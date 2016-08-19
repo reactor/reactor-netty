@@ -1,34 +1,17 @@
-= Reactor Guide
+= Reactor Netty
 Stephane Maldini;
-:appversion: 0.5.0.BUILD-SNAPSHOT (wiki)
+:appversion: 0.5.0 (wiki)
 ifndef::host-github[:ext-relative: {outfilesuffix}]
 {appversion}
 :doctype: book
 :icons: font
 
-include::gettingstarted.adoc[]
-include::20to25.adoc[]
-
-[[reactor-ipc]]
-= *reactor-ipc*
-include::core-bytebuffer.adoc[]
-
-[[reactor-netty]]
-= *reactor-netty*
 include::net.adoc[]
 include::net-tcp.adoc[]
 include::net-http.adoc[]
 include::net-e2e.adoc[]
 
-[[reactor-aeron]]
-= *reactor-aeron*
-include::aeron.adoc[]
-
-[[reactor-codec]]
-= *reactor-codec*
-include::core-codec.adoc[]
-
 
 [[reactor-samples]]
-= cookbook
+
 include::recipes.adoc[]
