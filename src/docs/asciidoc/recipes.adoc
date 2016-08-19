@@ -1,0 +1,56 @@
+==== Non Blocking Konami Code
+
+If you made it that far, here a simple non blocking stream to scale up your Konami codes over websocket. Tell me about a reward... Don't forget to add *Netty* in your classpath along *reactor-netty*.
+
+[source,java]
+----
+final TopicProcessor<Integer> keyboardStream = TopicProcessor.create();
+
+HttpServer.<String, String>create(spec ->
+		spec
+			.codec(StandardCodecs.STRING_CODEC)
+			.listen(3000)
+	)
+	.ws("/", channel -> {
+		System.out.println("Connected a websocket client: " + channel.remoteAddress());
+
+		return channel.upgradeToWebsocket()
+			.then(() -> keyboardStream)
+			.skipWhile(key -> KeyEvent.VK_UP != key)
+			.buffer(10, 1) // <1>
+			.map(keys -> keys.size() == 10 &&
+				keys.get(0) == KeyEvent.VK_UP &&
+				keys.get(1) == KeyEvent.VK_UP &&
+				keys.get(2) == KeyEvent.VK_DOWN &&
+				keys.get(3) == KeyEvent.VK_DOWN &&
+				keys.get(4) == KeyEvent.VK_LEFT &&
+				keys.get(5) == KeyEvent.VK_RIGHT &&
+				keys.get(6) == KeyEvent.VK_LEFT &&
+				keys.get(7) == KeyEvent.VK_RIGHT &&
+				keys.get(8) == KeyEvent.VK_B &&
+				keys.get(9) == KeyEvent.VK_A
+			)
+			.map(isKonami -> isKonami ? "Konami!" : "Nah")
+			.as(konamis ->
+				channel.send(konamis)
+			);
+		})
+		.subscribe();
+
+keyboardStream.onNext(KeyEvent.VK_RIGHT);
+keyboardStream.onNext(KeyEvent.VK_UP);
+keyboardStream.onNext(KeyEvent.VK_UP);
+keyboardStream.onNext(KeyEvent.VK_DOWN);
+keyboardStream.onNext(KeyEvent.VK_DOWN);
+keyboardStream.onNext(KeyEvent.VK_LEFT);
+keyboardStream.onNext(KeyEvent.VK_RIGHT);
+keyboardStream.onNext(KeyEvent.VK_LEFT);
+keyboardStream.onNext(KeyEvent.VK_RIGHT);
+keyboardStream.onNext(KeyEvent.VK_B);
+keyboardStream.onNext(KeyEvent.VK_A);
+keyboardStream.onNext(KeyEvent.VK_C);
+keyboardStream.onComplete();
+
+System.out.println(konamis.await());
+----
+<1> Note the `buffer(size, skip)` use, we want to evaluate all last 10 keys combinations, 10 by 10. That means we need to create a new list of 10 keys for every key.
