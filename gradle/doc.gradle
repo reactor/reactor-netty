@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 configure(rootProject) {
   apply plugin: "java"
   apply plugin: 'org.asciidoctor.convert'
 
   task api(type: Javadoc) {
-	group = "Reactor IPC Javadoc"
+	dependsOn jar
+	group = "Reactor Netty Javadoc"
 
 	description = "Generates aggregated Javadoc API documentation."
-	title = "${rootProject.description} ${version} API"
+	title = "Reactor Netty ${version}"
 
 	if (JavaVersion.current().isJava8Compatible()) {
 	  compileTestJava.options.compilerArgs += "-parameters"
@@ -30,21 +30,19 @@ configure(rootProject) {
 		options.addStringOption('Xdoclint:none', '-quiet')
 	  }
 	}
+
 	options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
 	options.author = true
-	options.header = rootProject.description
+	options.header = "Reactor Netty"
 	options.overview = "src/api/overview.html"
 	options.stylesheetFile = file("src/api/stylesheet.css")
 	options.links(rootProject.ext.javadocLinks)
 
-	source rootProject.sourceSets.main.allJava
-
 	maxMemory = "1024m"
 	destinationDir = new File(buildDir, "api")
-
+	source rootProject.sourceSets.main.allJava
 	doFirst {
-	  classpath = files(
-			  rootProject.subprojects.collect { it.sourceSets.main.compileClasspath })
+	  classpath = files(rootProject.sourceSets.main.compileClasspath)
 	}
   }
 
@@ -55,7 +53,9 @@ configure(rootProject) {
 	outputDir file("$buildDir/asciidoc")
 	backends = ['html5', 'pdf']
 	logDocuments = true
-	options = [doctype: 'book']
+	options = [
+			doctype: 'book'
+	]
 	attributes docinfo: '',
 			toc2: '',
 			'compat-mode': '',
@@ -66,9 +66,8 @@ configure(rootProject) {
 
 	doLast {
 	  file("$outputDir/pdf/index.pdf").
-			  renameTo("$outputDir/pdf/ipc-reference-guide-${version}.pdf")
+			  renameTo("$outputDir/pdf/netty-reference-guide-${version}.pdf")
 	}
   }
-
 }
 

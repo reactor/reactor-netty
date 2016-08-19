@@ -65,6 +65,8 @@ ext {
 			"http://fasterxml.github.io/jackson-databind/javadoc/2.5/",
 			"http://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/",
 			"http://projectreactor.io/core/docs/api/",
+			"http://projectreactor.io/ipc/docs/api/",
+			"http://projectreactor.io/codec/docs/api/",
 			"http://projectreactor.io/ext/docs/api/",
 	] as String[]
 }
