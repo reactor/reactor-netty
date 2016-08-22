@@ -37,7 +37,8 @@ ext {
 	gradleScriptDir = "${rootProject.projectDir}/gradle"
 
 	reactorIpcVersion = "$version"
-	reactorBusVersion = '3.0.0.BUILD-SNAPSHOT'
+	reactorBusVersion = '0.6.0.BUILD-SNAPSHOT'
+	reactorCodecVersion = "$version"
 
 	// Languages
 	groovyVersion = '2.4.1'
@@ -176,7 +177,7 @@ configure(rootProject) { project ->
 		}
 
 		//Codec Preprocessor
-		optional "io.projectreactor.addons:reactor-codec:$reactorIpcVersion"
+		optional "io.projectreactor.addons:reactor-codec:$reactorCodecVersion"
 
 		//Default reactor-netty impl
 		compile "io.netty:netty-all:$nettyVersion"
