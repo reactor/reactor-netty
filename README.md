@@ -14,7 +14,7 @@ serialization and such.
 An implementation of Reactive Streams over Aeron supporting both unicast and multicast modes of data sending.
 
 ### Getting it
-- Snapshot : **0.5.0.BUILD-SNAPSHOT**  ( Java 8+ required )
+- Snapshot : **0.6.0.BUILD-SNAPSHOT**  ( Java 8+ required )
 - Milestone : **TBA**  ( Java 8+ required )
 
 With Gradle from repo.spring.io or Maven Central repositories (stable releases only):
@@ -26,7 +26,7 @@ With Gradle from repo.spring.io or Maven Central repositories (stable releases o
     }
 
     dependencies {
-      compile "io.projectreactor.ipc:reactor-aeron:0.5.0.BUILD-SNAPSHOT"
+      compile "io.projectreactor.ipc:reactor-aeron:0.6.0.BUILD-SNAPSHOT"
     }
 ```
 
