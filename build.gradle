@@ -176,7 +176,7 @@ configure(rootProject) { project ->
 		}
 
 		//Codec Preprocessor
-		optional "io.projectreactor.ipc:reactor-codec:$reactorIpcVersion"
+		optional "io.projectreactor.addons:reactor-codec:$reactorIpcVersion"
 
 		//Default reactor-netty impl
 		compile "io.netty:netty-all:$nettyVersion"
