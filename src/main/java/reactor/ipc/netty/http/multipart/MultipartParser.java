@@ -24,6 +24,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.Cancellation;
 import reactor.core.MultiProducer;
 import reactor.core.Producer;
 import reactor.core.Receiver;
@@ -41,7 +42,7 @@ import reactor.ipc.netty.common.ByteBufEncodedFlux;
  */
 
 final class MultipartParser
-		implements Subscriber<MultipartTokenizer.Token>, Subscription, Runnable, Producer,
+		implements Subscriber<MultipartTokenizer.Token>, Subscription, Cancellation, Producer,
 		           MultiProducer, Receiver, Trackable {
 
 	final Subscriber<? super ByteBufEncodedFlux> actual;
@@ -155,12 +156,12 @@ final class MultipartParser
 	@Override
 	public void cancel() {
 		if (ONCE.compareAndSet(this, 0, 1)) {
-			run();
+			dispose();
 		}
 	}
 
 	@Override
-	public void run() {
+	public void dispose() {
 		if (WIP.decrementAndGet(this) == 0) {
 			s.cancel();
 		}
