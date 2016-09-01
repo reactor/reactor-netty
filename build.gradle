@@ -39,7 +39,7 @@ ext {
   reactorCoreVersion = "3.0.1.RELEASE"
   reactorIpcVersion = "$version"
   reactorBusVersion = "$version"
-  reactorCodecVersion = "$version"
+  reactorCodecVersion = "0.6.0.BUILD-SNAPSHOT"
 
   // Languages
   groovyVersion = '2.4.1'
