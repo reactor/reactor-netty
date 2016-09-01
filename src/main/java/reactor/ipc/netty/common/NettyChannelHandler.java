@@ -800,6 +800,11 @@ public class NettyChannelHandler<C extends NettyChannel> extends ChannelDuplexHa
 		}
 
 		@Override
+		public FluxSink<Object> serialize() {
+			return this; //should use event loop
+		}
+
+		@Override
 		public long requestedFromDownstream() {
 			return requested;
 		}
