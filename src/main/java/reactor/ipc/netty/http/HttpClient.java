@@ -18,8 +18,10 @@ package reactor.ipc.netty.http;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpMethod;
@@ -28,6 +30,7 @@ import reactor.core.Loopback;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.common.ChannelBridge;
+import reactor.ipc.netty.common.ColocatedEventLoopGroup;
 import reactor.ipc.netty.common.NettyChannel;
 import reactor.ipc.netty.common.NettyHandlerNames;
 import reactor.ipc.netty.config.ClientOptions;
@@ -41,6 +44,36 @@ import reactor.ipc.netty.tcp.TcpClient;
  */
 public class HttpClient
 		implements Loopback {
+
+	static final DefaultState global = new DefaultState();
+
+	public static EventLoopGroup defaultEventLoopGroup() {
+		ColocatedEventLoopGroup eventLoopGroup = DefaultState.CLIENT_GROUP.;
+		int ioThreadCount = TcpServer.DEFAULT_TCP_THREAD_COUNT;
+		this.ioGroup = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(ioThreadCount,
+				(Runnable r) -> {
+					Thread t = new Thread(r, "reactor-tcp-client-io-"+COUNTER
+							.incrementAndGet());
+					t.setDaemon(options.daemon());
+					return t;
+				}));
+		for (; ; ) {
+			ColocatedEventLoopGroup s = cachedSchedulers.get(key);
+			if (s != null) {
+				return s;
+			}
+			s = new ColocatedEventLoopGroup(key, schedulerSupplier.get());
+			if (DefaultState.CLIENT_GROUP.compareAndSet(global, null, s)) {
+				return s;
+			}
+			s._shutdown();
+		}
+
+		if (eventLoopGroup == null) {
+
+		}
+		return DEFAULT_STATE.clientGroup;
+	}
 
 
 	/**
@@ -326,5 +359,17 @@ public class HttpClient
 		protected ClientOptions getOptions() {
 			return super.getOptions();
 		}
+	}
+
+	final static class DefaultState {
+
+		volatile ColocatedEventLoopGroup clientGroup;
+
+		static final AtomicReferenceFieldUpdater<DefaultState, ColocatedEventLoopGroup>
+				CLIENT_GROUP = AtomicReferenceFieldUpdater.newUpdater(DefaultState.class,
+				ColocatedEventLoopGroup.class,
+				"clientGroup");
+
+
 	}
 }
