@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit
  */
 class NettyTcpServerSpec extends Specification {
 
-  def "TcpServer responds to requests from clients"() {
+  /*def "TcpServer responds to requests from clients"() {
 		given: "a simple TcpServer"
 			def dataLatch = new CountDownLatch(1)
 			def server = TcpServer.create("127.0.0.1")
@@ -56,7 +56,7 @@ class NettyTcpServerSpec extends Specification {
 
 		cleanup: "the server is stopped"
 			server.shutdown()
-	}
+	}*/
 
   def "TcpServer can encode and decode JSON"() {
 		given: "a TcpServer with JSON defaultCodec"
