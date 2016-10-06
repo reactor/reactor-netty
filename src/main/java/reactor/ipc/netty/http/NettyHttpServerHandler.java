@@ -192,8 +192,6 @@ class NettyHttpServerHandler extends NettyChannelHandler<NettyHttpChannel> {
 				}
 				ChannelFuture f;
 				if(!request.isWebsocket()) {
-					//FIXME when keep alive is supported
-					request.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 					if (request.markHeadersAsFlushed()) {
 						ctx.write(request.getNettyResponse());
 					}

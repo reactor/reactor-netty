@@ -89,6 +89,8 @@ abstract class NettyHttpChannel extends TcpChannel
 		this.headers = nettyRequest.headers();
 		this.responseHeaders = nettyResponse.headers();
 		this.responseHeader(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+		//FIXME when keep alive is supported
+		this.responseHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 	}
 
 	@Override
