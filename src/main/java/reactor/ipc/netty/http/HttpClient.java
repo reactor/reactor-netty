@@ -47,33 +47,33 @@ public class HttpClient
 
 	static final DefaultState global = new DefaultState();
 
-	public static EventLoopGroup defaultEventLoopGroup() {
-		ColocatedEventLoopGroup eventLoopGroup = DefaultState.CLIENT_GROUP.;
-		int ioThreadCount = TcpServer.DEFAULT_TCP_THREAD_COUNT;
-		this.ioGroup = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(ioThreadCount,
-				(Runnable r) -> {
-					Thread t = new Thread(r, "reactor-tcp-client-io-"+COUNTER
-							.incrementAndGet());
-					t.setDaemon(options.daemon());
-					return t;
-				}));
-		for (; ; ) {
-			ColocatedEventLoopGroup s = cachedSchedulers.get(key);
-			if (s != null) {
-				return s;
-			}
-			s = new ColocatedEventLoopGroup(key, schedulerSupplier.get());
-			if (DefaultState.CLIENT_GROUP.compareAndSet(global, null, s)) {
-				return s;
-			}
-			s._shutdown();
-		}
-
-		if (eventLoopGroup == null) {
-
-		}
-		return DEFAULT_STATE.clientGroup;
-	}
+//	public static EventLoopGroup defaultEventLoopGroup() {
+//		ColocatedEventLoopGroup eventLoopGroup = DefaultState.CLIENT_GROUP.;
+//		int ioThreadCount = TcpServer.DEFAULT_TCP_THREAD_COUNT;
+//		this.ioGroup = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(ioThreadCount,
+//				(Runnable r) -> {
+//					Thread t = new Thread(r, "reactor-tcp-client-io-"+COUNTER
+//							.incrementAndGet());
+//					t.setDaemon(options.daemon());
+//					return t;
+//				}));
+//		for (; ; ) {
+//			ColocatedEventLoopGroup s = cachedSchedulers.get(key);
+//			if (s != null) {
+//				return s;
+//			}
+//			s = new ColocatedEventLoopGroup(key, schedulerSupplier.get());
+//			if (DefaultState.CLIENT_GROUP.compareAndSet(global, null, s)) {
+//				return s;
+//			}
+//			s._shutdown();
+//		}
+//
+//		if (eventLoopGroup == null) {
+//
+//		}
+//		return DEFAULT_STATE.clientGroup;
+//	}
 
 
 	/**
