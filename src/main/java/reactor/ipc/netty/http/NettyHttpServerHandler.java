@@ -27,6 +27,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -190,6 +192,8 @@ class NettyHttpServerHandler extends NettyChannelHandler<NettyHttpChannel> {
 				}
 				ChannelFuture f;
 				if(!request.isWebsocket()) {
+					//FIXME when keep alive is supported
+					request.addHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 					if (request.markHeadersAsFlushed()) {
 						ctx.write(request.getNettyResponse());
 					}
