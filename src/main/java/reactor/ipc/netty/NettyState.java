@@ -17,16 +17,34 @@ package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
 
-import reactor.ipc.connector.ConnectedState;
+import io.netty.channel.Channel;
+import reactor.core.Cancellation;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Stephane Maldini
  */
-public interface NettyState extends ConnectedState {
+public interface NettyState extends Cancellation {
 
 	/**
 	 *
 	 * @return
 	 */
 	InetSocketAddress address();
+
+	/**
+	 * Return the underlying {@link Channel}
+	 * @return the underlying {@link Channel}
+	 */
+	Channel channel();
+
+
+	/**
+	 * Return an observing {@link Mono} terminating with success when shutdown
+	 * successfully
+	 * or error.
+	 *
+	 * @return a {@link Mono} terminating with success if shutdown successfully or error
+	 */
+	Mono<Void> onClose();
 }

@@ -51,7 +51,7 @@ final class ChannelState implements NettyState {
 	}
 
 	@Override
-	public Object delegate() {
+	public Channel channel() {
 		return c;
 	}
 

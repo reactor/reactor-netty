@@ -20,11 +20,9 @@ import java.net.InetSocketAddress;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaders;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.http.multipart.MultipartInbound;
-import reactor.ipc.netty.NettyInbound;
 
 /**
  * An Http Reactive read contract for incoming response. It inherits several accessor related to HTTP
@@ -52,8 +50,8 @@ public interface HttpInbound extends HttpConnection, NettyInbound {
 		HttpInbound thiz = this;
 		return new MultipartInbound() {
 			@Override
-			public Channel delegate() {
-				return thiz.delegate();
+			public Channel channel() {
+				return thiz.channel();
 			}
 
 			@Override

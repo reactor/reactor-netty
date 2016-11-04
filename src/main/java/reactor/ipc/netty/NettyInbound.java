@@ -19,6 +19,7 @@ package reactor.ipc.netty;
 import java.net.InetSocketAddress;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import reactor.core.publisher.Flux;
 import reactor.ipc.connector.Inbound;
 
@@ -27,8 +28,11 @@ import reactor.ipc.connector.Inbound;
  */
 public interface NettyInbound extends Inbound<ByteBuf> {
 
-	@Override
-	io.netty.channel.Channel delegate();
+	/**
+	 * Return the underlying {@link Channel}
+	 * @return the underlying {@link Channel}
+	 */
+	Channel channel();
 
 	/**
 	 * Return true  if underlying channel is closed or inbound bridge is detached
@@ -61,7 +65,7 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 */
 	@Override
 	default ByteBufFlux receive() {
-		return new ByteBufFlux(receiveObject(), delegate().alloc());
+		return new ByteBufFlux(receiveObject(), channel().alloc());
 	}
 
 

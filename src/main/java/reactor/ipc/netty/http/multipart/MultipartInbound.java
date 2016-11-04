@@ -38,7 +38,7 @@ public interface MultipartInbound extends NettyInbound {
 	 */
 	static Flux<ByteBufFlux> from(HttpInbound inbound) {
 		String boundary = MultipartCodec.extractBoundary(inbound.headers());
-		return new MultipartDecoder(inbound.receive(), boundary, inbound.delegate().alloc());
+		return new MultipartDecoder(inbound.receive(), boundary, inbound.channel().alloc());
 	}
 
 	/**
@@ -56,7 +56,7 @@ public interface MultipartInbound extends NettyInbound {
 		                                      .flatMap(bb -> Flux.using(() -> bb,
 				                                      Flux::just,
 				                                      ReferenceCounted::release)),
-				delegate().alloc());
+				channel().alloc());
 	}
 
 	@Override

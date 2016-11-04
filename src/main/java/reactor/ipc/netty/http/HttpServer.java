@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -25,10 +24,8 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import io.netty.channel.Channel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
@@ -38,7 +35,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.connector.ConnectedState;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.channel.NettyHandlerNames;
@@ -145,7 +141,7 @@ public final class HttpServer
 				if (afterHandlers == null) {
 					if (ops.markHeadersAsFlushed()) {
 						//404
-						ops.delegate()
+						ops.channel()
 						   .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
 								   HttpResponseStatus.NOT_FOUND));
 					}
@@ -187,7 +183,7 @@ public final class HttpServer
 			}
 			else if (ops.markHeadersAsFlushed()) {
 				//404
-				ops.delegate()
+				ops.channel()
 				   .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
 						   HttpResponseStatus.NOT_FOUND));
 			}

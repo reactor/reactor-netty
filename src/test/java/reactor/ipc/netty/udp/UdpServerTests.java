@@ -122,7 +122,7 @@ public class UdpServerTests {
 	@SuppressWarnings("unchecked")
 	public void supportsUdpMulticast() throws Exception {
 		final int port = SocketUtils.findAvailableUdpPort();
-		final CountDownLatch latch = new CountDownLatch(4 ^ 2);
+		final CountDownLatch latch = new CountDownLatch(Schedulers.DEFAULT_POOL_SIZE);
 		Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
 
 		final InetAddress multicastGroup = InetAddress.getByName("230.0.0.1");

@@ -146,7 +146,7 @@ public class TcpServerTests {
 			                    .map(s -> {
 				                    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
 					                    m.writeValue(os, s);
-					                    return in.delegate()
+					                    return in.channel()
 					                             .alloc()
 					                             .buffer()
 					                             .writeBytes(os.toByteArray());
@@ -225,7 +225,7 @@ public class TcpServerTests {
 		                             .block();
 
 		client.newHandler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
-		                                            .map(b -> in.delegate()
+		                                            .map(b -> in.channel()
 		                                                        .alloc()
 		                                                        .buffer()
 		                                                        .writeBytes(b.getBytes()))))

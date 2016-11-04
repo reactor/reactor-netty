@@ -224,8 +224,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 				"");
 	}
 
-	@Override
-	final public Channel delegate() {
+	final public Channel channel() {
 		return channel;
 	}
 
@@ -259,11 +258,6 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	@Override
 	final public long getPending() {
 		return inboundQueue != null ? inboundQueue.size() : 0;
-	}
-
-	@Override
-	final public Scheduler inboundScheduler() {
-		return ioScheduler;
 	}
 
 	@Override
@@ -449,11 +443,6 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 			       }
 		       });
 		return this;
-	}
-
-	@Override
-	public Scheduler outboundScheduler() {
-		return ioScheduler;
 	}
 
 	@Override

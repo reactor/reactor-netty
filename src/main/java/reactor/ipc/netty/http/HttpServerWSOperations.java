@@ -47,10 +47,10 @@ final class HttpServerWSOperations extends HttpServerOperations
 			String protocols,
 			HttpServerOperations replaced,
 			boolean plainText) {
-		super(replaced.delegate(), replaced);
+		super(replaced.channel(), replaced);
 		this.plainText = plainText;
 
-		Channel channel = replaced.delegate();
+		Channel channel = replaced.channel();
 
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory =
@@ -72,19 +72,19 @@ final class HttpServerWSOperations extends HttpServerOperations
 
 	@Override
 	public void operationComplete(Future<Void> future) throws Exception {
-		delegate().read();
+		channel().read();
 	}
 
 	@Override
 	public void onNext(Object frame) {
 		if (frame instanceof CloseWebSocketFrame) {
-			handshaker.close(delegate(), ((CloseWebSocketFrame) frame).retain());
+			handshaker.close(channel(), ((CloseWebSocketFrame) frame).retain());
 			onComplete();
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {
-			delegate().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
-			                                                                            .retain()));
+			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
+			                                                                           .retain()));
 			return;
 		}
 		super.onNext(frame);

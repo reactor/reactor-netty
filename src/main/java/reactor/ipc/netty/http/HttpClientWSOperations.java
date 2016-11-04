@@ -52,10 +52,10 @@ final class HttpClientWSOperations extends HttpClientOperations
 	HttpClientWSOperations(URI currentURI,
 			String protocols, HttpClientOperations replaced,
 			boolean plainText) {
-		super(replaced.delegate(), replaced);
+		super(replaced.channel(), replaced);
 		this.plainText = plainText;
 
-		Channel channel = delegate();
+		Channel channel = channel();
 
 		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 				WebSocketVersion.V13,
@@ -87,15 +87,15 @@ final class HttpClientWSOperations extends HttpClientOperations
 	public void onNext(Object msg) {
 		Class<?> messageClass = msg.getClass();
 		if (FullHttpResponse.class.isAssignableFrom(messageClass)) {
-			delegate().pipeline()
-			          .remove(HttpObjectAggregator.class);
+			channel().pipeline()
+			         .remove(HttpObjectAggregator.class);
 			HttpResponse response = (HttpResponse) msg;
 			setNettyResponse(response);
 
 			if (checkResponseCode(response)) {
 
 				if (!handshaker.isHandshakeComplete()) {
-					handshaker.finishHandshake(delegate(), (FullHttpResponse) msg);
+					handshaker.finishHandshake(channel(), (FullHttpResponse) msg);
 				}
 				handshakerResult.trySuccess();
 
@@ -104,15 +104,15 @@ final class HttpClientWSOperations extends HttpClientOperations
 			return;
 		}
 		if (PingWebSocketFrame.class.isAssignableFrom(messageClass)) {
-			delegate().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()
-			                                                                          .retain()));
+			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()
+			                                                                         .retain()));
 			return;
 		}
 		if (CloseWebSocketFrame.class.isAssignableFrom(messageClass)) {
 			if (log.isDebugEnabled()) {
 				log.debug("Closing Websocket");
 			}
-			delegate().close();
+			channel().close();
 		}
 		else {
 			super.onNext(msg);
@@ -125,7 +125,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			handshakerResult.tryFailure(f.cause());
 			return;
 		}
-		delegate().read();
+		channel().read();
 	}
 
 	@Override
@@ -134,7 +134,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug("Closing Websocket");
 			}
-			delegate().close();
+			channel().close();
 		}
 	}
 

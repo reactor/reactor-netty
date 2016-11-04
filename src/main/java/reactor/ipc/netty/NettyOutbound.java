@@ -20,10 +20,10 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -37,8 +37,11 @@ import static reactor.core.publisher.Flux.just;
  */
 public interface NettyOutbound extends Outbound<ByteBuf> {
 
-	@Override
-	io.netty.channel.Channel delegate();
+	/**
+	 * Return the underlying {@link Channel}
+	 * @return the underlying {@link Channel}
+	 */
+	Channel channel();
 
 	/**
 	 * Enable flush on each packet sent via {@link #send}, {@link #sendString},
@@ -143,9 +146,26 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * error during write
 	 */
 	default Mono<Void> sendFile(File file, long position, long count) {
-		return ChannelFutureMono.from(delegate().writeAndFlush(new DefaultFileRegion(file,
+		return ChannelFutureMono.from(channel().writeAndFlush(new DefaultFileRegion(file,
 				position,
 				count)));
+	}
+
+	/**
+	 * Send data to the peer, listen for any error on write and close on terminal signal
+	 * (complete|error).Each individual {@link Publisher} completion will flush
+	 * the underlying IO runtime.
+	 *
+	 * @param dataStreams the dataStream publishing OUT items to write on this channel
+	 *
+	 * @return A {@link Mono} to signal successful sequence write (e.g. after "flush") or
+	 * any error during write
+	 */
+	default Mono<Void> sendGroups(Publisher<? extends Publisher<? extends ByteBuf>>
+			dataStreams) {
+		return Flux.from(dataStreams)
+		           .concatMapDelayError(this::send, false, 32)
+		           .then();
 	}
 
 	/**
@@ -188,8 +208,8 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	default Mono<Void> sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
 		return send(Flux.from(dataStream)
-		                .map(s -> delegate().alloc()
-		                                    .buffer()
-		                                    .writeBytes(s.getBytes(charset))));
+		                .map(s -> channel().alloc()
+		                                   .buffer()
+		                                   .writeBytes(s.getBytes(charset))));
 	}
 }

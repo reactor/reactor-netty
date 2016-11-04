@@ -180,14 +180,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public Mono<Void> onClose() {
-		return ChannelFutureMono.from(delegate().closeFuture());
+		return ChannelFutureMono.from(channel().closeFuture());
 	}
 
 	@Override
 	public void dispose() {
 		try {
-			delegate().close()
-			          .sync();
+			channel().close()
+			         .sync();
 		}
 		catch (InterruptedException ie) {
 			Thread.currentThread()
@@ -197,7 +197,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public InetSocketAddress address() {
-		return ((SocketChannel) delegate()).remoteAddress();
+		return ((SocketChannel) channel()).remoteAddress();
 	}
 
 	/**
@@ -283,8 +283,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 			if (log.isDebugEnabled()) {
 				log.debug("Received response (auto-read:{}) : {}",
-						delegate().config()
-						          .isAutoRead(),
+						channel().config()
+						         .isAutoRead(),
 						headers().toString());
 			}
 
@@ -292,7 +292,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				clientSink().success(this);
 			}
 			else {
-				log.debug("Failed status check on response packet", delegate(), msg);
+				log.debug("Failed status check on response packet", channel(), msg);
 			}
 			postRead(msg);
 			return;
@@ -331,7 +331,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			boolean textPlain,
 			BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
-		ChannelPipeline pipeline = delegate().pipeline();
+		ChannelPipeline pipeline = channel().pipeline();
 
 		URI uri;
 		try {
@@ -376,13 +376,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (log.isDebugEnabled()) {
 				log.debug("Read last http packet");
 			}
-			delegate().close();
+			channel().close();
 		}
 	}
 
 	@Override
 	protected void doSubscribeHeaders(Subscriber<? super Void> s) {
-		ChannelFutureMono.from(delegate().writeAndFlush(nettyRequest))
+		ChannelFutureMono.from(channel().writeAndFlush(nettyRequest))
 		                 .subscribe(s);
 	}
 
@@ -423,8 +423,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			HttpClientWSOperations ops =
 					new HttpClientWSOperations(url, protocols, this, textPlain);
 
-			if (delegate().attr(OPERATIONS_ATTRIBUTE_KEY)
-			              .compareAndSet(this, ops)) {
+			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
+			             .compareAndSet(this, ops)) {
 				return ChannelFutureMono.from(ops.handshakerResult)
 				                        .then(() -> MonoSource.wrap(websocketHandler.apply(
 						                        ops,

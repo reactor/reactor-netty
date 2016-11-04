@@ -302,7 +302,7 @@ public class SmokeTests {
 			                                                        .map(dummy ?
 					                                                        Function.identity() :
 					                                                        new GpdistCodec(
-							                                                        request.delegate()
+							                                                        request.channel()
 							                                                               .alloc())));
 		                       }))
 		                       .block();

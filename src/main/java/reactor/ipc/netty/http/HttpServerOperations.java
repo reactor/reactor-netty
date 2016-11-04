@@ -143,7 +143,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//       No need to notify the upstream handlers - just log.
 		//       If decoding a response, just throw an error.
 		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
-			return ChannelFutureMono.from(() -> delegate().writeAndFlush(CONTINUE))
+			return ChannelFutureMono.from(() -> channel().writeAndFlush(CONTINUE))
 			                        .thenMany(super.receiveObject());
 		}
 		else {
@@ -190,8 +190,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			if (isWebsocket()) {
 				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
-				delegate().pipeline()
-				          .addBefore(NettyHandlerNames.ReactiveBridge,
+				channel().pipeline()
+				         .addBefore(NettyHandlerNames.ReactiveBridge,
 						          NettyHandlerNames.HttpAggregator,
 						          agg);
 			}
@@ -380,8 +380,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpServerWSOperations ops =
 					new HttpServerWSOperations(url, protocols, this, textPlain);
 
-			if (delegate().attr(OPERATIONS_ATTRIBUTE_KEY)
-			              .compareAndSet(this, ops)) {
+			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
+			             .compareAndSet(this, ops)) {
 				return ChannelFutureMono.from(ops.handshakerResult)
 				                        .then(() ->
 						MonoSource
@@ -396,7 +396,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void doSubscribeHeaders(Subscriber<? super Void> s) {
-		ChannelFutureMono.from(delegate().writeAndFlush(nettyResponse))
+		ChannelFutureMono.from(channel().writeAndFlush(nettyResponse))
 		                 .subscribe(s);
 	}
 
@@ -445,7 +445,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			log.error("Error processing connection. Closing the channel.", t);
 			if (parent.markHeadersAsFlushed()) {
-				parent.delegate()
+				parent.channel()
 				      .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
 						      HttpResponseStatus.INTERNAL_SERVER_ERROR))
 				      .addListener(ChannelFutureListener.CLOSE);
@@ -459,13 +459,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		@Override
 		public boolean isStarted() {
-			return parent.delegate()
+			return parent.channel()
 			             .isActive();
 		}
 
 		@Override
 		public boolean isTerminated() {
-			return !parent.delegate()
+			return !parent.channel()
 			           .isOpen();
 		}
 
@@ -476,7 +476,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		@Override
 		public void onComplete() {
-			if (parent.delegate()
+			if (parent.channel()
 			          .isOpen()) {
 				if (log.isDebugEnabled()) {
 					log.debug("Last Http Response packet");
@@ -484,14 +484,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				ChannelFuture f;
 				if (!parent.isWebsocket()) {
 					if (parent.markHeadersAsFlushed()) {
-						parent.delegate()
+						parent.channel()
 						      .write(parent.nettyResponse);
 					}
-					f = parent.delegate()
+					f = parent.channel()
 					          .writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 				}
 				else {
-					f = parent.delegate()
+					f = parent.channel()
 					          .writeAndFlush(new CloseWebSocketFrame());
 				}
 				if (!parent.isKeepAlive()) {

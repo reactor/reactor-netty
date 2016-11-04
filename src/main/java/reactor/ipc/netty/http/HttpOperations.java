@@ -27,13 +27,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.AsciiString;
@@ -46,7 +41,6 @@ import reactor.core.Receiver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.channel.NettyOperations;
@@ -97,7 +91,7 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		Supplier<Mono<Void>> writeFile =
-				() -> ChannelFutureMono.from(delegate().writeAndFlush(new DefaultFileRegion(
+				() -> ChannelFutureMono.from(channel().writeAndFlush(new DefaultFileRegion(
 						file,
 						position,
 						count)));
@@ -142,9 +136,9 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 		}
 
 		return send(Flux.from(dataStream)
-		                .map(s -> delegate().alloc()
-		                                    .buffer()
-		                                    .writeBytes(s.getBytes(charset))));
+		                .map(s -> channel().alloc()
+		                                   .buffer()
+		                                   .writeBytes(s.getBytes(charset))));
 	}
 
 	@Override
