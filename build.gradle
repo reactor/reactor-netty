@@ -36,10 +36,8 @@ ext {
   gradleVersion = '2.8'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.0.2.RELEASE"
-  reactorIpcVersion = "0.5.1.RELEASE"
-  reactorBusVersion = "0.6.0.BUILD-SNAPSHOT"
-  reactorCodecVersion = "0.6.0.BUILD-SNAPSHOT"
+  reactorCoreVersion = "3.0.3.RELEASE"
+  reactorIpcVersion = "0.6.0.BUILD-SNAPSHOT"
 
   // Languages
   groovyVersion = '2.4.1'
@@ -167,14 +165,6 @@ configure(rootProject) { project ->
 
 	compile "io.projectreactor.ipc:reactor-ipc:$reactorIpcVersion"
 	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
-
-	//Improved Http routing
-	optional("io.projectreactor.addons:reactor-bus:$reactorBusVersion") {
-	  transitive = false
-	}
-
-	//Codec Preprocessor
-	optional "io.projectreactor.addons:reactor-codec:$reactorCodecVersion"
 
 	//Default reactor-netty impl
 	compile "io.netty:netty-all:$nettyVersion"

@@ -29,7 +29,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import reactor.ipc.netty.common.ColocatedEventLoopGroup;
+import reactor.ipc.netty.channel.ColocatedEventLoopGroup;
 
 /**
  * @author Stephane Maldini

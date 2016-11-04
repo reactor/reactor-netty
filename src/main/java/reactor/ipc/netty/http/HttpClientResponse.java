@@ -15,6 +15,9 @@
  */
 package reactor.ipc.netty.http;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import reactor.ipc.netty.NettyState;
+
 /**
  * An HttpClient Reactive read contract for incoming response. It inherits several
  * accessor
@@ -25,7 +28,7 @@ package reactor.ipc.netty.http;
  * @author Stephane Maldini
  * @since 2.5
  */
-public interface HttpClientResponse extends HttpInbound {
+public interface HttpClientResponse extends HttpInbound, NettyState {
 
 	/**
 	 * Return the previous redirections or empty array
@@ -33,4 +36,11 @@ public interface HttpClientResponse extends HttpInbound {
 	 * @return the previous redirections or empty array
 	 */
 	String[] redirectedFrom();
+
+
+
+	/**
+	 * @return the resolved HTTP Response Status
+	 */
+	HttpResponseStatus status();
 }

@@ -16,9 +16,12 @@
 
 package reactor.ipc.netty.config;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.function.Consumer;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -36,18 +39,19 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 			".managed.default",
 			"false"));
 
-	private long                      timeout                   = 30000L;
-	private long                      sslHandshakeTimeoutMillis = 10000L;
-	private boolean                   keepAlive                 = true;
-	private int                       linger             = 0;
-	private boolean                   tcpNoDelay         = true;
-	private int                       rcvbuf             = 1024 * 1024;
-	private int                       sndbuf             = 1024 * 1024;
-	private boolean                   managed            = DEFAULT_MANAGED_PEER;
-	private Consumer<ChannelPipeline> pipelineConfigurer = null;
-	private EventLoopGroup            eventLoopGroup     = null;
-	private boolean                   daemon             = true;
-	private SslContextBuilder         sslOptions         = null;
+	long                      timeout                   = 30000L;
+	long                      sslHandshakeTimeoutMillis = 10000L;
+	boolean                   keepAlive                 = true;
+	int                       linger                    = 0;
+	boolean                   tcpNoDelay                = true;
+	int                       rcvbuf                    = 1024 * 1024;
+	int                       sndbuf                    = 1024 * 1024;
+	boolean                   managed                   = DEFAULT_MANAGED_PEER;
+	Consumer<ChannelPipeline> pipelineConfigurer        = null;
+	EventLoopGroup            eventLoopGroup            = null;
+	boolean                   daemon                    = true;
+	SslContextBuilder         sslOptions                = null;
+	Consumer<? super Channel> onStart                   = null;
 
 
 
@@ -139,6 +143,27 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 */
 	public SO managed(boolean managed) {
 		this.managed = managed;
+		return (SO) this;
+	}
+
+	/**
+	 * Returns the configured bound address listener
+	 *
+	 * @return The configured bound address listener
+	 */
+	public Consumer<? super Channel> onStart() {
+		return onStart;
+	}
+
+	/**
+	 * Configures a bound address listener, useful for randomly assigned port
+	 *
+	 * @param onBind the bound address listener
+	 *
+	 * @return {@code this}
+	 */
+	public SO onStart(Consumer<? super Channel> onBind) {
+		this.onStart = Objects.requireNonNull(onBind, "onStart");
 		return (SO) this;
 	}
 

@@ -16,14 +16,20 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -38,205 +44,120 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.resolver.NoopAddressResolverGroup;
+import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
+import reactor.core.Cancellation;
 import reactor.core.Exceptions;
-import reactor.core.publisher.DirectProcessor;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.Channel;
-import reactor.ipc.netty.common.ChannelBridge;
-import reactor.ipc.netty.common.ColocatedEventLoopGroup;
-import reactor.ipc.netty.common.DuplexSocket;
-import reactor.ipc.netty.common.MonoChannelFuture;
-import reactor.ipc.netty.common.NettyChannel;
-import reactor.ipc.netty.common.NettyChannelHandler;
-import reactor.ipc.netty.common.NettyHandlerNames;
+import reactor.core.publisher.MonoSink;
+import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.channel.ColocatedEventLoopGroup;
+import reactor.ipc.netty.channel.NettyHandlerNames;
+import reactor.ipc.netty.channel.NettyOperations;
 import reactor.ipc.netty.config.ClientOptions;
+import reactor.ipc.netty.util.CompositeCancellation;
 import reactor.ipc.netty.util.NettyNativeDetector;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
- * The base class for a Reactor-based TCP client.
+ * A TCP client connector.
  *
- * @author Jon Brisbin
  * @author Stephane Maldini
  */
-public class TcpClient extends DuplexSocket<ByteBuf, ByteBuf, NettyChannel>
-		implements ChannelBridge<TcpChannel> {
-
-
-
-	public static final Function PING = o -> Flux.empty();
+public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 	/**
-	 * Bind a new TCP client to the localhost on port 12012. The default client implementation is scanned
-	 * from the classpath on Class init. Support for Netty first is provided as long as the relevant
-	 * library dependencies are on the classpath. <p> A {@link TcpClient} is a specific kind of {@link
-	 * org.reactivestreams.Publisher} that will emit: - onNext {@link Channel} to consume data from - onComplete
-	 * when client is shutdown - onError when any error (more specifically IO error) occurs From the emitted {@link
-	 * Channel}, one can decide to add in-channel consumers to read any incoming data. <p> To reply data on the
-	 * active connection, {@link Channel#send} can subscribe to any passed {@link
-	 * org.reactivestreams.Publisher}. <p> Note that  read will pause when capacity
-	 * number of elements have been dispatched. <p> Emitted channels will run on the same thread they have beem
-	 * receiving IO events.
-	 *
+	 * Bind a new TCP client to the localhost on port 12012. The default client
+	 * implementation is scanned from the classpath on Class init.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 *
+	 * @return a new {@link TcpClient}
 	 */
 	public static TcpClient create() {
-		return create(DEFAULT_BIND_ADDRESS);
+		return create(NetUtil.LOCALHOST.getHostAddress());
 	}
 
 	/**
-	 * Bind a new TCP client to the specified connect address and port 12012. The default client
-	 * implementation is scanned from the classpath on Class init. Support for Netty is provided
-	 * as long as the relevant library dependencies are on the classpath. <p> A {@link TcpClient} is a specific kind of
-	 * {@link org.reactivestreams.Publisher} that will emit: - onNext {@link Channel} to consume data from -
-	 * onComplete when client is shutdown - onError when any error (more specifically IO error) occurs From the emitted
-	 * {@link Channel}, one can decide to add in-channel consumers to read any incoming data. <p> To reply data
-	 * on the active connection, {@link Channel#send} can subscribe to any passed {@link
-	 * org.reactivestreams.Publisher}. <p> Note that  read will pause when capacity
-	 * number of elements have been dispatched. <p> Emitted channels will run on the same thread they have beem
-	 * receiving IO events.
-	 *
+	 * Bind a new TCP client to the specified connect address and port 12012.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 *
 	 * @param bindAddress the address to connect to on port 12012
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 * <p>
+	 * a new {@link TcpClient}
 	 */
 	public static TcpClient create(String bindAddress) {
-		return create(bindAddress, DEFAULT_PORT);
+		return create(bindAddress, NettyConnector.DEFAULT_PORT);
 	}
 
 	/**
-	 * Bind a new TCP client to "loopback" on the the specified port. The default client implementation is
-	 * scanned from the classpath on Class init. Support for Netty is provided as long as the
-	 * relevant library dependencies are on the classpath. <p> A {@link TcpClient} is a specific kind of {@link
-	 * org.reactivestreams.Publisher} that will emit: - onNext {@link Channel} to consume data from - onComplete
-	 * when client is shutdown - onError when any error (more specifically IO error) occurs From the emitted {@link
-	 * Channel}, one can decide to add in-channel consumers to read any incoming data. <p> To reply data on the
-	 * active connection, {@link Channel#send} can subscribe to any passed {@link
-	 * org.reactivestreams.Publisher}. <p> Note that  read will pause when capacity
-	 * number of elements have been dispatched. <p> Emitted channels will run on the same thread they have beem
-	 * receiving IO events.
-	 *
+	 * Bind a new TCP client to "loopback" on the the specified port. The default client
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 *
 	 * @param port the port to connect to on "loopback"
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 * <p>
+	 * a new {@link TcpClient}
 	 */
 	public static TcpClient create(int port) {
-		return create(DEFAULT_BIND_ADDRESS, port);
+		return create(NetUtil.LOCALHOST.getHostAddress(), port);
 	}
 
 	/**
-	 * Bind a new TCP client to the specified connect address and port. The default client implementation is
-	 * scanned from the classpath on Class init. Support for Netty is provided as long as the
-	 * relevant library dependencies are on the classpath. <p> A {@link TcpClient} is a specific kind of {@link
-	 * org.reactivestreams.Publisher} that will emit: - onNext {@link Channel} to consume data from - onComplete
-	 * when client is shutdown - onError when any error (more specifically IO error) occurs From the emitted {@link
-	 * Channel}, one can decide to add in-channel consumers to read any incoming data. <p> To reply data on the
-	 * active connection, {@link Channel#send} can subscribe to any passed {@link
-	 * org.reactivestreams.Publisher}. <p> Note that  read will pause when capacity
-	 * number of elements have been dispatched. <p> Emitted channels will run on the same thread they have beem
-	 * receiving IO events.
-	 *
+	 * Bind a new TCP client to the specified connect address and port.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 *
 	 * @param bindAddress the address to connect to
 	 * @param port the port to connect to
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 * <p>
+	 * a new {@link TcpClient}
 	 */
 	public static TcpClient create(String bindAddress, int port) {
 		return create(ClientOptions.to(bindAddress, port));
 	}
 
 	/**
-	 * Bind a new TCP client to the specified connect address and port. The default client implementation is
-	 * scanned from the classpath on Class init. Support for Netty is provided as long as the relevant library
-	 * dependencies are on the classpath. <p> A {@link TcpClient} is a specific kind of {@link
-	 * org.reactivestreams.Publisher} that will emit: - onNext {@link Channel} to consume data from - onComplete
-	 * when client is shutdown - onError when any error (more specifically IO error) occurs From the emitted {@link
-	 * Channel}, one can decide to add in-channel consumers to read any incoming data. <p> To reply data on the
-	 * active connection, {@link Channel#send} can subscribe to any passed {@link org.reactivestreams.Publisher}.
-	 * <p> Note that read will pause when capacity number of elements
-	 * have been dispatched. <p> Emitted channels will run on the same thread they have beem receiving IO events.
-	 * <p>
+	 * Bind a new TCP client to the specified connect address and port.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param options
-	 *
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 * @param options a new {@link TcpClient}
 	 */
 	public static TcpClient create(ClientOptions options) {
-		return new TcpClient(options);
+		return new TcpClient(Objects.requireNonNull(options, "options"));
 	}
 
-	final EventLoopGroup      ioGroup;
 	final ClientOptions       options;
 	final SslContext          sslContext;
 	final NettyNativeDetector channelAdapter;
 
-	final InetSocketAddress connectAddress;
-
 	protected TcpClient(ClientOptions options) {
-		if (null == options.remoteAddress()) {
-			this.connectAddress = new InetSocketAddress("127.0.0.1", 3000);
-		}
-		else{
-			this.connectAddress = options.remoteAddress();
-		}
-
 		this.options = options.toImmutable();
 
-		if(options.ssl() != null){
-			try{
-				sslContext = options.ssl().build();
+		if (options.ssl() != null) {
+			try {
+				sslContext = options.ssl()
+				                    .build();
 
 				if (log.isDebugEnabled()) {
-					log.debug("Connecting with SSL enabled using context {}",
-							sslContext.getClass().getSimpleName());
+					log.debug("Will connect with SSL enabled using context {}",
+							sslContext.getClass()
+							          .getSimpleName());
 				}
 
 				channelAdapter = sslContext instanceof JdkSslContext ?
-						NettyNativeDetector.force(false) :
-						NettyNativeDetector.instance();
+						NettyNativeDetector.force(false) : NettyNativeDetector.instance();
 			}
-			catch (SSLException ssle){
+			catch (SSLException ssle) {
 				throw Exceptions.bubble(ssle);
 			}
 		}
-		else{
+		else {
 			sslContext = null;
 			channelAdapter = NettyNativeDetector.instance();
 		}
 
-		if (null != options.eventLoopGroup()) {
-			this.ioGroup = options.eventLoopGroup();
-		}
-		else {
-			int ioThreadCount = TcpServer.DEFAULT_TCP_THREAD_COUNT;
-			this.ioGroup = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(ioThreadCount,
-					(Runnable r) -> {
-						Thread t = new Thread(r, "reactor-tcp-client-io-"+COUNTER
-								.incrementAndGet());
-						t.setDaemon(options.daemon());
-						return t;
-					}));
-		}
-
-	}
-
-	/**
-	 * Get the {@link InetSocketAddress} to which this client must connect.
-	 *
-	 * @return the connect address
-	 */
-	public InetSocketAddress getConnectAddress() {
-		return connectAddress;
-	}
-
-	@Override
-	public String toString() {
-		return "TcpClient:" + getConnectAddress().toString();
 	}
 
 	/**
@@ -244,145 +165,228 @@ public class TcpClient extends DuplexSocket<ByteBuf, ByteBuf, NettyChannel>
 	 *
 	 * @return the client options
 	 */
-	protected ClientOptions getOptions() {
+	public final ClientOptions getOptions() {
 		return this.options;
 	}
 
 	@Override
-	protected Mono<Void> doStart(final Function<? super NettyChannel, ? extends Publisher<Void>>
-			handler){
-		return doStart(handler, getConnectAddress(), this, sslContext != null);
+	public final Mono<? extends NettyState> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+		return newHandler(handler, options.remoteAddress(), sslContext != null, null);
+	}
+
+	@Override
+	public String toString() {
+		return "TcpClient:" + options.remoteAddress().toString();
 	}
 
 	@SuppressWarnings("unchecked")
-	protected Mono<Void> doStart(final Function<? super NettyChannel, ? extends Publisher<Void>>
-			handler, InetSocketAddress address, ChannelBridge<? extends
-			TcpChannel> channelBridge, boolean secure) {
+	protected Mono<NettyState> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+			InetSocketAddress address,
+			boolean secure,
+			Consumer<? super Channel> onSetup) {
 
-		final Function<? super NettyChannel, ? extends Publisher<Void>> targetHandler =
-				null == handler ? (Function<? super NettyChannel, ? extends Publisher<Void>>) PING : handler;
+		final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>>
+				targetHandler = null == handler ? NettyOperations.noopHandler() : handler;
 
-		Bootstrap _bootstrap = new Bootstrap().group(ioGroup);
+		return Mono.create(sink -> {
+			Bootstrap bootstrap = new Bootstrap();
 
-		if (options.proxyType() != null) {
-			_bootstrap.resolver(NoopAddressResolverGroup.INSTANCE);
-		}
+			resolver(bootstrap);
+			options(bootstrap);
+			handler(bootstrap, targetHandler, secure, sink, onSetup);
+			Cancellation onCancelGroups = channel(bootstrap);
+			Cancellation onCancelClient = connect(bootstrap, address, sink);
 
-		_bootstrap
-		                                      .channel(channelAdapter.getChannel(
-				                                      ioGroup))
-		                                      .option(ChannelOption.ALLOCATOR,
-				                                      PooledByteBufAllocator.DEFAULT)
-		                                       .option(ChannelOption.SO_RCVBUF,
-				                                      options.rcvbuf())
-		                                      .option(ChannelOption.SO_SNDBUF,
-				                                      options.sndbuf())
-		                                      .option(ChannelOption.AUTO_READ, false)
-		                                      .option(ChannelOption.SO_KEEPALIVE,
-				                                      options.keepAlive())
-		                                      .option(ChannelOption.SO_LINGER,
-				                                      options.linger())
-		                                      .option(ChannelOption.TCP_NODELAY,
-				                                      options.tcpNoDelay())
-		                                      .option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
-				                                      (int) Math.min(Integer.MAX_VALUE,
-						                                      options
-						                                      .timeoutMillis()));
-		if (!secure) {
-			_bootstrap.handler(new TcpClientChannelSetup(this, null, channelBridge,
-					targetHandler));
-			return MonoChannelFuture.from(_bootstrap.connect(address));
+			sink.setCancellation(CompositeCancellation.from(onCancelClient,
+					onCancelGroups));
+		});
+	}
+
+	/**
+	 * Current {@link LoggingHandler}
+	 *
+	 * @return a {@link LoggingHandler}
+	 */
+	protected LoggingHandler logger() {
+		return loggingHandler;
+	}
+
+	/**
+	 * Triggered when {@link Channel} has been fully setup by the client to bind
+	 * handler
+	 * state.
+	 *
+	 * @param handler the user-provided handler on in/out
+	 * @param ch the configured {@link Channel}
+	 * @param sink the user-facing {@link MonoSink}
+	 */
+	protected void onSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+			SocketChannel ch,
+			MonoSink<NettyState> sink) {
+		NettyOperations.bind(ch, handler, sink);
+	}
+
+	/**
+	 * Set current {@link Bootstrap} channel and group
+	 *
+	 * @param bootstrap {@link Bootstrap}
+	 *
+	 * @return a {@link Cancellation} that shutdown the eventLoopGroup on dispose
+	 */
+	protected Cancellation channel(Bootstrap bootstrap) {
+		final EventLoopGroup elg;
+		final Cancellation onCancel;
+		if (null != options.eventLoopGroup()) {
+			elg = options.eventLoopGroup();
+			onCancel = null;
 		}
 		else {
-			DirectProcessor<Void> p = DirectProcessor.create();
-			_bootstrap.handler(new TcpClientChannelSetup(this, p, channelBridge, targetHandler));
-			return MonoChannelFuture.from(_bootstrap.connect(address)).flux().then(p);
+			elg = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(
+					NettyConnector.DEFAULT_IO_THREAD_COUNT,
+					(Runnable r) -> {
+						Thread t = new Thread(r,
+								"reactor-tcp-client-io-" + COUNTER.incrementAndGet());
+						t.setDaemon(options.daemon());
+						return t;
+					}));
 
+			onCancel = () -> {
+				try {
+					elg.shutdownGracefully()
+					   .sync();
+				}
+				catch (InterruptedException i) {
+					log.error("error while disposing the handler eventLoopGroup", i);
+				}
+			};
+		}
+		bootstrap.group(elg)
+		         .channel(channelAdapter.getChannel(elg));
+		return onCancel;
+	}
+
+	/**
+	 * Connect to the remote address with the configured {@link Bootstrap}
+	 *
+	 * @param bootstrap current {@link Bootstrap}
+	 * @param address remote {@link InetSocketAddress}
+	 * @param sink the {@link MonoSink} to bind connection termination on terminated or
+	 * failure
+	 *
+	 * @return a {@link Cancellation} that terminate the connection on dispose
+	 */
+	protected Cancellation connect(Bootstrap bootstrap,
+			InetSocketAddress address,
+			MonoSink<NettyState> sink) {
+		ChannelFuture f = bootstrap.connect(address)
+		                           .addListener(new OnBindListener(sink));
+
+		return () -> {
+			try {
+				f.channel()
+				 .close()
+				 .sync();
+			}
+			catch (InterruptedException e) {
+				log.error("error while disposing the channel", e);
+			}
+		};
+	}
+
+	/**
+	 * Set current {@link Bootstrap} handler
+	 *
+	 * @param bootstrap {@link Bootstrap}
+	 * @param handler the user provided in/out handler
+	 * @param secure if the connection will have secure transport
+	 * @param sink the {@link MonoSink} to complete successfully or not on connection
+	 * terminated
+	 */
+	protected void handler(Bootstrap bootstrap,
+			BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+			boolean secure,
+			MonoSink<NettyState> sink,
+			Consumer<? super Channel> onSetup) {
+		bootstrap.handler(new ClientSetup(this, sink, secure, handler, onSetup));
+	}
+
+	/**
+	 * Set current {@link Bootstrap} options
+	 *
+	 * @param bootstrap {@link Bootstrap}
+	 */
+	protected void options(Bootstrap bootstrap) {
+		bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+		         .option(ChannelOption.SO_RCVBUF, options.rcvbuf())
+		         .option(ChannelOption.SO_SNDBUF, options.sndbuf())
+		         .option(ChannelOption.AUTO_READ, false)
+		         .option(ChannelOption.SO_KEEPALIVE, options.keepAlive())
+		         .option(ChannelOption.SO_LINGER, options.linger())
+		         .option(ChannelOption.TCP_NODELAY, options.tcpNoDelay())
+		         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
+				         (int) Math.min(Integer.MAX_VALUE, options.timeoutMillis()));
+	}
+
+	protected void resolver(Bootstrap bootstrap) {
+		if (options.proxyType() != null) {
+			bootstrap.resolver(NoopAddressResolverGroup.INSTANCE);
 		}
 	}
 
-	protected Class<?> logClass() {
-		return TcpClient.class;
-	}
+	static final class ClientSetup extends ChannelInitializer<SocketChannel> {
 
-	@Override
-	protected Mono<Void> doShutdown() {
+		final TcpClient                 parent;
+		final MonoSink<NettyState>      sink;
+		final Consumer<? super Channel> onSetup;
+		final boolean                   secure;
+		final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>>
+		                                handler;
 
-		if (getOptions() != null && getOptions().eventLoopGroup() != null) {
-			return Mono.empty();
-		}
-
-		return MonoChannelFuture.from(ioGroup.shutdownGracefully());
-	}
-
-	protected void bindChannel(Function<? super NettyChannel, ? extends Publisher<Void>> handler,
-			SocketChannel ch, ChannelBridge<? extends TcpChannel> channelBridge)
-			throws Exception {
-		ch.pipeline()
-		  .addLast(NettyHandlerNames.ReactiveBridge,
-				  new NettyChannelHandler<>(handler, channelBridge, ch));
-	}
-
-	@Override
-	protected boolean shouldFailOnStarted() {
-		return false;
-	}
-
-	protected static final Logger log = Loggers.getLogger(TcpClient.class);
-
-	static final class TcpClientChannelSetup extends ChannelInitializer<SocketChannel> {
-
-		final TcpClient                                      parent;
-		final ChannelBridge<? extends TcpChannel>            channelBridge;
-		final DirectProcessor<Void>                            secureCallback;
-		final Function<? super NettyChannel, ? extends Publisher<Void>> targetHandler;
-
-		TcpClientChannelSetup(TcpClient parent,
-				DirectProcessor<Void> secureCallback,
-				ChannelBridge<? extends TcpChannel> channelBridge,
-				Function<? super NettyChannel, ? extends Publisher<Void>> targetHandler) {
+		ClientSetup(TcpClient parent,
+				MonoSink<NettyState> sink,
+				boolean secure,
+				BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+				Consumer<? super Channel> onSetup) {
 			this.parent = parent;
-			this.secureCallback = secureCallback;
-			this.channelBridge = channelBridge;
-			this.targetHandler = targetHandler;
+			this.secure = secure;
+			this.sink = sink;
+			this.handler = handler;
+			this.onSetup = onSetup;
 		}
 
 		@Override
 		public void initChannel(final SocketChannel ch) throws Exception {
 			ChannelPipeline pipeline = ch.pipeline();
 
-			if (secureCallback != null && null != parent.sslContext) {
+			if (secure && null != parent.sslContext) {
 				SslHandler sslHandler = parent.sslContext.newHandler(ch.alloc());
 				sslHandler.setHandshakeTimeoutMillis(parent.options.sslHandshakeTimeoutMillis());
 				if (log.isTraceEnabled()) {
 					pipeline.addFirst(NettyHandlerNames.SslLoggingHandler,
-							new LoggingHandler(parent.logClass()));
+							parent.logger());
 					pipeline.addAfter(NettyHandlerNames.SslLoggingHandler,
 							NettyHandlerNames.SslHandler,
 							sslHandler);
 				}
 				else {
-					pipeline.addFirst(NettyHandlerNames.SslHandler,
-							sslHandler);
+					pipeline.addFirst(NettyHandlerNames.SslHandler, sslHandler);
 				}
 				if (log.isDebugEnabled()) {
 					pipeline.addAfter(NettyHandlerNames.SslHandler,
-							NettyHandlerNames.LoggingHandler,
-							new LoggingHandler(parent.logClass()));
+							NettyHandlerNames.LoggingHandler, parent.logger());
 					pipeline.addAfter(NettyHandlerNames.LoggingHandler,
 							NettyHandlerNames.SslReader,
-							new NettySslReader(secureCallback));
+							new NettySslReader(sink));
 				}
 				else {
 					pipeline.addAfter(NettyHandlerNames.SslHandler,
 							NettyHandlerNames.SslReader,
-							new NettySslReader(secureCallback));
+							new NettySslReader(sink));
 				}
 
 			}
 			else if (log.isDebugEnabled()) {
-				pipeline.addFirst(NettyHandlerNames.LoggingHandler,
-						new LoggingHandler(parent.logClass()));
+				pipeline.addFirst(NettyHandlerNames.LoggingHandler, parent.logger());
 			}
 
 			if (parent.options.proxyType() != null) {
@@ -417,21 +421,52 @@ public class TcpClient extends DuplexSocket<ByteBuf, ByteBuf, NettyChannel>
 				pipeline.addFirst(NettyHandlerNames.ProxyHandler, proxy);
 			}
 
+			parent.onSetup(handler, ch, sink);
+
+			if (onSetup != null) {
+				onSetup.accept(ch);
+			}
+
+			if (null != parent.options.onStart()){
+				parent.options.onStart().accept(ch);
+			}
 			if (null != parent.options.pipelineConfigurer()) {
 				parent.options.pipelineConfigurer()
 				              .accept(pipeline);
 			}
 
-			parent.bindChannel(targetHandler, ch, channelBridge);
 		}
 	}
 
-	@Override
-	public TcpChannel createChannelBridge(io.netty.channel.Channel ioChannel,
-			Flux<Object> input,
-			Object... parameters) {
-		return new TcpChannel(ioChannel, input);
+	static final class OnBindListener implements ChannelFutureListener {
+
+		final MonoSink<?> sink;
+
+		OnBindListener(MonoSink<NettyState> sink) {
+			this.sink = sink;
+		}
+
+		@Override
+		public void operationComplete(ChannelFuture f) throws Exception {
+			if (log.isInfoEnabled()) {
+				log.info("CONNECT {} {}",
+						f.isSuccess() ? "OK" : "FAILED",
+						f.channel()
+						 .remoteAddress());
+			}
+			if (!f.isSuccess()) {
+				if (f.cause() != null) {
+					sink.error(f.cause());
+				}
+				else {
+					sink.error(new IOException("error while connecting to " + f.channel()
+					                                                           .remoteAddress()));
+				}
+			}
+		}
 	}
 
-	static final AtomicLong COUNTER = new AtomicLong();
+	static final Logger         log            = Loggers.getLogger(TcpClient.class);
+	static final AtomicLong     COUNTER        = new AtomicLong();
+	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
 }

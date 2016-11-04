@@ -32,9 +32,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.UnicastProcessor;
 import reactor.core.Trackable;
 import reactor.core.publisher.Operators;
-import reactor.core.Exceptions;
 import reactor.util.concurrent.QueueSupplier;
-import reactor.ipc.netty.common.ByteBufEncodedFlux;
+import reactor.ipc.netty.ByteBufFlux;
 
 /**
  * @author Ben Hale
@@ -45,8 +44,8 @@ final class MultipartParser
 		implements Subscriber<MultipartTokenizer.Token>, Subscription, Cancellation, Producer,
 		           MultiProducer, Receiver, Trackable {
 
-	final Subscriber<? super ByteBufEncodedFlux> actual;
-	final ByteBufAllocator                       alloc;
+	final Subscriber<? super ByteBufFlux> actual;
+	final ByteBufAllocator                alloc;
 
 	volatile int wip;
 	@SuppressWarnings("rawtypes")
@@ -64,7 +63,7 @@ final class MultipartParser
 
 	boolean done;
 
-	MultipartParser(Subscriber<? super ByteBufEncodedFlux> actual, ByteBufAllocator alloc) {
+	MultipartParser(Subscriber<? super ByteBufFlux> actual, ByteBufAllocator alloc) {
 		this.actual = actual;
 		this.wip = 1;
 		this.alloc = alloc;
@@ -112,7 +111,7 @@ final class MultipartParser
 
 				window = w;
 
-				actual.onNext(ByteBufEncodedFlux.encoded(
+				actual.onNext(ByteBufFlux.from(
 						w.flatMap(b -> Flux.using(() -> b, Flux::just,
 								ByteBuf::release)), alloc));
 		}

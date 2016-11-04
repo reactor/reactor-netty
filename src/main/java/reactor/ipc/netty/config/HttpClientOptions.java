@@ -23,10 +23,11 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
-import reactor.ipc.netty.common.DuplexSocket;
+import reactor.ipc.netty.NettyConnector;
 
 /**
  * @author Stephane Maldini
@@ -38,7 +39,7 @@ public class HttpClientOptions extends ClientOptions {
 	}
 
 	public static HttpClientOptions to(String host){
-		return to(host, DuplexSocket.DEFAULT_PORT);
+		return to(host, NettyConnector.DEFAULT_PORT);
 	}
 
 	public static HttpClientOptions to(String host, int port){
@@ -93,7 +94,7 @@ public class HttpClientOptions extends ClientOptions {
 	 *
 	 * @return {@literal this}
 	 */
-	public ClientOptions proxy(@Nonnull String host, int port) {
+	public HttpClientOptions proxy(@Nonnull String host, int port) {
 		return proxy(InetSocketAddress.createUnresolved(host, port));
 	}
 
@@ -105,7 +106,7 @@ public class HttpClientOptions extends ClientOptions {
 	 *
 	 * @return {@literal this}
 	 */
-	public ClientOptions proxy(@Nonnull String host,
+	public HttpClientOptions proxy(@Nonnull String host,
 			int port,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
@@ -119,7 +120,7 @@ public class HttpClientOptions extends ClientOptions {
 	 *
 	 * @return {@literal this}
 	 */
-	public ClientOptions proxy(@Nonnull InetSocketAddress connectAddress) {
+	public HttpClientOptions proxy(@Nonnull InetSocketAddress connectAddress) {
 		return proxy(new InetResolverProxySupplier(connectAddress), null, null);
 	}
 
@@ -130,7 +131,7 @@ public class HttpClientOptions extends ClientOptions {
 	 *
 	 * @return {@literal this}
 	 */
-	public ClientOptions proxy(@Nonnull InetSocketAddress connectAddress,
+	public HttpClientOptions proxy(@Nonnull InetSocketAddress connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
 		return proxy(new InetResolverProxySupplier(connectAddress), username, password);
@@ -143,7 +144,7 @@ public class HttpClientOptions extends ClientOptions {
 	 *
 	 * @return {@literal this}
 	 */
-	public ClientOptions proxy(@Nonnull Proxy type,
+	public HttpClientOptions proxy(@Nonnull Proxy type,
 			@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
 		return proxy(connectAddress, null, null);
 	}
@@ -155,7 +156,7 @@ public class HttpClientOptions extends ClientOptions {
 	 *
 	 * @return {@literal this}
 	 */
-	public ClientOptions proxy(@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
+	public HttpClientOptions proxy(@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
 		proxy(Proxy.HTTP, connectAddress, username, password);
@@ -182,13 +183,25 @@ public class HttpClientOptions extends ClientOptions {
 
 	final static class ImmutableHttpClientOptions extends HttpClientOptions {
 
-		final HttpClientOptions options;
-
 		ImmutableHttpClientOptions(HttpClientOptions options) {
-			this.options = options;
-			if(options.ssl() != null){
-					super.ssl(options.ssl());
-			}
+			this.proxyUsername = options.proxyUsername;
+			this.proxyPassword = options.proxyPassword;
+			this.proxyAddress = options.proxyAddress;
+			this.proxyType = options.proxyType;
+			this.connectAddress = options.connectAddress;
+			this.timeout = options.timeout;
+			this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis;
+			this.keepAlive = options.keepAlive;
+			this.linger = options.linger;
+			this.tcpNoDelay = options.tcpNoDelay;
+			this.rcvbuf = options.rcvbuf;
+			this.sndbuf = options.sndbuf;
+			this.managed = options.managed;
+			this.pipelineConfigurer = options.pipelineConfigurer;
+			this.eventLoopGroup = options.eventLoopGroup;
+			this.daemon = options.daemon;
+			this.sslOptions = options.sslOptions;
+			this.onStart = options.onStart;
 		}
 
 		@Override
@@ -197,101 +210,31 @@ public class HttpClientOptions extends ClientOptions {
 		}
 
 		@Override
-		public String proxyUsername() {
-			return options.proxyUsername();
-		}
-
-		@Override
-		public Function<? super String, ? extends String> proxyPassword() {
-			return options.proxyPassword();
-		}
-
-		@Override
-		public Supplier<? extends InetSocketAddress> proxyAddress() {
-			return options.proxyAddress();
-		}
-
-		@Override
-		public Proxy proxyType() {
-			return options.proxyType();
-		}
-
-		@Override
-		public InetSocketAddress remoteAddress() {
-			return options.remoteAddress();
-		}
-
-		@Override
-		public EventLoopGroup eventLoopGroup() {
-			return options.eventLoopGroup();
-		}
-
-		@Override
-		public boolean managed() {
-			return options.managed();
-		}
-
-		@Override
-		public boolean keepAlive() {
-			return options.keepAlive();
-		}
-
-		@Override
-		public int linger() {
-			return options.linger();
-		}
-
-		@Override
-		public Consumer<ChannelPipeline> pipelineConfigurer() {
-			return options.pipelineConfigurer();
-		}
-
-		@Override
-		public int rcvbuf() {
-			return options.rcvbuf();
-		}
-
-		@Override
-		public int sndbuf() {
-			return options.sndbuf();
-		}
-
-		@Override
-		public boolean tcpNoDelay() {
-			return options.tcpNoDelay();
-		}
-
-		@Override
-		public long timeoutMillis() {
-			return options.timeoutMillis();
-		}
-
-		@Override
 		public HttpClientOptions sslSupport() {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 
 		@Override
-		public ClientOptions proxy(@Nonnull Proxy type,
+		public HttpClientOptions proxy(@Nonnull Proxy type,
 				@Nonnull InetSocketAddress connectAddress,
 				@Nullable String username,
 				@Nullable Function<? super String, ? extends String> password) {
-			return super.proxy(type, connectAddress, username, password);
-		}
-
-		@Override
-		public ClientOptions timeoutMillis(long timeout) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 
 		@Override
-		public ClientOptions sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
+		public HttpClientOptions timeoutMillis(long timeout) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 
 		@Override
-		public long sslHandshakeTimeoutMillis() {
-			return options.sslHandshakeTimeoutMillis();
+		public HttpClientOptions sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public HttpClientOptions onStart(Consumer<? super Channel> onBind) {
+			throw new UnsupportedOperationException("Immutable Options");
 		}
 
 		@Override
@@ -345,11 +288,6 @@ public class HttpClientOptions extends ClientOptions {
 		@Override
 		public HttpClientOptions daemon(boolean daemon) {
 			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public boolean daemon() {
-			return options.daemon();
 		}
 
 		@Override

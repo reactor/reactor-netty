@@ -19,12 +19,12 @@ import java.net.InetSocketAddress;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import reactor.core.publisher.Flux;
-import reactor.ipc.netty.common.ByteBufEncodedFlux;
-import reactor.ipc.netty.common.NettyChannel;
-import reactor.ipc.netty.common.NettyInbound;
-import reactor.ipc.netty.http.multipart.MultipartCodec;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.ByteBufFlux;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.http.multipart.MultipartInbound;
+import reactor.ipc.netty.NettyInbound;
 
 /**
  * An Http Reactive read contract for incoming response. It inherits several accessor related to HTTP
@@ -36,15 +36,12 @@ import reactor.ipc.netty.http.multipart.MultipartCodec;
  */
 public interface HttpInbound extends HttpConnection, NettyInbound {
 
-	/**
-	 * @return the resolved response HTTP headers
-	 */
-	HttpHeaders responseHeaders();
 
 	/**
-	 * @return the resolved HTTP Response Status
+	 *
+	 * @return HttpHeaders
 	 */
-	HttpResponseStatus status();
+	HttpHeaders headers();
 
 	/**
 	 * a {@literal byte[]} inbound {@link Flux}
@@ -60,13 +57,23 @@ public interface HttpInbound extends HttpConnection, NettyInbound {
 			}
 
 			@Override
-			public Flux<ByteBufEncodedFlux> receiveParts() {
-				return MultipartCodec.decode(thiz);
+			public Flux<ByteBufFlux> receiveParts() {
+				return MultipartInbound.from(thiz);
 			}
 
 			@Override
-			public NettyChannel.Lifecycle on() {
-				return thiz.on();
+			public NettyInbound onClose(Runnable onClose) {
+				return thiz.onClose(onClose);
+			}
+
+			@Override
+			public NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
+				return thiz.onReadIdle(idleTimeout, onReadIdle);
+			}
+
+			@Override
+			public boolean isDisposed() {
+				return thiz.isDisposed();
 			}
 
 			@Override

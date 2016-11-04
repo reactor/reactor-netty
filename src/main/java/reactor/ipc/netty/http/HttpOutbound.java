@@ -16,10 +16,12 @@
 
 package reactor.ipc.netty.http;
 
-import io.netty.handler.codec.http.HttpHeaders;
+import java.util.function.BiFunction;
+
 import io.netty.handler.codec.http.cookie.Cookie;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.common.NettyOutbound;
+import reactor.ipc.netty.NettyOutbound;
 
 /**
  * An Http Reactive client write contract for outgoing requests. It inherits several accessor related to HTTP flow :
@@ -38,28 +40,15 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	HttpOutbound addCookie(Cookie cookie);
 
 	/**
+	 *
 	 * @param name
 	 * @param value
-	 *
 	 * @return
 	 */
 	HttpOutbound addHeader(CharSequence name, CharSequence value);
 
 	@Override
 	HttpOutbound flushEach();
-
-	/**
-	 * @param name
-	 * @param value
-	 *
-	 * @return
-	 */
-	HttpOutbound header(CharSequence name, CharSequence value);
-
-	/**
-	 * @return Resolved HTTP request headers
-	 */
-	HttpHeaders headers();
 
 	/**
 	 * set the request keepAlive if true otherwise remove the existing connection keep alive header
@@ -71,7 +60,7 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	/**
 	 *
 	 */
-	HttpOutbound removeTransferEncodingChunked();
+	HttpOutbound disableChunkedTransfer();
 
 	/**
 	 * @return
@@ -82,18 +71,20 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 
 	/**
 	 * Upgrade connection to Websocket
+	 * @param websocketHandler the in/out handler for ws transport
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	default Mono<Void> upgradeToWebsocket() {
-		return upgradeToWebsocket(null, false);
+	default Mono<Void> upgradeToWebsocket(BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return upgradeToWebsocket(uri(), false, websocketHandler);
 	}
 
 	/**
 	 * Upgrade connection to Websocket with text plain payloads
+	 * @param websocketHandler the in/out handler for ws transport
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	default Mono<Void> upgradeToTextWebsocket() {
-		return upgradeToWebsocket(null, true);
+	default Mono<Void> upgradeToTextWebsocket(BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return upgradeToWebsocket(uri(), true, websocketHandler);
 	}
 
 
@@ -101,8 +92,11 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	 * Upgrade connection to Websocket
 	 * @param protocols
 	 * @param textPlain
+	 * @param websocketHandler the in/out handler for ws transport
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	Mono<Void> upgradeToWebsocket(String protocols, boolean textPlain);
+	Mono<Void> upgradeToWebsocket(String protocols,
+			boolean textPlain,
+			BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler);
 }

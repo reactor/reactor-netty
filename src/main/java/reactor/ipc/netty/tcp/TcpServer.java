@@ -16,242 +16,159 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
+import reactor.core.Cancellation;
 import reactor.core.Exceptions;
 import reactor.core.MultiProducer;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import reactor.ipc.Channel;
-import reactor.ipc.netty.common.ChannelBridge;
-import reactor.ipc.netty.common.DuplexSocket;
-import reactor.ipc.netty.common.MonoChannelFuture;
-import reactor.ipc.netty.common.NettyChannel;
-import reactor.ipc.netty.common.NettyChannelHandler;
-import reactor.ipc.netty.common.NettyHandlerNames;
+import reactor.core.publisher.MonoSink;
+import reactor.ipc.connector.ConnectedState;
+import reactor.ipc.netty.ChannelFutureMono;
+import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.channel.NettyHandlerNames;
+import reactor.ipc.netty.channel.NettyOperations;
 import reactor.ipc.netty.config.ServerOptions;
+import reactor.ipc.netty.util.CompositeCancellation;
 import reactor.ipc.netty.util.NettyNativeDetector;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
- * Base functionality needed by all servers that communicate with clients over TCP.
+ * * A TCP server connector.
  *
  * @author Stephane Maldini
  */
-public class TcpServer extends DuplexSocket<ByteBuf, ByteBuf, NettyChannel> implements
-                                                                    MultiProducer,
-                                                                    ChannelBridge<TcpChannel> {
-
-	public static final int DEFAULT_TCP_THREAD_COUNT = Integer.parseInt(System.getProperty(
-			"reactor.tcp.ioThreadCount",
-			"" + Schedulers.DEFAULT_POOL_SIZE / 2));
-
-	public static final int DEFAULT_TCP_SELECT_COUNT =
-			Integer.parseInt(System.getProperty("reactor.tcp.selectThreadCount", "" + DEFAULT_TCP_THREAD_COUNT));
+public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, MultiProducer {
 
 	/**
-	 * Bind a new TCP server to "loopback" on port {@literal 12012}. The default server implementation is
-	 * scanned from the classpath on Class init. Support for Netty is provided as long as the
-	 * relevant library dependencies are on the classpath. <p> To reply data on the active connection, {@link
-	 * Channel#send} can subscribe to any passed {@link org.reactivestreams.Publisher}. <p> Note that
-	 * read will pause when capacity number of elements have been dispatched. <p>
-	 * Emitted channels will run on the same thread they have beem receiving IO events.
-	 *
+	 * Bind a new TCP server to "loopback" on port {@literal 12012}.
+	 * Handlers will run on the same thread they have beem receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 *
+	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create() {
-		return create(DEFAULT_BIND_ADDRESS);
+		return create(NetUtil.LOCALHOST.getHostAddress());
 	}
 
 	/**
-	 * Bind a new TCP server to the given bind address and port. The default server implementation is scanned
-	 * from the classpath on Class init. Support for Netty is provided as long as the relevant library dependencies are
-	 * on the classpath. <p> A {@link TcpServer} is a specific kind of {@link org.reactivestreams.Publisher} that will
-	 * emit: - onNext {@link Channel} to consume data from - onComplete when server is shutdown - onError when any
-	 * error (more specifically IO error) occurs From the emitted {@link Channel}, one can decide to add in-channel
-	 * consumers to read any incoming data. <p> To reply data on the active connection, {@link Channel#send} can
-	 * subscribe to any passed {@link org.reactivestreams.Publisher}. <p> Note that read will pause when capacity number of elements have been dispatched. <p>
-	 * Emitted channels will run on the same thread they have beem receiving IO events.
-	 * <p>
+	 * Bind a new TCP server to the given bind address and port.
+	 * Handlers will run on the same thread they have beem receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param options
+	 * @param options {@link ServerOptions} configuration input
 	 *
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(ServerOptions options) {
-		return new TcpServer(options);
+		return new TcpServer(Objects.requireNonNull(options, "options"));
 	}
 
 	/**
-	 * Bind a new TCP server to "loopback" on the given port. The default server implementation is scanned
-	 * from the classpath on Class init. Support for Netty first is provided as long as the relevant
-	 * library dependencies are on the classpath. <p> A {@link TcpServer} is a specific kind of {@link
-	 * org.reactivestreams.Publisher} that will emit: - onNext {@link Channel} to consume data from - onComplete
-	 * when server is shutdown - onError when any error (more specifically IO error) occurs From the emitted {@link
-	 * Channel}, one can decide to add in-channel consumers to read any incoming data. <p> To reply data on the
-	 * active connection, {@link Channel#send} can subscribe to any passed {@link
-	 * org.reactivestreams.Publisher}. <p> Note that  read will pause when capacity
-	 * number of elements have been dispatched. <p> Emitted channels will run on the same thread they have beem
-	 * receiving IO events.
-	 *
+	 * Bind a new TCP server to "loopback" on the given port.
+	 * Handlers will run on the same thread they have beem receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 *
 	 * @param port the port to listen on loopback
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 *
+	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(int port) {
-		return create(DEFAULT_BIND_ADDRESS, port);
+		return create(NetUtil.LOCALHOST.getHostAddress(), port);
 	}
 
 	/**
-	 * Bind a new TCP server to the given bind address on port {@literal 12012}. The default server
-	 * implementation is scanned from the classpath on Class init. Support for Netty first is provided
-	 * as long as the relevant library dependencies are on the classpath. <p> A {@link TcpServer} is a specific kind of
-	 * {@link org.reactivestreams.Publisher} that will emit: - onNext {@link Channel} to consume data from -
-	 * onComplete when server is shutdown - onError when any error (more specifically IO error) occurs From the emitted
-	 * {@link Channel}, one can decide to add in-channel consumers to read any incoming data. <p> To reply data
-	 * on the active connection, {@link Channel#send} can subscribe to any passed {@link
-	 * org.reactivestreams.Publisher}. <p> Note that  read will pause when capacity
-	 * number of elements have been dispatched. <p> Emitted channels will run on the same thread they have beem
-	 * receiving IO events.
-	 *
+	 * Bind a new TCP server to the given bind address on port {@literal 12012}.
+	 * Handlers will run on the same thread they have beem receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
-	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the default port 12012
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 *
+	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
+	 * default port 12012
+	 *
+	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(String bindAddress) {
 		return create(bindAddress, 0);
 	}
 
 	/**
-	 * Bind a new TCP server to the given bind address and port. The default server implementation is scanned
-	 * from the classpath on Class init. Support for Netty is provided as long as the relevant
-	 * library dependencies are on the classpath. <p> A {@link TcpServer} is a specific kind of {@link
-	 * org.reactivestreams.Publisher} that will emit: - onNext {@link Channel} to consume data from - onComplete
-	 * when server is shutdown - onError when any error (more specifically IO error) occurs From the emitted {@link
-	 * Channel}, one can decide to add in-channel consumers to read any incoming data. <p> To reply data on the
-	 * active connection, {@link Channel#send} can subscribe to any passed {@link
-	 * org.reactivestreams.Publisher}. <p> Note that  read will pause when capacity
-	 * number of elements have been dispatched. <p> Emitted channels will run on the same thread they have beem
-	 * receiving IO events.
-	 *
+	 * Bind a new TCP server to the given bind address and port.
+	 * Handlers will run on the same thread they have beem receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 *
 	 * @param port the port to listen on the passed bind address
-	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the passed port
-	 * @return a new Stream of Channel, typically a peer of connections.
+	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
+	 * passed port
+	 *
+	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(String bindAddress, int port) {
 		return create(ServerOptions.create()
 		                           .listen(bindAddress, port));
 	}
 
-	final ServerBootstrap bootstrap;
-	final EventLoopGroup  selectorGroup;
-	final EventLoopGroup  ioGroup;
-	final ChannelGroup    channelGroup;
-	final ServerOptions   options;
-	final SslContext      sslContext;
-
-	//Carefully reset
-	InetSocketAddress listenAddress;
-	ChannelFuture     bindFuture;
+	final ChannelGroup        channelGroup;
+	final ServerOptions       options;
+	final SslContext          sslContext;
+	final InetSocketAddress   listenAddress;
+	final NettyNativeDetector channelAdapter;
 
 	protected TcpServer(ServerOptions options) {
-		this.listenAddress = options.listenAddress();
 		this.options = options.toImmutable();
-		int selectThreadCount = DEFAULT_TCP_SELECT_COUNT;
-		int ioThreadCount = DEFAULT_TCP_THREAD_COUNT;
+		this.listenAddress = options.listenAddress() == null ? new InetSocketAddress(0) :
+				options.listenAddress();
 
-		NettyNativeDetector channelAdapter;
-		if(options.ssl() != null) {
+		if (options.ssl() != null) {
 			try {
-				this.sslContext = options.ssl().build();
+				this.sslContext = options.ssl()
+				                         .build();
 				if (log.isDebugEnabled()) {
-					log.debug("Serving SSL enabled using context {}", sslContext.getClass().getSimpleName());
+					log.debug("Will serve with SSL enabled using context {}",
+							sslContext.getClass()
+							          .getSimpleName());
 				}
-				channelAdapter = sslContext instanceof JdkSslContext ?
-						NettyNativeDetector.force(false) :
-						NettyNativeDetector.instance();
+				this.channelAdapter = sslContext instanceof JdkSslContext ?
+						NettyNativeDetector.force(false) : NettyNativeDetector.instance();
 			}
 			catch (SSLException e) {
 				throw Exceptions.bubble(e);
 			}
 		}
-		else{
-			this.sslContext = null;
-			channelAdapter = NettyNativeDetector.instance();
-		}
-
-		this.selectorGroup = channelAdapter.newEventLoopGroup(selectThreadCount,
-				(Runnable r) -> {
-					Thread t = new Thread(r, "reactor-tcp-server-select-"+COUNTER
-							.incrementAndGet());
-					t.setDaemon(options.daemon());
-					return t;
-				});
-
-		if (null != options.eventLoopGroup()) {
-			this.ioGroup = options.eventLoopGroup();
-		}
 		else {
-			this.ioGroup = channelAdapter.newEventLoopGroup(ioThreadCount,
-					(Runnable r) -> {
-						Thread t = new Thread(r,
-								"reactor-tcp-server-io-" + COUNTER.incrementAndGet());
-						t.setDaemon(options.daemon());
-						return t;
-					});
+			this.sslContext = null;
+			this.channelAdapter = NettyNativeDetector.instance();
 		}
-
-		ServerBootstrap _serverBootstrap =
-				new ServerBootstrap().group(selectorGroup, ioGroup)
-				                     .channel(channelAdapter.getServerChannel(ioGroup))
-				                     .option(ChannelOption.SO_BACKLOG, options.backlog())
-		                             .childOption(ChannelOption.ALLOCATOR,
-				                             PooledByteBufAllocator.DEFAULT)
-		                             .childOption(ChannelOption.SO_RCVBUF,
-				                             options.rcvbuf())
-		                             .childOption(ChannelOption.SO_SNDBUF,
-				                             options.sndbuf())
-		                             .childOption(ChannelOption.AUTO_READ, false)
-		                             .childOption(ChannelOption.SO_KEEPALIVE,
-				                             options.keepAlive())
-		                             .childOption(ChannelOption.SO_LINGER,
-				                             options.linger())
-		                             .childOption(ChannelOption.TCP_NODELAY,
-				                             options.tcpNoDelay())
-		                             .option(ChannelOption.SO_REUSEADDR, options.reuseAddr())
-		                             .childOption(ChannelOption.SO_REUSEADDR, options.reuseAddr())
-		                             .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS,
-				                             (int) Math.min(Integer.MAX_VALUE,
-						                             options
-								                             .timeoutMillis()))
-		                                   .localAddress((null == listenAddress ?
-				                                   new InetSocketAddress(0) : listenAddress));
 
 		if (options.managed()) {
 			log.debug("Server is managed.");
@@ -261,29 +178,6 @@ public class TcpServer extends DuplexSocket<ByteBuf, ByteBuf, NettyChannel> impl
 			log.debug("Server is not managed (Not directly introspectable)");
 			this.channelGroup = null;
 		}
-
-		this.bootstrap = _serverBootstrap;
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Void> doShutdown() {
-		try {
-			bindFuture.channel()
-			          .close()
-			          .sync();
-		}
-		catch (InterruptedException ie) {
-			return Mono.error(ie);
-		}
-
-		final Mono<Void> shutdown = MonoChannelFuture.from(selectorGroup.shutdownGracefully());
-
-		if (null == getOptions() || null == getOptions().eventLoopGroup()) {
-			return shutdown.then(aVoid -> MonoChannelFuture.from(ioGroup.shutdownGracefully()));
-		}
-
-		return shutdown;
 	}
 
 	@Override
@@ -297,7 +191,8 @@ public class TcpServer extends DuplexSocket<ByteBuf, ByteBuf, NettyChannel> impl
 			return null;
 		}
 		return new Iterator<Object>() {
-			final Iterator<io.netty.channel.Channel> channelIterator = channelGroup.iterator();
+			final Iterator<io.netty.channel.Channel> channelIterator =
+					channelGroup.iterator();
 
 			@Override
 			public boolean hasNext() {
@@ -307,109 +202,290 @@ public class TcpServer extends DuplexSocket<ByteBuf, ByteBuf, NettyChannel> impl
 			@Override
 			public Object next() {
 				return channelIterator.next()
-				                      .pipeline()
-				                      .get(NettyChannelHandler.class);
+				                      .attr(NettyOperations.OPERATIONS_ATTRIBUTE_KEY)
+				                      .get();
 			}
 		};
-	}
-
-	/**
-	 * Get the address to which this server is bound. If port 0 was used, returns the resolved port if possible
-	 * @return the address bound
-	 */
-	public InetSocketAddress getListenAddress() {
-		return listenAddress;
 	}
 
 	/**
 	 * Get the {@link ServerOptions} currently in effect.
+	 *
 	 * @return the current server options
 	 */
-	protected ServerOptions getOptions() {
+	public final ServerOptions getOptions() {
 		return options;
 	}
 
-	@Override
-	public String toString() {
-		return "TcpServer:" + getListenAddress().toString();
-	}
-
-	@Override
-	protected Mono<Void> doStart(final Function<? super NettyChannel, ? extends Publisher<Void>> handler) {
-
-		bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
-			@Override
-			public void initChannel(final SocketChannel ch) throws Exception {
-				if (log.isDebugEnabled()) {
-					log.debug("CONNECT {}", ch);
-				}
-
-				if (channelGroup != null) {
-					channelGroup.add(ch);
-				}
-
-				bindChannel(handler, ch);
-			}
-		});
-
-		bindFuture = bootstrap.bind();
-
-		return new MonoChannelFuture<ChannelFuture>(bindFuture) {
-			@Override
-			protected void doComplete(ChannelFuture future, Subscriber<? super Void> s) {
-				if(log.isInfoEnabled()) {
-					log.info("BIND {} {}",
-							future.isSuccess() ? "OK" : "FAILED",
-							future.channel()
-							      .localAddress());
-				}
-				if (listenAddress.getPort() == 0) {
-					listenAddress = (InetSocketAddress) future.channel()
-					                                          .localAddress();
-				}
-				super.doComplete(future, s);
-			}
-		};
-	}
-
-	protected SslContext getSslContext() {
+	/**
+	 * Get the {@link SslContext}
+	 *
+	 * @return the {@link SslContext}
+	 */
+	public final SslContext getSslContext() {
 		return sslContext;
 	}
 
 	@Override
-	public TcpChannel createChannelBridge(io.netty.channel.Channel ioChannel,
-			Flux<Object> input,
-			Object... parameters) {
-		return new TcpChannel(ioChannel, input);
+	public final Mono<? extends NettyState> newHandler(BiFunction<? super NettyInbound, ? super
+			NettyOutbound, ? extends Publisher<Void>> handler) {
+		Objects.requireNonNull(handler, "handler");
+		return Mono.create(sink -> {
+			ServerBootstrap bootstrap = new ServerBootstrap();
+
+			options(bootstrap);
+			childOptions(bootstrap);
+			childHandler(bootstrap, handler);
+			Cancellation onCancelGroups = channel(bootstrap);
+			Cancellation onCancelServer = bind(bootstrap, sink);
+
+			sink.setCancellation(CompositeCancellation.from(onCancelServer,
+					onCancelGroups));
+		});
 	}
 
-	protected void bindChannel(Function<? super NettyChannel, ? extends Publisher<Void>> handler, SocketChannel nativeChannel) {
-		ChannelPipeline pipeline = nativeChannel.pipeline();
-
-		if (sslContext != null) {
-			SslHandler sslHandler =  sslContext.newHandler
-					(nativeChannel.alloc());
-			sslHandler.setHandshakeTimeoutMillis(options.sslHandshakeTimeoutMillis());
-			pipeline
-			  .addFirst(NettyHandlerNames.SslHandler, sslHandler);
-		}
-
-		if (null != getOptions() && null != getOptions().pipelineConfigurer()) {
-			getOptions().pipelineConfigurer()
-			            .accept(pipeline);
-		}
-
-
-		if (log.isDebugEnabled()) {
-			pipeline.addLast(NettyHandlerNames.LoggingHandler,
-					new LoggingHandler(TcpServer.class));
-		}
-
-		pipeline.addLast(NettyHandlerNames.ReactiveBridge,
-				new NettyChannelHandler<>(handler, this, nativeChannel));
+	@Override
+	public String toString() {
+		return "TcpServer:" + options.listenAddress().toString();
 	}
 
-	final static Logger log = Loggers.getLogger(TcpServer.class);
+	/**
+	 * Triggered when {@link Channel} has been fully setup by the server to bind
+	 * handler
+	 * state.
+	 *
+	 * @param handler the user-provided handler on in/out
+	 * @param nativeChannel the configured {@link Channel}
+	 */
+	protected void onSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+			SocketChannel nativeChannel) {
+		NettyOperations.bind(nativeChannel, handler, null);
+	}
 
-	static final AtomicLong COUNTER = new AtomicLong();
+	/**
+	 * Bind the passed {@link ServerBootstrap} and connect the mono sink to pass bind
+	 * error if any
+	 *
+	 * @param bootstrap the current {@link ServerBootstrap}
+	 * @param sink the {@link MonoSink} used to forward binding error
+	 *
+	 * @return a {@link Cancellation} that shutdown the server on dispose
+	 */
+	protected Cancellation bind(ServerBootstrap bootstrap,
+			MonoSink<NettyState> sink) {
+		ChannelFuture f = bootstrap.bind(listenAddress)
+		                           .addListener(new OnBindListener(sink));
+
+		return () -> {
+			try {
+				f.channel()
+				 .close()
+				 .sync();
+			}
+			catch (InterruptedException e) {
+				log.error("error while disposing the channel", e);
+			}
+		};
+	}
+
+	/**
+	 * Set current {@link ServerBootstrap} channel and group
+	 *
+	 * @param bootstrap {@link ServerBootstrap}
+	 *
+	 * @return a {@link Cancellation} that shutdown the eventLoopGroup on dispose
+	 */
+	protected Cancellation channel(ServerBootstrap bootstrap) {
+		final Cancellation onCancel;
+		final EventLoopGroup selectorGroup = channelAdapter.newEventLoopGroup(
+				DEFAULT_TCP_SELECT_COUNT,
+				(Runnable r) -> {
+					Thread t = new Thread(r,
+							"reactor-tcp-server-select-" + COUNTER.incrementAndGet());
+					t.setDaemon(options.daemon());
+					return t;
+				});
+
+		final EventLoopGroup elg;
+		if (null != options.eventLoopGroup()) {
+			elg = options.eventLoopGroup();
+			onCancel = () -> {
+				try {
+					selectorGroup.shutdownGracefully()
+					             .sync();
+				}
+				catch (InterruptedException i) {
+					log.error("error while disposing the handler selector eventLoopGroup",
+							i);
+				}
+			};
+		}
+		else {
+			elg = channelAdapter.newEventLoopGroup(DEFAULT_IO_THREAD_COUNT,
+					(Runnable r) -> {
+						Thread t = new Thread(r,
+								"reactor-tcp-server-io-" + COUNTER.incrementAndGet());
+						t.setDaemon(options.daemon());
+						return t;
+					});
+
+			onCancel = () -> {
+				try {
+					selectorGroup.shutdownGracefully()
+					             .sync();
+				}
+				catch (InterruptedException i) {
+					log.error("error while disposing the handler selector eventLoopGroup",
+							i);
+				}
+				try {
+					elg.shutdownGracefully()
+					   .sync();
+				}
+				catch (InterruptedException i) {
+					log.error("error while disposing the handler io eventLoopGroup", i);
+				}
+			};
+		}
+
+		bootstrap.group(selectorGroup, elg)
+		         .channel(channelAdapter.getServerChannel(elg));
+		return onCancel;
+	}
+
+	/**
+	 * Set current {@link ServerBootstrap} childHandler
+	 *
+	 * @param bootstrap {@link ServerBootstrap}
+	 * @param handler user provided in/out handler
+	 */
+	protected void childHandler(ServerBootstrap bootstrap,
+			BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+		bootstrap.childHandler(new ServerSetup(handler, this, null));
+	}
+
+	/**
+	 * Set current {@link ServerBootstrap} childOptions
+	 *
+	 * @param bootstrap {@link ServerBootstrap}
+	 */
+	protected void childOptions(ServerBootstrap bootstrap) {
+		bootstrap.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+		         .childOption(ChannelOption.SO_RCVBUF, options.rcvbuf())
+		         .childOption(ChannelOption.SO_SNDBUF, options.sndbuf())
+		         .childOption(ChannelOption.AUTO_READ, false)
+		         .childOption(ChannelOption.SO_KEEPALIVE, options.keepAlive())
+		         .childOption(ChannelOption.SO_LINGER, options.linger())
+		         .childOption(ChannelOption.TCP_NODELAY, options.tcpNoDelay())
+		         .childOption(ChannelOption.SO_REUSEADDR, options.reuseAddr())
+		         .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS,
+				         (int) Math.min(Integer.MAX_VALUE, options.timeoutMillis()));
+	}
+
+	/**
+	 * Set current {@link ServerBootstrap} options
+	 *
+	 * @param bootstrap {@link ServerBootstrap}
+	 */
+	protected void options(ServerBootstrap bootstrap) {
+		bootstrap.option(ChannelOption.SO_BACKLOG, options.backlog())
+		         .option(ChannelOption.SO_REUSEADDR, options.reuseAddr());
+	}
+
+	/**
+	 * Current {@link LoggingHandler}
+	 *
+	 * @return a {@link LoggingHandler}
+	 */
+	protected LoggingHandler logger() {
+		return loggingHandler;
+	}
+
+	static final class ServerSetup extends ChannelInitializer<SocketChannel> {
+
+		final TcpServer                 parent;
+		final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>>
+		                                handler;
+		final Consumer<? super Channel> onSetup;
+
+		public ServerSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+				TcpServer parent,
+				Consumer<? super Channel> onSetup) {
+			this.parent = parent;
+			this.handler = handler;
+			this.onSetup = onSetup;
+		}
+
+		@Override
+		public void initChannel(final SocketChannel ch) throws Exception {
+			if (log.isDebugEnabled()) {
+				log.debug("CONNECT {}", ch);
+			}
+
+			if (parent.channelGroup != null) {
+				parent.channelGroup.add(ch);
+			}
+
+			ChannelPipeline pipeline = ch.pipeline();
+
+			if (parent.sslContext != null) {
+				SslHandler sslHandler = parent.sslContext.newHandler(ch.alloc());
+				sslHandler.setHandshakeTimeoutMillis(parent.options.sslHandshakeTimeoutMillis());
+				pipeline.addFirst(NettyHandlerNames.SslHandler, sslHandler);
+			}
+
+			if (log.isDebugEnabled()) {
+				pipeline.addLast(NettyHandlerNames.LoggingHandler, parent.logger());
+			}
+
+			parent.onSetup(handler, ch);
+
+			if (onSetup != null) {
+				onSetup.accept(ch);
+			}
+			if (null != parent.options.onStart()) {
+				parent.options.onStart()
+				              .accept(ch);
+			}
+			if (null != parent.options.pipelineConfigurer()) {
+				parent.options.pipelineConfigurer()
+				              .accept(pipeline);
+			}
+		}
+	}
+
+	final static class OnBindListener implements ChannelFutureListener {
+
+		final MonoSink<NettyState> sink;
+
+		public OnBindListener(MonoSink<NettyState> sink) {
+			this.sink = sink;
+		}
+
+		@Override
+		public void operationComplete(ChannelFuture f) throws Exception {
+			if (log.isInfoEnabled()) {
+				log.info("BIND {} {}",
+						f.isSuccess() ? "OK" : "FAILED",
+						f.channel()
+						 .localAddress());
+			}
+			if (!f.isSuccess()) {
+				if (f.cause() != null) {
+					sink.error(f.cause());
+				}
+				else {
+					sink.error(new IOException("error while binding to " + f.channel()
+					                                                        .localAddress()));
+				}
+			}
+			else{
+				sink.success(NettyOperations.state(f.channel()));
+			}
+		}
+	}
+
+	final static Logger         log            = Loggers.getLogger(TcpServer.class);
+	static final AtomicLong     COUNTER        = new AtomicLong();
+	static final LoggingHandler loggingHandler = new LoggingHandler(TcpServer.class);
 }

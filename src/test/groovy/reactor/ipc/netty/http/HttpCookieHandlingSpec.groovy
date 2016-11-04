@@ -15,59 +15,50 @@
  */
 package reactor.ipc.netty.http
 
+import io.netty.handler.codec.http.cookie.Cookie
 import io.netty.handler.codec.http.cookie.DefaultCookie
 import reactor.core.publisher.Mono
-import reactor.ipc.netty.http.HttpClient
-import reactor.ipc.netty.http.HttpServer
 import spock.lang.Specification
 
 import java.time.Duration
 import java.util.function.Function
 
-public class HttpCookieHandlingSpec extends Specification{
+public class HttpCookieHandlingSpec extends Specification {
 
-  def "client without cookie gets a new one from server"(){
-
-	given: "a http server setting cookie 1.0"
-	def server = HttpServer.create(0)
+  def "client without cookie gets a new one from server"() {
 
 	when: "server is prepared"
-	server.get("/test"){
-	   req ->
-		req.addResponseCookie(new DefaultCookie("cookie1", "test_value"))
-			.send(req.receive().log("server received"))
-	}
+	def server = HttpServer.create(0).newRouter {
+	  it.get("/test") { req, resp ->
+		resp.addCookie(new DefaultCookie("cookie1", "test_value"))
+				.send(req.receive().log("server received"))
+	  }
+	}.block()
 
-	then: "the server was started"
-	server
-	!server.start().block(Duration.ofSeconds(5))
-
-	when: "a request with URI is sent onto the server"
-	def client = HttpClient.create("localhost", server.listenAddress.port)
-
-	def cookieResponse = client.get('/test').then({
-	  replies -> Mono.just(replies.cookies())
-	} as Function)
-	.doOnSuccess{
-	  println it
-	}
-	.doOnError {
-	  println "Failed requesting server: $it"
-	}
+	def cookieResponse = HttpClient.create("localhost", server.address().port).
+			get('/test')
+			.then({ replies -> Mono.just(replies.cookies()) }
+					as Function<HttpClientResponse, Mono<Map<CharSequence, Set<Cookie>>>>)
+			.doOnSuccess {
+	  			println it
+			}
+			.doOnError {
+	  			println "Failed requesting server: $it"
+			}
 
 	then: "data with cookies was received"
 	def value = ""
 	try {
-	  def receivedCookies = cookieResponse.block(Duration.ofSeconds(5))
+	  def receivedCookies = cookieResponse.block()
 	  value = receivedCookies.get("cookie1")[0].value()
-	} catch (RuntimeException ex) {
+	}
+	catch (RuntimeException ex) {
 	  println ex.getMessage();
 	}
 	value == "test_value"
 
 	cleanup: "the client/server where stopped"
-	client?.shutdown()
-	server?.shutdown()
+	server?.dispose()
   }
 
 }

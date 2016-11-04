@@ -16,6 +16,14 @@
 
 package reactor.ipc.netty.http;
 
+import java.util.function.BiFunction;
+
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.cookie.Cookie;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.channel.NettyOperations;
+
 /**
  * An Http Reactive client write contract for outgoing requests. It inherits several
  * accessor related to HTTP flow : headers, params, URI, method, websocket...
@@ -23,13 +31,24 @@ package reactor.ipc.netty.http;
  * @author Stephane Maldini
  */
 public interface HttpClientRequest extends HttpOutbound {
-
 	/**
-	 * Return true  if redirected will be followed
-	 *
-	 * @return true if redirected will be followed
+	 * add the passed cookie
+	 * @return this
 	 */
-	boolean isFollowRedirect();
+	@Override
+	HttpClientRequest addCookie(Cookie cookie);
+
+	@Override
+	HttpClientRequest keepAlive(boolean keepAlive);
+
+	@Override
+	HttpClientRequest disableChunkedTransfer();
+
+	@Override
+	HttpClientRequest addHeader(CharSequence name, CharSequence value);
+
+	@Override
+	HttpClientRequest flushEach();
 
 	/**
 	 * Enable http status 302 auto-redirect support
@@ -39,12 +58,49 @@ public interface HttpClientRequest extends HttpOutbound {
 	HttpClientRequest followRedirect();
 
 	/**
+	 * @param name
+	 * @param value
+	 *
+	 * @return
+	 */
+	HttpClientRequest header(CharSequence name, CharSequence value);
+
+	/**
+	 * Return true  if redirected will be followed
+	 *
+	 * @return true if redirected will be followed
+	 */
+	boolean isFollowRedirect();
+
+	/**
 	 * Return the previous redirections or empty array
 	 *
 	 * @return the previous redirections or empty array
 	 */
 	String[] redirectedFrom();
 
-	@Override
-	HttpOutbound flushEach();
+	/**
+	 *
+	 * @return
+	 */
+	HttpHeaders requestHeaders();
+
+
+
+	/**
+	 * Upgrade connection to Websocket
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> upgradeToWebsocket() {
+		return upgradeToWebsocket(uri(), false, NettyOperations.noopHandler());
+	}
+
+	/**
+	 * Upgrade connection to Websocket with text plain payloads
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> upgradeToTextWebsocket() {
+		return upgradeToWebsocket(uri(), true, NettyOperations.noopHandler());
+	}
+
 }

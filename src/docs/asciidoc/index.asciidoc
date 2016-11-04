@@ -11,7 +11,3 @@ include::net-tcp.adoc[]
 include::net-http.adoc[]
 include::net-e2e.adoc[]
 
-
-[[reactor-samples]]
-
-include::recipes.adoc[]

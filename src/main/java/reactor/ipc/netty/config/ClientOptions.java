@@ -24,10 +24,13 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
-import reactor.ipc.netty.common.DuplexSocket;
+import io.netty.util.NetUtil;
+
+import static reactor.ipc.netty.NettyConnector.DEFAULT_PORT;
 
 /**
  * @author Stephane Maldini
@@ -38,54 +41,52 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	 * Proxy Type
 	 */
 	public enum Proxy {
-		HTTP,
-		SOCKS4,
-		SOCKS5
+		HTTP, SOCKS4, SOCKS5
 	}
 
 	/**
 	 * @return
 	 */
-	public static ClientOptions create(){
+	public static ClientOptions create() {
 		return new ClientOptions();
 	}
 
 	/**
-	 *
 	 * @param host
+	 *
 	 * @return
 	 */
-	public static ClientOptions to(String host){
-		return to(host, DuplexSocket.DEFAULT_PORT);
+	public static ClientOptions to(String host) {
+		return to(host, DEFAULT_PORT);
 	}
 
 	/**
-	 *
 	 * @param host
 	 * @param port
+	 *
 	 * @return
 	 */
-	public static ClientOptions to(String host, int port){
+	public static ClientOptions to(String host, int port) {
 		return create().connect(host, port);
 	}
 
-	String                                       proxyUsername;
+	String                                     proxyUsername;
 	Function<? super String, ? extends String> proxyPassword;
-	Supplier<? extends InetSocketAddress>        proxyAddress;
-	Proxy                                        proxyType;
+	Supplier<? extends InetSocketAddress>      proxyAddress;
+	Proxy                                      proxyType;
 
-	Supplier<? extends InetSocketAddress> connectAddress;
+	Supplier<? extends InetSocketAddress> connectAddress = DEFAULT_ADDRESS;
 
-	ClientOptions(){
+	ClientOptions() {
 
 	}
-
 
 	/**
 	 * The host and port to which this client should connect.
 	 *
 	 * @param host The host to connect to.
 	 * @param port The port to connect to.
+	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(@Nonnull String host, int port) {
@@ -96,6 +97,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	 * The address to which this client should connect.
 	 *
 	 * @param connectAddress The address to connect to.
+	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(@Nonnull InetSocketAddress connectAddress) {
@@ -106,12 +108,10 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	 * The address to which this client should connect.
 	 *
 	 * @param connectAddress The address to connect to.
+	 *
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
-		if(this.connectAddress != null) {
-			throw new IllegalStateException("Connect address is already set.");
-		}
 		this.connectAddress = connectAddress;
 		return this;
 	}
@@ -129,7 +129,10 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 			int port,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
-		return proxy(type, InetSocketAddress.createUnresolved(host, port), username, password);
+		return proxy(type,
+				InetSocketAddress.createUnresolved(host, port),
+				username,
+				password);
 	}
 
 	/**
@@ -167,7 +170,9 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 			@Nonnull InetSocketAddress connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
-		return proxy(type, new InetResolverProxySupplier(connectAddress), username,
+		return proxy(type,
+				new InetResolverProxySupplier(connectAddress),
+				username,
 				password);
 	}
 
@@ -203,6 +208,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 
 	/**
 	 * Return the eventual remote host
+	 *
 	 * @return the eventual remote host
 	 */
 	public InetSocketAddress remoteAddress() {
@@ -210,7 +216,6 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	}
 
 	/**
-	 *
 	 * @return this {@link ClientOptions}
 	 */
 	public ClientOptions sslSupport() {
@@ -220,6 +225,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 
 	/**
 	 * Proxy username if any
+	 *
 	 * @return a proxy username String
 	 */
 	public String proxyUsername() {
@@ -228,6 +234,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 
 	/**
 	 * Proxy password selector if any
+	 *
 	 * @return a proxy password selector
 	 */
 	public Function<? super String, ? extends String> proxyPassword() {
@@ -236,6 +243,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 
 	/**
 	 * Proxy address supplier if any
+	 *
 	 * @return a proxy address supplier
 	 */
 	public Supplier<? extends InetSocketAddress> proxyAddress() {
@@ -244,6 +252,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 
 	/**
 	 * {@link Proxy} category to use
+	 *
 	 * @return {@link Proxy} category to use
 	 */
 	public Proxy proxyType() {
@@ -251,7 +260,6 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	}
 
 	/**
-	 *
 	 * @return immutable {@link ClientOptions}
 	 */
 	public ClientOptions toImmutable() {
@@ -260,58 +268,31 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 
 	final static class ImmutableClientOptions extends ClientOptions {
 
-		final ClientOptions options;
-
 		ImmutableClientOptions(ClientOptions options) {
-			this.options = options;
-			if(options.ssl() != null){
-					super.ssl(options.ssl());
-			}
+			this.proxyUsername = options.proxyUsername;
+			this.proxyPassword = options.proxyPassword;
+			this.proxyAddress = options.proxyAddress;
+			this.proxyType = options.proxyType;
+			this.connectAddress = options.connectAddress;
+
+			this.timeout = options.timeout;
+			this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis;
+			this.keepAlive = options.keepAlive;
+			this.linger = options.linger;
+			this.tcpNoDelay = options.tcpNoDelay;
+			this.rcvbuf = options.rcvbuf;
+			this.sndbuf = options.sndbuf;
+			this.managed = options.managed;
+			this.pipelineConfigurer = options.pipelineConfigurer;
+			this.eventLoopGroup = options.eventLoopGroup;
+			this.daemon = options.daemon;
+			this.sslOptions = options.sslOptions;
+			this.onStart = options.onStart;
 		}
 
 		@Override
 		public ClientOptions toImmutable() {
 			return this;
-		}
-
-		@Override
-		public InetSocketAddress remoteAddress() {
-			return options.remoteAddress();
-		}
-
-		@Override
-		public EventLoopGroup eventLoopGroup() {
-			return options.eventLoopGroup();
-		}
-
-		@Override
-		public boolean managed() {
-			return options.managed();
-		}
-
-		@Override
-		public boolean keepAlive() {
-			return options.keepAlive();
-		}
-
-		@Override
-		public int linger() {
-			return options.linger();
-		}
-
-		@Override
-		public Consumer<ChannelPipeline> pipelineConfigurer() {
-			return options.pipelineConfigurer();
-		}
-
-		@Override
-		public int rcvbuf() {
-			return options.rcvbuf();
-		}
-
-		@Override
-		public int sndbuf() {
-			return options.sndbuf();
 		}
 
 		@Override
@@ -330,48 +311,8 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 		}
 
 		@Override
-		public boolean tcpNoDelay() {
-			return options.tcpNoDelay();
-		}
-
-		@Override
-		public long timeoutMillis() {
-			return options.timeoutMillis();
-		}
-
-		@Override
-		public Proxy proxyType() {
-			return options.proxyType();
-		}
-
-		@Override
-		public String proxyUsername() {
-			return options.proxyUsername();
-		}
-
-		@Override
-		public Function<? super String, ? extends String> proxyPassword() {
-			return options.proxyPassword();
-		}
-
-		@Override
-		public Supplier<? extends InetSocketAddress> proxyAddress() {
-			return options.proxyAddress();
-		}
-
-		@Override
 		public ClientOptions daemon(boolean daemon) {
 			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public boolean daemon() {
-			return options.daemon();
-		}
-
-		@Override
-		public long sslHandshakeTimeoutMillis() {
-			return options.sslHandshakeTimeoutMillis();
 		}
 
 		@Override
@@ -438,6 +379,11 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 		}
 
 		@Override
+		public ClientOptions onStart(Consumer<? super Channel> onBind) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
 		public ClientOptions tcpNoDelay(boolean tcpNoDelay) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
@@ -446,7 +392,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	static final class InetResolverSupplier implements Supplier<InetSocketAddress> {
 
 		final InetSocketAddress connectAddress;
-		final ClientOptions parent;
+		final ClientOptions     parent;
 
 		public InetResolverSupplier(InetSocketAddress address, ClientOptions parent) {
 			this.connectAddress = address;
@@ -476,4 +422,8 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 							connectAddress.getPort()) : connectAddress;
 		}
 	}
+
+	static final InetSocketAddress           LOCALHOST       =
+			new InetSocketAddress(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT);
+	static final Supplier<InetSocketAddress> DEFAULT_ADDRESS = () -> LOCALHOST;
 }

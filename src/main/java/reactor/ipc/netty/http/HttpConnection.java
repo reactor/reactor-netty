@@ -19,11 +19,9 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Set;
 
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.Cookie;
-import reactor.ipc.netty.common.NettyChannel;
 
 /**
  *
@@ -40,11 +38,6 @@ public interface HttpConnection {
 	 */
 	Map<CharSequence, Set<Cookie>> cookies();
 
-	/**
-	 *
-	 * @return
-	 */
-	Channel delegate();
 
 	/**
 	 * Is the request keepAlive
@@ -62,13 +55,6 @@ public interface HttpConnection {
 	 * @return the resolved request method (HTTP 1.1 etc)
 	 */
 	HttpMethod method();
-
-	/**
-	 * Assign event handlers to certain channel lifecycle events.
-	 *
-	 * @return Lifecycle to build the events handlers
-	 */
-	NettyChannel.Lifecycle on();
 
 	/**
 	 * Get the address of the remote peer.

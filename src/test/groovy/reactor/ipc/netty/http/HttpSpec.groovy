@@ -18,9 +18,6 @@ package reactor.ipc.netty.http
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.ipc.netty.config.ClientOptions
-import reactor.ipc.netty.http.HttpClient
-import reactor.ipc.netty.http.HttpException
-import reactor.ipc.netty.http.HttpServer
 import spock.lang.Specification
 
 import java.time.Duration
@@ -34,31 +31,22 @@ import java.util.function.Function
 class HttpSpec extends Specification {
 
   def "http responds empty"() {
-	given: "a simple HttpServer"
-
-	//Listen on localhost using default impl (Netty) and assign a global codec to receive/reply String data
-	def server = HttpServer.create(0)
 
 	when: "the server is prepared"
 
 	//prepare post request consumer on /test/* and capture the URL parameter "param"
-	server.post('/test/{param}') {
-	  req
-		->
-
-		//log then transform then log received http request content from the request body and the resolved URL parameter "param"
-		//the returned stream is bound to the request stream and will auto read/close accordingly
-		req.send(Flux.empty())
-	}
-
-	then: "the server was started"
-	server
-	!server.start().block(Duration.ofSeconds(500))
-
-	when: "data is sent with Reactor HTTP support"
+	def server = HttpServer.create(0).newRouter { r ->
+	  r.post('/test/{param}') {
+		req, res
+		  ->
+		  //log then transform then log received http request content from the request body and the resolved URL parameter "param"
+		  //the returned stream is bound to the request stream and will auto read/close accordingly
+		  res.send(Flux.empty())
+	  }
+	}.block()
 
 	//Prepare a client using default impl (Netty) to connect on http://localhost:port/ and assign global codec to send/receive String data
-	def client = HttpClient.create(ClientOptions.to("localhost", server.listenAddress.port))
+	def client = HttpClient.create(ClientOptions.to("localhost", server.address().port))
 
 	//prepare an http post request-reply flow
 	def content = client.post('/test/World') { req ->
@@ -68,11 +56,13 @@ class HttpSpec extends Specification {
 	  //return a producing stream to send some data along the request
 	  req.sendString(Mono.just("Hello").log('client-send'))
 
-	}.then ({ replies ->
-	  //successful request, listen for the first returned next reply and pass it downstream
-	  replies.receive().log('client-received').next()
+	}.then({
+	  replies
+		->
+		//successful request, listen for the first returned next reply and pass it downstream
+		replies.receive().log('client-received').next()
 	} as Function)
-	.doOnError {
+			.doOnError {
 	  //something failed during the request or the reply processing
 	  println "Failed requesting server: $it"
 	}
@@ -80,38 +70,33 @@ class HttpSpec extends Specification {
 	then: "data was not recieved"
 	//the produced reply should be there soon
 	!content.block(Duration.ofSeconds(5000))
+
+	server.dispose()
   }
 
-
-	def "http responds to requests from clients"() {
-	given: "a simple HttpServer"
-
-	//Listen on localhost using default impl (Netty) and assign a global codec to receive/reply String data
-	def server = HttpServer.create(0)
-
+  def "http responds to requests from clients"() {
 	when: "the server is prepared"
 
 	//prepare post request consumer on /test/* and capture the URL parameter "param"
-	server.post('/test/{param}') { req ->
+	def server = HttpServer.create(0).newRouter { r ->
+	  r.post('/test/{param}') {
+		req, res
+		  ->
 
-		//log then transform then log received http request content from the request body and the resolved URL parameter "param"
-		//the returned stream is bound to the request stream and will auto read/close accordingly
+		  //log then transform then log received http request content from the request body and the resolved URL parameter "param"
+		  //the returned stream is bound to the request stream and will auto read/close accordingly
 
-		req.sendString(req.receiveString()
-				.log('server-received')
-				.map { it + ' ' + req.param('param') + '!' }
-				.log('server-reply'))
+		  res.sendString(req.receive()
+				  .asString()
+				  .log('server-received')
+				  .map { it + ' ' + req.param('param') + '!' }
+				  .log('server-reply'))
 
-	}
-
-	then: "the server was started"
-	server
-	!server.start().block(Duration.ofSeconds(5))
-
-	when: "data is sent with Reactor HTTP support"
+	  }
+	}.block()
 
 	//Prepare a client using default impl (Netty) to connect on http://localhost:port/ and assign global codec to send/receive String data
-	def client = HttpClient.create("localhost", server.listenAddress.port)
+	def client = HttpClient.create("localhost", server.address().port)
 
 	//prepare an http post request-reply flow
 	def content = client.post('/test/World') { req ->
@@ -122,10 +107,13 @@ class HttpSpec extends Specification {
 	  req.sendString(Flux.just("Hello")
 			  .log('client-send'))
 
-	}.flatMap { replies ->
-	  //successful request, listen for the first returned next reply and pass it downstream
-	  replies.receiveString()
-			  .log('client-received')
+	}.flatMap {
+	  replies
+		->
+		//successful request, listen for the first returned next reply and pass it downstream
+		replies.receive()
+				.asString()
+				.log('client-received')
 	}
 	.publishNext()
 			.doOnError {
@@ -141,38 +129,29 @@ class HttpSpec extends Specification {
 
 	cleanup: "the client/server where stopped"
 	//note how we order first the client then the server shutdown
-	client?.shutdown()
-	server?.shutdown()
+	server?.dispose()
   }
 
   def "http error with requests from clients"() {
-	given: "a simple HttpServer"
-
-	//Listen on localhost using default impl (Netty) and assign a global codec to receive/reply String data
-	def server = HttpServer.create(0)
 
 	when: "the server is prepared"
 
 	CountDownLatch errored = new CountDownLatch(1)
 
-	server.get('/test') { req -> throw new Exception()
-	}.get('/test2') { req ->
-	  req.send(Flux.error(new Exception())).log("send").doOnError({
-		errored
-				.countDown()
-	  })
-	}.get('/test3') { req -> return Flux.error(new Exception())
-	}
+	def server = HttpServer.create(0).newRouter { r ->
+	  r.get('/test') { req, res -> throw new Exception() }
+			  .get('/test2') { req, res ->
+		res.send(Flux.error(new Exception())).log("send").doOnError({
+		  errored.countDown()
+		})
+	  }
+	  .get('/test3') { req, res -> return Flux.error(new Exception()) }
+	}.block()
 
-	then: "the server was started"
-	server
-	!server.start().block(Duration.ofSeconds(5))
-
-	when:
-	def client = HttpClient.create("localhost", server.listenAddress.port)
+	def client = HttpClient.create("localhost", server.address().port)
 
 	then:
-	server.listenAddress.port
+	server.address().port
 
 
 
@@ -181,17 +160,17 @@ class HttpSpec extends Specification {
 	//prepare an http post request-reply flow
 	client
 			.get('/test')
-			.then ({ replies ->
-	 			 Mono.just(replies.status().code())
+			.then({ replies ->
+	  Mono.just(replies.status().code())
 			  .log("received-status-1")
-			} as Function)
+	} as Function)
 			.block(Duration.ofSeconds(5))
 
 
 
 	then: "data was recieved"
 	//the produced reply should be there soon
-	thrown HttpException
+	thrown HttpClientException
 
 	when:
 	//prepare an http post request-reply flow
@@ -221,19 +200,17 @@ class HttpSpec extends Specification {
 
 	then: "data was recieved"
 	//the produced reply should be there soon
-	thrown HttpException
+	thrown HttpClientException
 
 	cleanup: "the client/server where stopped"
 	//note how we order first the client then the server shutdown
-	client?.shutdown()
-	server?.shutdown()
+	server?.dispose()
   }
 
   def "WebSocket responds to requests from clients"() {
 	given: "a simple HttpServer"
 
 	//Listen on localhost using default impl (Netty) and assign a global codec to receive/reply String data
-	def server = HttpServer.create(0)
 
 	def clientRes = 0
 	def serverRes = 0
@@ -241,31 +218,27 @@ class HttpSpec extends Specification {
 	when: "the server is prepared"
 
 	//prepare websocket request consumer on /test/* and capture the URL parameter "param"
-	server
-			.get('/test/{param}') {
-	  req
-		->
-		println req.headers().get('test')
-		//log then transform then log received http request content from the request body and the resolved URL parameter "param"
-		//the returned stream is bound to the request stream and will auto read/close accordingly
-		req.responseHeader("content-type", "text/plain")
-				.upgradeToWebsocket()
-				.thenMany(req
-				.flushEach()
-					.sendString(req.receiveString()
-						.doOnNext { serverRes++ }
-						.map { it + ' ' + req.param('param') + '!' }
-				.log('server-reply')))
-	}
-	server.start().block(Duration.ofSeconds(5))
-
-	then: "the server was started"
-	server
-
-	when: "data is sent with Reactor HTTP support"
+	def server = HttpServer.create(0).newRouter { r ->
+	  r.get('/test/{param}') {
+		req, resp
+		  ->
+		  println req.headers().get('test')
+		  //log then transform then log received http request content from the request body and the resolved URL parameter "param"
+		  //the returned stream is bound to the request stream and will auto read/close accordingly
+		  resp.header("content-type", "text/plain")
+				  .upgradeToWebsocket { i, o ->
+			o.flushEach()
+					.sendString(i.receive()
+					.asString()
+					.doOnNext { serverRes++ }
+					.map { it + ' ' + req.param('param') + '!' }
+					.log('server-reply'))
+		  }
+	  }
+	}.block(Duration.ofSeconds(5))
 
 	//Prepare a client using default impl (Netty) to connect on http://localhost:port/ and assign global codec to send/receive String data
-	def client = HttpClient.create("localhost", server.listenAddress.port)
+	def client = HttpClient.create("localhost", server.address().port)
 
 	//prepare an http websocket request-reply flow
 	def content = client.get('/test/World') { req ->
@@ -274,37 +247,42 @@ class HttpSpec extends Specification {
 
 	  //return a producing stream to send some data along the request
 	  req.flushEach()
-			  .upgradeToTextWebsocket().concatWith(req.sendString(Flux
-				.range(1, 1000)
+			  .upgradeToTextWebsocket { i, o ->
+				o.sendString(Flux
+				  .range(1, 1000)
 				  .log('client-send')
-				.map { it.toString() }))
+				  .map { it.toString() })
+			  }
 
-	}.flatMap { replies ->
-	  //successful handshake, listen for the first returned next replies and pass it downstream
+		}.flatMap {
 	  replies
-			  .receiveString()
-			  .log('client-received')
-			  .doOnNext { clientRes++ }
+		->
+		//successful handshake, listen for the first returned next replies and pass it downstream
+		replies
+				.receive()
+				.asString()
+				.log('client-received')
+				.doOnNext { clientRes++ }
 	}
 	.take(1000)
 			.collectList()
 			.cache()
 			.doOnError {
-	  			//something failed during the request or the reply processing
-	  			println "Failed requesting server: $it"
-			}
+	  //something failed during the request or the reply processing
+	  println "Failed requesting server: $it"
+	}
 
 
 	println "server: $serverRes / client: $clientRes"
 
 	then: "data was recieved"
 	//the produced reply should be there soon
+	//content.block(Duration.ofSeconds(15))[1000 - 1] == "1000 World!"
 	content.block(Duration.ofSeconds(15))[1000 - 1] == "1000 World!"
 
 	cleanup: "the client/server where stopped"
 	//note how we order first the client then the server shutdown
-	client?.shutdown()
-	server?.shutdown()
+	server?.dispose()
   }
 
 }

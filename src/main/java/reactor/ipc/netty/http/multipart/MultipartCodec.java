@@ -21,26 +21,16 @@ import java.util.regex.Pattern;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import reactor.core.publisher.Flux;
-import reactor.ipc.netty.common.ByteBufEncodedFlux;
+import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.http.HttpInbound;
 
 /**
  * @author Ben Hale
  */
-public final class MultipartCodec {
+final class MultipartCodec {
 
 	static final Pattern MULTIPART_PATTERN =
 			Pattern.compile("multipart.*; boundary=(.+)");
-
-	/**
-	 *
-	 * @param inbound
-	 * @return
-	 */
-	public static Flux<ByteBufEncodedFlux> decode(HttpInbound inbound) {
-		String boundary = extractBoundary(inbound.responseHeaders());
-		return new MultipartDecoder(inbound.receive(), boundary, inbound.delegate().alloc());
-	}
 
 	static String extractBoundary(HttpHeaders headers) {
 		return headers.entries()

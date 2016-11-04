@@ -23,15 +23,15 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,12 +39,11 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.buffer.Buffer;
-import reactor.ipc.netty.common.NettyCodec;
+import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.SocketUtils;
+import reactor.ipc.netty.channel.NettyHandlerNames;
 import reactor.ipc.netty.config.ClientOptions;
 import reactor.ipc.netty.http.HttpClient;
-import reactor.ipc.netty.tcp.TcpClient;
-import reactor.ipc.netty.util.SocketUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -102,22 +101,22 @@ public class TcpClientTests {
 	public void testTcpClient() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		TcpClient client = TcpClient.create("localhost", echoServerPort);
+		NettyState client = TcpClient.create("localhost", echoServerPort)
+		                             .newHandler((in, out) -> {
+			                             in.receive()
+			                               .log("conn")
+			                               .subscribe(s -> latch.countDown());
 
-		client.startAndAwait(conn -> {
-			conn.receive()
-			    .log("conn")
-			    .subscribe(s -> latch.countDown());
+			                             out.sendString(Flux.just("Hello World!"))
+			                                .subscribe();
 
-			conn.sendString(Flux.just("Hello World!"))
-			    .subscribe();
-
-			return Flux.never();
-		});
+			                             return Flux.never();
+		                             })
+		                             .block();
 
 		latch.await(30, TimeUnit.SECONDS);
 
-		client.shutdown();
+		client.dispose();
 
 		assertThat("latch was counted down", latch.getCount(), is(0L));
 	}
@@ -127,20 +126,22 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(1);
 
 		TcpClient client = TcpClient.create(ClientOptions.create()
-		                                                 .connect(new InetSocketAddress(echoServerPort)));
+		                                                 .connect(new InetSocketAddress(
+				                                                 echoServerPort)));
 
-		client.start(input -> {
-			input.receive()
-			     .subscribe(d -> latch.countDown());
-			input.sendString(Flux.just("Hello"))
-			     .subscribe();
+		NettyState s = client.newHandler((in, out) -> {
+			in.receive()
+			  .subscribe(d -> latch.countDown());
+			out.sendString(Flux.just("Hello"))
+			   .subscribe();
 
 			return Flux.never();
-		}).block(Duration.ofSeconds(5));
+		})
+		                     .block(Duration.ofSeconds(5));
 
 		latch.await(5, TimeUnit.SECONDS);
 
-		client.shutdown();
+		s.dispose();
 
 		assertThat("latch was counted down", latch.getCount(), is(0L));
 	}
@@ -151,51 +152,57 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<String>();
 
-		TcpClient client = TcpClient.create("localhost", echoServerPort);
+		NettyState client =
 
-		client.start(channel -> {
-			channel.receive(NettyCodec.linefeed())
-			       .log("received")
-			       .subscribe(s -> {
-						strings.add(s);
-						latch.countDown();
-					});
+				TcpClient.create(ClientOptions.to("localhost", echoServerPort)
+				                              .pipelineConfigurer(pipeline -> pipeline.addBefore(
+						                              NettyHandlerNames.ReactiveBridge,
+						                              "codec",
+						                              new LineBasedFrameDecoder(8 * 1024))))
+				         .newHandler((in, out) -> {
+					         in.receive()
+					           .asString()
+					           .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					           .log("received")
+					           .subscribe(s -> {
+						           strings.add(s);
+						           latch.countDown();
+					           });
 
-			channel.map(
-			  Flux.range(1, messages)
-				.map(i -> "Hello World!")
-				.subscribeOn(Schedulers.parallel())
-			, NettyCodec.linefeed()).subscribe();
+					         out.sendString(Flux.range(1, messages)
+					                            .map(i -> "Hello World!" + i + "\n")
+					                            .subscribeOn(Schedulers.parallel()))
+					            .subscribe();
 
-			return Flux.never();
-		}).block(Duration.ofSeconds(5));
+					         return Flux.never();
+				         })
+				         .block(Duration.ofSeconds(5));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
-		  latch.await(5, TimeUnit.SECONDS));
-		client.shutdown();
+				latch.await(5, TimeUnit.SECONDS));
+		client.dispose();
 
 		assertEquals(messages, strings.size());
-		Set<String> uniqueStrings = new HashSet<String>(strings);
-		assertEquals(1, uniqueStrings.size());
-		assertEquals("Hello World!", uniqueStrings.iterator().next());
 	}
 
 	@Test
 	public void closingPromiseIsFulfilled() throws InterruptedException {
 		TcpClient client = TcpClient.create("localhost", abortServerPort);
 
-		client.start(null);
-
-		client.shutdown().block(Duration.ofSeconds(30));
+		client.newHandler((in, out) -> Mono.empty())
+		      .block()
+		      .onClose()
+		      .block();
 	}
 
 	@Test
-	public void connectionWillRetryConnectionAttemptWhenItFails() throws InterruptedException {
+	public void connectionWillRetryConnectionAttemptWhenItFails()
+			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
 
 		TcpClient.create("localhost", abortServerPort + 3)
-		         .start(null)
+		         .newHandler((in, out) -> Mono.never())
 		         .retryWhen(errors -> errors.zipWith(Flux.range(1, 4), (a, b) -> b)
 		                                    .flatMap(attempt -> {
 			                                    switch (attempt) {
@@ -216,33 +223,40 @@ public class TcpClientTests {
 		         .subscribe(System.out::println);
 
 		latch.await(5, TimeUnit.SECONDS);
-		assertTrue("latch was counted down:"+latch.getCount(), latch.getCount() == 0 );
+		assertTrue("latch was counted down:" + latch.getCount(), latch.getCount() == 0);
 		assertThat("totalDelay was >1.6s", totalDelay.get(), greaterThanOrEqualTo(1600L));
 	}
 
 	@Test
-	public void connectionWillAttemptToReconnectWhenItIsDropped() throws InterruptedException, IOException {
+	public void connectionWillAttemptToReconnectWhenItIsDropped()
+			throws InterruptedException, IOException {
 		final CountDownLatch connectionLatch = new CountDownLatch(1);
 		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
 		TcpClient tcpClient = TcpClient.create("localhost", abortServerPort);
 
-		tcpClient.start(connection -> {
+		Mono<? extends NettyState> handler = tcpClient.newHandler((in, out) -> {
 			System.out.println("Start");
 			connectionLatch.countDown();
-			connection.receive()
-			          .subscribe();
+			in.receive()
+			  .subscribe();
 			return Flux.never();
-		})
-		         .repeatWhenEmpty(tries -> tries.take(1).doOnNext(s -> reconnectionLatch
-				         .countDown()))
+		});
+
+		handler.log()
+		       .block()
+		       .onClose()
+		       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
 		         .block();
 
-		assertTrue("Initial connection is made", connectionLatch.await(5, TimeUnit.SECONDS));
-		assertTrue("A reconnect attempt was made", reconnectionLatch.await(5, TimeUnit.SECONDS));
+		assertTrue("Initial connection is made",
+				connectionLatch.await(5, TimeUnit.SECONDS));
+		assertTrue("A reconnect attempt was made",
+				reconnectionLatch.await(5, TimeUnit.SECONDS));
 	}
 
 	@Test
-	public void consumerSpecAssignsEventHandlers() throws InterruptedException, IOException {
+	public void consumerSpecAssignsEventHandlers()
+			throws InterruptedException, IOException {
 		final CountDownLatch latch = new CountDownLatch(2);
 		final CountDownLatch close = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
@@ -250,40 +264,43 @@ public class TcpClientTests {
 
 		TcpClient client = TcpClient.create("localhost", timeoutServerPort);
 
-		client.startAndAwait(p -> {
-			  p.on()
-				.close(close::countDown)
-				.readIdle(500, () -> {
-					totalDelay.addAndGet(System.currentTimeMillis() - start);
-					latch.countDown();
-				})
-				.writeIdle(500, () -> {
-					totalDelay.addAndGet(System.currentTimeMillis() - start);
-					latch.countDown();
-				});
+		NettyState s = client.newHandler((in, out) -> {
+			in.onClose(close::countDown)
+			  .onReadIdle(500, () -> {
+				  totalDelay.addAndGet(System.currentTimeMillis() - start);
+				  latch.countDown();
+			  });
 
-			  return Mono.delayMillis(3000).then().log();
-		  }
-		);
+			out.onWriteIdle(500, () -> {
+				totalDelay.addAndGet(System.currentTimeMillis() - start);
+				latch.countDown();
+			});
+
+			return Mono.delayMillis(3000)
+			           .then()
+			           .log();
+		})
+		                     .block();
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 		assertTrue("close was counted down", close.await(30, TimeUnit.SECONDS));
 		assertThat("totalDelay was >500ms", totalDelay.get(), greaterThanOrEqualTo(500L));
+		s.dispose();
 	}
 
 	@Test
-	public void readIdleDoesNotFireWhileDataIsBeingRead() throws InterruptedException, IOException {
+	public void readIdleDoesNotFireWhileDataIsBeingRead()
+			throws InterruptedException, IOException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		long start = System.currentTimeMillis();
 
 		TcpClient client = TcpClient.create("localhost", heartbeatServerPort);
 
-		client.startAndAwait(p -> {
-			  p.on()
-				.readIdle(500, latch::countDown);
-			  return Flux.never();
-		  }
-		);
+		NettyState s = client.newHandler((in, out) -> {
+			in.onReadIdle(500, latch::countDown);
+			return Flux.never();
+		})
+		                     .block();
 
 		Thread.sleep(700);
 		heartbeatServer.close();
@@ -293,28 +310,31 @@ public class TcpClientTests {
 		long duration = System.currentTimeMillis() - start;
 
 		assertThat(duration, is(greaterThanOrEqualTo(500L)));
+		s.dispose();
 	}
 
 	@Test
-	public void writeIdleDoesNotFireWhileDataIsBeingSent() throws InterruptedException, IOException {
+	public void writeIdleDoesNotFireWhileDataIsBeingSent()
+			throws InterruptedException, IOException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		long start = System.currentTimeMillis();
 
-		TcpClient client = TcpClient.create("localhost", echoServerPort);
+		NettyState client = TcpClient.create("localhost", echoServerPort)
+		                             .newHandler((in, out) -> {
+			                             System.out.println("hello");
+			                             out.onWriteIdle(500, latch::countDown);
 
-		client.startAndAwait(connection -> {
-			System.out.println("hello");
-			  connection.on()
-				.writeIdle(500, latch::countDown);
+			                             List<Publisher<Void>> allWrites =
+					                             new ArrayList<>();
+			                             for (int i = 0; i < 5; i++) {
+				                             allWrites.add(out.sendString(Flux.just("a")
+				                                                              .delayMillis(
+						                                                              750)));
+			                             }
+			                             return Flux.merge(allWrites);
+		                             })
+		                             .block();
 
-			  List<Publisher<Void>> allWrites = new ArrayList<>();
-			  for (int i = 0; i < 5; i++) {
-				  allWrites.add(connection.sendString(Flux.just("a")
-				                                          .delayMillis(750)));
-			  }
-			  return Flux.merge(allWrites);
-		  }
-		);
 		System.out.println("Started");
 
 		assertTrue(latch.await(5, TimeUnit.SECONDS));
@@ -322,7 +342,7 @@ public class TcpClientTests {
 		long duration = System.currentTimeMillis() - start;
 
 		assertThat(duration, is(greaterThanOrEqualTo(500l)));
-		client.shutdown();
+		client.dispose();
 	}
 
 	@Test
@@ -331,15 +351,17 @@ public class TcpClientTests {
 
 		final CountDownLatch latch = new CountDownLatch(1);
 		System.out.println(client.get("http://www.google.com/?q=test%20d%20dq")
-		      .then(r -> r.receiveString().collectList())
-		      .doOnSuccess(v -> latch.countDown())
-		      .block());
-
+		                         .then(r -> r.receive()
+		                                     .asString()
+		                                     .collectList())
+		                         .doOnSuccess(v -> latch.countDown())
+		                         .block());
 
 		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
 	}
 
 	private static final class EchoServer implements Runnable {
+
 		private final    int                 port;
 		private final    ServerSocketChannel server;
 		private volatile Thread              thread;
@@ -357,13 +379,14 @@ public class TcpClientTests {
 		@Override
 		public void run() {
 			try {
-				server.socket().bind(new InetSocketAddress(port));
+				server.socket()
+				      .bind(new InetSocketAddress(port));
 				server.configureBlocking(true);
 				thread = Thread.currentThread();
 				while (true) {
 					SocketChannel ch = server.accept();
 
-					ByteBuffer buffer = ByteBuffer.allocate(Buffer.SMALL_IO_BUFFER_SIZE);
+					ByteBuffer buffer = ByteBuffer.allocate(8192);
 					while (true) {
 						int read = ch.read(buffer);
 						if (read > 0) {
@@ -377,7 +400,8 @@ public class TcpClientTests {
 						buffer.rewind();
 					}
 				}
-			} catch (IOException e) {
+			}
+			catch (IOException e) {
 				// Server closed
 			}
 		}
@@ -395,7 +419,8 @@ public class TcpClientTests {
 	}
 
 	private static final class ConnectionAbortServer implements Runnable {
-		final            int                 port;
+
+		final         int                 port;
 		private final ServerSocketChannel server;
 
 		private ConnectionAbortServer(int port) {
@@ -412,13 +437,15 @@ public class TcpClientTests {
 		public void run() {
 			try {
 				server.configureBlocking(true);
-				server.socket().bind(new InetSocketAddress(port));
+				server.socket()
+				      .bind(new InetSocketAddress(port));
 				while (true) {
 					SocketChannel ch = server.accept();
 					System.out.println("ABORTING");
 					ch.close();
 				}
-			} catch (Exception e) {
+			}
+			catch (Exception e) {
 				// Server closed
 			}
 		}
@@ -432,7 +459,8 @@ public class TcpClientTests {
 	}
 
 	private static final class ConnectionTimeoutServer implements Runnable {
-		final            int                 port;
+
+		final         int                 port;
 		private final ServerSocketChannel server;
 
 		private ConnectionTimeoutServer(int port) {
@@ -449,13 +477,15 @@ public class TcpClientTests {
 		public void run() {
 			try {
 				server.configureBlocking(true);
-				server.socket().bind(new InetSocketAddress(port));
+				server.socket()
+				      .bind(new InetSocketAddress(port));
 				while (true) {
 					SocketChannel ch = server.accept();
 					ByteBuffer buff = ByteBuffer.allocate(1);
 					ch.read(buff);
 				}
-			} catch (IOException e) {
+			}
+			catch (IOException e) {
 			}
 		}
 
@@ -468,7 +498,8 @@ public class TcpClientTests {
 	}
 
 	private static final class HeartbeatServer implements Runnable {
-		final            int                 port;
+
+		final         int                 port;
 		private final ServerSocketChannel server;
 
 		private HeartbeatServer(int port) {
@@ -485,7 +516,8 @@ public class TcpClientTests {
 		public void run() {
 			try {
 				server.configureBlocking(true);
-				server.socket().bind(new InetSocketAddress(port));
+				server.socket()
+				      .bind(new InetSocketAddress(port));
 				while (true) {
 					SocketChannel ch = server.accept();
 					while (server.isOpen()) {
@@ -496,9 +528,11 @@ public class TcpClientTests {
 						Thread.sleep(100);
 					}
 				}
-			} catch (IOException e) {
+			}
+			catch (IOException e) {
 				// Server closed
-			} catch (InterruptedException ie) {
+			}
+			catch (InterruptedException ie) {
 
 			}
 		}

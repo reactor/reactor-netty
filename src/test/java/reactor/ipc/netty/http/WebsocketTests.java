@@ -20,9 +20,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.http.HttpClient;
-import reactor.ipc.netty.http.HttpInbound;
-import reactor.ipc.netty.http.HttpServer;
+import reactor.ipc.netty.NettyState;
 
 /**
  * @author tjreactive
@@ -30,7 +28,7 @@ import reactor.ipc.netty.http.HttpServer;
  */
 public class WebsocketTests {
 
-	private HttpServer httpServer;
+	private NettyState httpServer;
 
 	static final String auth =
 			"bearer abc";
@@ -41,23 +39,25 @@ public class WebsocketTests {
 	}
 
 	private void setupServer() throws InterruptedException {
-		httpServer = HttpServer.create(0);
-		httpServer.start(channel -> channel.upgradeToTextWebsocket()
-		                                   .concatWith(channel.sendString(Mono.just("test"))))
-		          .block();
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.upgradeToTextWebsocket((i, o) -> o.sendString(
+				                       Mono.just("test"))))
+		                       .block();
 	}
 
 	@Test
 	public void simpleTest() {
-			String res = HttpClient.create("localhost", httpServer.getListenAddress().getPort())
-			                       .get("/test",
-					                       c -> c.addHeader("Authorization", auth)
-					                             .upgradeToTextWebsocket())
-			                       .flatMap(HttpInbound::receiveString)
-			                       .log()
-			                       .collectList()
-			                       .block()
-			                       .get(0);
+		String res = HttpClient.create(httpServer.address()
+		                                         .getPort())
+		                       .get("/test",
+				                       out -> out.addHeader("Authorization", auth)
+				                                 .upgradeToTextWebsocket())
+		                       .flatMap(in -> in.receive()
+		                                        .asString())
+		                       .log()
+		                       .collectList()
+		                       .block()
+		                       .get(0);
 
 		if (!res.equals("test")) {
 			throw new IllegalStateException("test");
@@ -66,7 +66,7 @@ public class WebsocketTests {
 
 	@After
 	public void teardown() throws Exception {
-		httpServer.shutdown();
+		httpServer.dispose();
 	}
 
 

@@ -19,19 +19,19 @@ package reactor.ipc.netty.tcp;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.MonoSink;
 
 /**
  * @author Stephane Maldini
  */
 final class NettySslReader extends ChannelDuplexHandler {
 
-	final DirectProcessor<Void> secureCallback;
+	final MonoSink<?> sink;
 
 	boolean handshakeDone;
 
-	NettySslReader(DirectProcessor<Void> secureCallback) {
-		this.secureCallback = secureCallback;
+	NettySslReader(MonoSink<?> sink) {
+		this.sink = sink;
 	}
 
 	@Override
@@ -54,21 +54,12 @@ final class NettySslReader extends ChannelDuplexHandler {
 		if (evt instanceof SslHandshakeCompletionEvent) {
 			handshakeDone = true;
 			SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
-			if(secureCallback != null) {
 				if (handshake.isSuccess()) {
 					ctx.fireChannelActive();
-					secureCallback.onComplete();
 				}
 				else {
-					secureCallback.onError(handshake.cause());
+					sink.error(handshake.cause());
 				}
-			}
-			else if(!handshake.isSuccess()){
-				ctx.fireExceptionCaught(handshake.cause());
-			}
-			else{
-				ctx.fireChannelActive();
-			}
 		}
 		super.userEventTriggered(ctx, evt);
 	}

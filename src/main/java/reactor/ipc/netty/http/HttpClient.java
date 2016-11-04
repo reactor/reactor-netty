@@ -18,23 +18,29 @@ package reactor.ipc.netty.http;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.Channel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
-import reactor.core.Loopback;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSource;
-import reactor.ipc.netty.common.ChannelBridge;
-import reactor.ipc.netty.common.ColocatedEventLoopGroup;
-import reactor.ipc.netty.common.NettyChannel;
-import reactor.ipc.netty.common.NettyHandlerNames;
+import reactor.core.publisher.MonoSink;
+import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.channel.ColocatedEventLoopGroup;
+import reactor.ipc.netty.channel.NettyHandlerNames;
+import reactor.ipc.netty.channel.NettyOperations;
 import reactor.ipc.netty.config.ClientOptions;
-import reactor.ipc.netty.tcp.TcpChannel;
 import reactor.ipc.netty.tcp.TcpClient;
 
 /**
@@ -42,14 +48,19 @@ import reactor.ipc.netty.tcp.TcpClient;
  *
  * @author Stephane Maldini
  */
-public class HttpClient
-		implements Loopback {
+public class HttpClient implements NettyConnector<HttpClientResponse, HttpClientRequest> {
 
-	static final DefaultState global = new DefaultState();
+	/**
+	 * @return a simple HTTP client
+	 */
+	public static HttpClient create() {
+		return create(ClientOptions.create()
+		                           .sslSupport());
+	}
 
 //	public static EventLoopGroup defaultEventLoopGroup() {
 //		ColocatedEventLoopGroup eventLoopGroup = DefaultState.CLIENT_GROUP.;
-//		int ioThreadCount = TcpServer.DEFAULT_TCP_THREAD_COUNT;
+//		int ioThreadCount = TcpServer.DEFAULT_IO_THREAD_COUNT;
 //		this.ioGroup = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(ioThreadCount,
 //				(Runnable r) -> {
 //					Thread t = new Thread(r, "reactor-tcp-client-io-"+COUNTER
@@ -68,28 +79,14 @@ public class HttpClient
 //			}
 //			s._shutdown();
 //		}
-//
-//		if (eventLoopGroup == null) {
-//
-//		}
-//		return DEFAULT_STATE.clientGroup;
-//	}
-
-
-	/**
-	 * @return a simple HTTP client
-	 */
-	public static HttpClient create() {
-		return create(ClientOptions.create()
-		                           .sslSupport());
-	}
 
 	/**
 	 * @return a simple HTTP client
 	 */
 	public static HttpClient create(ClientOptions options) {
-		return new HttpClient(options);
+		return new HttpClient(Objects.requireNonNull(options, "options"));
 	}
+//		if (eventLoopGroup == null) {
 
 	/**
 	 * @return a simple HTTP client
@@ -97,6 +94,9 @@ public class HttpClient
 	public static HttpClient create(String address) {
 		return create(address, 80);
 	}
+//		}
+//		return DEFAULT_STATE.clientGroup;
+//	}
 
 	/**
 	 * @return a simple HTTP client
@@ -106,23 +106,28 @@ public class HttpClient
 		                           .connect(address, port));
 	}
 
+	/**
+	 * @return a simple HTTP client
+	 */
+	public static HttpClient create(int port) {
+		return create(ClientOptions.create()
+		                           .connect(NetUtil.LOCALHOST.getHostAddress(), port));
+	}
+
 	final TcpBridgeClient client;
 
 	protected HttpClient(final ClientOptions options) {
 		this.client = new TcpBridgeClient(options);
 	}
 
-	@Override
-	public Object connectedInput() {
-		return client;
-	}
-
 	/**
 	 * HTTP DELETE the passed URL. When connection has been made, the passed handler is
 	 * invoked and can be used to build precisely the request and write data to it.
+	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public final Mono<HttpClientResponse> delete(String url,
@@ -131,12 +136,13 @@ public class HttpClient
 	}
 
 	/**
-	 * HTTP DELETE the passed URL. When connection has been made, the passed handler is invoked and can be used to build
-	 * precisely the request and write data to it.
+	 * HTTP DELETE the passed URL. When connection has been made, the passed handler is
+	 * invoked and can be used to build precisely the request and write data to it.
 	 *
 	 * @param url the target remote URL
 	 *
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for response
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
+	 * response
 	 */
 	public final Mono<HttpClientResponse> delete(String url) {
 		return request(HttpMethod.DELETE, url, null);
@@ -145,9 +151,11 @@ public class HttpClient
 	/**
 	 * HTTP GET the passed URL. When connection has been made, the passed handler is
 	 * invoked and can be used to build precisely the request and write data to it.
+	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public final Mono<HttpClientResponse> get(String url,
@@ -160,18 +168,27 @@ public class HttpClient
 	 *
 	 * @param url the target remote URL
 	 *
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for response
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
+	 * response
 	 */
 	public final Mono<HttpClientResponse> get(String url) {
 		return request(HttpMethod.GET, url, null);
 	}
 
+	@Override
+	@SuppressWarnings("unchecked")
+	public Mono<HttpClientResponse> newHandler(BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> ioHandler) {
+		return (Mono<HttpClientResponse>) client.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) ioHandler);
+	}
+
 	/**
 	 * HTTP PATCH the passed URL. When connection has been made, the passed handler is
 	 * invoked and can be used to build precisely the request and write data to it.
+	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public final Mono<HttpClientResponse> patch(String url,
@@ -184,26 +201,21 @@ public class HttpClient
 	 *
 	 * @param url the target remote URL
 	 *
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for response
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
+	 * response
 	 */
 	public final Mono<HttpClientResponse> patch(String url) {
 		return request(HttpMethod.PATCH, url, null);
 	}
 
 	/**
-	 * Is shutdown
-	 * @return is shutdown
-	 */
-	public boolean isShutdown() {
-		return client.isShutdown();
-	}
-
-	/**
 	 * HTTP POST the passed URL. When connection has been made, the passed handler is
 	 * invoked and can be used to build precisely the request and write data to it.
+	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public final Mono<HttpClientResponse> post(String url,
@@ -214,9 +226,11 @@ public class HttpClient
 	/**
 	 * HTTP PUT the passed URL. When connection has been made, the passed handler is
 	 * invoked and can be used to build precisely the request and write data to it.
+	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public final Mono<HttpClientResponse> put(String url,
@@ -228,10 +242,12 @@ public class HttpClient
 	 * Use the passed HTTP method to send to the given URL. When connection has been made,
 	 * the passed handler is invoked and can be used to build precisely the request and
 	 * write data to it.
+	 *
 	 * @param method the HTTP method to send
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on opened TCP connection
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public Mono<HttpClientResponse> request(HttpMethod method,
@@ -247,45 +263,42 @@ public class HttpClient
 		catch (Exception e) {
 			return Mono.error(e);
 		}
-		return new MonoHttpClientChannel(this, currentURI, method, handler);
+		return new MonoHttpClientResponse(this, currentURI, method, handler);
 	}
 
 	/**
 	 * WebSocket to the passed URL.
+	 *
 	 * @param url the target remote URL
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public final Mono<HttpClientResponse> ws(String url) {
 		return request(HttpMethod.GET, parseURL(url, true),
-				HttpClientRequest::upgradeToWebsocket);
+				req -> req.upgradeToWebsocket(NettyOperations.noopHandler()));
 	}
 
 	/**
 	 * WebSocket to the passed URL.
 	 *
 	 * @param url the target remote URL
-	 * @param handler the {@link Function} to invoke on opened TCP connection
+	 * @param handler the {@link Function} to invoke on opened WS connection
 	 *
-	 * @return a {@link Mono} of the {@link HttpChannel} ready to consume for response
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
+	 * response
 	 */
-	public final Mono<HttpClientResponse> ws(String url, final Function<? super
-			HttpClientRequest, ? extends Publisher<Void>> handler) {
+	public final Mono<HttpClientResponse> ws(String url,
+			final Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
 		return request(HttpMethod.GET,
 				parseURL(url, true),
-				ch -> ch.upgradeToTextWebsocket()
-				        .then(() -> MonoSource.wrap(handler.apply(ch))));
+				ch -> ch.upgradeToWebsocket((in, out) -> handler.apply((HttpClientRequest) out)));
 	}
 
-	/**
-	 * @return
-	 */
-	public final Mono<Void> shutdown() {
-		return client.shutdown();
-	}
-
-	Mono<Void> doStart(URI url, ChannelBridge<? extends
-			TcpChannel> bridge, Function<? super HttpChannel, ? extends Publisher<Void>> handler) {
+	@SuppressWarnings("unchecked")
+	Mono<?> newHandler(URI url,
+			Consumer<? super Channel> onSetup,
+			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> ioHandler) {
 
 		boolean secure = url.getScheme() != null && (url.getScheme()
 		                                                .toLowerCase()
@@ -293,23 +306,24 @@ public class HttpClient
 		                                                                            .toLowerCase()
 		                                                                            .equals(WSS_SCHEME));
 		int port = url.getPort() != -1 ? url.getPort() : (secure ? 443 : 80);
-		return client.doStart(inoutChannel -> handler.apply(((NettyHttpChannel) inoutChannel)),
+		return client.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) ioHandler,
 				client.getOptions()
 				      .proxyType() != null ?
 						InetSocketAddress.createUnresolved(url.getHost(), port) :
-						new InetSocketAddress(url.getHost(), port),
-				bridge, secure);
+						new InetSocketAddress(url.getHost(), port), secure, onSetup);
 	}
 
 	final String parseURL(String url, boolean ws) {
 		if (!url.startsWith(HTTP_SCHEME) && !url.startsWith(WS_SCHEME)) {
 			final String parsedUrl = (ws ? WS_SCHEME : HTTP_SCHEME) + "://";
 			if (url.startsWith("/")) {
+				InetSocketAddress remote = client.getOptions()
+				                                 .remoteAddress();
+
 				return parsedUrl + (client.getOptions()
-				                          .proxyType() == null && client.getConnectAddress() != null ?
-						client.getConnectAddress()
-						      .getHostName() + ":" + client.getConnectAddress().getPort() :
-						"localhost") + url;
+				                          .proxyType() == null && remote != null ?
+						remote.getHostName() + ":" + remote.getPort() : "localhost") +
+						url;
 			}
 			else {
 				return parsedUrl + url;
@@ -319,48 +333,9 @@ public class HttpClient
 			return url;
 		}
 	}
-	final static String WS_SCHEME    = "ws";
-	final static String WSS_SCHEME   = "wss";
-	final static String HTTP_SCHEME  = "http";
-	final static String HTTPS_SCHEME = "https";
 
-	@SuppressWarnings("unchecked")
-	final class TcpBridgeClient extends TcpClient {
-
-		TcpBridgeClient(ClientOptions options) {
-			super(options);
-		}
-
-		@Override
-		protected void bindChannel(Function<? super NettyChannel, ? extends Publisher<Void>> handler,
-				SocketChannel ch,
-				ChannelBridge<? extends TcpChannel> channelBridge) {
-			ch.pipeline()
-			  .addLast(NettyHandlerNames.HttpCodecHandler, new HttpClientCodec())
-			  .addLast(NettyHandlerNames.ReactiveBridge, new NettyHttpClientHandler
-					  (handler,
-					  (ChannelBridge<HttpClientChannel>) channelBridge, ch));
-		}
-
-		@Override
-		protected Mono<Void> doStart(Function<? super NettyChannel, ? extends Publisher<Void>> handler,
-				InetSocketAddress address,
-				ChannelBridge<? extends TcpChannel> channelBridge,
-				boolean secure) {
-			return super.doStart(handler, address, channelBridge, secure);
-		}
-
-		@Override
-		protected Class<?> logClass() {
-			return HttpClient.class;
-		}
-
-		@Override
-		protected ClientOptions getOptions() {
-			return super.getOptions();
-		}
-	}
-
+	//
+//
 	final static class DefaultState {
 
 		volatile ColocatedEventLoopGroup clientGroup;
@@ -370,6 +345,43 @@ public class HttpClient
 				ColocatedEventLoopGroup.class,
 				"clientGroup");
 
+	}
 
+	final static DefaultState   global         = new DefaultState();
+	final static String         WS_SCHEME      = "ws";
+	final static String         WSS_SCHEME     = "wss";
+	final static String         HTTP_SCHEME    = "http";
+	final static String         HTTPS_SCHEME   = "https";
+	final static LoggingHandler loggingHandler = new LoggingHandler(HttpClient.class);
+
+	@SuppressWarnings("unchecked")
+	final class TcpBridgeClient extends TcpClient {
+
+		TcpBridgeClient(ClientOptions options) {
+			super(options);
+		}
+
+		@Override
+		protected Mono<NettyState> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+				InetSocketAddress address,
+				boolean secure,
+				Consumer<? super Channel> onSetup) {
+			return super.newHandler(handler, address, secure, onSetup);
+		}
+
+		@Override
+		protected void onSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+				SocketChannel ch,
+				MonoSink<NettyState> sink) {
+			ch.pipeline()
+			  .addLast(NettyHandlerNames.HttpCodecHandler, new HttpClientCodec());
+
+			HttpClientOperations.bindHttp(ch, handler, sink);
+		}
+
+		@Override
+		protected LoggingHandler logger() {
+			return loggingHandler;
+		}
 	}
 }

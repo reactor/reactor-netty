@@ -22,12 +22,14 @@ import java.net.ProtocolFamily;
 import java.security.cert.CertificateException;
 import java.util.function.Consumer;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.NetUtil;
 import reactor.core.Exceptions;
-import reactor.ipc.netty.common.DuplexSocket;
+import reactor.ipc.netty.NettyConnector;
 
 /**
  * Encapsulates configuration options for server sockets.
@@ -49,7 +51,7 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 	 * @return
 	 */
 	public static ServerOptions on(int port) {
-		return on(DuplexSocket.DEFAULT_BIND_ADDRESS, port);
+		return on(NetUtil.LOCALHOST.getHostAddress(), port);
 	}
 	/**
 	 *
@@ -67,11 +69,11 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 		return new ServerOptions().listen(address, port).daemon(false);
 	}
 
-	protected InetSocketAddress listenAddress;
-	private   NetworkInterface  multicastInterface;
-	private int            backlog        = 1000;
-	private boolean        reuseAddr      = true;
-	private ProtocolFamily protocolFamily = null;
+	InetSocketAddress listenAddress;
+	NetworkInterface  multicastInterface;
+	int            backlog        = 1000;
+	boolean        reuseAddr      = true;
+	ProtocolFamily protocolFamily = null;
 
 	ServerOptions(){
 	}
@@ -222,97 +224,38 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 	}
 
 	final static class ImmutableServerOptions extends ServerOptions {
-		final ServerOptions options;
-
 		ImmutableServerOptions(ServerOptions options) {
-			this.options = options;
-			if(options.ssl() != null){
-				super.ssl(options.ssl());
-			}
-		}
-
-		@Override
-		public InetSocketAddress listenAddress() {
-			return options.listenAddress();
-		}
-
-		@Override
-		public int backlog() {
-			return options.backlog();
-		}
-
-		@Override
-		public NetworkInterface multicastInterface() {
-			return options.multicastInterface();
-		}
-
-		@Override
-		public ProtocolFamily protocolFamily() {
-			return options.protocolFamily();
-		}
-
-		@Override
-		public boolean reuseAddr() {
-			return options.reuseAddr();
-		}
-
-		@Override
-		public EventLoopGroup eventLoopGroup() {
-			return options.eventLoopGroup();
-		}
-
-		@Override
-		public boolean daemon() {
-			return options.daemon();
+			this.listenAddress = options.listenAddress;
+			this.multicastInterface = options.multicastInterface;
+			this.backlog = options.backlog;
+			this.reuseAddr = options.reuseAddr;
+			this.protocolFamily = options.protocolFamily;
+			this.timeout = options.timeout;
+			this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis;
+			this.keepAlive = options.keepAlive;
+			this.linger = options.linger;
+			this.tcpNoDelay = options.tcpNoDelay;
+			this.rcvbuf = options.rcvbuf;
+			this.sndbuf = options.sndbuf;
+			this.managed = options.managed;
+			this.pipelineConfigurer = options.pipelineConfigurer;
+			this.eventLoopGroup = options.eventLoopGroup;
+			this.daemon = options.daemon;
+			this.sslOptions = options.sslOptions;
+			this.onStart = options.onStart;
 		}
 
 		@Override
 		public ServerOptions daemon(boolean daemon) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
-
-		@Override
-		public boolean managed() {
-			return options.managed();
-		}
-
-		@Override
-		public boolean keepAlive() {
-			return options.keepAlive();
-		}
-
-		@Override
-		public int linger() {
-			return options.linger();
-		}
-
-		@Override
-		public Consumer<ChannelPipeline> pipelineConfigurer() {
-			return options.pipelineConfigurer();
-		}
-
-		@Override
-		public int rcvbuf() {
-			return options.rcvbuf();
-		}
-
-		@Override
-		public int sndbuf() {
-			return options.sndbuf();
-		}
-
-		@Override
-		public boolean tcpNoDelay() {
-			return options.tcpNoDelay();
-		}
-
-		@Override
-		public long timeoutMillis() {
-			return options.timeoutMillis();
-		}
-
 		@Override
 		public ServerOptions backlog(int backlog) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public ServerOptions onStart(Consumer<? super Channel> onBind) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 
@@ -409,11 +352,6 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 		@Override
 		public ServerOptions sslSelfSigned() {
 			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public long sslHandshakeTimeoutMillis() {
-			return options.sslHandshakeTimeoutMillis();
 		}
 
 		@Override

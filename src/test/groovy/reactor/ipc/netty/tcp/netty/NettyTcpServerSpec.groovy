@@ -16,9 +16,10 @@
 
 package reactor.ipc.netty.tcp.netty
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import io.netty.buffer.Unpooled
+import io.netty.util.NetUtil
 import reactor.core.publisher.Flux
-import reactor.ipc.codec.json.JsonCodec
-import reactor.ipc.netty.common.NettyCodec
 import reactor.ipc.netty.tcp.TcpClient
 import reactor.ipc.netty.tcp.TcpServer
 import spock.lang.Specification
@@ -35,175 +36,176 @@ import java.util.concurrent.TimeUnit
  */
 class NettyTcpServerSpec extends Specification {
 
-  /*def "TcpServer responds to requests from clients"() {
-		given: "a simple TcpServer"
-			def dataLatch = new CountDownLatch(1)
-			def server = TcpServer.create("127.0.0.1")
+  def m = new ObjectMapper()
 
-		when: "the server is started"
-		server.start { conn -> conn.sendString(Flux.just("Hello World!")) }.block()
+  def jsonEncoder = { pojo ->
+	def out = new ByteArrayOutputStream()
+	m.writeValue(out, pojo)
+	Unpooled.copiedBuffer(out.toByteArray())
+  }
 
-
-			def client = new SimpleClient(server.listenAddress.port, dataLatch,
-					"Hello World!")
-			client.start()
-			dataLatch.await(5, TimeUnit.SECONDS)
-
-		then: "data was recieved"
-			client.data?.remaining() == 12
-			new String(client.data.array()) == "Hello World!"
-			dataLatch.count == 0
-
-		cleanup: "the server is stopped"
-			server.shutdown()
-	}*/
+  def jsonDecoder = { bb -> m.readValue(bb, Pojo)
+  }
 
   def "TcpServer can encode and decode JSON"() {
-		given: "a TcpServer with JSON defaultCodec"
-			def dataLatch = new CountDownLatch(1)
-		TcpServer server = TcpServer.create()
+	when: "the server is started"
+	def dataLatch = new CountDownLatch(1)
 
-		when: "the server is started"
-		server.start({ conn ->
-		  conn.map(conn.receive(NettyCodec.json(Pojo)).log().take(1).map { pojo ->
-							assert pojo.name == "John Doe"
-							new Pojo(name: "Jane Doe")
-						}
-				  , NettyCodec.json(Pojo))
-		}).block()
+	def server = TcpServer.create().newHandler { i, o ->
+	  o.send(i.receive()
+			  .asString()
+			  .map(jsonDecoder)
+			  .log()
+			  .take(1)
+			  .map { pojo ->
+		assert pojo.name == "John Doe"
+		new Pojo(name: "Jane Doe")
+	  }
+	  .map(jsonEncoder))
+	}.block()
 
-			def client = new SimpleClient(server.listenAddress.port, dataLatch, "{\"name\":\"John Doe\"}")
-			client.start()
-			dataLatch.await(5, TimeUnit.SECONDS)
+	def client = new SimpleClient(server.address().port, dataLatch,
+			"{\"name\":\"John Doe\"}")
+	client.start()
+	dataLatch.await(5, TimeUnit.SECONDS)
 
-		then: "data was recieved"
-			client.data?.remaining() == 19
-			new String(client.data.array()) == "{\"name\":\"Jane Doe\"}"
-			dataLatch.count == 0
+	then: "data was recieved"
+	client.data?.remaining() == 19
+	new String(client.data.array()) == "{\"name\":\"Jane Doe\"}"
+	dataLatch.count == 0
 
-		cleanup: "the server is stopped"
-			server?.shutdown()
-	}
+	cleanup: "the server is stopped"
+	server?.dispose()
+  }
 
-	def "flush every 5 elems with manual decoding"() {
-		given: "a TcpServer and a TcpClient"
-			def latch = new CountDownLatch(10)
+  def "flush every 5 elems with manual decoding"() {
+	when: "the client/server are prepared"
+	def latch = new CountDownLatch(10)
+	def server = TcpServer.create().newHandler { i, o ->
+	  i.receive()
+			  .asString()
+			  .log('serve')
+			  .map { bb -> m.readValue(bb, Pojo[]) }
+			  .concatMap { d -> Flux.fromArray(d) }
+			  .window(5)
+			  .concatMap { w -> o.send(w.collectList().map(jsonEncoder)) }
+	}.block()
 
-			def server = TcpServer.create()
-			def codec = new JsonCodec<Pojo, Pojo>(Pojo)
+	def client = TcpClient.create(server.address().port)
+	client.newHandler { i, o ->
+	  i.receive()
+			  .asString()
+			  .map { bb -> m.readValue(bb, Pojo[]) }
+			  .concatMap { d -> Flux.fromArray(d) }
+			  .log('receive')
+			  .subscribe { latch.countDown() }
 
-		when: "the client/server are prepared"
-			server.start { input ->
-			  input.mapAndFlush(input.receive(NettyCodec.from(codec))
-								.log('serve').window(5), NettyCodec.from(codec)
-				)
-			}.block()
+	  o.send(Flux.range(1, 10)
+			  .map { new Pojo(name: 'test' + it) }
+			  .log('send')
+			  .collectList()
+			  .map(jsonEncoder))
+			  .subscribe()
 
-			def client = TcpClient.create("localhost", server.listenAddress.port)
-			client.start { input ->
-			  input.receive(NettyCodec.from(codec))
-						.log('receive')
-						.subscribe { latch.countDown() }
+	  Flux.never()
+	}.block()
 
-			  input.map(
-						Flux.range(1, 10)
-								.map { new Pojo(name: 'test' + it) }
-								.log('send'), NettyCodec.from(codec)
-				).subscribe()
-
-			  Flux.never()
-			}.block()
-
-		then: "the client/server were started"
-			latch.await(5, TimeUnit.SECONDS)
-
-
-		cleanup: "the client/server where stopped"
-			client.shutdown()
-			server.shutdown()
-	}
+	then: "the client/server were started"
+	latch.await()
 
 
-	def "retry strategies when server fails"() {
-		given: "a TcpServer and a TcpClient"
-			def elem = 10
-			def latch = new CountDownLatch(elem)
+	cleanup: "the client/server where stopped"
+	server.dispose()
+  }
 
-		TcpServer server = TcpServer.create("localhost")
-			def codec = new JsonCodec<Pojo, Pojo>(Pojo)
-			def i = 0
+  def "retry strategies when server fails"() {
+	when: "the client/server are prepared"
+	def elem = 10
+	def latch = new CountDownLatch(elem)
 
-		when: "the client/server are prepared"
-			server.start { input ->
-			  input.mapAndFlush(input.receive(NettyCodec.from(codec))
-						.map {
-						  Flux.just(it)
+	def j = 0
+	def server = TcpServer.create("localhost").newHandler { i, o ->
+	  o.sendGroups(i.receive()
+			  .asString()
+			  .map { bb -> m.readValue(bb, Pojo[]) }
+			  .map { d ->
+				  Flux.fromArray(d)
 						  .doOnNext {
-							if (i++ < 2) {
-							  throw new Exception("test")
+							  if (j++ < 2) {
+								throw new Exception("test")
+							  }
 							}
-						  }
-						  .retry(2).doOnComplete{ println 'wow '+it }.log('flatmap-retry')
-			  			}, NettyCodec.from(codec))
-			}.block()
+						  .retry(2)
+						  .collectList()
+						  .map(jsonEncoder)
+				}
+	  		  .doOnComplete { println 'wow ' + it }
+			  .log('flatmap-retry'))
+	}.block()
 
-			def client = TcpClient.create("localhost", server.listenAddress.port)
-			client.start { input ->
-			  input.receive(NettyCodec.from(codec))
-						.log('receive')
-						.subscribe { latch.countDown() }
+	def client = TcpClient.create("localhost", server.address().port)
+	client.newHandler { i, o ->
+	  i.receive()
+			  .asString()
+			  .map { bb -> m.readValue(bb, Pojo[]) }
+			  .concatMap { d -> Flux.fromArray(d) }
+			  .log('receive')
+			  .subscribe { latch.countDown() }
 
-			  input.map(
-						Flux.range(1, elem)
-								.map { new Pojo(name: 'test' + it) }
-								.log('send'), NettyCodec.from(codec)
-				).subscribe()
+	  o.send(Flux.range(1, elem)
+			  .map { new Pojo(name: 'test' + it) }
+			  .log('send')
+			  .collectList().map(jsonEncoder)).subscribe()
 
-			  Flux.never()
-			}.block()
+	  Flux.never()
+	}.block()
 
-		then: "the client/server were started"
-			latch.await(10, TimeUnit.SECONDS)
+	then: "the client/server were started"
+	latch.await(10, TimeUnit.SECONDS)
 
 
-		cleanup: "the client/server where stopped"
-			client.shutdown()
-			server.shutdown()
+	cleanup: "the client/server where stopped"
+	server.dispose()
+  }
+
+  static class SimpleClient extends Thread {
+
+	final int port
+
+	final CountDownLatch latch
+
+	final String output
+
+	ByteBuffer data
+
+	SimpleClient(int port, CountDownLatch latch, String output) {
+	  this.port = port
+	  this.latch = latch
+	  this.output = output
 	}
 
-
-	static class SimpleClient extends Thread {
-		final int port
-		final CountDownLatch latch
-		final String output
-		ByteBuffer data
-
-		SimpleClient(int port, CountDownLatch latch, String output) {
-			this.port = port
-			this.latch = latch
-			this.output = output
-		}
-
-		@Override
-		void run() {
-			def ch = SocketChannel.open(new InetSocketAddress("127.0.0.1", port))
-			def len = ch.write(ByteBuffer.wrap(output.getBytes(Charset.defaultCharset())))
-			assert ch.connected
-			data = ByteBuffer.allocate(len)
-			int read = ch.read(data)
-			assert read > 0
-			data.flip()
-			latch.countDown()
-		}
+	@Override
+	void run() {
+	  def ch = SocketChannel.
+			  open(new InetSocketAddress(NetUtil.LOCALHOST.getHostAddress(), port))
+	  def len = ch.write(ByteBuffer.wrap(output.getBytes(Charset.defaultCharset())))
+	  assert ch.connected
+	  data = ByteBuffer.allocate(len)
+	  int read = ch.read(data)
+	  assert read > 0
+	  data.flip()
+	  latch.countDown()
 	}
+  }
 
-	static class Pojo {
-		String name
+  static class Pojo {
 
-		@Override
-		String toString() {
-			name
-		}
+	String name
+
+	@Override
+	String toString() {
+	  name
 	}
+  }
 
 }

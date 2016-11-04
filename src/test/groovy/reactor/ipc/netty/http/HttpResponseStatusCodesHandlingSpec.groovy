@@ -16,76 +16,62 @@
 package reactor.ipc.netty.http
 
 import reactor.core.publisher.Flux
-import reactor.ipc.netty.http.HttpClient
-import reactor.ipc.netty.http.HttpServer
 import spock.lang.Specification
-
-import java.time.Duration
 
 /**
  * @author Anatoly Kadyshev
  */
 public class HttpResponseStatusCodesHandlingSpec extends Specification {
 
-    def "http status code 404 is handled by the client"() {
-        given: "a simple HttpServer"
-            def server = HttpServer.create(0)
+  def "http status code 404 is handled by the client"() {
+	when: "the server is prepared"
+	def server = HttpServer.create(0).newRouter { r ->
+	  r.post('/test') {
+		req, res -> res.send(req.receive().log('server-received'))
+	  }
+	}.block()
 
-        when: "the server is prepared"
-            server.post('/test') { req ->
-                req.send(
-                        req.log('server-received')
-                )
-            }
+	def client = HttpClient.create("localhost", server.address().port)
 
-        then: "the server was started"
-          server
-          !server.start().block(Duration.ofSeconds(5))
+	def replyReceived = ""
+	def content = client.get('/unsupportedURI') { req ->
+	  //prepare content-type
+	  req.header('Content-Type', 'text/plain')
 
-        when: "a request with unsupported URI is sent onto the server"
-            def client = HttpClient.create("localhost", server.listenAddress.port)
+	  //return a producing stream to send some data along the request
+	  req.sendString(Flux
+			  .just("Hello")
+			  .log('client-send'))
+	}
+	.flatMap { replies ->
+	  //successful request, listen for replies
+	  replies
+			  .receive()
+	  		  .asString()
+			  .log('client-received')
+			  .doOnNext { s -> replyReceived = s
+	  }
+	}
+	.next()
+			.doOnError {
+	  //something failed during the request or the reply processing
+	  println "Failed requesting server: $it"
+	}
 
-            def replyReceived = ""
-            def content = client.get('/unsupportedURI') { req ->
-                //prepare content-type
-                req.header('Content-Type', 'text/plain')
+	then: "error is thrown with a message and no reply received"
+	def exceptionMessage = ""
 
-                //return a producing stream to send some data along the request
-                req.sendString(
-                    Flux
-                            .just("Hello")
-                            .log('client-send')
-                )
-            }
-            .flatMap { replies ->
-                //successful request, listen for replies
-                replies
-                        .receiveString()
-                        .log('client-received')
-                        .doOnNext { s ->
-                            replyReceived = s
-                        }
-            }
-            .next()
-            .doOnError {
-                //something failed during the request or the reply processing
-                println "Failed requesting server: $it"
-            }
+	try {
+	  content.block();
+	}
+	catch (RuntimeException ex) {
+	  exceptionMessage = ex.getMessage();
+	}
 
-        then: "error is thrown with a message and no reply received"
-            def exceptionMessage = ""
+	exceptionMessage == "HTTP request failed with code: 404"
+	replyReceived == ""
 
-            try {
-                content.block();
-            } catch (RuntimeException ex) {
-                exceptionMessage = ex.getMessage();
-            }
-
-            exceptionMessage == "HTTP request failed with code: 404"
-            replyReceived == ""
-
-        cleanup: "the client/server where stopped"
-        client?.shutdown()
-        server?.shutdown()
-    }
+	cleanup: "the client/server where stopped"
+	server?.dispose()
+  }
 }
