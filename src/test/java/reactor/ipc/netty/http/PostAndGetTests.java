@@ -58,7 +58,7 @@ public class PostAndGetTests {
 
 	BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> getHandler() {
 		return (req, resp) -> {
-			req.headers()
+			req.requestHeaders()
 			   .entries()
 			   .forEach(entry1 -> System.out.println(String.format("header [%s=>%s]",
 					   entry1.getKey(),
@@ -82,7 +82,7 @@ public class PostAndGetTests {
 	BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> postHandler() {
 		return (req, resp) -> {
 
-			req.headers()
+			req.requestHeaders()
 			   .entries()
 			   .forEach(entry -> System.out.println(String.format("header [%s=>%s]",
 					   entry.getKey(),

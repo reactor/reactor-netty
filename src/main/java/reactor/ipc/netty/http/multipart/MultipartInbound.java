@@ -21,6 +21,7 @@ import io.netty.util.ReferenceCounted;
 import reactor.core.publisher.Flux;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.http.HttpClientResponse;
 import reactor.ipc.netty.http.HttpInbound;
 
 /**
@@ -36,8 +37,8 @@ public interface MultipartInbound extends NettyInbound {
 	 * @param inbound
 	 * @return
 	 */
-	static Flux<ByteBufFlux> from(HttpInbound inbound) {
-		String boundary = MultipartCodec.extractBoundary(inbound.headers());
+	static Flux<ByteBufFlux> from(HttpClientResponse inbound) {
+		String boundary = MultipartCodec.extractBoundary(inbound.responseHeaders());
 		return new MultipartDecoder(inbound.receive(), boundary, inbound.channel().alloc());
 	}
 

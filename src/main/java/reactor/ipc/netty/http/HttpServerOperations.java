@@ -186,7 +186,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public void onNext(Object msg) {
 		if (msg instanceof HttpRequest) {
 			nettyRequest = (HttpRequest) msg;
-			cookies = Cookies.newServerRequestHolder(headers());
+			cookies = Cookies.newServerRequestHolder(requestHeaders());
 
 			if (isWebsocket()) {
 				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
@@ -228,7 +228,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpHeaders headers() {
+	public HttpHeaders requestHeaders() {
 		if (nettyRequest != null) {
 			return nettyRequest.headers();
 		}
@@ -242,7 +242,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public boolean isWebsocket() {
-		String isWebsocket = headers().get(HttpHeaderNames.UPGRADE);
+		String isWebsocket = requestHeaders().get(HttpHeaderNames.UPGRADE);
 		return isWebsocket != null && isWebsocket.toLowerCase()
 		                                         .equals("websocket");
 	}

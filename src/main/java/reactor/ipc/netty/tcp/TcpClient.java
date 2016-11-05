@@ -448,8 +448,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 		@Override
 		public void operationComplete(ChannelFuture f) throws Exception {
-			if (log.isInfoEnabled()) {
-				log.info("CONNECT {} {}",
+			if (log.isDebugEnabled()) {
+				log.debug("CONNECT {} {}",
 						f.isSuccess() ? "OK" : "FAILED",
 						f.channel()
 						 .remoteAddress());

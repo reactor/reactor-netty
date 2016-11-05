@@ -287,7 +287,7 @@ public interface HttpServerRoutes extends
 		Predicate<HttpServerRequest> condition = HttpPredicate.get(path);
 
 		return route(condition, (req, resp) -> {
-			String connection = req.headers()
+			String connection = req.requestHeaders()
 			                       .get(HttpHeaderNames.CONNECTION);
 			HttpServerOperations ops = (HttpServerOperations) req;
 			if (connection != null && connection.equals(HttpHeaderValues.UPGRADE.toString())) {

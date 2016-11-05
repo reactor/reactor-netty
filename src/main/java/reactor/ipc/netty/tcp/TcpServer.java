@@ -461,8 +461,8 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 
 		@Override
 		public void operationComplete(ChannelFuture f) throws Exception {
-			if (log.isInfoEnabled()) {
-				log.info("BIND {} {}",
+			if (log.isDebugEnabled()) {
+				log.debug("BIND {} {}",
 						f.isSuccess() ? "OK" : "FAILED",
 						f.channel()
 						 .localAddress());

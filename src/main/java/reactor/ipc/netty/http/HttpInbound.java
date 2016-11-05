@@ -15,14 +15,7 @@
  */
 package reactor.ipc.netty.http;
 
-import java.net.InetSocketAddress;
-
-import io.netty.channel.Channel;
-import io.netty.handler.codec.http.HttpHeaders;
-import reactor.core.publisher.Flux;
-import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyInbound;
-import reactor.ipc.netty.http.multipart.MultipartInbound;
 
 /**
  * An Http Reactive read contract for incoming response. It inherits several accessor related to HTTP
@@ -30,54 +23,7 @@ import reactor.ipc.netty.http.multipart.MultipartInbound;
  * URI, method, websocket...
  *
  * @author Stephane Maldini
- * @since 2.5
+ * @since 0.6
  */
 public interface HttpInbound extends HttpConnection, NettyInbound {
-
-
-	/**
-	 *
-	 * @return HttpHeaders
-	 */
-	HttpHeaders headers();
-
-	/**
-	 * a {@literal byte[]} inbound {@link Flux}
-	 *
-	 * @return a {@literal byte[]} inbound {@link Flux}
-	 */
-	default MultipartInbound receiveMultipart() {
-		HttpInbound thiz = this;
-		return new MultipartInbound() {
-			@Override
-			public Channel channel() {
-				return thiz.channel();
-			}
-
-			@Override
-			public Flux<ByteBufFlux> receiveParts() {
-				return MultipartInbound.from(thiz);
-			}
-
-			@Override
-			public NettyInbound onClose(Runnable onClose) {
-				return thiz.onClose(onClose);
-			}
-
-			@Override
-			public NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
-				return thiz.onReadIdle(idleTimeout, onReadIdle);
-			}
-
-			@Override
-			public boolean isDisposed() {
-				return thiz.isDisposed();
-			}
-
-			@Override
-			public InetSocketAddress remoteAddress() {
-				return thiz.remoteAddress();
-			}
-		};
-	}
 }

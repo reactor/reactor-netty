@@ -30,7 +30,8 @@ final class RedirectClientException extends HttpClientException {
 
 	public RedirectClientException(HttpClientResponse response) {
 		super(response);
-		location = Objects.requireNonNull(response.headers().get(HttpHeaderNames
+		location = Objects.requireNonNull(response.responseHeaders()
+		                                          .get(HttpHeaderNames
 				.LOCATION));
 	}
 

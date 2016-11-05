@@ -52,4 +52,10 @@ public interface HttpServerRequest extends HttpInbound {
 	 */
 	HttpServerRequest paramsResolver(Function<? super String, Map<String, Object>> headerResolver);
 
+	/**
+	 *
+	 * @return
+	 */
+	HttpHeaders requestHeaders();
+
 }

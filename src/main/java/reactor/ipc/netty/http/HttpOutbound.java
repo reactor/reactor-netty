@@ -18,6 +18,7 @@ package reactor.ipc.netty.http;
 
 import java.util.function.BiFunction;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;

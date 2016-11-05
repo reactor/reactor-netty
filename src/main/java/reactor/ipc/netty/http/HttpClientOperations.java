@@ -219,8 +219,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return this;
 	}
 
-	@Override
-	public HttpHeaders headers() {
+	public HttpHeaders responseHeaders() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
 			return responseState.headers;
@@ -285,7 +284,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				log.debug("Received response (auto-read:{}) : {}",
 						channel().config()
 						         .isAutoRead(),
-						headers().toString());
+						responseHeaders().toString());
 			}
 
 			if (checkResponseCode(response)) {

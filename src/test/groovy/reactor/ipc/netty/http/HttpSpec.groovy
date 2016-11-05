@@ -222,7 +222,7 @@ class HttpSpec extends Specification {
 	  r.get('/test/{param}') {
 		req, resp
 		  ->
-		  println req.headers().get('test')
+		  println req.requestHeaders().get('test')
 		  //log then transform then log received http request content from the request body and the resolved URL parameter "param"
 		  //the returned stream is bound to the request stream and will auto read/close accordingly
 		  resp.header("content-type", "text/plain")
