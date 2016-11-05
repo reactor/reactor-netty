@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -48,12 +47,10 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.MonoSource;
-import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.channel.NettyHandlerNames;
@@ -434,53 +431,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			log.error("Cannot enable websocket if headers have already been sent");
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
-	}
-
-	static class HttpClientCloseSubscriber implements Subscriber<Void> {
-
-		private final ChannelHandlerContext ctx;
-
-		public HttpClientCloseSubscriber(ChannelHandlerContext ctx) {
-			this.ctx = ctx;
-		}
-
-		@Override
-		public void onComplete() {
-		}
-
-		@Override
-		public void onError(Throwable t) {
-			if (t == null) {
-				throw Exceptions.argumentIsNullException();
-			}
-			if (t instanceof IOException && t.getMessage() != null && t.getMessage()
-			                                                           .contains(
-					                                                           "Broken pipe")) {
-				if (log.isDebugEnabled()) {
-					log.debug("Connection closed remotely", t);
-				}
-				return;
-			}
-			if (ctx.channel()
-			       .isOpen()) {
-				if (log.isDebugEnabled()) {
-					log.error("Closing HTTP channel due to error", t);
-				}
-				ctx.channel()
-				   .close();
-			}
-		}
-
-		@Override
-		public void onNext(Void aVoid) {
-		}
-
-		@Override
-		public void onSubscribe(final Subscription s) {
-			ctx.read();
-			Operators.validate(null, s);
-			s.request(Long.MAX_VALUE);
-		}
 	}
 
 	static final class ResponseState {

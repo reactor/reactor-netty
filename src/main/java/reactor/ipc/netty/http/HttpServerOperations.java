@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -26,7 +25,6 @@ import java.util.function.Function;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -45,16 +43,11 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-import reactor.core.Receiver;
-import reactor.core.Trackable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
-import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.channel.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
@@ -413,92 +406,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return cookies.getCachedCookies();
 		}
 		throw new IllegalStateException("request not parsed");
-	}
-
-	final static class HttpServerCloseSubscriber
-			implements Subscriber<Void>, Receiver, Trackable {
-
-		final HttpServerOperations parent;
-		Subscription subscription;
-
-		public HttpServerCloseSubscriber(HttpServerOperations parent) {
-			this.parent = parent;
-		}
-
-		@Override
-		public void onSubscribe(Subscription s) {
-			if (Operators.validate(subscription, s)) {
-				subscription = s;
-				s.request(Long.MAX_VALUE);
-			}
-		}
-
-		@Override
-		public void onError(Throwable t) {
-			if (t != null && t instanceof IOException && t.getMessage() != null && t.getMessage()
-			                                                                        .contains(
-					                                                                        "Broken " + "pipe")) {
-				if (log.isDebugEnabled()) {
-					log.debug("Connection closed remotely", t);
-				}
-				return;
-			}
-			log.error("Error processing connection. Closing the channel.", t);
-			if (parent.markHeadersAsFlushed()) {
-				parent.channel()
-				      .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-						      HttpResponseStatus.INTERNAL_SERVER_ERROR))
-				      .addListener(ChannelFutureListener.CLOSE);
-			}
-		}
-
-		@Override
-		public void onNext(Void aVoid) {
-
-		}
-
-		@Override
-		public boolean isStarted() {
-			return parent.channel()
-			             .isActive();
-		}
-
-		@Override
-		public boolean isTerminated() {
-			return !parent.channel()
-			           .isOpen();
-		}
-
-		@Override
-		public Object upstream() {
-			return subscription;
-		}
-
-		@Override
-		public void onComplete() {
-			if (parent.channel()
-			          .isOpen()) {
-				if (log.isDebugEnabled()) {
-					log.debug("Last Http Response packet");
-				}
-				ChannelFuture f;
-				if (!parent.isWebsocket()) {
-					if (parent.markHeadersAsFlushed()) {
-						parent.channel()
-						      .write(parent.nettyResponse);
-					}
-					f = parent.channel()
-					          .writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-				}
-				else {
-					f = parent.channel()
-					          .writeAndFlush(new CloseWebSocketFrame());
-				}
-				if (!parent.isKeepAlive()) {
-					f.addListener(ChannelFutureListener.CLOSE);
-				}
-			}
-		}
 	}
 
 	static final Logger log = Loggers.getLogger(HttpServerOperations.class);
