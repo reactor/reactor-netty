@@ -176,6 +176,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public void onComplete() {
+		super.onComplete();
+		dispose();
+	}
+
+	@Override
 	public Mono<Void> onClose() {
 		return ChannelFutureMono.from(channel().closeFuture());
 	}

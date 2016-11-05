@@ -195,10 +195,9 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 			options(bootstrap);
 			handler(bootstrap, targetHandler, secure, sink, onSetup);
 			Cancellation onCancelGroups = channel(bootstrap);
-			Cancellation onCancelClient = connect(bootstrap, address, sink);
+			Cancellation onCancelClient = connect(bootstrap, address, sink, onCancelGroups);
 
-			sink.setCancellation(CompositeCancellation.from(onCancelClient,
-					onCancelGroups));
+			sink.setCancellation(onCancelClient);
 		});
 	}
 
@@ -250,15 +249,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 						return t;
 					}));
 
-			onCancel = () -> {
-				try {
-					elg.shutdownGracefully()
-					   .sync();
-				}
-				catch (InterruptedException i) {
-					log.error("error while disposing the handler eventLoopGroup", i);
-				}
-			};
+			onCancel = elg::shutdownGracefully;
 		}
 		bootstrap.group(elg)
 		         .channel(channelAdapter.getChannel(elg));
@@ -272,20 +263,25 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @param address remote {@link InetSocketAddress}
 	 * @param sink the {@link MonoSink} to bind connection termination on terminated or
 	 * failure
+	 * @param onClose close callback
 	 *
 	 * @return a {@link Cancellation} that terminate the connection on dispose
 	 */
 	protected Cancellation connect(Bootstrap bootstrap,
 			InetSocketAddress address,
-			MonoSink<NettyState> sink) {
+			MonoSink<NettyState> sink,
+			Cancellation onClose) {
 		ChannelFuture f = bootstrap.connect(address)
-		                           .addListener(new OnBindListener(sink));
+		                           .addListener(new OnBindListener(sink, onClose));
 
 		return () -> {
 			try {
 				f.channel()
 				 .close()
 				 .sync();
+				if(onClose != null) {
+					onClose.dispose();
+				}
 			}
 			catch (InterruptedException e) {
 				log.error("error while disposing the channel", e);
@@ -441,9 +437,11 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	static final class OnBindListener implements ChannelFutureListener {
 
 		final MonoSink<?> sink;
+		final Cancellation onClose;
 
-		OnBindListener(MonoSink<NettyState> sink) {
+		OnBindListener(MonoSink<NettyState> sink, Cancellation onClose) {
 			this.sink = sink;
+			this.onClose = onClose;
 		}
 
 		@Override
@@ -453,6 +451,9 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 						f.isSuccess() ? "OK" : "FAILED",
 						f.channel()
 						 .remoteAddress());
+			}
+			if (onClose != null){
+				f.channel().closeFuture().addListener(x -> onClose.dispose());
 			}
 			if (!f.isSuccess()) {
 				if (f.cause() != null) {

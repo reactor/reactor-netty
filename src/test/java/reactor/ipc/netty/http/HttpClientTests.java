@@ -26,7 +26,7 @@ import reactor.core.publisher.Mono;
 public class HttpClientTests {
 
 	@Test
-	public void simpleTest() {
+	public void simpleTest() throws Exception {
 		int res = HttpClient.create("google.com")
 		                    .get("/search", c -> c.followRedirect().sendHeaders())
 		                    .then(r -> Mono.just(r.status().code()))
@@ -36,6 +36,7 @@ public class HttpClientTests {
 		if (res != 200) {
 			throw new IllegalStateException("test status failed with "+res);
 		}
+		Thread.sleep(1000000);
 	}
 	@Test
 	public void simpleTest404() {
