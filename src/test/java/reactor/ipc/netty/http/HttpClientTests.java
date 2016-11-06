@@ -36,7 +36,6 @@ public class HttpClientTests {
 		if (res != 200) {
 			throw new IllegalStateException("test status failed with "+res);
 		}
-		Thread.sleep(1000000);
 	}
 	@Test
 	public void simpleTest404() {
