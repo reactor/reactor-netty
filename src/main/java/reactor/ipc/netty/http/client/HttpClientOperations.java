@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -53,8 +53,12 @@ import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.NettyHandlerNames;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.http.Cookies;
+import reactor.ipc.netty.http.HttpInbound;
+import reactor.ipc.netty.http.HttpOperations;
+import reactor.ipc.netty.http.HttpOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -113,7 +117,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public HttpClientRequest addCookie(Cookie cookie) {
-		if (statusAndHeadersSent == 0) {
+		if (!hasSentHeaders()) {
 			this.headers.add(HttpHeaderNames.COOKIE,
 					ClientCookieEncoder.STRICT.encode(cookie));
 		}
@@ -139,7 +143,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	 */
 	@Override
 	public HttpClientRequest addHeader(CharSequence name, CharSequence value) {
-		if (statusAndHeadersSent == 0) {
+		if (!hasSentHeaders()) {
 			this.headers.add(name, value);
 		}
 		else {
@@ -152,7 +156,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	public Map<CharSequence, Set<Cookie>> cookies() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
-			return responseState.cookies.getCachedCookies();
+			return responseState.cookieHolder.getCachedCookies();
 		}
 		return null;
 	}
@@ -213,7 +217,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	 */
 	@Override
 	public HttpClientRequest header(CharSequence name, CharSequence value) {
-		if (statusAndHeadersSent == 0) {
+		if (!hasSentHeaders()) {
 			this.headers.set(name, value);
 		}
 		else {
@@ -383,7 +387,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void doSubscribeHeaders(Subscriber<? super Void> s) {
+	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
 		ChannelFutureMono.from(channel().writeAndFlush(nettyRequest))
 		                 .subscribe(s);
 	}
@@ -421,7 +425,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		//prevent further header to be sent for handshaking
-		if (markHeadersAsFlushed()) {
+		if (markHeadersAsSent()) {
 			HttpClientWSOperations ops =
 					new HttpClientWSOperations(url, protocols, this, textPlain);
 
@@ -443,12 +447,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 		final HttpResponse response;
 		final HttpHeaders  headers;
-		final Cookies      cookies;
+		final Cookies      cookieHolder;
 
 		ResponseState(HttpResponse response, HttpHeaders headers) {
 			this.response = response;
 			this.headers = headers;
-			this.cookies = Cookies.newClientResponseHolder(headers);
+			this.cookieHolder = Cookies.newClientResponseHolder(headers);
 		}
 	}
 

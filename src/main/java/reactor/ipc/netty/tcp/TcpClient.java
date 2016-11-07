@@ -54,12 +54,11 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.ColocatedEventLoopGroup;
-import reactor.ipc.netty.channel.NettyHandlerNames;
+import reactor.ipc.netty.options.ColocatedEventLoopGroup;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
-import reactor.ipc.netty.config.ClientOptions;
-import reactor.ipc.netty.util.CompositeCancellation;
-import reactor.ipc.netty.util.NettyNativeDetector;
+import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.options.NettyNativeDetector;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -230,14 +229,15 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 *
 	 * @param bootstrap {@link Bootstrap}
 	 *
-	 * @return a {@link Cancellation} that shutdown the eventLoopGroup on dispose
+	 * @return a {@link Cancellation} that shutdown the eventLoopSelector on dispose
 	 */
 	protected Cancellation channel(Bootstrap bootstrap) {
 		final EventLoopGroup elg;
 		final Cancellation onCancel;
-		if (null != options.eventLoopGroup()) {
-			elg = options.eventLoopGroup();
-			onCancel = null;
+		if (null != options.eventLoopSelector()) {
+			elg = options.eventLoopSelector()
+			             .apply(options.preferNative());
+			onCancel = elg::shutdownGracefully;
 		}
 		else {
 			elg = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(
@@ -352,7 +352,24 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 		@Override
 		public void initChannel(final SocketChannel ch) throws Exception {
+			if (log.isDebugEnabled()) {
+				log.debug("TCP CONNECT {}", ch);
+			}
+
+			if (null != parent.options.onChannelInit()) {
+				if (!parent.options.onChannelInit()
+				                   .test(ch)) {
+					if (log.isDebugEnabled()) {
+						log.debug("TCP DROPPED by onChannelInit predicate {}", ch);
+					}
+					ch.close();
+					sink.success();
+					return;
+				}
+			}
+
 			ChannelPipeline pipeline = ch.pipeline();
+
 
 			if (secure && null != parent.sslContext) {
 				SslHandler sslHandler = parent.sslContext.newHandler(ch.alloc());
@@ -419,16 +436,16 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 			parent.onSetup(handler, ch, sink);
 
-			if (onSetup != null) {
-				onSetup.accept(ch);
+			try {
+				if (onSetup != null) {
+					onSetup.accept(ch);
+				}
 			}
-
-			if (null != parent.options.onStart()){
-				parent.options.onStart().accept(ch);
-			}
-			if (null != parent.options.pipelineConfigurer()) {
-				parent.options.pipelineConfigurer()
-				              .accept(pipeline);
+			finally {
+				if (null != parent.options.afterChannelInit()) {
+					parent.options.afterChannelInit()
+					              .accept(ch);
+				}
 			}
 
 		}

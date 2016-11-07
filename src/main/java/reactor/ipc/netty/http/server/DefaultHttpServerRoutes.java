@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.server;
 
 import java.util.Iterator;
 import java.util.Map;

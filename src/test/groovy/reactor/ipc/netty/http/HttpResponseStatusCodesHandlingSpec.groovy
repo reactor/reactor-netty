@@ -16,6 +16,8 @@
 package reactor.ipc.netty.http
 
 import reactor.core.publisher.Flux
+import reactor.ipc.netty.http.client.HttpClient
+import reactor.ipc.netty.http.server.HttpServer
 import spock.lang.Specification
 
 /**

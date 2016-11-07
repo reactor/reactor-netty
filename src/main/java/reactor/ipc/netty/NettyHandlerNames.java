@@ -14,34 +14,19 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
-
-import io.netty.handler.codec.http.HttpResponseStatus;
+package reactor.ipc.netty;
 
 /**
- * An error for signalling that an error occurred during a communication over HTTP version
- *
  * @author Stephane Maldini
  */
-public class HttpClientException extends RuntimeException {
+public interface NettyHandlerNames {
 
-	private final HttpClientResponse response;
-
-	public HttpClientException(HttpClientResponse response) {
-		super("HTTP request failed with code: " + response.status().code());
-		this.response = response;
-	}
-
-	public HttpResponseStatus getResponseStatus() {
-		return response.status();
-	}
-
-	public HttpClientResponse getResponse(){
-		return response;
-	}
-
-	@Override
-	public synchronized Throwable fillInStackTrace() {
-		return null;
-	}
+	String SslHandler        = "sslHandler";
+	String SslReader         = "sslReader";
+	String SslLoggingHandler = "sslLoggingHandler";
+	String ProxyHandler      = "proxyHandler";
+	String HttpCodecHandler  = "httpCodecHandler";
+	String ReactiveBridge    = "reactiveBridge";
+	String HttpAggregator    = "reactorHttpAggregator";
+	String LoggingHandler    = "loggingHandler";
 }

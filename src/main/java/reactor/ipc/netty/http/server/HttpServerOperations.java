@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.server;
 
 import java.util.Map;
 import java.util.Objects;
@@ -27,8 +27,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -43,14 +45,19 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
-import reactor.ipc.netty.channel.NettyHandlerNames;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.http.Cookies;
+import reactor.ipc.netty.http.HttpInbound;
+import reactor.ipc.netty.http.HttpOperations;
+import reactor.ipc.netty.http.HttpOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -77,13 +84,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final HttpResponse nettyResponse;
 	final HttpHeaders  responseHeaders;
 
-	Cookies                                       cookies;
+	Cookies                                       cookieHolder;
 	HttpRequest                                   nettyRequest;
 	Function<? super String, Map<String, Object>> paramsResolver;
 
 	HttpServerOperations(Channel ch, HttpServerOperations replaced) {
 		super(ch, replaced);
-		this.cookies = replaced.cookies;
+		this.cookieHolder = replaced.cookieHolder;
 		this.responseHeaders = replaced.responseHeaders;
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
@@ -118,7 +125,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerResponse addCookie(Cookie cookie) {
-		if (statusAndHeadersSent == 0) {
+		if (!hasSentHeaders()) {
 			this.responseHeaders.add(HttpHeaderNames.SET_COOKIE,
 					ServerCookieEncoder.STRICT.encode(cookie));
 		}
@@ -155,7 +162,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	 */
 	@Override
 	public HttpServerResponse addHeader(CharSequence name, CharSequence value) {
-		if (statusAndHeadersSent == 0) {
+		if (!hasSentHeaders()) {
 			this.responseHeaders.add(name, value);
 		}
 		else {
@@ -179,7 +186,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public void onNext(Object msg) {
 		if (msg instanceof HttpRequest) {
 			nettyRequest = (HttpRequest) msg;
-			cookies = Cookies.newServerRequestHolder(requestHeaders());
+			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
 
 			if (isWebsocket()) {
 				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
@@ -278,7 +285,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	/**
-	 * @param headerResolver
+	 * @param headerResolver a selector accepting the current URI string and returning
+	 * grouped parameters.
 	 */
 	@Override
 	public HttpServerRequest paramsResolver(Function<? super String, Map<String, Object>> headerResolver) {
@@ -296,7 +304,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	 */
 	@Override
 	public HttpServerResponse header(CharSequence name, CharSequence value) {
-		if (statusAndHeadersSent == 0) {
+		if (!hasSentHeaders()) {
 			this.responseHeaders.set(name, value);
 		}
 		else {
@@ -307,7 +315,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerResponse chunkedTransfer(boolean chunked) {
-		HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
+		if (!hasSentHeaders()) {
+			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
+		}
+		else {
+			throw new IllegalStateException("Status and headers already sent");
+		}
 		return this;
 	}
 
@@ -335,7 +348,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	 */
 	@Override
 	public HttpServerResponse status(HttpResponseStatus status) {
-		if (statusAndHeadersSent == 0) {
+		if (!hasSentHeaders()) {
 			this.nettyResponse.setStatus(status);
 		}
 		else {
@@ -369,7 +382,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		if (markHeadersAsFlushed()) {
+		if (markHeadersAsSent()) {
 			HttpServerWSOperations ops =
 					new HttpServerWSOperations(url, protocols, this, textPlain);
 
@@ -388,7 +401,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void doSubscribeHeaders(Subscriber<? super Void> s) {
+	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
 		ChannelFutureMono.from(channel().writeAndFlush(nettyResponse))
 		                 .subscribe(s);
 	}
@@ -402,11 +415,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public Map<CharSequence, Set<Cookie>> cookies() {
-		if (cookies != null) {
-			return cookies.getCachedCookies();
+		if (cookieHolder != null) {
+			return cookieHolder.getCachedCookies();
 		}
 		throw new IllegalStateException("request not parsed");
 	}
 
-	static final Logger log = Loggers.getLogger(HttpServerOperations.class);
+	static final Logger           log          = Loggers.getLogger(HttpServerOperations.class);
+	final static AsciiString      EVENT_STREAM =
+			new AsciiString("text/event-stream");
+	final static FullHttpResponse CONTINUE     =
+			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+					HttpResponseStatus.CONTINUE,
+					Unpooled.EMPTY_BUFFER);
 }

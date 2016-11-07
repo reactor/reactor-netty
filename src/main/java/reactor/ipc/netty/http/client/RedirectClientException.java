@@ -14,19 +14,25 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.channel;
+package reactor.ipc.netty.http.client;
+
+import java.util.Objects;
+
+import io.netty.handler.codec.http.HttpHeaderNames;
 
 /**
- * @author Stephane Maldini
+ * An error for signalling that an error occurred during a communication over HTTP version
+ *
  */
-public interface NettyHandlerNames {
+final class RedirectClientException extends HttpClientException {
 
-	String SslHandler        = "sslHandler";
-	String SslReader         = "sslReader";
-	String SslLoggingHandler = "sslLoggingHandler";
-	String ProxyHandler      = "proxyHandler";
-	String HttpCodecHandler  = "httpCodecHandler";
-	String ReactiveBridge    = "reactiveBridge";
-	String HttpAggregator    = "reactorHttpAggregator";
-	String LoggingHandler    = "loggingHandler";
+	final String location;
+
+	public RedirectClientException(HttpClientResponse response) {
+		super(response);
+		location = Objects.requireNonNull(response.responseHeaders()
+		                                          .get(HttpHeaderNames
+				.LOCATION));
+	}
+
 }

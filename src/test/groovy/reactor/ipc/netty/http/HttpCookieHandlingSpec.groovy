@@ -18,9 +18,11 @@ package reactor.ipc.netty.http
 import io.netty.handler.codec.http.cookie.Cookie
 import io.netty.handler.codec.http.cookie.DefaultCookie
 import reactor.core.publisher.Mono
+import reactor.ipc.netty.http.client.HttpClient
+import reactor.ipc.netty.http.client.HttpClientResponse
+import reactor.ipc.netty.http.server.HttpServer
 import spock.lang.Specification
 
-import java.time.Duration
 import java.util.function.Function
 
 public class HttpCookieHandlingSpec extends Specification {

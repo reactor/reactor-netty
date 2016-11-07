@@ -13,8 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package reactor.ipc.netty.options;
 
 /**
- * Configuration of the various Netty parameters for clients and servers.
+ * An {@link EventLoopSelector} selector with associated
+ * {@link io.netty.channel.Channel} factories.
+ *
+ * @author Stephane Maldini
+ * @since 0.6
  */
-package reactor.ipc.netty.config;
+public interface EventLoopSelector {
+
+}

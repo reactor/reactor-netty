@@ -44,12 +44,11 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
-import reactor.ipc.netty.config.ServerOptions;
-import reactor.ipc.netty.util.CompositeCancellation;
-import reactor.ipc.netty.util.NettyNativeDetector;
+import reactor.ipc.netty.options.ServerOptions;
+import reactor.ipc.netty.options.NettyNativeDetector;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -166,10 +165,9 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 			options(bootstrap);
 			handler(bootstrap, targetHandler, sink);
 			Cancellation onCancelGroups = channel(bootstrap);
-			Cancellation onCancelClient = bind(bootstrap, sink);
+			Cancellation onCancelClient = bind(bootstrap, sink, onCancelGroups);
 
-			sink.setCancellation(CompositeCancellation.from(onCancelClient,
-					onCancelGroups));
+			sink.setCancellation(onCancelClient);
 		});
 	}
 
@@ -188,14 +186,15 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 *
 	 * @param bootstrap {@link Bootstrap}
 	 *
-	 * @return a {@link Cancellation} that shutdown the eventLoopGroup on dispose
+	 * @return a {@link Cancellation} that shutdown the eventLoopSelector on dispose
 	 */
 	Cancellation channel(Bootstrap bootstrap) {
 		final Cancellation onCancel;
 		final EventLoopGroup elg;
 
-		if (null != options.eventLoopGroup()) {
-			elg = options.eventLoopGroup();
+		if (null != options.eventLoopSelector()) {
+			elg = options.eventLoopSelector()
+			             .apply(options.preferNative());
 			onCancel = null;
 		}
 		else {
@@ -217,7 +216,8 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 					   .sync();
 				}
 				catch (InterruptedException i) {
-					log.error("error while disposing the handler io eventLoopGroup", i);
+					log.error("error while disposing the handler io eventLoopSelector",
+							i);
 				}
 			};
 		}
@@ -248,7 +248,9 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 *
 	 * @return a {@link Cancellation} that terminate the connection on dispose
 	 */
-	Cancellation bind(Bootstrap bootstrap, MonoSink<NettyState> sink) {
+	Cancellation bind(Bootstrap bootstrap,
+			MonoSink<NettyState> sink,
+			Cancellation onClose) {
 
 		ChannelFuture f = bootstrap.bind()
 		                           .addListener(new OnBindListener(sink));
@@ -258,6 +260,9 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 				f.channel()
 				 .close()
 				 .sync();
+				if (onClose != null) {
+					onClose.dispose();
+				}
 			}
 			catch (InterruptedException e) {
 				log.error("error while disposing the channel", e);
@@ -323,7 +328,18 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 		@Override
 		public void initChannel(final DatagramChannel ch) throws Exception {
 			if (log.isDebugEnabled()) {
-				log.debug("CONNECT {} {}", parent.options.multicastInterface(), ch);
+				log.debug("UDP CONNECT {} {}", parent.options.multicastInterface(), ch);
+			}
+			if (parent.options.onChannelInit() != null) {
+				if (parent.options.onChannelInit()
+				                  .test(ch)) {
+					if (log.isDebugEnabled()) {
+						log.debug("TCP DROPPED by onChannelInit predicate {}", ch);
+					}
+					ch.close();
+					sink.success();
+					return;
+				}
 			}
 
 			ChannelPipeline pipeline = ch.pipeline();
@@ -332,15 +348,14 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 				pipeline.addLast(NettyHandlerNames.LoggingHandler, loggingHandler);
 			}
 
-			parent.onSetup(handler, ch, sink);
-
-			if(parent.options.onStart() != null){
-				parent.options.onStart().accept(ch);
+			try {
+				parent.onSetup(handler, ch, sink);
 			}
-
-			if (null != parent.options.pipelineConfigurer()) {
-				parent.options.pipelineConfigurer()
-				              .accept(pipeline);
+			finally {
+				if (null != parent.options.afterChannelInit()) {
+					parent.options.afterChannelInit()
+					              .accept(ch);
+				}
 			}
 		}
 	}
@@ -356,7 +371,7 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 		@Override
 		public void operationComplete(ChannelFuture f) throws Exception {
 			if (log.isInfoEnabled()) {
-				log.info("BIND {} {}",
+				log.info("CONNECT {} {}",
 						f.isSuccess() ? "OK" : "FAILED",
 						f.channel()
 						 .localAddress());

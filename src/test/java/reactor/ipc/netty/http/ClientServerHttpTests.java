@@ -38,6 +38,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.http.server.HttpServer;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;

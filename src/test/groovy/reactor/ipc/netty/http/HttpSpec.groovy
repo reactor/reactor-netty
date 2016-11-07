@@ -17,7 +17,10 @@ package reactor.ipc.netty.http
 
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.ipc.netty.config.ClientOptions
+import reactor.ipc.netty.http.client.HttpClient
+import reactor.ipc.netty.http.client.HttpClientException
+import reactor.ipc.netty.http.server.HttpServer
+import reactor.ipc.netty.options.ClientOptions
 import spock.lang.Specification
 
 import java.time.Duration

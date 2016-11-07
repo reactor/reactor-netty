@@ -14,25 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
-
-import java.util.Objects;
-
-import io.netty.handler.codec.http.HttpHeaderNames;
-
 /**
- * An error for signalling that an error occurred during a communication over HTTP version
- *
+ * Configuration of the various Reactor Netty parameters, for clients and servers.
  */
-final class RedirectClientException extends HttpClientException {
-
-	final String location;
-
-	public RedirectClientException(HttpClientResponse response) {
-		super(response);
-		location = Objects.requireNonNull(response.responseHeaders()
-		                                          .get(HttpHeaderNames
-				.LOCATION));
-	}
-
-}
+package reactor.ipc.netty.options;

@@ -45,15 +45,15 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.core.scheduler.Schedulers;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.SocketUtils;
-import reactor.ipc.netty.channel.NettyHandlerNames;
-import reactor.ipc.netty.config.ClientOptions;
-import reactor.ipc.netty.config.ServerOptions;
-import reactor.ipc.netty.http.HttpClient;
-import reactor.ipc.netty.http.HttpServer;
+import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.options.ServerOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -214,7 +214,8 @@ public class TcpServerTests {
 		};
 
 		TcpServer server = TcpServer.create(ServerOptions.create()
-		                                                 .pipelineConfigurer(pipeline -> pipeline.addBefore(
+		                                                 .afterChannelInit(c -> c.pipeline()
+		                                                                         .addBefore(
 				                                                 NettyHandlerNames.ReactiveBridge,
 				                                                 "codec",
 				                                                 new LineBasedFrameDecoder(

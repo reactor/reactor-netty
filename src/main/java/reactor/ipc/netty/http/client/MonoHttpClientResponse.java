@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.client;
 
 import java.net.URI;
 import java.net.URISyntaxException;

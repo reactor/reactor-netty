@@ -41,9 +41,9 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.SocketUtils;
-import reactor.ipc.netty.channel.NettyHandlerNames;
-import reactor.ipc.netty.config.ClientOptions;
-import reactor.ipc.netty.http.HttpClient;
+import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.http.client.HttpClient;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -155,7 +155,7 @@ public class TcpClientTests {
 		NettyState client =
 
 				TcpClient.create(ClientOptions.to("localhost", echoServerPort)
-				                              .pipelineConfigurer(pipeline -> pipeline.addBefore(
+				                              .afterChannelInit(c -> c.pipeline().addBefore(
 						                              NettyHandlerNames.ReactiveBridge,
 						                              "codec",
 						                              new LineBasedFrameDecoder(8 * 1024))))

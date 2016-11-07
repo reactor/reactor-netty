@@ -45,7 +45,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.SocketUtils;
-import reactor.ipc.netty.config.ServerOptions;
+import reactor.ipc.netty.options.ServerOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 

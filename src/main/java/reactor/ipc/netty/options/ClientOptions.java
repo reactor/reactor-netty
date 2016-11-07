@@ -14,25 +14,29 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.config;
+package reactor.ipc.netty.options;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.NetUtil;
 
 import static reactor.ipc.netty.NettyConnector.DEFAULT_PORT;
 
 /**
+ * A client connector builder with low-level connection options including connection pooling and
+ * proxy.
+ *
  * @author Stephane Maldini
  */
 public class ClientOptions extends NettyOptions<ClientOptions> {
@@ -45,31 +49,53 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	}
 
 	/**
-	 * @return
+	 * Create a client builder.
+	 *
+	 * @return a new client options builder
 	 */
 	public static ClientOptions create() {
 		return new ClientOptions();
 	}
 
 	/**
-	 * @param host
+	 * Create a client builder to connect on a given host by default. Resolution of the
+	 * host will be applied for each client new handler and after proxy if present.
+	 * Remote Port will be @{link #DEFAULT_PORT}.
 	 *
-	 * @return
+	 * @param host the default remote host to connect to.
+	 *
+	 * @return a new client options builder
 	 */
 	public static ClientOptions to(String host) {
 		return to(host, DEFAULT_PORT);
 	}
 
 	/**
-	 * @param host
-	 * @param port
+	 * Create a client builder to connect on a given host and port by default.
+	 * Resolution of the
+	 * host will be applied for each client new handler and after proxy if present.
 	 *
-	 * @return
+	 * @param host the default remote host to connect to.
+	 * @param port the default remote port to connect to.
+	 *
+	 * @return a new client options builder
 	 */
 	public static ClientOptions to(String host, int port) {
 		return create().connect(host, port);
 	}
 
+	/**
+	 * Client connection pool options
+	 */
+	boolean                                                    channelPool;
+	long                                                       channelPoolAcquireMillis;
+	int                                                        channelPoolSize;
+	int                                                        channelPoolAcquireSize;
+	Function<? super InetSocketAddress, ? extends ChannelPool> channelPoolResolver;
+
+	/**
+	 * Proxy options
+	 */
 	String                                     proxyUsername;
 	Function<? super String, ? extends String> proxyPassword;
 	Supplier<? extends InetSocketAddress>      proxyAddress;
@@ -78,7 +104,15 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	Supplier<? extends InetSocketAddress> connectAddress = DEFAULT_ADDRESS;
 
 	ClientOptions() {
+	}
 
+	ClientOptions(ClientOptions options){
+		super(options);
+		this.proxyUsername = options.proxyUsername;
+		this.proxyPassword = options.proxyPassword;
+		this.proxyAddress = options.proxyAddress;
+		this.proxyType = options.proxyType;
+		this.connectAddress = options.connectAddress;
 	}
 
 	/**
@@ -114,6 +148,11 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	public ClientOptions connect(@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
 		this.connectAddress = connectAddress;
 		return this;
+	}
+
+	@Override
+	public ClientOptions duplicate() {
+		return new ClientOptions(this);
 	}
 
 	/**
@@ -251,7 +290,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	}
 
 	/**
-	 * {@link Proxy} category to use
+	 * {@link Proxy} category to usePredicate
 	 *
 	 * @return {@link Proxy} category to use
 	 */
@@ -268,26 +307,8 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 
 	final static class ImmutableClientOptions extends ClientOptions {
 
-		ImmutableClientOptions(ClientOptions options) {
-			this.proxyUsername = options.proxyUsername;
-			this.proxyPassword = options.proxyPassword;
-			this.proxyAddress = options.proxyAddress;
-			this.proxyType = options.proxyType;
-			this.connectAddress = options.connectAddress;
-
-			this.timeout = options.timeout;
-			this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis;
-			this.keepAlive = options.keepAlive;
-			this.linger = options.linger;
-			this.tcpNoDelay = options.tcpNoDelay;
-			this.rcvbuf = options.rcvbuf;
-			this.sndbuf = options.sndbuf;
-			this.managed = options.managed;
-			this.pipelineConfigurer = options.pipelineConfigurer;
-			this.eventLoopGroup = options.eventLoopGroup;
-			this.daemon = options.daemon;
-			this.sslOptions = options.sslOptions;
-			this.onStart = options.onStart;
+		public ImmutableClientOptions(ClientOptions options) {
+			super(options);
 		}
 
 		@Override
@@ -334,7 +355,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 		}
 
 		@Override
-		public ClientOptions eventLoopGroup(EventLoopGroup eventLoopGroup) {
+		public ClientOptions eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopGroup) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 
@@ -354,7 +375,51 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 		}
 
 		@Override
-		public ClientOptions pipelineConfigurer(Consumer<ChannelPipeline> pipelineConfigurer) {
+		public ClientOptions afterChannelInit(Consumer<? super Channel> afterChannelInit) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public ClientOptions connect(@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public ClientOptions proxy(@Nonnull Proxy type,
+				@Nonnull String host,
+				int port,
+				@Nullable String username,
+				@Nullable Function<? super String, ? extends String> password) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public ClientOptions proxy(@Nonnull Proxy type, @Nonnull String host, int port) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public ClientOptions proxy(@Nonnull Proxy type,
+				@Nonnull InetSocketAddress connectAddress) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public ClientOptions proxy(@Nonnull Proxy type,
+				@Nonnull InetSocketAddress connectAddress,
+				@Nullable String username,
+				@Nullable Function<? super String, ? extends String> password) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public ClientOptions proxy(@Nonnull Proxy type,
+				@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
+			throw new UnsupportedOperationException("Immutable Options");
+		}
+
+		@Override
+		public ClientOptions preferNative(boolean preferNative) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 
@@ -379,7 +444,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 		}
 
 		@Override
-		public ClientOptions onStart(Consumer<? super Channel> onBind) {
+		public ClientOptions onChannelInit(Predicate<? super Channel> onChannelInit) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 

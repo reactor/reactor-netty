@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.client;
 
 import java.net.URI;
 
@@ -37,7 +37,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import reactor.ipc.netty.channel.NettyHandlerNames;
+import reactor.ipc.netty.NettyHandlerNames;
 
 /**
  * @author Stephane Maldini

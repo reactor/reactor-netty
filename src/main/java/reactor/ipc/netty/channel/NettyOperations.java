@@ -53,6 +53,7 @@ import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
@@ -61,20 +62,27 @@ import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
 
 /**
+ * A bridge between an immutable {@link Channel} and {@link NettyInbound} /
+ * {@link NettyOutbound} semantics exposed to user
+ * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)}
+ *
  * @author Stephane Maldini
+ * @since 0.6
  */
 public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
 		implements Trackable, NettyInbound, NettyOutbound, Subscription, Producer,
 		           Loopback, Publisher<Object> {
 
 	/**
-	 *
+	 * The attribute in {@link Channel} to store the current {@link NettyOperations}
 	 */
 	public static final AttributeKey<NettyOperations> OPERATIONS_ATTRIBUTE_KEY =
 			AttributeKey.newInstance("nettyOperations");
 
 	/**
-	 * @param ch
+	 * Add the shareable {@link NettyHandlerNames#ReactiveBridge} handler to the channel.
+	 *
+	 * @param ch a given channel
 	 */
 	public static void addHandler(Channel ch) {
 		ch.pipeline()
@@ -91,13 +99,17 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	static final BiFunction PING = (i, o) -> Flux.empty();
 
 	/**
-	 * @param channel
-	 * @param handler
-	 * @param sink
-	 * @param <INBOUND>
-	 * @param <OUTBOUND>
+	 * Create a new {@link NettyOperations} attached to the {@link Channel} attribute
+	 * {@link #OPERATIONS_ATTRIBUTE_KEY}.
+	 * Attach the {@link NettyHandlerNames#ReactiveBridge} handle.
 	 *
-	 * @return
+	 * @param channel the new {@link Channel} connection
+	 * @param handler the user-provided {@link BiFunction} i/o handler
+	 * @param sink the user-facing {@link Mono} emitting {@link NettyState}
+	 * @param <INBOUND> the {@link NettyInbound} type
+	 * @param <OUTBOUND> the {@link NettyOutbound} type
+	 *
+	 * @return the created {@link NettyOperations} bridge
 	 */
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> NettyOperations<INBOUND, OUTBOUND> bind(
 			Channel channel,
@@ -471,7 +483,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return new PostWritePublisher(dataStream);
+		return new MonoWriter(dataStream);
 	}
 
 	@Override
@@ -479,7 +491,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return new PostWritePublisher(dataStream);
+		return new MonoWriter(dataStream);
 	}
 
 	@Override
@@ -777,11 +789,11 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	static final Logger                                                     log       =
 			Loggers.getLogger(NettyOperations.class);
 
-	final class PostWritePublisher extends Mono<Void> implements Receiver, Loopback {
+	final class MonoWriter extends Mono<Void> implements Receiver, Loopback {
 
 		final Publisher<?> dataStream;
 
-		public PostWritePublisher(Publisher<?> dataStream) {
+		public MonoWriter(Publisher<?> dataStream) {
 			this.dataStream = dataStream;
 		}
 

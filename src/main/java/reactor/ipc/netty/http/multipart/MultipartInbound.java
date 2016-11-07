@@ -21,8 +21,7 @@ import io.netty.util.ReferenceCounted;
 import reactor.core.publisher.Flux;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyInbound;
-import reactor.ipc.netty.http.HttpClientResponse;
-import reactor.ipc.netty.http.HttpInbound;
+import reactor.ipc.netty.http.client.HttpClientResponse;
 
 /**
  * An Http Reactive Multipart read contract for incoming traffic.

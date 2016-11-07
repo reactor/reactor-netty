@@ -21,6 +21,8 @@ import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.http.server.HttpServer;
 
 /**
  * @author tjreactive

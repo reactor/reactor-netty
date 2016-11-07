@@ -23,15 +23,9 @@ import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -46,20 +40,23 @@ import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.channel.NettyOperations;
 
 /**
+ * An HTTP ready {@link NettyOperations} with state management for status and headers
+ * (first HTTP response packet).
+ *
  * @author Stephane Maldini
  */
-abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends HttpOutbound>
+public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends HttpOutbound>
 		extends NettyOperations<INBOUND, OUTBOUND> implements HttpInbound, HttpOutbound {
 
 
 	volatile int statusAndHeadersSent = 0;
 
-	HttpOperations(Channel ioChannel, HttpOperations<INBOUND, OUTBOUND> replaced) {
+	protected HttpOperations(Channel ioChannel, HttpOperations<INBOUND, OUTBOUND> replaced) {
 		super(ioChannel, replaced);
 		this.statusAndHeadersSent = replaced.statusAndHeadersSent;
 	}
 
-	HttpOperations(Channel ioChannel,
+	protected HttpOperations(Channel ioChannel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			MonoSink<NettyState> clientSink) {
 		super(ioChannel, handler, clientSink);
@@ -72,9 +69,27 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 		return this;
 	}
 
+	/**
+	 * Return  true if headers and status have been sent to the client
+	 *
+	 * @return true if headers and status have been sent to the client
+	 */
+	public boolean hasSentHeaders() {
+		return statusAndHeadersSent == 1;
+	}
+
 	@Override
 	public boolean isWebsocket() {
 		return false;
+	}
+
+	/**
+	 * Mark the headers sent
+	 *
+	 * @return true if marked for the first time
+	 */
+	public final boolean markHeadersAsSent() {
+		return HEADERS_SENT.compareAndSet(this, 0, 1);
 	}
 
 	@Override
@@ -82,7 +97,7 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return new MonoOutboundWrite(dataStream);
+		return new MonoHttpWithHeadersWriter(dataStream);
 	}
 
 	@Override
@@ -108,8 +123,8 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		if (markHeadersAsFlushed()) {
-			return new MonoOnlyHeaderWrite();
+		if (markHeadersAsSent()) {
+			return new MonoHeadersSender();
 		}
 		else {
 			return Mono.empty();
@@ -121,7 +136,7 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return new MonoOutboundWrite(source);
+		return new MonoHttpWithHeadersWriter(source);
 	}
 
 	@Override
@@ -131,8 +146,8 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		if (isWebsocket()) {
-			return new MonoOutboundWrite(Flux.from(dataStream)
-			                                 .map(TextWebSocketFrame::new));
+			return new MonoHttpWithHeadersWriter(Flux.from(dataStream)
+			                                         .map(TextWebSocketFrame::new));
 		}
 
 		return send(Flux.from(dataStream)
@@ -150,28 +165,24 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 		return method().name() + ":" + uri();
 	}
 
-
-	protected abstract void doSubscribeHeaders(Subscriber<? super Void> s);
-
-	final boolean markHeadersAsFlushed() {
-		return HEADERS_SENT.compareAndSet(this, 0, 1);
-	}
-
+	/**
+	 * Write and send the initial {@link io.netty.handler.codec.http.HttpRequest}
+	 * mssage that will commit the status and response headers.
+	 *
+	 * @param s the {@link Subscriber} callback completing on confirmed commit or
+	 * failing with root cause.
+	 */
+	protected abstract void sendHeadersAndSubscribe(Subscriber<? super Void> s);
 	final static AtomicIntegerFieldUpdater<HttpOperations> HEADERS_SENT =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");
-	final static AsciiString                               EVENT_STREAM =
-			new AsciiString("text/event-stream");
-	final static FullHttpResponse                          CONTINUE     =
-			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-					HttpResponseStatus.CONTINUE,
-					Unpooled.EMPTY_BUFFER);
 
-	final class MonoOutboundWrite extends Mono<Void> implements Receiver, Loopback {
+	final class MonoHttpWithHeadersWriter
+			extends Mono<Void> implements Receiver, Loopback {
 
 		final Publisher<?> source;
 
-		public MonoOutboundWrite(Publisher<?> source) {
+		public MonoHttpWithHeadersWriter(Publisher<?> source) {
 			this.source = source;
 		}
 
@@ -187,8 +198,8 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 
 		@Override
 		public void subscribe(final Subscriber<? super Void> s) {
-			if (markHeadersAsFlushed()) {
-				doSubscribeHeaders(new HttpOutboundSubscriber(s));
+			if (markHeadersAsSent()) {
+				sendHeadersAndSubscribe(new HttpWriterSubscriber(s));
 			}
 			else {
 				emitWriter(source, s);
@@ -200,12 +211,12 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 			return source;
 		}
 
-		final class HttpOutboundSubscriber implements Subscriber<Void>, Receiver, Producer {
+		final class HttpWriterSubscriber implements Subscriber<Void>, Receiver, Producer {
 
 			final Subscriber<? super Void> s;
 			Subscription subscription;
 
-			public HttpOutboundSubscriber(Subscriber<? super Void> s) {
+			public HttpWriterSubscriber(Subscriber<? super Void> s) {
 				this.s = s;
 			}
 
@@ -244,7 +255,7 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 		}
 	}
 
-	final class MonoOnlyHeaderWrite extends Mono<Void> implements Loopback {
+	final class MonoHeadersSender extends Mono<Void> implements Loopback {
 
 		@Override
 		public Object connectedInput() {
@@ -258,7 +269,7 @@ abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends Http
 
 		@Override
 		public void subscribe(Subscriber<? super Void> s) {
-			doSubscribeHeaders(s);
+			sendHeadersAndSubscribe(s);
 		}
 	}
 }

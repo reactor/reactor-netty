@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -37,10 +37,11 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.ColocatedEventLoopGroup;
-import reactor.ipc.netty.channel.NettyHandlerNames;
+import reactor.ipc.netty.options.ColocatedEventLoopGroup;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
-import reactor.ipc.netty.config.ClientOptions;
+import reactor.ipc.netty.http.server.HttpServerResponse;
+import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.tcp.TcpClient;
 
 /**
@@ -59,7 +60,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	}
 
 //	public static EventLoopGroup defaultEventLoopGroup() {
-//		ColocatedEventLoopGroup eventLoopGroup = DefaultState.CLIENT_GROUP.;
+//		ColocatedEventLoopGroup eventLoopSelector = DefaultState.CLIENT_GROUP.;
 //		int ioThreadCount = TcpServer.DEFAULT_IO_THREAD_COUNT;
 //		this.ioGroup = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(ioThreadCount,
 //				(Runnable r) -> {
@@ -86,7 +87,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	public static HttpClient create(ClientOptions options) {
 		return new HttpClient(Objects.requireNonNull(options, "options"));
 	}
-//		if (eventLoopGroup == null) {
+//		if (eventLoopSelector == null) {
 
 	/**
 	 * @return a simple HTTP client

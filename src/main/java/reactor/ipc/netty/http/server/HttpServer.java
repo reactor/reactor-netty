@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.server;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -37,8 +36,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.NettyHandlerNames;
-import reactor.ipc.netty.config.ServerOptions;
+import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.options.ServerOptions;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -139,7 +138,7 @@ public final class HttpServer
 				Publisher<Void> afterHandlers = routeRequestResponse(req, resp, routes);
 
 				if (afterHandlers == null) {
-					if (ops.markHeadersAsFlushed()) {
+					if (ops.markHeadersAsSent()) {
 						//404
 						ops.channel()
 						   .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
@@ -157,37 +156,6 @@ public final class HttpServer
 				return Mono.error(t);
 			}
 			//500
-		});
-	}
-
-	/**
-	 * Register an handler for the given Selector condition, incoming connections will
-	 * query the internal registry to invoke the matching handlers. Implementation may
-	 * choose to reply 404 if no route matches.
-	 *
-	 * @param condition a {@link Predicate} to match the incoming connection with
-	 * registered handler
-	 * @param service an handler to invoke for the given condition
-	 *
-	 * @return a new route handler
-	 */
-	@SuppressWarnings("unchecked")
-	public final Mono<? extends NettyState> service(final Predicate<HttpServerRequest> condition,
-			final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> service) {
-		Objects.requireNonNull(condition, "condition");
-		Objects.requireNonNull(service, "service");
-		return newHandler((req, resp) -> {
-			HttpServerOperations ops = (HttpServerOperations) req;
-			if (condition.test(req)) {
-				return service.apply(req, resp);
-			}
-			else if (ops.markHeadersAsFlushed()) {
-				//404
-				ops.channel()
-				   .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-						   HttpResponseStatus.NOT_FOUND));
-			}
-			return Flux.empty();
 		});
 	}
 

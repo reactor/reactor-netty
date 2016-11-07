@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.server;
 
 import java.io.IOException;
 
@@ -62,7 +62,7 @@ final class HttpServerCloseSubscriber
 			return;
 		}
 		HttpServerOperations.log.error("Error processing connection. Closing the channel.", t);
-		if (parent.markHeadersAsFlushed()) {
+		if (parent.markHeadersAsSent()) {
 			parent.channel()
 			      .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
 					      HttpResponseStatus.INTERNAL_SERVER_ERROR))
@@ -101,7 +101,7 @@ final class HttpServerCloseSubscriber
 			}
 			ChannelFuture f;
 			if (!parent.isWebsocket()) {
-				if (parent.markHeadersAsFlushed()) {
+				if (parent.markHeadersAsSent()) {
 					parent.channel()
 					      .write(parent.nettyResponse);
 				}

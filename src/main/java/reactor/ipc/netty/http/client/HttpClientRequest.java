@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
-
-import java.util.function.BiFunction;
+package reactor.ipc.netty.http.client;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.http.HttpOutbound;
 
 /**
  * An Http Reactive client write contract for outgoing requests. It inherits several

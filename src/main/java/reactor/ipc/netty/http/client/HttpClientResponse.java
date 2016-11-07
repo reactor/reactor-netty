@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
 
@@ -24,6 +24,7 @@ import reactor.core.publisher.Flux;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.multipart.MultipartInbound;
 
 /**

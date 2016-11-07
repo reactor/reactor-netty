@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -50,14 +49,13 @@ import reactor.core.MultiProducer;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
-import reactor.ipc.netty.config.ServerOptions;
-import reactor.ipc.netty.util.CompositeCancellation;
-import reactor.ipc.netty.util.NettyNativeDetector;
+import reactor.ipc.netty.options.ServerOptions;
+import reactor.ipc.netty.options.NettyNativeDetector;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -234,10 +232,9 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 			childOptions(bootstrap);
 			childHandler(bootstrap, handler);
 			Cancellation onCancelGroups = channel(bootstrap);
-			Cancellation onCancelServer = bind(bootstrap, sink);
+			Cancellation onCancelServer = bind(bootstrap, sink, onCancelGroups);
 
-			sink.setCancellation(CompositeCancellation.from(onCancelServer,
-					onCancelGroups));
+			sink.setCancellation(onCancelServer);
 		});
 	}
 
@@ -269,7 +266,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 	 * @return a {@link Cancellation} that shutdown the server on dispose
 	 */
 	protected Cancellation bind(ServerBootstrap bootstrap,
-			MonoSink<NettyState> sink) {
+			MonoSink<NettyState> sink, Cancellation onClose) {
 		ChannelFuture f = bootstrap.bind(listenAddress)
 		                           .addListener(new OnBindListener(sink));
 
@@ -278,6 +275,9 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 				f.channel()
 				 .close()
 				 .sync();
+				if(onClose != null){
+					onClose.dispose();
+				}
 			}
 			catch (InterruptedException e) {
 				log.error("error while disposing the channel", e);
@@ -290,7 +290,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 	 *
 	 * @param bootstrap {@link ServerBootstrap}
 	 *
-	 * @return a {@link Cancellation} that shutdown the eventLoopGroup on dispose
+	 * @return a {@link Cancellation} that shutdown the eventLoopSelector on dispose
 	 */
 	protected Cancellation channel(ServerBootstrap bootstrap) {
 		final Cancellation onCancel;
@@ -304,15 +304,16 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 				});
 
 		final EventLoopGroup elg;
-		if (null != options.eventLoopGroup()) {
-			elg = options.eventLoopGroup();
+		if (null != options.eventLoopSelector()) {
+			elg = options.eventLoopSelector().apply(options.preferNative());
 			onCancel = () -> {
 				try {
 					selectorGroup.shutdownGracefully()
 					             .sync();
 				}
 				catch (InterruptedException i) {
-					log.error("error while disposing the handler selector eventLoopGroup",
+					log.error(
+							"error while disposing the handler selector eventLoopSelector",
 							i);
 				}
 			};
@@ -332,7 +333,8 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 					             .sync();
 				}
 				catch (InterruptedException i) {
-					log.error("error while disposing the handler selector eventLoopGroup",
+					log.error(
+							"error while disposing the handler selector eventLoopSelector",
 							i);
 				}
 				try {
@@ -340,7 +342,8 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 					   .sync();
 				}
 				catch (InterruptedException i) {
-					log.error("error while disposing the handler io eventLoopGroup", i);
+					log.error("error while disposing the handler io eventLoopSelector",
+							i);
 				}
 			};
 		}
@@ -358,7 +361,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 	 */
 	protected void childHandler(ServerBootstrap bootstrap,
 			BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
-		bootstrap.childHandler(new ServerSetup(handler, this, null));
+		bootstrap.childHandler(new ServerSetup(handler, this));
 	}
 
 	/**
@@ -403,20 +406,27 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 		final TcpServer                 parent;
 		final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>>
 		                                handler;
-		final Consumer<? super Channel> onSetup;
-
-		public ServerSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
-				TcpServer parent,
-				Consumer<? super Channel> onSetup) {
+		ServerSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+				TcpServer parent) {
 			this.parent = parent;
 			this.handler = handler;
-			this.onSetup = onSetup;
 		}
 
 		@Override
 		public void initChannel(final SocketChannel ch) throws Exception {
 			if (log.isDebugEnabled()) {
-				log.debug("CONNECT {}", ch);
+				log.debug("TCP CONNECTED {}", ch);
+			}
+
+			if (null != parent.options.onChannelInit()) {
+				if (parent.options.onChannelInit()
+				                  .test(ch)) {
+					if (log.isDebugEnabled()) {
+						log.debug("TCP DROPPED by onChannelInit predicate {}", ch);
+					}
+					ch.close();
+					return;
+				}
 			}
 
 			if (parent.channelGroup != null) {
@@ -435,19 +445,16 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 				pipeline.addLast(NettyHandlerNames.LoggingHandler, parent.logger());
 			}
 
-			parent.onSetup(handler, ch);
+			try {
+				parent.onSetup(handler, ch);
+			}
+			finally {
+				if (null != parent.options.afterChannelInit()) {
+					parent.options.afterChannelInit()
+					              .accept(ch);
+				}
+			}
 
-			if (onSetup != null) {
-				onSetup.accept(ch);
-			}
-			if (null != parent.options.onStart()) {
-				parent.options.onStart()
-				              .accept(ch);
-			}
-			if (null != parent.options.pipelineConfigurer()) {
-				parent.options.pipelineConfigurer()
-				              .accept(pipeline);
-			}
 		}
 	}
 

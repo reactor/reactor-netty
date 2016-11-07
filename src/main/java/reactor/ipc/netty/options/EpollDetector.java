@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.util;
+package reactor.ipc.netty.options;
 
 import java.util.concurrent.ThreadFactory;
 
@@ -29,7 +29,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import reactor.ipc.netty.channel.ColocatedEventLoopGroup;
+import reactor.ipc.netty.options.ColocatedEventLoopGroup;
 
 /**
  * @author Stephane Maldini

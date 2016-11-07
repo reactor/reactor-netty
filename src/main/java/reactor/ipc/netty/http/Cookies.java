@@ -31,21 +31,43 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 
 /**
- * Store cookies for the http channel. TODO Need to refactor when switching to 4.1 to use more utils
+ * Store cookies for the http channel.
+ * @since 0.6
  */
-final class Cookies {
+public final class Cookies {
+
+	/**
+	 *
+	 * Return a new cookies holder from client response headers
+	 * @param headers client response headers
+	 * @return a new cookies holder from client response headers
+	 */
+	public static Cookies newClientResponseHolder(HttpHeaders headers) {
+		return new Cookies(headers, HttpHeaderNames.SET_COOKIE, true);
+	}
+
+	/**
+	 * Return a new cookies holder from server request headers
+	 * @param headers server request headers
+	 * @return a new cookies holder from server request headers
+	 */
+	public static Cookies newServerRequestHolder(HttpHeaders headers) {
+		return new Cookies(headers, HttpHeaderNames.COOKIE, false);
+	}
+
 
 	final static int NOT_READ = 0;
 	final static int READING  = 1;
-	final static int READ     = 2;
 
+	final static int READ     = 2;
 	final HttpHeaders  nettyHeaders;
 	final CharSequence cookiesHeaderName;
+
 	final boolean      isClientChannel;
 
 	Map<CharSequence, Set<Cookie>> cachedCookies;
-
 	volatile     int                                state = 0;
+
 	static final AtomicIntegerFieldUpdater<Cookies> STATE =
 			AtomicIntegerFieldUpdater.newUpdater(Cookies.class, "state");
 
@@ -93,13 +115,5 @@ final class Cookies {
 		cachedCookies = Collections.unmodifiableMap(cookies);
 		state = READ;
 		return cachedCookies;
-	}
-
-	static Cookies newClientResponseHolder(HttpHeaders headers) {
-		return new Cookies(headers, HttpHeaderNames.SET_COOKIE, true);
-	}
-
-	static Cookies newServerRequestHolder(HttpHeaders headers) {
-		return new Cookies(headers, HttpHeaderNames.COOKIE, false);
 	}
 }

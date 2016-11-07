@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import reactor.ipc.netty.http.HttpOperations;
 
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}

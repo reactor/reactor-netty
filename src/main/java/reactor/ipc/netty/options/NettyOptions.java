@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.config;
+package reactor.ipc.netty.options;
 
-import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 
 /**
- * Encapsulates common socket options.
+ * A common connector builder with low-level connection options including ssl, tcp
+ * configuration, channel init handlers.
+ *
  * @param <SO> A NettyOptions subclass
- * @author Jon Brisbin
  * @author Stephane Maldini
  */
 @SuppressWarnings("unchecked")
@@ -39,21 +40,73 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 			".managed.default",
 			"false"));
 
-	long                      timeout                   = 30000L;
-	long                      sslHandshakeTimeoutMillis = 10000L;
-	boolean                   keepAlive                 = true;
-	int                       linger                    = 0;
-	boolean                   tcpNoDelay                = true;
-	int                       rcvbuf                    = 1024 * 1024;
-	int                       sndbuf                    = 1024 * 1024;
-	boolean                   managed                   = DEFAULT_MANAGED_PEER;
-	Consumer<ChannelPipeline> pipelineConfigurer        = null;
-	EventLoopGroup            eventLoopGroup            = null;
-	boolean                   daemon                    = true;
-	SslContextBuilder         sslOptions                = null;
-	Consumer<? super Channel> onStart                   = null;
+	long              timeout                   = 30000L;
+	long              sslHandshakeTimeoutMillis = 10000L;
+	boolean           keepAlive                 = true;
+	int               linger                    = 0;
+	boolean           tcpNoDelay                = true;
+	int               rcvbuf                    = 1024 * 1024;
+	int               sndbuf                    = 1024 * 1024;
+	boolean           managed                   = DEFAULT_MANAGED_PEER;
+	boolean           preferNative              = true;
+	boolean           daemon                    = true;
+	SslContextBuilder sslOptions                = null;
 
+	Consumer<? super Channel>                           afterChannelInit  = null;
+	Predicate<? super Channel>                          onChannelInit     = null;
+	Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector = null;
 
+	NettyOptions() {
+
+	}
+
+	NettyOptions(NettyOptions options) {
+		this.timeout = options.timeout;
+		this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis;
+		this.keepAlive = options.keepAlive;
+		this.linger = options.linger;
+		this.tcpNoDelay = options.tcpNoDelay;
+		this.rcvbuf = options.rcvbuf;
+		this.sndbuf = options.sndbuf;
+		this.managed = options.managed;
+		this.daemon = options.daemon;
+		this.sslOptions = options.sslOptions;
+
+		this.afterChannelInit = options.afterChannelInit;
+		this.onChannelInit = options.onChannelInit;
+		this.eventLoopSelector = options.eventLoopSelector;
+		this.preferNative = options.preferNative;
+	}
+
+	/**
+	 * Returns the callback after each {@link Channel} initialization and after
+	 * reactor-netty
+	 * pipeline handlers have been registered.
+	 *
+	 * @return the post channel setup handler
+	 *
+	 * @see #onChannelInit()
+	 */
+	public Consumer<? super Channel> afterChannelInit() {
+		return afterChannelInit;
+	}
+
+	/**
+	 * Setup the callback after each {@link Channel} initialization and after
+	 * reactor-netty
+	 * pipeline handlers have been registered.
+	 *
+	 * @param afterChannelInit the post channel setup handler
+	 *
+	 * @return {@code this}
+	 *
+	 * @see #onChannelInit(Predicate)
+	 */
+	public SO afterChannelInit(Consumer<? super Channel> afterChannelInit) {
+		Objects.requireNonNull(afterChannelInit, "afterChannelInit");
+		this.afterChannelInit = afterChannelInit;
+		return (SO) this;
+	}
 
 	/**
 	 * Returns a boolean indicating whether or not runtime threads will run daemon.
@@ -75,20 +128,44 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	}
 
 	/**
+	 * Return a copy of all options and references such as
+	 * {@link #onChannelInit(Predicate)}. Further option uses on the returned builder will
+	 * be fully isolated from this option builder.
 	 *
-	 * @return
+	 * @return a new duplicated builder;
 	 */
-	public EventLoopGroup eventLoopGroup() {
-		return eventLoopGroup;
+	public abstract SO duplicate();
+
+	/**
+	 * Provide a shared {@link EventLoopGroup} each Connector handler.
+	 * @param eventLoopGroup an eventLoopGroup to share
+	 * @return an {@link EventLoopGroup} provider given the native runtime expectation
+	 */
+	public SO eventLoopGroup(EventLoopGroup eventLoopGroup) {
+		Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
+		this.eventLoopSelector = useNative -> eventLoopGroup;
+		return (SO)this;
 	}
 
 	/**
-	 *
-	 * @param eventLoopGroup
-	 * @return
+	 * Return the configured {@link EventLoopGroup} selector for each Connector handler.
+	 * @return an {@link EventLoopGroup} selector for each Connector handler.
 	 */
-	public SO eventLoopGroup(EventLoopGroup eventLoopGroup) {
-		this.eventLoopGroup = eventLoopGroup;
+	public Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector() {
+		return eventLoopSelector;
+	}
+
+	/**
+	 * Provide an {@link EventLoopGroup} selector for each Connector handler.
+	 * Note that server might call it twice for both their selection and io loops.
+	 * @param eventLoopSelector a selector accepting native runtime expectation and
+	 * returning an eventLoopGroup
+	 *
+	 * @return this builder
+	 */
+	public SO eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector) {
+		Objects.requireNonNull(eventLoopSelector, "eventLoopSelector");
+		this.eventLoopSelector = eventLoopSelector;
 		return (SO) this;
 	}
 
@@ -137,8 +214,9 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	}
 
 	/**
-	 * Set the is managed value.
-	 * @param managed Should the peer be traced
+	 * Set the is managed value. Will retain connections in a
+	 * connector global scoped {@link io.netty.channel.group.ChannelGroup}
+	 * @param managed Should the connector be traced
 	 * @return {@code this}
 	 */
 	public SO managed(boolean managed) {
@@ -147,43 +225,50 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	}
 
 	/**
-	 * Returns the configured bound address listener
+	 * Returns the callback for each {@link Channel} initialization and before
+	 * reactor-netty
+	 * pipeline handlers have been registered.
 	 *
-	 * @return The configured bound address listener
+	 * @return The pre channel pipeline setup handler
+	 * @see #afterChannelInit()
 	 */
-	public Consumer<? super Channel> onStart() {
-		return onStart;
+	public Predicate<? super Channel> onChannelInit() {
+		return onChannelInit;
 	}
 
 	/**
-	 * Configures a bound address listener, useful for randomly assigned port
+	 * A callback for each {@link Channel} initialization and before reactor-netty
+	 * pipeline handlers have been registered.
 	 *
-	 * @param onBind the bound address listener
+	 * @param onChannelInit pre channel pipeline setup handler
 	 *
 	 * @return {@code this}
+	 * @see #afterChannelInit(Consumer)
 	 */
-	public SO onStart(Consumer<? super Channel> onBind) {
-		this.onStart = Objects.requireNonNull(onBind, "onStart");
+	public SO onChannelInit(Predicate<? super Channel> onChannelInit) {
+		this.onChannelInit = Objects.requireNonNull(onChannelInit, "onChannelInit");
 		return (SO) this;
 	}
 
 	/**
-	 *
-	 * @return
+	 * Set the preferred native option. Determine if epoll should be used if available.
+	 * @param preferNative Should the connector prefer native (epoll) if available
+	 * @return {@code this}
 	 */
-	public Consumer<ChannelPipeline> pipelineConfigurer() {
-		return pipelineConfigurer;
+	public SO preferNative(boolean preferNative) {
+		this.preferNative = preferNative;
+		return (SO) this;
 	}
 
 	/**
+	 * Return true if epoll should be used if available.
 	 *
-	 * @param pipelineConfigurer
-	 * @return
+	 * @return true if epoll should be used if available.
 	 */
-	public SO pipelineConfigurer(Consumer<ChannelPipeline> pipelineConfigurer) {
-		this.pipelineConfigurer = pipelineConfigurer;
-		return (SO) this;
+	public boolean preferNative() {
+		return preferNative;
 	}
+
 
 	/**
 	 * Gets the configured {@code SO_RCVBUF} (receive buffer) size
@@ -230,6 +315,7 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 * @return {@literal this}
 	 */
 	public SO sslConfigurer(Consumer<? super SslContextBuilder> sslConfigurer) {
+		Objects.requireNonNull(sslConfigurer, "sslConfigurer");
 		sslConfigurer.accept(sslOptions);
 		return (SO) this;
 	}
@@ -241,6 +327,7 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 * @return {@literal this}
 	 */
 	public final SO sslHandshakeTimeout(Duration sslHandshakeTimeout) {
+		Objects.requireNonNull(sslHandshakeTimeout, "sslHandshakeTimeout");
 		return sslHandshakeTimeoutMillis(sslHandshakeTimeout.toMillis());
 	}
 
@@ -325,6 +412,7 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 * @return {@code this}
 	 */
 	public final SO timeout(Duration timeout) {
+		Objects.requireNonNull(timeout, "timeout");
 		return timeoutMillis(timeout.toMillis());
 	}
 }

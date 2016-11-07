@@ -18,6 +18,8 @@ package reactor.ipc.netty.http;
 
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.http.client.HttpClientException;
 
 /**
  * @author Stephane Maldini

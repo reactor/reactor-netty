@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.server;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -29,6 +29,8 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.http.HttpInbound;
+import reactor.ipc.netty.http.HttpOutbound;
 
 /**
  * @author Stephane Maldini

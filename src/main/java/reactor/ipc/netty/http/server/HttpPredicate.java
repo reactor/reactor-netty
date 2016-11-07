@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.server;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,7 +38,7 @@ final class HttpPredicate
 		implements Predicate<HttpServerRequest>, Function<Object, Map<String, Object>> {
 
 	/**
-	 * An alias for {@link HttpServerRoutes#http}.
+	 * An alias for {@link HttpPredicate#http}.
 	 * <p>
 	 * Creates a {@link Predicate} based on a URI template filtering .
 	 * <p>
@@ -48,7 +48,6 @@ final class HttpPredicate
 	 *
 	 * @return The new {@link Predicate}.
 	 *
-	 * @see reactor.bus.selector.UriPathTemplate
 	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> delete(String uri) {
@@ -56,7 +55,7 @@ final class HttpPredicate
 	}
 
 	/**
-	 * An alias for {@link HttpServerRoutes#http}.
+	 * An alias for {@link HttpPredicate#http}.
 	 * <p>
 	 * Creates a {@link Predicate} based on a URI template filtering .
 	 * <p>
@@ -66,7 +65,6 @@ final class HttpPredicate
 	 *
 	 * @return The new {@link Predicate}.
 	 *
-	 * @see reactor.bus.selector.UriPathTemplate
 	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> get(String uri) {
@@ -81,7 +79,6 @@ final class HttpPredicate
 	 *
 	 * @return The new {@link HttpPredicate}.
 	 *
-	 * @see reactor.bus.selector.UriPathTemplate
 	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> http(String uri,
@@ -95,7 +92,7 @@ final class HttpPredicate
 	}
 
 	/**
-	 * An alias for {@link HttpServerRoutes#http}.
+	 * An alias for {@link HttpPredicate#http}.
 	 * <p>
 	 * Creates a {@link Predicate} based on a URI template filtering .
 	 * <p>
@@ -105,7 +102,6 @@ final class HttpPredicate
 	 *
 	 * @return The new {@link Predicate}.
 	 *
-	 * @see reactor.bus.selector.UriPathTemplate
 	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> post(String uri) {
@@ -113,7 +109,7 @@ final class HttpPredicate
 	}
 
 	/**
-	 * An alias for {@link HttpServerRoutes#get} prefix ([prefix]/**), useful for file system
+	 * An alias for {@link HttpPredicate#get} prefix ([prefix]/**), useful for file system
 	 * mapping.
 	 * <p>
 	 * Creates a {@link Predicate} based on a URI template filtering .
@@ -122,7 +118,6 @@ final class HttpPredicate
 	 *
 	 * @return The new {@link Predicate}.
 	 *
-	 * @see reactor.bus.selector.UriPathTemplate
 	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> prefix(String prefix) {
@@ -130,7 +125,7 @@ final class HttpPredicate
 	}
 
 	/**
-	 * An alias for {@link HttpServerRoutes#get} prefix (/**), useful for file system mapping.
+	 * An alias for {@link HttpPredicate#get} prefix (/**), useful for file system mapping.
 	 * <p>
 	 * Creates a {@link Predicate} based on a URI template filtering .
 	 * <p>
@@ -150,7 +145,7 @@ final class HttpPredicate
 	}
 
 	/**
-	 * An alias for {@link HttpServerRoutes#http}.
+	 * An alias for {@link HttpPredicate#http}.
 	 * <p>
 	 * Creates a {@link Predicate} based on a URI template filtering .
 	 * <p>
@@ -160,7 +155,6 @@ final class HttpPredicate
 	 *
 	 * @return The new {@link Predicate}.
 	 *
-	 * @see reactor.bus.selector.UriPathTemplate
 	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> put(String uri) {
