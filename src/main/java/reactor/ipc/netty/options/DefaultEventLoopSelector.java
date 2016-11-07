@@ -128,6 +128,7 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 			if (!cacheNativeSelectLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}
+			eventLoopGroup = cacheNativeSelectLoops();
 		}
 		return eventLoopGroup;
 	}
@@ -141,6 +142,7 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 			if (!cacheNativeServerLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}
+			eventLoopGroup = cacheNativeServerLoops();
 		}
 		return eventLoopGroup;
 	}
@@ -155,6 +157,7 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}
+			eventLoopGroup = cacheNativeClientLoops();
 		}
 		return eventLoopGroup;
 	}
