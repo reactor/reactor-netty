@@ -51,8 +51,7 @@ final class ConnectHandler implements ChannelFutureListener, Cancellation {
 		if (log.isDebugEnabled()) {
 			log.debug("CONNECT {} {}",
 					f.isSuccess() ? "OK" : "FAILED",
-					f.channel()
-					 .remoteAddress());
+					f.channel());
 		}
 		if (onClose != null) {
 			f.channel()

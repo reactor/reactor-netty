@@ -60,7 +60,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 //	public static EventLoopGroup defaultEventLoopGroup() {
 //		ColocatedEventLoopGroup eventLoopSelector = DefaultState.CLIENT_GROUP.;
-//		int ioThreadCount = TcpServer.DEFAULT_IO_THREAD_COUNT;
+//		int ioThreadCount = TcpServer.DEFAULT_IO_WORKER_COUNT;
 //		this.ioGroup = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(ioThreadCount,
 //				(Runnable r) -> {
 //					Thread t = new Thread(r, "reactor-tcp-client-io-"+COUNTER

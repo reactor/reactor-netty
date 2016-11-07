@@ -34,7 +34,6 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 
 	static final Logger log = Loggers.getLogger(DefaultEventLoopSelector.class);
 
-	final boolean                         hasNative;
 	final String                          prefix;
 	final boolean                         daemon;
 	final int                             selectCount;
@@ -62,15 +61,15 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 			boolean daemon) {
 
 		this.daemon = daemon;
-		this.hasNative = SafeEpollDetector.hasEpoll();
 		this.workerCount = workerCount;
 		this.prefix = prefix;
 
-		this.serverLoops = EventLoopSelector.colocate(new NioEventLoopGroup(workerCount,
-				threadFactory(this, "server-nio")));
+		this.serverLoops = new NioEventLoopGroup(workerCount,
+				threadFactory(this, "server-nio"));
 
 		this.clientLoops =
-				new NioEventLoopGroup(workerCount, threadFactory(this, "client-nio"));
+				EventLoopSelector.colocate(new NioEventLoopGroup(workerCount,
+						threadFactory(this, "client-nio")));
 
 		this.cacheNativeClientLoops = new AtomicReference<>();
 		this.cacheNativeServerLoops = new AtomicReference<>();
@@ -88,13 +87,13 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 		}
 
 		if (log.isDebugEnabled()) {
-			log.debug("Default epoll " + "support : " + hasNative);
+			log.debug("Default epoll " + "support : " + preferNative());
 		}
 	}
 
 	@Override
 	public EventLoopGroup onServerSelect(boolean useNative) {
-		if (useNative && hasNative) {
+		if (useNative && preferNative()) {
 			return cacheNativeSelectLoops();
 		}
 		return serverSelectLoops;
@@ -102,7 +101,7 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 
 	@Override
 	public EventLoopGroup onServer(boolean useNative) {
-		if (useNative && hasNative) {
+		if (useNative && preferNative()) {
 			return cacheNativeServerLoops();
 		}
 		return serverLoops;
@@ -110,15 +109,10 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 
 	@Override
 	public EventLoopGroup onClient(boolean useNative) {
-		if (useNative && hasNative) {
+		if (useNative && preferNative()) {
 			return cacheNativeClientLoops();
 		}
 		return clientLoops;
-	}
-
-	@Override
-	public boolean preferNative() {
-		return hasNative;
 	}
 
 	EventLoopGroup cacheNativeSelectLoops() {

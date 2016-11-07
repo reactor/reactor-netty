@@ -36,18 +36,18 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 public interface EventLoopSelector {
 
 	/**
-	 *
+	 * Default worker thread count, fallback to available processor
 	 */
-	int DEFAULT_IO_THREAD_COUNT  = Integer.parseInt(System.getProperty(
-			"reactor.tcp.ioThreadCount",
+	int DEFAULT_IO_WORKER_COUNT = Integer.parseInt(System.getProperty(
+			"reactor.tcp.workerCount",
 			"" + Runtime.getRuntime()
 			            .availableProcessors()));
 	/**
-	 *
+	 * Default selector thread count, fallback to -1 (no selector thread)
 	 */
-	int DEFAULT_TCP_SELECT_COUNT = Integer.parseInt(System.getProperty(
-			"reactor.tcp.selectThreadCount",
-			"" + DEFAULT_IO_THREAD_COUNT));
+	int DEFAULT_IO_SELECT_COUNT = Integer.parseInt(System.getProperty(
+			"reactor.tcp.selectCount",
+			"" + -1));
 
 	/**
 	 * Create a delegating {@link EventLoopGroup} which reuse local event loop if already
@@ -64,8 +64,11 @@ public interface EventLoopSelector {
 	}
 
 	/**
+	 * Create a simple {@link EventLoopSelector} to provide automatically for {@link
+	 * EventLoopGroup} and {@link Channel} factories
+	 *
 	 * @param prefix the event loop thread name prefix
-	 * @param workerCount
+	 * @param workerCount number of worker threads
 	 * @param daemon shoult the thread be released on jvm shutdown
 	 *
 	 * @return a new {@link EventLoopSelector} to provide automatically for {@link
@@ -79,9 +82,12 @@ public interface EventLoopSelector {
 	}
 
 	/**
+	 * Create a simple {@link EventLoopSelector} to provide automatically for {@link
+	 * EventLoopGroup} and {@link Channel} factories
+	 *
 	 * @param prefix the event loop thread name prefix
-	 * @param selectCount
-	 * @param workerCount
+	 * @param selectCount number of selector threads
+	 * @param workerCount number of worker threads
 	 * @param daemon shoult the thread be released on jvm shutdown
 	 *
 	 * @return a new {@link EventLoopSelector} to provide automatically for {@link
@@ -105,15 +111,17 @@ public interface EventLoopSelector {
 	}
 
 	/**
+	 * Create a simple {@link EventLoopSelector} to provide automatically for {@link
+	 * EventLoopGroup} and {@link Channel} factories
+	 *
 	 * @param prefix the event loop thread name prefix
 	 *
 	 * @return a new {@link EventLoopSelector} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
 	static EventLoopSelector create(String prefix) {
-		return create(prefix,
-				Runtime.getRuntime()
-				       .availableProcessors(),
+		return new DefaultEventLoopSelector(prefix, DEFAULT_IO_SELECT_COUNT,
+				DEFAULT_IO_WORKER_COUNT,
 				true);
 
 	}

@@ -23,6 +23,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 
@@ -59,6 +60,7 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	boolean           managed                   = DEFAULT_MANAGED_PEER;
 	boolean           daemon                    = true;
 	SslContextBuilder sslOptions                = null;
+
 	boolean preferNative;
 
 	Consumer<? super Channel>             afterChannelInit  = null;
