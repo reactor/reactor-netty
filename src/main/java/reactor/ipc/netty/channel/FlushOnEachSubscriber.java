@@ -86,7 +86,7 @@ final class FlushOnEachSubscriber
 
 		ctx.channel()
 		   .eventLoop()
-		   .execute(() -> parent.doOnTerminate(ctx, null, promise, null));
+		   .execute(() -> parent.doOnTerminatedWriter(ctx, null, promise, null));
 	}
 
 	@Override
@@ -104,7 +104,7 @@ final class FlushOnEachSubscriber
 		   .removeListener(this);
 		ctx.channel()
 		   .eventLoop()
-		   .execute(() -> parent.doOnTerminate(ctx, null, promise, t));
+		   .execute(() -> parent.doOnTerminatedWriter(ctx, null, promise, t));
 	}
 
 	@Override

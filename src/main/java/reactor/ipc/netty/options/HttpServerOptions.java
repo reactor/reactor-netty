@@ -20,11 +20,10 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.ProtocolFamily;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.NetUtil;
 
@@ -106,7 +105,7 @@ public class HttpServerOptions extends ServerOptions {
 	}
 
 	@Override
-	public HttpServerOptions eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector) {
+	public HttpServerOptions eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopSelector) {
 		super.eventLoopSelector(eventLoopSelector);
 		return this;
 	}
@@ -242,7 +241,7 @@ public class HttpServerOptions extends ServerOptions {
 		}
 
 		@Override
-		public HttpServerOptions eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopGroup) {
+		public HttpServerOptions eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopGroup) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 

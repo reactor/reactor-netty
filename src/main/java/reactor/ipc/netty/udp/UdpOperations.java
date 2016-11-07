@@ -49,7 +49,7 @@ final class UdpOperations extends NettyOperations<UdpInbound, UdpOutbound>
 		channel.attr(NettyOperations.OPERATIONS_ATTRIBUTE_KEY)
 		       .set(ops);
 
-		NettyOperations.addHandler(channel);
+		NettyOperations.addReactiveBridgeHandler(channel);
 
 		return ops;
 	}

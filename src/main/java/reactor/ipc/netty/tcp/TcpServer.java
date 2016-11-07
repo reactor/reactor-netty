@@ -16,11 +16,9 @@
 
 package reactor.ipc.netty.tcp;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import javax.net.ssl.SSLException;
 
@@ -28,8 +26,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -54,8 +50,8 @@ import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.options.EventLoopSelector;
 import reactor.ipc.netty.options.ServerOptions;
-import reactor.ipc.netty.options.NettyNativeDetector;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -64,7 +60,8 @@ import reactor.util.Loggers;
  *
  * @author Stephane Maldini
  */
-public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, MultiProducer {
+public class TcpServer
+		implements NettyConnector<NettyInbound, NettyOutbound>, MultiProducer {
 
 	/**
 	 * Bind a new TCP server to "loopback" on port {@literal 12012}.
@@ -133,12 +130,15 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 		                           .listen(bindAddress, port));
 	}
 
-	final ChannelGroup        channelGroup;
-	final ServerOptions       options;
-	final SslContext          sslContext;
-	final InetSocketAddress   listenAddress;
-	final NettyNativeDetector channelAdapter;
+	final ChannelGroup      channelGroup;
+	final ServerOptions     options;
+	final SslContext        sslContext;
+	final InetSocketAddress listenAddress;
+	final boolean           useNative;
 
+	/**
+	 * @param options
+	 */
 	protected TcpServer(ServerOptions options) {
 		this.options = options.toImmutable();
 		this.listenAddress = options.listenAddress() == null ? new InetSocketAddress(0) :
@@ -153,8 +153,6 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 							sslContext.getClass()
 							          .getSimpleName());
 				}
-				this.channelAdapter = sslContext instanceof JdkSslContext ?
-						NettyNativeDetector.force(false) : NettyNativeDetector.instance();
 			}
 			catch (SSLException e) {
 				throw Exceptions.bubble(e);
@@ -162,8 +160,8 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 		}
 		else {
 			this.sslContext = null;
-			this.channelAdapter = NettyNativeDetector.instance();
 		}
+		this.useNative = options.preferNative() && !(sslContext instanceof JdkSslContext);
 
 		if (options.managed()) {
 			log.debug("Server is managed.");
@@ -222,8 +220,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 	}
 
 	@Override
-	public final Mono<? extends NettyState> newHandler(BiFunction<? super NettyInbound, ? super
-			NettyOutbound, ? extends Publisher<Void>> handler) {
+	public final Mono<? extends NettyState> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return Mono.create(sink -> {
 			ServerBootstrap bootstrap = new ServerBootstrap();
@@ -240,7 +237,8 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 
 	@Override
 	public String toString() {
-		return "TcpServer:" + options.listenAddress().toString();
+		return "TcpServer:" + options.listenAddress()
+		                             .toString();
 	}
 
 	/**
@@ -266,23 +264,31 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 	 * @return a {@link Cancellation} that shutdown the server on dispose
 	 */
 	protected Cancellation bind(ServerBootstrap bootstrap,
-			MonoSink<NettyState> sink, Cancellation onClose) {
-		ChannelFuture f = bootstrap.bind(listenAddress)
-		                           .addListener(new OnBindListener(sink));
+			MonoSink<NettyState> sink,
+			Cancellation onClose) {
+		return NettyOperations.newConnectHandler(bootstrap.bind(listenAddress),
+				sink,
+				onClose,
+				true);
+	}
 
-		return () -> {
-			try {
-				f.channel()
-				 .close()
-				 .sync();
-				if(onClose != null){
-					onClose.dispose();
-				}
-			}
-			catch (InterruptedException e) {
-				log.error("error while disposing the channel", e);
-			}
-		};
+	/**
+	 * Return the current {@link EventLoopSelector}
+	 * @return the current {@link EventLoopSelector}
+	 */
+	protected final EventLoopSelector optionsOrDefaultLoops(){
+		return this.options.eventLoopSelector() != null ?
+				this.options.eventLoopSelector()
+				            .get() : global();
+	}
+
+
+	/**
+	 * Return the global {@link EventLoopSelector}
+	 * @return the global {@link EventLoopSelector}
+	 */
+	protected EventLoopSelector global(){
+		return DEFAULT_TCP_SERVER_LOOPS;
 	}
 
 	/**
@@ -294,19 +300,23 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 	 */
 	protected Cancellation channel(ServerBootstrap bootstrap) {
 		final Cancellation onCancel;
-		final EventLoopGroup selectorGroup = channelAdapter.newEventLoopGroup(
-				DEFAULT_TCP_SELECT_COUNT,
-				(Runnable r) -> {
-					Thread t = new Thread(r,
-							"reactor-tcp-server-select-" + COUNTER.incrementAndGet());
-					t.setDaemon(options.daemon());
-					return t;
-				});
 
-		final EventLoopGroup elg;
-		if (null != options.eventLoopSelector()) {
-			elg = options.eventLoopSelector().apply(options.preferNative());
+		EventLoopSelector loops = optionsOrDefaultLoops();
+
+		final EventLoopGroup selectorGroup = loops.onServerSelect(useNative);
+		final EventLoopGroup elg = loops.onServer(useNative);
+
+		if (loops != global()) {
 			onCancel = () -> {
+				try {
+					selectorGroup.shutdownGracefully()
+					             .sync();
+				}
+				catch (InterruptedException i) {
+					log.error(
+							"error while disposing the handler selector eventLoopSelector",
+							i);
+				}
 				try {
 					selectorGroup.shutdownGracefully()
 					             .sync();
@@ -319,37 +329,12 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 			};
 		}
 		else {
-			elg = channelAdapter.newEventLoopGroup(DEFAULT_IO_THREAD_COUNT,
-					(Runnable r) -> {
-						Thread t = new Thread(r,
-								"reactor-tcp-server-io-" + COUNTER.incrementAndGet());
-						t.setDaemon(options.daemon());
-						return t;
-					});
-
-			onCancel = () -> {
-				try {
-					selectorGroup.shutdownGracefully()
-					             .sync();
-				}
-				catch (InterruptedException i) {
-					log.error(
-							"error while disposing the handler selector eventLoopSelector",
-							i);
-				}
-				try {
-					elg.shutdownGracefully()
-					   .sync();
-				}
-				catch (InterruptedException i) {
-					log.error("error while disposing the handler io eventLoopSelector",
-							i);
-				}
-			};
+			onCancel = null;
 		}
 
 		bootstrap.group(selectorGroup, elg)
-		         .channel(channelAdapter.getServerChannel(elg));
+		         .channel(loops.onServerChannel(elg));
+
 		return onCancel;
 	}
 
@@ -403,9 +388,10 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 
 	static final class ServerSetup extends ChannelInitializer<SocketChannel> {
 
-		final TcpServer                 parent;
+		final TcpServer parent;
 		final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>>
-		                                handler;
+		                handler;
+
 		ServerSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 				TcpServer parent) {
 			this.parent = parent;
@@ -458,38 +444,9 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound>, M
 		}
 	}
 
-	final static class OnBindListener implements ChannelFutureListener {
-
-		final MonoSink<NettyState> sink;
-
-		public OnBindListener(MonoSink<NettyState> sink) {
-			this.sink = sink;
-		}
-
-		@Override
-		public void operationComplete(ChannelFuture f) throws Exception {
-			if (log.isDebugEnabled()) {
-				log.debug("BIND {} {}",
-						f.isSuccess() ? "OK" : "FAILED",
-						f.channel()
-						 .localAddress());
-			}
-			if (!f.isSuccess()) {
-				if (f.cause() != null) {
-					sink.error(f.cause());
-				}
-				else {
-					sink.error(new IOException("error while binding to " + f.channel()
-					                                                        .localAddress()));
-				}
-			}
-			else{
-				sink.success(NettyOperations.state(f.channel()));
-			}
-		}
-	}
-
-	final static Logger         log            = Loggers.getLogger(TcpServer.class);
-	static final AtomicLong     COUNTER        = new AtomicLong();
-	static final LoggingHandler loggingHandler = new LoggingHandler(TcpServer.class);
+	static final Logger            log                      =
+			Loggers.getLogger(TcpServer.class);
+	static final LoggingHandler    loggingHandler           =
+			new LoggingHandler(TcpServer.class);
+	static final EventLoopSelector DEFAULT_TCP_SERVER_LOOPS = EventLoopSelector.create("tcp");
 }

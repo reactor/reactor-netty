@@ -16,23 +16,17 @@
 
 package reactor.ipc.netty.udp;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ProtocolFamily;
 import java.util.Objects;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -47,8 +41,9 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.options.EventLoopSelector;
+import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.options.ServerOptions;
-import reactor.ipc.netty.options.NettyNativeDetector;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -81,7 +76,7 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 * @return a new {@link UdpClient}
 	 */
 	public static UdpClient create(String bindAddress) {
-		return create(bindAddress, NettyConnector.DEFAULT_PORT);
+		return create(bindAddress, NettyOptions.DEFAULT_PORT);
 	}
 
 	/**
@@ -182,6 +177,16 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	}
 
 	/**
+	 * Return the current {@link EventLoopSelector}
+	 * @return the current {@link EventLoopSelector}
+	 */
+	protected EventLoopSelector optionsOrDefaultLoops(){
+		return this.options.eventLoopSelector() != null ?
+				this.options.eventLoopSelector()
+				            .get() : DEFAULT_UDP_LOOPS;
+	}
+
+	/**
 	 * Set current {@link Bootstrap} channel and group
 	 *
 	 * @param bootstrap {@link Bootstrap}
@@ -189,27 +194,16 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 * @return a {@link Cancellation} that shutdown the eventLoopSelector on dispose
 	 */
 	Cancellation channel(Bootstrap bootstrap) {
-		final Cancellation onCancel;
-		final EventLoopGroup elg;
 
-		if (null != options.eventLoopSelector()) {
-			elg = options.eventLoopSelector()
-			             .apply(options.preferNative());
+		EventLoopSelector loops = optionsOrDefaultLoops();
+
+		final EventLoopGroup elg = loops.onServer(options.protocolFamily() == null && options.preferNative());
+		final Cancellation onCancel;
+
+		if (loops == DEFAULT_UDP_LOOPS) {
 			onCancel = null;
 		}
 		else {
-			int ioThreadCount = DEFAULT_UDP_THREAD_COUNT;
-			ThreadFactory tf = (Runnable r) -> {
-				Thread t = new Thread(r, "reactor-udp-io-" + COUNTER.incrementAndGet());
-				t.setDaemon(options.daemon());
-				return t;
-			};
-
-			elg = options.protocolFamily() == null ? NettyNativeDetector.instance()
-			                                                            .newEventLoopGroup(
-					                                                            ioThreadCount,
-					                                                            tf) :
-					new NioEventLoopGroup(ioThreadCount, tf);
 			onCancel = () -> {
 				try {
 					elg.shutdownGracefully()
@@ -221,17 +215,10 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 				}
 			};
 		}
-
 		bootstrap.group(elg);
 
-		if ((options.protocolFamily() == null) && NettyNativeDetector.instance()
-		                                                             .getDatagramChannel(
-				                                                             elg)
-		                                                             .getSimpleName()
-		                                                             .startsWith("Epoll")) {
-
-			bootstrap.channel(NettyNativeDetector.instance()
-			                                     .getDatagramChannel(elg));
+		if (options.protocolFamily() == null && options.preferNative()) {
+			bootstrap.channel(loops.onDatagramChannel(elg));
 		}
 		else {
 			bootstrap.channelFactory(() -> new NioDatagramChannel(toNettyFamily(options.protocolFamily())));
@@ -252,22 +239,7 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 			MonoSink<NettyState> sink,
 			Cancellation onClose) {
 
-		ChannelFuture f = bootstrap.bind()
-		                           .addListener(new OnBindListener(sink));
-
-		return () -> {
-			try {
-				f.channel()
-				 .close()
-				 .sync();
-				if (onClose != null) {
-					onClose.dispose();
-				}
-			}
-			catch (InterruptedException e) {
-				log.error("error while disposing the channel", e);
-			}
-		};
+		return NettyOperations.newConnectHandler(bootstrap.bind(), sink, onClose);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -360,40 +332,13 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 		}
 	}
 
-	final static class OnBindListener implements ChannelFutureListener {
-
-		final MonoSink<NettyState>            sink;
-
-		public OnBindListener(MonoSink<NettyState> sink) {
-			this.sink = sink;
-		}
-
-		@Override
-		public void operationComplete(ChannelFuture f) throws Exception {
-			if (log.isInfoEnabled()) {
-				log.info("CONNECT {} {}",
-						f.isSuccess() ? "OK" : "FAILED",
-						f.channel()
-						 .localAddress());
-			}
-			if (!f.isSuccess()) {
-				if (f.cause() != null) {
-					sink.error(f.cause());
-				}
-				else {
-					sink.error(new IOException("error while binding to " + f.channel()
-					                                                        .localAddress()));
-				}
-			}
-		}
-
-	}
-
 	static final int DEFAULT_UDP_THREAD_COUNT = Integer.parseInt(System.getProperty(
 			"reactor.udp.ioThreadCount",
 			"" + Schedulers.DEFAULT_POOL_SIZE));
 
 	static final Logger         log            = Loggers.getLogger(UdpClient.class);
-	static final AtomicLong     COUNTER        = new AtomicLong();
 	static final LoggingHandler loggingHandler = new LoggingHandler(UdpClient.class);
+
+	static final EventLoopSelector DEFAULT_UDP_LOOPS =
+			EventLoopSelector.create("udp", DEFAULT_UDP_THREAD_COUNT, true);
 }

@@ -77,7 +77,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		channel.attr(OPERATIONS_ATTRIBUTE_KEY)
 		       .set(ops);
 
-		NettyOperations.addHandler(channel);
+		NettyOperations.addReactiveBridgeHandler(channel);
 
 		return ops;
 	}
@@ -366,11 +366,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void doOnTerminate(ChannelHandlerContext ctx,
+	protected void doOnTerminatedWriter(ChannelHandlerContext ctx,
 			ChannelFuture last,
 			ChannelPromise promise,
 			Throwable exception) {
-		super.doOnTerminate(ctx,
+		super.doOnTerminatedWriter(ctx,
 				ctx.write(isWebsocket() ? Unpooled.EMPTY_BUFFER :
 						LastHttpContent.EMPTY_LAST_CONTENT),
 				promise,

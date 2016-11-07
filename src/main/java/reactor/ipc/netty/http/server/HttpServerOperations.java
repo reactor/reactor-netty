@@ -76,7 +76,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		channel.attr(OPERATIONS_ATTRIBUTE_KEY)
 		       .set(ops);
 
-		NettyOperations.addHandler(channel);
+		NettyOperations.addReactiveBridgeHandler(channel);
 
 		return ops;
 	}
@@ -363,11 +363,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void doOnTerminate(ChannelHandlerContext ctx,
+	protected void doOnTerminatedWriter(ChannelHandlerContext ctx,
 			ChannelFuture last,
 			ChannelPromise promise,
 			Throwable exception) {
-		super.doOnTerminate(ctx,
+		super.doOnTerminatedWriter(ctx,
 				ctx.channel()
 				   .write(Unpooled.EMPTY_BUFFER),
 				promise,

@@ -19,8 +19,8 @@ package reactor.ipc.netty.options;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
@@ -36,9 +36,18 @@ import io.netty.handler.ssl.SslContextBuilder;
 @SuppressWarnings("unchecked")
 public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 
+	/**
+	 *
+	 */
 	public static final boolean DEFAULT_MANAGED_PEER = Boolean.parseBoolean(System.getProperty("reactor.ipc.netty" +
 			".managed.default",
 			"false"));
+	/**
+	 *
+	 */
+	public static final int     DEFAULT_PORT         =
+			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
+					12012;
 
 	long              timeout                   = 30000L;
 	long              sslHandshakeTimeoutMillis = 10000L;
@@ -48,16 +57,17 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	int               rcvbuf                    = 1024 * 1024;
 	int               sndbuf                    = 1024 * 1024;
 	boolean           managed                   = DEFAULT_MANAGED_PEER;
-	boolean           preferNative              = true;
 	boolean           daemon                    = true;
 	SslContextBuilder sslOptions                = null;
+	boolean preferNative;
 
-	Consumer<? super Channel>                           afterChannelInit  = null;
-	Predicate<? super Channel>                          onChannelInit     = null;
-	Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector = null;
+	Consumer<? super Channel>             afterChannelInit  = null;
+	Predicate<? super Channel>            onChannelInit     = null;
+	Supplier<? extends EventLoopSelector> eventLoopSelector = null;
 
 	NettyOptions() {
-
+		preferNative =
+				Boolean.parseBoolean(System.getProperty("reactor.ipc.epoll", "true"));
 	}
 
 	NettyOptions(NettyOptions options) {
@@ -143,7 +153,7 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 */
 	public SO eventLoopGroup(EventLoopGroup eventLoopGroup) {
 		Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
-		this.eventLoopSelector = useNative -> eventLoopGroup;
+		this.eventLoopSelector = () -> preferNative -> eventLoopGroup;
 		return (SO)this;
 	}
 
@@ -151,7 +161,7 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 * Return the configured {@link EventLoopGroup} selector for each Connector handler.
 	 * @return an {@link EventLoopGroup} selector for each Connector handler.
 	 */
-	public Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector() {
+	public Supplier<? extends EventLoopSelector> eventLoopSelector() {
 		return eventLoopSelector;
 	}
 
@@ -163,7 +173,7 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 *
 	 * @return this builder
 	 */
-	public SO eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector) {
+	public SO eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopSelector) {
 		Objects.requireNonNull(eventLoopSelector, "eventLoopSelector");
 		this.eventLoopSelector = eventLoopSelector;
 		return (SO) this;

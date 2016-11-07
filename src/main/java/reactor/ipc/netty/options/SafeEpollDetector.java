@@ -26,6 +26,7 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -34,7 +35,7 @@ import reactor.ipc.netty.options.ColocatedEventLoopGroup;
 /**
  * @author Stephane Maldini
  */
-public class EpollDetector {
+final class SafeEpollDetector {
 
 	private static final boolean epoll;
 
@@ -50,7 +51,10 @@ public class EpollDetector {
 	}
 
 	public static EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return epoll ? new EpollEventLoopGroup(threads, factory) : new NioEventLoopGroup(threads, factory);
+		if(epoll){
+			return new EpollEventLoopGroup(threads, factory);
+		}
+		throw new IllegalStateException("Missing EPoll on current system");
 	}
 
 	public static Class<? extends ServerChannel> getServerChannel(EventLoopGroup group) {
@@ -61,7 +65,7 @@ public class EpollDetector {
 		return useEpoll(group) ? EpollSocketChannel.class : NioSocketChannel.class;
 	}
 
-	public static Class<? extends Channel> getDatagramChannel(EventLoopGroup group) {
+	public static Class<? extends DatagramChannel> getDatagramChannel(EventLoopGroup group) {
 		return useEpoll(group) ? EpollDatagramChannel.class : NioDatagramChannel.class;
 	}
 

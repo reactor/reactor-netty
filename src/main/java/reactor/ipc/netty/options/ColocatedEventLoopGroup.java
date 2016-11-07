@@ -37,7 +37,7 @@ import io.netty.util.concurrent.ScheduledFuture;
 /**
  * Reuse local event loop if already working inside one.
  */
-public final class ColocatedEventLoopGroup implements EventLoopGroup {
+final class ColocatedEventLoopGroup implements EventLoopGroup {
 
 	final EventLoopGroup eventLoopGroup;
 	final FastThreadLocal<EventLoop> localLoop = new FastThreadLocal<>();

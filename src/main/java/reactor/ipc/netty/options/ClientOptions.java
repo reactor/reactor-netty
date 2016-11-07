@@ -26,12 +26,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.NetUtil;
-
-import static reactor.ipc.netty.NettyConnector.DEFAULT_PORT;
 
 /**
  * A client connector builder with low-level connection options including connection pooling and
@@ -355,7 +352,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 		}
 
 		@Override
-		public ClientOptions eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopGroup) {
+		public ClientOptions eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopGroup) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 

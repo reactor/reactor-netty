@@ -24,13 +24,13 @@ import reactor.core.publisher.MonoSink;
 /**
  * @author Stephane Maldini
  */
-final class NettySslReader extends ChannelDuplexHandler {
+final class SslReadHandler extends ChannelDuplexHandler {
 
 	final MonoSink<?> sink;
 
 	boolean handshakeDone;
 
-	NettySslReader(MonoSink<?> sink) {
+	SslReadHandler(MonoSink<?> sink) {
 		this.sink = sink;
 	}
 

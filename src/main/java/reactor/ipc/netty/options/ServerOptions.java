@@ -21,11 +21,10 @@ import java.net.NetworkInterface;
 import java.net.ProtocolFamily;
 import java.security.cert.CertificateException;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
@@ -269,7 +268,7 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 		}
 
 		@Override
-		public ServerOptions eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopGroup) {
+		public ServerOptions eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopGroup) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 

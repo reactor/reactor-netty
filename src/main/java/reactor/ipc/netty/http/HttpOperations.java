@@ -202,7 +202,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 				sendHeadersAndSubscribe(new HttpWriterSubscriber(s));
 			}
 			else {
-				emitWriter(source, s);
+				doChannelWriter(source, s);
 			}
 		}
 
@@ -228,7 +228,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			@Override
 			public void onComplete() {
 				this.subscription = null;
-				emitWriter(source, s);
+				doChannelWriter(source, s);
 			}
 
 			@Override

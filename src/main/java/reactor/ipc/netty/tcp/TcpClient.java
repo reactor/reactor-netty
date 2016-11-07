@@ -16,10 +16,8 @@
 
 package reactor.ipc.netty.tcp;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
@@ -28,8 +26,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -51,14 +47,14 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.options.ColocatedEventLoopGroup;
-import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
 import reactor.ipc.netty.options.ClientOptions;
-import reactor.ipc.netty.options.NettyNativeDetector;
+import reactor.ipc.netty.options.EventLoopSelector;
+import reactor.ipc.netty.options.NettyOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -89,7 +85,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * a new {@link TcpClient}
 	 */
 	public static TcpClient create(String bindAddress) {
-		return create(bindAddress, NettyConnector.DEFAULT_PORT);
+		return create(bindAddress, NettyOptions.DEFAULT_PORT);
 	}
 
 	/**
@@ -127,9 +123,9 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		return new TcpClient(Objects.requireNonNull(options, "options"));
 	}
 
-	final ClientOptions       options;
-	final SslContext          sslContext;
-	final NettyNativeDetector channelAdapter;
+	final ClientOptions     options;
+	final SslContext        sslContext;
+	final boolean useNative;
 
 	protected TcpClient(ClientOptions options) {
 		this.options = options.toImmutable();
@@ -145,8 +141,6 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 							          .getSimpleName());
 				}
 
-				channelAdapter = sslContext instanceof JdkSslContext ?
-						NettyNativeDetector.force(false) : NettyNativeDetector.instance();
 			}
 			catch (SSLException ssle) {
 				throw Exceptions.bubble(ssle);
@@ -154,8 +148,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		}
 		else {
 			sslContext = null;
-			channelAdapter = NettyNativeDetector.instance();
 		}
+		this.useNative = options.preferNative() && !(sslContext instanceof JdkSslContext);
 
 	}
 
@@ -175,7 +169,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 	@Override
 	public String toString() {
-		return "TcpClient:" + options.remoteAddress().toString();
+		return "TcpClient:" + options.remoteAddress()
+		                             .toString();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -194,7 +189,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 			options(bootstrap);
 			handler(bootstrap, targetHandler, secure, sink, onSetup);
 			Cancellation onCancelGroups = channel(bootstrap);
-			Cancellation onCancelClient = connect(bootstrap, address, sink, onCancelGroups);
+			Cancellation onCancelClient =
+					connect(bootstrap, address, sink, onCancelGroups);
 
 			sink.setCancellation(onCancelClient);
 		});
@@ -225,6 +221,22 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	}
 
 	/**
+	 * Return the current {@link EventLoopSelector}
+	 * @return the current {@link EventLoopSelector}
+	 */
+	protected final EventLoopSelector optionsOrDefaultLoops(){
+		return this.options.eventLoopSelector() != null ?
+				this.options.eventLoopSelector()
+				            .get() : global();
+	}/**
+	 * Return the global {@link EventLoopSelector}
+	 * @return the global {@link EventLoopSelector}
+	 */
+	protected EventLoopSelector global(){
+		return DEFAULT_TCP_CLIENT_LOOPS;
+	}
+
+	/**
 	 * Set current {@link Bootstrap} channel and group
 	 *
 	 * @param bootstrap {@link Bootstrap}
@@ -232,27 +244,21 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @return a {@link Cancellation} that shutdown the eventLoopSelector on dispose
 	 */
 	protected Cancellation channel(Bootstrap bootstrap) {
-		final EventLoopGroup elg;
+		EventLoopSelector loops = optionsOrDefaultLoops();
+
+		final EventLoopGroup elg = loops.onClient(useNative);
+
 		final Cancellation onCancel;
-		if (null != options.eventLoopSelector()) {
-			elg = options.eventLoopSelector()
-			             .apply(options.preferNative());
-			onCancel = elg::shutdownGracefully;
+		if(loops == global()){
+			onCancel = null;
 		}
 		else {
-			elg = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(
-					NettyConnector.DEFAULT_IO_THREAD_COUNT,
-					(Runnable r) -> {
-						Thread t = new Thread(r,
-								"reactor-tcp-client-io-" + COUNTER.incrementAndGet());
-						t.setDaemon(options.daemon());
-						return t;
-					}));
-
 			onCancel = elg::shutdownGracefully;
 		}
+
 		bootstrap.group(elg)
-		         .channel(channelAdapter.getChannel(elg));
+		         .channel(loops.onChannel(elg));
+
 		return onCancel;
 	}
 
@@ -271,22 +277,9 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 			InetSocketAddress address,
 			MonoSink<NettyState> sink,
 			Cancellation onClose) {
-		ChannelFuture f = bootstrap.connect(address)
-		                           .addListener(new OnBindListener(sink, onClose));
-
-		return () -> {
-			try {
-				f.channel()
-				 .close()
-				 .sync();
-				if(onClose != null) {
-					onClose.dispose();
-				}
-			}
-			catch (InterruptedException e) {
-				log.error("error while disposing the channel", e);
-			}
-		};
+		return NettyOperations.newConnectHandler(bootstrap.connect(address),
+				sink,
+				onClose);
 	}
 
 	/**
@@ -370,7 +363,6 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 			ChannelPipeline pipeline = ch.pipeline();
 
-
 			if (secure && null != parent.sslContext) {
 				SslHandler sslHandler = parent.sslContext.newHandler(ch.alloc());
 				sslHandler.setHandshakeTimeoutMillis(parent.options.sslHandshakeTimeoutMillis());
@@ -386,15 +378,16 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				}
 				if (log.isDebugEnabled()) {
 					pipeline.addAfter(NettyHandlerNames.SslHandler,
-							NettyHandlerNames.LoggingHandler, parent.logger());
+							NettyHandlerNames.LoggingHandler,
+							parent.logger());
 					pipeline.addAfter(NettyHandlerNames.LoggingHandler,
 							NettyHandlerNames.SslReader,
-							new NettySslReader(sink));
+							new SslReadHandler(sink));
 				}
 				else {
 					pipeline.addAfter(NettyHandlerNames.SslHandler,
 							NettyHandlerNames.SslReader,
-							new NettySslReader(sink));
+							new SslReadHandler(sink));
 				}
 
 			}
@@ -451,40 +444,9 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		}
 	}
 
-	static final class OnBindListener implements ChannelFutureListener {
-
-		final MonoSink<?> sink;
-		final Cancellation onClose;
-
-		OnBindListener(MonoSink<NettyState> sink, Cancellation onClose) {
-			this.sink = sink;
-			this.onClose = onClose;
-		}
-
-		@Override
-		public void operationComplete(ChannelFuture f) throws Exception {
-			if (log.isDebugEnabled()) {
-				log.debug("CONNECT {} {}",
-						f.isSuccess() ? "OK" : "FAILED",
-						f.channel()
-						 .remoteAddress());
-			}
-			if (onClose != null){
-				f.channel().closeFuture().addListener(x -> onClose.dispose());
-			}
-			if (!f.isSuccess()) {
-				if (f.cause() != null) {
-					sink.error(f.cause());
-				}
-				else {
-					sink.error(new IOException("error while connecting to " + f.channel()
-					                                                           .remoteAddress()));
-				}
-			}
-		}
-	}
-
 	static final Logger         log            = Loggers.getLogger(TcpClient.class);
-	static final AtomicLong     COUNTER        = new AtomicLong();
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
+
+	static final EventLoopSelector DEFAULT_TCP_CLIENT_LOOPS =
+			EventLoopSelector.create("tcp");
 }

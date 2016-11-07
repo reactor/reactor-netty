@@ -35,14 +35,14 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyConnector;
-import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.NettyHandlerNames;
-import reactor.ipc.netty.options.ServerOptions;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.options.EventLoopSelector;
+import reactor.ipc.netty.options.NettyOptions;
+import reactor.ipc.netty.options.ServerOptions;
 import reactor.ipc.netty.tcp.TcpServer;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 /**
  * Base functionality needed by all servers that communicate with clients over HTTP.
@@ -91,7 +91,7 @@ public final class HttpServer
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(String bindAddress) {
-		return create(bindAddress, NettyConnector.DEFAULT_PORT);
+		return create(bindAddress, NettyOptions.DEFAULT_PORT);
 	}
 
 	/**
@@ -123,7 +123,7 @@ public final class HttpServer
 
 	/**
 	 *
-	 * @param routesBuilder
+	 * @param routesBuilder a mutable route builder
 	 * @return a new {@link Mono} starting the router on subscribe
 	 */
 	public Mono<? extends NettyState> newRouter(Consumer<? super HttpServerRoutes>
@@ -196,7 +196,6 @@ public final class HttpServer
 		return Flux.concat(Flux.fromIterable(multiplexing));
 	}
 
-	static final Logger         log            = Loggers.getLogger(HttpServer.class);
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
 
 	final class TcpBridgeServer extends TcpServer {
@@ -215,8 +214,16 @@ public final class HttpServer
 		}
 
 		@Override
+		protected EventLoopSelector global() {
+			return DEFAULT_HTTP_SERVER_LOOPS;
+		}
+
+		@Override
 		protected LoggingHandler logger() {
 			return loggingHandler;
 		}
 	}
+
+	static final EventLoopSelector DEFAULT_HTTP_SERVER_LOOPS = EventLoopSelector.create
+			("http");
 }

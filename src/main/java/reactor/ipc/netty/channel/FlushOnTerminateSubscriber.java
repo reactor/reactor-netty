@@ -63,7 +63,7 @@ final class FlushOnTerminateSubscriber
 		   .removeListener(this);
 		ctx.channel()
 		   .eventLoop()
-		   .execute(() -> parent.doOnTerminate(ctx, lastWrite, promise, null));
+		   .execute(() -> parent.doOnTerminatedWriter(ctx, lastWrite, promise, null));
 	}
 
 	@Override
@@ -81,7 +81,7 @@ final class FlushOnTerminateSubscriber
 		   .removeListener(this);
 		ctx.channel()
 		   .eventLoop()
-		   .execute(() -> parent.doOnTerminate(ctx, lastWrite, promise, t));
+		   .execute(() -> parent.doOnTerminatedWriter(ctx, lastWrite, promise, t));
 	}
 
 	@Override

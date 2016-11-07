@@ -19,7 +19,6 @@ package reactor.ipc.netty.http.client;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -34,14 +33,14 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.options.ColocatedEventLoopGroup;
-import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.NettyOperations;
 import reactor.ipc.netty.http.server.HttpServerResponse;
 import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.options.EventLoopSelector;
 import reactor.ipc.netty.tcp.TcpClient;
 
 /**
@@ -335,20 +334,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		}
 	}
 
-	//
-//
-	final static class DefaultState {
-
-		volatile ColocatedEventLoopGroup clientGroup;
-
-		static final AtomicReferenceFieldUpdater<DefaultState, ColocatedEventLoopGroup>
-				CLIENT_GROUP = AtomicReferenceFieldUpdater.newUpdater(DefaultState.class,
-				ColocatedEventLoopGroup.class,
-				"clientGroup");
-
-	}
-
-	final static DefaultState   global         = new DefaultState();
 	final static String         WS_SCHEME      = "ws";
 	final static String         WSS_SCHEME     = "wss";
 	final static String         HTTP_SCHEME    = "http";
@@ -381,8 +366,16 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		}
 
 		@Override
+		protected EventLoopSelector global() {
+			return DEFAULT_HTTP_CLIENT_LOOPS;
+		}
+
+		@Override
 		protected LoggingHandler logger() {
 			return loggingHandler;
 		}
 	}
+
+	static final EventLoopSelector DEFAULT_HTTP_CLIENT_LOOPS = EventLoopSelector.create
+			("http");
 }

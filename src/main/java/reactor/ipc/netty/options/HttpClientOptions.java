@@ -25,9 +25,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
-import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
-import reactor.ipc.netty.NettyConnector;
 
 /**
  * An http client connector builder with low-level connection options including
@@ -43,7 +41,7 @@ public class HttpClientOptions extends ClientOptions {
 	}
 
 	public static HttpClientOptions to(String host){
-		return to(host, NettyConnector.DEFAULT_PORT);
+		return to(host, NettyOptions.DEFAULT_PORT);
 	}
 
 	public static HttpClientOptions to(String host, int port){
@@ -111,7 +109,7 @@ public class HttpClientOptions extends ClientOptions {
 	}
 
 	@Override
-	public HttpClientOptions eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector) {
+	public HttpClientOptions eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopSelector) {
 		super.eventLoopSelector(eventLoopSelector);
 		return this;
 	}
@@ -356,7 +354,7 @@ public class HttpClientOptions extends ClientOptions {
 		}
 
 		@Override
-		public HttpClientOptions eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopGroup) {
+		public HttpClientOptions eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopGroup) {
 			throw new UnsupportedOperationException("Immutable Options");
 		}
 

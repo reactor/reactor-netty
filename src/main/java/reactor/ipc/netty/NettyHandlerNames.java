@@ -17,7 +17,10 @@
 package reactor.ipc.netty;
 
 /**
+ * Constant for names used when adding/removing {@link io.netty.channel.ChannelHandler}.
+ *
  * @author Stephane Maldini
+ * @since 0.6
  */
 public interface NettyHandlerNames {
 
