@@ -101,7 +101,7 @@ public class HttpClientOptions extends ClientOptions {
 
 	@Override
 	public HttpClientOptions daemon(boolean daemon) {
-		daemon(daemon);
+		super.daemon(daemon);
 		return this;
 	}
 
@@ -112,13 +112,13 @@ public class HttpClientOptions extends ClientOptions {
 
 	@Override
 	public HttpClientOptions eventLoopSelector(Function<? super Boolean, ? extends EventLoopGroup> eventLoopSelector) {
-		eventLoopSelector(eventLoopSelector);
+		super.eventLoopSelector(eventLoopSelector);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions keepAlive(boolean keepAlive) {
-		keepAlive(keepAlive);
+		super.keepAlive(keepAlive);
 		return this;
 	}
 
@@ -130,7 +130,7 @@ public class HttpClientOptions extends ClientOptions {
 
 	@Override
 	public HttpClientOptions managed(boolean managed) {
-		managed(managed);
+		super.managed(managed);
 		return this;
 	}
 
@@ -142,7 +142,7 @@ public class HttpClientOptions extends ClientOptions {
 
 	@Override
 	public HttpClientOptions preferNative(boolean preferNative) {
-		preferNative(preferNative);
+		super.preferNative(preferNative);
 		return this;
 	}
 
@@ -179,20 +179,20 @@ public class HttpClientOptions extends ClientOptions {
 			int port,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
-		proxy(type, host, port, username, password);
+		super.proxy(type, host, port, username, password);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions proxy(@Nonnull Proxy type, @Nonnull String host, int port) {
-		proxy(type, host, port);
+		super.proxy(type, host, port);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions proxy(@Nonnull Proxy type,
 			@Nonnull InetSocketAddress connectAddress) {
-		proxy(type, connectAddress);
+		super.proxy(type, connectAddress);
 		return this;
 	}
 
@@ -201,7 +201,7 @@ public class HttpClientOptions extends ClientOptions {
 			@Nonnull InetSocketAddress connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
-		proxy(type, connectAddress, username, password);
+		super.proxy(type, connectAddress, username, password);
 		return this;
 	}
 
@@ -210,7 +210,7 @@ public class HttpClientOptions extends ClientOptions {
 			@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
-		proxy(type, connectAddress, username, password);
+		super.proxy(type, connectAddress, username, password);
 		return this;
 	}
 
@@ -260,37 +260,37 @@ public class HttpClientOptions extends ClientOptions {
 	public HttpClientOptions proxy(@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
-		proxy(Proxy.HTTP, connectAddress, username, password);
+		super.proxy(Proxy.HTTP, connectAddress, username, password);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions rcvbuf(int rcvbuf) {
-		rcvbuf(rcvbuf);
+		super.rcvbuf(rcvbuf);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions sndbuf(int sndbuf) {
-		sndbuf(sndbuf);
+		super.sndbuf(sndbuf);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions ssl(SslContextBuilder sslOptions) {
-		ssl(sslOptions);
+		super.ssl(sslOptions);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions sslConfigurer(Consumer<? super SslContextBuilder> sslConfigurer) {
-		sslConfigurer(sslConfigurer);
+		super.sslConfigurer(sslConfigurer);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
-		sslHandshakeTimeoutMillis(sslHandshakeTimeoutMillis);
+		super.sslHandshakeTimeoutMillis(sslHandshakeTimeoutMillis);
 		return this;
 	}
 
@@ -300,19 +300,19 @@ public class HttpClientOptions extends ClientOptions {
 	 */
 	@Override
 	public HttpClientOptions sslSupport() {
-		ssl(SslContextBuilder.forClient());
+		super.ssl(SslContextBuilder.forClient());
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions tcpNoDelay(boolean tcpNoDelay) {
-		tcpNoDelay(tcpNoDelay);
+		super.tcpNoDelay(tcpNoDelay);
 		return this;
 	}
 
 	@Override
 	public HttpClientOptions timeoutMillis(long timeout) {
-		timeoutMillis(timeout);
+		super.timeoutMillis(timeout);
 		return this;
 	}
 

@@ -258,7 +258,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	 * @return this {@link ClientOptions}
 	 */
 	public ClientOptions sslSupport() {
-		ssl(SslContextBuilder.forClient());
+		super.ssl(SslContextBuilder.forClient());
 		return this;
 	}
 
