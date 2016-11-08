@@ -114,7 +114,8 @@ final class MultipartParser
 
 				actual.onNext(ByteBufFlux.from(
 						w.flatMap(b -> Flux.using(() -> b, Flux::just,
-								ByteBuf::release)), alloc));
+								ByteBuf::release)),
+						alloc));
 		}
 	}
 

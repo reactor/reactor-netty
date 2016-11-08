@@ -27,8 +27,10 @@ import reactor.core.publisher.Mono;
 public interface NettyState extends Cancellation {
 
 	/**
+	 * Return remote address if client {@link NettyState} otherwise local address if
+	 * server.
 	 *
-	 * @return
+	 * @return remote or local {@link InetSocketAddress}
 	 */
 	InetSocketAddress address();
 

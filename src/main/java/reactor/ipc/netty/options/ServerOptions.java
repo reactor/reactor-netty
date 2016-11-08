@@ -177,7 +177,8 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 
 	/**
 	 * Return the multicast {@link NetworkInterface}
-	 * @return the multicast {@link NetworkInterface
+	 *
+	 * @return the multicast {@link NetworkInterface}
 	 */
 	public NetworkInterface multicastInterface() {
 		return this.multicastInterface;

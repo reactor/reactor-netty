@@ -208,7 +208,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	Queue<Object>              inboundQueue;
 	boolean                    inboundDone;
 	Throwable                  error;
-	long                       requestedInbound;
+	long                       inboundRequested;
 	int                        wip;
 	volatile Cancellation cancel;
 	volatile boolean      flushEach;
@@ -221,7 +221,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 		this.inboundQueue = replaced.inboundQueue;
 		this.inboundDone = replaced.inboundDone;
 		this.error = replaced.error;
-		this.requestedInbound = replaced.requestedInbound;
+		this.inboundRequested = replaced.inboundRequested;
 		this.wip = replaced.wip;
 		this.cancel = replaced.cancel;
 		this.flushEach = replaced.flushEach;
@@ -400,14 +400,14 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	@Override
 	public void request(long n) {
 		if (Operators.validate(n)) {
-			this.requestedInbound = Operators.addCap(requestedInbound, n);
+			this.inboundRequested = Operators.addCap(inboundRequested, n);
 			drainReceiver();
 		}
 	}
 
 	@Override
 	public long requestedFromDownstream() {
-		return requestedInbound;
+		return inboundRequested;
 	}
 
 	@Override
@@ -518,7 +518,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	/**
 	 * React on inbound/outbound error
 	 *
-	 * @param err the {@link }
+	 * @param err the {@link Throwable} cause
 	 */
 	protected void onChannelError(Throwable err) {
 		if (err == null) {
@@ -722,7 +722,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
-				requestedInbound = 0L;
+				inboundRequested = 0L;
 				if (c != null) {
 					c.dispose();
 				}
@@ -745,7 +745,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 				return false;
 			}
 
-			long r = requestedInbound;
+			long r = inboundRequested;
 			long e = 0L;
 
 			while (e != r) {
@@ -811,7 +811,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 
 			if (e != 0L) {
 				if (r != Long.MAX_VALUE) {
-					if ((requestedInbound -= e) > 0L) {
+					if ((inboundRequested -= e) > 0L) {
 						channel.read();
 					}
 				}

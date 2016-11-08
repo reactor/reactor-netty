@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty;
 
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.function.Function;
@@ -70,6 +71,14 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 			bb.readBytes(bytes);
 			return bytes;
 		});
+	}
+	/**
+	 * a {@link InputStream} inbound {@link Flux}
+	 *
+	 * @return a {@link InputStream} inbound {@link Flux}
+	 */
+	public Flux<InputStream> asInputStream() {
+		return map(ByteBufMono.ReleasingInputStream::new);
 	}
 
 	/**

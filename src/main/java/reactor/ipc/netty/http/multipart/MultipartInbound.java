@@ -53,7 +53,7 @@ public interface MultipartInbound extends NettyInbound {
 		return ByteBufFlux.from(receiveParts().onBackpressureError()
 		                                      .concatMap(parts -> parts.aggregate()
 		                                                               .retain())
-		                                      .flatMap(bb -> Flux.using(() -> bb,
+		                                      .concatMap(bb -> Flux.using(() -> bb,
 				                                      Flux::just,
 				                                      ReferenceCounted::release)),
 				channel().alloc());
