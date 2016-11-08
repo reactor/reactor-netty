@@ -157,9 +157,9 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = new Bootstrap();
 
-			options(bootstrap);
-			handler(bootstrap, targetHandler, sink);
 			Cancellation onCancelGroups = channel(bootstrap);
+			options(bootstrap);
+			handler(bootstrap, targetHandler, sink, onCancelGroups);
 			Cancellation onCancelClient = bind(bootstrap, sink, onCancelGroups);
 
 			sink.setCancellation(onCancelClient);
@@ -168,12 +168,10 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 
 	@SuppressWarnings("unchecked")
 	void onSetup(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			DatagramChannel ioChannel,
-			MonoSink<NettyState> sink) {
+			DatagramChannel ioChannel, MonoSink<NettyState> sink, Cancellation onClose) {
 		UdpOperations.bind(ioChannel,
 				options.multicastInterface(),
-				handler,
-				sink);
+				handler, sink, onClose);
 	}
 
 	/**
@@ -245,8 +243,9 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	@SuppressWarnings("unchecked")
 	void handler(Bootstrap bootstrap,
 			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> sink) {
-		bootstrap.handler(new ClientSetup(handler, this, sink));
+			MonoSink<NettyState> sink,
+			Cancellation onClose) {
+		bootstrap.handler(new ClientSetup(handler, this, sink, onClose));
 	}
 
 	/**
@@ -284,15 +283,16 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 
 	static final class ClientSetup extends ChannelInitializer<DatagramChannel> {
 
-		final UdpClient   parent;
+		final UdpClient            parent;
 		final MonoSink<NettyState> sink;
+		final Cancellation         onClose;
 		final BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>>
-		                  handler;
+		                           handler;
 
 		public ClientSetup(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-				UdpClient parent,
-				MonoSink<NettyState> sink) {
+				UdpClient parent, MonoSink<NettyState> sink, Cancellation onClose) {
 			this.parent = parent;
+			this.onClose = onClose;
 			this.sink = sink;
 			this.handler = handler;
 		}
@@ -321,7 +321,7 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 			}
 
 			try {
-				parent.onSetup(handler, ch, sink);
+				parent.onSetup(handler, ch, sink, onClose);
 			}
 			finally {
 				if (null != parent.options.afterChannelInit()) {

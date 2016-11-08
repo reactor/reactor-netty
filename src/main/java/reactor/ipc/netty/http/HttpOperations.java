@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.Cancellation;
 import reactor.core.Loopback;
 import reactor.core.Producer;
 import reactor.core.Receiver;
@@ -58,8 +59,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 
 	protected HttpOperations(Channel ioChannel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink) {
-		super(ioChannel, handler, clientSink);
+			MonoSink<NettyState> clientSink, Cancellation onClose) {
+		super(ioChannel, handler, clientSink, onClose);
 
 	}
 

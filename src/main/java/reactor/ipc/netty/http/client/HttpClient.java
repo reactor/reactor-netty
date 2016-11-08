@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
+import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
@@ -38,6 +39,7 @@ import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.http.HttpEventLoopSelector;
 import reactor.ipc.netty.http.server.HttpServerResponse;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.EventLoopSelector;
@@ -358,16 +360,16 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		@Override
 		protected void onSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 				SocketChannel ch,
-				MonoSink<NettyState> sink) {
+				MonoSink<NettyState> sink, Cancellation onClose) {
 			ch.pipeline()
 			  .addLast(NettyHandlerNames.HttpCodecHandler, new HttpClientCodec());
 
-			HttpClientOperations.bindHttp(ch, handler, sink);
+			HttpClientOperations.bindHttp(ch, handler, sink, onClose);
 		}
 
 		@Override
 		protected EventLoopSelector global() {
-			return DEFAULT_HTTP_CLIENT_LOOPS;
+			return HttpEventLoopSelector.defaultHttpLoops();
 		}
 
 		@Override
@@ -375,7 +377,4 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 			return loggingHandler;
 		}
 	}
-
-	static final EventLoopSelector DEFAULT_HTTP_CLIENT_LOOPS = EventLoopSelector.create
-			("http");
 }

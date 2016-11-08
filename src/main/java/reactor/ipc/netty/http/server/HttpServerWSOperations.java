@@ -77,10 +77,10 @@ final class HttpServerWSOperations extends HttpServerOperations
 	}
 
 	@Override
-	public void onNext(Object frame) {
+	public void onInboundNext(Object frame) {
 		if (frame instanceof CloseWebSocketFrame) {
 			handshaker.close(channel(), ((CloseWebSocketFrame) frame).retain());
-			onComplete();
+			onChannelComplete();
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {
@@ -88,7 +88,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 			                                                                           .retain()));
 			return;
 		}
-		super.onNext(frame);
+		super.onInboundNext(frame);
 	}
 
 	@Override

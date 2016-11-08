@@ -98,7 +98,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(Channel ch,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
-		super(ch, handler, null);
+		super(ch, handler, null, null);
 		this.nettyResponse =
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
@@ -178,12 +178,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public void onActive(ChannelHandlerContext ctx) {
+	public void onChannelActive(ChannelHandlerContext ctx) {
 		ctx.read();
 	}
 
 	@Override
-	public void onNext(Object msg) {
+	public void onInboundNext(Object msg) {
 		if (msg instanceof HttpRequest) {
 			nettyRequest = (HttpRequest) msg;
 			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
@@ -205,14 +205,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		if (msg instanceof HttpContent) {
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
-				super.onNext(msg);
+				super.onInboundNext(msg);
 			}
 			if (msg instanceof LastHttpContent) {
-				onComplete();
+				onChannelComplete();
 			}
 		}
 		else{
-			super.onNext(msg);
+			super.onInboundNext(msg);
 		}
 	}
 

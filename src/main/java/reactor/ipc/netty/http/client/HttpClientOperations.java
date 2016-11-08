@@ -47,13 +47,14 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import reactor.core.Cancellation;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
-import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyState;
 import reactor.ipc.netty.channel.NettyOperations;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
@@ -70,9 +71,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	static HttpOperations bindHttp(Channel channel,
 			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink) {
+			MonoSink<NettyState> clientSink,
+			Cancellation onClose) {
 
-		HttpClientOperations ops = new HttpClientOperations(channel, handler, clientSink);
+		HttpClientOperations ops =
+				new HttpClientOperations(channel, handler, clientSink, onClose);
 
 		channel.attr(OPERATIONS_ATTRIBUTE_KEY)
 		       .set(ops);
@@ -82,10 +85,10 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return ops;
 	}
 
-	final String[]    redirectedFrom;
-	final boolean     isSecure;
-	final HttpRequest nettyRequest;
-	final HttpHeaders headers;
+	final String[]     redirectedFrom;
+	final boolean      isSecure;
+	final HttpRequest  nettyRequest;
+	final HttpHeaders  headers;
 
 	volatile ResponseState responseState;
 
@@ -103,8 +106,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	HttpClientOperations(Channel channel,
 			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink) {
-		super(channel, handler, clientSink);
+			MonoSink<NettyState> clientSink,
+			Cancellation onClose) {
+		super(channel, handler, clientSink, onClose);
 		this.isSecure = channel.pipeline()
 		                       .get(NettyHandlerNames.SslHandler) != null;
 		String[] redirects = channel.attr(REDIRECT_ATTR_KEY)
@@ -125,11 +129,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			throw new IllegalStateException("Status and headers already sent");
 		}
 		return this;
-	}
-
-	@Override
-	public HttpMethod method() {
-		return nettyRequest.method();
 	}
 
 	/**
@@ -153,6 +152,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public InetSocketAddress address() {
+		return ((SocketChannel) channel()).remoteAddress();
+	}
+
+	@Override
 	public Map<CharSequence, Set<Cookie>> cookies() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
@@ -168,6 +172,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public void dispose() {
+		if(dependentCancellation() != null){
+			dependentCancellation().dispose();
+		}
+	}
+
+	@Override
 	public HttpClientRequest flushEach() {
 		super.flushEach();
 		return this;
@@ -177,34 +188,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	public HttpClientRequest followRedirect() {
 		redirectable = true;
 		return this;
-	}
-
-	@Override
-	public void onComplete() {
-		super.onComplete();
-		dispose();
-	}
-
-	@Override
-	public Mono<Void> onClose() {
-		return ChannelFutureMono.from(channel().closeFuture());
-	}
-
-	@Override
-	public void dispose() {
-		try {
-			channel().close()
-			         .sync();
-		}
-		catch (InterruptedException ie) {
-			Thread.currentThread()
-			      .interrupt();
-		}
-	}
-
-	@Override
-	public InetSocketAddress address() {
-		return ((SocketChannel) channel()).remoteAddress();
 	}
 
 	/**
@@ -226,16 +209,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return this;
 	}
 
-	public HttpHeaders responseHeaders() {
-		ResponseState responseState = this.responseState;
-		if (responseState != null) {
-			return responseState.headers;
-		}
-		else {
-			return null;
-		}
-	}
-
 	@Override
 	public boolean isFollowRedirect() {
 		return redirectable && redirectedFrom.length <= MAX_REDIRECTS;
@@ -252,29 +225,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return this;
 	}
 
-	final HttpRequest getNettyRequest() {
-		return nettyRequest;
+	@Override
+	public HttpMethod method() {
+		return nettyRequest.method();
 	}
 
 	@Override
-	public final String uri() {
-		return this.nettyRequest.uri();
-	}
-
-	@Override
-	public final HttpVersion version() {
-		HttpVersion version = this.nettyRequest.protocolVersion();
-		if (version.equals(HttpVersion.HTTP_1_0)) {
-			return HttpVersion.HTTP_1_0;
-		}
-		else if (version.equals(HttpVersion.HTTP_1_1)) {
-			return HttpVersion.HTTP_1_1;
-		}
-		throw new IllegalStateException(version.protocolName() + " not supported");
-	}
-
-	@Override
-	public void onActive(final ChannelHandlerContext ctx) {
+	public void onChannelActive(final ChannelHandlerContext ctx) {
 		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
 
 		handler().apply(this, this)
@@ -282,7 +239,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public void onNext(Object msg) {
+	public Mono<Void> onClose() {
+		return ChannelFutureMono.from(channel().closeFuture());
+	}
+
+	@Override
+	public void onInboundNext(Object msg) {
 		if (msg instanceof HttpResponse) {
 			HttpResponse response = (HttpResponse) msg;
 			setNettyResponse(response);
@@ -304,7 +266,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (LastHttpContent.EMPTY_LAST_CONTENT != msg) {
-			super.onNext(msg);
+			super.onInboundNext(msg);
 		}
 		postRead(msg);
 	}
@@ -320,6 +282,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpHeaders requestHeaders() {
 		return nettyRequest.headers();
+	}
+
+	public HttpHeaders responseHeaders() {
+		ResponseState responseState = this.responseState;
+		if (responseState != null) {
+			return responseState.headers;
+		}
+		else {
+			return null;
+		}
 	}
 
 	@Override
@@ -366,6 +338,23 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public final String uri() {
+		return this.nettyRequest.uri();
+	}
+
+	@Override
+	public final HttpVersion version() {
+		HttpVersion version = this.nettyRequest.protocolVersion();
+		if (version.equals(HttpVersion.HTTP_1_0)) {
+			return HttpVersion.HTTP_1_0;
+		}
+		else if (version.equals(HttpVersion.HTTP_1_1)) {
+			return HttpVersion.HTTP_1_1;
+		}
+		throw new IllegalStateException(version.protocolName() + " not supported");
+	}
+
+	@Override
 	protected void doOnTerminatedWriter(ChannelHandlerContext ctx,
 			ChannelFuture last,
 			ChannelPromise promise,
@@ -382,7 +371,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (log.isDebugEnabled()) {
 				log.debug("Read last http packet");
 			}
-			channel().close();
+			if(channel().isOpen()) {
+				channel().close();
+			}
 		}
 	}
 
@@ -406,6 +397,10 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return false;
 		}
 		return true;
+	}
+
+	final HttpRequest getNettyRequest() {
+		return nettyRequest;
 	}
 
 	final void setNettyResponse(HttpResponse nettyResponse) {

@@ -74,6 +74,7 @@ class HttpSpec extends Specification {
 	//the produced reply should be there soon
 	!content.block(Duration.ofSeconds(5000))
 
+	cleanup:
 	server.dispose()
   }
 

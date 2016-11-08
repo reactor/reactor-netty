@@ -84,7 +84,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public void onNext(Object msg) {
+	public void onInboundNext(Object msg) {
 		Class<?> messageClass = msg.getClass();
 		if (FullHttpResponse.class.isAssignableFrom(messageClass)) {
 			channel().pipeline()
@@ -115,7 +115,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			channel().close();
 		}
 		else {
-			super.onNext(msg);
+			super.onInboundNext(msg);
 		}
 	}
 
@@ -134,7 +134,9 @@ final class HttpClientWSOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug("Closing Websocket");
 			}
-			channel().close();
+			if(channel().isOpen()) {
+				channel().close();
+			}
 		}
 	}
 

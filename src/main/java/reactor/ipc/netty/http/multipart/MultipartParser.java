@@ -97,6 +97,7 @@ final class MultipartParser
 						"delimiter"));
 				break;
 			case CLOSE_DELIMITER:
+				s.cancel();
 				onComplete();
 				break;
 			case DELIMITER:

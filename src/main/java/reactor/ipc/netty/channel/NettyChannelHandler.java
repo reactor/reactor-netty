@@ -40,17 +40,17 @@ final class NettyChannelHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelActive(final ChannelHandlerContext ctx) throws Exception {
 		ctx.fireChannelActive();
-		operations(ctx).onActive(ctx);
+		operations(ctx).onChannelActive(ctx);
 	}
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		try {
-			operations(ctx).onComplete();
+			operations(ctx).onChannelComplete();
 		}
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);
-			operations(ctx).onError(err);
+			operations(ctx).onChannelError(err);
 		}
 		finally {
 			ctx.fireChannelInactive();
@@ -66,18 +66,18 @@ final class NettyChannelHandler extends ChannelDuplexHandler {
 			if (msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
 				return;
 			}
-			operations(ctx).onNext(msg);
+			operations(ctx).onInboundNext(msg);
 			ctx.fireChannelRead(msg);
 		}
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);
-			operations(ctx).onError(err);
+			operations(ctx).onChannelError(err);
 		}
 	}
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-		operations(ctx).onInboundRequest(ctx);
+		operations(ctx).afterInboundNext(ctx);
 	}
 
 	@Override
@@ -87,7 +87,7 @@ final class NettyChannelHandler extends ChannelDuplexHandler {
 		if(log.isDebugEnabled()){
 			log.error("handler failure", err);
 		}
-		operations(ctx).onError(err);
+		operations(ctx).onChannelError(err);
 	}
 
 	@Override
@@ -97,7 +97,7 @@ final class NettyChannelHandler extends ChannelDuplexHandler {
 		if (msg instanceof ChannelWriter) {
 			@SuppressWarnings("unchecked") ChannelWriter dataWriter =
 					(ChannelWriter) msg;
-			operations(ctx).onWrite(ctx,
+			operations(ctx).onOutboundWriter(ctx,
 					dataWriter.writeStream,
 					dataWriter.flushMode,
 					promise);

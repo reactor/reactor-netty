@@ -39,6 +39,7 @@ import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.http.HttpEventLoopSelector;
 import reactor.ipc.netty.options.EventLoopSelector;
 import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.options.ServerOptions;
@@ -215,7 +216,7 @@ public final class HttpServer
 
 		@Override
 		protected EventLoopSelector global() {
-			return DEFAULT_HTTP_SERVER_LOOPS;
+			return HttpEventLoopSelector.defaultHttpLoops();
 		}
 
 		@Override
@@ -223,7 +224,4 @@ public final class HttpServer
 			return loggingHandler;
 		}
 	}
-
-	static final EventLoopSelector DEFAULT_HTTP_SERVER_LOOPS = EventLoopSelector.create
-			("http");
 }

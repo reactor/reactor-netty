@@ -251,7 +251,7 @@ public class TcpServer
 	 */
 	protected void onSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 			SocketChannel nativeChannel) {
-		NettyOperations.bind(nativeChannel, handler, null);
+		NettyOperations.bind(nativeChannel, handler, null, null);
 	}
 
 	/**
@@ -288,7 +288,7 @@ public class TcpServer
 	 * @return the global {@link EventLoopSelector}
 	 */
 	protected EventLoopSelector global(){
-		return DEFAULT_TCP_SERVER_LOOPS;
+		return TcpEventLoopSelector.DEFAULT_TCP_LOOPS;
 	}
 
 	/**
@@ -400,10 +400,6 @@ public class TcpServer
 
 		@Override
 		public void initChannel(final SocketChannel ch) throws Exception {
-			if (log.isDebugEnabled()) {
-				log.debug("TCP CONNECTED {}", ch);
-			}
-
 			if (null != parent.options.onChannelInit()) {
 				if (parent.options.onChannelInit()
 				                  .test(ch)) {
@@ -448,5 +444,5 @@ public class TcpServer
 			Loggers.getLogger(TcpServer.class);
 	static final LoggingHandler    loggingHandler           =
 			new LoggingHandler(TcpServer.class);
-	static final EventLoopSelector DEFAULT_TCP_SERVER_LOOPS = EventLoopSelector.create("tcp");
+
 }

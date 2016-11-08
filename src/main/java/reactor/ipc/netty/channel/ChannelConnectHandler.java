@@ -29,14 +29,14 @@ import reactor.util.Loggers;
 /**
  * @author Stephane Maldini
  */
-final class ConnectHandler implements ChannelFutureListener, Cancellation {
+final class ChannelConnectHandler implements ChannelFutureListener, Cancellation {
 
 	final MonoSink<NettyState> sink;
 	final Cancellation         onClose;
 	final ChannelFuture        f;
 	final boolean              emitChannelState;
 
-	ConnectHandler(ChannelFuture f,
+	ChannelConnectHandler(ChannelFuture f,
 			MonoSink<NettyState> sink,
 			Cancellation onClose,
 			boolean emitChannelState) {
@@ -48,11 +48,6 @@ final class ConnectHandler implements ChannelFutureListener, Cancellation {
 
 	@Override
 	public void operationComplete(ChannelFuture f) throws Exception {
-		if (log.isDebugEnabled()) {
-			log.debug("CONNECT {} {}",
-					f.isSuccess() ? "OK" : "FAILED",
-					f.channel());
-		}
 		if (onClose != null) {
 			f.channel()
 			 .closeFuture()
@@ -64,28 +59,31 @@ final class ConnectHandler implements ChannelFutureListener, Cancellation {
 			}
 			else {
 				sink.error(new IOException("error while connecting to " + f.channel()
-				                                                           .remoteAddress()));
+				                                                           .toString()));
 			}
 		}
 		else if (emitChannelState) {
-			sink.success(NettyOperations.newNettyState(f.channel()));
+			sink.success(NettyOperations.newNettyState(f.channel(), this));
 		}
 	}
 
 	@Override
 	public void dispose() {
-		try {
-			f.channel()
-			 .close()
-			 .sync();
-			if (onClose != null) {
-				onClose.dispose();
+		if (f.channel()
+		     .isOpen()) {
+			try {
+				f.channel()
+				 .close()
+				 .sync();
+				if (onClose != null) {
+					onClose.dispose();
+				}
 			}
-		}
-		catch (InterruptedException e) {
-			log.error("error while disposing the channel", e);
+			catch (InterruptedException e) {
+				log.error("error while disposing the channel", e);
+			}
 		}
 	}
 
-	static final Logger log = Loggers.getLogger(ConnectHandler.class);
+	static final Logger log = Loggers.getLogger(ChannelConnectHandler.class);
 }

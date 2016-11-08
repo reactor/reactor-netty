@@ -26,6 +26,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.ChannelFutureMono;
@@ -43,8 +44,9 @@ final class UdpOperations extends NettyOperations<UdpInbound, UdpOutbound>
 	static UdpOperations bind(DatagramChannel channel,
 			NetworkInterface iface,
 			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink) {
-		UdpOperations ops = new UdpOperations(channel, iface, handler, clientSink);
+			MonoSink<NettyState> clientSink,
+			Cancellation onClose) {
+		UdpOperations ops = new UdpOperations(channel, iface, handler, clientSink, onClose);
 
 		channel.attr(NettyOperations.OPERATIONS_ATTRIBUTE_KEY)
 		       .set(ops);
@@ -60,8 +62,8 @@ final class UdpOperations extends NettyOperations<UdpInbound, UdpOutbound>
 	UdpOperations(DatagramChannel channel,
 			NetworkInterface multicastInterface,
 			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink) {
-		super(channel, handler, clientSink);
+			MonoSink<NettyState> clientSink, Cancellation onClose) {
+		super(channel, handler, clientSink, onClose);
 		this.datagramChannel = channel;
 		this.multicastInterface = multicastInterface;
 	}

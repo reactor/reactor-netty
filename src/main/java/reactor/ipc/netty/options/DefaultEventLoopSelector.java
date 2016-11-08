@@ -22,8 +22,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 /**
  * An adapted global eventLoop handler.
@@ -31,8 +29,6 @@ import reactor.util.Loggers;
  * @since 0.6
  */
 final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSelector {
-
-	static final Logger log = Loggers.getLogger(DefaultEventLoopSelector.class);
 
 	final String                          prefix;
 	final boolean                         daemon;
@@ -84,10 +80,6 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 			this.serverSelectLoops =
 					new NioEventLoopGroup(selectCount, threadFactory(this, "select-nio"));
 			this.cacheNativeSelectLoops = new AtomicReference<>();
-		}
-
-		if (log.isDebugEnabled()) {
-			log.debug("Default epoll " + "support : " + preferNative());
 		}
 	}
 

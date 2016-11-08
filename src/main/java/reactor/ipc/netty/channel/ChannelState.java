@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyState;
@@ -30,10 +31,12 @@ import reactor.ipc.netty.NettyState;
  */
 final class ChannelState implements NettyState {
 
-	final Channel c;
+	final Channel      c;
+	final Cancellation onClose;
 
-	ChannelState(Channel c) {
+	ChannelState(Channel c, Cancellation onClose) {
 		this.c = c;
+		this.onClose = onClose;
 	}
 
 	@Override
@@ -62,13 +65,8 @@ final class ChannelState implements NettyState {
 
 	@Override
 	public void dispose() {
-		try {
-			c.close()
-			 .sync();
-		}
-		catch (InterruptedException ie) {
-			Thread.currentThread()
-			      .interrupt();
+		if(onClose != null){
+			onClose.dispose();
 		}
 	}
 }

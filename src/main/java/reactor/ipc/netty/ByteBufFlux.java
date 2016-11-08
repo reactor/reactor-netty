@@ -16,17 +16,15 @@
 
 package reactor.ipc.netty;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufInputStream;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSource;
 import reactor.core.publisher.Mono;
@@ -37,7 +35,7 @@ import reactor.core.publisher.Mono;
  *
  * @author Stephane Maldini
  */
-public final class ByteBufFlux extends FluxSource<Object, ByteBuf> {
+public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 
 	/**
 	 * Decorate as {@link ByteBufFlux}
@@ -133,6 +131,11 @@ public final class ByteBufFlux extends FluxSource<Object, ByteBuf> {
 	protected ByteBufFlux(Flux<?> source, ByteBufAllocator allocator) {
 		super(source.map(objectMapper));
 		this.alloc = allocator;
+	}
+
+	@Override
+	public void subscribe(Subscriber<? super ByteBuf> s) {
+		source.subscribe(s);
 	}
 
 	/**

@@ -185,10 +185,10 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = new Bootstrap();
 
+			Cancellation onCancelGroups = channel(bootstrap);
 			resolver(bootstrap);
 			options(bootstrap);
-			handler(bootstrap, targetHandler, secure, sink, onSetup);
-			Cancellation onCancelGroups = channel(bootstrap);
+			handler(bootstrap, targetHandler, secure, sink, onSetup, onCancelGroups);
 			Cancellation onCancelClient =
 					connect(bootstrap, address, sink, onCancelGroups);
 
@@ -213,11 +213,12 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @param handler the user-provided handler on in/out
 	 * @param ch the configured {@link Channel}
 	 * @param sink the user-facing {@link MonoSink}
+	 * @param onClose the dispose callback
 	 */
 	protected void onSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 			SocketChannel ch,
-			MonoSink<NettyState> sink) {
-		NettyOperations.bind(ch, handler, sink);
+			MonoSink<NettyState> sink, Cancellation onClose) {
+		NettyOperations.bind(ch, handler, sink, onClose);
 	}
 
 	/**
@@ -233,7 +234,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @return the global {@link EventLoopSelector}
 	 */
 	protected EventLoopSelector global(){
-		return DEFAULT_TCP_CLIENT_LOOPS;
+		return TcpEventLoopSelector.DEFAULT_TCP_LOOPS;
 	}
 
 	/**
@@ -289,14 +290,16 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @param handler the user provided in/out handler
 	 * @param secure if the connection will have secure transport
 	 * @param sink the {@link MonoSink} to complete successfully or not on connection
+	 * @param onClose the dispose callback
 	 * terminated
 	 */
 	protected void handler(Bootstrap bootstrap,
 			BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 			boolean secure,
 			MonoSink<NettyState> sink,
-			Consumer<? super Channel> onSetup) {
-		bootstrap.handler(new ClientSetup(this, sink, secure, handler, onSetup));
+			Consumer<? super Channel> onSetup,
+			Cancellation onClose) {
+		bootstrap.handler(new ClientSetup(this, sink, secure, handler, onSetup, onClose));
 	}
 
 	/**
@@ -330,25 +333,24 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		final boolean                   secure;
 		final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>>
 		                                handler;
+		final Cancellation              onClose;
 
 		ClientSetup(TcpClient parent,
 				MonoSink<NettyState> sink,
 				boolean secure,
 				BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
-				Consumer<? super Channel> onSetup) {
+				Consumer<? super Channel> onSetup,
+				Cancellation onClose) {
 			this.parent = parent;
 			this.secure = secure;
 			this.sink = sink;
 			this.handler = handler;
 			this.onSetup = onSetup;
+			this.onClose = onClose;
 		}
 
 		@Override
 		public void initChannel(final SocketChannel ch) throws Exception {
-			if (log.isDebugEnabled()) {
-				log.debug("TCP CONNECT {}", ch);
-			}
-
 			if (null != parent.options.onChannelInit()) {
 				if (!parent.options.onChannelInit()
 				                   .test(ch)) {
@@ -427,7 +429,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				pipeline.addFirst(NettyHandlerNames.ProxyHandler, proxy);
 			}
 
-			parent.onSetup(handler, ch, sink);
+			parent.onSetup(handler, ch, sink, onClose);
 
 			try {
 				if (onSetup != null) {
@@ -447,6 +449,4 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	static final Logger         log            = Loggers.getLogger(TcpClient.class);
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
 
-	static final EventLoopSelector DEFAULT_TCP_CLIENT_LOOPS =
-			EventLoopSelector.create("tcp");
 }
