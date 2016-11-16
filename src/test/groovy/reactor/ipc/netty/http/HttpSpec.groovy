@@ -138,6 +138,37 @@ class HttpSpec extends Specification {
 	server?.dispose()
   }
 
+  def "Not found with requests from clients"() {
+	when: "the server is prepared"
+	def server = HttpServer.create(0).newRouter { r ->
+	}.block()
+	def client = HttpClient.create("localhost", server.address().port)
+
+	then:
+	server.address().port
+
+	when: "data is sent with Reactor HTTP support"
+
+	//prepare an http post request-reply flow
+	client
+			.get('/test')
+			.then({ replies ->
+		Mono.just(replies.status().code())
+				.log("received-status-1")
+	} as Function)
+			.block(Duration.ofSeconds(5))
+
+	then: "data was recieved"
+	//the produced reply should be there soon
+	def e = thrown HttpClientException
+	def headers = e.response.responseHeaders()
+	assert headers.get("content-length") == "0"
+
+	cleanup: "the client/server where stopped"
+	//note how we order first the client then the server shutdown
+	server?.dispose()
+  }
+
   def "http error with requests from clients"() {
 
 	when: "the server is prepared"
