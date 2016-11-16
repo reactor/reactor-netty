@@ -46,8 +46,8 @@ public interface HttpConnection {
 	boolean isKeepAlive();
 
 	/**
-	 *
-	 * @return
+	 * Return true if websocket connection (upgraded)
+	 * @return true if websocket connection
 	 */
 	boolean isWebsocket();
 

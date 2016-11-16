@@ -34,17 +34,19 @@ import reactor.ipc.netty.NettyOutbound;
 public interface HttpOutbound extends HttpConnection, NettyOutbound {
 
 	/**
-	 * add the passed cookie
+	 * add an outbound cookie
 	 *
-	 * @return this
+	 * @return this outbound
 	 */
 	HttpOutbound addCookie(Cookie cookie);
 
 	/**
+	 * Add an outbound http header
 	 *
-	 * @param name
-	 * @param value
-	 * @return
+	 * @param name header name
+	 * @param value header value
+	 *
+	 * @return this outbound
 	 */
 	HttpOutbound addHeader(CharSequence name, CharSequence value);
 
@@ -54,17 +56,21 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	/**
 	 * set the request keepAlive if true otherwise remove the existing connection keep alive header
 	 *
-	 * @return is keep alive
+	 * @return this outbound
 	 */
 	HttpOutbound keepAlive(boolean keepAlive);
 
 	/**
+	 * Remove transfer-encoding: chunked header
 	 *
+	 * @return this outbound
 	 */
 	HttpOutbound disableChunkedTransfer();
 
 	/**
-	 * @return
+	 * Return a {@link Mono} successful on committed response
+	 *
+	 * @return a {@link Mono} successful on committed response
 	 */
 	Mono<Void> sendHeaders();
 
