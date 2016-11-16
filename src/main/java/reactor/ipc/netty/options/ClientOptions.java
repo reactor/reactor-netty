@@ -18,17 +18,29 @@ package reactor.ipc.netty.options;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import io.netty.channel.Channel;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
+import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.proxy.ProxyHandler;
+import io.netty.handler.proxy.Socks4ProxyHandler;
+import io.netty.handler.proxy.Socks5ProxyHandler;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.NetUtil;
+import reactor.core.Exceptions;
 
 /**
  * A client connector builder with low-level connection options including connection pooling and
@@ -36,14 +48,7 @@ import io.netty.util.NetUtil;
  *
  * @author Stephane Maldini
  */
-public class ClientOptions extends NettyOptions<ClientOptions> {
-
-	/**
-	 * Proxy Type
-	 */
-	public enum Proxy {
-		HTTP, SOCKS4, SOCKS5
-	}
+public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 
 	/**
 	 * Create a client builder.
@@ -54,41 +59,17 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 		return new ClientOptions();
 	}
 
-	/**
-	 * Create a client builder to connect on a given host by default. Resolution of the
-	 * host will be applied for each client new handler and after proxy if present.
-	 * Remote Port will be @{link #DEFAULT_PORT}.
-	 *
-	 * @param host the default remote host to connect to.
-	 *
-	 * @return a new client options builder
-	 */
-	public static ClientOptions to(String host) {
-		return to(host, DEFAULT_PORT);
+	static void defaultClientOptions(Bootstrap bootstrap) {
+		bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+		         .option(ChannelOption.AUTO_READ, false)
+		         .option(ChannelOption.SO_RCVBUF, 1024 * 1024)
+		         .option(ChannelOption.SO_SNDBUF, 1024 * 1024);
 	}
-
 	/**
-	 * Create a client builder to connect on a given host and port by default.
-	 * Resolution of the
-	 * host will be applied for each client new handler and after proxy if present.
-	 *
-	 * @param host the default remote host to connect to.
-	 * @param port the default remote port to connect to.
-	 *
-	 * @return a new client options builder
+	 * Client connection pool selector
 	 */
-	public static ClientOptions to(String host, int port) {
-		return create().connect(host, port);
-	}
-
-	/**
-	 * Client connection pool options
-	 */
-	boolean                                                    channelPool;
-	long                                                       channelPoolAcquireMillis;
-	int                                                        channelPoolSize;
-	int                                                        channelPoolAcquireSize;
-	Function<? super InetSocketAddress, ? extends ChannelPool> channelPoolResolver;
+	BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool>
+			poolSelector;
 
 	/**
 	 * Proxy options
@@ -98,18 +79,53 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	Supplier<? extends InetSocketAddress>      proxyAddress;
 	Proxy                                      proxyType;
 
-	Supplier<? extends InetSocketAddress> connectAddress = DEFAULT_ADDRESS;
+	InternetProtocolFamily                protocolFamily = null;
+	Supplier<? extends InetSocketAddress> connectAddress = null;
 
-	ClientOptions() {
+	/**
+	 * Build a new {@link Bootstrap}
+	 */
+	protected ClientOptions() {
+		this(new Bootstrap());
 	}
 
-	ClientOptions(ClientOptions options){
+	/**
+	 * Apply common option via super constructor then apply
+	 * {@link #defaultClientOptions(Bootstrap)}
+	 * to the passed bootstrap.
+	 *
+	 * @param bootstrap the bootstrap reference to use
+	 */
+	protected ClientOptions(Bootstrap bootstrap) {
+		super(bootstrap);
+		defaultClientOptions(bootstrap);
+	}
+
+	/**
+	 * Deep-copy all references from the passed options into this new
+	 * {@link NettyOptions} instance.
+	 *
+	 * @param options the source options to duplicate
+	 */
+	protected ClientOptions(ClientOptions options){
 		super(options);
 		this.proxyUsername = options.proxyUsername;
 		this.proxyPassword = options.proxyPassword;
 		this.proxyAddress = options.proxyAddress;
 		this.proxyType = options.proxyType;
 		this.connectAddress = options.connectAddress;
+		this.protocolFamily = options.protocolFamily;
+	}
+
+	/**
+	 * The localhost port to which this client should connect.
+	 *
+	 * @param port The port to connect to.
+	 *
+	 * @return {@literal this}
+	 */
+	public ClientOptions connect(int port) {
+		return connect(new InetSocketAddress(port));
 	}
 
 	/**
@@ -132,7 +148,7 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(@Nonnull InetSocketAddress connectAddress) {
-		return connect(new InetResolverSupplier(connectAddress, this));
+		return connect(() -> connectAddress);
 	}
 
 	/**
@@ -143,13 +159,145 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
-		this.connectAddress = connectAddress;
+		this.connectAddress = Objects.requireNonNull(connectAddress, "connectAddress");
+		return this;
+	}
+
+	/**
+	 * Disable current {@link #poolSelector}
+	 *
+	 * @return {@code this}
+	 */
+	public ClientOptions disablePool() {
+		this.poolSelector = null;
 		return this;
 	}
 
 	@Override
 	public ClientOptions duplicate() {
 		return new ClientOptions(this);
+	}
+
+	@Override
+	public Bootstrap get() {
+		return get(null);
+	}
+
+	/**
+	 * Return a new {@link Bootstrap} given an optional address or the current
+	 * {@link #connect(Supplier)} resolved.
+	 *
+	 * @param address an optional address
+	 *
+	 * @return a new {@link Bootstrap}
+	 */
+	public final Bootstrap get(InetSocketAddress address) {
+		Bootstrap b = super.get();
+		InetSocketAddress adr;
+		if (address != null) {
+			adr = address;
+		}
+		else if (connectAddress != null) {
+			adr = connectAddress.get();
+		}
+		else {
+			adr = null;
+		}
+
+		if (adr != null) {
+			if (useDatagramChannel()) {
+				b.localAddress(adr);
+			}
+			else {
+				b.remoteAddress(adr);
+			}
+		}
+		groupAndChannel(b);
+		return b;
+	}
+
+	/**
+	 * Select a channel pool from the given address.
+	 *
+	 * @param address the optional address to use
+	 *
+	 * @return an eventual {@link ChannelPool}
+	 */
+	public final ChannelPool getPool(InetSocketAddress address) {
+		if (poolSelector == null) {
+			return null;
+		}
+		address = address == null && connectAddress != null ? connectAddress.get() :
+				address;
+		return poolSelector.apply(address, this);
+	}
+
+	/**
+	 * Return a new eventual {@link ProxyHandler}
+	 *
+	 * @return a new eventual {@link ProxyHandler}
+	 */
+	public final ProxyHandler getProxyHandler() {
+		if (proxyType == null) {
+			return null;
+		}
+		InetSocketAddress proxyAddr = proxyAddress.get();
+		String username = proxyUsername;
+		String password = username != null && proxyPassword != null ?
+				proxyPassword.apply(username) : null;
+
+		switch (proxyType) {
+			case HTTP:
+				return username != null && password != null ?
+						new HttpProxyHandler(proxyAddr, username, password) :
+						new HttpProxyHandler(proxyAddr);
+			case SOCKS4:
+				return username != null ? new Socks4ProxyHandler(proxyAddr, username) :
+						new Socks4ProxyHandler(proxyAddr);
+			case SOCKS5:
+				return username != null && password != null ?
+						new Socks5ProxyHandler(proxyAddr, username, password) :
+						new Socks5ProxyHandler(proxyAddr);
+		}
+		throw new IllegalArgumentException("Proxy type unsupported : " + proxyType);
+	}
+
+	/**
+	 * Resolve the latest {@link #connect)} address
+	 *
+	 * @return the resolved address if any
+	 */
+	public final InetSocketAddress getRemoteAddress() {
+		return null != connectAddress ? connectAddress.get() : null;
+	}
+
+	/**
+	 * Configures the {@link ChannelPool} selector for the socket. Will effectively
+	 * enable client connection-pooling.
+	 *
+	 * @param poolSelector the {@link BiFunction} to compute a {@link ChannelPool} given
+	 * an {@link InetSocketAddress}
+	 *
+	 * @return {@code this}
+	 */
+	public ClientOptions poolSelector(BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool> poolSelector) {
+		Objects.requireNonNull(poolSelector, "poolSelector");
+		this.poolSelector = poolSelector;
+		return this;
+	}
+
+	/**
+	 * Configures the version family for the socket.
+	 *
+	 * @param protocolFamily the version family for the socket, or null for the system
+	 * default family
+	 *
+	 * @return {@code this}
+	 */
+	public ClientOptions protocolFamily(InternetProtocolFamily protocolFamily) {
+		Objects.requireNonNull(protocolFamily, "protocolFamily");
+		this.protocolFamily = protocolFamily;
+		return this;
 	}
 
 	/**
@@ -190,9 +338,8 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 	 *
 	 * @return {@literal this}
 	 */
-	public ClientOptions proxy(@Nonnull Proxy type,
-			@Nonnull InetSocketAddress connectAddress) {
-		return proxy(type, new InetResolverProxySupplier(connectAddress), null, null);
+	public ClientOptions proxy(@Nonnull Proxy type, @Nonnull InetSocketAddress connectAddress) {
+		return proxy(type, connectAddress, null, null);
 	}
 
 	/**
@@ -206,8 +353,10 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 			@Nonnull InetSocketAddress connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
-		return proxy(type,
-				new InetResolverProxySupplier(connectAddress),
+		return proxy(type, connectAddress.isUnresolved() ?
+						() -> new InetSocketAddress(connectAddress.getHostName(),
+								connectAddress.getPort()) :
+						() -> connectAddress,
 				username,
 				password);
 	}
@@ -239,253 +388,89 @@ public class ClientOptions extends NettyOptions<ClientOptions> {
 		this.proxyPassword = password;
 		this.proxyAddress = Objects.requireNonNull(connectAddress, "addressSupplier");
 		this.proxyType = Objects.requireNonNull(type, "proxyType");
+		bootstrapTemplate.resolver(NoopAddressResolverGroup.INSTANCE);
 		return this;
 	}
 
 	/**
-	 * Return the eventual remote host
+	 * Enable default sslContext support
 	 *
-	 * @return the eventual remote host
-	 */
-	public InetSocketAddress remoteAddress() {
-		return connectAddress != null ? connectAddress.get() : null;
-	}
-
-	/**
 	 * @return this {@link ClientOptions}
 	 */
 	public ClientOptions sslSupport() {
-		super.ssl(SslContextBuilder.forClient());
-		return this;
+		return sslSupport(c -> {
+		});
 	}
 
 	/**
-	 * Proxy username if any
+	 * Enable default sslContext support and enable further customization via the passed
+	 * configurator. The builder will then produce the {@link SslContext} to be passed to
+	 * {@link #sslContext(SslContext)}.
 	 *
-	 * @return a proxy username String
-	 */
-	public String proxyUsername() {
-		return proxyUsername;
-	}
-
-	/**
-	 * Proxy password selector if any
+	 * @param configurator builder callback for further customization.
 	 *
-	 * @return a proxy password selector
+	 * @return this {@link ClientOptions}
 	 */
-	public Function<? super String, ? extends String> proxyPassword() {
-		return proxyPassword;
+	public ClientOptions sslSupport(Consumer<? super SslContextBuilder> configurator) {
+		Objects.requireNonNull(configurator, "configurator");
+		try {
+			SslContextBuilder builder = SslContextBuilder.forClient();
+			configurator.accept(builder);
+			return sslContext(builder.build());
+		}
+		catch (Exception sslException) {
+			throw Exceptions.bubble(sslException);
+		}
+	}
+
+//
+
+	/**
+	 * Proxy Type
+	 */
+	public enum Proxy {
+		HTTP, SOCKS4, SOCKS5
+
 	}
 
 	/**
-	 * Proxy address supplier if any
+	 * Return true if {@link io.netty.channel.socket.DatagramChannel} should be used
 	 *
-	 * @return a proxy address supplier
+	 * @return true if {@link io.netty.channel.socket.DatagramChannel} should be used
 	 */
-	public Supplier<? extends InetSocketAddress> proxyAddress() {
-		return proxyAddress;
+	protected boolean useDatagramChannel() {
+		return false;
 	}
 
 	/**
-	 * {@link Proxy} category to usePredicate
+	 * Return true if proxy options have been set
 	 *
-	 * @return {@link Proxy} category to use
+	 * @return true if proxy options have been set
 	 */
-	public Proxy proxyType() {
-		return proxyType;
+	protected boolean useProxy() {
+		return proxyType != null;
 	}
 
-	/**
-	 * @return immutable {@link ClientOptions}
-	 */
-	public ClientOptions toImmutable() {
-		return new ImmutableClientOptions(this);
-	}
+	final void groupAndChannel(Bootstrap bootstrap) {
+		ChannelResources loops =
+				Objects.requireNonNull(this.channelResources, "channelResources");
 
-	final static class ImmutableClientOptions extends ClientOptions {
+		boolean useNative = preferNative && !(sslContext instanceof JdkSslContext);
+		EventLoopGroup elg = loops.onClient(useNative);
+		bootstrap.group(elg);
 
-		public ImmutableClientOptions(ClientOptions options) {
-			super(options);
+		if (useDatagramChannel()) {
+			if (useNative && protocolFamily == null) {
+				bootstrap.channel(loops.onDatagramChannel(elg));
+			}
+			else {
+				bootstrap.channelFactory(() -> new NioDatagramChannel(protocolFamily));
+			}
 		}
-
-		@Override
-		public ClientOptions toImmutable() {
-			return this;
-		}
-
-		@Override
-		public ClientOptions sslSupport() {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions timeoutMillis(long timeout) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions daemon(boolean daemon) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions connect(@Nonnull String host, int port) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions proxy(@Nonnull Proxy type,
-				@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
-				@Nullable String username,
-				@Nullable Function<? super String, ? extends String> password) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions connect(@Nonnull InetSocketAddress connectAddress) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopGroup) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions keepAlive(boolean keepAlive) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions linger(int linger) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions managed(boolean managed) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions afterChannelInit(Consumer<? super Channel> afterChannelInit) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions connect(@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions proxy(@Nonnull Proxy type,
-				@Nonnull String host,
-				int port,
-				@Nullable String username,
-				@Nullable Function<? super String, ? extends String> password) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions proxy(@Nonnull Proxy type, @Nonnull String host, int port) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions proxy(@Nonnull Proxy type,
-				@Nonnull InetSocketAddress connectAddress) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions proxy(@Nonnull Proxy type,
-				@Nonnull InetSocketAddress connectAddress,
-				@Nullable String username,
-				@Nullable Function<? super String, ? extends String> password) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions proxy(@Nonnull Proxy type,
-				@Nonnull Supplier<? extends InetSocketAddress> connectAddress) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions preferNative(boolean preferNative) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions rcvbuf(int rcvbuf) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions ssl(SslContextBuilder sslOptions) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions sslConfigurer(Consumer<? super SslContextBuilder> consumer) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions sndbuf(int sndbuf) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions onChannelInit(Predicate<? super Channel> onChannelInit) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ClientOptions tcpNoDelay(boolean tcpNoDelay) {
-			throw new UnsupportedOperationException("Immutable Options");
+		else {
+			bootstrap.channel(loops.onChannel(elg));
 		}
 	}
 
-	static final class InetResolverSupplier implements Supplier<InetSocketAddress> {
 
-		final InetSocketAddress connectAddress;
-		final ClientOptions     parent;
-
-		public InetResolverSupplier(InetSocketAddress address, ClientOptions parent) {
-			this.connectAddress = address;
-			this.parent = parent;
-		}
-
-		@Override
-		public InetSocketAddress get() {
-			return connectAddress.isUnresolved() && parent.proxyType == null ?
-					new InetSocketAddress(connectAddress.getHostName(),
-							connectAddress.getPort()) : connectAddress;
-		}
-	}
-
-	static final class InetResolverProxySupplier implements Supplier<InetSocketAddress> {
-
-		final InetSocketAddress connectAddress;
-
-		public InetResolverProxySupplier(InetSocketAddress address) {
-			this.connectAddress = address;
-		}
-
-		@Override
-		public InetSocketAddress get() {
-			return connectAddress.isUnresolved() ?
-					new InetSocketAddress(connectAddress.getHostName(),
-							connectAddress.getPort()) : connectAddress;
-		}
-	}
-
-	static final InetSocketAddress           LOCALHOST       =
-			new InetSocketAddress(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT);
-	static final Supplier<InetSocketAddress> DEFAULT_ADDRESS = () -> LOCALHOST;
 }

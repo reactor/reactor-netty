@@ -77,33 +77,32 @@ final class HttpServerWSOperations extends HttpServerOperations
 	}
 
 	@Override
-	public void onInboundNext(Object frame) {
+	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame) {
 			handshaker.close(channel(), ((CloseWebSocketFrame) frame).retain());
 			onChannelComplete();
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {
-			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
+			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
 			                                                                           .retain()));
 			return;
 		}
-		super.onInboundNext(frame);
+		super.onInboundNext(ctx, frame);
 	}
 
 	@Override
-	protected ChannelFuture doOnWrite(final Object data,
-			final ChannelHandlerContext ctx) {
+	public ChannelFuture sendNext(Object data) {
 		if (data instanceof ByteBuf) {
 			if (plainText) {
-				return ctx.write(new TextWebSocketFrame((ByteBuf) data));
+				return channel().write(new TextWebSocketFrame((ByteBuf) data));
 			}
-			return ctx.write(new BinaryWebSocketFrame((ByteBuf) data));
+			return channel().write(new BinaryWebSocketFrame((ByteBuf) data));
 		}
 		else if (data instanceof String) {
-			return ctx.write(new TextWebSocketFrame((String) data));
+			return channel().write(new TextWebSocketFrame((String) data));
 		}
-		return ctx.write(data);
+		return channel().write(data);
 	}
 
 	@Override

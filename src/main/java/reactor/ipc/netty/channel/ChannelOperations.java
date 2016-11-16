@@ -32,13 +32,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -53,10 +55,11 @@ import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.NettyContext;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
@@ -64,143 +67,74 @@ import reactor.util.concurrent.QueueSupplier;
 /**
  * A bridge between an immutable {@link Channel} and {@link NettyInbound} /
  * {@link NettyOutbound} semantics exposed to user
- * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)}
+ * {@link NettyConnector#newHandler(BiFunction)}
  *
  * @author Stephane Maldini
  * @since 0.6
  */
-public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
+public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
 		implements Trackable, NettyInbound, NettyOutbound, Subscription, Producer,
 		           Loopback, Publisher<Object> {
 
 	/**
-	 * The attribute in {@link Channel} to store the current {@link NettyOperations}
+	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}
 	 */
-	public static final AttributeKey<NettyOperations> OPERATIONS_ATTRIBUTE_KEY =
+	public static final AttributeKey<ChannelOperations> OPERATIONS_ATTRIBUTE_KEY =
 			AttributeKey.newInstance("nettyOperations");
 
 	/**
-	 * Add the shareable {@link NettyHandlerNames#ReactiveBridge} handler to the channel.
-	 *
-	 * @param ch a given channel
-	 */
-	public static void addReactiveBridgeHandler(Channel ch) {
-		ch.pipeline()
-		  .addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
-	}
-
-	/**
-	 * Create a new {@link NettyOperations} attached to the {@link Channel} attribute
+	 * Create a new {@link ChannelOperations} attached to the {@link Channel} attribute
 	 * {@link #OPERATIONS_ATTRIBUTE_KEY}.
 	 * Attach the {@link NettyHandlerNames#ReactiveBridge} handle.
 	 *
 	 * @param channel the new {@link Channel} connection
 	 * @param handler the user-provided {@link BiFunction} i/o handler
-	 * @param sink the user-facing {@link Mono} emitting {@link NettyState}
+	 * @param sink the user-facing {@link Mono} emitting {@link NettyContext}
 	 * @param onClose the dispose callback
 	 * @param <INBOUND> the {@link NettyInbound} type
 	 * @param <OUTBOUND> the {@link NettyOutbound} type
 	 *
-	 * @return the created {@link NettyOperations} bridge
+	 * @return the created {@link ChannelOperations} bridge
 	 */
-	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> NettyOperations<INBOUND, OUTBOUND> bind(
+	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> ChannelOperations<INBOUND, OUTBOUND> bind(
 			Channel channel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> sink,
+			MonoSink<NettyContext> sink,
 			Cancellation onClose) {
 
-		@SuppressWarnings("unchecked") NettyOperations<INBOUND, OUTBOUND> ops =
-				new NettyOperations<>(channel, handler, sink, onClose);
+		@SuppressWarnings("unchecked") ChannelOperations<INBOUND, OUTBOUND> ops =
+				new ChannelOperations<>(channel, handler, sink, onClose);
 
 		channel.attr(OPERATIONS_ATTRIBUTE_KEY)
 		       .set(ops);
-
-		addReactiveBridgeHandler(channel);
 
 		return ops;
 	}
 
 	/**
-	 * Return a new {@link ChannelFutureListener} to emit that will bind connection
-	 * errors to the passed sink. It will be synchronously disposable via
-	 * {@link Cancellation#dispose()}.
+	 * Return a new {@link NettyContext} bound to the given {@link Channel}
 	 *
-	 * @param sink the {@link Channel} to monitor
-	 * @param onClose the {@link Channel} to monitor
-	 * @param emitChannelState emit a {@link #newNettyState(Channel, Cancellation)} on
-	 * success
+	 * @param ch the {@link Channel} to monitor
+	 * @param onClose the dispose callback
 	 *
-	 * @return a new {@link ChannelFutureListener}
+	 * @return a new {@link NettyContext} bound to the given {@link Channel}
 	 */
-	public static Cancellation newConnectHandler(ChannelFuture f,
-			MonoSink<NettyState> sink,
-			Cancellation onClose,
-			boolean emitChannelState) {
-
-		ChannelConnectHandler c =
-				new ChannelConnectHandler(f, sink, onClose, emitChannelState);
-		f.addListener(c);
-		return c;
-	}
-
-	/**
-	 * Return a new {@link ChannelFutureListener} to emit that will bind connection
-	 * errors to the passed sink. It will be synchronously disposable via
-	 * {@link Cancellation#dispose()}. It won't emit any success by default and will
-	 * leave further {@link #onChannelActive(ChannelHandlerContext)} or
-	 * {@link #onInboundNext(Object)} emit it.
-	 *
-	 * @param sink the {@link Channel} to monitor
-	 * @param onClose the {@link Channel} to monitor
-	 *
-	 * @return a new {@link ChannelFutureListener}
-	 */
-	public static Cancellation newConnectHandler(ChannelFuture f,
-			MonoSink<NettyState> sink,
-			Cancellation onClose) {
-		return newConnectHandler(f, sink, onClose, false);
-	}
-
-	/**
-	 * Create a {@link ChannelWriter} used by {@link NettyOperations} to prepare the
-	 * outbound flow via
-	 * {@link ChannelOutboundHandler#write(ChannelHandlerContext, Object, ChannelPromise)}
-	 *
-	 * @param writeStream Outgoing datasource
-	 * @param flushMode Flushing behavior
-	 *
-	 * @return a new {@link ChannelWriter}
-	 */
-	public static ChannelWriter newWriter(Publisher<?> writeStream,
-			ChannelWriter.FlushMode flushMode) {
-		return new ChannelWriter(writeStream, flushMode);
+	static NettyContext newNettyState(Channel ch, Cancellation onClose) {
+		return new ContextHandler.ChannelCancellation(ch, onClose);
 	}
 
 	@SuppressWarnings("unchecked")
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> noopHandler() {
 		return PING;
 	}
-
-	/**
-	 * Return a new {@link NettyState} bound to the given {@link Channel}
-	 *
-	 * @param ch the {@link Channel} to monitor
-	 * @param onClose the dispose callback
-	 *
-	 * @return a new {@link NettyState} bound to the given {@link Channel}
-	 */
-	static NettyState newNettyState(Channel ch, Cancellation onClose) {
-		return new ChannelState(ch, onClose);
-	}
-
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
 			handler;
 
-	final MonoSink<NettyState> clientSink;
-	final Channel              channel;
-	final Scheduler            ioScheduler;
-	final Flux<?>              input;
-	final Cancellation         onClose;
+	final MonoSink<NettyContext> clientSink;
+	final Channel                channel;
+	final Scheduler              ioScheduler;
+	final Flux<?>                input;
+	final Cancellation           onClose;
 
 	// guarded //
 	Subscriber<? super Object> receiver;
@@ -213,8 +147,8 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	volatile Cancellation cancel;
 	volatile boolean      flushEach;
 
-	protected NettyOperations(Channel channel,
-			NettyOperations<INBOUND, OUTBOUND> replaced) {
+	protected ChannelOperations(Channel channel,
+			ChannelOperations<INBOUND, OUTBOUND> replaced) {
 		this(channel, replaced.handler, replaced.clientSink, replaced.onClose);
 		this.receiver = replaced.receiver;
 		this.receiverCaughtUp = replaced.receiverCaughtUp;
@@ -227,9 +161,9 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 		this.flushEach = replaced.flushEach;
 	}
 
-	protected NettyOperations(Channel channel,
+	protected ChannelOperations(Channel channel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink,
+			MonoSink<NettyContext> clientSink,
 			Cancellation onClose) {
 		this.handler = Objects.requireNonNull(handler, "handler");
 		this.channel = Objects.requireNonNull(channel, "channel");
@@ -238,6 +172,11 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 		this.ioScheduler = Schedulers.fromExecutor(channel.eventLoop());
 		this.input = Flux.from(this)
 		                 .subscribeOn(ioScheduler);
+	}
+
+	@Override
+	public <T> Attribute<T> attr(AttributeKey<T> key) {
+		return channel.attr(key);
 	}
 
 	@Override
@@ -331,16 +270,8 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 		return !channel.isOpen();
 	}
 
-	/**
-	 * Return available dispose callback
-	 * @return available dispose callback
-	 */
-	final protected Cancellation dependentCancellation(){
-		return onClose;
-	}
-
 	@Override
-	public NettyOperations<INBOUND, OUTBOUND> onClose(final Runnable onClose) {
+	public ChannelOperations<INBOUND, OUTBOUND> onClose(final Runnable onClose) {
 		channel.pipeline()
 		       .addLast(new ChannelDuplexHandler() {
 			       @Override
@@ -354,7 +285,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	}
 
 	@Override
-	public NettyOperations<INBOUND, OUTBOUND> onReadIdle(long idleTimeout,
+	public ChannelOperations<INBOUND, OUTBOUND> onReadIdle(long idleTimeout,
 			final Runnable onReadIdle) {
 		channel.pipeline()
 		       .addFirst(new IdleStateHandler(idleTimeout, 0, 0, TimeUnit.MILLISECONDS) {
@@ -371,7 +302,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	}
 
 	@Override
-	public NettyOperations<INBOUND, OUTBOUND> onWriteIdle(long idleTimeout,
+	public ChannelOperations<INBOUND, OUTBOUND> onWriteIdle(long idleTimeout,
 			final Runnable onWriteIdle) {
 		channel.pipeline()
 		       .addLast(new IdleStateHandler(0, idleTimeout, 0, TimeUnit.MILLISECONDS) {
@@ -464,6 +395,15 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	}
 
 	/**
+	 * Return available dispose callback
+	 *
+	 * @return available dispose callback
+	 */
+	final protected Cancellation dependentCancellation() {
+		return onClose;
+	}
+
+	/**
 	 * React after inbound {@link Channel#read}
 	 *
 	 * @param ctx the current {@link ChannelHandlerContext}
@@ -479,6 +419,47 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	 */
 	final protected long bufferedInbound() {
 		return getPending();
+	}
+
+	/**
+	 * Callback when a writer {@link Subscriber} has effectively terminated listening
+	 * on further {@link Publisher} signals.
+	 *
+	 * @param last an optional callback for the last written payload
+	 * @param promise the promise to fulfil for acknowledging termination success
+	 * @param exception non null if the writer has terminated with a failure
+	 */
+	protected void onTerminatedWriter(
+			ChannelFuture last,
+			final ChannelPromise promise,
+			final Throwable exception) {
+		if (channel
+		       .isOpen()) {
+			ChannelFutureListener listener = future -> {
+				if (exception != null) {
+					promise.tryFailure(exception);
+				}
+				else if (future.isSuccess()) {
+					promise.trySuccess();
+				}
+				else {
+					promise.tryFailure(future.cause());
+				}
+			};
+
+			if (last != null) {
+				last.addListener(listener);
+				channel.flush();
+			}
+		}
+		else {
+			if (exception != null) {
+				promise.tryFailure(exception);
+			}
+			else {
+				promise.trySuccess();
+			}
+		}
 	}
 
 	/**
@@ -499,15 +480,15 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	/**
 	 * React on inbound/outbound completion (last packet)
 	 */
-	protected void onChannelComplete() {
+	public void onChannelComplete() {
 		if (isCancelled() || inboundDone) {
 			return;
 		}
 		inboundDone = true;
 		Subscriber<?> receiver = this.receiver;
 		if (receiverCaughtUp && receiver != null) {
-			cancelReceiver();
 			receiver.onComplete();
+			cancelReceiver();
 		}
 		if (clientSink != null) {
 			clientSink.success();
@@ -520,7 +501,7 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	 *
 	 * @param err the {@link Throwable} cause
 	 */
-	protected void onChannelError(Throwable err) {
+	public void onChannelError(Throwable err) {
 		if (err == null) {
 			err = new NullPointerException("error is null");
 		}
@@ -529,8 +510,10 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 			return;
 		}
 		inboundDone = true;
+		Subscriber<?> receiver = this.receiver;
 		if (receiverCaughtUp && receiver != null) {
 			receiver.onError(err);
+			cancelReceiver();
 		}
 		else {
 			this.error = err;
@@ -540,11 +523,31 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	}
 
 	/**
+	 * React on new outbound {@link Publisher} writer
+	 *
+	 * @param writeStream the {@link Publisher} to send
+	 * @param flushMode the flush strategy
+	 * @param promise an actual promise fulfilled on writer success/error
+	 */
+	protected void doOutboundWriter(
+			Publisher<?> writeStream,
+			FlushMode flushMode,
+			ChannelPromise promise) {
+		if (flushMode == FlushMode.MANUAL_COMPLETE) {
+			writeStream.subscribe(new FlushOnTerminateSubscriber(this, promise));
+		}
+		else {
+			writeStream.subscribe(new FlushOnEachSubscriber(this, promise));
+		}
+	}
+
+	/**
 	 * React on inbound {@link Channel#read}
 	 *
+	 * @param ctx the context
 	 * @param msg the read payload
 	 */
-	protected void onInboundNext(Object msg) {
+	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg == null) {
 			onChannelError(new NullPointerException("msg is null"));
 			return;
@@ -579,38 +582,18 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	}
 
 	/**
-	 * React on new outbound {@link Publisher} writer
-	 *
-	 * @param ctx the current {@link ChannelHandlerContext}
-	 * @param writeStream the {@link Publisher} to send
-	 * @param flushMode the flush strategy
-	 * @param promise an actual promise fulfilled on writer success/error
-	 */
-	protected void onOutboundWriter(ChannelHandlerContext ctx,
-			Publisher<?> writeStream,
-			ChannelWriter.FlushMode flushMode,
-			ChannelPromise promise) {
-		if (flushMode == ChannelWriter.FlushMode.MANUAL_COMPLETE) {
-			writeStream.subscribe(new FlushOnTerminateSubscriber(this, ctx, promise));
-		}
-		else {
-			writeStream.subscribe(new FlushOnEachSubscriber(this, ctx, promise));
-		}
-	}
-
-	/**
 	 * Return the available {@link MonoSink} for user-facing lifecycle handling
 	 *
 	 * @return the available {@link MonoSink} for user-facing lifecycle handling
 	 */
-	final protected MonoSink<NettyState> clientSink() {
+	final protected MonoSink<NettyContext> clientSink() {
 		return clientSink;
 	}
 
 	/**
-	 * Return the user-provided {@link reactor.ipc.netty.NettyConnector} handler
+	 * Return the user-provided {@link NettyConnector} handler
 	 *
-	 * @return the user-provided {@link reactor.ipc.netty.NettyConnector} handler
+	 * @return the user-provided {@link NettyConnector} handler
 	 */
 	final protected BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler() {
 		return handler;
@@ -636,26 +619,30 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 			}
 		};
 
-		ChannelWriter.FlushMode mode;
+		ChannelPromise p = channel.newPromise();
+		p.addListener(postWriteListener);
+
+		FlushMode mode;
 		if (flushEach) {
-			mode = ChannelWriter.FlushMode.AUTO_EACH;
+			mode = FlushMode.AUTO_EACH;
 		}
 		else {
-			mode = ChannelWriter.FlushMode.MANUAL_COMPLETE;
+			mode = FlushMode.MANUAL_COMPLETE;
 		}
-
-		ChannelWriter writer = newWriter(encodedWriter, mode);
 
 		if (channel.eventLoop()
 		           .inEventLoop()) {
-
-			channel.write(writer)
-			       .addListener(postWriteListener);
+			doOutboundWriter(
+					encodedWriter,
+					mode,
+					p);
 		}
 		else {
 			channel.eventLoop()
-			       .execute(() -> channel.write(writer)
-			                             .addListener(postWriteListener));
+			       .execute(() -> doOutboundWriter(
+					       encodedWriter,
+					       mode,
+					       p));
 		}
 	}
 
@@ -663,58 +650,14 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	 * Write an individual packet (to be encoded further if the pipeline permits).
 	 *
 	 * @param data the payload to write on the {@link Channel}
-	 * @param ctx the actual {@link ChannelHandlerContext}
 	 *
 	 * @return the {@link ChannelFuture} of the successful/not payload write
 	 */
-	protected ChannelFuture doOnWrite(Object data, ChannelHandlerContext ctx) {
+	public ChannelFuture sendNext(Object data) {
 		if (Unpooled.EMPTY_BUFFER != data) {
-			return ctx.channel()
-			          .write(data);
+			return channel.write(data);
 		}
 		return null;
-	}
-
-	/**
-	 * Callback when a writer {@link Subscriber} has effectively terminated listening
-	 * on further {@link Publisher} signals.
-	 *
-	 * @param ctx the actual {@link ChannelHandlerContext}
-	 * @param last an optional callback for the last written payload
-	 * @param promise the promise to fulfil for acknowledging termination success
-	 * @param exception non null if the writer has terminated with a failure
-	 */
-	protected void doOnTerminatedWriter(ChannelHandlerContext ctx,
-			ChannelFuture last,
-			final ChannelPromise promise,
-			final Throwable exception) {
-		if (ctx.channel()
-		       .isOpen()) {
-			ChannelFutureListener listener = future -> {
-				if (exception != null) {
-					promise.tryFailure(exception);
-				}
-				else if (future.isSuccess()) {
-					promise.trySuccess();
-				}
-				else {
-					promise.tryFailure(future.cause());
-				}
-			};
-
-			if (last != null) {
-				last.addListener(listener);
-				ctx.flush();
-			}
-		}
-		else {
-			if (exception != null) {
-				promise.tryFailure(exception);
-			}
-			else {
-				promise.trySuccess();
-			}
-		}
 	}
 
 	final void cancelReceiver() {
@@ -722,7 +665,9 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
-				inboundRequested = 0L;
+				if (onClose != null) {
+					onClose.dispose();
+				}
 				if (c != null) {
 					c.dispose();
 				}
@@ -742,6 +687,9 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 			final Subscriber<? super Object> a = receiver;
 
 			if (a == null) {
+				if(inboundDone){
+					cancelReceiver();
+				}
 				return false;
 			}
 
@@ -849,24 +797,20 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 	}
 
 	final void unsubscribeReceiver() {
+		inboundRequested = 0L;
 		receiver = null;
 	}
 
-	/**
-	 *
-	 */
-	static final ChannelHandler                                             BRIDGE    =
-			new NettyChannelHandler();
 	@SuppressWarnings("rawtypes")
-	static final AtomicReferenceFieldUpdater<NettyOperations, Cancellation> CANCEL    =
-			AtomicReferenceFieldUpdater.newUpdater(NettyOperations.class,
+	static final AtomicReferenceFieldUpdater<ChannelOperations, Cancellation> CANCEL    =
+			AtomicReferenceFieldUpdater.newUpdater(ChannelOperations.class,
 					Cancellation.class,
 					"cancel");
-	static final Cancellation                                               CANCELLED =
+	static final Cancellation                                                 CANCELLED =
 			() -> {
 			};
-	static final Logger                                                     log       =
-			Loggers.getLogger(NettyOperations.class);
+	static final Logger                                                       log       =
+			Loggers.getLogger(ChannelOperations.class);
 
 	static final BiFunction PING = (i, o) -> Flux.empty();
 
@@ -880,12 +824,12 @@ public class NettyOperations<INBOUND extends NettyInbound, OUTBOUND extends Nett
 
 		@Override
 		public Object connectedInput() {
-			return NettyOperations.this;
+			return ChannelOperations.this;
 		}
 
 		@Override
 		public Object connectedOutput() {
-			return NettyOperations.this;
+			return ChannelOperations.this;
 		}
 
 		@Override

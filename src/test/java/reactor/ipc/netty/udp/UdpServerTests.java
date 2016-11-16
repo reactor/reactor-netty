@@ -24,7 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.net.StandardProtocolFamily;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
@@ -36,6 +35,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.channel.ChannelOption;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.NetUtil;
 import org.junit.After;
 import org.junit.Before;
@@ -43,9 +44,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.SocketUtils;
-import reactor.ipc.netty.options.ServerOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -79,8 +79,8 @@ public class UdpServerTests {
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(4);
 
-		final NettyState server = UdpClient.create(port)
-		                                   .newHandler((in, out) -> {
+		final NettyContext server = UdpClient.create(port)
+		                                     .newHandler((in, out) -> {
 			                                   in.receive()
 			                                     .asByteArray()
 			                                     .log()
@@ -91,7 +91,7 @@ public class UdpServerTests {
 			                                     });
 			                                   return Flux.never();
 		                                   })
-		                                   .doOnSuccess(v -> {
+		                                     .doOnSuccess(v -> {
 			                                   try {
 				                                   DatagramChannel udp =
 						                                   DatagramChannel.open();
@@ -112,7 +112,7 @@ public class UdpServerTests {
 				                                   e.printStackTrace();
 			                                   }
 		                                   })
-		                                   .block();
+		                                     .block();
 
 		assertThat("latch was counted down", latch.await(10, TimeUnit.SECONDS));
 		server.dispose();
@@ -128,16 +128,15 @@ public class UdpServerTests {
 		final InetAddress multicastGroup = InetAddress.getByName("230.0.0.1");
 		final NetworkInterface multicastInterface = findMulticastEnabledIPv4Interface();
 		log.info("Using network interface '{}' for multicast", multicastInterface);
-		final Collection<NettyState> servers = new ArrayList<>();
+		final Collection<NettyContext> servers = new ArrayList<>();
 
 		for (int i = 0; i < 4; i++) {
-			NettyState server = UdpClient.create(ServerOptions.create()
-			                                                  .reuseAddr(true)
-			                                                  .listen(port)
-			                                                  .protocolFamily(
-					                                                  StandardProtocolFamily.INET))
-			                             .newHandler((in, out) -> {
-				                             Flux.<NetworkInterface>generate(s -> {
+			NettyContext server =
+					UdpClient.create(opts -> opts.option(ChannelOption.SO_REUSEADDR, true)
+					                             .connect(port)
+					                             .protocolFamily(InternetProtocolFamily.IPv4))
+					         .newHandler((in, out) -> {
+						         Flux.<NetworkInterface>generate(s -> {
 					                             if (ifaces.hasMoreElements()) {
 						                             s.next(ifaces.nextElement());
 					                             }
@@ -161,7 +160,7 @@ public class UdpServerTests {
 				                               });
 				                             return Flux.never();
 			                             })
-			                             .block();
+					         .block();
 
 			servers.add(server);
 		}
@@ -194,7 +193,7 @@ public class UdpServerTests {
 		assertThat("latch was not counted down enough: " + latch.getCount() + " left on " + (4 ^ 2),
 				latch.getCount() == 0);
 
-		for (NettyState s : servers) {
+		for (NettyContext s : servers) {
 			s.dispose();
 		}
 	}

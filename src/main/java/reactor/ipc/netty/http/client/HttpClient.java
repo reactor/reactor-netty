@@ -24,25 +24,23 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty.channel.Channel;
+import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
-import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.NettyOperations;
-import reactor.ipc.netty.http.HttpEventLoopSelector;
+import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.channel.ContextHandler;
+import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServerResponse;
 import reactor.ipc.netty.options.ClientOptions;
-import reactor.ipc.netty.options.EventLoopSelector;
 import reactor.ipc.netty.tcp.TcpClient;
 
 /**
@@ -56,39 +54,19 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * @return a simple HTTP client
 	 */
 	public static HttpClient create() {
-		return create(ClientOptions.create()
-		                           .sslSupport());
+		return create(HttpClientOptions::sslSupport);
 	}
-
-//	public static EventLoopGroup defaultEventLoopGroup() {
-//		ColocatedEventLoopGroup eventLoopSelector = DefaultState.CLIENT_GROUP.;
-//		int ioThreadCount = TcpServer.DEFAULT_IO_WORKER_COUNT;
-//		this.ioGroup = new ColocatedEventLoopGroup(channelAdapter.newEventLoopGroup(ioThreadCount,
-//				(Runnable r) -> {
-//					Thread t = new Thread(r, "reactor-tcp-client-io-"+COUNTER
-//							.incrementAndGet());
-//					t.setDaemon(options.daemon());
-//					return t;
-//				}));
-//		for (; ; ) {
-//			ColocatedEventLoopGroup s = cachedSchedulers.get(key);
-//			if (s != null) {
-//				return s;
-//			}
-//			s = new ColocatedEventLoopGroup(key, schedulerSupplier.get());
-//			if (DefaultState.CLIENT_GROUP.compareAndSet(global, null, s)) {
-//				return s;
-//			}
-//			s._shutdown();
-//		}
 
 	/**
 	 * @return a simple HTTP client
 	 */
-	public static HttpClient create(ClientOptions options) {
-		return new HttpClient(Objects.requireNonNull(options, "options"));
+	public static HttpClient create(Consumer<? super HttpClientOptions> options) {
+		Objects.requireNonNull(options, "options");
+		HttpClientOptions clientOptions = HttpClientOptions.create();
+		clientOptions.channelResources(HttpResources.defaultHttpLoops());
+		options.accept(clientOptions);
+		return new HttpClient(clientOptions.duplicate());
 	}
-//		if (eventLoopSelector == null) {
 
 	/**
 	 * @return a simple HTTP client
@@ -96,30 +74,27 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	public static HttpClient create(String address) {
 		return create(address, 80);
 	}
-//		}
-//		return DEFAULT_STATE.clientGroup;
-//	}
 
 	/**
 	 * @return a simple HTTP client
 	 */
 	public static HttpClient create(String address, int port) {
-		return create(ClientOptions.create()
-		                           .connect(address, port));
+		return create(opts -> opts.connect(address, port));
 	}
 
 	/**
 	 * @return a simple HTTP client
 	 */
 	public static HttpClient create(int port) {
-		return create(ClientOptions.create()
-		                           .connect(NetUtil.LOCALHOST.getHostAddress(), port));
+		return create("localhost", port);
 	}
 
-	final TcpBridgeClient client;
+	final TcpBridgeClient   client;
+	final HttpClientOptions options;
 
-	protected HttpClient(final ClientOptions options) {
+	protected HttpClient(final HttpClientOptions options) {
 		this.client = new TcpBridgeClient(options);
+		this.options = options;
 	}
 
 	/**
@@ -255,17 +230,12 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	public Mono<HttpClientResponse> request(HttpMethod method,
 			String url,
 			Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
-		final URI currentURI;
-		try {
-			if (method == null && url == null) {
-				throw new IllegalArgumentException("Method && url cannot be both null");
-			}
-			currentURI = new URI(parseURL(url, false));
+
+		if (method == null || url == null) {
+			throw new IllegalArgumentException("Method && url cannot be both null");
 		}
-		catch (Exception e) {
-			return Mono.error(e);
-		}
-		return new MonoHttpClientResponse(this, currentURI, method, handler);
+
+		return new MonoHttpClientResponse(this, url, method, handler);
 	}
 
 	/**
@@ -277,8 +247,9 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * response
 	 */
 	public final Mono<HttpClientResponse> ws(String url) {
-		return request(HttpMethod.GET, parseURL(url, true),
-				req -> req.upgradeToWebsocket(NettyOperations.noopHandler()));
+		return request(WS,
+				url,
+				req -> req.upgradeToWebsocket(ChannelOperations.noopHandler()));
 	}
 
 	/**
@@ -292,50 +263,12 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 */
 	public final Mono<HttpClientResponse> ws(String url,
 			final Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
-		return request(HttpMethod.GET,
-				parseURL(url, true),
+		return request(WS,
+				url,
 				ch -> ch.upgradeToWebsocket((in, out) -> handler.apply((HttpClientRequest) out)));
 	}
 
-	@SuppressWarnings("unchecked")
-	Mono<?> newHandler(URI url,
-			Consumer<? super Channel> onSetup,
-			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> ioHandler) {
-
-		boolean secure = url.getScheme() != null && (url.getScheme()
-		                                                .toLowerCase()
-		                                                .equals(HTTPS_SCHEME) || url.getScheme()
-		                                                                            .toLowerCase()
-		                                                                            .equals(WSS_SCHEME));
-		int port = url.getPort() != -1 ? url.getPort() : (secure ? 443 : 80);
-		return client.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) ioHandler,
-				client.getOptions()
-				      .proxyType() != null ?
-						InetSocketAddress.createUnresolved(url.getHost(), port) :
-						new InetSocketAddress(url.getHost(), port), secure, onSetup);
-	}
-
-	final String parseURL(String url, boolean ws) {
-		if (!url.startsWith(HTTP_SCHEME) && !url.startsWith(WS_SCHEME)) {
-			final String parsedUrl = (ws ? WS_SCHEME : HTTP_SCHEME) + "://";
-			if (url.startsWith("/")) {
-				InetSocketAddress remote = client.getOptions()
-				                                 .remoteAddress();
-
-				return parsedUrl + (client.getOptions()
-				                          .proxyType() == null && remote != null ?
-						remote.getHostName() + ":" + remote.getPort() : "localhost") +
-						url;
-			}
-			else {
-				return parsedUrl + url;
-			}
-		}
-		else {
-			return url;
-		}
-	}
-
+	static final HttpMethod     WS             = new HttpMethod("WS");
 	final static String         WS_SCHEME      = "ws";
 	final static String         WSS_SCHEME     = "wss";
 	final static String         HTTP_SCHEME    = "http";
@@ -350,7 +283,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		}
 
 		@Override
-		protected Mono<NettyState> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+		protected Mono<NettyContext> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 				InetSocketAddress address,
 				boolean secure,
 				Consumer<? super Channel> onSetup) {
@@ -358,23 +291,23 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		}
 
 		@Override
-		protected void onSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
-				SocketChannel ch,
-				MonoSink<NettyState> sink, Cancellation onClose) {
-			ch.pipeline()
-			  .addLast(NettyHandlerNames.HttpCodecHandler, new HttpClientCodec());
-
-			HttpClientOperations.bindHttp(ch, handler, sink, onClose);
-		}
-
-		@Override
-		protected EventLoopSelector global() {
-			return HttpEventLoopSelector.defaultHttpLoops();
-		}
-
-		@Override
-		protected LoggingHandler logger() {
-			return loggingHandler;
+		protected ContextHandler<SocketChannel> doHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+				MonoSink<NettyContext> sink,
+				boolean secure,
+				ChannelPool pool,
+				Consumer<? super Channel> onSetup) {
+			return ContextHandler.newClientContext(sink,
+					options,
+					loggingHandler,
+					secure,
+					pool,
+					(ch, c) -> {
+						if(onSetup != null){
+							onSetup.accept(ch);
+						}
+						HttpClientOperations.bindHttp(ch, handler, sink, c);
+					});
 		}
 	}
+
 }

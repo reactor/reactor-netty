@@ -115,6 +115,9 @@ final class HttpServerCloseSubscriber
 			if (!parent.isKeepAlive()) {
 				f.addListener(ChannelFutureListener.CLOSE);
 			}
+			else{
+				parent.channel().pipeline().fireChannelInactive();
+			}
 		}
 	}
 }

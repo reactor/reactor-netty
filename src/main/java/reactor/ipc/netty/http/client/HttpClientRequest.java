@@ -19,7 +19,7 @@ package reactor.ipc.netty.http.client;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpOutbound;
 
 /**
@@ -90,7 +90,7 @@ public interface HttpClientRequest extends HttpOutbound {
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> upgradeToWebsocket() {
-		return upgradeToWebsocket(uri(), false, NettyOperations.noopHandler());
+		return upgradeToWebsocket(uri(), false, ChannelOperations.noopHandler());
 	}
 
 	/**
@@ -98,7 +98,7 @@ public interface HttpClientRequest extends HttpOutbound {
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> upgradeToTextWebsocket() {
-		return upgradeToWebsocket(uri(), true, NettyOperations.noopHandler());
+		return upgradeToWebsocket(uri(), true, ChannelOperations.noopHandler());
 	}
 
 }

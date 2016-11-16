@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.tcp;
+package reactor.ipc.netty.channel;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import reactor.core.publisher.MonoSink;
 
 /**
  * @author Stephane Maldini
  */
-final class SslReadHandler extends ChannelDuplexHandler {
+final class SslReadHandler extends ChannelInboundHandlerAdapter {
 
 	final MonoSink<?> sink;
 
@@ -53,13 +53,16 @@ final class SslReadHandler extends ChannelDuplexHandler {
 			throws Exception {
 		if (evt instanceof SslHandshakeCompletionEvent) {
 			handshakeDone = true;
+			if(ctx.pipeline().context(this) != null){
+				ctx.pipeline().remove(this);
+			}
 			SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
-				if (handshake.isSuccess()) {
-					ctx.fireChannelActive();
-				}
-				else {
-					sink.error(handshake.cause());
-				}
+			if (handshake.isSuccess()) {
+				ctx.fireChannelActive();
+			}
+			else {
+				sink.error(handshake.cause());
+			}
 		}
 		super.userEventTriggered(ctx, evt);
 	}

@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -35,7 +34,7 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 @ChannelHandler.Sharable
-final class NettyChannelHandler extends ChannelDuplexHandler {
+final class ChannelOperationsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void channelActive(final ChannelHandlerContext ctx) throws Exception {
@@ -66,7 +65,7 @@ final class NettyChannelHandler extends ChannelDuplexHandler {
 			if (msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
 				return;
 			}
-			operations(ctx).onInboundNext(msg);
+			operations(ctx).onInboundNext(ctx, msg);
 			ctx.fireChannelRead(msg);
 		}
 		catch (Throwable err) {
@@ -90,31 +89,14 @@ final class NettyChannelHandler extends ChannelDuplexHandler {
 		operations(ctx).onChannelError(err);
 	}
 
-	@Override
-	public void write(final ChannelHandlerContext ctx,
-			Object msg,
-			final ChannelPromise promise) throws Exception {
-		if (msg instanceof ChannelWriter) {
-			@SuppressWarnings("unchecked") ChannelWriter dataWriter =
-					(ChannelWriter) msg;
-			operations(ctx).onOutboundWriter(ctx,
-					dataWriter.writeStream,
-					dataWriter.flushMode,
-					promise);
-		}
-		else {
-			ctx.write(msg, promise);
-		}
-	}
-
-	final NettyOperations<?, ?> operations(ChannelHandlerContext ctx) {
+	final ChannelOperations<?, ?> operations(ChannelHandlerContext ctx) {
 		return ctx.channel()
-		          .attr(NettyOperations.OPERATIONS_ATTRIBUTE_KEY)
+		          .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
 		          .get();
 	}
 
 //
 
-	protected static final Logger log = Loggers.getLogger(NettyChannelHandler.class);
+	protected static final Logger log = Loggers.getLogger(ChannelOperationsHandler.class);
 
 }

@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBuf;
 import reactor.ipc.connector.Connector;
 
 /**
+ * A Netty {@link Connector}
  * @param <INBOUND> incoming traffic API such as server request or client response
  * @param <OUTBOUND> outgoing traffic API such as server response or client request
  * @author Stephane Maldini

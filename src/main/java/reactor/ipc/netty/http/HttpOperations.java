@@ -37,17 +37,17 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.ChannelFutureMono;
-import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.channel.ChannelOperations;
 
 /**
- * An HTTP ready {@link NettyOperations} with state management for status and headers
+ * An HTTP ready {@link ChannelOperations} with state management for status and headers
  * (first HTTP response packet).
  *
  * @author Stephane Maldini
  */
 public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends HttpOutbound>
-		extends NettyOperations<INBOUND, OUTBOUND> implements HttpInbound, HttpOutbound {
+		extends ChannelOperations<INBOUND, OUTBOUND> implements HttpInbound, HttpOutbound {
 
 
 	volatile int statusAndHeadersSent = 0;
@@ -59,7 +59,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 
 	protected HttpOperations(Channel ioChannel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink, Cancellation onClose) {
+			MonoSink<NettyContext> clientSink, Cancellation onClose) {
 		super(ioChannel, handler, clientSink, onClose);
 
 	}
@@ -174,6 +174,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	 * failing with root cause.
 	 */
 	protected abstract void sendHeadersAndSubscribe(Subscriber<? super Void> s);
+
+
 	final static AtomicIntegerFieldUpdater<HttpOperations> HEADERS_SENT =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");

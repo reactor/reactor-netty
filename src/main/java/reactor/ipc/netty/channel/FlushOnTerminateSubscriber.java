@@ -18,7 +18,6 @@ package reactor.ipc.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -32,18 +31,15 @@ import reactor.core.publisher.Operators;
 final class FlushOnTerminateSubscriber
 		implements Subscriber<Object>, ChannelFutureListener, Loopback {
 
-	final ChannelHandlerContext ctx;
-	final ChannelPromise        promise;
-	final NettyOperations<?, ?> parent;
+	final ChannelPromise          promise;
+	final ChannelOperations<?, ?> parent;
 
 	ChannelFuture lastWrite;
 	Subscription  subscription;
 
-	public FlushOnTerminateSubscriber(NettyOperations<?, ?> parent,
-			ChannelHandlerContext ctx,
+	public FlushOnTerminateSubscriber(ChannelOperations<?, ?> parent,
 			ChannelPromise promise) {
 		this.parent = parent;
-		this.ctx = ctx;
 		this.promise = promise;
 	}
 
@@ -58,12 +54,12 @@ final class FlushOnTerminateSubscriber
 			throw new IllegalStateException("already flushed");
 		}
 		subscription = null;
-		ctx.channel()
+		parent.channel
 		   .closeFuture()
 		   .removeListener(this);
-		ctx.channel()
-		   .eventLoop()
-		   .execute(() -> parent.doOnTerminatedWriter(ctx, lastWrite, promise, null));
+		parent.channel
+				.eventLoop()
+				.execute(() -> parent.onTerminatedWriter(lastWrite, promise, null));
 	}
 
 	@Override
@@ -74,14 +70,14 @@ final class FlushOnTerminateSubscriber
 		if (subscription == null) {
 			throw new IllegalStateException("already flushed", t);
 		}
-		NettyOperations.log.error("Write error", t);
+		ChannelOperations.log.error("Write error", t);
 		subscription = null;
-		ctx.channel()
+		parent.channel
 		   .closeFuture()
 		   .removeListener(this);
-		ctx.channel()
-		   .eventLoop()
-		   .execute(() -> parent.doOnTerminatedWriter(ctx, lastWrite, promise, t));
+		parent.channel
+				.eventLoop()
+				.execute(() -> parent.onTerminatedWriter(lastWrite, promise, t));
 	}
 
 	@Override
@@ -93,12 +89,12 @@ final class FlushOnTerminateSubscriber
 			throw Exceptions.failWithCancel();
 		}
 		try {
-			ChannelFuture cf = parent.doOnWrite(w, ctx);
+			ChannelFuture cf = parent.sendNext(w);
 			lastWrite = cf;
-			if (cf != null && NettyOperations.log.isDebugEnabled()) {
+			if (cf != null && ChannelOperations.log.isDebugEnabled()) {
 				cf.addListener((ChannelFutureListener) future -> {
 					if (!future.isSuccess()) {
-						NettyOperations.log.error("write error :" + w, future.cause());
+						ChannelOperations.log.error("write error :" + w, future.cause());
 						if (ByteBuf.class.isAssignableFrom(w.getClass())) {
 							((ByteBuf) w).resetReaderIndex();
 						}
@@ -107,7 +103,7 @@ final class FlushOnTerminateSubscriber
 			}
 		}
 		catch (Throwable t) {
-			NettyOperations.log.error("Write error for " + w, t);
+			ChannelOperations.log.error("Write error for " + w, t);
 			onError(t);
 		}
 	}
@@ -117,7 +113,7 @@ final class FlushOnTerminateSubscriber
 		if (Operators.validate(subscription, s)) {
 			this.subscription = s;
 
-			ctx.channel()
+			parent.channel
 			   .closeFuture()
 			   .addListener(this);
 
@@ -130,11 +126,11 @@ final class FlushOnTerminateSubscriber
 		Subscription subscription = this.subscription;
 		this.subscription = null;
 		if (subscription != null && future.channel()
-		                                  .attr(NettyOperations.OPERATIONS_ATTRIBUTE_KEY)
+		                                  .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
 		                                  .get()
 		                                  .bufferedInbound() == 0L) {
-			if (NettyOperations.log.isDebugEnabled()) {
-				NettyOperations.log.debug("Cancel from remotely closed connection");
+			if (ChannelOperations.log.isDebugEnabled()) {
+				ChannelOperations.log.debug("Cancel from remotely closed connection");
 			}
 			subscription.cancel();
 		}

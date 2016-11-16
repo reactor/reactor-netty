@@ -19,7 +19,6 @@ package reactor.ipc.netty.tcp;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -31,6 +30,7 @@ import java.util.function.BiFunction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.junit.After;
@@ -48,12 +48,10 @@ import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.options.ClientOptions;
-import reactor.ipc.netty.options.ServerOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -90,19 +88,19 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void tcpServerHandlesJsonPojosOverSsl()
-			throws InterruptedException, CertificateException {
+	public void tcpServerHandlesJsonPojosOverSsl() throws Exception {
 		final CountDownLatch latch = new CountDownLatch(2);
 
-		SslContextBuilder clientOptions = SslContextBuilder.forClient()
-		                                                   .trustManager(
-				                                                   InsecureTrustManagerFactory.INSTANCE);
-		final TcpServer server = TcpServer.create(ServerOptions.on("localhost")
+		SslContext clientOptions = SslContextBuilder.forClient()
+		                                            .trustManager(
+				                                            InsecureTrustManagerFactory.INSTANCE)
+		                                            .build();
+		final TcpServer server = TcpServer.create(opts -> opts.listen("localhost")
 		                                                       .sslSelfSigned());
 
 		ObjectMapper m = new ObjectMapper();
 
-		NettyState connectedServer = server.newHandler((in, out) -> {
+		NettyContext connectedServer = server.newHandler((in, out) -> {
 			in.receive()
 			  .asByteArray()
 			  .map(bb -> {
@@ -123,14 +121,14 @@ public class TcpServerTests {
 			return out.sendString(Mono.just("Hi"))
 			          .concatWith(Flux.never());
 		})
-		                                   .block();
+		                                     .block();
 
-		final TcpClient client = TcpClient.create(ClientOptions.to("localhost",
+		final TcpClient client = TcpClient.create(opts -> opts.connect("localhost",
 				connectedServer.address()
 				               .getPort())
-		                                                       .ssl(clientOptions));
+		                                                      .sslContext(clientOptions));
 
-		NettyState connectedClient = client.newHandler((in, out) -> {
+		NettyContext connectedClient = client.newHandler((in, out) -> {
 			//in
 			in.receive()
 			  .asString()
@@ -158,7 +156,7 @@ public class TcpServerTests {
 			          .concatWith(Flux.never());
 //			return Mono.empty();
 		})
-		                                   .block();
+		                                     .block();
 
 		assertTrue("Latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
@@ -172,8 +170,8 @@ public class TcpServerTests {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		NettyState server = TcpServer.create(port)
-		                             .newHandler((in, out) -> {
+		NettyContext server = TcpServer.create(port)
+		                               .newHandler((in, out) -> {
 			                             InetSocketAddress remoteAddr =
 					                             in.remoteAddress();
 			                             assertNotNull("remote address is not null",
@@ -182,12 +180,12 @@ public class TcpServerTests {
 
 			                             return Flux.never();
 		                             })
-		                             .block();
+		                               .block();
 
-		NettyState client = TcpClient.create(port)
-		                             .newHandler((in, out) -> out.sendString(Flux.just(
+		NettyContext client = TcpClient.create(port)
+		                               .newHandler((in, out) -> out.sendString(Flux.just(
 				                             "Hello World!")))
-		                             .block();
+		                               .block();
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
@@ -213,7 +211,7 @@ public class TcpServerTests {
 			return Flux.never();
 		};
 
-		TcpServer server = TcpServer.create(ServerOptions.create()
+		TcpServer server = TcpServer.create(opts -> opts
 		                                                 .afterChannelInit(c -> c.pipeline()
 		                                                                         .addBefore(
 				                                                 NettyHandlerNames.ReactiveBridge,
@@ -222,8 +220,8 @@ public class TcpServerTests {
 						                                                 8 * 1024)))
 		                                                 .listen(port));
 
-		NettyState connected = server.newHandler(serverHandler)
-		                             .block();
+		NettyContext connected = server.newHandler(serverHandler)
+		                               .block();
 
 		client.newHandler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
 		                                            .map(b -> in.channel()
@@ -257,8 +255,8 @@ public class TcpServerTests {
 
 		//on a server dispatching data on the default shared dispatcher, and serializing/deserializing as string
 		//Listen for anything exactly hitting the root URI and route the incoming connection request to the callback
-		NettyState s = HttpServer.create(0)
-		                         .newRouter(r -> r.get("/", (request, response) -> {
+		NettyContext s = HttpServer.create(0)
+		                           .newRouter(r -> r.get("/", (request, response) -> {
 			                         //prepare a response header to be appended first before any reply
 			                         response.addHeader("X-CUSTOM", "12345");
 			                         //attach to the shared tail, take the most recent generated substream and merge it to the high level stream
@@ -271,7 +269,7 @@ public class TcpServerTests {
 			                                                        .concatWith(Flux.just(
 					                                                        "end\n")));
 		                         }))
-		                         .block();
+		                           .block();
 
 		for (int i = 0; i < 50; i++) {
 			Thread.sleep(500);
@@ -287,8 +285,8 @@ public class TcpServerTests {
 
 		final CountDownLatch countDownLatch = new CountDownLatch(1);
 
-		NettyState server = TcpServer.create(0)
-		                             .newHandler((in, out) -> {
+		NettyContext server = TcpServer.create(0)
+		                               .newHandler((in, out) -> {
 			                             in.receive()
 			                               .log("channel")
 			                               .subscribe(trip -> {
@@ -296,16 +294,16 @@ public class TcpServerTests {
 			                               });
 			                             return Flux.never();
 		                             })
-		                             .block();
+		                               .block();
 
 		System.out.println("PORT +" + server.address()
 		                                    .getPort());
 
-		NettyState client = TcpClient.create(server.address()
-		                                           .getPort())
-		                             .newHandler((in, out) -> out.sendString(Flux.just(
+		NettyContext client = TcpClient.create(server.address()
+		                                             .getPort())
+		                               .newHandler((in, out) -> out.sendString(Flux.just(
 				                             "test")))
-		                             .block();
+		                               .block();
 
 		client.dispose();
 		server.dispose();

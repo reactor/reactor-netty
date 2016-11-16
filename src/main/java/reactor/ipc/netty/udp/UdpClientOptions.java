@@ -13,13 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.tcp;
+package reactor.ipc.netty.udp;
 
-import reactor.ipc.netty.options.EventLoopSelector;
+import java.net.InetSocketAddress;
+import javax.annotation.Nonnull;
+
+import reactor.ipc.netty.options.ClientOptions;
 
 /**
  * @author Stephane Maldini
  */
-final class TcpEventLoopSelector {
-	static final EventLoopSelector DEFAULT_TCP_LOOPS = EventLoopSelector.create("tcp");
+final class UdpClientOptions extends ClientOptions {
+
+	@Override
+	protected boolean useDatagramChannel() {
+		return true;
+	}
+
+	UdpClientOptions() {
+	}
+
+	UdpClientOptions(ClientOptions options) {
+		super(options);
+	}
+
+	@Override
+	public UdpClientOptions duplicate() {
+		return new UdpClientOptions(this);
+	}
+
+	@Override
+	public ClientOptions connect(@Nonnull String host, int port) {
+		return connect(new InetSocketAddress(host, port));
+	}
 }

@@ -20,7 +20,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 
@@ -30,7 +30,7 @@ import reactor.ipc.netty.http.server.HttpServer;
  */
 public class WebsocketTests {
 
-	private NettyState httpServer;
+	private NettyContext httpServer;
 
 	static final String auth =
 			"bearer abc";
@@ -50,6 +50,19 @@ public class WebsocketTests {
 	@Test
 	public void simpleTest() {
 		String res = HttpClient.create(httpServer.address()
+		                                         .getPort())
+		                       .get("/test",
+				                       out -> out.addHeader("Authorization", auth)
+				                                 .upgradeToTextWebsocket())
+		                       .flatMap(in -> in.receive()
+		                                        .asString())
+		                       .log()
+		                       .collectList()
+		                       .block()
+		                       .get(0);
+
+
+		res = HttpClient.create(httpServer.address()
 		                                         .getPort())
 		                       .get("/test",
 				                       out -> out.addHeader("Authorization", auth)

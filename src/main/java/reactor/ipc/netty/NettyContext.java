@@ -24,10 +24,10 @@ import reactor.core.publisher.Mono;
 /**
  * @author Stephane Maldini
  */
-public interface NettyState extends Cancellation {
+public interface NettyContext extends Cancellation {
 
 	/**
-	 * Return remote address if client {@link NettyState} otherwise local address if
+	 * Return remote address if client {@link NettyContext} otherwise local address if
 	 * server.
 	 *
 	 * @return remote or local {@link InetSocketAddress}

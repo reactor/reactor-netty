@@ -29,7 +29,7 @@ import reactor.core.publisher.Mono;
 public class ChannelFutureMono<C extends Future> extends Mono<Void> {
 
 	public static Mono<Void> from(Future future){
-		return new ChannelFutureMono<Future>(future);
+		return new ChannelFutureMono<>(future);
 	}
 
 	public static Mono<Void> from(Supplier<? extends Future> deferredFuture){

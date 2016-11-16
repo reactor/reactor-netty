@@ -17,42 +17,42 @@
 package reactor.ipc.netty.channel;
 
 import java.io.IOException;
+import java.util.Objects;
+import java.util.function.BiConsumer;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.Future;
 import reactor.core.Cancellation;
 import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.options.NettyOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
+ * @param <CHANNEL> the channel type
+ *
  * @author Stephane Maldini
  */
-final class ChannelConnectHandler implements ChannelFutureListener, Cancellation {
+abstract class CloseableContextHandler<CHANNEL extends Channel>
+		extends ContextHandler<CHANNEL> implements ChannelFutureListener {
 
-	final MonoSink<NettyState> sink;
-	final Cancellation         onClose;
-	final ChannelFuture        f;
-	final boolean              emitChannelState;
+	static final Logger log = Loggers.getLogger(CloseableContextHandler.class);
 
-	ChannelConnectHandler(ChannelFuture f,
-			MonoSink<NettyState> sink,
-			Cancellation onClose,
-			boolean emitChannelState) {
-		this.sink = sink;
-		this.f = f;
-		this.emitChannelState = emitChannelState;
-		this.onClose = onClose;
+	ChannelFuture f;
+
+	CloseableContextHandler(BiConsumer<? super CHANNEL, ? super Cancellation> doWithPipeline,
+			NettyOptions<?, ?> options,
+			MonoSink<NettyContext> sink,
+			LoggingHandler loggingHandler) {
+		super(doWithPipeline, options, sink, loggingHandler);
 	}
 
 	@Override
-	public void operationComplete(ChannelFuture f) throws Exception {
-		if (onClose != null) {
-			f.channel()
-			 .closeFuture()
-			 .addListener(x -> onClose.dispose());
-		}
+	public final void operationComplete(ChannelFuture f) throws Exception {
 		if (!f.isSuccess()) {
 			if (f.cause() != null) {
 				sink.error(f.cause());
@@ -62,28 +62,39 @@ final class ChannelConnectHandler implements ChannelFutureListener, Cancellation
 				                                                           .toString()));
 			}
 		}
-		else if (emitChannelState) {
-			sink.success(NettyOperations.newNettyState(f.channel(), this));
+		else {
+			log.debug("started {}", f.channel().toString());
+			doStarted(f.channel());
 		}
 	}
 
 	@Override
-	public void dispose() {
+	@SuppressWarnings("unchecked")
+	public void setFuture(Future<?> future) {
+		Objects.requireNonNull(future, "future");
+		if (this.f != null) {
+			future.cancel(true);
+		}
+		this.f = (ChannelFuture) future;
+		f.addListener(this);
+		sink.setCancellation(this);
+	}
+
+	@Override
+	public final void dispose() {
 		if (f.channel()
 		     .isOpen()) {
 			try {
 				f.channel()
 				 .close()
 				 .sync();
-				if (onClose != null) {
-					onClose.dispose();
-				}
 			}
 			catch (InterruptedException e) {
 				log.error("error while disposing the channel", e);
 			}
 		}
+		else if (!f.isDone()) {
+			f.cancel(true);
+		}
 	}
-
-	static final Logger log = Loggers.getLogger(ChannelConnectHandler.class);
 }

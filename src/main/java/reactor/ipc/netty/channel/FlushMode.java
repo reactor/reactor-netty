@@ -13,26 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package reactor.ipc.netty.http;
-
-import reactor.ipc.netty.options.EventLoopSelector;
+package reactor.ipc.netty.channel;
 
 /**
- * Hold the default Http event loops
  *
- * @author Stephane Maldini
- * @since 0.6
  */
-public final class HttpEventLoopSelector {
+public enum FlushMode {
+	AUTO_EACH, AUTO_LOOP, MANUAL_COMPLETE, MANUAL_BOUNDARY
 
-	static final EventLoopSelector DEFAULT_HTTP_LOOPS = EventLoopSelector.create("http");
-
-	/**
-	 * Return the global HTTP event loop selector
-	 * @return the global HTTP event loop selector
-	 */
-	public static EventLoopSelector defaultHttpLoops(){
-		return DEFAULT_HTTP_LOOPS;
-	}
 }

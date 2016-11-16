@@ -40,6 +40,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -48,12 +49,13 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import reactor.core.Cancellation;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyHandlerNames;
-import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOperations;
@@ -70,13 +72,18 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		implements HttpServerRequest, HttpServerResponse {
 
 	static HttpServerOperations bindHttp(Channel channel,
-			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
-		HttpServerOperations ops = new HttpServerOperations(channel, handler);
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
+			Cancellation onClose) {
+		HttpServerOperations ops = new HttpServerOperations(channel, handler, onClose);
 
-		channel.attr(OPERATIONS_ATTRIBUTE_KEY)
-		       .set(ops);
+		ChannelOperations<?, ?> before = channel.attr(OPERATIONS_ATTRIBUTE_KEY)
+		                                        .getAndSet(ops);
+		if (before != null) {
+			before.cancel();
+		}
 
-		NettyOperations.addReactiveBridgeHandler(channel);
+		channel.pipeline()
+		       .addLast(NettyHandlerNames.HttpCodecHandler, new HttpServerCodec());
 
 		return ops;
 	}
@@ -97,30 +104,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	HttpServerOperations(Channel ch,
-			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
-		super(ch, handler, null, null);
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
+			Cancellation onClose) {
+		super(ch, handler, null, onClose);
 		this.nettyResponse =
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		responseHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 		//FIXME when keep alive is supported
 		responseHeaders.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-	}
-
-	@Override
-	public String uri() {
-		if (nettyRequest != null) {
-			return nettyRequest.uri();
-		}
-		throw new IllegalStateException("request not parsed");
-	}
-
-	@Override
-	public HttpVersion version() {
-		if (nettyRequest != null) {
-			return nettyRequest.protocolVersion();
-		}
-		throw new IllegalStateException("request not parsed");
 	}
 
 	@Override
@@ -133,22 +125,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			throw new IllegalStateException("Status and headers already sent");
 		}
 		return this;
-	}
-
-	@Override
-	public Flux<?> receiveObject() {
-		// Handle the 'Expect: 100-continue' header if necessary.
-		// TODO: Respond with 413 Request Entity Too Large
-		//   and discard the traffic or close the connection.
-		//       No need to notify the upstream handlers - just log.
-		//       If decoding a response, just throw an error.
-		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
-			return ChannelFutureMono.from(() -> channel().writeAndFlush(CONTINUE))
-			                        .thenMany(super.receiveObject());
-		}
-		else {
-			return super.receiveObject();
-		}
 	}
 
 	/**
@@ -172,53 +148,22 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerResponse flushEach() {
-		super.flushEach();
+	public HttpServerResponse chunkedTransfer(boolean chunked) {
+		if (!hasSentHeaders()) {
+			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
+		}
+		else {
+			throw new IllegalStateException("Status and headers already sent");
+		}
 		return this;
 	}
 
 	@Override
-	public void onChannelActive(ChannelHandlerContext ctx) {
-		ctx.read();
-	}
-
-	@Override
-	public void onInboundNext(Object msg) {
-		if (msg instanceof HttpRequest) {
-			nettyRequest = (HttpRequest) msg;
-			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
-
-			if (isWebsocket()) {
-				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
-				channel().pipeline()
-				         .addBefore(NettyHandlerNames.ReactiveBridge,
-						          NettyHandlerNames.HttpAggregator,
-						          agg);
-			}
-
-			handler().apply(this, this)
-			         .subscribe(new HttpServerCloseSubscriber(this));
-
-			if(!(msg instanceof FullHttpRequest)){
-				return;
-			}
+	public Map<CharSequence, Set<Cookie>> cookies() {
+		if (cookieHolder != null) {
+			return cookieHolder.getCachedCookies();
 		}
-		if (msg instanceof HttpContent) {
-			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
-				super.onInboundNext(msg);
-			}
-			if (msg instanceof LastHttpContent) {
-				onChannelComplete();
-			}
-		}
-		else{
-			super.onInboundNext(msg);
-		}
-	}
-
-	@Override
-	public HttpHeaders responseHeaders() {
-		return responseHeaders;
+		throw new IllegalStateException("request not parsed");
 	}
 
 	@Override
@@ -228,11 +173,28 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpHeaders requestHeaders() {
-		if (nettyRequest != null) {
-			return nettyRequest.headers();
+	public HttpServerResponse flushEach() {
+		super.flushEach();
+		return this;
+	}
+
+	/**
+	 * Define the response HTTP header for the given key
+	 *
+	 * @param name the HTTP response header key to override
+	 * @param value the HTTP response header content
+	 *
+	 * @return this
+	 */
+	@Override
+	public HttpServerResponse header(CharSequence name, CharSequence value) {
+		if (!hasSentHeaders()) {
+			this.responseHeaders.set(name, value);
 		}
-		throw new IllegalStateException("request not parsed");
+		else {
+			throw new IllegalStateException("Status and headers already sent");
+		}
+		return this;
 	}
 
 	@Override
@@ -256,6 +218,45 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public HttpMethod method() {
 		return nettyRequest.method();
+	}
+
+	@Override
+	public void onChannelActive(ChannelHandlerContext ctx) {
+		ctx.read();
+	}
+
+	@Override
+	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
+		if (msg instanceof HttpRequest) {
+			nettyRequest = (HttpRequest) msg;
+			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
+
+			if (isWebsocket()) {
+				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
+				channel().pipeline()
+				         .addBefore(NettyHandlerNames.ReactiveBridge,
+						         NettyHandlerNames.HttpAggregator,
+						         agg);
+			}
+
+			handler().apply(this, this)
+			         .subscribe(new HttpServerCloseSubscriber(this));
+
+			if (!(msg instanceof FullHttpRequest)) {
+				return;
+			}
+		}
+		if (msg instanceof HttpContent) {
+			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
+				super.onInboundNext(ctx, msg);
+			}
+			if (msg instanceof LastHttpContent) {
+				onChannelComplete();
+			}
+		}
+		else {
+			super.onInboundNext(ctx, msg);
+		}
 	}
 
 	/**
@@ -294,34 +295,33 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return this;
 	}
 
-	/**
-	 * Define the response HTTP header for the given key
-	 *
-	 * @param name the HTTP response header key to override
-	 * @param value the HTTP response header content
-	 *
-	 * @return this
-	 */
 	@Override
-	public HttpServerResponse header(CharSequence name, CharSequence value) {
-		if (!hasSentHeaders()) {
-			this.responseHeaders.set(name, value);
+	public Flux<?> receiveObject() {
+		// Handle the 'Expect: 100-continue' header if necessary.
+		// TODO: Respond with 413 Request Entity Too Large
+		//   and discard the traffic or close the connection.
+		//       No need to notify the upstream handlers - just log.
+		//       If decoding a response, just throw an error.
+		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
+			return ChannelFutureMono.from(() -> channel().writeAndFlush(CONTINUE))
+			                        .thenMany(super.receiveObject());
 		}
 		else {
-			throw new IllegalStateException("Status and headers already sent");
+			return super.receiveObject();
 		}
-		return this;
 	}
 
 	@Override
-	public HttpServerResponse chunkedTransfer(boolean chunked) {
-		if (!hasSentHeaders()) {
-			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
+	public HttpHeaders requestHeaders() {
+		if (nettyRequest != null) {
+			return nettyRequest.headers();
 		}
-		else {
-			throw new IllegalStateException("Status and headers already sent");
-		}
-		return this;
+		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public HttpHeaders responseHeaders() {
+		return responseHeaders;
 	}
 
 	/**
@@ -358,20 +358,45 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected ChannelFuture doOnWrite(final Object data, final ChannelHandlerContext ctx) {
-		return ctx.write(data);
+	public Mono<Void> upgradeToWebsocket(String protocols,
+			boolean textPlain,
+			BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return withWebsocketSupport(uri(), protocols, textPlain, websocketHandler);
 	}
 
 	@Override
-	protected void doOnTerminatedWriter(ChannelHandlerContext ctx,
-			ChannelFuture last,
+	public String uri() {
+		if (nettyRequest != null) {
+			return nettyRequest.uri();
+		}
+		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public HttpVersion version() {
+		if (nettyRequest != null) {
+			return nettyRequest.protocolVersion();
+		}
+		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public ChannelFuture sendNext(final Object data) {
+		return channel().write(data);
+	}
+
+	@Override
+	protected void onTerminatedWriter(ChannelFuture last,
 			ChannelPromise promise,
 			Throwable exception) {
-		super.doOnTerminatedWriter(ctx,
-				ctx.channel()
-				   .write(Unpooled.EMPTY_BUFFER),
-				promise,
+		super.onTerminatedWriter(channel().write(Unpooled.EMPTY_BUFFER), promise,
 				exception);
+	}
+
+	@Override
+	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
+		ChannelFutureMono.from(channel().writeAndFlush(nettyResponse))
+		                 .subscribe(s);
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,
@@ -399,28 +424,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
 	}
-
-	@Override
-	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
-		ChannelFutureMono.from(channel().writeAndFlush(nettyResponse))
-		                 .subscribe(s);
-	}
-
-	@Override
-	public Mono<Void> upgradeToWebsocket(String protocols,
-			boolean textPlain,
-			BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return withWebsocketSupport(uri(), protocols, textPlain, websocketHandler);
-	}
-
-	@Override
-	public Map<CharSequence, Set<Cookie>> cookies() {
-		if (cookieHolder != null) {
-			return cookieHolder.getCachedCookies();
-		}
-		throw new IllegalStateException("request not parsed");
-	}
-
 	static final Logger           log          = Loggers.getLogger(HttpServerOperations.class);
 	final static AsciiString      EVENT_STREAM =
 			new AsciiString("text/event-stream");

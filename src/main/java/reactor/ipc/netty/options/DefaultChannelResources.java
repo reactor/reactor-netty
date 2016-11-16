@@ -28,7 +28,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
  *
  * @since 0.6
  */
-final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSelector {
+final class DefaultChannelResources extends AtomicLong implements ChannelResources {
 
 	final String                          prefix;
 	final boolean                         daemon;
@@ -41,17 +41,17 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 	final AtomicReference<EventLoopGroup> cacheNativeServerLoops;
 	final AtomicReference<EventLoopGroup> cacheNativeSelectLoops;
 
-	static ThreadFactory threadFactory(DefaultEventLoopSelector parent, String prefix) {
+	static ThreadFactory threadFactory(DefaultChannelResources parent, String prefix) {
 		return new EventLoopSelectorFactory(parent.daemon,
 				parent.prefix + "-" + prefix,
 				parent);
 	}
 
-	DefaultEventLoopSelector(String prefix, int workerCount, boolean daemon) {
+	DefaultChannelResources(String prefix, int workerCount, boolean daemon) {
 		this(prefix, -1, workerCount, daemon);
 	}
 
-	DefaultEventLoopSelector(String prefix,
+	DefaultChannelResources(String prefix,
 			int selectCount,
 			int workerCount,
 			boolean daemon) {
@@ -64,7 +64,7 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 				threadFactory(this, "server-nio"));
 
 		this.clientLoops =
-				EventLoopSelector.colocate(new NioEventLoopGroup(workerCount,
+				ChannelResources.colocate(new NioEventLoopGroup(workerCount,
 						threadFactory(this, "client-nio")));
 
 		this.cacheNativeClientLoops = new AtomicReference<>();
@@ -145,7 +145,7 @@ final class DefaultEventLoopSelector extends AtomicLong implements EventLoopSele
 			EventLoopGroup newEventLoopGroup = SafeEpollDetector.newEventLoopGroup(
 					workerCount,
 					threadFactory(this, "client-epoll"));
-			newEventLoopGroup = EventLoopSelector.colocate(newEventLoopGroup);
+			newEventLoopGroup = ChannelResources.colocate(newEventLoopGroup);
 			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}

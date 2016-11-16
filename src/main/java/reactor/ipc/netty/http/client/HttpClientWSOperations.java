@@ -84,7 +84,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public void onInboundNext(Object msg) {
+	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		Class<?> messageClass = msg.getClass();
 		if (FullHttpResponse.class.isAssignableFrom(messageClass)) {
 			channel().pipeline()
@@ -112,10 +112,10 @@ final class HttpClientWSOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug("Closing Websocket");
 			}
-			channel().close();
+			onChannelComplete();
 		}
 		else {
-			super.onInboundNext(msg);
+			super.onInboundNext(ctx, msg);
 		}
 	}
 
@@ -134,25 +134,23 @@ final class HttpClientWSOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug("Closing Websocket");
 			}
-			if(channel().isOpen()) {
-				channel().close();
-			}
+			onChannelComplete();
 		}
 	}
 
 	@Override
-	protected ChannelFuture doOnWrite(Object data, ChannelHandlerContext ctx) {
+	public ChannelFuture sendNext(Object data) {
 		if (data instanceof ByteBuf) {
 			if (plainText) {
-				return ctx.write(new TextWebSocketFrame((ByteBuf) data));
+				return channel().write(new TextWebSocketFrame((ByteBuf) data));
 			}
-			return ctx.write(new BinaryWebSocketFrame((ByteBuf) data));
+			return channel().write(new BinaryWebSocketFrame((ByteBuf) data));
 		}
 		else if (data instanceof String) {
-			return ctx.write(new TextWebSocketFrame((String) data));
+			return channel().write(new TextWebSocketFrame((String) data));
 		}
 		else {
-			return ctx.write(data);
+			return channel().write(data);
 		}
 	}
 }

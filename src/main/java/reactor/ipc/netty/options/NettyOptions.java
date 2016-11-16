@@ -22,27 +22,31 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import io.netty.bootstrap.AbstractBootstrap;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.util.AttributeKey;
 
 /**
- * A common connector builder with low-level connection options including ssl, tcp
+ * A common connector builder with low-level connection options including sslContext, tcp
  * configuration, channel init handlers.
  *
+ * @param <BOOSTRAP> A Netty {@link Bootstrap} type
  * @param <SO> A NettyOptions subclass
+ *
  * @author Stephane Maldini
  */
 @SuppressWarnings("unchecked")
-public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
+public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, ?>, SO extends NettyOptions<BOOSTRAP, SO>>
+		implements Supplier<BOOSTRAP> {
 
-	/**
-	 *
-	 */
-	public static final boolean DEFAULT_MANAGED_PEER = Boolean.parseBoolean(System.getProperty("reactor.ipc.netty" +
-			".managed.default",
-			"false"));
 	/**
 	 *
 	 */
@@ -50,43 +54,36 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
 					12012;
 
-	long              timeout                   = 30000L;
-	long              sslHandshakeTimeoutMillis = 10000L;
-	boolean           keepAlive                 = true;
-	int               linger                    = 0;
-	boolean           tcpNoDelay                = true;
-	int               rcvbuf                    = 1024 * 1024;
-	int               sndbuf                    = 1024 * 1024;
-	boolean           managed                   = DEFAULT_MANAGED_PEER;
-	boolean           daemon                    = true;
-	SslContextBuilder sslOptions                = null;
-
-	boolean preferNative;
-
-	Consumer<? super Channel>             afterChannelInit  = null;
-	Predicate<? super Channel>            onChannelInit     = null;
-	Supplier<? extends EventLoopSelector> eventLoopSelector = null;
-
-	NettyOptions() {
-		preferNative =
-				Boolean.parseBoolean(System.getProperty("reactor.ipc.epoll", "true"));
+	static void defaultNettyOptions(AbstractBootstrap<?, ?> bootstrap) {
+		bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
 	}
 
-	NettyOptions(NettyOptions options) {
-		this.timeout = options.timeout;
+	final BOOSTRAP bootstrapTemplate;
+
+	boolean                        preferNative              = DEFAULT_NATIVE;
+	ChannelResources               channelResources          = null;
+	ChannelGroup                   channelGroup              = null;
+	SslContext                     sslContext                = null;
+	long                           sslHandshakeTimeoutMillis = 10000L;
+	Consumer<? super Channel>      afterChannelInit          = null;
+	Consumer<? super Channel>      afterChannelInitUser      = null;
+	Predicate<? super Channel>     onChannelInit             = null;
+
+	NettyOptions(BOOSTRAP bootstrapTemplate) {
+		this.bootstrapTemplate = bootstrapTemplate;
+		defaultNettyOptions(bootstrapTemplate);
+	}
+
+	NettyOptions(NettyOptions<BOOSTRAP, ?> options) {
+		this.bootstrapTemplate = options.bootstrapTemplate.clone();
 		this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis;
-		this.keepAlive = options.keepAlive;
-		this.linger = options.linger;
-		this.tcpNoDelay = options.tcpNoDelay;
-		this.rcvbuf = options.rcvbuf;
-		this.sndbuf = options.sndbuf;
-		this.managed = options.managed;
-		this.daemon = options.daemon;
-		this.sslOptions = options.sslOptions;
+		this.sslContext = options.sslContext;
 
 		this.afterChannelInit = options.afterChannelInit;
+		this.afterChannelInitUser = options.afterChannelInitUser;
 		this.onChannelInit = options.onChannelInit;
-		this.eventLoopSelector = options.eventLoopSelector;
+		this.channelGroup = options.channelGroup;
+		this.channelResources = options.channelResources;
 		this.preferNative = options.preferNative;
 	}
 
@@ -99,8 +96,8 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 *
 	 * @see #onChannelInit()
 	 */
-	public Consumer<? super Channel> afterChannelInit() {
-		return afterChannelInit;
+	public final Consumer<? super Channel> afterChannelInit() {
+		return afterChannelInitUser;
 	}
 
 	/**
@@ -116,26 +113,67 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 */
 	public SO afterChannelInit(Consumer<? super Channel> afterChannelInit) {
 		Objects.requireNonNull(afterChannelInit, "afterChannelInit");
-		this.afterChannelInit = afterChannelInit;
+		this.afterChannelInitUser = afterChannelInit;
+		if (channelGroup != null) {
+			this.afterChannelInit = c -> {
+				afterChannelInit.accept(c);
+				channelGroup.add(c);
+			};
+		}
+		else {
+			this.afterChannelInit = afterChannelInit;
+		}
 		return (SO) this;
 	}
 
 	/**
-	 * Returns a boolean indicating whether or not runtime threads will run daemon.
-	 * @return a boolean indicating whether or not runtime threads will run daemon.
+	 * Attribute default attribute to the future {@link Channel} connection. They will
+	 * be available via {@link reactor.ipc.netty.NettyInbound#attr(AttributeKey}.
+	 *
+	 * @param key the attribute key
+	 * @param value the attribute value
+	 * @param <T> the attribute type
+	 * @return this builder
+	 * @see Bootstrap#attr(AttributeKey, Object)
 	 */
-	public boolean daemon() {
-		return daemon;
+	public <T> SO attr(AttributeKey<T> key, T value) {
+		bootstrapTemplate.attr(key, value);
+		return (SO) this;
 	}
 
 	/**
-	 * Will run runtime threads in daemon mode or not. Explicit shutdowns will be
-	 * required if not daemon.
-	 * @param daemon {@code true} to run in daemon threads.
-	 * @return {@code this}
+	 * Provide a {@link ChannelGroup} for each active remote channel will be held in the
+	 * provided group.
+	 *
+	 * @param channelGroup a {@link ChannelGroup} to monitor remote channel
+	 *
+	 * @return this builder
 	 */
-	public SO daemon(boolean daemon) {
-		this.daemon = daemon;
+	public SO channelGroup(ChannelGroup channelGroup) {
+		Objects.requireNonNull(channelGroup, "channelGroup");
+		this.channelGroup = channelGroup;
+		Consumer<? super Channel> c = this.afterChannelInitUser;
+		if (c != null) {
+			afterChannelInit(c);
+		}
+		else {
+			this.afterChannelInit = channelGroup::add;
+		}
+		return (SO) this;
+	}
+
+	/**
+	 * Provide an {@link EventLoopGroup} supplier.
+	 * Note that server might call it twice for both their selection and io loops.
+	 *
+	 * @param channelResources a selector accepting native runtime expectation and
+	 * returning an eventLoopGroup
+	 *
+	 * @return this builder
+	 */
+	public SO channelResources(ChannelResources channelResources) {
+		Objects.requireNonNull(channelResources, "channelResources");
+		this.channelResources = channelResources;
 		return (SO) this;
 	}
 
@@ -150,90 +188,36 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 
 	/**
 	 * Provide a shared {@link EventLoopGroup} each Connector handler.
+	 *
 	 * @param eventLoopGroup an eventLoopGroup to share
+	 *
 	 * @return an {@link EventLoopGroup} provider given the native runtime expectation
 	 */
 	public SO eventLoopGroup(EventLoopGroup eventLoopGroup) {
 		Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
-		this.eventLoopSelector = () -> preferNative -> eventLoopGroup;
-		return (SO)this;
+		return channelResources(preferNative -> eventLoopGroup);
+	}
+
+	@Override
+	public BOOSTRAP get() {
+		return bootstrapTemplate.clone();
 	}
 
 	/**
-	 * Return the configured {@link EventLoopGroup} selector for each Connector handler.
-	 * @return an {@link EventLoopGroup} selector for each Connector handler.
-	 */
-	public Supplier<? extends EventLoopSelector> eventLoopSelector() {
-		return eventLoopSelector;
-	}
-
-	/**
-	 * Provide an {@link EventLoopGroup} selector for each Connector handler.
-	 * Note that server might call it twice for both their selection and io loops.
-	 * @param eventLoopSelector a selector accepting native runtime expectation and
-	 * returning an eventLoopGroup
+	 * Return a new eventual {@link SslHandler}
 	 *
-	 * @return this builder
+	 * @param allocator {@link ByteBufAllocator} to allocate for packet storage
+	 *
+	 * @return a new eventual {@link SslHandler}
 	 */
-	public SO eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopSelector) {
-		Objects.requireNonNull(eventLoopSelector, "eventLoopSelector");
-		this.eventLoopSelector = eventLoopSelector;
-		return (SO) this;
-	}
-
-	/**
-	 * Returns a boolean indicating whether or not {@code SO_KEEPALIVE} is enabled
-	 * @return {@code true} if keep alive is enabled, {@code false} otherwise
-	 */
-	public boolean keepAlive() {
-		return keepAlive;
-	}
-
-	/**
-	 * Enables or disables {@code SO_KEEPALIVE}.
-	 * @param keepAlive {@code true} to enable keepalive, {@code false} to disable
-	 * keepalive
-	 * @return {@code this}
-	 */
-	public SO keepAlive(boolean keepAlive) {
-		this.keepAlive = keepAlive;
-		return (SO) this;
-	}
-
-	/**
-	 * Returns the configuration of {@code SO_LINGER}.
-	 * @return the value of {@code SO_LINGER} in seconds
-	 */
-	public int linger() {
-		return linger;
-	}
-
-	/**
-	 * Configures {@code SO_LINGER}
-	 * @param linger The linger period in seconds
-	 * @return {@code this}
-	 */
-	public SO linger(int linger) {
-		this.linger = linger;
-		return (SO) this;
-	}
-
-	/**
-	 * @return false if not managed
-	 */
-	public boolean managed() {
-		return managed;
-	}
-
-	/**
-	 * Set the is managed value. Will retain connections in a
-	 * connector global scoped {@link io.netty.channel.group.ChannelGroup}
-	 * @param managed Should the connector be traced
-	 * @return {@code this}
-	 */
-	public SO managed(boolean managed) {
-		this.managed = managed;
-		return (SO) this;
+	public final SslHandler getSslHandler(ByteBufAllocator allocator) {
+		if(sslContext == null){
+			return null;
+		}
+		Objects.requireNonNull(allocator, "allocator");
+		SslHandler sslHandler = sslContext.newHandler(allocator);
+		sslHandler.setHandshakeTimeoutMillis(sslHandshakeTimeoutMillis);
+		return sslHandler;
 	}
 
 	/**
@@ -242,9 +226,10 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 * pipeline handlers have been registered.
 	 *
 	 * @return The pre channel pipeline setup handler
+	 *
 	 * @see #afterChannelInit()
 	 */
-	public Predicate<? super Channel> onChannelInit() {
+	public final Predicate<? super Channel> onChannelInit() {
 		return onChannelInit;
 	}
 
@@ -255,6 +240,7 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 * @param onChannelInit pre channel pipeline setup handler
 	 *
 	 * @return {@code this}
+	 *
 	 * @see #afterChannelInit(Consumer)
 	 */
 	public SO onChannelInit(Predicate<? super Channel> onChannelInit) {
@@ -263,8 +249,26 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	}
 
 	/**
+	 * Set a {@link ChannelOption} value for low level connection settings like
+	 * SO_TIMEOUT or SO_KEEPALIVE. This will apply to each new channel from remote
+	 * peer.
+	 *
+	 * @param key the option key
+	 * @param <T> the option type
+	 *
+	 * @return {@code this}
+	 * @see Bootstrap#option(ChannelOption, Object)
+	 */
+	public <T> SO option(ChannelOption<T> key, T value) {
+		this.bootstrapTemplate.option(key, value);
+		return (SO) this;
+	}
+
+	/**
 	 * Set the preferred native option. Determine if epoll should be used if available.
+	 *
 	 * @param preferNative Should the connector prefer native (epoll) if available
+	 *
 	 * @return {@code this}
 	 */
 	public SO preferNative(boolean preferNative) {
@@ -273,62 +277,15 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	}
 
 	/**
-	 * Return true if epoll should be used if available.
-	 *
-	 * @return true if epoll should be used if available.
-	 */
-	public boolean preferNative() {
-		return preferNative;
-	}
-
-
-	/**
-	 * Gets the configured {@code SO_RCVBUF} (receive buffer) size
-	 * @return The configured receive buffer size
-	 */
-	public int rcvbuf() {
-		return rcvbuf;
-	}
-
-	/**
-	 * Sets the {@code SO_RCVBUF} (receive buffer) size
-	 * @param rcvbuf The size of the receive buffer
-	 * @return {@code this}
-	 */
-	public SO rcvbuf(int rcvbuf) {
-		this.rcvbuf = rcvbuf;
-		return (SO) this;
-	}
-
-	/**
-	 * Return eventual {@link SslContextBuilder}
-	 * @return optional {@link SslContextBuilder}
-	 */
-	public SslContextBuilder ssl() {
-		return sslOptions;
-	}
-
-	/**
 	 * Set the options to use for configuring SSL. Setting this to {@code null} means
 	 * don't use SSL at all (the default).
 	 *
-	 * @param sslOptions The options to set when configuring SSL
+	 * @param sslContext The context to set when configuring SSL
 	 *
 	 * @return {@literal this}
 	 */
-	public SO ssl(SslContextBuilder sslOptions) {
-		this.sslOptions = sslOptions;
-		return (SO) this;
-	}
-
-	/**
-	 * Return eventual {@link SslContextBuilder}
-	 * @param sslConfigurer the callback accepting the current {@link SslContextBuilder}
-	 * @return {@literal this}
-	 */
-	public SO sslConfigurer(Consumer<? super SslContextBuilder> sslConfigurer) {
-		Objects.requireNonNull(sslConfigurer, "sslConfigurer");
-		sslConfigurer.accept(sslOptions);
+	public SO sslContext(SslContext sslContext) {
+		this.sslContext = sslContext;
 		return (SO) this;
 	}
 
@@ -336,9 +293,10 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
 	 *
 	 * @param sslHandshakeTimeout The timeout {@link Duration}
+	 *
 	 * @return {@literal this}
 	 */
-	public final SO sslHandshakeTimeout(Duration sslHandshakeTimeout) {
+	public SO sslHandshakeTimeout(Duration sslHandshakeTimeout) {
 		Objects.requireNonNull(sslHandshakeTimeout, "sslHandshakeTimeout");
 		return sslHandshakeTimeoutMillis(sslHandshakeTimeout.toMillis());
 	}
@@ -347,84 +305,23 @@ public abstract class NettyOptions<SO extends NettyOptions<? super SO>> {
 	 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
 	 *
 	 * @param sslHandshakeTimeoutMillis The timeout in milliseconds
+	 *
 	 * @return {@literal this}
 	 */
 	public SO sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
+		if(sslHandshakeTimeoutMillis < 0L){
+			throw new IllegalArgumentException("ssl handshake timeout must be positive," +
+					" was: "+sslHandshakeTimeoutMillis);
+		}
 		this.sslHandshakeTimeoutMillis = sslHandshakeTimeoutMillis;
 		return (SO) this;
 	}
 
-	/**
-	 * Return SSL handshake timeout value in milliseconds
-	 *
-	 * @return the SSL handshake timeout
-	 */
-	public long sslHandshakeTimeoutMillis() {
-		return sslHandshakeTimeoutMillis;
+	@Override
+	public String toString() {
+		return "NettyOptions{" + "bootstrapTemplate=" + bootstrapTemplate + ", sslHandshakeTimeoutMillis=" + sslHandshakeTimeoutMillis + ", sslContext=" + sslContext + ", preferNative=" + preferNative + ", afterChannelInit=" + afterChannelInit + ", onChannelInit=" + onChannelInit + ", channelResources=" + channelResources + '}';
 	}
 
-	/**
-	 * Gets the configured {@code SO_SNDBUF} (send buffer) size
-	 * @return The configured send buffer size
-	 */
-	public int sndbuf() {
-		return sndbuf;
-	}
-
-	/**
-	 * Sets the {@code SO_SNDBUF} (send buffer) size
-	 * @param sndbuf The size of the send buffer
-	 * @return {@code this}
-	 */
-	public SO sndbuf(int sndbuf) {
-		this.sndbuf = sndbuf;
-		return (SO) this;
-	}
-
-	/**
-	 * Returns a boolean indicating whether or not {@code TCP_NODELAY} is enabled
-	 * @return {@code true} if {@code TCP_NODELAY} is enabled, {@code false} if it is not
-	 */
-	public boolean tcpNoDelay() {
-		return tcpNoDelay;
-	}
-
-	/**
-	 * Enables or disables {@code TCP_NODELAY}
-	 * @param tcpNoDelay {@code true} to enable {@code TCP_NODELAY}, {@code false} to
-	 * disable it
-	 * @return {@code this}
-	 */
-	public SO tcpNoDelay(boolean tcpNoDelay) {
-		this.tcpNoDelay = tcpNoDelay;
-		return (SO) this;
-	}
-
-	/**
-	 * Gets the {@code SO_TIMEOUT} value
-	 * @return the timeout value
-	 */
-	public long timeoutMillis() {
-		return timeout;
-	}
-
-	/**
-	 * Set the {@code SO_TIMEOUT} value in millis.
-	 * @param timeout The {@code SO_TIMEOUT} value.
-	 * @return {@code this}
-	 */
-	public SO timeoutMillis(long timeout) {
-		this.timeout = timeout;
-		return (SO) this;
-	}
-
-	/**
-	 * Set the {@code SO_TIMEOUT} value.
-	 * @param timeout The {@code SO_TIMEOUT} value.
-	 * @return {@code this}
-	 */
-	public final SO timeout(Duration timeout) {
-		Objects.requireNonNull(timeout, "timeout");
-		return timeoutMillis(timeout.toMillis());
-	}
+	static final boolean DEFAULT_NATIVE =
+			Boolean.parseBoolean(System.getProperty("reactor.ipc.netty.epoll", "true"));
 }

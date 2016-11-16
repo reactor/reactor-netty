@@ -23,10 +23,9 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
@@ -34,13 +33,13 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.http.HttpEventLoopSelector;
-import reactor.ipc.netty.options.EventLoopSelector;
+import reactor.ipc.netty.channel.ContextHandler;
+import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.options.ServerOptions;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -69,8 +68,12 @@ public final class HttpServer
 	 *
 	 * @return a simple HTTP server
 	 */
-	public static HttpServer create(ServerOptions options) {
-		return new HttpServer(options);
+	public static HttpServer create(Consumer<? super HttpServerOptions> options) {
+		Objects.requireNonNull(options, "options");
+		HttpServerOptions serverOptions = HttpServerOptions.create();
+		serverOptions.channelResources(HttpResources.defaultHttpLoops());
+		options.accept(serverOptions);
+		return new HttpServer(serverOptions.duplicate());
 	}
 
 	/**
@@ -104,19 +107,20 @@ public final class HttpServer
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(String bindAddress, int port) {
-		return create(ServerOptions.create()
-		                           .listen(bindAddress, port));
+		return create(opts -> opts.listen(bindAddress, port));
 	}
 
 	final TcpBridgeServer server;
+	final HttpServerOptions options;
 
-	HttpServer(ServerOptions options) {
+	HttpServer(HttpServerOptions options) {
 		this.server = new TcpBridgeServer(options);
+		this.options = options;
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public Mono<? extends NettyState> newHandler(BiFunction<? super HttpServerRequest, ? super
+	public Mono<? extends NettyContext> newHandler(BiFunction<? super HttpServerRequest, ? super
 			HttpServerResponse, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return server.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) handler);
@@ -127,7 +131,7 @@ public final class HttpServer
 	 * @param routesBuilder a mutable route builder
 	 * @return a new {@link Mono} starting the router on subscribe
 	 */
-	public Mono<? extends NettyState> newRouter(Consumer<? super HttpServerRoutes>
+	public Mono<? extends NettyContext> newRouter(Consumer<? super HttpServerRoutes>
 			routesBuilder) {
 		Objects.requireNonNull(routesBuilder, "routeBuilder");
 		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
@@ -206,22 +210,13 @@ public final class HttpServer
 		}
 
 		@Override
-		protected void onSetup(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
-				SocketChannel ch) {
-			ch.pipeline()
-			  .addLast(NettyHandlerNames.HttpCodecHandler, new HttpServerCodec());
-
-			HttpServerOperations.bindHttp(ch, handler);
-		}
-
-		@Override
-		protected EventLoopSelector global() {
-			return HttpEventLoopSelector.defaultHttpLoops();
-		}
-
-		@Override
-		protected LoggingHandler logger() {
-			return loggingHandler;
+		protected ContextHandler<Channel> doHandler(
+				BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+				MonoSink<NettyContext> sink) {
+			return ContextHandler.newServerContext(sink,
+					options,
+					loggingHandler,
+					(ch, c) -> HttpServerOperations.bindHttp(ch, handler, c));
 		}
 	}
 }

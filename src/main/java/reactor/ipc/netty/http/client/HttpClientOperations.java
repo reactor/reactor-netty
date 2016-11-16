@@ -32,6 +32,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -54,8 +55,8 @@ import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyHandlerNames;
-import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOperations;
@@ -71,8 +72,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	static HttpOperations bindHttp(Channel channel,
 			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink,
+			MonoSink<NettyContext> clientSink,
 			Cancellation onClose) {
+
 
 		HttpClientOperations ops =
 				new HttpClientOperations(channel, handler, clientSink, onClose);
@@ -80,7 +82,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		channel.attr(OPERATIONS_ATTRIBUTE_KEY)
 		       .set(ops);
 
-		NettyOperations.addReactiveBridgeHandler(channel);
+		channel.pipeline()
+		       .addLast(NettyHandlerNames.HttpCodecHandler, new HttpClientCodec());
 
 		return ops;
 	}
@@ -106,7 +109,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	HttpClientOperations(Channel channel,
 			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink,
+			MonoSink<NettyContext> clientSink,
 			Cancellation onClose) {
 		super(channel, handler, clientSink, onClose);
 		this.isSecure = channel.pipeline()
@@ -244,7 +247,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public void onInboundNext(Object msg) {
+	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpResponse) {
 			HttpResponse response = (HttpResponse) msg;
 			setNettyResponse(response);
@@ -266,7 +269,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (LastHttpContent.EMPTY_LAST_CONTENT != msg) {
-			super.onInboundNext(msg);
+			super.onInboundNext(ctx, msg);
 		}
 		postRead(msg);
 	}
@@ -355,12 +358,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void doOnTerminatedWriter(ChannelHandlerContext ctx,
+	protected void onTerminatedWriter(
 			ChannelFuture last,
 			ChannelPromise promise,
 			Throwable exception) {
-		super.doOnTerminatedWriter(ctx,
-				ctx.write(isWebsocket() ? Unpooled.EMPTY_BUFFER :
+		super.onTerminatedWriter(channel().write(isWebsocket() ? Unpooled.EMPTY_BUFFER :
 						LastHttpContent.EMPTY_LAST_CONTENT),
 				promise,
 				exception);
@@ -371,9 +373,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (log.isDebugEnabled()) {
 				log.debug("Read last http packet");
 			}
-			if(channel().isOpen()) {
-				channel().close();
-			}
+			onChannelComplete();
 		}
 	}
 

@@ -38,63 +38,67 @@ import reactor.core.publisher.Mono;
  */
 final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 
-	final HttpClient                                                     client;
+	final HttpClient                                                     parent;
 	final URI                                                            startURI;
 	final HttpMethod                                                     method;
 	final Function<? super HttpClientRequest, ? extends Publisher<Void>> handler;
-	final boolean                                                        secure;
 
 	static final AsciiString ALL = new AsciiString("*/*");
 
-	MonoHttpClientResponse(HttpClient client, URI startURI,
+	MonoHttpClientResponse(HttpClient parent, String url,
 			HttpMethod method,
 			Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
-		this.client = client;
-		this.startURI = startURI;
-		this.method = method;
+		this.parent = parent;
+		try {
+			this.startURI = new URI(parent.options.formatSchemeAndHost(url,
+					method == HttpClient.WS));
+		}
+		catch (URISyntaxException e) {
+			throw Exceptions.bubble(e);
+		}
+		this.method = method == HttpClient.WS ? HttpMethod.GET : method;
 		this.handler = handler;
-		this.secure = startURI.getScheme()
-		                      .equalsIgnoreCase(HttpClient.HTTPS_SCHEME) || startURI.getScheme()
-		                                                                            .equalsIgnoreCase(
-				                                                                            HttpClient.WSS_SCHEME);
 
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public void subscribe(final Subscriber<? super HttpClientResponse> subscriber) {
-		ReconnectableBridge bridge = new ReconnectableBridge(secure);
+		ReconnectableBridge bridge = new ReconnectableBridge();
 		bridge.activeURI = startURI;
 
-		Mono.defer(() -> client.newHandler(bridge.activeURI, bridge, (in, out) -> {
-			try {
-				URI uri = bridge.activeURI;
-				HttpClientOperations ch = (HttpClientOperations) in;
-				ch.getNettyRequest()
-				  .setUri(uri.getPath() + (uri.getQuery() == null ? "" :
-						  "?" + uri.getRawQuery()))
-				  .setMethod(method)
-				  .setProtocolVersion(HttpVersion.HTTP_1_1)
-				  .headers()
-				  .add(HttpHeaderNames.HOST, uri.getHost())
-				  .add(HttpHeaderNames.ACCEPT, ALL);
+		Mono.defer(() -> parent.client.newHandler((in, out) -> {
+					try {
+						URI uri = bridge.activeURI;
+						HttpClientOperations ch = (HttpClientOperations) in;
+						ch.getNettyRequest()
+						  .setUri(uri.getPath() + (uri.getQuery() == null ? "" :
+								  "?" + uri.getRawQuery()))
+						  .setMethod(method)
+						  .setProtocolVersion(HttpVersion.HTTP_1_1)
+						  .headers()
+						  .add(HttpHeaderNames.HOST, uri.getHost())
+						  .add(HttpHeaderNames.ACCEPT, ALL);
 
-				if (method == HttpMethod.GET || method == HttpMethod.HEAD) {
-					ch.disableChunkedTransfer();
-				}
+						if (method == HttpMethod.GET || method == HttpMethod.HEAD) {
+							ch.disableChunkedTransfer();
+						}
 
-				if (handler != null) {
-					return handler.apply(out);
-				}
-				else {
-					HttpUtil.setTransferEncodingChunked(ch.nettyRequest, false);
-					return ch.sendHeaders();
-				}
-			}
-			catch (Throwable t) {
-				return Mono.error(t);
-			}
-		}))
+						if (handler != null) {
+							return handler.apply(ch);
+						}
+						else {
+							HttpUtil.setTransferEncodingChunked(ch.nettyRequest, false);
+							return ch.sendHeaders();
+						}
+					}
+					catch (Throwable t) {
+						return Mono.error(t);
+					}
+				},
+				parent.options.getRemoteAddress(bridge.activeURI),
+				HttpClientOptions.isSecure(bridge.activeURI),
+				bridge))
 		    .retry(bridge)
 		    .cast(HttpClientResponse.class)
 		    .subscribe(subscriber);
@@ -103,13 +107,10 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 	static final class ReconnectableBridge
 			implements Predicate<Throwable>, Consumer<Channel> {
 
-		final boolean isSecure;
-
 		volatile URI      activeURI;
 		volatile String[] redirectedFrom;
 
-		public ReconnectableBridge(boolean isSecure) {
-			this.isSecure = isSecure;
+		ReconnectableBridge() {
 		}
 
 		void redirect(String to) {

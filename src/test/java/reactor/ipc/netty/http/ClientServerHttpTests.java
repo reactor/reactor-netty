@@ -37,7 +37,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
-import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 
@@ -50,7 +50,7 @@ import static org.junit.Assert.assertThat;
 @Ignore
 public class ClientServerHttpTests {
 
-	private NettyState                httpServer;
+	private NettyContext              httpServer;
 	private Processor<String, String> broadcaster;
 
 	@Test

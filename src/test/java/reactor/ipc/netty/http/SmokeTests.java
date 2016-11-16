@@ -44,11 +44,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
-import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.options.ClientOptions;
-import reactor.ipc.netty.options.ServerOptions;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -61,7 +59,7 @@ import static org.junit.Assert.assertThat;
 public class SmokeTests {
 
 	private Processor<ByteBuf, ByteBuf> processor;
-	private NettyState                  httpServer;
+	private NettyContext                httpServer;
 
 	private final AtomicInteger postReduce         = new AtomicInteger();
 	private final AtomicInteger windows            = new AtomicInteger();
@@ -88,7 +86,6 @@ public class SmokeTests {
 		this.port = port;
 	}*/
 
-	private ClientOptions nettyOptions = ClientOptions.to("localhost", port);
 	@SuppressWarnings("unchecked")
 	private List<Integer> windowsData  = new ArrayList<>();
 
@@ -167,11 +164,6 @@ public class SmokeTests {
 	public void testMultipleConsumersMultipleTimes() throws Exception {
 		int fulltotalints = 0;
 
-		nettyOptions = ClientOptions.to("localhost",
-				httpServer.address()
-				          .getPort())
-		                            .eventLoopGroup(new NioEventLoopGroup(10));
-
 		for (int t = 0; t < iter; t++) {
 			List<Integer> clientDatas = new ArrayList<>();
 			try {
@@ -217,11 +209,6 @@ public class SmokeTests {
 	@Test
 	public void testMultipleConsumersMultipleTimesSize() throws Exception {
 		int fulltotalints = 0;
-
-		nettyOptions = ClientOptions.to("localhost",
-				httpServer.address()
-				          .getPort())
-		                            .eventLoopGroup(new NioEventLoopGroup(10));
 
 		for (int t = 0; t < iter; t++) {
 			int size = 0;
@@ -269,9 +256,9 @@ public class SmokeTests {
 		                                 //.log("log", LogOperator.REQUEST)
 		                                 .subscribeWith(workProcessor);
 
-		httpServer = HttpServer.create(ServerOptions.on(port)
-		                                            .eventLoopGroup(new NioEventLoopGroup(
-				                                            10)))
+		httpServer = HttpServer.create(opts -> opts.listen(port)
+		                                           .eventLoopGroup(new NioEventLoopGroup(
+				                                           10)))
 		                       .newRouter(r -> r.get("/data", (request, response) -> {
 			                       response.chunkedTransfer(false);
 
@@ -312,7 +299,11 @@ public class SmokeTests {
 	}
 
 	private List<String> getClientDataPromise() throws Exception {
-		HttpClient httpClient = HttpClient.create(nettyOptions);
+		HttpClient httpClient =
+				HttpClient.create(opts -> opts.eventLoopGroup(new NioEventLoopGroup(10))
+				                              .connect("localhost",
+						                              httpServer.address()
+						                                        .getPort()));
 
 		Mono<List<String>> content = httpClient.get("/data")
 		                                       .then(f -> f.receive()

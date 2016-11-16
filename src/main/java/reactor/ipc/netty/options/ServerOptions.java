@@ -17,17 +17,19 @@
 package reactor.ipc.netty.options;
 
 import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
-import java.net.ProtocolFamily;
-import java.security.cert.CertificateException;
+import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.NetUtil;
+import io.netty.util.AttributeKey;
 import reactor.core.Exceptions;
 
 /**
@@ -35,89 +37,86 @@ import reactor.core.Exceptions;
  *
  * @author Stephane Maldini
  */
-public class ServerOptions extends NettyOptions<ServerOptions> {
+public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> {
 
 	/**
 	 * Create a new server builder
 	 * @return a new server builder
 	 */
 	public static ServerOptions create() {
-		return new ServerOptions().daemon(false);
+		return new ServerOptions();
+	}
+
+	static void defaultServerOptions(ServerBootstrap bootstrap) {
+		bootstrap.localAddress(LOCALHOST_AUTO_PORT)
+		         .option(ChannelOption.SO_REUSEADDR, true)
+		         .option(ChannelOption.SO_BACKLOG, 1000)
+		         .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+		         .childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
+		         .childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
+		         .childOption(ChannelOption.AUTO_READ, false)
+		         .childOption(ChannelOption.SO_KEEPALIVE, true)
+		         .childOption(ChannelOption.SO_LINGER, 0)
+		         .childOption(ChannelOption.TCP_NODELAY, true)
+		         .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000);
 	}
 
 	/**
-	 * Create a server builder for listening on the current default localhost address
-	 * (inet4 or inet6) and {@code port}.
-	 * @param port the port to listen on.
-	 * @return a new server builder
+	 * Build a new {@link ServerBootstrap}.
 	 */
-	public static ServerOptions on(int port) {
-		return on(NetUtil.LOCALHOST.getHostAddress(), port);
-	}
-	/**
-	 * Create a server builder for listening on the given {@code bindAddress} and port
-	 * 0 which will resolve to an available port.
-	 * @param bindAddress the hostname to be resolved into an address to listen
-	 * @return a new server builder
-	 */
-	public static ServerOptions on(String bindAddress) {
-		return on(bindAddress, 0);
+	protected ServerOptions() {
+		this(new ServerBootstrap());
 	}
 
 	/**
-	 * Create a server builder for listening on the given {@code bindAddress} and
-	 * {@code port}.
-	 * @param bindAddress the hostname to be resolved into an address to listen
-	 * @param port the port to listen on.
-	 * @return a new server builder
+	 * Apply common option via super constructor then apply
+	 * {@link #defaultServerOptions(ServerBootstrap)}
+	 * to the passed bootstrap.
+	 *
+	 * @param serverBootstrap the server bootstrap reference to use
 	 */
-	public static ServerOptions on(String bindAddress, int port) {
-		return new ServerOptions().listen(bindAddress, port)
-		                          .daemon(false);
+	protected ServerOptions(ServerBootstrap serverBootstrap) {
+		super(serverBootstrap);
+		defaultServerOptions(serverBootstrap);
 	}
 
-	int            backlog        = 1000;
-	boolean        reuseAddr      = true;
-
-	ProtocolFamily protocolFamily = null;
-	InetSocketAddress listenAddress;
-	NetworkInterface  multicastInterface;
-
-	ServerOptions(){
-	}
-
-	ServerOptions(ServerOptions options){
+	/**
+	 * Deep-copy all references from the passed options into this new
+	 * {@link ServerOptions} instance.
+	 *
+	 * @param options the source options to duplicate
+	 */
+	protected ServerOptions(ServerOptions options) {
 		super(options);
-		this.listenAddress = options.listenAddress;
-		this.multicastInterface = options.multicastInterface;
-		this.backlog = options.backlog;
-		this.reuseAddr = options.reuseAddr;
-		this.protocolFamily = options.protocolFamily;
 	}
 
 	/**
-	 * Returns the configured pending connection backlog for the socket.
+	 * Attribute default attribute to the future {@link Channel} connection. They will
+	 * be available via {@link reactor.ipc.netty.NettyInbound#attr(AttributeKey}.
 	 *
-	 * @return The configured connection backlog size
-	 */
-	public int backlog() {
-		return backlog;
-	}
-
-	/**
-	 * Configures the size of the pending connection backlog for the socket.
+	 * @param key the attribute key
+	 * @param value the attribute value
+	 * @param <T> the attribute type
+	 * @return this builder
 	 *
-	 * @param backlog The size of the backlog
-	 * @return {@code this}
+	 * @see ServerBootstrap#childAttr(AttributeKey, Object)
 	 */
-	public ServerOptions backlog(int backlog) {
-		this.backlog = backlog;
+	@Override
+	public <T> ServerOptions attr(AttributeKey<T> key, T value) {
+		bootstrapTemplate.childAttr(key, value);
 		return this;
 	}
 
 	@Override
 	public ServerOptions duplicate() {
 		return new ServerOptions(this);
+	}
+
+	@Override
+	public ServerBootstrap get() {
+		ServerBootstrap b = super.get();
+		groupAndChannel(b);
+		return b;
 	}
 
 	/**
@@ -128,6 +127,20 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 	 */
 	public ServerOptions listen(int port) {
 		return listen(new InetSocketAddress(port));
+	}
+
+	/**
+	 * The host on which this server should listen, port will be resolved on bind.
+	 *
+	 * @param host The host to bind to.
+	 *
+	 * @return {@literal this}
+	 */
+	public ServerOptions listen(String host) {
+		if (null == host) {
+			host = "localhost";
+		}
+		return listen(new InetSocketAddress(host, 0));
 	}
 
 	/**
@@ -151,76 +164,58 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 	 * @return {@literal this}
 	 */
 	public ServerOptions listen(InetSocketAddress listenAddress) {
-		this.listenAddress = listenAddress;
-		return this;
-	}
-
-
-	/**
-	 * Return the listening {@link InetSocketAddress}
-	 * @return the listening address
-	 */
-	public InetSocketAddress listenAddress(){
-		return this.listenAddress;
-	}
-
-	/**
-	 * Set the interface to use for multicast.
-	 *
-	 * @param iface the {@link NetworkInterface} to use for multicast.
-	 * @return {@literal this}
-	 */
-	public ServerOptions multicastInterface(NetworkInterface iface) {
-		this.multicastInterface = iface;
+		Objects.requireNonNull(listenAddress, "listenAddress");
+		bootstrapTemplate.localAddress(listenAddress);
 		return this;
 	}
 
 	/**
-	 * Return the multicast {@link NetworkInterface}
+	 * Set a {@link ChannelOption} value for low level connection settings like
+	 * SO_TIMEOUT or SO_KEEPALIVE. This will apply to each new channel from remote
+	 * peer.
 	 *
-	 * @return the multicast {@link NetworkInterface}
-	 */
-	public NetworkInterface multicastInterface() {
-		return this.multicastInterface;
-	}
-
-	/**
-	 * Returns the configured version family for the socket.
+	 * @param key the option key
+	 * @param <T> the option type
 	 *
-	 * @return the configured version family for the socket
-	 */
-	public ProtocolFamily protocolFamily() {
-		return protocolFamily;
-	}
-
-	/**
-	 * Configures the version family for the socket.
-	 *
-	 * @param protocolFamily the version family for the socket, or null for the system default family
 	 * @return {@code this}
+	 * @see ServerBootstrap#childOption(ChannelOption, Object)
 	 */
-	public ServerOptions protocolFamily(ProtocolFamily protocolFamily) {
-		this.protocolFamily = protocolFamily;
+	@Override
+	public <T> ServerOptions option(ChannelOption<T> key, T value) {
+		bootstrapTemplate.childOption(key, value);
 		return this;
 	}
 
 	/**
-	 * Returns a boolean indicating whether or not {@code SO_REUSEADDR} is enabled
+	 * Attribute default attribute to the future {@link Channel} connection. They will
+	 * be available via {@link reactor.ipc.netty.NettyInbound#attr(AttributeKey}.
 	 *
-	 * @return {@code true} if {@code SO_REUSEADDR} is enabled, {@code false} if it is not
+	 * @param key the attribute key
+	 * @param value the attribute value
+	 * @param <T> the attribute type
+	 * @return this builder
+	 *
+	 * @see Bootstrap#attr(AttributeKey, Object)
 	 */
-	public boolean reuseAddr() {
-		return reuseAddr;
+	public <T> ServerOptions selectorAttr(AttributeKey<T> key, T value) {
+		bootstrapTemplate.childAttr(key, value);
+		return this;
 	}
 
 	/**
-	 * Enables or disables {@code SO_REUSEADDR}.
+	 * Set a {@link ChannelOption} value for low level selector channel settings like
+	 * SO_TIMEOUT or SO_KEEPALIVE. This will apply to each new channel from remote
+	 * peer.
 	 *
-	 * @param reuseAddr {@code true} to enable {@code SO_REUSEADDR}, {@code false} to disable it
+	 * @param key the option key
+	 * @param <T> the option type
+	 *
 	 * @return {@code this}
+	 *
+	 * @see ServerBootstrap#childOption(ChannelOption, Object)
 	 */
-	public ServerOptions reuseAddr(boolean reuseAddr) {
-		this.reuseAddr = reuseAddr;
+	public <T> ServerOptions selectorOption(ChannelOption<T> key, T value) {
+		bootstrapTemplate.childOption(key, value);
 		return this;
 	}
 
@@ -230,148 +225,45 @@ public class ServerOptions extends NettyOptions<ServerOptions> {
 	 * @return {@code this}
 	 */
 	public ServerOptions sslSelfSigned() {
-		SelfSignedCertificate ssc;
-		try {
-			ssc = new SelfSignedCertificate();
-		}
-		catch (CertificateException e) {
-			throw Exceptions.bubble(e);
-		}
-		return ssl(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()));
+		return sslSelfSigned(c -> {
+		});
 	}
 
 	/**
-	 * @return Immutable {@link ServerOptions}
+	 * Enable SSL service with a self-signed certificate and allows extra
+	 * parameterization of the self signed {@link SslContextBuilder}. The builder is
+	 * then used to invoke {@link #sslContext(SslContext)}.
+	 *
+	 * @param configurator the builder callback to setup the self-signed {@link SslContextBuilder}
+	 *
+	 * @return {@code this}
 	 */
-	public ServerOptions toImmutable(){
-		return new ImmutableServerOptions(this);
-	}
-
-	final static class ImmutableServerOptions extends ServerOptions {
-
-		public ImmutableServerOptions(ServerOptions options) {
-			super(options);
+	public ServerOptions sslSelfSigned(Consumer<? super SslContextBuilder> configurator) {
+		Objects.requireNonNull(configurator, "configurator");
+		SelfSignedCertificate ssc;
+		try {
+			ssc = new SelfSignedCertificate();
+			SslContextBuilder builder =
+					SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
+			configurator.accept(builder);
+			return sslContext(builder.build());
 		}
-
-		@Override
-		public ServerOptions afterChannelInit(Consumer<? super Channel> afterChannelInit) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions backlog(int backlog) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions daemon(boolean daemon) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions eventLoopSelector(Supplier<? extends EventLoopSelector> eventLoopGroup) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions keepAlive(boolean keepAlive) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions linger(int linger) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions listen(int port) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions listen(String host, int port) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions listen(InetSocketAddress listenAddress) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions managed(boolean managed) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions multicastInterface(NetworkInterface iface) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions onChannelInit(Predicate<? super Channel> onChannelInit) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions preferNative(boolean preferNative) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions protocolFamily(ProtocolFamily protocolFamily) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions rcvbuf(int rcvbuf) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions reuseAddr(boolean reuseAddr) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions sndbuf(int sndbuf) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions ssl(SslContextBuilder sslOptions) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions sslConfigurer(Consumer<? super SslContextBuilder> consumer) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions sslSelfSigned() {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions tcpNoDelay(boolean tcpNoDelay) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions timeoutMillis(long timeout) {
-			throw new UnsupportedOperationException("Immutable Options");
-		}
-
-		@Override
-		public ServerOptions toImmutable() {
-			return this;
+		catch (Exception sslException) {
+			throw Exceptions.bubble(sslException);
 		}
 	}
 
+	final void groupAndChannel(ServerBootstrap bootstrap) {
+		ChannelResources loops =
+				Objects.requireNonNull(this.channelResources, "channelResources");
+
+		boolean useNative = preferNative && !(sslContext instanceof JdkSslContext);
+		final EventLoopGroup selectorGroup = loops.onServerSelect(useNative);
+		final EventLoopGroup elg = loops.onServer(useNative);
+
+		bootstrap.group(selectorGroup, elg)
+		         .channel(loops.onServerChannel(elg));
+	}
+
+	final static InetSocketAddress LOCALHOST_AUTO_PORT = new InetSocketAddress(0);
 }

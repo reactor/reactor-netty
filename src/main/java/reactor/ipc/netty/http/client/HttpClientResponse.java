@@ -20,10 +20,12 @@ import java.net.InetSocketAddress;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import reactor.core.publisher.Flux;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyInbound;
-import reactor.ipc.netty.NettyState;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.multipart.MultipartInbound;
 
@@ -37,7 +39,7 @@ import reactor.ipc.netty.http.multipart.MultipartInbound;
  * @author Stephane Maldini
  * @since 2.5
  */
-public interface HttpClientResponse extends HttpInbound, NettyState {
+public interface HttpClientResponse extends HttpInbound, NettyContext {
 
 
 
@@ -49,6 +51,11 @@ public interface HttpClientResponse extends HttpInbound, NettyState {
 	default MultipartInbound receiveMultipart() {
 		HttpClientResponse thiz = this;
 		return new MultipartInbound() {
+			@Override
+			public <T> Attribute<T> attr(AttributeKey<T> key) {
+				return thiz.attr(key);
+			}
+
 			@Override
 			public Channel channel() {
 				return thiz.channel();

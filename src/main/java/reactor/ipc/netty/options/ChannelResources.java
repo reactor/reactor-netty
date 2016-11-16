@@ -26,14 +26,14 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
- * An {@link EventLoopSelector} selector with associated
+ * An {@link EventLoopGroup} selector with associated
  * {@link io.netty.channel.Channel} factories.
  *
  * @author Stephane Maldini
  * @since 0.6
  */
 @FunctionalInterface
-public interface EventLoopSelector {
+public interface ChannelResources {
 
 	/**
 	 * Default worker thread count, fallback to available processor
@@ -64,25 +64,25 @@ public interface EventLoopSelector {
 	}
 
 	/**
-	 * Create a simple {@link EventLoopSelector} to provide automatically for {@link
+	 * Create a simple {@link ChannelResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 *
 	 * @param prefix the event loop thread name prefix
 	 * @param workerCount number of worker threads
 	 * @param daemon shoult the thread be released on jvm shutdown
 	 *
-	 * @return a new {@link EventLoopSelector} to provide automatically for {@link
+	 * @return a new {@link ChannelResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
-	static EventLoopSelector create(String prefix, int workerCount, boolean daemon) {
+	static ChannelResources create(String prefix, int workerCount, boolean daemon) {
 		if (workerCount < 1) {
 			throw new IllegalArgumentException("Must provide a strictly positive " + "worker number, " + "was: " + workerCount);
 		}
-		return new DefaultEventLoopSelector(prefix, workerCount, daemon);
+		return new DefaultChannelResources(prefix, workerCount, daemon);
 	}
 
 	/**
-	 * Create a simple {@link EventLoopSelector} to provide automatically for {@link
+	 * Create a simple {@link ChannelResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 *
 	 * @param prefix the event loop thread name prefix
@@ -90,10 +90,10 @@ public interface EventLoopSelector {
 	 * @param workerCount number of worker threads
 	 * @param daemon shoult the thread be released on jvm shutdown
 	 *
-	 * @return a new {@link EventLoopSelector} to provide automatically for {@link
+	 * @return a new {@link ChannelResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
-	static EventLoopSelector create(String prefix,
+	static ChannelResources create(String prefix,
 			int selectCount,
 			int workerCount,
 			boolean daemon) {
@@ -107,20 +107,20 @@ public interface EventLoopSelector {
 		if (selectCount < 1) {
 			throw new IllegalArgumentException("Must provide a strictly positive " + "worker number, " + "was: " + workerCount);
 		}
-		return new DefaultEventLoopSelector(prefix, selectCount, workerCount, daemon);
+		return new DefaultChannelResources(prefix, selectCount, workerCount, daemon);
 	}
 
 	/**
-	 * Create a simple {@link EventLoopSelector} to provide automatically for {@link
+	 * Create a simple {@link ChannelResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 *
 	 * @param prefix the event loop thread name prefix
 	 *
-	 * @return a new {@link EventLoopSelector} to provide automatically for {@link
+	 * @return a new {@link ChannelResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
-	static EventLoopSelector create(String prefix) {
-		return new DefaultEventLoopSelector(prefix, DEFAULT_IO_SELECT_COUNT,
+	static ChannelResources create(String prefix) {
+		return new DefaultChannelResources(prefix, DEFAULT_IO_SELECT_COUNT,
 				DEFAULT_IO_WORKER_COUNT,
 				true);
 
@@ -197,9 +197,20 @@ public interface EventLoopSelector {
 	}
 
 	/**
+	 * Rreturn true if should default to native {@link EventLoopGroup} and {@link Channel}
+	 *
 	 * @return true if should default to native {@link EventLoopGroup} and {@link Channel}
 	 */
 	default boolean preferNative() {
 		return SafeEpollDetector.hasEpoll();
+	}
+
+	/**
+	 * return true if {@link EventLoopGroup} should not be shutdown
+	 *
+	 * @return true if {@link EventLoopGroup} should not be shutdown
+	 */
+	default boolean daemon() {
+		return false;
 	}
 }

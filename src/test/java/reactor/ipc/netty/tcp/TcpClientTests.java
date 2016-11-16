@@ -39,10 +39,9 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.NettyHandlerNames;
-import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -101,8 +100,8 @@ public class TcpClientTests {
 	public void testTcpClient() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		NettyState client = TcpClient.create("localhost", echoServerPort)
-		                             .newHandler((in, out) -> {
+		NettyContext client = TcpClient.create("localhost", echoServerPort)
+		                               .newHandler((in, out) -> {
 			                             in.receive()
 			                               .log("conn")
 			                               .subscribe(s -> latch.countDown());
@@ -112,7 +111,7 @@ public class TcpClientTests {
 
 			                             return Flux.never();
 		                             })
-		                             .block();
+		                               .block();
 
 		latch.await(30, TimeUnit.SECONDS);
 
@@ -125,11 +124,10 @@ public class TcpClientTests {
 	public void testTcpClientWithInetSocketAddress() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		TcpClient client = TcpClient.create(ClientOptions.create()
-		                                                 .connect(new InetSocketAddress(
-				                                                 echoServerPort)));
+		TcpClient client =
+				TcpClient.create(opts -> opts.connect(new InetSocketAddress(echoServerPort)));
 
-		NettyState s = client.newHandler((in, out) -> {
+		NettyContext s = client.newHandler((in, out) -> {
 			in.receive()
 			  .subscribe(d -> latch.countDown());
 			out.sendString(Flux.just("Hello"))
@@ -137,7 +135,7 @@ public class TcpClientTests {
 
 			return Flux.never();
 		})
-		                     .block(Duration.ofSeconds(5));
+		                       .block(Duration.ofSeconds(5));
 
 		latch.await(5, TimeUnit.SECONDS);
 
@@ -152,13 +150,15 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<String>();
 
-		NettyState client =
+		NettyContext client =
 
-				TcpClient.create(ClientOptions.to("localhost", echoServerPort)
-				                              .afterChannelInit(c -> c.pipeline().addBefore(
-						                              NettyHandlerNames.ReactiveBridge,
-						                              "codec",
-						                              new LineBasedFrameDecoder(8 * 1024))))
+				TcpClient.create(opts -> opts.connect("localhost", echoServerPort)
+				                             .afterChannelInit(c -> c.pipeline()
+				                                                     .addBefore(
+						                                                     NettyHandlerNames.ReactiveBridge,
+						                                                     "codec",
+						                                                     new LineBasedFrameDecoder(
+								                                                     8 * 1024))))
 				         .newHandler((in, out) -> {
 					         in.receive()
 					           .asString()
@@ -234,7 +234,7 @@ public class TcpClientTests {
 		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
 		TcpClient tcpClient = TcpClient.create("localhost", abortServerPort);
 
-		Mono<? extends NettyState> handler = tcpClient.newHandler((in, out) -> {
+		Mono<? extends NettyContext> handler = tcpClient.newHandler((in, out) -> {
 			System.out.println("Start");
 			connectionLatch.countDown();
 			in.receive()
@@ -246,7 +246,7 @@ public class TcpClientTests {
 		       .block()
 		       .onClose()
 		       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
-		         .block();
+		       .block();
 
 		assertTrue("Initial connection is made",
 				connectionLatch.await(5, TimeUnit.SECONDS));
@@ -264,7 +264,7 @@ public class TcpClientTests {
 
 		TcpClient client = TcpClient.create("localhost", timeoutServerPort);
 
-		NettyState s = client.newHandler((in, out) -> {
+		NettyContext s = client.newHandler((in, out) -> {
 			in.onClose(close::countDown)
 			  .onReadIdle(500, () -> {
 				  totalDelay.addAndGet(System.currentTimeMillis() - start);
@@ -280,7 +280,7 @@ public class TcpClientTests {
 			           .then()
 			           .log();
 		})
-		                     .block();
+		                       .block();
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 		assertTrue("close was counted down", close.await(30, TimeUnit.SECONDS));
@@ -296,11 +296,11 @@ public class TcpClientTests {
 
 		TcpClient client = TcpClient.create("localhost", heartbeatServerPort);
 
-		NettyState s = client.newHandler((in, out) -> {
+		NettyContext s = client.newHandler((in, out) -> {
 			in.onReadIdle(500, latch::countDown);
 			return Flux.never();
 		})
-		                     .block();
+		                       .block();
 
 		Thread.sleep(700);
 		heartbeatServer.close();
@@ -319,8 +319,8 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(1);
 		long start = System.currentTimeMillis();
 
-		NettyState client = TcpClient.create("localhost", echoServerPort)
-		                             .newHandler((in, out) -> {
+		NettyContext client = TcpClient.create("localhost", echoServerPort)
+		                               .newHandler((in, out) -> {
 			                             System.out.println("hello");
 			                             out.onWriteIdle(500, latch::countDown);
 
@@ -333,7 +333,7 @@ public class TcpClientTests {
 			                             }
 			                             return Flux.merge(allWrites);
 		                             })
-		                             .block();
+		                               .block();
 
 		System.out.println("Started");
 

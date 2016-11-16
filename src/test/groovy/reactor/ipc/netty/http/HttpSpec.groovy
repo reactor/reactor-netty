@@ -20,7 +20,6 @@ import reactor.core.publisher.Mono
 import reactor.ipc.netty.http.client.HttpClient
 import reactor.ipc.netty.http.client.HttpClientException
 import reactor.ipc.netty.http.server.HttpServer
-import reactor.ipc.netty.options.ClientOptions
 import spock.lang.Specification
 
 import java.time.Duration
@@ -49,7 +48,10 @@ class HttpSpec extends Specification {
 	}.block()
 
 	//Prepare a client using default impl (Netty) to connect on http://localhost:port/ and assign global codec to send/receive String data
-	def client = HttpClient.create(ClientOptions.to("localhost", server.address().port))
+	def client = HttpClient.create { opts ->
+	  opts.connect("localhost", server.address()
+			  .port)
+	}
 
 	//prepare an http post request-reply flow
 	def content = client.post('/test/World') { req ->

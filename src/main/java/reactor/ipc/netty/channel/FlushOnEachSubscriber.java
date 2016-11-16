@@ -17,7 +17,6 @@ package reactor.ipc.netty.channel;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -34,18 +33,15 @@ final class FlushOnEachSubscriber
 		implements Subscriber<Object>, ChannelFutureListener, Loopback, Trackable,
 		           Receiver {
 
-	final NettyOperations<?, ?> parent;
-	final ChannelHandlerContext ctx;
-	final ChannelPromise        promise;
+	final ChannelOperations<?, ?> parent;
+	final ChannelPromise          promise;
 	final ChannelFutureListener writeListener = new WriteListener();
 
 	volatile Subscription subscription;
 
-	public FlushOnEachSubscriber(NettyOperations<?, ?> parent,
-			ChannelHandlerContext ctx,
+	public FlushOnEachSubscriber(ChannelOperations<?, ?> parent,
 			ChannelPromise promise) {
 		this.parent = parent;
-		this.ctx = ctx;
 		this.promise = promise;
 	}
 
@@ -56,7 +52,7 @@ final class FlushOnEachSubscriber
 
 	@Override
 	public boolean isCancelled() {
-		return !ctx.channel()
+		return !parent.channel
 		           .isOpen();
 	}
 
@@ -67,7 +63,7 @@ final class FlushOnEachSubscriber
 
 	@Override
 	public boolean isTerminated() {
-		return !ctx.channel()
+		return !parent.channel
 		           .isOpen();
 	}
 
@@ -77,16 +73,16 @@ final class FlushOnEachSubscriber
 			throw new IllegalStateException("already flushed");
 		}
 		subscription = null;
-		if (NettyOperations.log.isDebugEnabled()) {
-			NettyOperations.log.debug("Flush Connection");
+		if (ChannelOperations.log.isDebugEnabled()) {
+			ChannelOperations.log.debug("Flush Connection");
 		}
-		ctx.channel()
+		parent.channel
 		   .closeFuture()
 		   .removeListener(this);
 
-		ctx.channel()
+		parent.channel
 		   .eventLoop()
-		   .execute(() -> parent.doOnTerminatedWriter(ctx, null, promise, null));
+		   .execute(() -> parent.onTerminatedWriter(null, promise, null));
 	}
 
 	@Override
@@ -97,14 +93,14 @@ final class FlushOnEachSubscriber
 		if (subscription == null) {
 			throw new IllegalStateException("already flushed", t);
 		}
-		NettyOperations.log.error("Write error", t);
+		ChannelOperations.log.error("Write error", t);
 		subscription = null;
-		ctx.channel()
+		parent.channel
 		   .closeFuture()
 		   .removeListener(this);
-		ctx.channel()
+		parent.channel
 		   .eventLoop()
-		   .execute(() -> parent.doOnTerminatedWriter(ctx, null, promise, t));
+		   .execute(() -> parent.onTerminatedWriter(null, promise, t));
 	}
 
 	@Override
@@ -116,14 +112,14 @@ final class FlushOnEachSubscriber
 			throw Exceptions.failWithCancel();
 		}
 		try {
-			ChannelFuture cf = parent.doOnWrite(w, ctx);
+			ChannelFuture cf = parent.sendNext(w);
 			if (cf != null) {
 				cf.addListener(writeListener);
 			}
-			ctx.flush();
+			parent.channel.flush();
 		}
 		catch (Throwable t) {
-			NettyOperations.log.error("Write error for " + w, t);
+			ChannelOperations.log.error("Write error for " + w, t);
 			onError(t);
 			throw Exceptions.failWithCancel();
 		}
@@ -134,7 +130,7 @@ final class FlushOnEachSubscriber
 		if (Operators.validate(subscription, s)) {
 			subscription = s;
 
-			ctx.channel()
+			parent.channel
 			   .closeFuture()
 			   .addListener(this);
 
@@ -147,11 +143,11 @@ final class FlushOnEachSubscriber
 		Subscription subscription = this.subscription;
 		this.subscription = null;
 		if (subscription != null && future.channel()
-		                                  .attr(NettyOperations.OPERATIONS_ATTRIBUTE_KEY)
+		                                  .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
 		                                  .get()
 		                                  .bufferedInbound() == 0L) {
-			if (NettyOperations.log.isDebugEnabled()) {
-				NettyOperations.log.debug("Cancel from remotely closed connection");
+			if (ChannelOperations.log.isDebugEnabled()) {
+				ChannelOperations.log.debug("Cancel from remotely closed connection");
 			}
 			subscription.cancel();
 		}
@@ -168,8 +164,8 @@ final class FlushOnEachSubscriber
 		public void operationComplete(ChannelFuture future) throws Exception {
 			if (!future.isSuccess()) {
 				promise.tryFailure(future.cause());
-				if (NettyOperations.log.isDebugEnabled()) {
-					NettyOperations.log.debug("Write error", future.cause());
+				if (ChannelOperations.log.isDebugEnabled()) {
+					ChannelOperations.log.debug("Write error", future.cause());
 				}
 				return;
 			}

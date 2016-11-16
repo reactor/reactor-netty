@@ -25,6 +25,7 @@
     </appender>
 
 	<logger name="reactor" level="INFO"/>
+	<!--<logger name="reactor" level="INFO"/>-->
 	<logger name="reactor.ipc.netty" level="DEBUG"/>
 
     <root level="info">

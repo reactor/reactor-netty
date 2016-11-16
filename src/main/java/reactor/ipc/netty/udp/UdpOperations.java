@@ -30,42 +30,36 @@ import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.ChannelFutureMono;
-import reactor.ipc.netty.NettyState;
-import reactor.ipc.netty.channel.NettyOperations;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
  */
-final class UdpOperations extends NettyOperations<UdpInbound, UdpOutbound>
+final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		implements UdpInbound, UdpOutbound {
 
 	static UdpOperations bind(DatagramChannel channel,
-			NetworkInterface iface,
 			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink,
+			MonoSink<NettyContext> clientSink,
 			Cancellation onClose) {
-		UdpOperations ops = new UdpOperations(channel, iface, handler, clientSink, onClose);
+		UdpOperations ops = new UdpOperations(channel, handler, clientSink, onClose);
 
-		channel.attr(NettyOperations.OPERATIONS_ATTRIBUTE_KEY)
+		channel.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
 		       .set(ops);
-
-		NettyOperations.addReactiveBridgeHandler(channel);
 
 		return ops;
 	}
 
 	final DatagramChannel  datagramChannel;
-	final NetworkInterface multicastInterface;
 
 	UdpOperations(DatagramChannel channel,
-			NetworkInterface multicastInterface,
 			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyState> clientSink, Cancellation onClose) {
+			MonoSink<NettyContext> clientSink, Cancellation onClose) {
 		super(channel, handler, clientSink, onClose);
 		this.datagramChannel = channel;
-		this.multicastInterface = multicastInterface;
 	}
 
 	/**
@@ -76,8 +70,8 @@ final class UdpOperations extends NettyOperations<UdpInbound, UdpOutbound>
 	 * @return a {@link Publisher} that will be complete when the group has been joined
 	 */
 	public Mono<Void> join(final InetAddress multicastAddress, NetworkInterface iface) {
-		if (null == iface && null != multicastInterface) {
-			iface = multicastInterface;
+		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
+			iface = datagramChannel.config().getNetworkInterface();
 		}
 
 		final ChannelFuture future;
@@ -107,8 +101,8 @@ final class UdpOperations extends NettyOperations<UdpInbound, UdpOutbound>
 	 * @return a {@link Publisher} that will be complete when the group has been left
 	 */
 	public Mono<Void> leave(final InetAddress multicastAddress, NetworkInterface iface) {
-		if (null == iface && null != multicastInterface) {
-			iface = multicastInterface;
+		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
+			iface = datagramChannel.config().getNetworkInterface();
 		}
 
 		final ChannelFuture future;

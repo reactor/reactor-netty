@@ -20,16 +20,34 @@ import java.net.InetSocketAddress;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 import reactor.core.publisher.Flux;
 import reactor.ipc.connector.Inbound;
 
 /**
+ * An inbound-traffic API delegating to an underlying {@link Channel}
+ *
  * @author Stephane Maldini
+ * @since 0.6
  */
 public interface NettyInbound extends Inbound<ByteBuf> {
 
 	/**
-	 * Return the underlying {@link Channel}
+	 * Return a pre-configured attribute stored in every inbound channel
+	 * @param key attribute key
+	 * @param <T> a channel attribute type
+	 * @return a {@link Channel} attribute
+	 * @see Channel#attr(AttributeKey)
+	 */
+	<T> Attribute<T> attr(AttributeKey<T> key);
+
+	/**
+	 * Return the underlying {@link Channel}. Direct interaction might be considered
+	 * insecure if that affects the
+	 * underlying IO processing such as read, write or close or state such as pipeline
+	 * handler addition/removal.
+	 *
 	 * @return the underlying {@link Channel}
 	 */
 	Channel channel();

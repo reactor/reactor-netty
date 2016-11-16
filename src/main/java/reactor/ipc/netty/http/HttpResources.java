@@ -13,28 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.channel;
 
-import org.reactivestreams.Publisher;
+package reactor.ipc.netty.http;
+
+import reactor.ipc.netty.options.ChannelResources;
 
 /**
+ * Hold the default Http event loops
  *
+ * @author Stephane Maldini
+ * @since 0.6
  */
-public final class ChannelWriter {
-
-	final Publisher<?> writeStream;
-	final FlushMode    flushMode;
-
-	ChannelWriter(Publisher<?> writeStream, FlushMode flushMode) {
-		this.writeStream = writeStream;
-		this.flushMode = flushMode;
-	}
+public final class HttpResources {
 
 	/**
-	 *
+	 * Return the global HTTP event loop selector
+	 * @return the global HTTP event loop selector
 	 */
-	public enum FlushMode {
-		AUTO_EACH, AUTO_LOOP, MANUAL_COMPLETE, MANUAL_BOUNDARY
-
+	public static ChannelResources defaultHttpLoops(){
+		return DEFAULT_HTTP_LOOPS;
 	}
+
+	static final ChannelResources DEFAULT_HTTP_LOOPS = ChannelResources.create("http");
+
+	HttpResources(){}
 }

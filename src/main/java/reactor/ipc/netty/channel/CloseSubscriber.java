@@ -34,8 +34,8 @@ final class CloseSubscriber implements Subscriber<Void> {
 
 	@Override
 	public void onComplete() {
-		if (NettyOperations.log.isDebugEnabled()) {
-			NettyOperations.log.debug("Closing connection");
+		if (ChannelOperations.log.isDebugEnabled()) {
+			ChannelOperations.log.debug("Closing connection");
 		}
 		ctx.channel()
 		   .eventLoop()
@@ -46,13 +46,13 @@ final class CloseSubscriber implements Subscriber<Void> {
 	public void onError(Throwable t) {
 		if (t instanceof IOException && t.getMessage()
 		                                 .contains("Broken pipe")) {
-			if (NettyOperations.log.isDebugEnabled()) {
-				NettyOperations.log.debug("Connection closed remotely", t);
+			if (ChannelOperations.log.isDebugEnabled()) {
+				ChannelOperations.log.debug("Connection closed remotely", t);
 			}
 			return;
 		}
 
-		NettyOperations.log.error("Error processing connection. Closing the channel.", t);
+		ChannelOperations.log.error("Error processing connection. Closing the channel.", t);
 
 		ctx.channel()
 		   .eventLoop()
