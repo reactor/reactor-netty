@@ -22,6 +22,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Operators;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
@@ -49,15 +51,15 @@ class HttpClientCloseSubscriber implements Subscriber<Void> {
 		if (t instanceof IOException && t.getMessage() != null && t.getMessage()
 		                                                           .contains(
 				                                                           "Broken pipe")) {
-			if (HttpClientOperations.log.isDebugEnabled()) {
-				HttpClientOperations.log.debug("Connection closed remotely", t);
+			if (log.isDebugEnabled()) {
+				log.debug("Connection closed remotely", t);
 			}
 			return;
 		}
 		if (ctx.channel()
 		       .isOpen()) {
-			if (HttpClientOperations.log.isDebugEnabled()) {
-				HttpClientOperations.log.error("Disposing HTTP channel due to error", t);
+			if (log.isDebugEnabled()) {
+				log.error("Disposing HTTP channel due to error", t);
 			}
 			parent.cancel();
 		}
@@ -73,4 +75,6 @@ class HttpClientCloseSubscriber implements Subscriber<Void> {
 		Operators.validate(null, s);
 		s.request(Long.MAX_VALUE);
 	}
+
+	static final Logger log = Loggers.getLogger(HttpClientCloseSubscriber.class);
 }

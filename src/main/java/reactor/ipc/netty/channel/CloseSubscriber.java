@@ -20,6 +20,8 @@ import java.io.IOException;
 import io.netty.channel.ChannelHandlerContext;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
@@ -36,8 +38,8 @@ final class CloseSubscriber implements Subscriber<Void> {
 
 	@Override
 	public void onComplete() {
-		if (ChannelOperations.log.isDebugEnabled()) {
-			ChannelOperations.log.debug("Closing connection");
+		if (log.isDebugEnabled()) {
+			log.debug("Closing connection");
 		}
 		parent.cancel();
 	}
@@ -46,14 +48,14 @@ final class CloseSubscriber implements Subscriber<Void> {
 	public void onError(Throwable t) {
 		if (t instanceof IOException && t.getMessage()
 		                                 .contains("Broken pipe")) {
-			if (ChannelOperations.log.isDebugEnabled()) {
-				ChannelOperations.log.debug("Connection closed remotely", t);
+			if (log.isDebugEnabled()) {
+				log.debug("Connection closed remotely", t);
 			}
 			parent.cancel();
 			return;
 		}
 
-		ChannelOperations.log.error("Error processing connection. Closing the channel.", t);
+		log.error("Error processing connection. Closing the channel.", t);
 		parent.cancel();
 	}
 
@@ -65,4 +67,6 @@ final class CloseSubscriber implements Subscriber<Void> {
 	public void onSubscribe(Subscription s) {
 		s.request(Long.MAX_VALUE);
 	}
+
+	static final Logger log = Loggers.getLogger(CloseSubscriber.class);
 }

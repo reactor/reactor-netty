@@ -24,9 +24,7 @@ import java.util.function.Function;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -49,7 +47,6 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-import reactor.core.Cancellation;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
@@ -370,19 +367,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return nettyRequest.protocolVersion();
 		}
 		throw new IllegalStateException("request not parsed");
-	}
-
-	@Override
-	public ChannelFuture sendNext(final Object data) {
-		return channel().write(data);
-	}
-
-	@Override
-	protected void onTerminatedWriter(ChannelFuture last,
-			ChannelPromise promise,
-			Throwable exception) {
-		super.onTerminatedWriter(channel().write(Unpooled.EMPTY_BUFFER), promise,
-				exception);
 	}
 
 	@Override

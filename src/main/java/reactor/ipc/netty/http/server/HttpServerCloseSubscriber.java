@@ -29,6 +29,8 @@ import org.reactivestreams.Subscription;
 import reactor.core.Receiver;
 import reactor.core.Trackable;
 import reactor.core.publisher.Operators;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
@@ -56,12 +58,12 @@ final class HttpServerCloseSubscriber
 		if (t != null && t instanceof IOException && t.getMessage() != null && t.getMessage()
 		                                                                        .contains(
 				                                                                        "Broken " + "pipe")) {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug("Connection closed remotely", t);
+			if (log.isDebugEnabled()) {
+				log.debug("Connection closed remotely", t);
 			}
 			return;
 		}
-		HttpServerOperations.log.error("Error processing connection. Closing the channel.", t);
+		log.error("Error processing connection. Closing the channel.", t);
 		if (parent.markHeadersAsSent()) {
 			ChannelFuture f = parent.channel()
 			                        .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
@@ -102,8 +104,8 @@ final class HttpServerCloseSubscriber
 	public void onComplete() {
 		if (parent.channel()
 		          .isOpen()) {
-			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug("Last Http Response packet");
+			if (log.isDebugEnabled()) {
+				log.debug("Last Http Response packet");
 			}
 			ChannelFuture f;
 			if (!parent.isWebsocket()) {
@@ -126,4 +128,6 @@ final class HttpServerCloseSubscriber
 			}
 		}
 	}
+
+	static final Logger log = Loggers.getLogger(HttpServerCloseSubscriber.class);
 }

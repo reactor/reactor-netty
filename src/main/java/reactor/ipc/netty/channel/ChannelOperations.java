@@ -617,10 +617,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return the {@link ChannelFuture} of the successful/not payload write
 	 */
 	public ChannelFuture sendNext(Object data) {
-		if (Unpooled.EMPTY_BUFFER != data) {
-			return channel.write(data);
-		}
-		return null;
+		return channel.write(data);
 	}
 
 	final void cancelReceiver() {
