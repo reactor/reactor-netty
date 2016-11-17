@@ -54,9 +54,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
-import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOperations;
@@ -74,24 +73,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
 			MonoSink<NettyContext> clientSink,
 			Cancellation onClose) {
-
-
-		HttpClientOperations ops =
-				new HttpClientOperations(channel, handler, clientSink, onClose);
-
-		channel.attr(OPERATIONS_ATTRIBUTE_KEY)
-		       .set(ops);
-
-		channel.pipeline()
-		       .addLast(NettyHandlerNames.HttpCodecHandler, new HttpClientCodec());
-
-		return ops;
+		return new HttpClientOperations(channel, handler, clientSink, onClose);
 	}
 
-	final String[]     redirectedFrom;
-	final boolean      isSecure;
-	final HttpRequest  nettyRequest;
-	final HttpHeaders  headers;
+	final String[]    redirectedFrom;
+	final boolean     isSecure;
+	final HttpRequest nettyRequest;
+	final HttpHeaders headers;
 
 	volatile ResponseState responseState;
 
@@ -176,7 +164,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public void dispose() {
-		if(dependentCancellation() != null){
+		if (dependentCancellation() != null) {
 			dependentCancellation().dispose();
 		}
 	}
@@ -235,10 +223,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public void onChannelActive(final ChannelHandlerContext ctx) {
+		ctx.pipeline()
+		   .addBefore(NettyHandlerNames.ReactiveBridge,
+				   NettyHandlerNames.HttpCodecHandler,
+				   new HttpClientCodec());
+
 		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
 
 		handler().apply(this, this)
-		         .subscribe(new HttpClientCloseSubscriber(ctx));
+		         .subscribe(new HttpClientCloseSubscriber(this, ctx));
 	}
 
 	@Override
@@ -262,8 +255,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (checkResponseCode(response)) {
 				clientSink().success(this);
 			}
-			else {
-				log.debug("Failed status check on response packet", channel(), msg);
+			else if (log.isDebugEnabled()) {
+				log.debug("Failed status check on response packet {} {}", channel(), msg);
 			}
 			postRead(msg);
 			return;
@@ -358,14 +351,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void onTerminatedWriter(
-			ChannelFuture last,
+	protected void onTerminatedWriter(ChannelFuture last,
 			ChannelPromise promise,
 			Throwable exception) {
 		super.onTerminatedWriter(channel().write(isWebsocket() ? Unpooled.EMPTY_BUFFER :
-						LastHttpContent.EMPTY_LAST_CONTENT),
-				promise,
-				exception);
+				LastHttpContent.EMPTY_LAST_CONTENT), promise, exception);
 	}
 
 	protected void postRead(Object msg) {
@@ -383,16 +373,18 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		                 .subscribe(s);
 	}
 
-	final boolean checkResponseCode(HttpResponse response)  {
+	final boolean checkResponseCode(HttpResponse response) {
 		int code = response.status()
 		                   .code();
 		if (code >= 400) {
 			Exception ex = new HttpClientException(this);
+			cancel();
 			clientSink().error(ex);
 			return false;
 		}
 		if (code >= 300 && isFollowRedirect()) {
 			Exception ex = new RedirectClientException(this);
+			cancel();
 			clientSink().error(ex);
 			return false;
 		}
@@ -455,5 +447,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	static final String[]               EMPTY_REDIRECTIONS = new String[0];
 	static final Logger                 log                =
 			Loggers.getLogger(HttpClientOperations.class);
-	static final AttributeKey<String[]> REDIRECT_ATTR_KEY  = AttributeKey.newInstance("httpRedirects");
+	static final AttributeKey<String[]> REDIRECT_ATTR_KEY  =
+			AttributeKey.newInstance("httpRedirects");
 }

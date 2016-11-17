@@ -39,8 +39,8 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 
@@ -102,15 +102,15 @@ public class TcpClientTests {
 
 		NettyContext client = TcpClient.create("localhost", echoServerPort)
 		                               .newHandler((in, out) -> {
-			                             in.receive()
-			                               .log("conn")
-			                               .subscribe(s -> latch.countDown());
+			                               in.receive()
+			                                 .log("conn")
+			                                 .subscribe(s -> latch.countDown());
 
-			                             out.sendString(Flux.just("Hello World!"))
-			                                .subscribe();
+			                               out.sendString(Flux.just("Hello World!"))
+			                                  .subscribe();
 
-			                             return Flux.never();
-		                             })
+			                               return Flux.never();
+		                               })
 		                               .block();
 
 		latch.await(30, TimeUnit.SECONDS);
@@ -187,7 +187,9 @@ public class TcpClientTests {
 
 	@Test
 	public void closingPromiseIsFulfilled() throws InterruptedException {
-		TcpClient client = TcpClient.create("localhost", abortServerPort);
+		TcpClient client =
+				TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
+				                             .disablePool());
 
 		client.newHandler((in, out) -> Mono.empty())
 		      .block()
@@ -262,7 +264,9 @@ public class TcpClientTests {
 		final AtomicLong totalDelay = new AtomicLong();
 		final long start = System.currentTimeMillis();
 
-		TcpClient client = TcpClient.create("localhost", timeoutServerPort);
+		TcpClient client =
+				TcpClient.create(opts -> opts.connect("localhost", timeoutServerPort)
+				                             .disablePool());
 
 		NettyContext s = client.newHandler((in, out) -> {
 			in.onClose(close::countDown)
@@ -321,18 +325,18 @@ public class TcpClientTests {
 
 		NettyContext client = TcpClient.create("localhost", echoServerPort)
 		                               .newHandler((in, out) -> {
-			                             System.out.println("hello");
-			                             out.onWriteIdle(500, latch::countDown);
+			                               System.out.println("hello");
+			                               out.onWriteIdle(500, latch::countDown);
 
-			                             List<Publisher<Void>> allWrites =
-					                             new ArrayList<>();
-			                             for (int i = 0; i < 5; i++) {
-				                             allWrites.add(out.sendString(Flux.just("a")
-				                                                              .delayMillis(
-						                                                              750)));
-			                             }
-			                             return Flux.merge(allWrites);
-		                             })
+			                               List<Publisher<Void>> allWrites =
+					                               new ArrayList<>();
+			                               for (int i = 0; i < 5; i++) {
+				                               allWrites.add(out.sendString(Flux.just("a")
+				                                                                .delayMillis(
+						                                                                750)));
+			                               }
+			                               return Flux.merge(allWrites);
+		                               })
 		                               .block();
 
 		System.out.println("Started");

@@ -28,9 +28,12 @@ import reactor.core.publisher.Operators;
  */
 class HttpClientCloseSubscriber implements Subscriber<Void> {
 
-	private final ChannelHandlerContext ctx;
+	final ChannelHandlerContext ctx;
+	final HttpClientOperations parent;
 
-	public HttpClientCloseSubscriber(ChannelHandlerContext ctx) {
+
+	public HttpClientCloseSubscriber(HttpClientOperations parent, ChannelHandlerContext ctx) {
+		this.parent = parent;
 		this.ctx = ctx;
 	}
 
@@ -54,10 +57,9 @@ class HttpClientCloseSubscriber implements Subscriber<Void> {
 		if (ctx.channel()
 		       .isOpen()) {
 			if (HttpClientOperations.log.isDebugEnabled()) {
-				HttpClientOperations.log.error("Closing HTTP channel due to error", t);
+				HttpClientOperations.log.error("Disposing HTTP channel due to error", t);
 			}
-			ctx.channel()
-			   .close();
+			parent.cancel();
 		}
 	}
 

@@ -17,6 +17,7 @@
 package reactor.ipc.netty.channel;
 
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -47,12 +48,12 @@ final class ClientContextHandler<CHANNEL extends Channel>
 
 	ChannelFuture f;
 
-	ClientContextHandler(BiConsumer<? super CHANNEL, ? super Cancellation> doWithPipeline,
+	ClientContextHandler(BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			ClientOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
 			boolean secure) {
-		super(doWithPipeline, options, sink, loggingHandler);
+		super(channelOpSelector, options, sink, loggingHandler);
 		this.clientOptions = options;
 		this.secure = secure;
 	}

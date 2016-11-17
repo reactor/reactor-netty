@@ -26,10 +26,12 @@ import org.reactivestreams.Subscription;
  */
 final class CloseSubscriber implements Subscriber<Void> {
 
-	final ChannelHandlerContext ctx;
+	final ChannelHandlerContext   ctx;
+	final ChannelOperations<?, ?> parent;
 
-	public CloseSubscriber(ChannelHandlerContext ctx) {
+	public CloseSubscriber(ChannelOperations<?, ?> ops, ChannelHandlerContext ctx) {
 		this.ctx = ctx;
+		this.parent = ops;
 	}
 
 	@Override
@@ -37,9 +39,7 @@ final class CloseSubscriber implements Subscriber<Void> {
 		if (ChannelOperations.log.isDebugEnabled()) {
 			ChannelOperations.log.debug("Closing connection");
 		}
-		ctx.channel()
-		   .eventLoop()
-		   .execute(ctx::close);
+		parent.cancel();
 	}
 
 	@Override
@@ -49,14 +49,12 @@ final class CloseSubscriber implements Subscriber<Void> {
 			if (ChannelOperations.log.isDebugEnabled()) {
 				ChannelOperations.log.debug("Connection closed remotely", t);
 			}
+			parent.cancel();
 			return;
 		}
 
 		ChannelOperations.log.error("Error processing connection. Closing the channel.", t);
-
-		ctx.channel()
-		   .eventLoop()
-		   .execute(ctx::close);
+		parent.cancel();
 	}
 
 	@Override

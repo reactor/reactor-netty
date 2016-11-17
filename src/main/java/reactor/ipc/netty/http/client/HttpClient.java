@@ -17,7 +17,6 @@
 package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -28,7 +27,6 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -63,7 +61,8 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	public static HttpClient create(Consumer<? super HttpClientOptions> options) {
 		Objects.requireNonNull(options, "options");
 		HttpClientOptions clientOptions = HttpClientOptions.create();
-		clientOptions.channelResources(HttpResources.defaultHttpLoops());
+		clientOptions.channelResources(HttpResources.defaultHttpLoops())
+		             .poolSelector(HttpResources.defaultPool());
 		options.accept(clientOptions);
 		return new HttpClient(clientOptions.duplicate());
 	}
@@ -305,7 +304,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 						if(onSetup != null){
 							onSetup.accept(ch);
 						}
-						HttpClientOperations.bindHttp(ch, handler, sink, c);
+						return HttpClientOperations.bindHttp(ch, handler, sink, c);
 					});
 		}
 	}

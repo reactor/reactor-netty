@@ -16,11 +16,10 @@
 
 package reactor.ipc.netty.channel;
 
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ServerChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import reactor.core.Cancellation;
@@ -42,11 +41,11 @@ final class ServerContextHandler
 
 	final ServerOptions serverOptions;
 
-	ServerContextHandler(BiConsumer<? super Channel, ? super Cancellation> doWithPipeline,
+	ServerContextHandler(BiFunction<? super Channel, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			ServerOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler) {
-		super(doWithPipeline, options, sink, loggingHandler);
+		super(channelOpSelector, options, sink, loggingHandler);
 		this.serverOptions = options;
 	}
 
@@ -57,7 +56,18 @@ final class ServerContextHandler
 
 	@Override
 	protected Cancellation doChannelTerminated(Channel channel) {
-		return EMPTY;
+		return () -> {
+			cleanHandlers(channel);
+
+			ChannelOperations<?, ?> op =
+					channelOpSelector.apply(channel, doChannelTerminated(channel));
+
+			channel.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
+			       .set(op);
+
+			op.onChannelActive(channel.pipeline()
+			                          .context(NettyHandlerNames.ReactiveBridge));
+		};
 	}
 
 	@Override

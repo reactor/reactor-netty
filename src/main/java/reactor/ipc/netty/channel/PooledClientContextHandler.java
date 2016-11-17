@@ -18,9 +18,10 @@ package reactor.ipc.netty.channel;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
@@ -29,6 +30,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import reactor.core.Cancellation;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -40,7 +42,7 @@ import reactor.util.Loggers;
  */
 final class PooledClientContextHandler<CHANNEL extends Channel>
 		extends ContextHandler<CHANNEL>
-		implements GenericFutureListener<Future<Channel>> {
+		implements GenericFutureListener<Future<CHANNEL>> {
 
 	static final Logger log = Loggers.getLogger(PooledClientContextHandler.class);
 
@@ -50,13 +52,13 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	Future<CHANNEL> f;
 
-	PooledClientContextHandler(BiConsumer<? super CHANNEL, ? super Cancellation> doWithPipeline,
+	PooledClientContextHandler(BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			ClientOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			ChannelPool pool) {
-		super(doWithPipeline, options, sink, loggingHandler);
+		super(channelOpSelector, options, sink, loggingHandler);
 		this.clientOptions = options;
 		this.secure = secure;
 		this.pool = pool;
@@ -75,15 +77,41 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public void operationComplete(Future<Channel> future) throws Exception {
-		Channel c = future.get();
-		if (!f.isSuccess()) {
-			if (f.cause() != null) {
-				sink.error(f.cause());
+	public void operationComplete(Future<CHANNEL> future) throws Exception {
+		if (!future.isSuccess()) {
+			if (future.cause() != null) {
+				sink.error(future.cause());
 			}
 			else {
-				sink.error(new IOException("error while connecting to " + c.toString()));
+				sink.error(new IOException("error while connecting to " + future.toString()));
 			}
+			return;
+		}
+		CHANNEL c = future.get();
+		if (c.pipeline()
+		     .get(NettyHandlerNames.ReactiveBridge) == null) {
+			initChannel(c);
+		}
+		else {
+			ChannelOperations<?, ?> op = channelOpSelector.apply(c,
+					doChannelTerminated(c));
+
+			ChannelOperations<?, ?> previous =
+					c.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
+					 .getAndSet(op);
+
+			if (previous != null) {
+				previous.cancel();
+			}
+			op.onChannelActive(c.pipeline()
+			                    .context(NettyHandlerNames.ReactiveBridge));
+		}
+		ChannelHandlerContext ctx = c.pipeline()
+		                             .context(c.attr(LAST_STATIC_TAIL_HANDLER)
+		                                       .get());
+		if (ctx != null) {
+			ctx.fireChannelRegistered();
+			ctx.fireChannelActive();
 		}
 	}
 
@@ -96,17 +124,23 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 		try {
 			Channel c = f.get();
+			if(!c.isActive()){
+				return;
+			}
+
+			cleanHandlers(c);
+
 			pool.release(c)
 			    .sync();
 		}
 		catch (Exception e) {
-			log.error("failed releasing channel");
+			log.error("failed releasing channel", e);
 		}
 	}
 
 	@Override
 	protected void doDropped(Channel channel) {
-		channel.close();
+		pool.release(channel);
 		sink.success();
 	}
 

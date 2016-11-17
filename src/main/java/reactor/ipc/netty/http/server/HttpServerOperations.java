@@ -55,7 +55,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyHandlerNames;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOperations;
@@ -74,18 +73,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	static HttpServerOperations bindHttp(Channel channel,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
 			Cancellation onClose) {
-		HttpServerOperations ops = new HttpServerOperations(channel, handler, onClose);
-
-		ChannelOperations<?, ?> before = channel.attr(OPERATIONS_ATTRIBUTE_KEY)
-		                                        .getAndSet(ops);
-		if (before != null) {
-			before.cancel();
-		}
-
-		channel.pipeline()
-		       .addLast(NettyHandlerNames.HttpCodecHandler, new HttpServerCodec());
-
-		return ops;
+		return new HttpServerOperations(channel, handler, onClose);
 	}
 
 	final HttpResponse nettyResponse;
@@ -111,8 +99,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		responseHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-		//FIXME when keep alive is supported
-		responseHeaders.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 	}
 
 	@Override
@@ -222,6 +208,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public void onChannelActive(ChannelHandlerContext ctx) {
+		ctx.pipeline()
+		   .addBefore(NettyHandlerNames.ReactiveBridge,
+				   NettyHandlerNames.HttpCodecHandler,
+				   new HttpServerCodec());
+
 		ctx.read();
 	}
 

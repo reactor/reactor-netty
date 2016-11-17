@@ -113,6 +113,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		this.proxyAddress = options.proxyAddress;
 		this.proxyType = options.proxyType;
 		this.connectAddress = options.connectAddress;
+		this.poolSelector = options.poolSelector;
 		this.protocolFamily = options.protocolFamily;
 	}
 
@@ -454,12 +455,13 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		ChannelResources loops =
 				Objects.requireNonNull(this.channelResources, "channelResources");
 
-		boolean useNative = preferNative && !(sslContext instanceof JdkSslContext);
+		boolean useNative =
+				protocolFamily == null && preferNative && !(sslContext instanceof JdkSslContext);
 		EventLoopGroup elg = loops.onClient(useNative);
 		bootstrap.group(elg);
 
 		if (useDatagramChannel()) {
-			if (useNative && protocolFamily == null) {
+			if (useNative) {
 				bootstrap.channel(loops.onDatagramChannel(elg));
 			}
 			else {

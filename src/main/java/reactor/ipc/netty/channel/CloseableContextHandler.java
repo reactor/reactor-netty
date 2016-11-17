@@ -19,6 +19,7 @@ package reactor.ipc.netty.channel;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -44,11 +45,11 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 
 	ChannelFuture f;
 
-	CloseableContextHandler(BiConsumer<? super CHANNEL, ? super Cancellation> doWithPipeline,
+	CloseableContextHandler(BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			NettyOptions<?, ?> options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler) {
-		super(doWithPipeline, options, sink, loggingHandler);
+		super(channelOpSelector, options, sink, loggingHandler);
 	}
 
 	@Override

@@ -16,7 +16,20 @@
 
 package reactor.ipc.netty.http;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.pool.ChannelPool;
+import io.netty.channel.pool.ChannelPoolHandler;
+import io.netty.channel.pool.FixedChannelPool;
 import reactor.ipc.netty.options.ChannelResources;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * Hold the default Http event loops
@@ -28,13 +41,72 @@ public final class HttpResources {
 
 	/**
 	 * Return the global HTTP event loop selector
+	 *
 	 * @return the global HTTP event loop selector
 	 */
-	public static ChannelResources defaultHttpLoops(){
+	public static ChannelResources defaultHttpLoops() {
 		return DEFAULT_HTTP_LOOPS;
 	}
 
-	static final ChannelResources DEFAULT_HTTP_LOOPS = ChannelResources.create("http");
+	/**
+	 * Return the global HTTP client pool selector
+	 *
+	 * @return the global HTTP client pool selector
+	 */
+	public static BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool> defaultPool() {
+		return DEFAULT_POOL_SELECTOR;
+	}
 
-	HttpResources(){}
+	static final ConcurrentMap<InetSocketAddress, ChannelPool> channelPools;
+	static final ChannelResources                              DEFAULT_HTTP_LOOPS;
+	static final BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool>
+	                                                           DEFAULT_POOL_SELECTOR;
+
+	static {
+		DEFAULT_POOL_SELECTOR = HttpResources::pool;
+		channelPools = new ConcurrentHashMap<>(8);
+		DEFAULT_HTTP_LOOPS = ChannelResources.create("http");
+	}
+
+	static ChannelPool pool(InetSocketAddress remote,
+			Supplier<? extends Bootstrap> bootstrap) {
+		for (; ; ) {
+			ChannelPool pool = channelPools.get(remote);
+			if (pool != null) {
+				return pool;
+			}
+			if (log.isDebugEnabled()) {
+				log.debug("new http client pool for {}", remote);
+			}
+			//pool = new SimpleChannelPool(bootstrap);
+			Bootstrap b = bootstrap.get();
+			b.remoteAddress(remote);
+			pool = new FixedChannelPool(b,
+					new ChannelPoolHandler() {
+						@Override
+						public void channelReleased(Channel ch) throws Exception {
+							log.debug("released {}", ch.toString());
+						}
+
+						@Override
+						public void channelAcquired(Channel ch) throws Exception {
+							log.debug("acquired {}", ch.toString());
+						}
+
+						@Override
+						public void channelCreated(Channel ch) throws Exception {
+							log.debug("created {}", ch.toString());
+						}
+					},1);
+			if (channelPools.putIfAbsent(remote, pool) == null) {
+				return pool;
+			}
+			pool.close();
+		}
+	}
+
+	static final Logger log = Loggers.getLogger(HttpResources.class);
+
+	HttpResources() {
+	}
 }

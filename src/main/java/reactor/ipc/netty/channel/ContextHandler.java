@@ -18,10 +18,12 @@ package reactor.ipc.netty.channel;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
@@ -29,6 +31,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
@@ -57,7 +60,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param options
 	 * @param loggingHandler
 	 * @param secure
-	 * @param doWithPipeline
+	 * @param channelOpSelector
 	 * @param <CHANNEL>
 	 *
 	 * @return a new {@link ContextHandler} for clients
@@ -67,13 +70,13 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			ClientOptions options,
 			LoggingHandler loggingHandler,
 			boolean secure,
-			BiConsumer<? super CHANNEL, ? super Cancellation> doWithPipeline) {
+			BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector) {
 		return newClientContext(sink,
 				options,
 				loggingHandler,
 				secure,
 				null,
-				doWithPipeline);
+				channelOpSelector);
 	}
 
 	/**
@@ -81,7 +84,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param options
 	 * @param loggingHandler
 	 * @param secure
-	 * @param doWithPipeline
+	 * @param channelOpSelector
 	 * @param pool
 	 * @param <CHANNEL>
 	 *
@@ -93,16 +96,16 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			LoggingHandler loggingHandler,
 			boolean secure,
 			ChannelPool pool,
-			BiConsumer<? super CHANNEL, ? super Cancellation> doWithPipeline) {
+			BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector) {
 		if (pool != null) {
-			return new PooledClientContextHandler<>(doWithPipeline,
+			return new PooledClientContextHandler<>(channelOpSelector,
 					options,
 					sink,
 					loggingHandler,
 					secure,
 					pool);
 		}
-		return new ClientContextHandler<>(doWithPipeline,
+		return new ClientContextHandler<>(channelOpSelector,
 				options,
 				sink,
 				loggingHandler,
@@ -113,34 +116,36 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param sink
 	 * @param options
 	 * @param loggingHandler
-	 * @param doWithPipeline
+	 * @param channelOpSelector
 	 *
 	 * @return a new {@link ContextHandler} for servers
 	 */
 	public static ContextHandler<Channel> newServerContext(MonoSink<NettyContext> sink,
 			ServerOptions options,
 			LoggingHandler loggingHandler,
-			BiConsumer<? super Channel, ? super Cancellation> doWithPipeline) {
-		return new ServerContextHandler(doWithPipeline, options, sink, loggingHandler);
+			BiFunction<? super Channel, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector) {
+		return new ServerContextHandler(channelOpSelector, options, sink, loggingHandler);
 	}
 
-	final MonoSink<NettyContext>                            sink;
-	final LoggingHandler                                    loggingHandler;
-	final BiConsumer<? super CHANNEL, ? super Cancellation> doWithPipeline;
-	final NettyOptions<?, ?>                                options;
+	final MonoSink<NettyContext> sink;
+	final NettyOptions<?, ?>     options;
+	final LoggingHandler         loggingHandler;
+	final BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>>
+	                             channelOpSelector;
 
 	/**
-	 * @param doWithPipeline
+	 * @param channelOpSelector
 	 * @param options
 	 * @param sink
 	 * @param loggingHandler
 	 */
-	protected ContextHandler(BiConsumer<? super CHANNEL, ? super Cancellation> doWithPipeline,
+	protected ContextHandler(BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			NettyOptions<?, ?> options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler) {
 		this.options = options;
-		this.doWithPipeline = Objects.requireNonNull(doWithPipeline, "doWithPipeline");
+		this.channelOpSelector =
+				Objects.requireNonNull(channelOpSelector, "channelOpSelector");
 		this.sink = sink;
 		this.loggingHandler = loggingHandler;
 	}
@@ -160,10 +165,41 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 		doPipeline(ch.pipeline());
 
+		ch.attr(LAST_STATIC_TAIL_HANDLER)
+		  .set(ch.pipeline()
+		         .lastContext()
+		         .name());
 		try {
-			doWithPipeline.accept(ch, doChannelTerminated(ch));
+			ChannelOperations<?, ?> op =
+					channelOpSelector.apply(ch, doChannelTerminated(ch));
+
+			ch.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
+			  .set(op);
+
 			ch.pipeline()
 			  .addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
+
+			if(!ch.isActive()){
+				ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
+					@Override
+					public void channelActive(ChannelHandlerContext ctx)
+							throws Exception {
+						ctx.pipeline().remove(this);
+						op.onChannelActive(ch.pipeline()
+						                     .context(NettyHandlerNames.ReactiveBridge));
+						super.channelActive(ctx);
+					}
+				});
+			}
+			else {
+				op.onChannelActive(ch.pipeline()
+				                     .context(NettyHandlerNames.ReactiveBridge));
+			}
+		}
+		catch (Exception t) {
+			if (log.isErrorEnabled()) {
+				log.error("Error while binding a channelOperation to {}", ch.toString());
+			}
 		}
 		finally {
 			if (null != options.afterChannelInit()) {
@@ -250,6 +286,29 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		}
 	}
 
-	static final Logger         log    = Loggers.getLogger(ContextHandler.class);
-	static final ChannelHandler BRIDGE = new ChannelOperationsHandler();
+	/**
+	 * clean all handler until marked tail
+	 *
+	 * @param channel the target channel to cleanup
+	 */
+	protected static void cleanHandlers(Channel channel){
+		ChannelHandlerContext ctx;
+		ChannelPipeline pipeline = channel.pipeline();
+		String lastHandler = channel.attr(LAST_STATIC_TAIL_HANDLER).get();
+
+		while((ctx = pipeline.lastContext()) != null){
+			if(ctx.name().equals(lastHandler)){
+				break;
+			}
+			pipeline.removeLast();
+		}
+		pipeline.addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
+	}
+
+	static final Logger               log                      =
+			Loggers.getLogger(ContextHandler.class);
+	static final ChannelHandler       BRIDGE                   =
+			new ChannelOperationsHandler();
+	static final AttributeKey<String> LAST_STATIC_TAIL_HANDLER =
+			AttributeKey.valueOf("staticTailHandler");
 }

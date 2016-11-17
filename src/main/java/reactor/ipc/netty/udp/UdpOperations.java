@@ -45,12 +45,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
 			MonoSink<NettyContext> clientSink,
 			Cancellation onClose) {
-		UdpOperations ops = new UdpOperations(channel, handler, clientSink, onClose);
-
-		channel.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-		       .set(ops);
-
-		return ops;
+		return new UdpOperations(channel, handler, clientSink, onClose);
 	}
 
 	final DatagramChannel  datagramChannel;

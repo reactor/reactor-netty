@@ -63,10 +63,16 @@ final class HttpServerCloseSubscriber
 		}
 		HttpServerOperations.log.error("Error processing connection. Closing the channel.", t);
 		if (parent.markHeadersAsSent()) {
-			parent.channel()
-			      .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-					      HttpResponseStatus.INTERNAL_SERVER_ERROR))
-			      .addListener(ChannelFutureListener.CLOSE);
+			ChannelFuture f = parent.channel()
+			                        .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+					                        HttpResponseStatus.INTERNAL_SERVER_ERROR));
+
+			if (!parent.isKeepAlive()) {
+				f.addListener(ChannelFutureListener.CLOSE);
+			}
+			else {
+				parent.cancel();
+			}
 		}
 	}
 
@@ -116,7 +122,7 @@ final class HttpServerCloseSubscriber
 				f.addListener(ChannelFutureListener.CLOSE);
 			}
 			else{
-				parent.channel().pipeline().fireChannelInactive();
+				parent.cancel();
 			}
 		}
 	}

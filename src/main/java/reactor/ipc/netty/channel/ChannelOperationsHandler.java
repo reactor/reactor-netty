@@ -39,7 +39,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelActive(final ChannelHandlerContext ctx) throws Exception {
 		ctx.fireChannelActive();
-		operations(ctx).onChannelActive(ctx);
 	}
 
 	@Override

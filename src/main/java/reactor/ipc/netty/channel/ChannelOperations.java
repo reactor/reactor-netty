@@ -30,17 +30,14 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -56,10 +53,10 @@ import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.NettyContext;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
@@ -101,12 +98,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			MonoSink<NettyContext> sink,
 			Cancellation onClose) {
-
 		@SuppressWarnings("unchecked") ChannelOperations<INBOUND, OUTBOUND> ops =
 				new ChannelOperations<>(channel, handler, sink, onClose);
-
-		channel.attr(OPERATIONS_ATTRIBUTE_KEY)
-		       .set(ops);
 
 		return ops;
 	}
@@ -127,6 +120,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> noopHandler() {
 		return PING;
 	}
+
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
 			handler;
 
@@ -143,7 +137,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	boolean                    inboundDone;
 	Throwable                  error;
 	long                       inboundRequested;
-	int                        wip;
 	volatile Cancellation cancel;
 	volatile boolean      flushEach;
 
@@ -156,7 +149,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.inboundDone = replaced.inboundDone;
 		this.error = replaced.error;
 		this.inboundRequested = replaced.inboundRequested;
-		this.wip = replaced.wip;
 		this.cancel = replaced.cancel;
 		this.flushEach = replaced.flushEach;
 	}
@@ -183,13 +175,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final public void cancel() {
 		cancelReceiver();
 
-		if (wip++ == 0) {
-			Queue<Object> q = inboundQueue;
-			if (q != null) {
-				Object o;
-				while ((o = q.poll()) != null) {
-					ReferenceCountUtil.release(o);
-				}
+		Queue<Object> q = inboundQueue;
+		if (q != null) {
+			Object o;
+			while ((o = q.poll()) != null) {
+				ReferenceCountUtil.release(o);
 			}
 		}
 	}
@@ -271,10 +261,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> onClose(final Runnable onClose) {
+	public final ChannelOperations<INBOUND, OUTBOUND> onClose(final Runnable onClose) {
 		channel.pipeline()
-		       .addLast(new ChannelDuplexHandler() {
-			       @Override
+		       .addAfter(NettyHandlerNames.ReactiveBridge,
+				       NettyHandlerNames.OnChannelClose,
+				       new ChannelDuplexHandler() {
+					       @Override
 			       public void channelInactive(ChannelHandlerContext ctx)
 					       throws Exception {
 				       onClose.run();
@@ -285,11 +277,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> onReadIdle(long idleTimeout,
+	public final ChannelOperations<INBOUND, OUTBOUND> onReadIdle(long idleTimeout,
 			final Runnable onReadIdle) {
 		channel.pipeline()
-		       .addFirst(new IdleStateHandler(idleTimeout, 0, 0, TimeUnit.MILLISECONDS) {
-			       @Override
+		       .addBefore(NettyHandlerNames.ReactiveBridge,
+				       NettyHandlerNames.OnChannelReadIdle,
+				       new IdleStateHandler(idleTimeout, 0, 0, TimeUnit.MILLISECONDS) {
+					       @Override
 			       protected void channelIdle(ChannelHandlerContext ctx,
 					       IdleStateEvent evt) throws Exception {
 				       if (evt.state() == IdleState.READER_IDLE) {
@@ -302,11 +296,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> onWriteIdle(long idleTimeout,
+	public final ChannelOperations<INBOUND, OUTBOUND> onWriteIdle(long idleTimeout,
 			final Runnable onWriteIdle) {
 		channel.pipeline()
-		       .addLast(new IdleStateHandler(0, idleTimeout, 0, TimeUnit.MILLISECONDS) {
-			       @Override
+		       .addAfter(NettyHandlerNames.ReactiveBridge,
+				       NettyHandlerNames.OnChannelWriteIdle,
+				       new IdleStateHandler(0, idleTimeout, 0, TimeUnit.MILLISECONDS) {
+					       @Override
 			       protected void channelIdle(ChannelHandlerContext ctx,
 					       IdleStateEvent evt) throws Exception {
 				       if (evt.state() == IdleState.WRITER_IDLE) {
@@ -429,12 +425,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param promise the promise to fulfil for acknowledging termination success
 	 * @param exception non null if the writer has terminated with a failure
 	 */
-	protected void onTerminatedWriter(
-			ChannelFuture last,
+	protected void onTerminatedWriter(ChannelFuture last,
 			final ChannelPromise promise,
 			final Throwable exception) {
-		if (channel
-		       .isOpen()) {
+		if (channel.isOpen()) {
 			ChannelFutureListener listener = future -> {
 				if (exception != null) {
 					promise.tryFailure(exception);
@@ -470,7 +464,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@SuppressWarnings("unchecked")
 	protected void onChannelActive(ChannelHandlerContext ctx) {
 		handler.apply((INBOUND) this, (OUTBOUND) this)
-		       .subscribe(new CloseSubscriber(ctx));
+		       .subscribe(new CloseSubscriber(this, ctx));
 
 		if (clientSink != null) {
 			clientSink.success(newNettyState(ctx.channel(), onClose));
@@ -529,8 +523,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param flushMode the flush strategy
 	 * @param promise an actual promise fulfilled on writer success/error
 	 */
-	protected void doOutboundWriter(
-			Publisher<?> writeStream,
+	protected void doOutboundWriter(Publisher<?> writeStream,
 			FlushMode flushMode,
 			ChannelPromise promise) {
 		if (flushMode == FlushMode.MANUAL_COMPLETE) {
@@ -632,17 +625,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 		if (channel.eventLoop()
 		           .inEventLoop()) {
-			doOutboundWriter(
-					encodedWriter,
-					mode,
-					p);
+			doOutboundWriter(encodedWriter, mode, p);
 		}
 		else {
 			channel.eventLoop()
-			       .execute(() -> doOutboundWriter(
-					       encodedWriter,
-					       mode,
-					       p));
+			       .execute(() -> doOutboundWriter(encodedWriter, mode, p));
 		}
 	}
 
@@ -676,106 +663,95 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	final boolean drainReceiver() {
-		if (wip++ != 0) {
+
+		final Queue<Object> q = inboundQueue;
+		final Subscriber<? super Object> a = receiver;
+
+		if (a == null) {
+			if (inboundDone) {
+				cancelReceiver();
+			}
 			return false;
 		}
 
-		int missed = 1;
+		long r = inboundRequested;
+		long e = 0L;
 
-		for (; ; ) {
-			final Queue<Object> q = inboundQueue;
-			final Subscriber<? super Object> a = receiver;
+		while (e != r) {
+			if (isCancelled()) {
+				return false;
+			}
 
-			if (a == null) {
-				if(inboundDone){
-					cancelReceiver();
+			boolean d = inboundDone;
+			Object v = q != null ? q.poll() : null;
+			boolean empty = v == null;
+
+			if (d && empty) {
+				cancelReceiver();
+				if (q != null) {
+					q.clear();
+				}
+				Throwable ex = error;
+				if (ex != null) {
+					a.onError(ex);
+				}
+				else {
+					a.onComplete();
 				}
 				return false;
 			}
 
-			long r = inboundRequested;
-			long e = 0L;
-
-			while (e != r) {
-				if (isCancelled()) {
-					return false;
-				}
-
-				boolean d = inboundDone;
-				Object v = q != null ? q.poll() : null;
-				boolean empty = v == null;
-
-				if (d && empty) {
-					cancelReceiver();
-					if (q != null) {
-						q.clear();
-					}
-					Throwable ex = error;
-					if (ex != null) {
-						a.onError(ex);
-					}
-					else {
-						a.onComplete();
-					}
-					return false;
-				}
-
-				if (empty) {
-					channel.read();
-					break;
-				}
-
-				try {
-					a.onNext(v);
-				}
-				finally {
-					ReferenceCountUtil.release(v);
-					channel.read();
-				}
-
-				e++;
+			if (empty) {
+				channel.read();
+				break;
 			}
 
-			if (e == r) {
-				if (isCancelled()) {
-					return false;
-				}
-
-				if (inboundDone && (q == null || q.isEmpty())) {
-					cancelReceiver();
-					if (q != null) {
-						q.clear();
-					}
-					Throwable ex = error;
-					if (ex != null) {
-						a.onError(ex);
-					}
-					else {
-						a.onComplete();
-					}
-					return false;
-				}
+			try {
+				a.onNext(v);
+			}
+			finally {
+				ReferenceCountUtil.release(v);
+				channel.read();
 			}
 
-			if (e != 0L) {
-				if (r != Long.MAX_VALUE) {
-					if ((inboundRequested -= e) > 0L) {
-						channel.read();
-					}
-				}
+			e++;
+		}
+
+		if (e == r) {
+			if (isCancelled()) {
+				return false;
 			}
 
-			missed = (wip = wip - missed);
-			if (missed == 0) {
-				if (r == Long.MAX_VALUE) {
-					channel.config()
-					       .setAutoRead(true);
-					channel.read();
-					return true;
+			if (inboundDone && (q == null || q.isEmpty())) {
+				cancelReceiver();
+				if (q != null) {
+					q.clear();
+				}
+				Throwable ex = error;
+				if (ex != null) {
+					a.onError(ex);
+				}
+				else {
+					a.onComplete();
 				}
 				return false;
 			}
 		}
+
+		if (e != 0L) {
+			if (r != Long.MAX_VALUE) {
+				if ((inboundRequested -= e) > 0L) {
+					channel.read();
+				}
+			}
+		}
+
+		if (r == Long.MAX_VALUE) {
+			channel.config()
+			       .setAutoRead(true);
+			channel.read();
+		}
+		return true;
 	}
 
 	final void initReceiver(Subscriber<? super Object> s) {
@@ -793,7 +769,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			channel.config()
 			       .setAutoRead(false);
 		});
-		wip = 0;
 	}
 
 	final void unsubscribeReceiver() {

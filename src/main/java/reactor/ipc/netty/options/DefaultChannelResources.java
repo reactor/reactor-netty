@@ -61,11 +61,10 @@ final class DefaultChannelResources extends AtomicLong implements ChannelResourc
 		this.prefix = prefix;
 
 		this.serverLoops = new NioEventLoopGroup(workerCount,
-				threadFactory(this, "server-nio"));
+				threadFactory(this, "nio"));
 
 		this.clientLoops =
-				ChannelResources.colocate(new NioEventLoopGroup(workerCount,
-						threadFactory(this, "client-nio")));
+				ChannelResources.colocate(serverLoops);
 
 		this.cacheNativeClientLoops = new AtomicReference<>();
 		this.cacheNativeServerLoops = new AtomicReference<>();

@@ -24,12 +24,15 @@ package reactor.ipc.netty;
  */
 public interface NettyHandlerNames {
 
-	String SslHandler        = "sslHandler";
-	String SslReader         = "sslReader";
-	String SslLoggingHandler = "sslLoggingHandler";
-	String ProxyHandler      = "proxyHandler";
-	String HttpCodecHandler  = "httpCodecHandler";
-	String ReactiveBridge    = "reactiveBridge";
-	String HttpAggregator    = "reactorHttpAggregator";
-	String LoggingHandler    = "loggingHandler";
+	String SslHandler         = "sslHandler";
+	String SslReader          = "sslReader";
+	String SslLoggingHandler  = "sslLoggingHandler";
+	String ProxyHandler       = "proxyHandler";
+	String HttpCodecHandler   = "httpCodecHandler";
+	String ReactiveBridge     = "reactiveBridge";
+	String HttpAggregator     = "reactorHttpAggregator";
+	String OnChannelWriteIdle = "onChannelWriteIdle";
+	String OnChannelReadIdle  = "onChannelReadIdle";
+	String OnChannelClose     = "onChannelClose";
+	String LoggingHandler     = "loggingHandler";
 }
