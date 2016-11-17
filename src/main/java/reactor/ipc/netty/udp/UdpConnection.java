@@ -29,7 +29,7 @@ import reactor.ipc.netty.ChannelFutureMono;
 /**
  * @author Stephane Maldini
  */
-public interface UdpConnection {
+interface UdpConnection {
 	/**
 	 * Join a multicast group.
 	 *

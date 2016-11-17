@@ -16,13 +16,17 @@
 package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
+import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 
 /**
+ * Hold contextual information for each {@link NettyConnector#newHandler(BiFunction)}
+ *
  * @author Stephane Maldini
+ * @since 0.6
  */
 public interface NettyContext extends Cancellation {
 
