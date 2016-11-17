@@ -189,7 +189,7 @@ public class TcpClientTests {
 	public void closingPromiseIsFulfilled() throws InterruptedException {
 		TcpClient client =
 				TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
-				                             .disablePool());
+				                             );
 
 		client.newHandler((in, out) -> Mono.empty())
 		      .block()
@@ -236,7 +236,7 @@ public class TcpClientTests {
 		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
 		TcpClient tcpClient =
 				TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
-				                             .disablePool());
+				                             );
 
 		Mono<? extends NettyContext> handler = tcpClient.newHandler((in, out) -> {
 			System.out.println("Start");
@@ -268,7 +268,7 @@ public class TcpClientTests {
 
 		TcpClient client =
 				TcpClient.create(opts -> opts.connect("localhost", timeoutServerPort)
-				                             .disablePool());
+				                             );
 
 		NettyContext s = client.newHandler((in, out) -> {
 			in.onClose(close::countDown)

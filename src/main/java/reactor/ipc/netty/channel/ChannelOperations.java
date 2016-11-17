@@ -245,17 +245,22 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final ChannelOperations<INBOUND, OUTBOUND> onClose(final Runnable onClose) {
-		channel.pipeline()
-		       .addAfter(NettyHandlerNames.ReactiveBridge,
-				       NettyHandlerNames.OnChannelClose,
-				       new ChannelDuplexHandler() {
-					       @Override
-			       public void channelInactive(ChannelHandlerContext ctx)
-					       throws Exception {
-				       onClose.run();
-				       super.channelInactive(ctx);
-			       }
-		       });
+		if(context.getClass().equals(ServerContextHandler.class)) {
+			channel.pipeline()
+			       .addAfter(NettyHandlerNames.ReactiveBridge,
+					       NettyHandlerNames.OnChannelClose,
+					       new ChannelDuplexHandler() {
+						       @Override
+						       public void channelInactive(ChannelHandlerContext ctx)
+								       throws Exception {
+							       onClose.run();
+							       super.channelInactive(ctx);
+						       }
+					       });
+		}
+		else{
+			context.onClose().subscribe(null, null, onClose);
+		}
 		return this;
 	}
 
