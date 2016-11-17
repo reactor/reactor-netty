@@ -99,7 +99,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 				}
 				handshakerResult.trySuccess();
 
-				clientSink().success(this);
+				parentContext().fireContextActive(this);
 			}
 			return;
 		}

@@ -234,7 +234,9 @@ public class TcpClientTests {
 			throws InterruptedException, IOException {
 		final CountDownLatch connectionLatch = new CountDownLatch(1);
 		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
-		TcpClient tcpClient = TcpClient.create("localhost", abortServerPort);
+		TcpClient tcpClient =
+				TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
+				                             .disablePool());
 
 		Mono<? extends NettyContext> handler = tcpClient.newHandler((in, out) -> {
 			System.out.println("Start");

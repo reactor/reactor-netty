@@ -41,7 +41,7 @@ final class ServerContextHandler
 
 	final ServerOptions serverOptions;
 
-	ServerContextHandler(BiFunction<? super Channel, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	ServerContextHandler(BiFunction<? super Channel, ? super ContextHandler<Channel>, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			ServerOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler) {
@@ -51,23 +51,25 @@ final class ServerContextHandler
 
 	@Override
 	protected void doStarted(Channel channel) {
-		sink.success(new ChannelCancellation(channel, this));
+		fireContextActive();
 	}
 
 	@Override
-	protected Cancellation doChannelTerminated(Channel channel) {
-		return () -> {
-			cleanHandlers(channel);
+	public void fireContextEmpty() {
+		//ignore, context is always fired on bound connection
+	}
 
-			ChannelOperations<?, ?> op =
-					channelOpSelector.apply(channel, doChannelTerminated(channel));
+	@Override
+	public void terminateChannel(Channel channel) {
+		cleanHandlers(channel);
 
-			channel.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-			       .set(op);
+		ChannelOperations<?, ?> op = channelOpSelector.apply(channel, this);
 
-			op.onChannelActive(channel.pipeline()
-			                          .context(NettyHandlerNames.ReactiveBridge));
-		};
+		channel.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
+		       .set(op);
+
+		op.onChannelActive(channel.pipeline()
+		                          .context(NettyHandlerNames.ReactiveBridge));
 	}
 
 	@Override

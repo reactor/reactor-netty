@@ -153,7 +153,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		return ContextHandler.newServerContext(sink,
 				options,
 				loggingHandler,
-				(ch, c) -> ChannelOperations.bind(ch, handler, null, c));
+				(ch, c) -> ChannelOperations.bind(ch, handler, c));
 	}
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpServer.class);

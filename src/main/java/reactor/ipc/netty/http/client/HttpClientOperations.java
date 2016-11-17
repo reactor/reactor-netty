@@ -48,14 +48,12 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-import reactor.core.Cancellation;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOperations;
@@ -71,9 +69,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	static HttpOperations bindHttp(Channel channel,
 			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> clientSink,
-			Cancellation onClose) {
-		return new HttpClientOperations(channel, handler, clientSink, onClose);
+			ContextHandler<?> context) {
+		return new HttpClientOperations(channel, handler, context);
 	}
 
 	final String[]    redirectedFrom;
@@ -97,9 +94,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	HttpClientOperations(Channel channel,
 			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> clientSink,
-			Cancellation onClose) {
-		super(channel, handler, clientSink, onClose);
+			ContextHandler<?> context) {
+		super(channel, handler, context);
 		this.isSecure = channel.pipeline()
 		                       .get(NettyHandlerNames.SslHandler) != null;
 		String[] redirects = channel.attr(REDIRECT_ATTR_KEY)
@@ -164,9 +160,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public void dispose() {
-		if (dependentCancellation() != null) {
-			dependentCancellation().dispose();
-		}
+		cancel();
 	}
 
 	@Override
@@ -253,7 +247,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 
 			if (checkResponseCode(response)) {
-				clientSink().success(this);
+				parentContext().fireContextActive(this);
 			}
 			else if (log.isDebugEnabled()) {
 				log.debug("Failed status check on response packet {} {}", channel(), msg);
@@ -379,13 +373,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (code >= 400) {
 			Exception ex = new HttpClientException(this);
 			cancel();
-			clientSink().error(ex);
+			parentContext().fireContextError(ex);
 			return false;
 		}
 		if (code >= 300 && isFollowRedirect()) {
 			Exception ex = new RedirectClientException(this);
 			cancel();
-			clientSink().error(ex);
+			parentContext().fireContextError(ex);
 			return false;
 		}
 		return true;

@@ -32,6 +32,7 @@ import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -43,17 +44,16 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 
 	static UdpOperations bind(DatagramChannel channel,
 			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> clientSink,
-			Cancellation onClose) {
-		return new UdpOperations(channel, handler, clientSink, onClose);
+			ContextHandler<?> context) {
+		return new UdpOperations(channel, handler, context);
 	}
 
 	final DatagramChannel  datagramChannel;
 
 	UdpOperations(DatagramChannel channel,
 			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> clientSink, Cancellation onClose) {
-		super(channel, handler, clientSink, onClose);
+			ContextHandler<?> context) {
+		super(channel, handler, context);
 		this.datagramChannel = channel;
 	}
 

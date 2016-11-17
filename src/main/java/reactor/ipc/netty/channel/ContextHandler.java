@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.channel;
 
-import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -27,16 +26,12 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.options.ClientOptions;
@@ -46,16 +41,19 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
- * A one time-set channel pipeline callback and context state for clean disposing
+ * A one time-set channel pipeline callback and {@link NettyContext} state for clean disposing.
+ * A {@link ContextHandler} is bound to a user-facing {@link MonoSink}
  *
  * @param <CHANNEL> the channel type
  *
  * @author Stephane Maldini
  */
 public abstract class ContextHandler<CHANNEL extends Channel>
-		extends ChannelInitializer<CHANNEL> implements Cancellation {
+		extends ChannelInitializer<CHANNEL> implements Cancellation, NettyContext {
 
 	/**
+	 * Create a new client context
+	 *
 	 * @param sink
 	 * @param options
 	 * @param loggingHandler
@@ -70,7 +68,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			ClientOptions options,
 			LoggingHandler loggingHandler,
 			boolean secure,
-			BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector) {
+			BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector) {
 		return newClientContext(sink,
 				options,
 				loggingHandler,
@@ -80,6 +78,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	}
 
 	/**
+	 * Create a new client context with optional pool support
+	 *
 	 * @param sink
 	 * @param options
 	 * @param loggingHandler
@@ -96,7 +96,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			LoggingHandler loggingHandler,
 			boolean secure,
 			ChannelPool pool,
-			BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector) {
+			BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector) {
 		if (pool != null) {
 			return new PooledClientContextHandler<>(channelOpSelector,
 					options,
@@ -113,6 +113,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	}
 
 	/**
+	 * Create a new server context
+	 *
 	 * @param sink
 	 * @param options
 	 * @param loggingHandler
@@ -123,14 +125,14 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	public static ContextHandler<Channel> newServerContext(MonoSink<NettyContext> sink,
 			ServerOptions options,
 			LoggingHandler loggingHandler,
-			BiFunction<? super Channel, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector) {
+			BiFunction<? super Channel, ? super ContextHandler<Channel>, ? extends ChannelOperations<?, ?>> channelOpSelector) {
 		return new ServerContextHandler(channelOpSelector, options, sink, loggingHandler);
 	}
 
 	final MonoSink<NettyContext> sink;
 	final NettyOptions<?, ?>     options;
 	final LoggingHandler         loggingHandler;
-	final BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>>
+	final BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>>
 	                             channelOpSelector;
 
 	/**
@@ -139,7 +141,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param sink
 	 * @param loggingHandler
 	 */
-	protected ContextHandler(BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	protected ContextHandler(BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			NettyOptions<?, ?> options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler) {
@@ -170,8 +172,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		         .lastContext()
 		         .name());
 		try {
-			ChannelOperations<?, ?> op =
-					channelOpSelector.apply(ch, doChannelTerminated(ch));
+			ChannelOperations<?, ?> op = channelOpSelector.apply(ch, this);
 
 			ch.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
 			  .set(op);
@@ -210,11 +211,63 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	}
 
 	/**
+	 * Trigger {@link MonoSink#success(Object)} that will signal
+	 * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)} returned
+	 * {@link Mono} subscriber.
+	 */
+	public final void fireContextActive() {
+		fireContextActive(null);
+	}
+
+	/**
+	 * Trigger {@link MonoSink#success(Object)} that will signal
+	 * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)} returned
+	 * {@link Mono} subscriber.
+	 *
+	 * @param context optional context to succeed the associated {@link MonoSink}
+	 */
+	public abstract void fireContextActive(NettyContext context);
+
+
+	/**
+	 * Trigger {@link MonoSink#success()} that will signal
+	 * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)} returned
+	 * {@link Mono} subscriber.
+	 *
+	 */
+	public void fireContextEmpty(){
+		sink.success();
+	}
+
+
+	/**
+	 * Trigger {@link MonoSink#error(Throwable)} that will signal
+	 * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)} returned
+	 * {@link Mono} subscriber.
+	 *
+	 * @param t error to fail the associated {@link MonoSink}
+	 */
+	public final void fireContextError(Throwable t){
+		sink.error(t);
+	}
+
+	/**
 	 * One-time only future setter
 	 *
 	 * @param future the connect/bind future to associate with and cancel on dispose
 	 */
 	public abstract void setFuture(Future<?> future);
+
+	/**
+	 * Cleanly terminate a channel according to the current context handler type.
+	 * Server might keep alive and recycle connections, pooled client will release and
+	 * classic client will close.
+	 *
+	 * @param channel the channel to unregister
+	 */
+	public void terminateChannel(Channel channel) {
+		dispose();
+	}
 
 	/**
 	 * @param channel
@@ -234,57 +287,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param pipeline
 	 */
 	protected abstract void doPipeline(ChannelPipeline pipeline);
-
-	/**
-	 * @param channel
-	 *
-	 * @return Cancellation to dispose on each remote termination
-	 */
-	protected Cancellation doChannelTerminated(CHANNEL channel) {
-		return this;
-	}
-
-	static final class ChannelCancellation implements NettyContext {
-
-		final Channel      c;
-		final Cancellation onClose;
-
-		ChannelCancellation(Channel c, Cancellation onClose) {
-			this.c = c;
-			this.onClose = onClose;
-		}
-
-		@Override
-		public InetSocketAddress address() {
-			if (c instanceof SocketChannel) {
-				return ((SocketChannel) c).remoteAddress();
-			}
-			if (c instanceof ServerSocketChannel) {
-				return ((ServerSocketChannel) c).localAddress();
-			}
-			if (c instanceof DatagramChannel) {
-				return ((DatagramChannel) c).localAddress();
-			}
-			throw new IllegalStateException("Does not have an InetSocketAddress");
-		}
-
-		@Override
-		public Channel channel() {
-			return c;
-		}
-
-		@Override
-		public void dispose() {
-			if (onClose != null) {
-				onClose.dispose();
-			}
-		}
-
-		@Override
-		public Mono<Void> onClose() {
-			return ChannelFutureMono.from(c.closeFuture());
-		}
-	}
 
 	/**
 	 * clean all handler until marked tail

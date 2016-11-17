@@ -17,6 +17,7 @@
 package reactor.ipc.netty.channel;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -24,11 +25,16 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import reactor.core.Cancellation;
+import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.core.publisher.MonoSource;
+import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.options.ClientOptions;
@@ -46,13 +52,14 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	static final Logger log = Loggers.getLogger(PooledClientContextHandler.class);
 
-	final ClientOptions clientOptions;
-	final boolean       secure;
-	final ChannelPool   pool;
+	final ClientOptions         clientOptions;
+	final boolean               secure;
+	final ChannelPool           pool;
+	final DirectProcessor<Void> onReleaseEmitter;
 
 	Future<CHANNEL> f;
 
-	PooledClientContextHandler(BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	PooledClientContextHandler(BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			ClientOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
@@ -62,6 +69,36 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		this.clientOptions = options;
 		this.secure = secure;
 		this.pool = pool;
+		this.onReleaseEmitter = DirectProcessor.create();
+	}
+
+	@Override
+	public void fireContextActive(NettyContext context) {
+		context = context != null ? context : this;
+		sink.success(context);
+	}
+
+	@Override
+	public InetSocketAddress address() {
+		Channel c = channel();
+		if (c instanceof SocketChannel) {
+			return ((SocketChannel) c).remoteAddress();
+		}
+		if (c instanceof DatagramChannel) {
+			return ((DatagramChannel) c).localAddress();
+		}
+		throw new IllegalStateException("Does not have an InetSocketAddress");
+	}
+
+	@Override
+	public Channel channel() {
+		return f.getNow();
+	}
+
+	@Override
+	public Mono<Void> onClose() {
+		return MonoSource.wrap(onReleaseEmitter)
+		                 .or(ChannelFutureMono.from(channel().closeFuture()));
 	}
 
 	@Override
@@ -93,8 +130,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			initChannel(c);
 		}
 		else {
-			ChannelOperations<?, ?> op = channelOpSelector.apply(c,
-					doChannelTerminated(c));
+			ChannelOperations<?, ?> op = channelOpSelector.apply(c, this);
 
 			ChannelOperations<?, ?> previous =
 					c.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
@@ -132,15 +168,18 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 			pool.release(c)
 			    .sync();
+
+			onReleaseEmitter.onComplete();
 		}
 		catch (Exception e) {
 			log.error("failed releasing channel", e);
+			onReleaseEmitter.onError(e);
 		}
 	}
 
 	@Override
 	protected void doDropped(Channel channel) {
-		pool.release(channel);
+		dispose();
 		sink.success();
 	}
 

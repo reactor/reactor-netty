@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.channel;
 
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
@@ -25,7 +24,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslHandler;
-import reactor.core.Cancellation;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
@@ -48,7 +46,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 
 	ChannelFuture f;
 
-	ClientContextHandler(BiFunction<? super CHANNEL, ? super Cancellation, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	ClientContextHandler(BiFunction<? super CHANNEL,? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			ClientOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,

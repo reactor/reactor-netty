@@ -55,6 +55,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOperations;
@@ -72,8 +73,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	static HttpServerOperations bindHttp(Channel channel,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-			Cancellation onClose) {
-		return new HttpServerOperations(channel, handler, onClose);
+			ContextHandler<?> context) {
+		return new HttpServerOperations(channel, handler, context);
 	}
 
 	final HttpResponse nettyResponse;
@@ -93,8 +94,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(Channel ch,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-			Cancellation onClose) {
-		super(ch, handler, null, onClose);
+			ContextHandler<?> context) {
+		super(ch, handler, context);
 		this.nettyResponse =
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();

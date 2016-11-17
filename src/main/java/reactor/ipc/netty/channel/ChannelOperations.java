@@ -86,8 +86,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 *
 	 * @param channel the new {@link Channel} connection
 	 * @param handler the user-provided {@link BiFunction} i/o handler
-	 * @param sink the user-facing {@link Mono} emitting {@link NettyContext}
-	 * @param onClose the dispose callback
+	 * @param context the dispose callback
 	 * @param <INBOUND> the {@link NettyInbound} type
 	 * @param <OUTBOUND> the {@link NettyOutbound} type
 	 *
@@ -96,24 +95,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> ChannelOperations<INBOUND, OUTBOUND> bind(
 			Channel channel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> sink,
-			Cancellation onClose) {
+			ContextHandler<?> context) {
 		@SuppressWarnings("unchecked") ChannelOperations<INBOUND, OUTBOUND> ops =
-				new ChannelOperations<>(channel, handler, sink, onClose);
+				new ChannelOperations<>(channel, handler, context);
 
 		return ops;
-	}
-
-	/**
-	 * Return a new {@link NettyContext} bound to the given {@link Channel}
-	 *
-	 * @param ch the {@link Channel} to monitor
-	 * @param onClose the dispose callback
-	 *
-	 * @return a new {@link NettyContext} bound to the given {@link Channel}
-	 */
-	static NettyContext newNettyState(Channel ch, Cancellation onClose) {
-		return new ContextHandler.ChannelCancellation(ch, onClose);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -124,11 +110,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
 			handler;
 
-	final MonoSink<NettyContext> clientSink;
-	final Channel                channel;
-	final Scheduler              ioScheduler;
-	final Flux<?>                input;
-	final Cancellation           onClose;
+	final Channel           channel;
+	final Scheduler         ioScheduler;
+	final Flux<?>           input;
+	final ContextHandler<?> context;
 
 	// guarded //
 	Subscriber<? super Object> receiver;
@@ -142,7 +127,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	protected ChannelOperations(Channel channel,
 			ChannelOperations<INBOUND, OUTBOUND> replaced) {
-		this(channel, replaced.handler, replaced.clientSink, replaced.onClose);
+		this(channel, replaced.handler, replaced.context);
 		this.receiver = replaced.receiver;
 		this.receiverCaughtUp = replaced.receiverCaughtUp;
 		this.inboundQueue = replaced.inboundQueue;
@@ -155,12 +140,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	protected ChannelOperations(Channel channel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> clientSink,
-			Cancellation onClose) {
+			ContextHandler<?> context) {
 		this.handler = Objects.requireNonNull(handler, "handler");
 		this.channel = Objects.requireNonNull(channel, "channel");
-		this.clientSink = clientSink;
-		this.onClose = onClose;
+		this.context = Objects.requireNonNull(context, "context");
 		this.ioScheduler = Schedulers.fromExecutor(channel.eventLoop());
 		this.input = Flux.from(this)
 		                 .subscribeOn(ioScheduler);
@@ -391,15 +374,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return available dispose callback
-	 *
-	 * @return available dispose callback
-	 */
-	final protected Cancellation dependentCancellation() {
-		return onClose;
-	}
-
-	/**
 	 * React after inbound {@link Channel#read}
 	 *
 	 * @param ctx the current {@link ChannelHandlerContext}
@@ -466,9 +440,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		handler.apply((INBOUND) this, (OUTBOUND) this)
 		       .subscribe(new CloseSubscriber(this, ctx));
 
-		if (clientSink != null) {
-			clientSink.success(newNettyState(ctx.channel(), onClose));
-		}
+		context.fireContextActive();
 	}
 
 	/**
@@ -484,9 +456,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			receiver.onComplete();
 			cancelReceiver();
 		}
-		if (clientSink != null) {
-			clientSink.success();
-		}
+		context.fireContextEmpty();
 		drainReceiver();
 	}
 
@@ -575,12 +545,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return the available {@link MonoSink} for user-facing lifecycle handling
+	 * Return the available parent {@link ContextHandler} for user-facing lifecycle
+	 * handling
 	 *
-	 * @return the available {@link MonoSink} for user-facing lifecycle handling
+	 * @return the available parent {@link ContextHandler}for user-facing lifecycle handling
 	 */
-	final protected MonoSink<NettyContext> clientSink() {
-		return clientSink;
+	final protected ContextHandler<?> parentContext() {
+		return context;
 	}
 
 	/**
@@ -652,9 +623,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
-				if (onClose != null) {
-					onClose.dispose();
-				}
+				context.terminateChannel(channel);
 				if (c != null) {
 					c.dispose();
 				}

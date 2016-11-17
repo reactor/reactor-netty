@@ -304,7 +304,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 						if(onSetup != null){
 							onSetup.accept(ch);
 						}
-						return HttpClientOperations.bindHttp(ch, handler, sink, c);
+						return HttpClientOperations.bindHttp(ch, handler, c);
 					});
 		}
 	}

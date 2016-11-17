@@ -39,6 +39,7 @@ import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.channel.ContextHandler;
 
 /**
  * An HTTP ready {@link ChannelOperations} with state management for status and headers
@@ -59,8 +60,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 
 	protected HttpOperations(Channel ioChannel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> clientSink, Cancellation onClose) {
-		super(ioChannel, handler, clientSink, onClose);
+			ContextHandler<?> context) {
+		super(ioChannel, handler, context);
 
 	}
 
