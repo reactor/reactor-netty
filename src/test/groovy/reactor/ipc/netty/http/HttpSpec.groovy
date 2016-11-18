@@ -170,7 +170,7 @@ class HttpSpec extends Specification {
 	  Mono.just(replies.status().code())
 			  .log("received-status-1")
 	} as Function)
-			.block(Duration.ofSeconds(5))
+			.block(Duration.ofSeconds(5000))
 
 
 
@@ -185,12 +185,11 @@ class HttpSpec extends Specification {
 			.flatMap { replies -> replies.receive().log("received-status-2")
 	}
 	.next()
-			.block(Duration.ofSeconds(3))
+			.block(Duration.ofSeconds(2))
 
 	then: "data was recieved"
 	//the produced reply should be there soon
-	thrown IllegalStateException
-	errored.await(5, TimeUnit.SECONDS)
+	errored.await(5000, TimeUnit.SECONDS)
 	!content
 
 	when:

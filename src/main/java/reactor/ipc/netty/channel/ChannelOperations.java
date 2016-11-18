@@ -562,11 +562,15 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			channel.flush();
 		}
 		else {
+			log.info(" "+channel.isOpen() +" "+last);
 			if (exception != null) {
 				promise.setFailure(exception);
 			}
 			else {
 				promise.setSuccess();
+			}
+			if(channel.isOpen()){
+				channel.eventLoop().execute(this::unregisterInterest);
 			}
 		}
 	}
@@ -678,7 +682,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final protected void unregisterInterest() {
 		int interest = INTERESTS.decrementAndGet(this);
 		if (interest < 0){
-			throw new IllegalStateException("Interest unregistration was not " +
+			throw new IllegalStateException("Unbalanced interest " +
+					" " +
 					"symmetrical, remaining: "+interest);
 		}
 		if (interest == 0) {

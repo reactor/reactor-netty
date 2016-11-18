@@ -89,13 +89,13 @@ final class HttpClientWSOperations extends HttpClientOperations
 		if (FullHttpResponse.class.isAssignableFrom(messageClass)) {
 			channel().pipeline()
 			         .remove(HttpObjectAggregator.class);
-			HttpResponse response = (HttpResponse) msg;
+			FullHttpResponse response = (FullHttpResponse) msg;
 			setNettyResponse(response);
 
 			if (checkResponseCode(response)) {
 
 				if (!handshaker.isHandshakeComplete()) {
-					handshaker.finishHandshake(channel(), (FullHttpResponse) msg);
+					handshaker.finishHandshake(channel(), response);
 				}
 				handshakerResult.trySuccess();
 
@@ -126,16 +126,6 @@ final class HttpClientWSOperations extends HttpClientOperations
 			return;
 		}
 		channel().read();
-	}
-
-	@Override
-	protected void postRead(Object msg) {
-		if (msg instanceof CloseWebSocketFrame) {
-			if (log.isDebugEnabled()) {
-				log.debug("Closing Websocket");
-			}
-			onInboundComplete();
-		}
 	}
 
 	@Override

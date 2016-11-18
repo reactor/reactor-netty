@@ -34,12 +34,24 @@ final class OutboundCloseSubscriber implements Subscriber<Void> {
 
 	@Override
 	public void onComplete() {
-		parent.onOuboundComplete();
+		if(parent.channel.eventLoop().inEventLoop()){
+			parent.onOuboundComplete();
+		}
+		else {
+			parent.channel.eventLoop()
+			              .execute(parent::onOuboundComplete);
+		}
 	}
 
 	@Override
 	public void onError(Throwable t) {
-		parent.onOutboundError(t);
+		if(parent.channel.eventLoop().inEventLoop()){
+			parent.onOutboundError(t);
+		}
+		else {
+			parent.channel.eventLoop()
+			              .execute(() -> parent.onOutboundError(t));
+		}
 	}
 
 	@Override

@@ -19,7 +19,6 @@ package reactor.ipc.netty.channel;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
@@ -30,7 +29,6 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
-import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.ChannelFutureMono;
@@ -126,14 +124,8 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 	public final void dispose() {
 		if (f.channel()
 		     .isOpen()) {
-			try {
 				f.channel()
-				 .close()
-				 .sync();
-			}
-			catch (InterruptedException e) {
-				log.error("error while disposing the channel", e);
-			}
+				 .close();
 		}
 		else if (!f.isDone()) {
 			f.cancel(true);

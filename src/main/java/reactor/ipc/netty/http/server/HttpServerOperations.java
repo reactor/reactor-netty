@@ -262,37 +262,32 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	protected void onOuboundComplete() {
 		if (channel().isOpen()) {
 			if (log.isDebugEnabled()) {
-				log.debug("Last Http Response packet");
+				log.debug("Last HTTP response frame");
 			}
 			ChannelFuture f;
 			if (!isWebsocket()) {
 				if (markHeadersAsSent()) {
 					channel().write(nettyResponse);
 				}
-				if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
-					f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-					if (!isKeepAlive()) {
-						//fast path vs unregisterInterest
-						f.addListener(ChannelFutureListener.CLOSE);
-					}
-					else {
-						f.addListener(s -> {
-							if (!s.isSuccess()) {
-								log.error("failed flushing last packet", s.cause());
-							}
-							unregisterInterest();
-						});
-					}
-					return;
+				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+				if (!isKeepAlive()) {
+					//fast path vs unregisterInterest
+					f.addListener(ChannelFutureListener.CLOSE);
 				}
-				channel().close();
-				unregisterInterest();
+				else {
+					f.addListener(s -> {
+						if (!s.isSuccess()) {
+							log.error("Failed flushing last frame", s.cause());
+						}
+						unregisterInterest();
+					});
+				}
 			}
 			else {
 				f = channel().writeAndFlush(new CloseWebSocketFrame());
 				f.addListener(s -> {
 					if (!s.isSuccess()) {
-						log.error("failed flushing last packet", s.cause());
+						log.error("Failed flushing last frame", s.cause());
 					}
 					unregisterInterest();
 				});
@@ -310,24 +305,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			return;
 		}
-		log.error("Error processing connection. Closing the channel.", err);
+		log.error("Error processing response.", err);
 		if (markHeadersAsSent()) {
 
-			ChannelFuture f;
-			if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
-				channel().write(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-						HttpResponseStatus.INTERNAL_SERVER_ERROR));
-				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-			}
-			else {
-				f = channel().writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-						HttpResponseStatus.INTERNAL_SERVER_ERROR));
-			}
-			f.addListener(r -> unregisterInterest());
+			channel().write(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+					HttpResponseStatus.INTERNAL_SERVER_ERROR));
 		}
-		else {
-			unregisterInterest();
-		}
+
+		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(r -> unregisterInterest());
 	}
 
 	/**
@@ -472,9 +457,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
 			             .compareAndSet(this, ops)) {
 				return ChannelFutureMono.from(ops.handshakerResult)
-				                        .then(() ->
-						MonoSource
-						.wrap(websocketHandler.apply(ops, ops)));
+				                        .then(() -> MonoSource.wrap(websocketHandler.apply(
+						                        ops,
+						                        ops)));
 			}
 		}
 		else {
@@ -482,9 +467,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
 	}
-	static final Logger           log          = Loggers.getLogger(HttpServerOperations.class);
-	final static AsciiString      EVENT_STREAM =
-			new AsciiString("text/event-stream");
+
+	static final Logger           log          =
+			Loggers.getLogger(HttpServerOperations.class);
+	final static AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
 	final static FullHttpResponse CONTINUE     =
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.CONTINUE,

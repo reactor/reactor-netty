@@ -88,7 +88,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler {
 		operations(ctx).onInboundError(err);
 	}
 
-	final ChannelOperations<?, ?> operations(ChannelHandlerContext ctx) {
+	static ChannelOperations<?, ?> operations(ChannelHandlerContext ctx) {
 		return ctx.channel()
 		          .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
 		          .get();
