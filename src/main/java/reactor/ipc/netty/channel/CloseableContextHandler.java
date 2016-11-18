@@ -92,6 +92,10 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 	@Override
 	public final void operationComplete(ChannelFuture f) throws Exception {
 		if (!f.isSuccess()) {
+			if(f.isCancelled()){
+				log.debug("cancelled {}", f.channel().toString());
+				return;
+			}
 			if (f.cause() != null) {
 				sink.error(f.cause());
 			}

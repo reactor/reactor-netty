@@ -116,6 +116,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
 		if (!future.isSuccess()) {
+			if(future.isCancelled()){
+				log.debug("cancelled {}", future.toString());
+				return;
+			}
 			if (future.cause() != null) {
 				sink.error(future.cause());
 			}
@@ -141,13 +145,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			}
 			op.onChannelActive(c.pipeline()
 			                    .context(NettyHandlerNames.ReactiveBridge));
-		}
-		ChannelHandlerContext ctx = c.pipeline()
-		                             .context(c.attr(LAST_STATIC_TAIL_HANDLER)
-		                                       .get());
-		if (ctx != null) {
-			ctx.fireChannelRegistered();
-			ctx.fireChannelActive();
 		}
 	}
 

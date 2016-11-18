@@ -79,8 +79,8 @@ final class HttpServerWSOperations extends HttpServerOperations
 	@Override
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame) {
-			handshaker.close(channel(), ((CloseWebSocketFrame) frame).retain());
-			onChannelComplete();
+			ctx.writeAndFlush(((CloseWebSocketFrame) frame).retain());
+			onInboundComplete();
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {

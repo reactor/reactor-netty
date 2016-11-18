@@ -24,11 +24,13 @@ import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
 import reactor.core.Loopback;
 import reactor.core.publisher.Operators;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
  */
-final class FlushOnTerminateSubscriber
+final class OutboundFlushLastSubscriber
 		implements Subscriber<Object>, ChannelFutureListener, Loopback {
 
 	final ChannelPromise          promise;
@@ -37,7 +39,7 @@ final class FlushOnTerminateSubscriber
 	ChannelFuture lastWrite;
 	Subscription  subscription;
 
-	public FlushOnTerminateSubscriber(ChannelOperations<?, ?> parent,
+	public OutboundFlushLastSubscriber(ChannelOperations<?, ?> parent,
 			ChannelPromise promise) {
 		this.parent = parent;
 		this.promise = promise;
@@ -70,7 +72,7 @@ final class FlushOnTerminateSubscriber
 		if (subscription == null) {
 			throw new IllegalStateException("already flushed", t);
 		}
-		ChannelOperations.log.error("Write error", t);
+		log.error("Write error", t);
 		subscription = null;
 		parent.channel
 		   .closeFuture()
@@ -91,10 +93,10 @@ final class FlushOnTerminateSubscriber
 		try {
 			ChannelFuture cf = parent.sendNext(w);
 			lastWrite = cf;
-			if (cf != null && ChannelOperations.log.isDebugEnabled()) {
+			if (cf != null && log.isDebugEnabled()) {
 				cf.addListener((ChannelFutureListener) future -> {
 					if (!future.isSuccess()) {
-						ChannelOperations.log.error("write error :" + w, future.cause());
+						log.error("write error :" + w, future.cause());
 						if (ByteBuf.class.isAssignableFrom(w.getClass())) {
 							((ByteBuf) w).resetReaderIndex();
 						}
@@ -103,7 +105,7 @@ final class FlushOnTerminateSubscriber
 			}
 		}
 		catch (Throwable t) {
-			ChannelOperations.log.error("Write error for " + w, t);
+			log.error("Write error for " + w, t);
 			onError(t);
 		}
 	}
@@ -129,10 +131,12 @@ final class FlushOnTerminateSubscriber
 		                                  .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
 		                                  .get()
 		                                  .bufferedInbound() == 0L) {
-			if (ChannelOperations.log.isDebugEnabled()) {
-				ChannelOperations.log.debug("Cancel from remotely closed connection");
+			if (log.isDebugEnabled()) {
+				log.debug("Cancel from remotely closed connection");
 			}
 			subscription.cancel();
 		}
 	}
+
+	static final Logger log = Loggers.getLogger(OutboundFlushLastSubscriber.class);
 }

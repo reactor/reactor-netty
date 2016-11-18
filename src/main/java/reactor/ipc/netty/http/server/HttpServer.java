@@ -146,7 +146,7 @@ public final class HttpServer
 					if (ops.markHeadersAsSent()) {
 						//404
 						ops.channel()
-						   .writeAndFlush(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+						   .write(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
 								   HttpResponseStatus.NOT_FOUND));
 					}
 					return Flux.empty();

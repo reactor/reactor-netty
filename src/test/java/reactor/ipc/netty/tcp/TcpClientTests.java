@@ -189,7 +189,7 @@ public class TcpClientTests {
 	public void closingPromiseIsFulfilled() throws InterruptedException {
 		TcpClient client =
 				TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
-				                             );
+				                             .disablePool());
 
 		client.newHandler((in, out) -> Mono.empty())
 		      .block()

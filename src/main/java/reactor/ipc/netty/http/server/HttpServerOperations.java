@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -25,8 +26,8 @@ import java.util.function.Function;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -46,6 +47,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -164,15 +166,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return this;
 	}
 
-	@Override
-	protected void onTerminatedWriter(ChannelFuture last,
-			ChannelPromise promise,
-			Throwable exception) {
-		super.onTerminatedWriter(channel().write(Unpooled.EMPTY_BUFFER),
-				promise,
-				exception);
-	}
-
 	/**
 	 * Define the response HTTP header for the given key
 	 *
@@ -231,6 +224,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			nettyRequest = (HttpRequest) msg;
 			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
 
+			if (nettyRequest.decoderResult()
+			                .isFailure()) {
+				onOutboundError(nettyRequest.decoderResult()
+				                            .cause());
+				return;
+			}
+
 			if (isWebsocket()) {
 				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
 				channel().pipeline()
@@ -239,8 +239,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 						         agg);
 			}
 
-			handler().apply(this, this)
-			         .subscribe(new HttpServerCloseSubscriber(this));
+			applyHandler();
 
 			if (!(msg instanceof FullHttpRequest)) {
 				return;
@@ -251,11 +250,83 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
-				onChannelComplete();
+				onInboundComplete();
 			}
 		}
 		else {
 			super.onInboundNext(ctx, msg);
+		}
+	}
+
+	@Override
+	protected void onOuboundComplete() {
+		if (channel().isOpen()) {
+			if (log.isDebugEnabled()) {
+				log.debug("Last Http Response packet");
+			}
+			ChannelFuture f;
+			if (!isWebsocket()) {
+				if (markHeadersAsSent()) {
+					channel().write(nettyResponse);
+				}
+				if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
+					f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+					if (!isKeepAlive()) {
+						//fast path vs unregisterInterest
+						f.addListener(ChannelFutureListener.CLOSE);
+					}
+					else {
+						f.addListener(s -> {
+							if (!s.isSuccess()) {
+								log.error("failed flushing last packet", s.cause());
+							}
+							unregisterInterest();
+						});
+					}
+					return;
+				}
+				channel().close();
+				unregisterInterest();
+			}
+			else {
+				f = channel().writeAndFlush(new CloseWebSocketFrame());
+				f.addListener(s -> {
+					if (!s.isSuccess()) {
+						log.error("failed flushing last packet", s.cause());
+					}
+					unregisterInterest();
+				});
+			}
+		}
+	}
+
+	@Override
+	protected void onOutboundError(Throwable err) {
+		if (err != null && err instanceof IOException && err.getMessage() != null && err.getMessage()
+		                                                                                .contains(
+				                                                                                "Broken " + "pipe")) {
+			if (log.isDebugEnabled()) {
+				log.debug("Connection closed remotely", err);
+			}
+			return;
+		}
+		log.error("Error processing connection. Closing the channel.", err);
+		if (markHeadersAsSent()) {
+
+			ChannelFuture f;
+			if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
+				channel().write(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+						HttpResponseStatus.INTERNAL_SERVER_ERROR));
+				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+			}
+			else {
+				f = channel().writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+						HttpResponseStatus.INTERNAL_SERVER_ERROR));
+			}
+			f.addListener(r -> unregisterInterest());
+		}
+		else {
+			unregisterInterest();
 		}
 	}
 

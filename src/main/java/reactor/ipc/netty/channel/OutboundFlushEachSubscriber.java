@@ -25,11 +25,13 @@ import reactor.core.Loopback;
 import reactor.core.Receiver;
 import reactor.core.Trackable;
 import reactor.core.publisher.Operators;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
  */
-final class FlushOnEachSubscriber
+final class OutboundFlushEachSubscriber
 		implements Subscriber<Object>, ChannelFutureListener, Loopback, Trackable,
 		           Receiver {
 
@@ -39,7 +41,7 @@ final class FlushOnEachSubscriber
 
 	volatile Subscription subscription;
 
-	public FlushOnEachSubscriber(ChannelOperations<?, ?> parent,
+	public OutboundFlushEachSubscriber(ChannelOperations<?, ?> parent,
 			ChannelPromise promise) {
 		this.parent = parent;
 		this.promise = promise;
@@ -73,8 +75,8 @@ final class FlushOnEachSubscriber
 			throw new IllegalStateException("already flushed");
 		}
 		subscription = null;
-		if (ChannelOperations.log.isDebugEnabled()) {
-			ChannelOperations.log.debug("Flush Connection");
+		if (log.isDebugEnabled()) {
+			log.debug("Flush Connection");
 		}
 		parent.channel
 		   .closeFuture()
@@ -93,7 +95,7 @@ final class FlushOnEachSubscriber
 		if (subscription == null) {
 			throw new IllegalStateException("already flushed", t);
 		}
-		ChannelOperations.log.error("Write error", t);
+		log.error("Write error", t);
 		subscription = null;
 		parent.channel
 		   .closeFuture()
@@ -119,7 +121,7 @@ final class FlushOnEachSubscriber
 			parent.channel.flush();
 		}
 		catch (Throwable t) {
-			ChannelOperations.log.error("Write error for " + w, t);
+			log.error("Write error for " + w, t);
 			onError(t);
 			throw Exceptions.failWithCancel();
 		}
@@ -146,8 +148,8 @@ final class FlushOnEachSubscriber
 		                                  .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
 		                                  .get()
 		                                  .bufferedInbound() == 0L) {
-			if (ChannelOperations.log.isDebugEnabled()) {
-				ChannelOperations.log.debug("Cancel from remotely closed connection");
+			if (log.isDebugEnabled()) {
+				log.debug("Cancel from remotely closed connection");
 			}
 			subscription.cancel();
 		}
@@ -164,15 +166,17 @@ final class FlushOnEachSubscriber
 		public void operationComplete(ChannelFuture future) throws Exception {
 			if (!future.isSuccess()) {
 				promise.tryFailure(future.cause());
-				if (ChannelOperations.log.isDebugEnabled()) {
-					ChannelOperations.log.debug("Write error", future.cause());
+				if (log.isDebugEnabled()) {
+					log.debug("Write error", future.cause());
 				}
 				return;
 			}
-			Subscription subscription = FlushOnEachSubscriber.this.subscription;
+			Subscription subscription = OutboundFlushEachSubscriber.this.subscription;
 			if (subscription != null) {
 				subscription.request(1L);
 			}
 		}
 	}
+	
+	static final Logger log = Loggers.getLogger(OutboundFlushEachSubscriber.class);
 }

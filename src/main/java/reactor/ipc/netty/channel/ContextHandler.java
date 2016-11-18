@@ -167,10 +167,13 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 		doPipeline(ch.pipeline());
 
-		ch.attr(LAST_STATIC_TAIL_HANDLER)
-		  .set(ch.pipeline()
-		         .lastContext()
-		         .name());
+		ChannelHandlerContext lastCtx = ch.pipeline()
+		                                  .lastContext();
+		if (lastCtx != null) {
+			ch.attr(LAST_STATIC_TAIL_HANDLER)
+			  .set(lastCtx.name());
+		}
+
 		try {
 			ChannelOperations<?, ?> op = channelOpSelector.apply(ch, this);
 
@@ -259,17 +262,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	public abstract void setFuture(Future<?> future);
 
 	/**
-	 * Cleanly terminate a channel according to the current context handler type.
-	 * Server might keep alive and recycle connections, pooled client will release and
-	 * classic client will close.
-	 *
-	 * @param channel the channel to unregister
-	 */
-	public void terminateChannel(Channel channel) {
-		dispose();
-	}
-
-	/**
 	 * @param channel
 	 */
 	protected void doStarted(Channel channel) {
@@ -289,6 +281,17 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	protected abstract void doPipeline(ChannelPipeline pipeline);
 
 	/**
+	 * Cleanly terminate a channel according to the current context handler type.
+	 * Server might keep alive and recycle connections, pooled client will release and
+	 * classic client will close.
+	 *
+	 * @param channel the channel to unregister
+	 */
+	protected void terminateChannel(Channel channel) {
+		dispose();
+	}
+
+	/**
 	 * clean all handler until marked tail
 	 *
 	 * @param channel the target channel to cleanup
@@ -298,8 +301,9 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		ChannelPipeline pipeline = channel.pipeline();
 		String lastHandler = channel.attr(LAST_STATIC_TAIL_HANDLER).get();
 
-		while((ctx = pipeline.lastContext()) != null){
-			if(ctx.name().equals(lastHandler)){
+		while((ctx = pipeline.lastContext()) != null) {
+			if (lastHandler != null && ctx.name()
+			                              .equals(lastHandler)){
 				break;
 			}
 			pipeline.removeLast();

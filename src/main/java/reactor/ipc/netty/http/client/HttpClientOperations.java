@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.client;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -24,12 +25,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -104,6 +103,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.nettyRequest =
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.headers = nettyRequest.headers();
+		registerInterest();
 	}
 
 	@Override
@@ -160,6 +160,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public void dispose() {
+		unregisterInterest();
 		cancel();
 	}
 
@@ -224,13 +225,46 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
 
-		handler().apply(this, this)
-		         .subscribe(new HttpClientCloseSubscriber(this, ctx));
+		applyHandler();
+	}
+
+	@Override
+	protected void onOuboundComplete() {
+		if (channel().isOpen()) {
+			if (!isWebsocket()) {
+				if (markHeadersAsSent()) {
+					channel().write(nettyRequest);
+				}
+				if(HttpUtil.isTransferEncodingChunked(nettyRequest)) {
+					channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+					         .addListener(r -> unregisterInterest());
+					return;
+				}
+			}
+
+			unregisterInterest();
+		}
+	}
+
+	@Override
+	protected void onOutboundError(Throwable err) {
+		if (err == null) {
+			throw Exceptions.argumentIsNullException();
+		}
+		if (err instanceof IOException && err.getMessage() != null && err.getMessage()
+		                                                                 .contains(
+				                                                                 "Broken pipe")) {
+			if (log.isDebugEnabled()) {
+				log.debug("Connection closed remotely", err);
+			}
+			return;
+		}
+		unregisterInterest();
 	}
 
 	@Override
 	public Mono<Void> onClose() {
-		return ChannelFutureMono.from(channel().closeFuture());
+		return parentContext().onClose();
 	}
 
 	@Override
@@ -238,6 +272,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (msg instanceof HttpResponse) {
 			HttpResponse response = (HttpResponse) msg;
 			setNettyResponse(response);
+			if (response.decoderResult()
+			            .isFailure()) {
+				onOutboundError(response.decoderResult()
+				                        .cause());
+				return;
+			}
 
 			if (log.isDebugEnabled()) {
 				log.debug("Received response (auto-read:{}) : {}",
@@ -344,20 +384,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		throw new IllegalStateException(version.protocolName() + " not supported");
 	}
 
-	@Override
-	protected void onTerminatedWriter(ChannelFuture last,
-			ChannelPromise promise,
-			Throwable exception) {
-		super.onTerminatedWriter(channel().write(isWebsocket() ? Unpooled.EMPTY_BUFFER :
-				LastHttpContent.EMPTY_LAST_CONTENT), promise, exception);
-	}
-
 	protected void postRead(Object msg) {
 		if (msg instanceof LastHttpContent) {
 			if (log.isDebugEnabled()) {
 				log.debug("Read last http packet");
 			}
-			onChannelComplete();
+			onInboundComplete();
 		}
 	}
 

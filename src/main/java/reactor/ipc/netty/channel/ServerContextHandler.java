@@ -88,6 +88,4 @@ final class ServerContextHandler
 		}
 
 	}
-
-	static final Cancellation EMPTY = () -> {};
 }

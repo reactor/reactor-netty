@@ -15,48 +15,31 @@
  */
 package reactor.ipc.netty.channel;
 
-import java.io.IOException;
-
-import io.netty.channel.ChannelHandlerContext;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.util.Logger;
-import reactor.util.Loggers;
+import reactor.core.publisher.Operators;
 
 /**
  * @author Stephane Maldini
  */
-final class CloseSubscriber implements Subscriber<Void> {
+final class OutboundCloseSubscriber implements Subscriber<Void> {
 
-	final ChannelHandlerContext   ctx;
 	final ChannelOperations<?, ?> parent;
 
-	public CloseSubscriber(ChannelOperations<?, ?> ops, ChannelHandlerContext ctx) {
-		this.ctx = ctx;
+	Subscription subscription;
+
+	public OutboundCloseSubscriber(ChannelOperations<?, ?> ops) {
 		this.parent = ops;
 	}
 
 	@Override
 	public void onComplete() {
-		if (log.isDebugEnabled()) {
-			log.debug("Closing connection");
-		}
-		parent.cancel();
+		parent.onOuboundComplete();
 	}
 
 	@Override
 	public void onError(Throwable t) {
-		if (t instanceof IOException && t.getMessage()
-		                                 .contains("Broken pipe")) {
-			if (log.isDebugEnabled()) {
-				log.debug("Connection closed remotely", t);
-			}
-			parent.cancel();
-			return;
-		}
-
-		log.error("Error processing connection. Closing the channel.", t);
-		parent.cancel();
+		parent.onOutboundError(t);
 	}
 
 	@Override
@@ -65,8 +48,12 @@ final class CloseSubscriber implements Subscriber<Void> {
 
 	@Override
 	public void onSubscribe(Subscription s) {
-		s.request(Long.MAX_VALUE);
+		if (Operators.validate(subscription, s)) {
+			subscription = s;
+			s.request(Long.MAX_VALUE);
+			if(!parent.context.getClass().equals(ServerContextHandler.class)){
+				parent.channel.read();
+			}
+		}
 	}
-
-	static final Logger log = Loggers.getLogger(CloseSubscriber.class);
 }
