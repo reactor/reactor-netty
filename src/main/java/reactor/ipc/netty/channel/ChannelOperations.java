@@ -272,7 +272,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	/**
 	 * React on inbound completion (last packet)
 	 */
-	public void onInboundComplete() {
+	protected void onInboundComplete() {
 		if (isCancelled() || inboundDone) {
 			return;
 		}
@@ -281,7 +281,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (receiverCaughtUp && receiver != null) {
 			receiver.onComplete();
 			cancelReceiver();
-			context.terminateChannel(channel);
 		}
 		else {
 			drainReceiver();
@@ -290,11 +289,19 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
+	 * React on inbound close (last packet)
+	 */
+	protected void onChannelInactive() {
+		onInboundComplete();
+		context.terminateChannel(channel);
+	}
+
+	/**
 	 * React on inbound error
 	 *
 	 * @param err the {@link Throwable} cause
 	 */
-	public void onInboundError(Throwable err) {
+	protected void onInboundError(Throwable err) {
 		if (err == null) {
 			err = new NullPointerException("error is null");
 		}
@@ -308,8 +315,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		inboundDone = true;
 		Subscriber<?> receiver = this.receiver;
 		if (receiverCaughtUp && receiver != null) {
-			receiver.onError(err);
 			cancelReceiver();
+			receiver.onError(err);
 		}
 		else {
 			this.error = err;
@@ -324,7 +331,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param ctx the context
 	 * @param msg the read payload
 	 */
-	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
+	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg == null) {
 			onInboundError(new NullPointerException("msg is null"));
 			return;
@@ -621,6 +628,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@SuppressWarnings("unchecked")
 	final protected void applyHandler() {
 		registerInterest();
+		if(log.isDebugEnabled()){
+			log.debug("[{}] handler is being applied: {}", formatName(), handler);
+		}
 		handler.apply((INBOUND) this, (OUTBOUND) this)
 		       .subscribe(new OutboundCloseSubscriber(this));
 	}
@@ -636,6 +646,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			final Subscriber<? super Void> postWriter) {
 
 		registerInterest();
+		if(log.isDebugEnabled()){
+			log.debug("[{}] New Outbound Sender: {}", formatName(), encodedWriter);
+		}
 
 		final ChannelFutureListener postWriteListener = future -> {
 			postWriter.onSubscribe(Operators.emptySubscription());
@@ -742,7 +755,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 			if (d && empty) {
 				cancelReceiver();
-				context.terminateChannel(channel);
 				if (q != null) {
 					q.clear();
 				}
@@ -779,7 +791,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 			if (inboundDone && (q == null || q.isEmpty())) {
 				cancelReceiver();
-				context.terminateChannel(channel);
 				if (q != null) {
 					q.clear();
 				}

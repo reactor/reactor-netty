@@ -44,7 +44,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		try {
-			operations(ctx).onInboundComplete();
+			operations(ctx).onChannelInactive();
 		}
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);

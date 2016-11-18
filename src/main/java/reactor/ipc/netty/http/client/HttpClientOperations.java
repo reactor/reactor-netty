@@ -26,7 +26,6 @@ import java.util.Set;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -292,13 +291,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			else if (log.isDebugEnabled()) {
 				log.debug("Failed status check on response packet {} {}", channel(), msg);
 			}
-			postRead(msg);
+			postReceive(msg);
 			return;
 		}
 		if (LastHttpContent.EMPTY_LAST_CONTENT != msg) {
 			super.onInboundNext(ctx, msg);
 		}
-		postRead(msg);
+		postReceive(msg);
 	}
 
 	@Override
@@ -384,12 +383,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		throw new IllegalStateException(version.protocolName() + " not supported");
 	}
 
-	protected void postRead(Object msg) {
+	protected void postReceive(Object msg) {
 		if (msg instanceof LastHttpContent) {
 			if (log.isDebugEnabled()) {
-				log.debug("Read last http packet");
+				log.debug("Received last HTTP packet");
 			}
-			onInboundComplete();
+			onChannelInactive();
 		}
 	}
 
