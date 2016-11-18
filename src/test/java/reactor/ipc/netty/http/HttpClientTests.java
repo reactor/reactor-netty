@@ -34,6 +34,11 @@ public class HttpClientTests {
 		                    .then(r -> Mono.just(r.status().code()))
 		                    .log()
 		                    .block();
+		res = HttpClient.create("google.com")
+		                    .get("/search", c -> c.followRedirect().sendHeaders())
+		                    .then(r -> Mono.just(r.status().code()))
+		                    .log()
+		                    .block();
 
 		if (res != 200) {
 			throw new IllegalStateException("test status failed with "+res);
