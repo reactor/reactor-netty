@@ -91,7 +91,7 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 	public final void operationComplete(ChannelFuture f) throws Exception {
 		if (!f.isSuccess()) {
 			if(f.isCancelled()){
-				log.debug("cancelled {}", f.channel().toString());
+				log.debug("Cancelled {}", f.channel().toString());
 				return;
 			}
 			if (f.cause() != null) {
@@ -103,7 +103,11 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 			}
 		}
 		else {
-			log.debug("started {}", f.channel().toString());
+			if(log.isDebugEnabled()) {
+				log.debug("Connected new channel {}",
+						f.channel()
+						 .toString());
+			}
 			doStarted(f.channel());
 		}
 	}
@@ -114,6 +118,9 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 		Objects.requireNonNull(future, "future");
 		if (this.f != null) {
 			future.cancel(true);
+		}
+		if(log.isDebugEnabled()){
+			log.debug("Connecting new channel: {}", channel().toString());
 		}
 		this.f = (ChannelFuture) future;
 		f.addListener(this);

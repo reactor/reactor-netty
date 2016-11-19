@@ -22,7 +22,6 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.DatagramChannel;
@@ -108,6 +107,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		if (this.f != null) {
 			future.cancel(true);
 		}
+		if (log.isDebugEnabled()) {
+			log.debug("Acquiring existing channel from pool: {}", pool.toString());
+		}
 		this.f = (Future<CHANNEL>) future;
 		f.addListener(this);
 		sink.setCancellation(this);
@@ -129,6 +131,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			return;
 		}
 		CHANNEL c = future.get();
+		if (log.isDebugEnabled()) {
+			log.debug("Acquired existing channel: {}", c.toString());
+		}
+
 		if (c.pipeline()
 		     .get(NettyHandlerNames.ReactiveBridge) == null) {
 			initChannel(c);
@@ -151,6 +157,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	public void dispose() {
 		if (!f.isDone()) {
+			if (log.isDebugEnabled()) {
+				log.debug("Releasing pending channel acquisition: {}", f.toString());
+			}
 			f.cancel(true);
 			return;
 		}
@@ -161,6 +170,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				return;
 			}
 
+			if (log.isDebugEnabled()) {
+				log.debug("Releasing channel: {}", c.toString());
+			}
+
 			cleanHandlers(c);
 
 			pool.release(c);
@@ -168,7 +181,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			onReleaseEmitter.onComplete();
 		}
 		catch (Exception e) {
-			log.error("failed releasing channel", e);
+			log.error("Failed releasing channel", e);
 			onReleaseEmitter.onError(e);
 		}
 	}

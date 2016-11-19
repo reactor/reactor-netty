@@ -700,12 +700,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 					"symmetrical, remaining: "+interest);
 		}
 		if (interest == 0) {
+			context.terminateChannel(channel);
 			if (log.isDebugEnabled()) {
 				log.debug("[{}] Successfully unregistered interest for channel {}",
 						formatName(),
 						channel().toString());
 			}
-			context.terminateChannel(channel);
 		}
 		else if (log.isDebugEnabled()) {
 			log.debug("[{}] Did not terminate channel as there is still registered " + "interest " + " : [{}] {}",
@@ -722,8 +722,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			if (c != CANCELLED) {
 				if (c != null) {
 					c.dispose();
+					return true;
 				}
-				return true;
 			}
 		}
 		return false;

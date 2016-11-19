@@ -76,7 +76,7 @@ public final class HttpResources {
 				return pool;
 			}
 			if (log.isDebugEnabled()) {
-				log.debug("new http client pool for {}", remote);
+				log.debug("Creating new HTTP client pool for {}", remote);
 			}
 			//pool = new SimpleChannelPool(bootstrap);
 			Bootstrap b = bootstrap.get();
@@ -85,17 +85,17 @@ public final class HttpResources {
 					new ChannelPoolHandler() {
 						@Override
 						public void channelReleased(Channel ch) throws Exception {
-							log.debug("released {}", ch.toString());
+							log.debug("Released: {}", ch.toString());
 						}
 
 						@Override
 						public void channelAcquired(Channel ch) throws Exception {
-							log.debug("acquired {}", ch.toString());
+							log.debug("Acquired: {}", ch.toString());
 						}
 
 						@Override
 						public void channelCreated(Channel ch) throws Exception {
-							log.debug("created {}", ch.toString());
+							log.debug("Created: {}", ch.toString());
 						}
 					},1);
 			if (channelPools.putIfAbsent(remote, pool) == null) {
