@@ -25,6 +25,8 @@ import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.logging.LoggingHandler;
@@ -145,9 +147,11 @@ public final class HttpServer
 				if (afterHandlers == null) {
 					if (ops.markHeadersAsSent()) {
 						//404
+						HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+								HttpResponseStatus.NOT_FOUND);
+						response.headers().add(HttpHeaderNames.CONTENT_LENGTH, 0L);
 						ops.channel()
-						   .write(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-								   HttpResponseStatus.NOT_FOUND));
+						   .write(response);
 					}
 					return Flux.empty();
 

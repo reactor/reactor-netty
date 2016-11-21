@@ -129,7 +129,7 @@ public interface HttpServerRoutes extends
 				return resp.sendFile(p.toFile());
 			}
 			else {
-				return Mono.error(Exceptions.failWithCancel());
+				return Mono.error(new Exception("File not found or is not readable: "+p));
 			}
 		});
 	}

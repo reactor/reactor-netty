@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.server;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -100,7 +101,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyResponse =
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
-		responseHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+		responseHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
+		//.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
+		.add(HttpHeaderNames.DATE, new Date());
+
 	}
 
 	@Override
@@ -305,13 +309,18 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			return;
 		}
-		log.error("Error processing response.", err);
 		if (markHeadersAsSent()) {
+			log.error("Error starting response. Replying error status", err);
 
-			channel().write(new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-					HttpResponseStatus.INTERNAL_SERVER_ERROR));
+			HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+					HttpResponseStatus.INTERNAL_SERVER_ERROR);
+			response.headers()
+			        .add(HttpHeaderNames.CONTENT_LENGTH, 0L);
+			channel().writeAndFlush(response)
+			         .addListener(r -> unregisterInterest());
+			return;
 		}
-
+		log.error("Error processing response. Sending last HTTP frame", err);
 		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(r -> unregisterInterest());
 	}
 
