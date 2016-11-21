@@ -27,7 +27,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
@@ -156,83 +155,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	@Override
 	public final void initChannel(final CHANNEL ch) throws Exception {
-		if (options.onChannelInit() != null) {
-			if (options.onChannelInit()
-			           .test(ch)) {
-				if (log.isDebugEnabled()) {
-					log.debug("DROPPED by onChannelInit predicate {}", ch);
-				}
-				doDropped(ch);
-				return;
-			}
-		}
-
-		doPipeline(ch.pipeline());
-
-		ChannelHandlerContext lastCtx = ch.pipeline()
-		                                  .lastContext();
-		if (lastCtx != null) {
-			ch.attr(LAST_STATIC_TAIL_HANDLER)
-			  .set(lastCtx.name());
-		}
-
-		try {
-			ChannelOperations<?, ?> op = channelOpSelector.apply(ch, this);
-
-			ch.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-			  .set(op);
-
-			ch.pipeline()
-			  .addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
-
-			if(!ch.isOpen()){
-				op.onInboundError(ABORTED);
-				return;
-			}
-			if (!ch.isActive() || ch.pipeline()
-			                        .context(NettyHandlerNames.SslHandler) != null) {
-				if (log.isDebugEnabled()) {
-					log.debug("Delayed bridging, adding onChannelActive handler");
-				}
-				ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
-					@Override
-					public void channelActive(ChannelHandlerContext ctx)
-							throws Exception {
-						ctx.pipeline().remove(this);
-						op.onChannelActive(ch.pipeline()
-						                     .context(NettyHandlerNames.ReactiveBridge));
-						ctx.fireChannelActive();
-					}
-
-					@Override
-					public void channelInactive(ChannelHandlerContext ctx)
-							throws Exception {
-						if(ctx.pipeline().context(this) != null) {
-							ctx.pipeline()
-							   .remove(this);
-							op.onInboundError(ABORTED);
-							ctx.fireChannelInactive();
-						}
-					}
-				});
-			}
-			else {
-				op.onChannelActive(ch.pipeline()
-				                     .context(NettyHandlerNames.ReactiveBridge));
-			}
-		}
-		catch (Exception t) {
-			if (log.isErrorEnabled()) {
-				log.error("Error while binding a channelOperation with: "+ ch.toString
-						(), t);
-			}
-		}
-		finally {
-			if (null != options.afterChannelInit()) {
-				options.afterChannelInit()
-				       .accept(ch);
-			}
-		}
+		ch.pipeline()
+		  .addLast(NettyHandlerNames.BridgeSetup, new BridgeSetupHandler<>(this, ch));
 	}
 
 	/**
@@ -303,16 +227,17 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	protected static void cleanHandlers(Channel channel){
 		ChannelHandlerContext ctx;
 		ChannelPipeline pipeline = channel.pipeline();
-		String lastHandler = channel.attr(LAST_STATIC_TAIL_HANDLER).get();
 
 		while((ctx = pipeline.lastContext()) != null) {
-			if (lastHandler != null && ctx.name()
-			                              .equals(lastHandler)){
+			if (ctx.name()
+			       .equals(NettyHandlerNames.BridgeSetup)) {
 				break;
 			}
 			pipeline.removeLast();
 		}
-		pipeline.addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
+		pipeline.addAfter(NettyHandlerNames.BridgeSetup,
+				NettyHandlerNames.ReactiveBridge,
+				BRIDGE);
 	}
 
 	static final IllegalStateException ABORTED =
@@ -329,6 +254,94 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			Loggers.getLogger(ContextHandler.class);
 	static final ChannelHandler       BRIDGE                   =
 			new ChannelOperationsHandler();
-	static final AttributeKey<String> LAST_STATIC_TAIL_HANDLER =
-			AttributeKey.valueOf("staticTailHandler");
+
+	static final class BridgeSetupHandler<CHANNEL extends Channel>
+			extends ChannelInboundHandlerAdapter {
+
+		final ContextHandler<CHANNEL> parent;
+		final CHANNEL                 ch;
+
+		boolean active;
+
+		BridgeSetupHandler(ContextHandler<CHANNEL> parent, CHANNEL ch) {
+			this.parent = parent;
+			this.ch = ch;
+		}
+
+		@Override
+		public void channelActive(ChannelHandlerContext ctx) throws Exception {
+			if (!active) {
+				active = true;
+
+				if (parent.options.onChannelInit() != null) {
+					if (parent.options.onChannelInit()
+					                  .test(ch)) {
+						if (log.isDebugEnabled()) {
+							log.debug("DROPPED by onChannelInit predicate {}", ch);
+						}
+						parent.doDropped(ch);
+						return;
+					}
+				}
+
+				parent.doPipeline(ch.pipeline());
+
+				try {
+					ChannelOperations<?, ?> op =
+							parent.channelOpSelector.apply(ch, parent);
+
+					ch.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
+					  .set(op);
+
+
+					ch.pipeline()
+					  .addAfter(NettyHandlerNames.BridgeSetup,
+							  NettyHandlerNames.ReactiveBridge,
+							  BRIDGE);
+
+					op.onChannelActive(ctx);
+				}
+				catch (Exception t) {
+					if (log.isErrorEnabled()) {
+						log.error("Error while binding a channelOperation with: " + ch.toString(),
+								t);
+					}
+				}
+				finally {
+					if (null != parent.options.afterChannelInit()) {
+						parent.options.afterChannelInit()
+						              .accept(ch);
+					}
+				}
+			}
+			ctx.fireChannelActive();
+		}
+
+		@Override
+		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+			if (!active) {
+				ChannelOperations<?, ?> op = parent.channelOpSelector.apply(ch, parent);
+
+				op.onInboundError(ABORTED);
+			}
+			ctx.fireChannelInactive();
+		}
+
+		@Override
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+				throws Exception {
+			if (!active) {
+				if (log.isErrorEnabled()) {
+					log.error("Error while binding a channelOperation with: " + ctx.channel()
+					                                                               .toString(),
+							cause);
+				}
+
+				ChannelOperations<?, ?> op = parent.channelOpSelector.apply(ch, parent);
+
+				op.onInboundError(ABORTED);
+			}
+			ctx.fireExceptionCaught(cause);
+		}
+	}
 }

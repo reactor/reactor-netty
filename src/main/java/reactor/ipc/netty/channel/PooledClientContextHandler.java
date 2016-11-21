@@ -135,17 +135,21 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		CHANNEL c = future.get();
 
 		if (c.pipeline()
-		     .get(NettyHandlerNames.ReactiveBridge) == null) {
+		     .get(NettyHandlerNames.BridgeSetup) == null) {
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
 			if(c.eventLoop().inEventLoop()){
 				initChannel(c);
+				c.pipeline().fireChannelRegistered();
+				c.pipeline().fireChannelActive();
 			}
 			else{
 				c.eventLoop().execute(() -> {
 					try {
 						initChannel(c);
+						c.pipeline().fireChannelRegistered();
+						c.pipeline().fireChannelActive();
 					}
 					catch (Exception e) {
 						log.error("", e);
@@ -192,27 +196,38 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			f.cancel(true);
 			return;
 		}
-
 		try {
-			Channel c = f.get();
+			CHANNEL c = f.get();
 			if(!c.isActive()){
 				return;
 			}
 
-			if (log.isDebugEnabled()) {
-				log.debug("Releasing channel: {}", c.toString());
+			if (!c.eventLoop()
+			      .inEventLoop()) {
+				c.eventLoop()
+				 .execute(() -> release(c));
+			}
+			else {
+				release(c);
 			}
 
-			cleanHandlers(c);
-
-			pool.release(c);
-
-			onReleaseEmitter.onComplete();
 		}
 		catch (Exception e) {
 			log.error("Failed releasing channel", e);
 			onReleaseEmitter.onError(e);
 		}
+	}
+
+	final void release(CHANNEL c) {
+		if (log.isDebugEnabled()) {
+			log.debug("Releasing channel: {}", c.toString());
+		}
+
+		cleanHandlers(c);
+
+		pool.release(c);
+
+		onReleaseEmitter.onComplete();
 	}
 
 	@Override

@@ -30,6 +30,7 @@ public interface NettyHandlerNames {
 	String ProxyHandler       = "proxyHandler";
 	String HttpCodecHandler   = "httpCodecHandler";
 	String ReactiveBridge     = "reactiveBridge";
+	String BridgeSetup        = "bridgeSetup";
 	String HttpAggregator     = "reactorHttpAggregator";
 	String OnChannelWriteIdle = "onChannelWriteIdle";
 	String OnChannelReadIdle  = "onChannelReadIdle";
