@@ -156,5 +156,11 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			return false;
 		}
 	}
+
+	@Override
+	public String toString() {
+		return "HttpClientHandler{" + "startURI=" + startURI + ", method=" + method +
+				", handler=" + handler + '}';
+	}
 }
 
