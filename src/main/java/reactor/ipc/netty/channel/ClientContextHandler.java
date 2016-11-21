@@ -59,7 +59,6 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	public final void fireContextActive(NettyContext context) {
 		if(!fired) {
 			fired = true;
-			context = context != null ? context : this;
 			sink.success(context);
 		}
 	}

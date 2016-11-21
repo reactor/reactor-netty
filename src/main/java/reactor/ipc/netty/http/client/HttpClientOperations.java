@@ -50,6 +50,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
@@ -218,117 +219,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void onChannelActive(final ChannelHandlerContext ctx) {
-		ctx.pipeline()
-		   .addBefore(NettyHandlerNames.ReactiveBridge,
-				   NettyHandlerNames.HttpCodecHandler,
-				   new HttpClientCodec());
-
-		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
-
-		applyHandler();
-	}
-
-
-	@Override
-	protected void onChannelTerminate() {
-		if (!isKeepAlive()) {
-			super.onChannelTerminate();
-		}
-		else {
-			if (log.isDebugEnabled()) {
-				log.debug("Cancelled Keep-Alive Connection, prepare to ignore extra " + "frames");
-			}
-			channel().pipeline()
-			         .addAfter(NettyHandlerNames.ReactiveBridge,
-					         NettyHandlerNames.OnHttpClose,
-					         new ChannelInboundHandlerAdapter() {
-						         @Override
-						         public void channelRead(ChannelHandlerContext ctx,
-								         Object msg) throws Exception {
-							         if (msg instanceof LastHttpContent) {
-								         HttpClientOperations.super.onChannelTerminate();
-							         }
-							         else {
-								         ctx.read();
-								         if (log.isDebugEnabled()) {
-									         log.debug("Cancelled Keep-Alive Connection, " + "dropping " + "frame: {}",
-											         msg.toString());
-								         }
-							         }
-						         }
-					         })
-			         .remove(NettyHandlerNames.ReactiveBridge);
-
-		}
-	}
-
-	@Override
-	protected void onOutboundComplete() {
-		if (channel().isOpen()) {
-			if (!isWebsocket()) {
-				if (markHeadersAsSent()) {
-					channel().write(nettyRequest);
-				}
-				if(HttpUtil.isTransferEncodingChunked(nettyRequest)) {
-					channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
-					         .addListener(r -> unregisterInterest());
-					return;
-				}
-			}
-
-			unregisterInterest();
-		}
-	}
-
-	@Override
 	public Mono<Void> onClose() {
 		return parentContext().onClose();
-	}
-
-	@Override
-	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpResponse) {
-			HttpResponse response = (HttpResponse) msg;
-			setNettyResponse(response);
-			if (response.decoderResult()
-			            .isFailure()) {
-				onOutboundError(response.decoderResult()
-				                        .cause());
-				return;
-			}
-
-			if (log.isDebugEnabled()) {
-				log.debug("Received response (auto-read:{}) : {}",
-						channel().config()
-						         .isAutoRead(),
-						responseHeaders().entries()
-						                 .toString());
-			}
-
-			if (checkResponseCode(response)) {
-				ctx.read();
-				parentContext().fireContextActive(this);
-			}
-			if(msg instanceof LastHttpContent) {
-				onChannelInactive();
-			}
-			return;
-		}
-		if (!(msg instanceof LastHttpContent)) {
-			super.onInboundNext(ctx, msg);
-			int inboundPrefetch = this.inboundPrefetch - 1;
-			if(inboundPrefetch >= 0){
-				this.inboundPrefetch = inboundPrefetch;
-				ctx.read();
-			}
-		}
-		else{
-			if (log.isDebugEnabled()) {
-				log.debug("Received last HTTP packet");
-			}
-			onChannelInactive();
-		}
 	}
 
 	@Override
@@ -412,6 +304,119 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return HttpVersion.HTTP_1_1;
 		}
 		throw new IllegalStateException(version.protocolName() + " not supported");
+	}
+
+	@Override
+	protected NettyContext context() {
+		return this;
+	}
+
+	@Override
+	protected void onChannelActive(final ChannelHandlerContext ctx) {
+		ctx.pipeline()
+		   .addBefore(NettyHandlerNames.ReactiveBridge,
+				   NettyHandlerNames.HttpCodecHandler,
+				   new HttpClientCodec());
+
+		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
+
+		applyHandler();
+	}
+
+	@Override
+	protected void onChannelTerminate() {
+		if (!isKeepAlive()) {
+			super.onChannelTerminate();
+		}
+		else {
+			if (log.isDebugEnabled()) {
+				log.debug("Cancelled Keep-Alive Connection, prepare to ignore extra " + "frames");
+			}
+			channel().pipeline()
+			         .addAfter(NettyHandlerNames.ReactiveBridge,
+					         NettyHandlerNames.OnHttpClose,
+					         new ChannelInboundHandlerAdapter() {
+						         @Override
+						         public void channelRead(ChannelHandlerContext ctx,
+								         Object msg) throws Exception {
+							         if (msg instanceof LastHttpContent) {
+								         HttpClientOperations.super.onChannelTerminate();
+							         }
+							         else {
+								         ctx.read();
+								         if (log.isDebugEnabled()) {
+									         log.debug("Cancelled Keep-Alive Connection, " + "dropping " + "frame: {}",
+											         msg.toString());
+								         }
+							         }
+						         }
+					         })
+			         .remove(NettyHandlerNames.ReactiveBridge);
+
+		}
+	}
+
+	@Override
+	protected void onOutboundComplete() {
+		if (channel().isOpen()) {
+			if (!isWebsocket()) {
+				if (markHeadersAsSent()) {
+					channel().write(nettyRequest);
+				}
+				if(HttpUtil.isTransferEncodingChunked(nettyRequest)) {
+					channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+					         .addListener(r -> unregisterInterest());
+					return;
+				}
+			}
+
+			unregisterInterest();
+		}
+	}
+
+	@Override
+	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
+		if (msg instanceof HttpResponse) {
+			HttpResponse response = (HttpResponse) msg;
+			setNettyResponse(response);
+			if (response.decoderResult()
+			            .isFailure()) {
+				onOutboundError(response.decoderResult()
+				                        .cause());
+				return;
+			}
+
+			if (log.isDebugEnabled()) {
+				log.debug("Received response (auto-read:{}) : {}",
+						channel().config()
+						         .isAutoRead(),
+						responseHeaders().entries()
+						                 .toString());
+			}
+
+			if (checkResponseCode(response)) {
+				ctx.read();
+				parentContext().fireContextActive(this);
+			}
+			if(msg instanceof LastHttpContent) {
+				onChannelInactive();
+			}
+			return;
+		}
+		if (!(msg instanceof LastHttpContent)) {
+			super.onInboundNext(ctx, msg);
+			int inboundPrefetch = this.inboundPrefetch - 1;
+			if(inboundPrefetch >= 0){
+				this.inboundPrefetch = inboundPrefetch;
+				ctx.read();
+			}
+		}
+		else{
+			if (log.isDebugEnabled()) {
+				log.debug("Received last HTTP packet");
+			}
+			onChannelInactive();
+		}
 	}
 
 	@Override

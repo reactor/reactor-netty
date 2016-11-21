@@ -53,6 +53,7 @@ import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -395,6 +396,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		return channel.toString();
 	}
 
+	protected NettyContext context(){
+		return context;
+	}
+
 	/**
 	 * React on input initialization
 	 *
@@ -403,7 +408,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@SuppressWarnings("unchecked")
 	protected void onChannelActive(ChannelHandlerContext ctx) {
 		applyHandler();
-		context.fireContextActive();
+		context.fireContextActive(context());
 	}
 
 	/**
@@ -518,6 +523,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		else {
 			drainReceiver();
 		}
+		context.fireContextActive(context());
 	}
 
 	/**
