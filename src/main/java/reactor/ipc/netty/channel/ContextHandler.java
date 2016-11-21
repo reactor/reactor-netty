@@ -189,7 +189,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 				op.onInboundError(ABORTED);
 				return;
 			}
-			if(!ch.isActive()){
+			if (!ch.isActive() || ch.pipeline()
+			                        .context(NettyHandlerNames.SslHandler) != null) {
 				if (log.isDebugEnabled()) {
 					log.debug("Delayed bridging, adding onChannelActive handler");
 				}
