@@ -519,11 +519,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (receiverFastpath && receiver != null) {
 			receiver.onComplete();
 			cancelReceiver();
+			context.fireContextActive(context());
 		}
 		else {
 			drainReceiver();
 		}
-		context.fireContextActive(context());
 	}
 
 	/**
@@ -821,6 +821,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		else {
 			a.onComplete();
 		}
+		context.fireContextActive(context());
 	}
 
 	final void unsubscribeReceiver() {
