@@ -32,7 +32,8 @@ public class HttpServerTests {
 	public void keepAlive() {
 		NettyContext c = HttpServer.create(0)
 		                           .newRouter(routes -> routes.directory("/test",
-				                           "/Users/smaldini/work/reactor-netty/src/test/resources/public"))
+				                           getClass().getResource("/public")
+				                                     .getFile()))
 		                           .block();
 
 		HttpClientResponse response0 = HttpClient.create(c.address().getPort())
