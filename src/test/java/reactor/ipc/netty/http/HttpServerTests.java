@@ -66,9 +66,9 @@ public class HttpServerTests {
 		                                         .block();
 
 
+		Assert.assertEquals(response0.channel(), response1.channel());
 		Assert.assertEquals(response0.channel(), response2.channel());
 		Assert.assertEquals(response0.channel(), response3.channel());
-		Assert.assertEquals(response0.channel(), response4.channel());
 		Assert.assertEquals(response0.channel(), response4.channel());
 		Assert.assertEquals(response0.channel(), response5.channel());
 		Assert.assertEquals(response0.channel(), response6.channel());
