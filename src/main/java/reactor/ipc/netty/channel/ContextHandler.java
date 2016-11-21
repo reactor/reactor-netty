@@ -329,6 +329,11 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 				public synchronized Throwable fillInStackTrace() {
 					return this;
 				}
+
+				@Override
+				public String toString() {
+					return "Aborted Connection";
+				}
 			};
 
 	static final Logger               log                      =
