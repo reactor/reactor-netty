@@ -119,7 +119,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
 		if (!future.isSuccess()) {
 			if(future.isCancelled()){
-				log.debug("cancelled {}", future.toString());
+				log.debug("Cancelled {}", future.toString());
 				return;
 			}
 			if (future.cause() != null) {
@@ -131,15 +131,18 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			return;
 		}
 		CHANNEL c = future.get();
-		if (log.isDebugEnabled()) {
-			log.debug("Acquired existing channel: {}", c.toString());
-		}
 
 		if (c.pipeline()
 		     .get(NettyHandlerNames.ReactiveBridge) == null) {
+			if (log.isDebugEnabled()) {
+				log.debug("Connected new channel: {}", c.toString());
+			}
 			initChannel(c);
 		}
 		else {
+			if (log.isDebugEnabled()) {
+				log.debug("Acquired existing channel: {}", c.toString());
+			}
 			ChannelOperations<?, ?> op = channelOpSelector.apply(c, this);
 
 			ChannelOperations<?, ?> previous =
