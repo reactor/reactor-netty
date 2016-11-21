@@ -111,32 +111,32 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	final Channel           channel;
 	final Scheduler         ioScheduler;
-	final Flux<?>           input;
+	final Flux<?>           inbound;
 	final ContextHandler<?> context;
 
 	// guarded //
 	Subscriber<? super Object> receiver;
-	boolean                    receiverCaughtUp;
+	boolean                    receiverFastpath;
+	long                       receiverDemand;
 	Queue<Object>              inboundQueue;
 	boolean                    inboundDone;
-	Throwable                  error;
-	long                       inboundRequested;
+	Throwable                  inboundError;
 
 	volatile int          interests;
-	volatile Cancellation cancel;
-	volatile boolean      flushEach;
+	volatile Cancellation receiverCancel;
+	volatile boolean      outboundFlushEach;
 
 	protected ChannelOperations(Channel channel,
 			ChannelOperations<INBOUND, OUTBOUND> replaced) {
 		this(channel, replaced.handler, replaced.context);
 		this.receiver = replaced.receiver;
-		this.receiverCaughtUp = replaced.receiverCaughtUp;
+		this.receiverFastpath = replaced.receiverFastpath;
 		this.inboundQueue = replaced.inboundQueue;
 		this.inboundDone = replaced.inboundDone;
-		this.error = replaced.error;
-		this.inboundRequested = replaced.inboundRequested;
-		this.cancel = replaced.cancel;
-		this.flushEach = replaced.flushEach;
+		this.inboundError = replaced.inboundError;
+		this.receiverDemand = replaced.receiverDemand;
+		this.receiverCancel = replaced.receiverCancel;
+		this.outboundFlushEach = replaced.outboundFlushEach;
 	}
 
 	protected ChannelOperations(Channel channel,
@@ -146,8 +146,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.channel = Objects.requireNonNull(channel, "channel");
 		this.context = Objects.requireNonNull(context, "context");
 		this.ioScheduler = Schedulers.fromExecutor(channel.eventLoop());
-		this.input = Flux.from(this)
-		                 .subscribeOn(ioScheduler);
+		this.inbound = Flux.from(this)
+		                   .subscribeOn(ioScheduler);
+		registerInterest();
 	}
 
 	@Override
@@ -157,7 +158,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	final public void cancel() {
-		if(cancelReceiver()){
+		if (cancelReceiver()) {
 			unregisterInterest();
 			Queue<Object> q = inboundQueue;
 			if (q != null) {
@@ -177,7 +178,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	final public Object connectedInput() {
-		return input;
+		return inbound;
 	}
 
 	@Override
@@ -187,9 +188,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		SocketAddress local = channel.localAddress();
 		String src = local != null ? local.toString() : "";
 		String dst = remote != null ? remote.toString() : "";
-		if (parent != null) {
-		}
-		else {
+		if (parent == null) {
 			String _src = src;
 			src = dst;
 			dst = _src;
@@ -206,7 +205,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public NettyOutbound flushEach() {
-		flushEach = true;
+		outboundFlushEach = true;
 		return this;
 	}
 
@@ -217,7 +216,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	final public Throwable getError() {
-		return error;
+		return inboundError;
 	}
 
 	@Override
@@ -227,7 +226,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	final public boolean isCancelled() {
-		return cancel == CANCELLED;
+		return receiverCancel == CANCELLED;
 	}
 
 	@Override
@@ -267,132 +266,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			       .subscribe(null, null, onClose);
 		}
 		return this;
-	}
-
-	/**
-	 * React on inbound completion (last packet)
-	 */
-	protected void onInboundComplete() {
-		if (isCancelled() || inboundDone) {
-			return;
-		}
-		inboundDone = true;
-		Subscriber<?> receiver = this.receiver;
-		if (receiverCaughtUp && receiver != null) {
-			receiver.onComplete();
-			cancelReceiver();
-		}
-		else {
-			drainReceiver();
-		}
-		context.fireContextEmpty();
-	}
-
-	/**
-	 * React on inbound close (last packet)
-	 */
-	protected void onChannelInactive() {
-		onInboundComplete();
-		context.terminateChannel(channel);
-	}
-
-	/**
-	 * React on inbound error
-	 *
-	 * @param err the {@link Throwable} cause
-	 */
-	protected void onInboundError(Throwable err) {
-		if (err == null) {
-			err = new NullPointerException("error is null");
-		}
-		if (log.isErrorEnabled()) {
-			log.error("[" + formatName() + "] Inbound error", err);
-		}
-		if (isCancelled() || inboundDone) {
-			Operators.onErrorDropped(err);
-			return;
-		}
-		inboundDone = true;
-		Subscriber<?> receiver = this.receiver;
-		if (receiverCaughtUp && receiver != null) {
-			cancelReceiver();
-			receiver.onError(err);
-		}
-		else {
-			this.error = err;
-			inboundDone = true;
-			drainReceiver();
-		}
-	}
-
-	/**
-	 * React on inbound {@link Channel#read}
-	 *
-	 * @param ctx the context
-	 * @param msg the read payload
-	 */
-	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg == null) {
-			onInboundError(new NullPointerException("msg is null"));
-			return;
-		}
-		if (inboundDone) {
-			Operators.onNextDropped(msg);
-			return;
-		}
-		ReferenceCountUtil.retain(msg);
-		if (receiverCaughtUp && receiver != null) {
-			try {
-				receiver.onNext(msg);
-			}
-			finally {
-				ReferenceCountUtil.release(msg);
-				channel.read();
-			}
-
-		}
-		else {
-			Queue<Object> q = inboundQueue;
-			if (q == null) {
-				q = QueueSupplier.unbounded()
-				                 .get();
-				inboundQueue = q;
-			}
-			q.offer(msg);
-			if (drainReceiver()) {
-				receiverCaughtUp = true;
-			}
-		}
-	}
-
-	/**
-	 * React on inbound/outbound completion (last packet)
-	 */
-	protected void onOuboundComplete() {
-		if (log.isDebugEnabled()) {
-			log.debug("[{}] Closing connection", formatName());
-		}
-		unregisterInterest();
-	}
-
-	/**
-	 * React on inbound/outbound error
-	 *
-	 * @param err the {@link Throwable} cause
-	 */
-	protected void onOutboundError(Throwable err) {
-		if (err instanceof IOException && err.getMessage()
-		                                     .contains("Broken pipe")) {
-			if (log.isDebugEnabled()) {
-				log.debug("[{}] Connection closed remotely", formatName(), err);
-			}
-			cancel();
-			return;
-		}
-
-		log.error("[" + formatName() + "] Error processing connection. Closing the channel",
-				err);
-		unregisterInterest();
 	}
 
 	@Override
@@ -435,7 +308,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public Flux<?> receiveObject() {
-		return input;
+		return inbound;
 	}
 
 	@Override
@@ -446,14 +319,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public void request(long n) {
 		if (Operators.validate(n)) {
-			this.inboundRequested = Operators.addCap(inboundRequested, n);
+			this.receiverDemand = Operators.addCap(receiverDemand, n);
 			drainReceiver();
 		}
 	}
 
 	@Override
 	public long requestedFromDownstream() {
-		return inboundRequested;
+		return receiverDemand;
 	}
 
 	@Override
@@ -461,7 +334,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return new MonoWriter(dataStream);
+		return new MonoSend(dataStream);
 	}
 
 	/**
@@ -480,7 +353,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return new MonoWriter(dataStream);
+		return new MonoSend(dataStream);
 	}
 
 	@Override
@@ -497,8 +370,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 		if (receiver == null) {
 			if (inboundDone) {
-				if (error != null) {
-					Operators.error(s, error);
+				if (inboundError != null) {
+					Operators.error(s, inboundError);
 					return;
 				}
 				else if (getPending() == 0) {
@@ -523,21 +396,158 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * React after inbound {@link Channel#read}
+	 * React on input initialization
 	 *
 	 * @param ctx the current {@link ChannelHandlerContext}
 	 */
-	protected void afterInboundNext(ChannelHandlerContext ctx) {
-		ctx.fireChannelReadComplete();
+	@SuppressWarnings("unchecked")
+	protected void onChannelActive(ChannelHandlerContext ctx) {
+		applyHandler();
+		context.fireContextActive();
 	}
 
 	/**
-	 * Return buffered packets in backlog
+	 * React on inbound {@link Channel#read}
 	 *
-	 * @return buffered packet count
+	 * @param ctx the context
+	 * @param msg the read payload
 	 */
-	final protected long bufferedInbound() {
-		return getPending();
+	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
+		if (msg == null) {
+			onInboundError(new NullPointerException("msg is null"));
+			return;
+		}
+		if (inboundDone) {
+			Operators.onNextDropped(msg);
+			return;
+		}
+		ReferenceCountUtil.retain(msg);
+		if (receiverFastpath && receiver != null) {
+			try {
+				receiver.onNext(msg);
+			}
+			finally {
+				ReferenceCountUtil.release(msg);
+			}
+
+		}
+		else {
+			Queue<Object> q = inboundQueue;
+			if (q == null) {
+				q = QueueSupplier.unbounded()
+				                 .get();
+				inboundQueue = q;
+			}
+			q.offer(msg);
+			if (drainReceiver()) {
+				receiverFastpath = true;
+			}
+		}
+	}
+
+	/**
+	 * React on inbound/outbound completion (last packet)
+	 */
+	protected void onOutboundComplete() {
+		if (log.isDebugEnabled()) {
+			log.debug("[{}] Closing connection", formatName());
+		}
+		unregisterInterest();
+	}
+
+	/**
+	 * React on inbound/outbound error
+	 *
+	 * @param err the {@link Throwable} cause
+	 */
+	protected void onOutboundError(Throwable err) {
+		if (err instanceof IOException && err.getMessage()
+		                                     .contains("Broken pipe")) {
+			if (log.isDebugEnabled()) {
+				log.debug("[{}] Connection closed remotely", formatName(), err);
+			}
+			cancel();
+			return;
+		}
+
+		log.error("[" + formatName() + "] Error processing connection. Closing the channel",
+				err);
+		unregisterInterest();
+	}
+
+	/**
+	 * React on channel release/close event
+	 */
+	protected void onChannelTerminate() {
+		context.terminateChannel(channel);
+	}
+
+	/**
+	 * Apply the user-provided {@link NettyConnector} handler
+	 */
+	@SuppressWarnings("unchecked")
+	protected final void applyHandler() {
+		if (log.isDebugEnabled()) {
+			log.debug("[{}] handler is being applied: {}", formatName(), handler);
+		}
+		handler.apply((INBOUND) this, (OUTBOUND) this)
+		       .subscribe(new OutboundCloseSubscriber(this));
+	}
+
+	/**
+	 * React on inbound close (last packet)
+	 */
+	protected final void onChannelInactive() {
+		onInboundComplete();
+		context.terminateChannel(channel);
+	}
+
+	/**
+	 * React on inbound completion (last packet)
+	 */
+	protected final void onInboundComplete() {
+		if (isCancelled() || inboundDone) {
+			return;
+		}
+		inboundDone = true;
+		Subscriber<?> receiver = this.receiver;
+		if (receiverFastpath && receiver != null) {
+			receiver.onComplete();
+			cancelReceiver();
+		}
+		else {
+			drainReceiver();
+		}
+		context.fireContextEmpty();
+	}
+
+	/**
+	 * React on inbound error
+	 *
+	 * @param err the {@link Throwable} cause
+	 */
+	protected final void onInboundError(Throwable err) {
+		if (err == null) {
+			err = new NullPointerException("error is null");
+		}
+		if (log.isErrorEnabled()) {
+			log.error("[" + formatName() + "] Inbound error", err);
+		}
+		if (isCancelled() || inboundDone) {
+			Operators.onErrorDropped(err);
+			return;
+		}
+		inboundDone = true;
+		Subscriber<?> receiver = this.receiver;
+		if (receiverFastpath && receiver != null) {
+			cancelReceiver();
+			receiver.onError(err);
+		}
+		else {
+			this.inboundError = err;
+			inboundDone = true;
+			drainReceiver();
+		}
 	}
 
 	/**
@@ -548,7 +558,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param promise the promise to fulfil for acknowledging termination success
 	 * @param exception non null if the writer has terminated with a failure
 	 */
-	protected final void onTerminatedWriter(ChannelFuture last,
+	protected final void onTerminatedSend(ChannelFuture last,
 			final ChannelPromise promise,
 			final Throwable exception) {
 		if (channel.isOpen() && last != null) {
@@ -569,70 +579,18 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			channel.flush();
 		}
 		else {
-			log.info(" "+channel.isOpen() +" "+last);
+			log.info(" " + channel.isOpen() + " " + last);
 			if (exception != null) {
 				promise.setFailure(exception);
 			}
 			else {
 				promise.setSuccess();
 			}
-			if(channel.isOpen()){
-				channel.eventLoop().execute(this::unregisterInterest);
+			if (channel.isOpen()) {
+				channel.eventLoop()
+				       .execute(this::unregisterInterest);
 			}
 		}
-	}
-
-	/**
-	 * React on input initialization
-	 *
-	 * @param ctx the current {@link ChannelHandlerContext}
-	 */
-	@SuppressWarnings("unchecked")
-	protected void onChannelActive(ChannelHandlerContext ctx) {
-		applyHandler();
-		context.fireContextActive();
-	}
-
-	/**
-	 * React on new outbound {@link Publisher} writer
-	 *
-	 * @param writeStream the {@link Publisher} to send
-	 * @param flushMode the flush strategy
-	 * @param promise an actual promise fulfilled on writer success/error
-	 */
-	protected void doOutboundWriter(Publisher<?> writeStream,
-			FlushMode flushMode,
-			ChannelPromise promise) {
-		if (flushMode == FlushMode.MANUAL_COMPLETE) {
-			writeStream.subscribe(new OutboundFlushLastSubscriber(this, promise));
-		}
-		else {
-			writeStream.subscribe(new OutboundFlushEachSubscriber(this, promise));
-		}
-	}
-
-	/**
-	 * Return the available parent {@link ContextHandler} for user-facing lifecycle
-	 * handling
-	 *
-	 * @return the available parent {@link ContextHandler}for user-facing lifecycle
-	 * handling
-	 */
-	final protected ContextHandler<?> parentContext() {
-		return context;
-	}
-
-	/**
-	 * Apply the user-provided {@link NettyConnector} handler
-	 */
-	@SuppressWarnings("unchecked")
-	final protected void applyHandler() {
-		registerInterest();
-		if(log.isDebugEnabled()){
-			log.debug("[{}] handler is being applied: {}", formatName(), handler);
-		}
-		handler.apply((INBOUND) this, (OUTBOUND) this)
-		       .subscribe(new OutboundCloseSubscriber(this));
 	}
 
 	/**
@@ -642,11 +600,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param encodedWriter the {@link Publisher} to write from
 	 * @param postWriter the {@link Subscriber} to forward commit success/failure
 	 */
-	final protected void doChannelWriter(final Publisher<?> encodedWriter,
+	final protected void onOuboundSend(final Publisher<?> encodedWriter,
 			final Subscriber<? super Void> postWriter) {
 
 		registerInterest();
-		if(log.isDebugEnabled()){
+		if (log.isDebugEnabled()) {
 			log.debug("[{}] New Outbound Sender: {}", formatName(), encodedWriter);
 		}
 
@@ -664,7 +622,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		p.addListener(postWriteListener);
 
 		FlushMode mode;
-		if (flushEach) {
+		if (outboundFlushEach) {
 			mode = FlushMode.AUTO_EACH;
 		}
 		else {
@@ -673,12 +631,23 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 		if (channel.eventLoop()
 		           .inEventLoop()) {
-			doOutboundWriter(encodedWriter, mode, p);
+			doOutboundSend(encodedWriter, mode, p);
 		}
 		else {
 			channel.eventLoop()
-			       .execute(() -> doOutboundWriter(encodedWriter, mode, p));
+			       .execute(() -> doOutboundSend(encodedWriter, mode, p));
 		}
+	}
+
+	/**
+	 * Return the available parent {@link ContextHandler} for user-facing lifecycle
+	 * handling
+	 *
+	 * @return the available parent {@link ContextHandler}for user-facing lifecycle
+	 * handling
+	 */
+	final protected ContextHandler<?> parentContext() {
+		return context;
 	}
 
 	/**
@@ -694,13 +663,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	final protected void unregisterInterest() {
 		int interest = INTERESTS.decrementAndGet(this);
-		if (interest < 0){
-			throw new IllegalStateException("Unbalanced interest " +
-					" " +
-					"symmetrical, remaining: "+interest);
+		if (interest < 0) {
+			throw new IllegalStateException("Unbalanced interest " + " " + "symmetrical, remaining: " + interest);
 		}
 		if (interest == 0) {
-			context.terminateChannel(channel);
+			onChannelTerminate();
 			if (log.isDebugEnabled()) {
 				log.debug("[{}] Successfully unregistered interest for channel {}",
 						formatName(),
@@ -716,7 +683,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	final boolean cancelReceiver() {
-		Cancellation c = cancel;
+		Cancellation c = receiverCancel;
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
@@ -727,6 +694,24 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * React on new outbound {@link Publisher} writer
+	 *
+	 * @param writeStream the {@link Publisher} to send
+	 * @param flushMode the flush strategy
+	 * @param promise an actual promise fulfilled on writer success/error
+	 */
+	final void doOutboundSend(Publisher<?> writeStream,
+			FlushMode flushMode,
+			ChannelPromise promise) {
+		if (flushMode == FlushMode.MANUAL_COMPLETE) {
+			writeStream.subscribe(new OutboundFlushLastSubscriber(this, promise));
+		}
+		else {
+			writeStream.subscribe(new OutboundFlushEachSubscriber(this, promise));
+		}
 	}
 
 	final boolean drainReceiver() {
@@ -741,7 +726,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return false;
 		}
 
-		long r = inboundRequested;
+		long r = receiverDemand;
 		long e = 0L;
 
 		while (e != r) {
@@ -754,22 +739,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			boolean empty = v == null;
 
 			if (d && empty) {
-				cancelReceiver();
-				if (q != null) {
-					q.clear();
-				}
-				Throwable ex = error;
-				if (ex != null) {
-					a.onError(ex);
-				}
-				else {
-					a.onComplete();
-				}
+				terminateInbound(q, a);
 				return false;
 			}
 
 			if (empty) {
-				channel.read();
 				break;
 			}
 
@@ -778,47 +752,37 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			}
 			finally {
 				ReferenceCountUtil.release(v);
-				channel.read();
 			}
 
 			e++;
 		}
 
-		if (e == r) {
-			if (isCancelled()) {
-				return false;
-			}
-
-			if (inboundDone && (q == null || q.isEmpty())) {
-				cancelReceiver();
-				if (q != null) {
-					q.clear();
-				}
-				Throwable ex = error;
-				if (ex != null) {
-					a.onError(ex);
-				}
-				else {
-					a.onComplete();
-				}
-				return false;
-			}
+		if (isCancelled()) {
+			return false;
 		}
 
-		if (e != 0L) {
-			if (r != Long.MAX_VALUE) {
-				if ((inboundRequested -= e) > 0L) {
-					channel.read();
-				}
-			}
+		if (inboundDone && (q == null || q.isEmpty())) {
+			terminateInbound(q, a);
+			return false;
 		}
 
 		if (r == Long.MAX_VALUE) {
 			channel.config()
 			       .setAutoRead(true);
 			channel.read();
+			return true;
 		}
-		return true;
+
+		if ((receiverDemand -= e) > 0L || e > 0L) {
+			channel.read();
+		}
+
+		return false;
+	}
+
+	final String formatName() {
+		return getClass().getSimpleName()
+		                 .replace("Operations", "");
 	}
 
 	final void initReceiver(Subscriber<? super Object> s) {
@@ -840,31 +804,42 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		});
 	}
 
-	final void unsubscribeReceiver() {
-		inboundRequested = 0L;
-		receiver = null;
+	final void terminateInbound(Queue<?> q, Subscriber<?> a) {
+		cancelReceiver();
+		if (q != null) {
+			q.clear();
+		}
+		Throwable ex = inboundError;
+		if (ex != null) {
+			a.onError(ex);
+		}
+		else {
+			a.onComplete();
+		}
 	}
 
+	final void unsubscribeReceiver() {
+		receiverDemand = 0L;
+		receiver = null;
+	}
 	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<ChannelOperations, Cancellation> CANCEL =
 			AtomicReferenceFieldUpdater.newUpdater(ChannelOperations.class,
 					Cancellation.class,
-					"cancel");
-
+					"receiverCancel");
 	static final AtomicIntegerFieldUpdater<ChannelOperations> INTERESTS =
 			AtomicIntegerFieldUpdater.newUpdater(ChannelOperations.class, "interests");
-
 	static final Cancellation CANCELLED = () -> {
 	};
 	static final Logger       log       = Loggers.getLogger(ChannelOperations.class);
+	static final BiFunction                                                   PING   =
+			(i, o) -> Flux.empty();
 
-	static final BiFunction PING = (i, o) -> Flux.empty();
-
-	final class MonoWriter extends Mono<Void> implements Receiver, Loopback {
+	final class MonoSend extends Mono<Void> implements Receiver, Loopback {
 
 		final Publisher<?> dataStream;
 
-		public MonoWriter(Publisher<?> dataStream) {
+		public MonoSend(Publisher<?> dataStream) {
 			this.dataStream = dataStream;
 		}
 
@@ -881,7 +856,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		@Override
 		public void subscribe(Subscriber<? super Void> s) {
 			try {
-				doChannelWriter(dataStream, s);
+				onOuboundSend(dataStream, s);
 			}
 			catch (Throwable throwable) {
 				Operators.error(s, throwable);
@@ -892,11 +867,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		public Object upstream() {
 			return dataStream;
 		}
-	}
-
-	final String formatName() {
-		return getClass().getSimpleName()
-		                 .replace("Operations", "");
 	}
 
 }

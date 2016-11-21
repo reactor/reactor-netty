@@ -35,11 +35,11 @@ final class OutboundCloseSubscriber implements Subscriber<Void> {
 	@Override
 	public void onComplete() {
 		if(parent.channel.eventLoop().inEventLoop()){
-			parent.onOuboundComplete();
+			parent.onOutboundComplete();
 		}
 		else {
 			parent.channel.eventLoop()
-			              .execute(parent::onOuboundComplete);
+			              .execute(parent::onOutboundComplete);
 		}
 	}
 

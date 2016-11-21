@@ -44,11 +44,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		try {
-			operations(ctx).onChannelInactive();
+			ChannelOperations<?,?> ops = operations(ctx);
+			if(ops != null){
+				ops.onChannelInactive();
+			}
 		}
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);
-			operations(ctx).onInboundError(err);
+			exceptionCaught(ctx, err);
 		}
 		finally {
 			ctx.fireChannelInactive();
@@ -69,13 +72,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler {
 		}
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);
-			operations(ctx).onInboundError(err);
+			exceptionCaught(ctx, err);
 		}
 	}
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-		operations(ctx).afterInboundNext(ctx);
+		ctx.fireChannelReadComplete();
 	}
 
 	@Override
@@ -85,7 +88,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler {
 		if(log.isDebugEnabled()){
 			log.error("handler failure", err);
 		}
-		operations(ctx).onInboundError(err);
+		ChannelOperations<?,?> ops = operations(ctx);
+		if(ops != null){
+			ops.onInboundError(err);
+		}
 	}
 
 	static ChannelOperations<?, ?> operations(ChannelHandlerContext ctx) {

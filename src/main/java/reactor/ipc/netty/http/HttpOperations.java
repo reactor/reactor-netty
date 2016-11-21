@@ -29,15 +29,12 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.core.Cancellation;
 import reactor.core.Loopback;
 import reactor.core.Producer;
 import reactor.core.Receiver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.ChannelFutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 
@@ -206,7 +203,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 				sendHeadersAndSubscribe(new HttpWriterSubscriber(s));
 			}
 			else {
-				doChannelWriter(source, s);
+				onOuboundSend(source, s);
 			}
 		}
 
@@ -232,7 +229,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			@Override
 			public void onComplete() {
 				this.subscription = null;
-				doChannelWriter(source, s);
+				onOuboundSend(source, s);
 			}
 
 			@Override

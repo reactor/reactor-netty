@@ -55,24 +55,24 @@ final class TcpResources {
 				return pool;
 			}
 			if (log.isDebugEnabled()) {
-				log.debug("new tcp client pool for {}", remote);
+				log.debug("New TCP client pool for {}", remote);
 			}
 			//pool = new SimpleChannelPool(bootstrap);
 			pool = new FixedChannelPool(bootstrap.get(),
 					new ChannelPoolHandler() {
 						@Override
 						public void channelReleased(Channel ch) throws Exception {
-							log.debug("released {}", ch.toString());
+							log.debug("Released {}", ch.toString());
 						}
 
 						@Override
 						public void channelAcquired(Channel ch) throws Exception {
-							log.debug("acquired {}", ch.toString());
+							log.debug("Acquired {}", ch.toString());
 						}
 
 						@Override
 						public void channelCreated(Channel ch) throws Exception {
-							log.debug("created {}", ch.toString());
+							log.debug("Created {}", ch.toString());
 						}
 					},
 					Runtime.getRuntime()

@@ -112,7 +112,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug("Closing Websocket");
 			}
-			onInboundComplete();
+			onChannelInactive();
 		}
 		else {
 			super.onInboundNext(ctx, msg);

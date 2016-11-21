@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -27,6 +26,7 @@ import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -77,6 +77,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	final HttpHeaders headers;
 
 	volatile ResponseState responseState;
+	int inboundPrefetch;
 
 	boolean redirectable;
 
@@ -87,6 +88,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.nettyRequest = replaced.nettyRequest;
 		this.responseState = replaced.responseState;
 		this.redirectable = replaced.redirectable;
+		this.inboundPrefetch = replaced.inboundPrefetch;
 		this.headers = replaced.headers;
 	}
 
@@ -102,6 +104,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.nettyRequest =
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.headers = nettyRequest.headers();
+		this.inboundPrefetch = 16;
 		registerInterest();
 	}
 
@@ -159,7 +162,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public void dispose() {
-		unregisterInterest();
 		cancel();
 	}
 
@@ -216,7 +218,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public void onChannelActive(final ChannelHandlerContext ctx) {
+	protected void onChannelActive(final ChannelHandlerContext ctx) {
 		ctx.pipeline()
 		   .addBefore(NettyHandlerNames.ReactiveBridge,
 				   NettyHandlerNames.HttpCodecHandler,
@@ -227,8 +229,42 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		applyHandler();
 	}
 
+
 	@Override
-	protected void onOuboundComplete() {
+	protected void onChannelTerminate() {
+		if (!isKeepAlive()) {
+			super.onChannelTerminate();
+		}
+		else {
+			if (log.isDebugEnabled()) {
+				log.debug("Cancelled Keep-Alive Connection, prepare to ignore extra " + "frames");
+			}
+			channel().pipeline()
+			         .addAfter(NettyHandlerNames.ReactiveBridge,
+					         NettyHandlerNames.OnHttpClose,
+					         new ChannelInboundHandlerAdapter() {
+						         @Override
+						         public void channelRead(ChannelHandlerContext ctx,
+								         Object msg) throws Exception {
+							         if (msg instanceof LastHttpContent) {
+								         HttpClientOperations.super.onChannelTerminate();
+							         }
+							         else {
+								         ctx.read();
+								         if (log.isDebugEnabled()) {
+									         log.debug("Cancelled Keep-Alive Connection, " + "dropping " + "frame: {}",
+											         msg.toString());
+								         }
+							         }
+						         }
+					         })
+			         .remove(NettyHandlerNames.ReactiveBridge);
+
+		}
+	}
+
+	@Override
+	protected void onOutboundComplete() {
 		if (channel().isOpen()) {
 			if (!isWebsocket()) {
 				if (markHeadersAsSent()) {
@@ -243,22 +279,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 			unregisterInterest();
 		}
-	}
-
-	@Override
-	protected void onOutboundError(Throwable err) {
-		if (err == null) {
-			throw Exceptions.argumentIsNullException();
-		}
-		if (err instanceof IOException && err.getMessage() != null && err.getMessage()
-		                                                                 .contains(
-				                                                                 "Broken pipe")) {
-			if (log.isDebugEnabled()) {
-				log.debug("Connection closed remotely", err);
-			}
-			return;
-		}
-		unregisterInterest();
 	}
 
 	@Override
@@ -282,22 +302,33 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				log.debug("Received response (auto-read:{}) : {}",
 						channel().config()
 						         .isAutoRead(),
-						responseHeaders().toString());
+						responseHeaders().entries()
+						                 .toString());
 			}
 
 			if (checkResponseCode(response)) {
+				ctx.read();
 				parentContext().fireContextActive(this);
 			}
-			else if (log.isDebugEnabled()) {
-				log.debug("Failed status check on response packet {} {}", channel(), msg);
+			if(msg instanceof LastHttpContent) {
+				onChannelInactive();
 			}
-			postReceive(msg);
 			return;
 		}
-		if (LastHttpContent.EMPTY_LAST_CONTENT != msg) {
+		if (!(msg instanceof LastHttpContent)) {
 			super.onInboundNext(ctx, msg);
+			int inboundPrefetch = this.inboundPrefetch - 1;
+			if(inboundPrefetch >= 0){
+				this.inboundPrefetch = inboundPrefetch;
+				ctx.read();
+			}
 		}
-		postReceive(msg);
+		else{
+			if (log.isDebugEnabled()) {
+				log.debug("Received last HTTP packet");
+			}
+			onChannelInactive();
+		}
 	}
 
 	@Override
@@ -383,15 +414,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		throw new IllegalStateException(version.protocolName() + " not supported");
 	}
 
-	protected void postReceive(Object msg) {
-		if (msg instanceof LastHttpContent) {
-			if (log.isDebugEnabled()) {
-				log.debug("Received last HTTP packet");
-			}
-			onChannelInactive();
-		}
-	}
-
 	@Override
 	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
 		ChannelFutureMono.from(channel().writeAndFlush(nettyRequest))
@@ -402,14 +424,23 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		int code = response.status()
 		                   .code();
 		if (code >= 400) {
+			if (log.isDebugEnabled()) {
+				log.debug("Received Server Error, stop reading: {}", response.toString());
+			}
 			Exception ex = new HttpClientException(this);
-			cancel();
+			super.onChannelTerminate(); // force terminate
 			parentContext().fireContextError(ex);
 			return false;
 		}
 		if (code >= 300 && isFollowRedirect()) {
+			if (log.isDebugEnabled()) {
+				log.debug("Received Redirect location: {}",
+						response.headers()
+						        .entries()
+						        .toString());
+			}
 			Exception ex = new RedirectClientException(this);
-			cancel();
+			super.onChannelTerminate(); // force terminate
 			parentContext().fireContextError(ex);
 			return false;
 		}

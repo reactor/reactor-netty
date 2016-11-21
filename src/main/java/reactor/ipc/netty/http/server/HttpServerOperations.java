@@ -259,7 +259,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void onOuboundComplete() {
+	protected void onOutboundComplete() {
 		if (channel().isOpen()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Last HTTP response frame");
@@ -324,6 +324,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	 */
 	@Override
 	public Object param(CharSequence key) {
+		Objects.requireNonNull(key, "key");
 		Map<String, Object> params = null;
 		if (paramsResolver != null) {
 			params = this.paramsResolver.apply(uri());

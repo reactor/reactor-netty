@@ -120,7 +120,7 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 			future.cancel(true);
 		}
 		if(log.isDebugEnabled()){
-			log.debug("Connecting new channel: {}", channel().toString());
+			log.debug("Connecting new channel: {}", future.toString());
 		}
 		this.f = (ChannelFuture) future;
 		f.addListener(this);

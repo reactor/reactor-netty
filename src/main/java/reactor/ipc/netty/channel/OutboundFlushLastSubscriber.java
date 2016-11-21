@@ -61,7 +61,7 @@ final class OutboundFlushLastSubscriber
 		   .removeListener(this);
 		parent.channel
 				.eventLoop()
-				.execute(() -> parent.onTerminatedWriter(lastWrite, promise, null));
+				.execute(() -> parent.onTerminatedSend(lastWrite, promise, null));
 	}
 
 	@Override
@@ -79,7 +79,7 @@ final class OutboundFlushLastSubscriber
 		   .removeListener(this);
 		parent.channel
 				.eventLoop()
-				.execute(() -> parent.onTerminatedWriter(lastWrite, promise, t));
+				.execute(() -> parent.onTerminatedSend(lastWrite, promise, t));
 	}
 
 	@Override
@@ -127,10 +127,7 @@ final class OutboundFlushLastSubscriber
 	public void operationComplete(ChannelFuture future) throws Exception {
 		Subscription subscription = this.subscription;
 		this.subscription = null;
-		if (subscription != null && future.channel()
-		                                  .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-		                                  .get()
-		                                  .bufferedInbound() == 0L) {
+		if (subscription != null) {
 			if (log.isDebugEnabled()) {
 				log.debug("Cancel from remotely closed connection");
 			}

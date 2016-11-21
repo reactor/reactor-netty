@@ -88,9 +88,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 							return handler.apply(ch);
 						}
 						else {
-							HttpUtil.setTransferEncodingChunked(ch.nettyRequest, false);
-							ch.nettyRequest.headers().set(HttpHeaderNames
-									.CONTENT_LENGTH, 0);
+							ch.disableChunkedTransfer();
 							return ch.sendHeaders();
 						}
 					}

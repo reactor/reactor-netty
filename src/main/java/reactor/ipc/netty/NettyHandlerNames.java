@@ -34,5 +34,6 @@ public interface NettyHandlerNames {
 	String OnChannelWriteIdle = "onChannelWriteIdle";
 	String OnChannelReadIdle  = "onChannelReadIdle";
 	String OnChannelClose     = "onChannelClose";
+	String OnHttpClose        = "onHttpClose";
 	String LoggingHandler     = "loggingHandler";
 }
