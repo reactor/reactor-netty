@@ -34,6 +34,7 @@ import reactor.core.Producer;
 import reactor.core.Receiver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
@@ -272,6 +273,10 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		public void subscribe(Subscriber<? super Void> s) {
 			if(markHeadersAsSent()) {
 				sendHeadersAndSubscribe(s);
+			}
+			else{
+				s.onSubscribe(Operators.emptySubscription());
+				s.onComplete();
 			}
 		}
 	}
