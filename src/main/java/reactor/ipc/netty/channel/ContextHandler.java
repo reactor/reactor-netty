@@ -23,7 +23,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
@@ -48,7 +47,7 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 public abstract class ContextHandler<CHANNEL extends Channel>
-		extends ChannelInitializer<CHANNEL> implements Cancellation, NettyContext {
+		implements Cancellation, NettyContext {
 
 	/**
 	 * Create a new client context
@@ -153,10 +152,13 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		this.loggingHandler = loggingHandler;
 	}
 
-	@Override
-	public final void initChannel(final CHANNEL ch) throws Exception {
-		ch.pipeline()
-		  .addLast(NettyHandlerNames.BridgeSetup, new BridgeSetupHandler<>(this, ch));
+	/**
+	 * Return a new Bridge setup handler
+	 * @return a new Bridge setup handler
+	 */
+	@SuppressWarnings("unchecked")
+	public final ChannelHandler getBridge() {
+		return new BridgeSetupHandler((ContextHandler<Channel>)this);
 	}
 
 	/**
@@ -255,46 +257,45 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	static final ChannelHandler       BRIDGE                   =
 			new ChannelOperationsHandler();
 
-	static final class BridgeSetupHandler<CHANNEL extends Channel>
+	static final class BridgeSetupHandler
 			extends ChannelInboundHandlerAdapter {
 
-		final ContextHandler<CHANNEL> parent;
-		final CHANNEL                 ch;
+		final ContextHandler<Channel> parent;
 
 		boolean active;
 
-		BridgeSetupHandler(ContextHandler<CHANNEL> parent, CHANNEL ch) {
+		BridgeSetupHandler(ContextHandler<Channel> parent) {
 			this.parent = parent;
-			this.ch = ch;
 		}
 
 		@Override
+		@SuppressWarnings("unchecked")
 		public void channelActive(ChannelHandlerContext ctx) throws Exception {
 			if (!active) {
 				active = true;
 
 				if (parent.options.onChannelInit() != null) {
 					if (parent.options.onChannelInit()
-					                  .test(ch)) {
+					                  .test(ctx.channel())) {
 						if (log.isDebugEnabled()) {
-							log.debug("DROPPED by onChannelInit predicate {}", ch);
+							log.debug("DROPPED by onChannelInit predicate {}", ctx.channel());
 						}
-						parent.doDropped(ch);
+						parent.doDropped(ctx.channel());
 						return;
 					}
 				}
 
-				parent.doPipeline(ch.pipeline());
+				parent.doPipeline(ctx.pipeline());
 
 				try {
 					ChannelOperations<?, ?> op =
-							parent.channelOpSelector.apply(ch, parent);
+							parent.channelOpSelector.apply(ctx.channel(), parent);
 
-					ch.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-					  .set(op);
+					ctx.channel()
+					   .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
+					   .set(op);
 
-
-					ch.pipeline()
+					ctx.pipeline()
 					  .addAfter(NettyHandlerNames.BridgeSetup,
 							  NettyHandlerNames.ReactiveBridge,
 							  BRIDGE);
@@ -303,14 +304,15 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 				}
 				catch (Exception t) {
 					if (log.isErrorEnabled()) {
-						log.error("Error while binding a channelOperation with: " + ch.toString(),
+						log.error("Error while binding a channelOperation with: " + ctx.channel()
+						                                                               .toString(),
 								t);
 					}
 				}
 				finally {
 					if (null != parent.options.afterChannelInit()) {
 						parent.options.afterChannelInit()
-						              .accept(ch);
+						              .accept(ctx.channel());
 					}
 				}
 			}
@@ -320,7 +322,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		@Override
 		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 			if (!active) {
-				ChannelOperations<?, ?> op = parent.channelOpSelector.apply(ch, parent);
+				ChannelOperations<?, ?> op =
+						parent.channelOpSelector.apply(ctx.channel(), parent);
 
 				op.onInboundError(ABORTED);
 			}
@@ -337,7 +340,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 							cause);
 				}
 
-				ChannelOperations<?, ?> op = parent.channelOpSelector.apply(ch, parent);
+				ChannelOperations<?, ?> op =
+						parent.channelOpSelector.apply(ctx.channel(), parent);
 
 				op.onInboundError(ABORTED);
 			}

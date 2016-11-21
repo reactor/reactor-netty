@@ -73,7 +73,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	@Override
 	public void fireContextActive(NettyContext context) {
-		if(!fired) {
+		if (!fired) {
 			fired = true;
 			sink.success(context);
 		}
@@ -120,7 +120,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
 		if (!future.isSuccess()) {
-			if(future.isCancelled()){
+			if (future.isCancelled()) {
 				log.debug("Cancelled {}", future.toString());
 				return;
 			}
@@ -134,44 +134,31 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 		CHANNEL c = future.get();
 
+		if (c.eventLoop()
+		     .inEventLoop()) {
+			connectOrAcquire(c);
+		}
+		else {
+			c.eventLoop()
+			 .execute(() -> connectOrAcquire(c));
+		}
+	}
+
+	final void connectOrAcquire(CHANNEL c) {
 		if (c.pipeline()
 		     .get(NettyHandlerNames.BridgeSetup) == null) {
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
-			if(c.eventLoop().inEventLoop()){
-				initChannel(c);
-				fireHandlerEvent(c);
-			}
-			else{
-				c.eventLoop().execute(() -> {
-					try {
-						initChannel(c);
-						fireHandlerEvent(c);
-					}
-					catch (Exception e) {
-						log.error("", e);
-					}
-				});
-			}
+			c.pipeline().addLast(NettyHandlerNames.BridgeSetup, BRIDGE);
 		}
 		else {
 			if (log.isDebugEnabled()) {
 				log.debug("Acquired existing channel: {}", c.toString());
 			}
-
-			if(c.eventLoop().inEventLoop()){
-				replaceBridge(c);
-			}
-			else{
-				c.eventLoop().execute(() -> replaceBridge(c));
-			}
-
-
+			replaceBridge(c);
 		}
-	}
 
-	final void fireHandlerEvent(CHANNEL c) {
 		if (c.isRegistered()) {
 			c.pipeline()
 			 .fireChannelRegistered();
@@ -189,7 +176,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 	}
 
-	final void replaceBridge(CHANNEL c){
+	final void replaceBridge(CHANNEL c) {
 		ChannelOperations<?, ?> op = channelOpSelector.apply(c, this);
 
 		ChannelOperations<?, ?> previous =
@@ -214,7 +201,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 		try {
 			CHANNEL c = f.get();
-			if(!c.isActive()){
+			if (!c.isActive()) {
 				return;
 			}
 

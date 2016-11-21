@@ -129,7 +129,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		return Mono.create(sink -> {
 			ServerBootstrap b = options.get();
 			ContextHandler<Channel> contextHandler = doHandler(handler, sink);
-			b.childHandler(contextHandler);
+			b.childHandler(contextHandler.getBridge());
 			contextHandler.setFuture(b.bind());
 		});
 	}
