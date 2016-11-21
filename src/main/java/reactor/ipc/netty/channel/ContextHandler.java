@@ -184,6 +184,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			  .addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
 
 			if(!ch.isActive()){
+				log.debug("Delayed bridging");
 				ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
 					@Override
 					public void channelActive(ChannelHandlerContext ctx)
