@@ -73,8 +73,11 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	@Override
 	public void fireContextActive(NettyContext context) {
-		context = context != null ? context : this;
-		sink.success(context);
+		if(!fired) {
+			fired = true;
+			context = context != null ? context : this;
+			sink.success(context);
+		}
 	}
 
 	@Override

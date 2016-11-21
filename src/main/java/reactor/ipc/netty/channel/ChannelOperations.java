@@ -369,12 +369,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 					inboundDone);
 		}
 		if (receiver == null) {
-			if (inboundDone) {
+			if (inboundDone && getPending() == 0) {
 				if (inboundError != null) {
 					Operators.error(s, inboundError);
 					return;
 				}
-				else if (getPending() == 0) {
+				else {
 					Operators.complete(s);
 					return;
 				}
@@ -538,15 +538,15 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 		inboundDone = true;
 		Subscriber<?> receiver = this.receiver;
+		this.inboundError = err;
 		if (receiverFastpath && receiver != null) {
 			cancelReceiver();
 			receiver.onError(err);
 		}
 		else {
-			this.inboundError = err;
-			inboundDone = true;
 			drainReceiver();
 		}
+		context.fireContextError(err);
 	}
 
 	/**

@@ -135,6 +135,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	final BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>>
 	                             channelOpSelector;
 
+	boolean fired;
+
 	/**
 	 * @param channelOpSelector
 	 * @param options
@@ -257,8 +259,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 *
 	 * @param t error to fail the associated {@link MonoSink}
 	 */
-	public final void fireContextError(Throwable t){
-		sink.error(t);
+	public void fireContextError(Throwable t){
+		if(!fired) {
+			sink.error(t);
+		}
 	}
 
 	/**

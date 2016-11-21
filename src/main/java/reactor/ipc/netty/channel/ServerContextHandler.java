@@ -56,7 +56,12 @@ final class ServerContextHandler
 
 	@Override
 	public final void fireContextActive(NettyContext context) {
-		//Ignore
+		//Ignore, child channels cannot trigger context active
+	}
+
+	@Override
+	public void fireContextError(Throwable t) {
+		//Ignore, child channels cannot trigger context error
 	}
 
 	@Override

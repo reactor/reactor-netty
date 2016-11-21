@@ -44,7 +44,6 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	final ClientOptions clientOptions;
 	final boolean       secure;
 
-	ChannelFuture f;
 
 	ClientContextHandler(BiFunction<? super CHANNEL,? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			ClientOptions options,
@@ -58,14 +57,20 @@ final class ClientContextHandler<CHANNEL extends Channel>
 
 	@Override
 	public final void fireContextActive(NettyContext context) {
-		context = context != null ? context : this;
-		sink.success(context);
+		if(!fired) {
+			fired = true;
+			context = context != null ? context : this;
+			sink.success(context);
+		}
 	}
 
 	@Override
 	protected void doDropped(Channel channel) {
 		channel.close();
-		sink.success();
+		if(!fired) {
+			fired = true;
+			sink.success();
+		}
 	}
 
 	@Override
