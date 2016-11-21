@@ -366,6 +366,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				if (markHeadersAsSent()) {
 					if(!chunked){
 						channel().writeAndFlush(nettyRequest).addListener(r -> unregisterInterest());
+						return;
 					}
 					else{
 						channel().write(nettyRequest);
