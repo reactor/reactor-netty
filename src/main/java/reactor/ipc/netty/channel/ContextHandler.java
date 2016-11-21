@@ -222,7 +222,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		}
 		catch (Exception t) {
 			if (log.isErrorEnabled()) {
-				log.error("Error while binding a channelOperation to {}", ch.toString());
+				log.error("Error while binding a channelOperation with: "+ ch.toString
+						(), t);
 			}
 		}
 		finally {
@@ -330,10 +331,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					return this;
 				}
 
-				@Override
-				public String toString() {
-					return "Aborted Connection";
-				}
 			};
 
 	static final Logger               log                      =
