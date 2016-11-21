@@ -48,11 +48,9 @@ public class HttpServerTests {
 		                                         .get("/test/test1.css")
 		                                         .block();
 
-
 		HttpClientResponse response3 = HttpClient.create(c.address().getPort())
 		                                         .get("/test/test2.css")
 		                                         .block();
-
 
 		HttpClientResponse response4 = HttpClient.create(c.address().getPort())
 		                                         .get("/test/test3.css")
