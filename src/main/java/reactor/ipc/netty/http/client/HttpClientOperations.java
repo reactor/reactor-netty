@@ -30,6 +30,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -374,6 +375,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 	}
 
+	final void prefetchMore(ChannelHandlerContext ctx){
+		int inboundPrefetch = this.inboundPrefetch - 1;
+		if(inboundPrefetch >= 0){
+			this.inboundPrefetch = inboundPrefetch;
+			ctx.read();
+		}
+	}
+
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpResponse) {
@@ -395,21 +404,18 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 
 			if (checkResponseCode(response)) {
-				ctx.read();
+				prefetchMore(ctx);
 				parentContext().fireContextActive(this);
 			}
-			if(msg instanceof LastHttpContent) {
+			if(msg instanceof FullHttpResponse) {
+				super.onInboundNext(ctx, msg);
 				onChannelInactive();
 			}
 			return;
 		}
 		if (!(msg instanceof LastHttpContent)) {
 			super.onInboundNext(ctx, msg);
-			int inboundPrefetch = this.inboundPrefetch - 1;
-			if(inboundPrefetch >= 0){
-				this.inboundPrefetch = inboundPrefetch;
-				ctx.read();
-			}
+			prefetchMore(ctx);
 		}
 		else{
 			if (log.isDebugEnabled()) {
