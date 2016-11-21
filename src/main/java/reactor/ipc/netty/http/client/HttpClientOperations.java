@@ -421,6 +421,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (log.isDebugEnabled()) {
 				log.debug("Received last HTTP packet");
 			}
+			if(msg != LastHttpContent.EMPTY_LAST_CONTENT) {
+				super.onInboundNext(ctx, msg);
+			}
 			onChannelInactive();
 		}
 	}
