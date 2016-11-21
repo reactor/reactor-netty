@@ -60,7 +60,9 @@ public class HttpServerTests {
 		                                         .get("/test/test4.css")
 		                                         .block();
 
-		HttpClientResponse response6 = HttpClient.create(c.address().getPort())
+		HttpClientResponse response6 = HttpClient.create(opts -> opts.connect(c.address()
+		                                                                       .getPort())
+		                                                             .disablePool())
 		                                         .get("/test/test5.css")
 		                                         .block();
 
@@ -70,7 +72,7 @@ public class HttpServerTests {
 		Assert.assertEquals(response0.channel(), response3.channel());
 		Assert.assertEquals(response0.channel(), response4.channel());
 		Assert.assertEquals(response0.channel(), response5.channel());
-		Assert.assertEquals(response0.channel(), response6.channel());
+		Assert.assertNotEquals(response0.channel(), response6.channel());
 	}
 
 }

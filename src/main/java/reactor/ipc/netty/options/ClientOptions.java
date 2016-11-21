@@ -39,6 +39,7 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.NoopAddressResolverGroup;
+import io.netty.util.NetUtil;
 import reactor.core.Exceptions;
 
 /**
@@ -125,7 +126,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * @return {@literal this}
 	 */
 	public ClientOptions connect(int port) {
-		return connect(new InetSocketAddress(port));
+		return connect(new InetSocketAddress(NetUtil.LOCALHOST.getHostAddress(), port));
 	}
 
 	/**

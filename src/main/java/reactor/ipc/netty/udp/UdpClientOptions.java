@@ -43,6 +43,11 @@ final class UdpClientOptions extends ClientOptions {
 	}
 
 	@Override
+	public ClientOptions connect(int port) {
+		return connect(new InetSocketAddress(port));
+	}
+
+	@Override
 	public ClientOptions connect(@Nonnull String host, int port) {
 		return connect(new InetSocketAddress(host, port));
 	}
