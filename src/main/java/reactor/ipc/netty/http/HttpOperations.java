@@ -96,7 +96,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return new MonoHttpWithHeadersWriter(dataStream);
+		return new MonoHttpSendWithHeaders(dataStream);
 	}
 
 	@Override
@@ -123,7 +123,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		if (!hasSentHeaders()) {
-			return new MonoHeadersSender();
+			return new MonoSendHeaders();
 		}
 		else {
 			return Mono.empty();
@@ -135,7 +135,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return new MonoHttpWithHeadersWriter(source);
+		return new MonoHttpSendWithHeaders(source);
 	}
 
 	@Override
@@ -145,8 +145,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		if (isWebsocket()) {
-			return new MonoHttpWithHeadersWriter(Flux.from(dataStream)
-			                                         .map(TextWebSocketFrame::new));
+			return new MonoHttpSendWithHeaders(Flux.from(dataStream)
+			                                       .map(TextWebSocketFrame::new));
 		}
 
 		return send(Flux.from(dataStream)
@@ -178,12 +178,12 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");
 
-	final class MonoHttpWithHeadersWriter
+	final class MonoHttpSendWithHeaders
 			extends Mono<Void> implements Receiver, Loopback {
 
 		final Publisher<?> source;
 
-		public MonoHttpWithHeadersWriter(Publisher<?> source) {
+		public MonoHttpSendWithHeaders(Publisher<?> source) {
 			this.source = source;
 		}
 
@@ -200,7 +200,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		@Override
 		public void subscribe(final Subscriber<? super Void> s) {
 			if (markHeadersAsSent()) {
-				sendHeadersAndSubscribe(new HttpWriterSubscriber(s));
+				sendHeadersAndSubscribe(new HttpSendSubscriber(s));
 			}
 			else {
 				onOuboundSend(source, s);
@@ -212,12 +212,12 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			return source;
 		}
 
-		final class HttpWriterSubscriber implements Subscriber<Void>, Receiver, Producer {
+		final class HttpSendSubscriber implements Subscriber<Void>, Receiver, Producer {
 
 			final Subscriber<? super Void> s;
 			Subscription subscription;
 
-			public HttpWriterSubscriber(Subscriber<? super Void> s) {
+			public HttpSendSubscriber(Subscriber<? super Void> s) {
 				this.s = s;
 			}
 
@@ -256,7 +256,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		}
 	}
 
-	final class MonoHeadersSender extends Mono<Void> implements Loopback {
+	final class MonoSendHeaders extends Mono<Void> implements Loopback {
 
 		@Override
 		public Object connectedInput() {
@@ -270,7 +270,9 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 
 		@Override
 		public void subscribe(Subscriber<? super Void> s) {
-			sendHeadersAndSubscribe(s);
+			if(markHeadersAsSent()) {
+				sendHeadersAndSubscribe(s);
+			}
 		}
 	}
 }
