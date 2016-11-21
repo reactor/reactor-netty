@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -361,17 +362,23 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	protected void onOutboundComplete() {
 		if (channel().isOpen()) {
 			if (!isWebsocket()) {
+				boolean chunked = HttpUtil.isTransferEncodingChunked(nettyRequest);
 				if (markHeadersAsSent()) {
-					channel().write(nettyRequest);
+					if(!chunked){
+						channel().writeAndFlush(nettyRequest).addListener(r -> unregisterInterest());
+					}
+					else{
+						channel().write(nettyRequest);
+					}
 				}
-				if(HttpUtil.isTransferEncodingChunked(nettyRequest)) {
+				if(chunked) {
 					channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
 					         .addListener(r -> unregisterInterest());
-					return;
 				}
 			}
-
-			unregisterInterest();
+			else{
+				unregisterInterest();
+			}
 		}
 	}
 
