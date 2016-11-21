@@ -141,15 +141,13 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			}
 			if(c.eventLoop().inEventLoop()){
 				initChannel(c);
-				c.pipeline().fireChannelRegistered();
-				c.pipeline().fireChannelActive();
+				fireHandlerEvent(c);
 			}
 			else{
 				c.eventLoop().execute(() -> {
 					try {
 						initChannel(c);
-						c.pipeline().fireChannelRegistered();
-						c.pipeline().fireChannelActive();
+						fireHandlerEvent(c);
 					}
 					catch (Exception e) {
 						log.error("", e);
@@ -170,6 +168,24 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			}
 
 
+		}
+	}
+
+	final void fireHandlerEvent(CHANNEL c) {
+		if (c.isRegistered()) {
+			c.pipeline()
+			 .fireChannelRegistered();
+		}
+		if (c.isActive()) {
+			c.pipeline()
+			 .fireChannelActive();
+			return;
+		}
+		c.pipeline()
+		 .fireChannelInactive();
+		if (!c.isRegistered()) {
+			c.pipeline()
+			 .fireChannelUnregistered();
 		}
 	}
 
