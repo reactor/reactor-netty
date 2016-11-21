@@ -125,7 +125,7 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(1);
 
 		TcpClient client =
-				TcpClient.create(opts -> opts.connect(new InetSocketAddress(echoServerPort)));
+				TcpClient.create(echoServerPort);
 
 		NettyContext s = client.newHandler((in, out) -> {
 			in.receive()
@@ -234,28 +234,34 @@ public class TcpClientTests {
 			throws InterruptedException, IOException {
 		final CountDownLatch connectionLatch = new CountDownLatch(1);
 		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
-		TcpClient tcpClient =
-				TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
-				                             );
 
-		Mono<? extends NettyContext> handler = tcpClient.newHandler((in, out) -> {
-			System.out.println("Start");
-			connectionLatch.countDown();
-			in.receive()
-			  .subscribe();
-			return Flux.never();
-		});
+		try {
+			TcpClient tcpClient =
+					TcpClient.create(opts -> opts.connect("localhost", abortServerPort));
 
-		handler.log()
-		       .block()
-		       .onClose()
-		       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
-		       .block();
+			Mono<? extends NettyContext> handler = tcpClient.newHandler((in, out) -> {
+				System.out.println("Start");
+				connectionLatch.countDown();
+				in.receive()
+				  .subscribe();
+				return Flux.never();
+			});
 
-		assertTrue("Initial connection is made",
-				connectionLatch.await(5, TimeUnit.SECONDS));
-		assertTrue("A reconnect attempt was made",
-				reconnectionLatch.await(5, TimeUnit.SECONDS));
+			handler.log()
+			       .block()
+			       .onClose()
+			       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
+			       .block();
+
+			assertTrue("Initial connection is made", connectionLatch.await(5, TimeUnit.SECONDS));
+			assertTrue("A reconnect attempt was made", reconnectionLatch.await(5, TimeUnit.SECONDS));
+		}
+		catch (IllegalStateException ise){
+			if(ise.getMessage().contains("aborted")){
+				return;
+			}
+			throw ise;
+		}
 	}
 
 	@Test
