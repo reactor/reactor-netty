@@ -183,6 +183,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			ch.pipeline()
 			  .addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
 
+			if(!ch.isOpen()){
+				op.onInboundError(ABORTED);
+				return;
+			}
 			if(!ch.isActive()){
 				if (log.isDebugEnabled()) {
 					log.debug("Delayed bridging, adding onChannelActive handler");
@@ -203,7 +207,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 						if(ctx.pipeline().context(this) != null) {
 							ctx.pipeline()
 							   .remove(this);
-							op.onInboundError(CLOSED);
+							op.onInboundError(ABORTED);
 							ctx.fireChannelInactive();
 						}
 					}
@@ -314,7 +318,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		pipeline.addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
 	}
 
-	static final IllegalStateException CLOSED =
+	static final IllegalStateException ABORTED =
 			new IllegalStateException("Connection " + "has been aborted by the remote " +
 					"peer"){
 				@Override
