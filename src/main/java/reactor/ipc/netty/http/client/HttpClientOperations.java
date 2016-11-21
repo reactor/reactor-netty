@@ -439,7 +439,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
 		ChannelFutureMono.from(channel().writeAndFlush(nettyRequest))
-		                 .log("reactor.sendHeaders")
+		                 .log("reactor.ipc.netty.sendHeaders")
 		                 .subscribe(s);
 	}
 
