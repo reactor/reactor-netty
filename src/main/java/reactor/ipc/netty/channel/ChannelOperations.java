@@ -518,7 +518,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		else {
 			drainReceiver();
 		}
-		context.fireContextEmpty();
 	}
 
 	/**

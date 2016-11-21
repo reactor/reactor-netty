@@ -57,6 +57,12 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
+	public final void fireContextActive(NettyContext context) {
+		context = context != null ? context : this;
+		sink.success(context);
+	}
+
+	@Override
 	protected void doDropped(Channel channel) {
 		channel.close();
 		sink.success();

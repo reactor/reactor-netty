@@ -184,7 +184,9 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			  .addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
 
 			if(!ch.isActive()){
-				log.debug("Delayed bridging");
+				if (log.isDebugEnabled()) {
+					log.debug("Delayed bridging, adding onChannelActive handler");
+				}
 				ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
 					@Override
 					public void channelActive(ChannelHandlerContext ctx)
@@ -192,7 +194,18 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 						ctx.pipeline().remove(this);
 						op.onChannelActive(ch.pipeline()
 						                     .context(NettyHandlerNames.ReactiveBridge));
-						super.channelActive(ctx);
+						ctx.fireChannelActive();
+					}
+
+					@Override
+					public void channelInactive(ChannelHandlerContext ctx)
+							throws Exception {
+						if(ctx.pipeline().context(this) != null) {
+							ctx.pipeline()
+							   .remove(this);
+							op.onInboundError(CLOSED);
+							ctx.fireChannelInactive();
+						}
 					}
 				});
 			}
@@ -231,17 +244,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param context optional context to succeed the associated {@link MonoSink}
 	 */
 	public abstract void fireContextActive(NettyContext context);
-
-
-	/**
-	 * Trigger {@link MonoSink#success()} that will signal
-	 * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)} returned
-	 * {@link Mono} subscriber.
-	 *
-	 */
-	public void fireContextEmpty(){
-		sink.success();
-	}
 
 
 	/**
@@ -311,6 +313,15 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		}
 		pipeline.addLast(NettyHandlerNames.ReactiveBridge, BRIDGE);
 	}
+
+	static final IllegalStateException CLOSED =
+			new IllegalStateException("Connection " + "has been aborted by the remote " +
+					"peer"){
+				@Override
+				public synchronized Throwable fillInStackTrace() {
+					return this;
+				}
+			};
 
 	static final Logger               log                      =
 			Loggers.getLogger(ContextHandler.class);

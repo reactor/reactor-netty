@@ -57,12 +57,6 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public final void fireContextActive(NettyContext context) {
-		context = context != null ? context : this;
-		sink.success(context);
-	}
-
-	@Override
 	public final InetSocketAddress address() {
 		Channel c = f.channel();
 		if (c instanceof SocketChannel) {

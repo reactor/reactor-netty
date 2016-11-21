@@ -51,12 +51,12 @@ final class ServerContextHandler
 
 	@Override
 	protected void doStarted(Channel channel) {
-		fireContextActive();
+		sink.success(this);
 	}
 
 	@Override
-	public void fireContextEmpty() {
-		//ignore, context is always fired on bound connection
+	public final void fireContextActive(NettyContext context) {
+		//Ignore
 	}
 
 	@Override
