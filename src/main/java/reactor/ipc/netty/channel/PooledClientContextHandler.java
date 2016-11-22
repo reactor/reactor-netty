@@ -150,44 +150,39 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
-			c.pipeline().addLast(NettyHandlerNames.BridgeSetup, BRIDGE);
+			c.pipeline().addLast(NettyHandlerNames.BridgeSetup, getBridge());
+			if (c.isRegistered()) {
+				c.pipeline()
+				 .fireChannelRegistered();
+			}
+			if (c.isActive()) {
+				c.pipeline()
+				 .fireChannelActive();
+				return;
+			}
+			c.pipeline()
+			 .fireChannelInactive();
+			if (!c.isRegistered()) {
+				c.pipeline()
+				 .fireChannelUnregistered();
+			}
 		}
 		else {
 			if (log.isDebugEnabled()) {
 				log.debug("Acquired existing channel: {}", c.toString());
 			}
-			replaceBridge(c);
-		}
+			ChannelOperations<?, ?> op = channelOpSelector.apply(c, this);
 
-		if (c.isRegistered()) {
-			c.pipeline()
-			 .fireChannelRegistered();
-		}
-		if (c.isActive()) {
-			c.pipeline()
-			 .fireChannelActive();
-			return;
-		}
-		c.pipeline()
-		 .fireChannelInactive();
-		if (!c.isRegistered()) {
-			c.pipeline()
-			 .fireChannelUnregistered();
-		}
-	}
+			ChannelOperations<?, ?> previous =
+					c.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
+					 .getAndSet(op);
 
-	final void replaceBridge(CHANNEL c) {
-		ChannelOperations<?, ?> op = channelOpSelector.apply(c, this);
-
-		ChannelOperations<?, ?> previous =
-				c.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-				 .getAndSet(op);
-
-		if (previous != null) {
-			previous.cancel();
+			if (previous != null) {
+				previous.cancel();
+			}
+			op.onChannelActive(c.pipeline()
+			                    .context(NettyHandlerNames.ReactiveBridge));
 		}
-		op.onChannelActive(c.pipeline()
-		                    .context(NettyHandlerNames.ReactiveBridge));
 	}
 
 	@Override

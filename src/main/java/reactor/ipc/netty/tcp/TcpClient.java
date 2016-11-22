@@ -163,7 +163,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 			if (pool == null) {
 				Bootstrap b = options.get(address);
-				b.handler(contextHandler.getBridge());
+				b.handler(contextHandler);
 				contextHandler.setFuture(b.connect());
 			}
 			else {

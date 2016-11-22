@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
@@ -47,6 +48,7 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 public abstract class ContextHandler<CHANNEL extends Channel>
+		extends ChannelInitializer<CHANNEL>
 		implements Cancellation, NettyContext {
 
 	/**
@@ -150,6 +152,11 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 				Objects.requireNonNull(channelOpSelector, "channelOpSelector");
 		this.sink = sink;
 		this.loggingHandler = loggingHandler;
+	}
+
+	@Override
+	protected void initChannel(CHANNEL ch) throws Exception {
+		ch.pipeline().addLast(NettyHandlerNames.BridgeSetup, getBridge());
 	}
 
 	/**
@@ -305,7 +312,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 				catch (Exception t) {
 					if (log.isErrorEnabled()) {
 						log.error("Error while binding a channelOperation with: " + ctx.channel()
-						                                                               .toString(),
+						                                                               .toString() + " on "+ctx.pipeline(),
 								t);
 					}
 				}

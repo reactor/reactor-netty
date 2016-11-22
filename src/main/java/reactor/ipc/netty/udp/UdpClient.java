@@ -130,7 +130,7 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 		return Mono.create(sink -> {
 			Bootstrap b = options.get();
 			ContextHandler<DatagramChannel> c = doHandler(targetHandler, sink);
-			b.handler(c.getBridge());
+			b.handler(c);
 			c.setFuture(b.bind());
 		});
 	}
