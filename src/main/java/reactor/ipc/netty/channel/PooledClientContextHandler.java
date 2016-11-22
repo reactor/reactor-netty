@@ -150,7 +150,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
-			c.pipeline().addLast(NettyHandlerNames.BridgeSetup, getBridge());
+			doPipeline(c.pipeline());
+			c.pipeline()
+			 .addLast(NettyHandlerNames.BridgeSetup, new BridgeSetupHandler(this));
 			if (c.isRegistered()) {
 				c.pipeline()
 				 .fireChannelRegistered();
@@ -181,7 +183,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				previous.cancel();
 			}
 			op.onChannelActive(c.pipeline()
-			                    .context(NettyHandlerNames.ReactiveBridge));
+			                    .context(NettyHandlerNames.BridgeSetup));
 		}
 	}
 

@@ -78,48 +78,6 @@ final class ClientContextHandler<CHANNEL extends Channel>
 		addProxyHandler(clientOptions, pipeline);
 	}
 
-	static void addSslAndLogHandlers(ClientOptions options,
-			MonoSink<NettyContext> sink,
-			LoggingHandler loggingHandler,
-			boolean secure,
-			ChannelPipeline pipeline) {
-		SslHandler sslHandler = secure ? options.getSslHandler(pipeline.channel()
-		                                                               .alloc()) : null;
-		if (sslHandler != null) {
-			if (log.isDebugEnabled()) {
-				log.debug("SSL enabled using engine {}",
-						sslHandler.engine()
-						          .getClass()
-						          .getSimpleName());
-			}
-			if (log.isTraceEnabled()) {
-				pipeline.addFirst(NettyHandlerNames.SslLoggingHandler, loggingHandler);
-				pipeline.addAfter(NettyHandlerNames.SslLoggingHandler,
-						NettyHandlerNames.SslHandler,
-						sslHandler);
-			}
-			else {
-				pipeline.addFirst(NettyHandlerNames.SslHandler, sslHandler);
-			}
-			if (log.isDebugEnabled()) {
-				pipeline.addAfter(NettyHandlerNames.SslHandler,
-						NettyHandlerNames.LoggingHandler,
-						loggingHandler);
-				pipeline.addAfter(NettyHandlerNames.LoggingHandler,
-						NettyHandlerNames.SslReader,
-						new SslReadHandler(sink));
-			}
-			else {
-				pipeline.addAfter(NettyHandlerNames.SslHandler,
-						NettyHandlerNames.SslReader,
-						new SslReadHandler(sink));
-			}
-		}
-		else if (log.isDebugEnabled()) {
-			pipeline.addFirst(NettyHandlerNames.LoggingHandler, loggingHandler);
-		}
-	}
-
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline) {
 		ProxyHandler proxy = clientOptions.getProxyHandler();
 		if (proxy != null) {

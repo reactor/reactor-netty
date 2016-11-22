@@ -584,7 +584,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			channel.flush();
 		}
 		else {
-			log.info(" " + channel.isOpen() + " " + last);
 			if (exception != null) {
 				promise.setFailure(exception);
 			}

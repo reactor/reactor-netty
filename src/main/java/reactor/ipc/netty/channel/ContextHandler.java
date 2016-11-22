@@ -27,6 +27,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
 import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
@@ -40,16 +41,15 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
- * A one time-set channel pipeline callback and {@link NettyContext} state for clean disposing.
- * A {@link ContextHandler} is bound to a user-facing {@link MonoSink}
+ * A one time-set channel pipeline callback and {@link NettyContext} state for clean
+ * disposing. A {@link ContextHandler} is bound to a user-facing {@link MonoSink}
  *
  * @param <CHANNEL> the channel type
  *
  * @author Stephane Maldini
  */
 public abstract class ContextHandler<CHANNEL extends Channel>
-		extends ChannelInitializer<CHANNEL>
-		implements Cancellation, NettyContext {
+		extends ChannelInitializer<CHANNEL> implements Cancellation, NettyContext {
 
 	/**
 	 * Create a new client context
@@ -143,6 +143,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param sink
 	 * @param loggingHandler
 	 */
+	@SuppressWarnings("unchecked")
 	protected ContextHandler(BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
 			NettyOptions<?, ?> options,
 			MonoSink<NettyContext> sink,
@@ -156,16 +157,14 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
-		ch.pipeline().addLast(NettyHandlerNames.BridgeSetup, getBridge());
-	}
-
-	/**
-	 * Return a new Bridge setup handler
-	 * @return a new Bridge setup handler
-	 */
-	@SuppressWarnings("unchecked")
-	public final ChannelHandler getBridge() {
-		return new BridgeSetupHandler((ContextHandler<Channel>)this);
+		doPipeline(ch.pipeline());
+		ch.pipeline()
+		  .addLast(NettyHandlerNames.BridgeSetup, new BridgeSetupHandler(this));
+		if (log.isDebugEnabled()) {
+			log.debug("After pipeline {}",
+					ch.pipeline()
+					  .toString());
+		}
 	}
 
 	/**
@@ -177,7 +176,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 */
 	public abstract void fireContextActive(NettyContext context);
 
-
 	/**
 	 * Trigger {@link MonoSink#error(Throwable)} that will signal
 	 * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)} returned
@@ -185,8 +183,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 *
 	 * @param t error to fail the associated {@link MonoSink}
 	 */
-	public void fireContextError(Throwable t){
-		if(!fired) {
+	public void fireContextError(Throwable t) {
+		if (!fired) {
 			sink.error(t);
 		}
 	}
@@ -233,11 +231,11 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 *
 	 * @param channel the target channel to cleanup
 	 */
-	protected static void cleanHandlers(Channel channel){
+	protected static void cleanHandlers(Channel channel) {
 		ChannelHandlerContext ctx;
 		ChannelPipeline pipeline = channel.pipeline();
 
-		while((ctx = pipeline.lastContext()) != null) {
+		while ((ctx = pipeline.lastContext()) != null) {
 			if (ctx.name()
 			       .equals(NettyHandlerNames.BridgeSetup)) {
 				break;
@@ -250,8 +248,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	}
 
 	static final IllegalStateException ABORTED =
-			new IllegalStateException("Connection " + "has been aborted by the remote " +
-					"peer"){
+			new IllegalStateException("Connection " + "has been aborted by the remote " + "peer") {
 				@Override
 				public synchronized Throwable fillInStackTrace() {
 					return this;
@@ -259,20 +256,60 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 			};
 
-	static final Logger               log                      =
-			Loggers.getLogger(ContextHandler.class);
-	static final ChannelHandler       BRIDGE                   =
-			new ChannelOperationsHandler();
+	static final Logger         log    = Loggers.getLogger(ContextHandler.class);
+	static final ChannelHandler BRIDGE = new ChannelOperationsHandler();
 
-	static final class BridgeSetupHandler
-			extends ChannelInboundHandlerAdapter {
+	static void addSslAndLogHandlers(NettyOptions<?, ?> options,
+			MonoSink<NettyContext> sink,
+			LoggingHandler loggingHandler,
+			boolean secure,
+			ChannelPipeline pipeline) {
+		SslHandler sslHandler = secure ? options.getSslHandler(pipeline.channel()
+		                                                               .alloc()) : null;
+		if (sslHandler != null) {
+			if (log.isDebugEnabled()) {
+				log.debug("SSL enabled using engine {}",
+						sslHandler.engine()
+						          .getClass()
+						          .getSimpleName());
+			}
+			if (log.isTraceEnabled()) {
+				pipeline.addFirst(NettyHandlerNames.SslLoggingHandler, loggingHandler);
+				pipeline.addAfter(NettyHandlerNames.SslLoggingHandler,
+						NettyHandlerNames.SslHandler,
+						sslHandler);
+			}
+			else {
+				pipeline.addFirst(NettyHandlerNames.SslHandler, sslHandler);
+			}
+			if (log.isDebugEnabled()) {
+				pipeline.addAfter(NettyHandlerNames.SslHandler,
+						NettyHandlerNames.LoggingHandler,
+						loggingHandler);
+				pipeline.addAfter(NettyHandlerNames.LoggingHandler,
+						NettyHandlerNames.SslReader,
+						new SslReadHandler(sink));
+			}
+			else {
+				pipeline.addAfter(NettyHandlerNames.SslHandler,
+						NettyHandlerNames.SslReader,
+						new SslReadHandler(sink));
+			}
+		}
+		else if (log.isDebugEnabled()) {
+			pipeline.addFirst(NettyHandlerNames.LoggingHandler, loggingHandler);
+		}
+	}
+
+	static final class BridgeSetupHandler extends ChannelInboundHandlerAdapter {
 
 		final ContextHandler<Channel> parent;
 
 		boolean active;
 
-		BridgeSetupHandler(ContextHandler<Channel> parent) {
-			this.parent = parent;
+		@SuppressWarnings("unchecked")
+		BridgeSetupHandler(ContextHandler<?> parent) {
+			this.parent = (ContextHandler<Channel>) parent;
 		}
 
 		@Override
@@ -285,14 +322,13 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					if (parent.options.onChannelInit()
 					                  .test(ctx.channel())) {
 						if (log.isDebugEnabled()) {
-							log.debug("DROPPED by onChannelInit predicate {}", ctx.channel());
+							log.debug("DROPPED by onChannelInit predicate {}",
+									ctx.channel());
 						}
 						parent.doDropped(ctx.channel());
 						return;
 					}
 				}
-
-				parent.doPipeline(ctx.pipeline());
 
 				try {
 					ChannelOperations<?, ?> op =
@@ -303,16 +339,16 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					   .set(op);
 
 					ctx.pipeline()
-					  .addAfter(NettyHandlerNames.BridgeSetup,
-							  NettyHandlerNames.ReactiveBridge,
-							  BRIDGE);
+					   .addAfter(NettyHandlerNames.BridgeSetup,
+							   NettyHandlerNames.ReactiveBridge,
+							   BRIDGE);
 
 					op.onChannelActive(ctx);
 				}
 				catch (Exception t) {
 					if (log.isErrorEnabled()) {
 						log.error("Error while binding a channelOperation with: " + ctx.channel()
-						                                                               .toString() + " on "+ctx.pipeline(),
+						                                                               .toString() + " on " + ctx.pipeline(),
 								t);
 					}
 				}
@@ -329,10 +365,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		@Override
 		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 			if (!active) {
-				ChannelOperations<?, ?> op =
-						parent.channelOpSelector.apply(ctx.channel(), parent);
-
-				op.onInboundError(ABORTED);
+				parent.fireContextError(ABORTED);
 			}
 			ctx.fireChannelInactive();
 		}
@@ -347,10 +380,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 							cause);
 				}
 
-				ChannelOperations<?, ?> op =
-						parent.channelOpSelector.apply(ctx.channel(), parent);
-
-				op.onInboundError(ABORTED);
+				parent.fireContextError(cause);
 			}
 			ctx.fireExceptionCaught(cause);
 		}

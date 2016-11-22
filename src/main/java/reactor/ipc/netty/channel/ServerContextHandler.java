@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
-import reactor.core.Cancellation;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
@@ -79,18 +78,6 @@ final class ServerContextHandler
 
 	@Override
 	protected void doPipeline(ChannelPipeline pipeline) {
-		addSslAndLogHandlers(pipeline);
-	}
-
-	void addSslAndLogHandlers(ChannelPipeline pipeline) {
-		SslHandler sslHandler = options.getSslHandler(pipeline.channel().alloc());
-		if (sslHandler != null) {
-			pipeline.addFirst(NettyHandlerNames.SslHandler, sslHandler);
-		}
-
-		if (log.isDebugEnabled()) {
-			pipeline.addLast(NettyHandlerNames.LoggingHandler, loggingHandler);
-		}
-
+		addSslAndLogHandlers(options, sink, loggingHandler, true, pipeline);
 	}
 }
