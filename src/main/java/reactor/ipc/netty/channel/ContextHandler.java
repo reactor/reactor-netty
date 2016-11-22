@@ -274,7 +274,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 						          .getSimpleName());
 			}
 			if (log.isTraceEnabled()) {
-				pipeline.addFirst(NettyHandlerNames.SslLoggingHandler, loggingHandler);
+				pipeline.addFirst(NettyHandlerNames.SslLoggingHandler, new
+						LoggingHandler(SslReadHandler.class));
 				pipeline.addAfter(NettyHandlerNames.SslLoggingHandler,
 						NettyHandlerNames.SslHandler,
 						sslHandler);
