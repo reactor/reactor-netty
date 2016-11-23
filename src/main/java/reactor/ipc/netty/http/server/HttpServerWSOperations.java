@@ -28,8 +28,6 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import reactor.ipc.netty.http.HttpOperations;
 
 /**
@@ -37,8 +35,7 @@ import reactor.ipc.netty.http.HttpOperations;
  *
  * @author Stephane Maldini
  */
-final class HttpServerWSOperations extends HttpServerOperations
-		implements GenericFutureListener<Future<Void>> {
+final class HttpServerWSOperations extends HttpServerOperations {
 
 	final WebSocketServerHandshaker handshaker;
 	final ChannelFuture             handshakerResult;
@@ -67,13 +64,8 @@ final class HttpServerWSOperations extends HttpServerOperations
 					replaced.nettyRequest,
 					replaced.nettyRequest.headers(),
 					channel.newPromise())
-			                             .addListener(this);
+			                             .addListener(f -> channel.read());
 		}
-	}
-
-	@Override
-	public void operationComplete(Future<Void> future) throws Exception {
-		channel().read();
 	}
 
 	@Override

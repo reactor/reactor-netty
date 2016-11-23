@@ -58,7 +58,6 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
 		super(ioChannel, handler, context);
-		registerInterest(); //leave deferTerminateChannel to LastHttpContent consumed
 	}
 
 	@Override

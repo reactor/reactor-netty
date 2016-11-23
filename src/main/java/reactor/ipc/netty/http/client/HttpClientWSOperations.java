@@ -26,7 +26,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -35,15 +34,12 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import reactor.ipc.netty.NettyHandlerNames;
 
 /**
  * @author Stephane Maldini
  */
-final class HttpClientWSOperations extends HttpClientOperations
-		implements GenericFutureListener<Future<Void>> {
+final class HttpClientWSOperations extends HttpClientOperations {
 
 	final WebSocketClientHandshaker handshaker;
 	final ChannelPromise            handshakerResult;
@@ -74,7 +70,13 @@ final class HttpClientWSOperations extends HttpClientOperations
 			       .remove(handlerName);
 		}
 		handshaker.handshake(channel)
-		          .addListener(this);
+		          .addListener(f -> {
+			          if (!f.isSuccess()) {
+				          handshakerResult.tryFailure(f.cause());
+				          return;
+			          }
+			          channel().read();
+		          });
 	}
 
 	@Override
@@ -117,15 +119,6 @@ final class HttpClientWSOperations extends HttpClientOperations
 		else {
 			super.onInboundNext(ctx, msg);
 		}
-	}
-
-	@Override
-	public void operationComplete(Future f) throws Exception {
-		if (!f.isSuccess()) {
-			handshakerResult.tryFailure(f.cause());
-			return;
-		}
-		channel().read();
 	}
 
 	@Override

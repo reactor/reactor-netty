@@ -21,6 +21,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.Cancellation;
 import reactor.core.Exceptions;
 import reactor.core.Loopback;
 import reactor.core.publisher.Operators;
@@ -31,13 +32,14 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 final class OutboundFlushLastSubscriber
-		implements Subscriber<Object>, ChannelFutureListener, Loopback {
+		implements Subscriber<Object>, Runnable, Loopback {
 
 	final ChannelPromise          promise;
 	final ChannelOperations<?, ?> parent;
 
 	ChannelFuture lastWrite;
 	Subscription  subscription;
+	Cancellation  c;
 
 	public OutboundFlushLastSubscriber(ChannelOperations<?, ?> parent,
 			ChannelPromise promise) {
@@ -53,12 +55,14 @@ final class OutboundFlushLastSubscriber
 	@Override
 	public void onComplete() {
 		if (subscription == null) {
-			throw new IllegalStateException("already flushed");
+			return;
 		}
 		subscription = null;
-		parent.channel
-		   .closeFuture()
-		   .removeListener(this);
+		Cancellation c = this.c;
+		if(c != null) {
+			c.dispose();
+			this.c = null;
+		}
 		parent.channel
 				.eventLoop()
 				.execute(() -> parent.onTerminatedSend(lastWrite, promise, null));
@@ -74,9 +78,11 @@ final class OutboundFlushLastSubscriber
 		}
 		log.error("Write error", t);
 		subscription = null;
-		parent.channel
-		   .closeFuture()
-		   .removeListener(this);
+		Cancellation c = this.c;
+		if(c != null) {
+			c.dispose();
+			this.c = null;
+		}
 		parent.channel
 				.eventLoop()
 				.execute(() -> parent.onTerminatedSend(lastWrite, promise, t));
@@ -113,20 +119,26 @@ final class OutboundFlushLastSubscriber
 	@Override
 	public void onSubscribe(final Subscription s) {
 		if (Operators.validate(subscription, s)) {
-			this.subscription = s;
 
-			parent.channel
-			   .closeFuture()
-			   .addListener(this);
+			if(parent.channel.isOpen()){
+				this.subscription = s;
 
-			s.request(Long.MAX_VALUE);
+				parent.onInactive.subscribe(null, null, this);
+
+				s.request(Long.MAX_VALUE);
+			}
+			else{
+				s.cancel();
+			}
+
 		}
 	}
 
 	@Override
-	public void operationComplete(ChannelFuture future) throws Exception {
+	public void run() {
 		Subscription subscription = this.subscription;
 		this.subscription = null;
+		c = null;
 		if (subscription != null) {
 			if (log.isDebugEnabled()) {
 				log.debug("Cancel from remotely closed connection");

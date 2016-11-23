@@ -393,8 +393,16 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
-				onInboundComplete();
-				deferChannelTerminate();
+				if(isTerminated()) {
+					release();
+				}
+				else{
+					onInboundComplete();
+				}
+				return;
+			}
+			if(isTerminated()){
+				ctx.read();
 			}
 		}
 		else {
@@ -414,27 +422,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (log.isDebugEnabled()) {
 				log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
 			}
-			channel().pipeline()
-			         .addAfter(NettyHandlerNames.ReactiveBridge,
-					         NettyHandlerNames.OnHttpClose,
-					         new ChannelInboundHandlerAdapter() {
-						         @Override
-						         public void channelRead(ChannelHandlerContext ctx,
-								         Object msg) throws Exception {
-							         if (msg instanceof LastHttpContent) {
-								         release();
-							         }
-							         else {
-								         ctx.read();
-								         if (log.isDebugEnabled()) {
-									         log.debug(
-											         "Consuming keep-alive Connection, dropping frame: {}",
-											         msg.toString());
-								         }
-							         }
-						         }
-					         })
-			         .remove(NettyHandlerNames.ReactiveBridge);
 			channel().read();
 		}
 	}
@@ -457,7 +444,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			response.headers()
 			        .add(HttpHeaderNames.CONTENT_LENGTH, 0L);
 			channel().writeAndFlush(response)
-			         .addListener(r -> deferChannelTerminate());
+			         .addListener(r -> onChannelTerminate());
 			return;
 		}
 		log.error("Error processing response. Sending last HTTP frame", err);

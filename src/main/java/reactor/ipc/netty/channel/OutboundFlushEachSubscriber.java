@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.Cancellation;
 import reactor.core.Exceptions;
 import reactor.core.Loopback;
 import reactor.core.Receiver;
@@ -32,14 +33,16 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 final class OutboundFlushEachSubscriber
-		implements Subscriber<Object>, ChannelFutureListener, Loopback, Trackable,
-		           Receiver {
+		implements Subscriber<Object>, Loopback, Trackable,
+		           Receiver, Runnable {
 
 	final ChannelOperations<?, ?> parent;
 	final ChannelPromise          promise;
 	final ChannelFutureListener writeListener = new WriteListener();
 
 	volatile Subscription subscription;
+
+	Cancellation c;
 
 	public OutboundFlushEachSubscriber(ChannelOperations<?, ?> parent,
 			ChannelPromise promise) {
@@ -72,15 +75,14 @@ final class OutboundFlushEachSubscriber
 	@Override
 	public void onComplete() {
 		if (subscription == null) {
-			throw new IllegalStateException("already flushed");
+			return;
 		}
 		subscription = null;
-		if (log.isDebugEnabled()) {
-			log.debug("Flush Connection");
+		Cancellation c = this.c;
+		if(c != null) {
+			c.dispose();
+			this.c = null;
 		}
-		parent.channel
-		   .closeFuture()
-		   .removeListener(this);
 
 		parent.channel
 		   .eventLoop()
@@ -93,13 +95,16 @@ final class OutboundFlushEachSubscriber
 			throw Exceptions.argumentIsNullException();
 		}
 		if (subscription == null) {
-			throw new IllegalStateException("already flushed", t);
+			throw new IllegalStateException("already terminated", t);
 		}
 		log.error("Write error", t);
 		subscription = null;
-		parent.channel
-		   .closeFuture()
-		   .removeListener(this);
+		Cancellation c = this.c;
+		if(c != null) {
+			c.dispose();
+			this.c = null;
+		}
+
 		parent.channel
 		   .eventLoop()
 		   .execute(() -> parent.onTerminatedSend(null, promise, t));
@@ -130,25 +135,16 @@ final class OutboundFlushEachSubscriber
 	@Override
 	public void onSubscribe(final Subscription s) {
 		if (Operators.validate(subscription, s)) {
-			subscription = s;
+			if(parent.channel.isOpen()){
+				this.subscription = s;
 
-			parent.channel
-			   .closeFuture()
-			   .addListener(this);
+				parent.onInactive.subscribe(null, null, this);
 
-			s.request(1L);
-		}
-	}
-
-	@Override
-	public void operationComplete(ChannelFuture future) throws Exception {
-		Subscription subscription = this.subscription;
-		this.subscription = null;
-		if (subscription != null) {
-			if (log.isDebugEnabled()) {
-				log.debug("Cancel from remotely closed connection");
+				s.request(1L);
 			}
-			subscription.cancel();
+			else{
+				s.cancel();
+			}
 		}
 	}
 
@@ -157,7 +153,7 @@ final class OutboundFlushEachSubscriber
 		return subscription;
 	}
 
-	private class WriteListener implements ChannelFutureListener {
+	final class WriteListener implements ChannelFutureListener {
 
 		@Override
 		public void operationComplete(ChannelFuture future) throws Exception {
@@ -174,6 +170,18 @@ final class OutboundFlushEachSubscriber
 			}
 		}
 	}
-	
+
+	@Override
+	public void run() {
+		Subscription subscription = this.subscription;
+		this.subscription = null;
+		if (subscription != null) {
+			if (log.isDebugEnabled()) {
+				log.debug("Cancel from remotely closed connection");
+			}
+			subscription.cancel();
+		}
+	}
+
 	static final Logger log = Loggers.getLogger(OutboundFlushEachSubscriber.class);
 }
