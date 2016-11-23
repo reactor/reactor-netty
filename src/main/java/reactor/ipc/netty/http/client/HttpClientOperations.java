@@ -28,7 +28,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -46,7 +45,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -422,11 +420,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			return;
 		}
-		if (!(msg instanceof LastHttpContent)) {
-			super.onInboundNext(ctx, msg);
-			prefetchMore(ctx);
-		}
-		else{
+		if (msg instanceof LastHttpContent) {
 			if (log.isDebugEnabled()) {
 				log.debug("Received last HTTP packet");
 			}
@@ -434,7 +428,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				super.onInboundNext(ctx, msg);
 			}
 			onChannelInactive();
+			return;
 		}
+
+		super.onInboundNext(ctx, msg);
+		prefetchMore(ctx);
 	}
 
 	@Override
@@ -451,7 +449,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				log.debug("Received Server Error, stop reading: {}", response.toString());
 			}
 			Exception ex = new HttpClientException(this);
-			onChannelInactive(); // force terminate
+			onChannelTerminate();
 			parentContext().fireContextError(ex);
 			return false;
 		}
@@ -463,7 +461,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						        .toString());
 			}
 			Exception ex = new RedirectClientException(this);
-			onChannelInactive(); // force terminate
+			onChannelTerminate();
 			parentContext().fireContextError(ex);
 			return false;
 		}

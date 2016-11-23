@@ -342,10 +342,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 					Operators.error(s, inboundError);
 					return;
 				}
-				else {
-					Operators.complete(s);
-					return;
-				}
+
+				Operators.complete(s);
+				return;
 			}
 
 			initReceiver(s);
