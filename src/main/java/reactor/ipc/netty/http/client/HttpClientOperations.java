@@ -449,8 +449,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				log.debug("Received Server Error, stop reading: {}", response.toString());
 			}
 			Exception ex = new HttpClientException(this);
-			parentContext().fireContextError(ex);
 			onChannelTerminate();
+			parentContext().fireContextError(ex);
 			return false;
 		}
 		if (code >= 300 && isFollowRedirect()) {
@@ -461,8 +461,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						        .toString());
 			}
 			Exception ex = new RedirectClientException(this);
-			parentContext().fireContextError(ex);
 			onChannelTerminate();
+			parentContext().fireContextError(ex);
 			return false;
 		}
 		return true;
