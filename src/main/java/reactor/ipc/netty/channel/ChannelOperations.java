@@ -331,11 +331,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final void subscribe(Subscriber<? super Object> s) {
-		if (isDisposed()) {
-			Operators.error(s,
-					new IllegalStateException("This inbound is not " + "active " + "anymore"));
-			return;
-		}
 		if (log.isDebugEnabled()) {
 			log.debug("[{}] Subscribing inbound receiver [pending: " + "" + getPending() + ", inboundDone: {}]",
 					formatName(),
