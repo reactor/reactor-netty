@@ -26,8 +26,6 @@ import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.options.ServerOptions;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 /**
  *
@@ -35,8 +33,6 @@ import reactor.util.Loggers;
  */
 final class ServerContextHandler
 		extends CloseableContextHandler<Channel> {
-
-	static final Logger log = Loggers.getLogger(ServerContextHandler.class);
 
 	final ServerOptions serverOptions;
 
@@ -65,6 +61,15 @@ final class ServerContextHandler
 
 	@Override
 	public void terminateChannel(Channel channel) {
+		if(channel.eventLoop().inEventLoop()){
+			cleanChannel(channel);
+		}
+		else{
+			channel.eventLoop().execute(() -> cleanChannel(channel));
+		}
+	}
+
+	final void cleanChannel(Channel channel){
 		cleanHandlers(channel);
 
 		ChannelOperations<?, ?> op = channelOpSelector.apply(channel, this);

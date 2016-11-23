@@ -24,11 +24,14 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -102,9 +105,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		responseHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
-		//.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
-		.add(HttpHeaderNames.DATE, new Date());
-
+		               //.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
+		               .add(HttpHeaderNames.DATE, new Date());
 	}
 
 	@Override
@@ -210,118 +212,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public HttpMethod method() {
 		return nettyRequest.method();
-	}
-
-	@Override
-	public void onChannelActive(ChannelHandlerContext ctx) {
-		ctx.pipeline()
-		   .addBefore(NettyHandlerNames.ReactiveBridge,
-				   NettyHandlerNames.HttpCodecHandler,
-				   new HttpServerCodec());
-
-		ctx.read();
-	}
-
-	@Override
-	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
-			nettyRequest = (HttpRequest) msg;
-			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
-
-			if (nettyRequest.decoderResult()
-			                .isFailure()) {
-				onOutboundError(nettyRequest.decoderResult()
-				                            .cause());
-				return;
-			}
-
-			if (isWebsocket()) {
-				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
-				channel().pipeline()
-				         .addBefore(NettyHandlerNames.ReactiveBridge,
-						         NettyHandlerNames.HttpAggregator,
-						         agg);
-			}
-
-			applyHandler();
-
-			if (!(msg instanceof FullHttpRequest)) {
-				return;
-			}
-		}
-		if (msg instanceof HttpContent) {
-			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
-				super.onInboundNext(ctx, msg);
-			}
-			if (msg instanceof LastHttpContent) {
-				onInboundComplete();
-			}
-		}
-		else {
-			super.onInboundNext(ctx, msg);
-		}
-	}
-
-	@Override
-	protected void onOutboundComplete() {
-		if (channel().isOpen()) {
-			if (log.isDebugEnabled()) {
-				log.debug("Last HTTP response frame");
-			}
-			ChannelFuture f;
-			if (!isWebsocket()) {
-				if (markHeadersAsSent()) {
-					channel().write(nettyResponse);
-				}
-				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-				if (!isKeepAlive()) {
-					//fast path vs unregisterInterest
-					f.addListener(ChannelFutureListener.CLOSE);
-				}
-				else {
-					f.addListener(s -> {
-						if (!s.isSuccess()) {
-							log.error("Failed flushing last frame", s.cause());
-						}
-						unregisterInterest();
-					});
-				}
-			}
-			else {
-				f = channel().writeAndFlush(new CloseWebSocketFrame());
-				f.addListener(s -> {
-					if (!s.isSuccess()) {
-						log.error("Failed flushing last frame", s.cause());
-					}
-					unregisterInterest();
-				});
-			}
-		}
-	}
-
-	@Override
-	protected void onOutboundError(Throwable err) {
-		if (err != null && err instanceof IOException && err.getMessage() != null && err.getMessage()
-		                                                                                .contains(
-				                                                                                "Broken " + "pipe")) {
-			if (log.isDebugEnabled()) {
-				log.debug("Connection closed remotely", err);
-			}
-			return;
-		}
-		if (markHeadersAsSent()) {
-			log.error("Error starting response. Replying error status", err);
-
-			HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-					HttpResponseStatus.INTERNAL_SERVER_ERROR);
-			response.headers()
-			        .add(HttpHeaderNames.CONTENT_LENGTH, 0L);
-			channel().writeAndFlush(response)
-			         .addListener(r -> unregisterInterest());
-			return;
-		}
-		log.error("Error processing response. Sending last HTTP frame", err);
-		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT).addListener(r -> unregisterInterest());
 	}
 
 	/**
@@ -447,9 +337,172 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	protected void onChannelActive(ChannelHandlerContext ctx) {
+		ctx.pipeline()
+		   .addBefore(NettyHandlerNames.ReactiveBridge,
+				   NettyHandlerNames.HttpCodecHandler,
+				   new HttpServerCodec());
+
+		ctx.read();
+	}
+
+	@Override
+	public Mono<Void> sendFull(Publisher<? extends ByteBuf> source) {
+		ByteBufAllocator alloc = channel().alloc();
+		return Flux.from(source)
+		           .doOnNext(ByteBuf::retain)
+		           .collect(alloc::buffer, ByteBuf::writeBytes)
+		           .then(agg -> {
+			           if (!hasSentHeaders()) {
+				           header(HttpHeaderNames.CONTENT_LENGTH,
+						           "" + agg.readableBytes());
+			           }
+			           return super.send(Mono.just(agg));
+		           });
+	}
+
+	@Override
+	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
+		if (msg instanceof HttpRequest) {
+			nettyRequest = (HttpRequest) msg;
+			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
+
+			if (nettyRequest.decoderResult()
+			                .isFailure()) {
+				onOutboundError(nettyRequest.decoderResult()
+				                            .cause());
+				return;
+			}
+
+			if (isWebsocket()) {
+				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
+				channel().pipeline()
+				         .addBefore(NettyHandlerNames.ReactiveBridge,
+						         NettyHandlerNames.HttpAggregator,
+						         agg);
+			}
+
+			applyHandler();
+
+			if (!(msg instanceof FullHttpRequest)) {
+				return;
+			}
+		}
+		if (msg instanceof HttpContent) {
+			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
+				super.onInboundNext(ctx, msg);
+			}
+			if (msg instanceof LastHttpContent) {
+				onInboundComplete();
+				deferChannelTerminate();
+			}
+		}
+		else {
+			super.onInboundNext(ctx, msg);
+		}
+	}
+
+	@Override
+	protected void onOutboundComplete() {
+		if (log.isDebugEnabled()) {
+			log.debug("User Handler requesting a last HTTP frame write", formatName());
+		}
+		if (markReceiving() || isWebsocket()) {
+			release();
+		}
+		else {
+			if (log.isDebugEnabled()) {
+				log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
+			}
+			channel().pipeline()
+			         .addAfter(NettyHandlerNames.ReactiveBridge,
+					         NettyHandlerNames.OnHttpClose,
+					         new ChannelInboundHandlerAdapter() {
+						         @Override
+						         public void channelRead(ChannelHandlerContext ctx,
+								         Object msg) throws Exception {
+							         if (msg instanceof LastHttpContent) {
+								         release();
+							         }
+							         else {
+								         ctx.read();
+								         if (log.isDebugEnabled()) {
+									         log.debug(
+											         "Consuming keep-alive Connection, dropping frame: {}",
+											         msg.toString());
+								         }
+							         }
+						         }
+					         })
+			         .remove(NettyHandlerNames.ReactiveBridge);
+			channel().read();
+		}
+	}
+
+	@Override
+	protected void onOutboundError(Throwable err) {
+		if (err != null && err instanceof IOException && err.getMessage() != null && err.getMessage()
+		                                                                                .contains(
+				                                                                                "Broken " + "pipe")) {
+			if (log.isDebugEnabled()) {
+				log.debug("Connection closed remotely", err);
+			}
+			return;
+		}
+		if (markHeadersAsSent()) {
+			log.error("Error starting response. Replying error status", err);
+
+			HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+					HttpResponseStatus.INTERNAL_SERVER_ERROR);
+			response.headers()
+			        .add(HttpHeaderNames.CONTENT_LENGTH, 0L);
+			channel().writeAndFlush(response)
+			         .addListener(r -> deferChannelTerminate());
+			return;
+		}
+		log.error("Error processing response. Sending last HTTP frame", err);
+		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+		         .addListener(r -> onChannelTerminate());
+	}
+
+	@Override
 	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
 		ChannelFutureMono.from(channel().writeAndFlush(nettyResponse))
 		                 .subscribe(s);
+	}
+
+	final void release() {
+		if (log.isDebugEnabled()) {
+			log.debug("Last HTTP response frame");
+		}
+		ChannelFuture f;
+		if (!isWebsocket()) {
+			if (markHeadersAsSent()) {
+				channel().write(nettyResponse);
+			}
+			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+			if (!isKeepAlive()) {
+				//fast path vs deferChannelTerminate
+				f.addListener(ChannelFutureListener.CLOSE);
+			}
+			else {
+				f.addListener(s -> {
+					if (!s.isSuccess()) {
+						log.error("Failed flushing last frame", s.cause());
+					}
+					super.onChannelTerminate();
+				});
+			}
+		}
+		else {
+			f = channel().writeAndFlush(new CloseWebSocketFrame());
+			f.addListener(s -> {
+				if (!s.isSuccess()) {
+					log.error("Failed flushing last frame", s.cause());
+				}
+				super.onChannelTerminate();
+			});
+		}
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,

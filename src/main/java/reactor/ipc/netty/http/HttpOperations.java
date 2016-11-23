@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -35,7 +34,6 @@ import reactor.core.Receiver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
-import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 
@@ -60,7 +58,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
 		super(ioChannel, handler, context);
-
+		registerInterest(); //leave deferTerminateChannel to LastHttpContent consumed
 	}
 
 	@Override
@@ -97,6 +95,9 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
+		if (hasSentHeaders()) {
+			return super.send(dataStream);
+		}
 		return new MonoHttpSendWithHeaders(dataStream);
 	}
 
@@ -105,11 +106,9 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		Supplier<Mono<Void>> writeFile =
-				() -> ChannelFutureMono.from(channel().writeAndFlush(new DefaultFileRegion(
-						file,
-						position,
-						count)));
+
+		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
+
 		return sendHeaders().then(writeFile);
 	}
 
@@ -136,6 +135,9 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
+		if (hasSentHeaders()) {
+			return super.sendObject(source);
+		}
 		return new MonoHttpSendWithHeaders(source);
 	}
 
@@ -146,8 +148,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		if (isWebsocket()) {
-			return new MonoHttpSendWithHeaders(Flux.from(dataStream)
-			                                       .map(TextWebSocketFrame::new));
+			return sendObject(Flux.from(dataStream)
+			                      .map(TextWebSocketFrame::new));
 		}
 
 		return send(Flux.from(dataStream)
@@ -275,8 +277,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 				sendHeadersAndSubscribe(s);
 			}
 			else{
-				s.onSubscribe(Operators.emptySubscription());
-				s.onComplete();
+				Operators.complete(s);
 			}
 		}
 	}

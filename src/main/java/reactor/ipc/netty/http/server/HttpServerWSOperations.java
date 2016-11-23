@@ -92,7 +92,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 	}
 
 	@Override
-	public ChannelFuture sendNext(Object data) {
+	protected ChannelFuture sendNext(Object data) {
 		if (data instanceof ByteBuf) {
 			if (plainText) {
 				return channel().write(new TextWebSocketFrame((ByteBuf) data));

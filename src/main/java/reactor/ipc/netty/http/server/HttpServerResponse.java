@@ -30,25 +30,13 @@ import reactor.ipc.netty.http.HttpOutbound;
  */
 public interface HttpServerResponse extends HttpOutbound {
 
-	/**
-	 * add the passed cookie
-	 * @return this
-	 */
 	@Override
 	HttpServerResponse addCookie(Cookie cookie);
 
-	/**
-	 *
-	 * @param name
-	 * @param value
-	 * @return
-	 */
 	@Override
 	HttpServerResponse addHeader(CharSequence name, CharSequence value);
 
-	/**
-	 *
-	 */
+	@Override
 	HttpServerResponse chunkedTransfer(boolean chunked);
 
 	@Override
@@ -57,12 +45,7 @@ public interface HttpServerResponse extends HttpOutbound {
 	@Override
 	HttpServerResponse flushEach();
 
-	/**
-	 *
-	 * @param name
-	 * @param value
-	 * @return
-	 */
+	@Override
 	HttpServerResponse header(CharSequence name, CharSequence value);
 
 	@Override

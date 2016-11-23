@@ -55,12 +55,7 @@ public interface HttpClientRequest extends HttpOutbound {
 	 */
 	HttpClientRequest followRedirect();
 
-	/**
-	 * @param name
-	 * @param value
-	 *
-	 * @return
-	 */
+	@Override
 	HttpClientRequest header(CharSequence name, CharSequence value);
 
 	/**

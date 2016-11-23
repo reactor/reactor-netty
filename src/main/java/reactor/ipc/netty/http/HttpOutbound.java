@@ -18,7 +18,7 @@ package reactor.ipc.netty.http;
 
 import java.util.function.BiFunction;
 
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.cookie.Cookie;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -54,6 +54,16 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	HttpOutbound flushEach();
 
 	/**
+	 * Set an outbound header
+	 *
+	 * @param name headers key
+	 * @param value header value
+	 *
+	 * @return this outbound
+	 */
+	HttpOutbound header(CharSequence name, CharSequence value);
+
+	/**
 	 * set the request keepAlive if true otherwise remove the existing connection keep alive header
 	 *
 	 * @return this outbound
@@ -68,11 +78,31 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	HttpOutbound disableChunkedTransfer();
 
 	/**
+	 * Set transfer-encoding header
+	 *
+	 * @param chunked true if transfer-encoding:chunked
+	 *
+	 * @return this outbound
+	 */
+	HttpOutbound chunkedTransfer(boolean chunked);
+
+	/**
 	 * Return a {@link Mono} successful on committed response
 	 *
 	 * @return a {@link Mono} successful on committed response
 	 */
 	Mono<Void> sendHeaders();
+
+	/**
+	 * Collect all {@link io.netty.buffer.ByteBuf} and set the content-length if
+	 * headers haven't been previously committed
+	 *
+	 * @param source the input source to send to the remote outbound.
+	 *
+	 * @return a {@link Mono} successful on committed response
+	 * @see #send(Publisher)
+	 */
+	Mono<Void> sendFull(Publisher<? extends ByteBuf> source);
 
 
 

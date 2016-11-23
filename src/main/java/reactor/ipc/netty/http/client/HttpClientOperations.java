@@ -24,8 +24,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -45,10 +46,12 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
@@ -108,7 +111,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.headers = nettyRequest.headers();
 		this.inboundPrefetch = 16;
-		registerInterest();
 	}
 
 	@Override
@@ -155,6 +157,17 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return responseState.cookieHolder.getCachedCookies();
 		}
 		return null;
+	}
+
+	@Override
+	public HttpClientRequest chunkedTransfer(boolean chunked) {
+		if (!hasSentHeaders()) {
+			HttpUtil.setTransferEncodingChunked(nettyRequest, chunked);
+		}
+		else {
+			throw new IllegalStateException("Status and headers already sent");
+		}
+		return this;
 	}
 
 	@Override
@@ -332,7 +345,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 		else {
 			if (log.isDebugEnabled()) {
-				log.debug("Cancelled Keep-Alive Connection, prepare to ignore extra " + "frames");
+				log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
 			}
 			channel().pipeline()
 			         .addAfter(NettyHandlerNames.ReactiveBridge,
@@ -341,13 +354,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						         @Override
 						         public void channelRead(ChannelHandlerContext ctx,
 								         Object msg) throws Exception {
-							         if (msg instanceof LastHttpContent) {
+							         if (isWebsocket() && msg instanceof CloseWebSocketFrame || msg instanceof LastHttpContent) {
 								         HttpClientOperations.super.onChannelTerminate();
 							         }
 							         else {
 								         ctx.read();
 								         if (log.isDebugEnabled()) {
-									         log.debug("Cancelled Keep-Alive Connection, " + "dropping " + "frame: {}",
+									         log.debug("Consuming keep-alive " + "connection, " + "dropping" + " " + "frame: {}",
 											         msg.toString());
 								         }
 							         }
@@ -365,7 +378,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				boolean chunked = HttpUtil.isTransferEncodingChunked(nettyRequest);
 				if (markHeadersAsSent()) {
 					if(!chunked){
-						channel().writeAndFlush(nettyRequest).addListener(r -> unregisterInterest());
+						channel().writeAndFlush(nettyRequest)
+						         .addListener(r -> deferChannelTerminate());
 						return;
 					}
 					else{
@@ -374,11 +388,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				}
 				if(chunked) {
 					channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
-					         .addListener(r -> unregisterInterest());
+					         .addListener(r -> deferChannelTerminate());
 				}
 			}
 			else{
-				unregisterInterest();
+				deferChannelTerminate();
 			}
 		}
 	}
@@ -434,6 +448,29 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			onChannelInactive();
 		}
+	}
+
+	@Override
+	public Mono<Void> send(Publisher<? extends ByteBuf> dataStream) {
+		if (method() == HttpMethod.GET || method() == HttpMethod.HEAD) {
+			return sendFull(dataStream);
+		}
+		return super.send(dataStream);
+	}
+
+	@Override
+	public Mono<Void> sendFull(Publisher<? extends ByteBuf> source) {
+		ByteBufAllocator alloc = channel().alloc();
+		return Flux.from(source)
+		           .doOnNext(ByteBuf::retain)
+		           .collect(alloc::buffer, ByteBuf::writeBytes)
+		           .then(agg -> {
+			           if (!hasSentHeaders()) {
+				           header(HttpHeaderNames.CONTENT_LENGTH,
+						           "" + agg.readableBytes());
+			           }
+			           return super.send(Mono.just(agg));
+		           });
 	}
 
 	@Override

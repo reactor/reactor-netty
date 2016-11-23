@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package reactor.ipc.netty.channel;
 
 import org.reactivestreams.Subscriber;
@@ -34,24 +35,14 @@ final class OutboundCloseSubscriber implements Subscriber<Void> {
 
 	@Override
 	public void onComplete() {
-		if(parent.channel.eventLoop().inEventLoop()){
-			parent.onOutboundComplete();
-		}
-		else {
-			parent.channel.eventLoop()
-			              .execute(parent::onOutboundComplete);
-		}
+		parent.channel.eventLoop()
+		              .execute(parent::onOutboundComplete);
 	}
 
 	@Override
 	public void onError(Throwable t) {
-		if(parent.channel.eventLoop().inEventLoop()){
-			parent.onOutboundError(t);
-		}
-		else {
-			parent.channel.eventLoop()
-			              .execute(() -> parent.onOutboundError(t));
-		}
+		parent.channel.eventLoop()
+		              .execute(() -> parent.onOutboundError(t));
 	}
 
 	@Override
@@ -63,7 +54,8 @@ final class OutboundCloseSubscriber implements Subscriber<Void> {
 		if (Operators.validate(subscription, s)) {
 			subscription = s;
 			s.request(Long.MAX_VALUE);
-			if(!parent.context.getClass().equals(ServerContextHandler.class)){
+			if (!parent.context.getClass()
+			                   .equals(ServerContextHandler.class)) {
 				parent.channel.read();
 			}
 		}
