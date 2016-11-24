@@ -453,16 +453,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param err the {@link Throwable} cause
 	 */
 	protected void onOutboundError(Throwable err) {
-		if (err instanceof IOException && err.getMessage()
-		                                     .contains("Broken pipe")) {
-			if (log.isDebugEnabled()) {
-				log.debug("[{}] Connection closed remotely", formatName(), err);
-			}
-		}
-		else {
-			log.error("[" + formatName() + "] Error processing connection. Requesting close the channel",
-					err);
-		}
+		discreteRemoteClose(err);
 		onChannelTerminate();
 	}
 
@@ -490,6 +481,29 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
+	 * Try filtering out remote close unless traced, return true if filtered
+	 *
+	 * @param err the error to check
+	 *
+	 * @return true if filtered
+	 */
+	protected final boolean discreteRemoteClose(Throwable err) {
+		if (err instanceof IOException && (err.getMessage()
+		                                      .contains("Broken pipe") || err.getMessage()
+		                                                                     .contains(
+				                                                                     "Connection reset by peer"))) {
+			if (log.isDebugEnabled()) {
+				log.debug("[{}] Connection closed remotely", formatName(), err);
+			}
+			return true;
+		}
+
+		log.error("[" + formatName() + "] Error processing connection. Requesting close the channel",
+				err);
+		return false;
+	}
+
+	/**
 	 * Final release/close (last packet)
 	 */
 	protected final void onChannelInactive() {
@@ -513,8 +527,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (err == null) {
 			err = new NullPointerException("error is null");
 		}
-		if (log.isErrorEnabled()) {
-			log.error("[" + formatName() + "] Inbound error", err);
+		if (discreteRemoteClose(err)){
+			return;
 		}
 		if (isCancelled() || inboundDone) {
 			Operators.onErrorDropped(err);
@@ -761,9 +775,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 				channel.eventLoop()
 				       .execute(this::unsubscribeReceiver);
 			}
-
-			channel.config()
-			       .setAutoRead(false);
 		});
 	}
 

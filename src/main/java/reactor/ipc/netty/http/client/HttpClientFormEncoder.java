@@ -21,7 +21,6 @@ import java.nio.charset.Charset;
 import java.util.Objects;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.multipart.DiskAttribute;

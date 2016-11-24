@@ -446,12 +446,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onOutboundError(Throwable err) {
-		if (err != null && err instanceof IOException && err.getMessage() != null && err.getMessage()
-		                                                                                .contains(
-				                                                                                "Broken " + "pipe")) {
-			if (log.isDebugEnabled()) {
-				log.debug("Connection closed remotely", err);
-			}
+		if (discreteRemoteClose(err)){
 			return;
 		}
 		if (markHeadersAsSent()) {
@@ -492,7 +487,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			else {
 				f.addListener(s -> {
-					if (!s.isSuccess()) {
+					if (!s.isSuccess() && log.isDebugEnabled()) {
 						log.error("Failed flushing last frame", s.cause());
 					}
 					super.onChannelTerminate();
@@ -502,7 +497,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			f = channel().writeAndFlush(new CloseWebSocketFrame());
 			f.addListener(s -> {
-				if (!s.isSuccess()) {
+				if (!s.isSuccess() && log.isDebugEnabled()) {
 					log.error("Failed flushing last frame", s.cause());
 				}
 				super.onChannelTerminate();

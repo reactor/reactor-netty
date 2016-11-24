@@ -232,8 +232,13 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param channel the target channel to cleanup
 	 */
 	protected static void cleanHandlers(Channel channel) {
-		ChannelHandlerContext ctx;
 		ChannelPipeline pipeline = channel.pipeline();
+
+		if(!channel.isOpen() || pipeline.context(NettyHandlerNames.BridgeSetup) == null) {
+			return;
+		}
+
+		ChannelHandlerContext ctx;
 
 		while ((ctx = pipeline.lastContext()) != null) {
 			if (ctx.name()
