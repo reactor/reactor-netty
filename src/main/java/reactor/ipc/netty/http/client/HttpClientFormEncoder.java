@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.multipart.DiskAttribute;
 import io.netty.handler.codec.http.multipart.DiskFileUpload;
+import io.netty.handler.codec.http.multipart.FileUpload;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.MemoryFileUpload;
@@ -50,6 +51,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	final DirectProcessor<Long> progressFlux;
+	final HttpDataFactory       factory;
+	final HttpRequest           request;
 
 	boolean     cleanOnTerminate;
 	Charset     charset;
@@ -64,8 +67,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 			EncoderMode mode) throws ErrorDataEncoderException {
 		super(factory, request, multipart);
 		this.progressFlux = DirectProcessor.create();
+		this.request = request;
 		this.mode = mode;
 		this.charset = charset;
+		this.factory = factory;
 		this.cleanOnTerminate = true;
 	}
 
@@ -122,6 +127,38 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		}
 		catch (ErrorDataEncoderException e) {
 			throw Exceptions.propagate(e);
+		}
+		return this;
+	}
+
+	@Override
+	public HttpClientRequest.Form file(String name,
+			String filename,
+			File file,
+			String contentType) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(file, "file");
+		Objects.requireNonNull(filename, "filename");
+		String scontentType = contentType;
+		if (contentType == null) {
+			scontentType = DEFAULT_BINARY_CONTENT_TYPE;
+		}
+		FileUpload fileUpload = factory.createFileUpload(request,
+				name,
+				filename,
+				scontentType,
+				DEFAULT_TRANSFER_ENCODING,
+				null,
+				file.length());
+		try {
+			fileUpload.setContent(file);
+			addBodyHttpData(fileUpload);
+		}
+		catch (ErrorDataEncoderException e) {
+			throw Exceptions.propagate(e);
+		}
+		catch (IOException e) {
+			throw Exceptions.propagate(new ErrorDataEncoderException(e));
 		}
 		return this;
 	}
@@ -226,7 +263,6 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 			MemoryFileUpload fileUpload =
 					new MemoryFileUpload(name, name, scontentType, null, charset, -1);
 			fileUpload.setMaxSize(-1);
-
 			fileUpload.setContent(stream);
 			addBodyHttpData(fileUpload);
 		}
@@ -244,7 +280,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		cleanFiles();
 	}
 
-	final HttpClientFormEncoder applyChanges(HttpDataFactory factory, HttpRequest request)
+	final HttpClientFormEncoder applyChanges(HttpRequest request)
 			throws ErrorDataEncoderException {
 		if (!needNewEncoder) {
 			return this;

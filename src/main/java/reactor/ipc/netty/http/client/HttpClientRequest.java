@@ -102,7 +102,7 @@ public interface HttpClientRequest extends HttpOutbound {
 	 *
 	 * @return a {@link Flux} of latest in-flight or uploaded bytes,
 	 */
-	Flux<Long> sendMultipartForm(Consumer<Form> formCallback);
+	Flux<Long> sendMultipart(Consumer<Form> formCallback);
 
 	/**
 	 * Upgrade connection to Websocket
@@ -187,6 +187,18 @@ public interface HttpClientRequest extends HttpOutbound {
 		 * @return this builder
 		 */
 		Form file(String name, File file, String contentType);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param filename File name to override origin name
+		 * @param file File reference
+		 * @param contentType File mime-type
+		 *
+		 * @return this builder
+		 */
+		Form file(String name, String filename, File file, String contentType);
 
 		/**
 		 * Add an HTTP File Upload attribute

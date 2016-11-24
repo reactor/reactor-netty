@@ -301,7 +301,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public Flux<Long> sendMultipartForm(Consumer<Form> formCallback) {
+	public Flux<Long> sendMultipart(Consumer<Form> formCallback) {
 		return new FluxSendForm(this,
 				true,
 				new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
@@ -616,7 +616,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			          .pipeline()
 			          .context(NettyHandlerNames.ChunkedWriter) != null) {
 				Operators.error(s,
-						new IllegalStateException("A " + "sendForm or sendMultipartForm subscription has already " + "started"));
+						new IllegalStateException("A " + "sendForm or sendMultipart subscription has already " + "started"));
 				return;
 			}
 
@@ -629,7 +629,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 				formCallback.accept(encoder);
 
-				encoder = encoder.applyChanges(df, parent.nettyRequest);
+				encoder = encoder.applyChanges(parent.nettyRequest);
 
 				if (!parent.markHeadersAsSent()) {
 					Operators.error(s,

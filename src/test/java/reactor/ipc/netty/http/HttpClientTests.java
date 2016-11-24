@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http;
 
-import java.io.File;
 import java.io.InputStream;
 
 import org.junit.Test;
@@ -60,10 +59,10 @@ public class HttpClientTests {
 		//File f = new File("/Users/smaldini/Downloads/IMG_6702.mp4");
 		int res = HttpClient.create("google.com")
 		                    .put("/post",
-				                    c -> c.sendMultipartForm(form -> form.file("test", f)
-				                                                         .attr("att1",
+				                    c -> c.sendMultipart(form -> form.file("test", f)
+				                                                     .attr("att1",
 						                                                         "attr2")
-				                                                         .file("test2",
+				                                                     .file("test2",
 						                                                         f))
 				                          .log()
 				                          .then())
