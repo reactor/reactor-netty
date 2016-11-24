@@ -58,11 +58,15 @@ final class OutboundFlushLastSubscriber
 			return;
 		}
 		subscription = null;
+		parent.channel.flush();
+
 		Cancellation c = this.c;
 		if(c != null) {
 			c.dispose();
 			this.c = null;
 		}
+
+
 		parent.channel
 				.eventLoop()
 				.execute(() -> parent.onTerminatedSend(lastWrite, promise, null));
@@ -76,13 +80,16 @@ final class OutboundFlushLastSubscriber
 		if (subscription == null) {
 			throw new IllegalStateException("already flushed", t);
 		}
+
 		log.error("Write error", t);
 		subscription = null;
+		parent.channel.flush();
 		Cancellation c = this.c;
 		if(c != null) {
 			c.dispose();
 			this.c = null;
 		}
+
 		parent.channel
 				.eventLoop()
 				.execute(() -> parent.onTerminatedSend(lastWrite, promise, t));
