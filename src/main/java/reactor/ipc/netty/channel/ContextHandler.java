@@ -234,7 +234,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	protected static void cleanHandlers(Channel channel) {
 		ChannelPipeline pipeline = channel.pipeline();
 
-		if(!channel.isOpen() || pipeline.context(NettyHandlerNames.BridgeSetup) == null) {
+		if(pipeline.context(NettyHandlerNames.BridgeSetup) == null) {
 			return;
 		}
 

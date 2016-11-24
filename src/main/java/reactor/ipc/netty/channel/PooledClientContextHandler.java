@@ -223,11 +223,14 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			log.debug("Releasing channel: {}", c.toString());
 		}
 
+		if(!c.isOpen()) {
+			onReleaseEmitter.onComplete();
+			return;
+		}
 		cleanHandlers(c);
 
 		pool.release(c);
 
-		onReleaseEmitter.onComplete();
 	}
 
 	@Override

@@ -70,6 +70,10 @@ final class ServerContextHandler
 	}
 
 	final void cleanChannel(Channel channel){
+		if(!channel.isOpen()) {
+			return;
+		}
+
 		cleanHandlers(channel);
 
 		ChannelOperations<?, ?> op = channelOpSelector.apply(channel, this);
