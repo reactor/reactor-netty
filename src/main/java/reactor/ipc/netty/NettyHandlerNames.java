@@ -19,6 +19,23 @@ package reactor.ipc.netty;
 /**
  * Constant for names used when adding/removing {@link io.netty.channel.ChannelHandler}.
  *
+ * Order of placement :
+ * <p>
+ * {@code
+ * -> proxy ? [ProxyHandler]
+ * -> ssl ? [SslHandler]
+ * -> ssl & trace log ? [SslLoggingHandler]
+ * -> ssl ? [SslReader]
+ * -> log ? [LoggingHandler]
+ * => [BridgeSetup]
+ * -> http ws ? [HttpAggregator]
+ * -> http ? [HttpCodecHandler]
+ * -> onWriteIdle ? [OnChannelWriteIdle]
+ * -> onReadIdle ? [OnChannelReadIdle]
+ * -> http form/multipart ? [ChunkedWriter]
+ * => [ReactiveBridge]
+ * }
+ *
  * @author Stephane Maldini
  * @since 0.6
  */
@@ -34,7 +51,7 @@ public interface NettyHandlerNames {
 	String HttpAggregator     = "reactorHttpAggregator";
 	String OnChannelWriteIdle = "onChannelWriteIdle";
 	String OnChannelReadIdle  = "onChannelReadIdle";
-	String OnChannelClose     = "onChannelClose";
-	String OnHttpClose        = "onHttpClose";
+	String ChunkedWriter      = "chunkedWriter";
 	String LoggingHandler     = "loggingHandler";
+
 }

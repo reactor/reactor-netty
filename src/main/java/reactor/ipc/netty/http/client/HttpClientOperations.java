@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
@@ -35,6 +36,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -47,6 +49,10 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -54,6 +60,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
+import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
@@ -283,6 +290,22 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
 
 		return sendHeaders().then(writeFile);
+	}
+
+	@Override
+	public Flux<Long> sendForm(Consumer<Form> formCallback) {
+		return new FluxSendForm(this,
+				false,
+				new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
+				formCallback);
+	}
+
+	@Override
+	public Flux<Long> sendMultipartForm(Consumer<Form> formCallback) {
+		return new FluxSendForm(this,
+				true,
+				new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
+				formCallback);
 	}
 
 	@Override
@@ -550,6 +573,107 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			this.response = response;
 			this.headers = headers;
 			this.cookieHolder = Cookies.newClientResponseHolder(headers);
+		}
+	}
+
+	static final class FluxSendForm extends Flux<Long> {
+
+		final boolean              multipart;
+		final HttpClientOperations parent;
+		final Consumer<Form>       formCallback;
+		final HttpDataFactory      df;
+
+		FluxSendForm(HttpClientOperations parent,
+				boolean multipart,
+				HttpDataFactory df,
+				Consumer<Form> formCallback) {
+			this.parent = parent;
+			this.multipart = multipart;
+			this.df = df;
+			this.formCallback = formCallback;
+		}
+
+		@Override
+		public void subscribe(Subscriber<? super Long> s) {
+			if (s == null) {
+				throw Exceptions.argumentIsNullException();
+			}
+
+			if (parent.channel()
+			          .eventLoop()
+			          .inEventLoop()) {
+				_subscribe(s);
+			}
+			else {
+				parent.channel()
+				      .eventLoop()
+				      .execute(() -> _subscribe(s));
+			}
+		}
+
+		void _subscribe(Subscriber<? super Long> s) {
+			if (parent.channel()
+			          .pipeline()
+			          .context(NettyHandlerNames.ChunkedWriter) != null) {
+				Operators.error(s,
+						new IllegalStateException("A " + "sendForm or sendMultipartForm subscription has already " + "started"));
+				return;
+			}
+
+			try {
+				HttpClientFormEncoder encoder = new HttpClientFormEncoder(df,
+						parent.nettyRequest,
+						multipart,
+						HttpConstants.DEFAULT_CHARSET,
+						HttpPostRequestEncoder.EncoderMode.RFC1738);
+
+				formCallback.accept(encoder);
+
+				encoder = encoder.applyChanges(df, parent.nettyRequest);
+
+				if (!parent.markHeadersAsSent()) {
+					Operators.error(s,
+							new IllegalStateException("headers have already " + "been sent"));
+					return;
+				}
+
+				if (!multipart) {
+					parent.disableChunkedTransfer();
+				}
+
+				parent.channel()
+				      .pipeline()
+				      .addBefore(NettyHandlerNames.ReactiveBridge,
+						      NettyHandlerNames.ChunkedWriter,
+						      new ChunkedWriteHandler());
+
+				parent.channel()
+				      .write(encoder.finalizeRequest());
+
+				Flux<Long> tail = encoder.progressFlux.onBackpressureLatest();
+
+				if (encoder.cleanOnTerminate) {
+					tail = tail.doOnCancel(encoder)
+					           .doAfterTerminate(encoder);
+				}
+
+				tail.subscribe(s);
+
+				if (encoder.isChunked()) {
+					parent.channel()
+					      .write(encoder);
+				}
+
+				parent.channel()
+				      .flush();
+
+
+			}
+			catch (Throwable e) {
+				Exceptions.throwIfFatal(e);
+				df.cleanRequestHttpData(parent.nettyRequest);
+				Operators.error(s, Exceptions.unwrap(e));
+			}
 		}
 	}
 

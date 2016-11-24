@@ -16,6 +16,8 @@
 
 package reactor.ipc.netty.http;
 
+import java.io.File;
+
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.http.client.HttpClient;
@@ -30,33 +32,73 @@ public class HttpClientTests {
 	@Test
 	public void simpleTest() throws Exception {
 		int res = HttpClient.create("google.com")
-		                    .get("/search", c -> c.followRedirect().sendHeaders())
-		                    .then(r -> Mono.just(r.status().code()))
+		                    .get("/search",
+				                    c -> c.followRedirect()
+				                          .sendHeaders())
+		                    .then(r -> Mono.just(r.status()
+		                                          .code()))
 		                    .log()
 		                    .block();
 		res = HttpClient.create("google.com")
-		                    .get("/search", c -> c.followRedirect().sendHeaders())
-		                    .then(r -> Mono.just(r.status().code()))
-		                    .log()
-		                    .block();
+		                .get("/search",
+				                c -> c.followRedirect()
+				                      .sendHeaders())
+		                .then(r -> Mono.just(r.status()
+		                                      .code()))
+		                .log()
+		                .block();
 
 		if (res != 200) {
-			throw new IllegalStateException("test status failed with "+res);
+			throw new IllegalStateException("test status failed with " + res);
 		}
 	}
+
+	//@Test
+	public void postUpload() throws Exception {
+		File f = new File(getClass().getResource("/public/index.html").getFile());
+		//File f = new File("/Users/smaldini/Downloads/IMG_6702.mp4");
+		int res = HttpClient.create("google.com")
+		                    .put("/post",
+				                    c -> c.sendMultipartForm(form -> form.file("test", f)
+				                                                         .attr("att1",
+						                                                         "attr2")
+				                                                         .file("test2",
+						                                                         f))
+				                          .log()
+				                          .then())
+		                    .then(r -> Mono.just(r.status()
+		                                          .code()))
+		                    .block();
+		res = HttpClient.create("google.com")
+		                .get("/search",
+				                c -> c.followRedirect()
+				                      .sendHeaders())
+		                .then(r -> Mono.just(r.status()
+		                                      .code()))
+		                .log()
+		                .block();
+
+		if (res != 200) {
+			throw new IllegalStateException("test status failed with " + res);
+		}
+	}
+
 	@Test
 	public void simpleTest404() {
 		int res = HttpClient.create("google.com")
-		                       .get("/unsupportedURI", c -> c.followRedirect()
-		                                                   .sendHeaders())
-		                       .then(r -> Mono.just(r.status().code()))
-		                       .log()
-		                        .otherwise(HttpClientException.class,
-				                        e -> Mono.just(e.getResponseStatus().code()))
-		                       .block();
+		                    .get("/unsupportedURI",
+				                    c -> c.followRedirect()
+				                          .sendHeaders())
+		                    .then(r -> Mono.just(r.status()
+		                                          .code()))
+		                    .log()
+		                    .otherwise(HttpClientException.class,
+				                    e -> Mono.just(e.getResponseStatus()
+				                                    .code()))
+		                    .block();
 
 		if (res != 404) {
-			throw new IllegalStateException("test status failed with "+res);
+			throw new IllegalStateException("test status failed with " + res);
 		}
 	}
 

@@ -331,12 +331,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final void subscribe(Subscriber<? super Object> s) {
-		if (log.isDebugEnabled()) {
-			log.debug("[{}] Subscribing inbound receiver [pending: " + "" + getPending() + ", inboundDone: {}]",
-					formatName(),
-					inboundDone);
-		}
 		if (receiver == null) {
+			if (log.isDebugEnabled()) {
+				log.debug("[{}] Subscribing inbound receiver [pending: " + "" + getPending() + ", inboundDone: {}]",
+						formatName(),
+						inboundDone);
+			}
 			if (inboundDone && getPending() == 0) {
 				if (inboundError != null) {
 					Operators.error(s, inboundError);
@@ -349,9 +349,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 			initReceiver(s);
 			s.onSubscribe(this);
-		}
-		else if(inboundDone){
-			Operators.complete(s);
 		}
 		else {
 			Operators.error(s,

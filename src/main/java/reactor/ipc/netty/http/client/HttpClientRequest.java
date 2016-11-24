@@ -16,8 +16,17 @@
 
 package reactor.ipc.netty.http.client;
 
+import java.io.File;
+import java.nio.charset.Charset;
+import java.util.function.Consumer;
+
+import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpDataFactory;
+import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpOutbound;
@@ -76,10 +85,27 @@ public interface HttpClientRequest extends HttpOutbound {
 	 */
 	HttpHeaders requestHeaders();
 
+	/**
+	 * Prepare to send an HTTP Form excluding multipart
+	 *
+	 * @param formCallback called when form frames generator is created
+	 *
+	 * @return a {@link Flux} of latest in-flight or uploaded bytes,
+	 */
+	Flux<Long> sendForm(Consumer<Form> formCallback);
 
+	/**
+	 * Prepare to send an HTTP Form in multipart mode for file upload facilities
+	 *
+	 * @param formCallback called when form frames generator is created
+	 *
+	 * @return a {@link Flux} of latest in-flight or uploaded bytes,
+	 */
+	Flux<Long> sendMultipartForm(Consumer<Form> formCallback);
 
 	/**
 	 * Upgrade connection to Websocket
+	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> upgradeToWebsocket() {
@@ -88,10 +114,120 @@ public interface HttpClientRequest extends HttpOutbound {
 
 	/**
 	 * Upgrade connection to Websocket with text plain payloads
+	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> upgradeToTextWebsocket() {
 		return upgradeToWebsocket(uri(), true, ChannelOperations.noopHandler());
 	}
 
+	/**
+	 * Add an HTTP Form builder
+	 */
+	interface Form {
+
+		/**
+		 * Add an HTTP Form attribute
+		 *
+		 * @param name Attribute name
+		 * @param value Attribute value
+		 *
+		 * @return this builder
+		 */
+		Form attr(String name, String value);
+
+		/**
+		 * Set the Form {@link Charset}
+		 *
+		 * @param charset form charset
+		 *
+		 * @return this builder
+		 */
+		Form charset(Charset charset);
+
+
+		/**
+		 * Should file attributes be cleaned and eventually removed from disk.
+		 * Default to false.
+		 *
+		 * @param clean true if cleaned on termination (successful or failed)
+		 *
+		 * @return this builder
+		 */
+		Form cleanOnTerminate(boolean clean);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param file File reference
+		 *
+		 * @return this builder
+		 */
+		Form file(String name, File file);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param file File reference
+		 * @param contentType File mime-type
+		 *
+		 * @return this builder
+		 */
+		Form file(String name, File file, String contentType);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param files File references
+		 * @param contentTypes File mime-types in the same order han file references
+		 *
+		 * @return this builder
+		 */
+		Form files(String name, File[] files, String[] contentTypes);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param files File references
+		 * @param contentTypes File mime-type in the same order han file references
+		 * @param textFiles Plain-Text transmission in the same order han file references
+		 *
+		 * @return this builder
+		 */
+		Form files(String name, File[] files, String[] contentTypes, boolean[] textFiles);
+
+		/**
+		 * Set Form encoding
+		 *
+		 * @param mode the {@link HttpPostRequestEncoder.EncoderMode} to use for the form
+		 * encoding
+		 * @return this builder
+		 */
+		Form encoding(HttpPostRequestEncoder.EncoderMode mode);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param file File reference
+		 *
+		 * @return this builder
+		 */
+		Form textFile(String name, File file);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param file File reference
+		 * @param contentType File mime-type
+		 *
+		 * @return this builder
+		 */
+		Form textFile(String name, File file, String contentType);
+	}
 }
