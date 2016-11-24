@@ -29,10 +29,7 @@ import reactor.ipc.netty.http.HttpOutbound;
  * @author Stephane Maldini
  */
 public interface HttpClientRequest extends HttpOutbound {
-	/**
-	 * add the passed cookie
-	 * @return this
-	 */
+
 	@Override
 	HttpClientRequest addCookie(Cookie cookie);
 
@@ -73,8 +70,9 @@ public interface HttpClientRequest extends HttpOutbound {
 	String[] redirectedFrom();
 
 	/**
+	 * Return outbound headers to be sent
 	 *
-	 * @return
+	 * @return outbound headers to be sent
 	 */
 	HttpHeaders requestHeaders();
 

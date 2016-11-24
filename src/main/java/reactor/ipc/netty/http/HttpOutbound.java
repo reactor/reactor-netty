@@ -50,9 +50,6 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	 */
 	HttpOutbound addHeader(CharSequence name, CharSequence value);
 
-	@Override
-	HttpOutbound flushEach();
-
 	/**
 	 * Set an outbound header
 	 *
@@ -85,6 +82,13 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	 * @return this outbound
 	 */
 	HttpOutbound chunkedTransfer(boolean chunked);
+
+	/**
+	 * Return  true if headers and status have been sent to the client
+	 *
+	 * @return true if headers and status have been sent to the client
+	 */
+	boolean hasSentHeaders();
 
 	/**
 	 * Return a {@link Mono} successful on committed response

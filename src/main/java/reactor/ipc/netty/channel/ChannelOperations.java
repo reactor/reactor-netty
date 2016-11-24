@@ -570,6 +570,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			else {
 				promise.setSuccess();
 			}
+			if(channel.isOpen()) {
+				channel.flush();
+			}
 		}
 	}
 

@@ -16,11 +16,9 @@
 
 package reactor.ipc.netty.http;
 
-import java.io.File;
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -61,16 +59,6 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	}
 
 	@Override
-	public HttpOutbound flushEach() {
-		super.flushEach();
-		return this;
-	}
-
-	/**
-	 * Return  true if headers and status have been sent to the client
-	 *
-	 * @return true if headers and status have been sent to the client
-	 */
 	public boolean hasSentHeaders() {
 		return statusAndHeadersSent == 1;
 	}
@@ -78,15 +66,6 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	@Override
 	public boolean isWebsocket() {
 		return false;
-	}
-
-	/**
-	 * Mark the headers sent
-	 *
-	 * @return true if marked for the first time
-	 */
-	public final boolean markHeadersAsSent() {
-		return HEADERS_SENT.compareAndSet(this, 0, 1);
 	}
 
 	@Override
@@ -100,22 +79,6 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		return new MonoHttpSendWithHeaders(dataStream);
 	}
 
-	@Override
-	public Mono<Void> sendFile(File file, long position, long count) {
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
-
-		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
-
-		return sendHeaders().then(writeFile);
-	}
-
-	/**
-	 * Flush the headers if not sent. Might be useful for the case
-	 *
-	 * @return Stream to signal error or successful write to the client
-	 */
 	@Override
 	public Mono<Void> sendHeaders() {
 		if (isDisposed()) {
@@ -164,6 +127,15 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		}
 
 		return method().name() + ":" + uri();
+	}
+
+	/**
+	 * Mark the headers sent
+	 *
+	 * @return true if marked for the first time
+	 */
+	protected final boolean markHeadersAsSent() {
+		return HEADERS_SENT.compareAndSet(this, 0, 1);
 	}
 
 	/**

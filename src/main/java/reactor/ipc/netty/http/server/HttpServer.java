@@ -139,22 +139,14 @@ public final class HttpServer
 		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
 		routesBuilder.accept(routes);
 		return newHandler((req, resp) -> {
-			HttpServerOperations ops = (HttpServerOperations) req;
-
 			try {
 				Publisher<Void> afterHandlers = routeRequestResponse(req, resp, routes);
 
 				if (afterHandlers == null) {
-					if (ops.markHeadersAsSent()) {
-						//404
-						HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-								HttpResponseStatus.NOT_FOUND);
-						response.headers().add(HttpHeaderNames.CONTENT_LENGTH, 0L);
-						ops.channel()
-						   .write(response);
-					}
-					return Flux.empty();
-
+					resp.responseHeaders().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+					resp.status(HttpResponseStatus.NOT_FOUND);
+					resp.disableChunkedTransfer();
+					return resp.sendHeaders();
 				}
 				else {
 					return afterHandlers;

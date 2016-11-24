@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
@@ -23,6 +24,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -31,7 +33,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -347,15 +348,32 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public Mono<Void> sendFile(File file, long position, long count) {
+		if (isDisposed()) {
+			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
+		}
+
+		if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
+				nettyResponse) && count < Integer.MAX_VALUE) {
+			responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
+		}
+
+		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
+
+		return sendHeaders().then(writeFile);
+	}
+
+	@Override
 	public Mono<Void> sendFull(Publisher<? extends ByteBuf> source) {
 		ByteBufAllocator alloc = channel().alloc();
 		return Flux.from(source)
 		           .doOnNext(ByteBuf::retain)
 		           .collect(alloc::buffer, ByteBuf::writeBytes)
 		           .then(agg -> {
-			           if (!hasSentHeaders()) {
-				           header(HttpHeaderNames.CONTENT_LENGTH,
-						           "" + agg.readableBytes());
+			           if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
+					           nettyResponse)) {
+				           responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH,
+						           agg.readableBytes());
 			           }
 			           return super.send(Mono.just(agg));
 		           });
@@ -442,7 +460,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.INTERNAL_SERVER_ERROR);
 			response.headers()
-			        .add(HttpHeaderNames.CONTENT_LENGTH, 0L);
+			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
 			channel().writeAndFlush(response)
 			         .addListener(r -> onChannelTerminate());
 			return;
