@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.client;
 
 import java.io.File;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.function.Consumer;
 
@@ -170,12 +171,33 @@ public interface HttpClientRequest extends HttpOutbound {
 		 * Add an HTTP File Upload attribute
 		 *
 		 * @param name File name
+		 * @param stream InputStream reference
+		 *
+		 * @return this builder
+		 */
+		Form file(String name, InputStream stream);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
 		 * @param file File reference
 		 * @param contentType File mime-type
 		 *
 		 * @return this builder
 		 */
 		Form file(String name, File file, String contentType);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param stream File reference
+		 * @param contentType File mime-type
+		 *
+		 * @return this builder
+		 */
+		Form file(String name, InputStream stream, String contentType);
 
 		/**
 		 * Add an HTTP File Upload attribute
@@ -223,11 +245,32 @@ public interface HttpClientRequest extends HttpOutbound {
 		 * Add an HTTP File Upload attribute
 		 *
 		 * @param name File name
+		 * @param stream InputStream reference
+		 *
+		 * @return this builder
+		 */
+		Form textFile(String name, InputStream stream);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
 		 * @param file File reference
 		 * @param contentType File mime-type
 		 *
 		 * @return this builder
 		 */
 		Form textFile(String name, File file, String contentType);
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param inputStream File reference
+		 * @param contentType File mime-type
+		 *
+		 * @return this builder
+		 */
+		Form textFile(String name, InputStream inputStream, String contentType);
 	}
 }

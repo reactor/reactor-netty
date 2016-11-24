@@ -17,6 +17,8 @@
 package reactor.ipc.netty.http.client;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.Objects;
 
@@ -27,6 +29,7 @@ import io.netty.handler.codec.http.multipart.DiskAttribute;
 import io.netty.handler.codec.http.multipart.DiskFileUpload;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import reactor.core.Exceptions;
 import reactor.core.publisher.DirectProcessor;
 
@@ -107,12 +110,48 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
+	public HttpClientRequest.Form file(String name, InputStream inputStream) {
+		file(name, inputStream, null);
+		return this;
+	}
+
+	@Override
 	public HttpClientRequest.Form file(String name, File file, String contentType) {
 		try {
 			addBodyFileUpload(name, file, contentType, false);
 		}
 		catch (ErrorDataEncoderException e) {
 			throw Exceptions.propagate(e);
+		}
+		return this;
+	}
+
+	@Override
+	public HttpClientRequest.Form file(String name,
+			InputStream stream,
+			String contentType) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(stream, "stream");
+		try {
+			String scontentType = contentType;
+			if (contentType == null) {
+				scontentType = DEFAULT_BINARY_CONTENT_TYPE;
+			}
+			MemoryFileUpload fileUpload = new MemoryFileUpload(name,
+					name,
+					scontentType,
+					DEFAULT_TRANSFER_ENCODING,
+					charset,
+					-1);
+			fileUpload.setMaxSize(-1);
+			fileUpload.setContent(stream);
+			addBodyHttpData(fileUpload);
+		}
+		catch (ErrorDataEncoderException e) {
+			throw Exceptions.propagate(e);
+		}
+		catch (IOException e) {
+			throw Exceptions.propagate(new ErrorDataEncoderException(e));
 		}
 		return this;
 	}
@@ -166,6 +205,41 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
+	public HttpClientRequest.Form textFile(String name, InputStream stream) {
+		textFile(name, stream, null);
+		return this;
+	}
+
+	@Override
+	public HttpClientRequest.Form textFile(String name,
+			InputStream stream,
+			String contentType) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(stream, "stream");
+		try {
+			String scontentType = contentType;
+
+			if (contentType == null) {
+				scontentType = DEFAULT_TEXT_CONTENT_TYPE;
+			}
+
+			MemoryFileUpload fileUpload =
+					new MemoryFileUpload(name, name, scontentType, null, charset, -1);
+			fileUpload.setMaxSize(-1);
+
+			fileUpload.setContent(stream);
+			addBodyHttpData(fileUpload);
+		}
+		catch (ErrorDataEncoderException e) {
+			throw Exceptions.propagate(e);
+		}
+		catch (IOException e) {
+			throw Exceptions.propagate(new ErrorDataEncoderException(e));
+		}
+		return this;
+	}
+
+	@Override
 	public void run() {
 		cleanFiles();
 	}
@@ -183,4 +257,8 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 		return encoder;
 	}
+
+	static final String DEFAULT_BINARY_CONTENT_TYPE = "application/octet-stream";
+	static final String DEFAULT_TRANSFER_ENCODING   = "binary";
+	static final String DEFAULT_TEXT_CONTENT_TYPE   = "text/plain";
 }

@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http;
 
 import java.io.File;
+import java.io.InputStream;
 
 import org.junit.Test;
 import reactor.core.publisher.Mono;
@@ -55,7 +56,7 @@ public class HttpClientTests {
 
 	//@Test
 	public void postUpload() throws Exception {
-		File f = new File(getClass().getResource("/public/index.html").getFile());
+		InputStream f = getClass().getResourceAsStream("/public/index.html");
 		//File f = new File("/Users/smaldini/Downloads/IMG_6702.mp4");
 		int res = HttpClient.create("google.com")
 		                    .put("/post",
