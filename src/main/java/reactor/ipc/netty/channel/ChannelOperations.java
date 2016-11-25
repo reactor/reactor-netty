@@ -572,7 +572,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			};
 
 			last.addListener(listener);
-			channel.flush();
 		}
 		else {
 			if (exception != null) {
