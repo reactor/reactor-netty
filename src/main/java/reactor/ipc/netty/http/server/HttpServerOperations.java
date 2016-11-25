@@ -343,7 +343,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (ctx.pipeline()
 		       .context(NettyHandlerNames.HttpKeepAlive) == null) {
 			ctx.pipeline()
-			   .addBefore(NettyHandlerNames.BridgeSetup,
+			   .addBefore(NettyHandlerNames.ReactiveBridge,
 					   NettyHandlerNames.HttpKeepAlive,
 					   new HttpServerKeepAliveHandler());
 		}

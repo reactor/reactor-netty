@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.channel;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -238,18 +239,17 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			return;
 		}
 
-		ChannelHandlerContext ctx;
+		List<String> handlers = channel.pipeline().names();
+		int max = handlers.size() - 1;
 
-		while ((ctx = pipeline.lastContext()) != null) {
-			if (ctx.name()
-			       .equals(NettyHandlerNames.BridgeSetup)) {
-				break;
+		for(String h : handlers){
+			if (!NettyHandlerNames.isPersistent(h)) {
+				channel.pipeline().remove(h);
 			}
-			pipeline.removeLast();
+			if(--max == 0){
+				return;
+			}
 		}
-		pipeline.addAfter(NettyHandlerNames.BridgeSetup,
-				NettyHandlerNames.ReactiveBridge,
-				BRIDGE);
 	}
 
 	static final IllegalStateException ABORTED =
