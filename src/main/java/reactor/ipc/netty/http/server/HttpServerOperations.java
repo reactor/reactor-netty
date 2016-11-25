@@ -17,7 +17,6 @@
 package reactor.ipc.netty.http.server;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
@@ -28,11 +27,11 @@ import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -355,14 +354,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 
-		if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
-				nettyResponse) && count < Integer.MAX_VALUE) {
+		if (!HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
+				nettyResponse) && count < Integer.MAX_VALUE && markHeadersAsSent()) {
 			responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
+			channel().write(nettyRequest);
+			return ChannelFutureMono.from(channel().writeAndFlush(new DefaultFileRegion(
+					file,
+					position,
+					count)));
 		}
 
 		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
-
 		return sendHeaders().then(writeFile);
+
 	}
 
 	@Override
