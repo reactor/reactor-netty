@@ -31,16 +31,16 @@ public class HttpClientTests {
 
 	@Test
 	public void simpleTest() throws Exception {
-		int res = HttpClient.create("google.com")
-		                    .get("/search",
+		int res = HttpClient.create()
+		                    .get("http://next.projectreactor.io/assets/css/reactor.css",
 				                    c -> c.followRedirect()
 				                          .sendHeaders())
 		                    .then(r -> Mono.just(r.status()
 		                                          .code()))
 		                    .log()
 		                    .block();
-		res = HttpClient.create("google.com")
-		                .get("/search",
+		res = HttpClient.create()
+		                .get("http://next.projectreactor.io/assets/css/reactor.css",
 				                c -> c.followRedirect()
 				                      .sendHeaders())
 		                .then(r -> Mono.just(r.status()
