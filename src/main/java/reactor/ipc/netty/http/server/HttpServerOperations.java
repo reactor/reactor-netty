@@ -16,14 +16,12 @@
 
 package reactor.ipc.netty.http.server;
 
-import java.io.File;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -31,7 +29,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -40,6 +37,7 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
@@ -54,7 +52,6 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
@@ -200,9 +197,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public boolean isWebsocket() {
-		String isWebsocket = requestHeaders().get(HttpHeaderNames.UPGRADE);
-		return isWebsocket != null && isWebsocket.toLowerCase()
-		                                         .equals("websocket");
+		return requestHeaders().contains(HttpHeaderNames.UPGRADE,
+				HttpHeaderValues.WEBSOCKET,
+				true);
 	}
 
 	@Override
@@ -349,43 +346,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Mono<Void> sendFile(File file, long position, long count) {
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
-
-		if (!HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
-				nettyResponse) && count < Integer.MAX_VALUE && markHeadersAsSent()) {
-			responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
-			channel().write(nettyRequest);
-			return ChannelFutureMono.from(channel().writeAndFlush(new DefaultFileRegion(
-					file,
-					position,
-					count)));
-		}
-
-		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
-		return sendHeaders().then(writeFile);
-
-	}
-
-	@Override
-	public Mono<Void> sendFull(Publisher<? extends ByteBuf> source) {
-		ByteBufAllocator alloc = channel().alloc();
-		return Flux.from(source)
-		           .doOnNext(ByteBuf::retain)
-		           .collect(alloc::buffer, ByteBuf::writeBytes)
-		           .then(agg -> {
-			           if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
-					           nettyResponse)) {
-				           responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH,
-						           agg.readableBytes());
-			           }
-			           return super.send(Mono.just(agg));
-		           });
-	}
-
-	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			nettyRequest = (HttpRequest) msg;
@@ -478,9 +438,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
-		ChannelFutureMono.from(channel().writeAndFlush(nettyResponse))
-		                 .subscribe(s);
+	protected HttpMessage outboundHttpMessage() {
+		return nettyResponse;
 	}
 
 	final void release() {
@@ -558,6 +517,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	static final Logger           log          =
 			Loggers.getLogger(HttpServerOperations.class);
+
 	final static AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
 	final static FullHttpResponse CONTINUE     =
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,

@@ -16,12 +16,18 @@
 
 package reactor.ipc.netty.http;
 
+import java.io.File;
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -32,6 +38,7 @@ import reactor.core.Receiver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
+import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 
@@ -59,7 +66,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	}
 
 	@Override
-	public boolean hasSentHeaders() {
+	public final boolean hasSentHeaders() {
 		return statusAndHeadersSent == 1;
 	}
 
@@ -80,7 +87,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	}
 
 	@Override
-	public Mono<Void> sendHeaders() {
+	public final Mono<Void> sendHeaders() {
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
@@ -93,7 +100,49 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	}
 
 	@Override
-	public Mono<Void> sendObject(final Publisher<?> source) {
+	public final Mono<Void> sendFile(File file, long position, long count) {
+		if (isDisposed()) {
+			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
+		}
+
+		if (!hasSentHeaders()) {
+			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
+					outboundHttpMessage()) && count < MAX_CONTENT_LENGTH_SIZE) {
+				outboundHttpMessage().headers()
+				                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
+			}
+			else {
+				outboundHttpMessage().headers()
+				                     .remove(HttpHeaderNames.CONTENT_LENGTH);
+				HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
+			}
+		}
+
+		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
+
+		return sendHeaders().then(writeFile);
+	}
+
+	@Override
+	public final Mono<Void> sendFull(Publisher<? extends ByteBuf> source) {
+		ByteBufAllocator alloc = channel().alloc();
+		return Flux.from(source)
+		           .doOnNext(ByteBuf::retain)
+		           .collect(alloc::buffer, ByteBuf::writeBytes)
+		           .then(agg -> {
+			           if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
+					           outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
+					           outboundHttpMessage())) {
+				           outboundHttpMessage().headers()
+				                                .setInt(HttpHeaderNames.CONTENT_LENGTH,
+						                                agg.readableBytes());
+			           }
+			           return super.send(Mono.just(agg));
+		           });
+	}
+
+	@Override
+	public final Mono<Void> sendObject(final Publisher<?> source) {
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
@@ -104,7 +153,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	}
 
 	@Override
-	public Mono<Void> sendString(Publisher<? extends String> dataStream,
+	public final Mono<Void> sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
@@ -139,13 +188,23 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	}
 
 	/**
+	 * Outbound Netty HttpMessage
+	 *
+	 * @return Outbound Netty HttpMessage
+	 */
+	protected abstract HttpMessage outboundHttpMessage();
+
+	/**
 	 * Write and send the initial {@link io.netty.handler.codec.http.HttpRequest}
 	 * mssage that will commit the status and response headers.
 	 *
 	 * @param s the {@link Subscriber} callback completing on confirmed commit or
 	 * failing with root cause.
 	 */
-	protected abstract void sendHeadersAndSubscribe(Subscriber<? super Void> s);
+	final void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
+		ChannelFutureMono.from(channel().writeAndFlush(outboundHttpMessage()))
+		                 .subscribe(s);
+	}
 
 
 	final static AtomicIntegerFieldUpdater<HttpOperations> HEADERS_SENT =
@@ -252,4 +311,6 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			}
 		}
 	}
+
+	static final int MAX_CONTENT_LENGTH_SIZE = 4096;
 }

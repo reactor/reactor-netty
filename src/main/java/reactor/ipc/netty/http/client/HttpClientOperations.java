@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -25,7 +24,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -39,6 +37,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
@@ -277,22 +276,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public Mono<Void> sendFile(File file, long position, long count) {
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
-
-		if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(nettyRequest) && !HttpUtil.isContentLengthSet(
-				nettyRequest) && count < Integer.MAX_VALUE) {
-			headers.setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
-		}
-
-		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
-
-		return sendHeaders().then(writeFile);
-	}
-
-	@Override
 	public Flux<Long> sendForm(Consumer<Form> formCallback) {
 		return new FluxSendForm(this,
 				false,
@@ -306,22 +289,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				true,
 				new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
 				formCallback);
-	}
-
-	@Override
-	public Mono<Void> sendFull(Publisher<? extends ByteBuf> source) {
-		ByteBufAllocator alloc = channel().alloc();
-		return Flux.from(source)
-		           .doOnNext(ByteBuf::retain)
-		           .collect(alloc::buffer, ByteBuf::writeBytes)
-		           .then(agg -> {
-			           if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(nettyRequest) && !HttpUtil.isContentLengthSet(
-					           nettyRequest)) {
-				           headers.setInt(HttpHeaderNames.CONTENT_LENGTH,
-						           agg.readableBytes());
-			           }
-			           return super.send(Mono.just(agg));
-		           });
 	}
 
 	@Override
@@ -484,9 +451,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
-		ChannelFutureMono.from(channel().writeAndFlush(nettyRequest))
-		                 .subscribe(s);
+	protected HttpMessage outboundHttpMessage() {
+		return nettyRequest;
 	}
 
 	final boolean checkResponseCode(HttpResponse response) {
