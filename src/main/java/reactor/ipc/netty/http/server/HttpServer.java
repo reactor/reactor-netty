@@ -190,7 +190,6 @@ public final class HttpServer
 		do {
 			ioHandler = selected.next();
 			multiplexing.add(ioHandler.apply(req, resp));
-
 		}
 		while (selected.hasNext());
 

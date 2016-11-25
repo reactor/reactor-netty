@@ -69,6 +69,8 @@ import reactor.ipc.netty.http.HttpOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}.
  *
@@ -461,6 +463,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 		log.error("Error processing response. Sending last HTTP frame", err);
+
+		if (HttpUtil.isContentLengthSet(nettyResponse)) {
+			channel().writeAndFlush(EMPTY_BUFFER)
+			         .addListener(r -> onChannelTerminate());
+			return;
+		}
 		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
 		         .addListener(r -> onChannelTerminate());
 	}
@@ -475,24 +483,37 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (log.isDebugEnabled()) {
 			log.debug("Last HTTP response frame");
 		}
-		ChannelFuture f;
+		ChannelFuture f = null;
 		if (!isWebsocket()) {
 			if (markHeadersAsSent()) {
 				channel().write(nettyResponse);
 			}
-			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+			if (!HttpUtil.isContentLengthSet(nettyResponse)) {
+				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+			}
 			if (!isKeepAlive()) {
 				//fast path vs deferChannelTerminate
-				f.addListener(ChannelFutureListener.CLOSE);
+				if(f != null) {
+					f.addListener(ChannelFutureListener.CLOSE);
+				}
+				else{
+					channel().close();
+				}
+				return;
 			}
-			else {
+
+
+			if(f != null) {
 				f.addListener(s -> {
 					if (!s.isSuccess() && log.isDebugEnabled()) {
 						log.error("Failed flushing last frame", s.cause());
 					}
 					super.onChannelTerminate();
 				});
+				return;
 			}
+
+			super.onChannelTerminate();
 		}
 		else {
 			f = channel().writeAndFlush(new CloseWebSocketFrame());
@@ -537,5 +558,5 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final static FullHttpResponse CONTINUE     =
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.CONTINUE,
-					Unpooled.EMPTY_BUFFER);
+					EMPTY_BUFFER);
 }
