@@ -29,7 +29,7 @@ import reactor.ipc.netty.http.client.HttpClientException;
  */
 public class HttpClientTests {
 
-	@Test
+	//@Test
 	public void simpleTest() throws Exception {
 		int res = HttpClient.create()
 		                    .get("http://next.projectreactor.io/assets/css/reactor.css",

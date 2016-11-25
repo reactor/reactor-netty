@@ -27,6 +27,7 @@ package reactor.ipc.netty;
  * -> ssl & trace log ? [SslLoggingHandler]
  * -> ssl ? [SslReader]
  * -> log ? [LoggingHandler]
+ * -> http server & keep-alive ? [HttpKeepAlive]
  * => [BridgeSetup]
  * -> http ws ? [HttpAggregator]
  * -> http ? [HttpCodecHandler]
@@ -45,10 +46,11 @@ public interface NettyHandlerNames {
 	String SslReader          = "sslReader";
 	String SslLoggingHandler  = "sslLoggingHandler";
 	String ProxyHandler       = "proxyHandler";
-	String HttpCodecHandler   = "httpCodecHandler";
 	String ReactiveBridge     = "reactiveBridge";
 	String BridgeSetup        = "bridgeSetup";
+	String HttpCodecHandler   = "httpCodecHandler";
 	String HttpAggregator     = "reactorHttpAggregator";
+	String HttpKeepAlive      = "httpKeepAlive";
 	String OnChannelWriteIdle = "onChannelWriteIdle";
 	String OnChannelReadIdle  = "onChannelReadIdle";
 	String ChunkedWriter      = "chunkedWriter";

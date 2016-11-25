@@ -23,11 +23,8 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -44,6 +41,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpServerKeepAliveHandler;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -342,6 +340,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				   NettyHandlerNames.HttpCodecHandler,
 				   new HttpServerCodec());
 
+		if (ctx.pipeline()
+		       .context(NettyHandlerNames.HttpKeepAlive) == null) {
+			ctx.pipeline()
+			   .addBefore(NettyHandlerNames.BridgeSetup,
+					   NettyHandlerNames.HttpKeepAlive,
+					   new HttpServerKeepAliveHandler());
+		}
+
 		ctx.read();
 	}
 
@@ -451,32 +457,23 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (markHeadersAsSent()) {
 				channel().write(nettyResponse);
 			}
+
 			if (!HttpUtil.isContentLengthSet(nettyResponse)) {
 				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 			}
-			if (!isKeepAlive()) {
-				//fast path vs deferChannelTerminate
-				if(f != null) {
-					f.addListener(ChannelFutureListener.CLOSE);
+
+			if (isKeepAlive()) {
+				if (f != null) {
+					f.addListener(s -> {
+						if (!s.isSuccess() && log.isDebugEnabled()) {
+							log.error("Failed flushing last frame", s.cause());
+						}
+						super.onChannelTerminate();
+					});
+					return;
 				}
-				else{
-					channel().close();
-				}
-				return;
+				super.onChannelTerminate();
 			}
-
-
-			if(f != null) {
-				f.addListener(s -> {
-					if (!s.isSuccess() && log.isDebugEnabled()) {
-						log.error("Failed flushing last frame", s.cause());
-					}
-					super.onChannelTerminate();
-				});
-				return;
-			}
-
-			super.onChannelTerminate();
 		}
 		else {
 			f = channel().writeAndFlush(new CloseWebSocketFrame());
