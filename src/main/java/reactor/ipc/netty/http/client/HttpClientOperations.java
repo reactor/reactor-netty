@@ -647,8 +647,17 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						      NettyHandlerNames.ChunkedWriter,
 						      new ChunkedWriteHandler());
 
+				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
+
+				HttpRequest r = encoder.finalizeRequest();
+
+				if(!chunked){
+					HttpUtil.setTransferEncodingChunked(r, false);
+					HttpUtil.setContentLength(r, encoder.length());
+				}
+
 				parent.channel()
-				      .write(encoder.finalizeRequest());
+				      .write(r);
 
 				Flux<Long> tail = encoder.progressFlux.onBackpressureLatest();
 

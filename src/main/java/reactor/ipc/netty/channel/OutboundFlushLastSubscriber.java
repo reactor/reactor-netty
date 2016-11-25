@@ -58,7 +58,6 @@ final class OutboundFlushLastSubscriber
 			return;
 		}
 		subscription = null;
-		parent.channel.flush();
 
 		Cancellation c = this.c;
 		if(c != null) {
@@ -67,6 +66,7 @@ final class OutboundFlushLastSubscriber
 		}
 
 
+		parent.channel.flush();
 		parent.channel
 				.eventLoop()
 				.execute(() -> parent.onTerminatedSend(lastWrite, promise, null));
@@ -83,13 +83,13 @@ final class OutboundFlushLastSubscriber
 
 		log.error("Write error", t);
 		subscription = null;
-		parent.channel.flush();
 		Cancellation c = this.c;
 		if(c != null) {
 			c.dispose();
 			this.c = null;
 		}
 
+		parent.channel.flush();
 		parent.channel
 				.eventLoop()
 				.execute(() -> parent.onTerminatedSend(lastWrite, promise, t));
