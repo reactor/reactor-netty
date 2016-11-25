@@ -186,7 +186,9 @@ public interface HttpClientRequest extends HttpOutbound {
 		 *
 		 * @return this builder
 		 */
-		Form file(String name, File file, String contentType);
+		default Form file(String name, File file, String contentType){
+			return file(name, file.getName(), file, contentType);
+		}
 
 		/**
 		 * Add an HTTP File Upload attribute
@@ -209,14 +211,28 @@ public interface HttpClientRequest extends HttpOutbound {
 		 *
 		 * @return this builder
 		 */
-		Form file(String name, InputStream stream, String contentType);
+		default Form file(String name, InputStream stream, String contentType){
+			return file(name, name, stream, contentType);
+		}
+
+		/**
+		 * Add an HTTP File Upload attribute
+		 *
+		 * @param name File name
+		 * @param filename File name to override origin name
+		 * @param stream File reference
+		 * @param contentType File mime-type
+		 *
+		 * @return this builder
+		 */
+		Form file(String name, String filename, InputStream stream, String contentType);
 
 		/**
 		 * Add an HTTP File Upload attribute
 		 *
 		 * @param name File name
 		 * @param files File references
-		 * @param contentTypes File mime-types in the same order han file references
+		 * @param contentTypes File mime-types in the same order than file references
 		 *
 		 * @return this builder
 		 */
@@ -227,8 +243,8 @@ public interface HttpClientRequest extends HttpOutbound {
 		 *
 		 * @param name File name
 		 * @param files File references
-		 * @param contentTypes File mime-type in the same order han file references
-		 * @param textFiles Plain-Text transmission in the same order han file references
+		 * @param contentTypes File mime-type in the same order than file references
+		 * @param textFiles Plain-Text transmission in the same order than file references
 		 *
 		 * @return this builder
 		 */

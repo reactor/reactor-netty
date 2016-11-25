@@ -121,17 +121,6 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form file(String name, File file, String contentType) {
-		try {
-			addBodyFileUpload(name, file, contentType, false);
-		}
-		catch (ErrorDataEncoderException e) {
-			throw Exceptions.propagate(e);
-		}
-		return this;
-	}
-
-	@Override
 	public HttpClientRequest.Form file(String name,
 			String filename,
 			File file,
@@ -165,6 +154,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientRequest.Form file(String name,
+			String filename,
 			InputStream stream,
 			String contentType) {
 		Objects.requireNonNull(name, "name");
@@ -175,7 +165,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 				scontentType = DEFAULT_BINARY_CONTENT_TYPE;
 			}
 			MemoryFileUpload fileUpload = new MemoryFileUpload(name,
-					name,
+					filename,
 					scontentType,
 					DEFAULT_TRANSFER_ENCODING,
 					charset,
