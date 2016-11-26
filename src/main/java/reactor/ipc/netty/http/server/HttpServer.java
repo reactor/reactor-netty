@@ -16,24 +16,18 @@
 
 package reactor.ipc.netty.http.server;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
@@ -179,21 +173,7 @@ public final class HttpServer
 		BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
 				ioHandler = selected.next();
 
-		if (!selected.hasNext()) {
-			return ioHandler.apply(req, resp);
-		}
-
-		final List<Publisher<Void>> multiplexing = new ArrayList<>(4);
-
-		multiplexing.add(ioHandler.apply(req, resp));
-
-		do {
-			ioHandler = selected.next();
-			multiplexing.add(ioHandler.apply(req, resp));
-		}
-		while (selected.hasNext());
-
-		return Flux.concat(Flux.fromIterable(multiplexing));
+		return ioHandler.apply(req, resp);
 	}
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
