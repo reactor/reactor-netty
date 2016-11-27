@@ -36,7 +36,7 @@ import reactor.ipc.netty.http.HttpOutbound;
  * @author Stephane Maldini
  */
 public interface HttpServerRoutes extends
-                           BiFunction<HttpServerRequest, HttpServerResponse, Iterable<? extends BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>>> {
+                           BiFunction<HttpServerRequest, HttpServerResponse, BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>> {
 
 	/**
 	 * @return a new default routing registry {@link HttpServerRoutes}
@@ -129,7 +129,7 @@ public interface HttpServerRoutes extends
 				return resp.sendFile(p.toFile());
 			}
 			else {
-				return Mono.error(new Exception("File not found or is not readable: "+p));
+				throw HttpServer.NotFoundException.instance;
 			}
 		});
 	}
@@ -184,6 +184,9 @@ public interface HttpServerRoutes extends
 			final Function<HttpServerResponse, HttpServerResponse> interceptor) {
 		final File file = new File(filepath);
 		return route(path, (req, resp) -> {
+			if(!file.exists()){
+				throw HttpServer.NotFoundException.instance;
+			}
 			if (interceptor != null) {
 				return interceptor.apply(resp)
 				                  .sendFile(file);
@@ -289,10 +292,11 @@ public interface HttpServerRoutes extends
 		Predicate<HttpServerRequest> condition = HttpPredicate.get(path);
 
 		return route(condition, (req, resp) -> {
-			String connection = req.requestHeaders()
-			                       .get(HttpHeaderNames.CONNECTION);
-			HttpServerOperations ops = (HttpServerOperations) req;
-			if (connection != null && connection.equals(HttpHeaderValues.UPGRADE.toString())) {
+			if (req.requestHeaders()
+			       .contains(HttpHeaderNames.CONNECTION,
+					       HttpHeaderValues.UPGRADE, true)) {
+
+				HttpServerOperations ops = (HttpServerOperations) req;
 				return ops.withWebsocketSupport(req.uri(), protocols, false,
 						(BiFunction<HttpInbound, HttpOutbound, Publisher<Void>>)handler);
 			}

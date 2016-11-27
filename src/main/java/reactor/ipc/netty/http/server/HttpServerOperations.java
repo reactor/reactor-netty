@@ -273,6 +273,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public Mono<Void> sendRedirect(String location) {
+		Objects.requireNonNull(location, "location");
+		return this.status(HttpResponseStatus.FOUND)
+		           .header(HttpHeaderNames.LOCATION, location)
+		           .sendHeaders();
+	}
+
+	@Override
 	public HttpHeaders responseHeaders() {
 		return responseHeaders;
 	}

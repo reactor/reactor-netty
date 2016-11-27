@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http.server;
 
-import java.util.Iterator;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -134,46 +133,25 @@ public final class HttpServer
 		routesBuilder.accept(routes);
 		return newHandler((req, resp) -> {
 			try {
-				Publisher<Void> afterHandlers = routeRequestResponse(req, resp, routes);
-
-				if (afterHandlers == null) {
-					resp.responseHeaders().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
-					resp.status(HttpResponseStatus.NOT_FOUND);
-					resp.disableChunkedTransfer();
-					return resp.sendHeaders();
-				}
-				else {
-					return afterHandlers;
-				}
+				return routes.apply(req, resp) //apply route
+				             .apply(req, resp); //apply routed handler
+			}
+			catch (NotFoundException nfe) {
+				return empty(resp); //404
 			}
 			catch (Throwable t) {
 				Exceptions.throwIfFatal(t);
-				return Mono.error(t);
+				return Mono.error(t); //500
 			}
-			//500
 		});
 	}
 
-	final Publisher<Void> routeRequestResponse(HttpServerRequest req,
-			HttpServerResponse resp,
-			HttpServerRoutes routes) {
-
-		if (routes == null) {
-			return null;
-		}
-
-		final Iterator<? extends BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>>
-				selected = routes.apply(req, resp)
-				                 .iterator();
-
-		if (!selected.hasNext()) {
-			return null;
-		}
-
-		BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
-				ioHandler = selected.next();
-
-		return ioHandler.apply(req, resp);
+	static Publisher<Void> empty(HttpServerResponse resp) {
+		resp.responseHeaders()
+		    .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+		resp.status(HttpResponseStatus.NOT_FOUND);
+		resp.disableChunkedTransfer();
+		return resp.sendHeaders();
 	}
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
@@ -192,6 +170,16 @@ public final class HttpServer
 					options,
 					loggingHandler,
 					(ch, c) -> HttpServerOperations.bindHttp(ch, handler, c));
+		}
+	}
+
+	static final class NotFoundException extends RuntimeException {
+
+		static final NotFoundException instance = new NotFoundException();
+
+		@Override
+		public synchronized Throwable fillInStackTrace() {
+			return this;
 		}
 	}
 }

@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.server;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cookie.Cookie;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.http.HttpOutbound;
 
 /**
@@ -52,34 +53,44 @@ public interface HttpServerResponse extends HttpOutbound {
 	HttpServerResponse keepAlive(boolean keepAlive);
 
 	/**
+	 * Send redirect status {@link HttpResponseStatus#FOUND} along with a location
+	 * header to the remote client.
 	 *
-	 * @return
+	 * @param location the location to redirect to
+	 *
+	 * @return a {@link Mono} successful on flush confirmation
+	 */
+	Mono<Void> sendRedirect(String location);
+
+	/**
+	 * Return headers sent back to the clients
+	 * @return headers sent back to the clients
 	 */
 	HttpHeaders responseHeaders();
 
 	/**
-	 *
-	 * @return
+	 * Add Server-Side-Event content-type
+	 * @return this response
 	 */
 	HttpServerResponse sse();
 
 	/**
-	 *
-	 * @return
+	 * Return the assigned HTTP status
+	 * @return the assigned HTTP status
 	 */
 	HttpResponseStatus status();
 
 	/**
-	 *
-	 * @param status
-	 * @return
+	 * Set an HTTP status to be sent along with the headers
+	 * @param status an HTTP status to be sent along with the headers
+	 * @return this response
 	 */
 	HttpServerResponse status(HttpResponseStatus status);
 
 	/**
-	 *
-	 * @param status
-	 * @return
+	 * Set an HTTP status to be sent along with the headers
+	 * @param status an HTTP status to be sent along with the headers
+	 * @return this response
 	 */
 	default HttpServerResponse status(int status){
 		return status(HttpResponseStatus.valueOf(status));

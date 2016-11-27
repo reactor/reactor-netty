@@ -49,10 +49,19 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 	}
 
 	@Override
-	public Iterable<? extends BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>> apply(
+	public BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> apply(
 			HttpServerRequest request,
 			HttpServerResponse response) {
-		return new IterableRoute(handlers, request);
+		final Iterator<HttpRouteHandler> iterator = handlers.iterator();
+		HttpRouteHandler cursor;
+
+		while (iterator.hasNext()) {
+			cursor = iterator.next();
+			if (cursor.test(request)) {
+				return cursor;
+			}
+		}
+		throw HttpServer.NotFoundException.instance;
 	}
 
 	/**
@@ -83,51 +92,6 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		@Override
 		public boolean test(HttpServerRequest o) {
 			return condition.test(o);
-		}
-	}
-
-	static final class IterableRoute implements
-	                                 Iterable<BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>> {
-
-		final Iterable<HttpRouteHandler> handlers;
-		final HttpServerRequest          request;
-
-		IterableRoute(Iterable<HttpRouteHandler> handlers, HttpServerRequest request) {
-			this.handlers = handlers;
-			this.request = request;
-		}
-
-		@Override
-		public Iterator<BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>> iterator() {
-			final Iterator<HttpRouteHandler> iterator = handlers.iterator();
-			return new Iterator<BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>>() {
-
-				HttpRouteHandler cached;
-
-				@Override
-				public boolean hasNext() {
-					HttpRouteHandler cursor;
-					while (iterator.hasNext()) {
-						cursor = iterator.next();
-						if (cursor.test(request)) {
-							cached = cursor;
-							return true;
-						}
-					}
-					return false;
-				}
-
-				@Override
-				public BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>> next() {
-					HttpRouteHandler cursor = cached;
-					if (cursor != null) {
-						cached = null;
-						return cursor;
-					}
-					hasNext();
-					return cached;
-				}
-			};
 		}
 	}
 }
