@@ -81,6 +81,11 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		if (hasSentHeaders()) {
+			if (!HttpUtil.isContentLengthSet(outboundHttpMessage()) && !outboundHttpMessage().headers()
+			                                                                                 .contains(
+					                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {
+				HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
+			}
 			return super.send(dataStream);
 		}
 		return new MonoHttpSendWithHeaders(dataStream);
@@ -113,7 +118,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			}
 			else {
 				outboundHttpMessage().headers()
-				                     .remove(HttpHeaderNames.CONTENT_LENGTH);
+				                     .remove(HttpHeaderNames.CONTENT_LENGTH)
+				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
 				HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
 			}
 		}

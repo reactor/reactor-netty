@@ -101,9 +101,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyResponse =
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
-		responseHeaders.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED)
-		               //.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE)
-		               .add(HttpHeaderNames.DATE, new Date());
+		responseHeaders.add(HttpHeaderNames.DATE, new Date());
 	}
 
 	@Override
@@ -141,6 +139,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public HttpServerResponse chunkedTransfer(boolean chunked) {
 		if (!hasSentHeaders()) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
 		}
 		else {
