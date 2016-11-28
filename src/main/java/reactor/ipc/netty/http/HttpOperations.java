@@ -20,7 +20,6 @@ import java.io.File;
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -134,17 +133,15 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 				outboundHttpMessage().headers()
 				                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
 			}
-			else {
+			else if (!HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 				outboundHttpMessage().headers()
 				                     .remove(HttpHeaderNames.CONTENT_LENGTH)
 				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
 				HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
 			}
+			return sendHeaders().then(() -> super.sendFile(file, position, count));
 		}
-
-		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
-
-		return sendHeaders().then(writeFile);
+		return super.sendFile(file, position, count);
 	}
 
 	@Override
