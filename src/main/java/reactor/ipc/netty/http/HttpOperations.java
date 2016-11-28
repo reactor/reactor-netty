@@ -80,7 +80,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		if (hasSentHeaders()) {
+		if (!hasSentHeaders()) {
 			if (!HttpUtil.isContentLengthSet(outboundHttpMessage()) && !outboundHttpMessage().headers()
 			                                                                                 .contains(
 					                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {

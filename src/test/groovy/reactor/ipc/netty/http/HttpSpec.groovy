@@ -145,13 +145,19 @@ class HttpSpec extends Specification {
 	CountDownLatch errored = new CountDownLatch(1)
 
 	def server = HttpServer.create(0).newRouter { r ->
-	  r.get('/test') { req, res -> throw new Exception() }
+	  		 r.get('/test') { req, res ->
+			   throw new Exception()
+			  }
 			  .get('/test2') { req, res ->
-		res.send(Flux.error(new Exception())).log("send").doOnError({
-		  errored.countDown()
-		})
-	  }
-	  .get('/test3') { req, res -> return Flux.error(new Exception()) }
+				 res.send(Flux.error(new Exception()))
+				    .log("send")
+					.doOnError {
+		  				errored.countDown()
+			 		}
+			  }
+	  		  .get('/test3') { req, res ->
+			  	 Flux.error(new Exception())
+			  }
 	}.block()
 
 	def client = HttpClient.create("localhost", server.address().port)
