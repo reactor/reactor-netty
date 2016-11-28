@@ -209,7 +209,7 @@ public interface HttpClientRequest extends HttpOutbound {
 		 * @return this builder
 		 */
 		default Form file(String name, InputStream stream, String contentType){
-			return file(name, name, stream, contentType);
+			return file(name, "", stream, contentType);
 		}
 
 		/**
