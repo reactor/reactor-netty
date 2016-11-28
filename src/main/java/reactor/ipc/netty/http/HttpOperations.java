@@ -112,7 +112,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 
 		if (!hasSentHeaders()) {
 			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-					outboundHttpMessage())) {
+					outboundHttpMessage()) && count < Integer.MAX_VALUE) {
 				outboundHttpMessage().headers()
 				                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
 			}
