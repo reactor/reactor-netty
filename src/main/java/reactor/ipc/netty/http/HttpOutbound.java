@@ -106,7 +106,7 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	 * @return a {@link Mono} successful on committed response
 	 * @see #send(Publisher)
 	 */
-	Mono<Void> sendFull(Publisher<? extends ByteBuf> source);
+	Mono<Void> sendAggregate(Publisher<? extends ByteBuf> source);
 
 
 

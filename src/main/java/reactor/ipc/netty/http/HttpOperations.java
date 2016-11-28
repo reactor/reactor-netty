@@ -86,9 +86,27 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 					                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {
 				HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
 			}
-			return super.send(dataStream);
+			return new MonoHttpSendWithHeaders(dataStream);
 		}
-		return new MonoHttpSendWithHeaders(dataStream);
+		return super.send(dataStream);
+	}
+
+	@Override
+	public final Mono<Void> sendAggregate(Publisher<? extends ByteBuf> source) {
+		ByteBufAllocator alloc = channel().alloc();
+		return Flux.from(source)
+		           .doOnNext(ByteBuf::retain)
+		           .collect(alloc::buffer, ByteBuf::writeBytes)
+		           .then(agg -> {
+			           if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
+					           outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
+					           outboundHttpMessage())) {
+				           outboundHttpMessage().headers()
+				                                .setInt(HttpHeaderNames.CONTENT_LENGTH,
+						                                agg.readableBytes());
+			           }
+			           return sendHeaders().then(super.send(Mono.just(agg)));
+		           });
 	}
 
 	@Override
@@ -127,24 +145,6 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		Supplier<Mono<Void>> writeFile = () -> super.sendFile(file, position, count);
 
 		return sendHeaders().then(writeFile);
-	}
-
-	@Override
-	public final Mono<Void> sendFull(Publisher<? extends ByteBuf> source) {
-		ByteBufAllocator alloc = channel().alloc();
-		return Flux.from(source)
-		           .doOnNext(ByteBuf::retain)
-		           .collect(alloc::buffer, ByteBuf::writeBytes)
-		           .then(agg -> {
-			           if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
-					           outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-					           outboundHttpMessage())) {
-				           outboundHttpMessage().headers()
-				                                .setInt(HttpHeaderNames.CONTENT_LENGTH,
-						                                agg.readableBytes());
-			           }
-			           return super.send(Mono.just(agg));
-		           });
 	}
 
 	@Override

@@ -26,7 +26,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -270,7 +269,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public Mono<Void> send(Publisher<? extends ByteBuf> dataStream) {
 		if (method() == HttpMethod.GET || method() == HttpMethod.HEAD) {
-			return sendFull(dataStream);
+			return sendAggregate(dataStream);
 		}
 		return super.send(dataStream);
 	}
