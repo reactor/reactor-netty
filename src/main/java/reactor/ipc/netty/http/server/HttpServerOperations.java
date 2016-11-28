@@ -399,15 +399,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
-				if(isTerminated()) {
+				if (isTerminated()) {
 					release();
 				}
-				else{
+				else {
 					onInboundComplete();
 				}
 				return;
 			}
-			if(isTerminated()){
+			if (isTerminated()) {
 				ctx.read();
 			}
 		}
@@ -434,7 +434,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onOutboundError(Throwable err) {
-		if (discreteRemoteClose(err)){
+		if (discreteRemoteClose(err)) {
 			return;
 		}
 		if (markHeadersAsSent()) {
@@ -471,18 +471,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		ChannelFuture f = null;
 		if (!isWebsocket()) {
 			if (markHeadersAsSent()) {
-				if(!HttpUtil.isTransferEncodingChunked(nettyResponse) &&
-						!HttpUtil.isContentLengthSet(nettyResponse)){
+				if (!HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
+						nettyResponse)) {
 					HttpUtil.setContentLength(nettyResponse, 0);
 				}
-				channel().write(nettyResponse);
+				if (HttpUtil.isContentLengthSet(nettyResponse)) {
+					channel().writeAndFlush(nettyResponse);
+				}
+				else {
+					channel().write(nettyResponse);
+					f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+				}
 			}
-
-			if (!HttpUtil.isContentLengthSet(nettyResponse)) {
+			else if (!HttpUtil.isContentLengthSet(nettyResponse)) {
 				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-			}
-			else{
-				channel().flush();
 			}
 
 			if (isKeepAlive()) {
@@ -535,8 +537,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
 	}
 
-	static final Logger           log          =
-			Loggers.getLogger(HttpServerOperations.class);
+	static final Logger log = Loggers.getLogger(HttpServerOperations.class);
 
 	final static AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
 	final static FullHttpResponse CONTINUE     =
