@@ -471,11 +471,18 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		ChannelFuture f = null;
 		if (!isWebsocket()) {
 			if (markHeadersAsSent()) {
+				if(!HttpUtil.isTransferEncodingChunked(nettyResponse) &&
+						!HttpUtil.isContentLengthSet(nettyResponse)){
+					HttpUtil.setContentLength(nettyResponse, 0);
+				}
 				channel().write(nettyResponse);
 			}
 
 			if (!HttpUtil.isContentLengthSet(nettyResponse)) {
 				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+			}
+			else{
+				channel().flush();
 			}
 
 			if (isKeepAlive()) {
