@@ -21,11 +21,8 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.function.Consumer;
 
-import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
-import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -253,7 +250,7 @@ public interface HttpClientRequest extends HttpOutbound {
 		/**
 		 * Set Form encoding
 		 *
-		 * @param mode the {@link HttpPostRequestEncoder.EncoderMode} to use for the form
+		 * @param mode the encoding mode for this form
 		 * encoding
 		 * @return this builder
 		 */

@@ -63,6 +63,12 @@ public interface HttpServerResponse extends HttpOutbound {
 	Mono<Void> sendRedirect(String location);
 
 	/**
+	 *
+	 * @return a
+	 */
+	Mono<Void> sendNotFound();
+
+	/**
 	 * Return headers sent back to the clients
 	 * @return headers sent back to the clients
 	 */

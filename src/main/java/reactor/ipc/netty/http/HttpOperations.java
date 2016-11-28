@@ -107,7 +107,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 
 		if (!hasSentHeaders()) {
 			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-					outboundHttpMessage()) && count < MAX_CONTENT_LENGTH_SIZE) {
+					outboundHttpMessage())) {
 				outboundHttpMessage().headers()
 				                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
 			}
@@ -312,5 +312,4 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		}
 	}
 
-	static final int MAX_CONTENT_LENGTH_SIZE = 4096;
 }

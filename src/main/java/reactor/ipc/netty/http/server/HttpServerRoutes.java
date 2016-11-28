@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.server;
 
 import java.io.File;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,17 +27,19 @@ import java.util.function.Predicate;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
-import reactor.core.Exceptions;
-import reactor.core.publisher.Mono;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOutbound;
 
 /**
+ * Server routes are unique and only the first matching in order of declaration will be
+ * invoked.
+ *
  * @author Stephane Maldini
  */
 public interface HttpServerRoutes extends
-                           BiFunction<HttpServerRequest, HttpServerResponse, BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>> {
+                                  BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>> {
 
 	/**
 	 * @return a new default routing registry {@link HttpServerRoutes}
@@ -60,14 +63,14 @@ public interface HttpServerRoutes extends
 	 */
 
 	default HttpServerRoutes delete(String path,
-			final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		return route(HttpPredicate.delete(path), handler);
 	}
 
 	/**
 	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -76,14 +79,14 @@ public interface HttpServerRoutes extends
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes directory(String path, final File directory) {
+	default HttpServerRoutes directory(String path, File directory) {
 		return directory(path, directory.getAbsolutePath());
 	}
 
 	/**
 	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -92,14 +95,14 @@ public interface HttpServerRoutes extends
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes directory(final String path, final String directory) {
+	default HttpServerRoutes directory(String path, String directory) {
 		return directory(path, directory, null);
 	}
 
 	/**
 	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -108,17 +111,13 @@ public interface HttpServerRoutes extends
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes directory(final String path,
-			final String directory,
-			final Function<HttpServerResponse, HttpServerResponse> interceptor) {
+	default HttpServerRoutes directory(String path,
+			String directory,
+			Function<HttpServerResponse, HttpServerResponse> interceptor) {
 		return route(HttpPredicate.prefix(path), (req, resp) -> {
-			String strippedPrefix = req.uri()
+			String strippedPrefix = URI.create(req.uri())
+			                           .getPath()
 			                           .replaceFirst(path, "");
-			int paramIndex = strippedPrefix.lastIndexOf("?");
-			if (paramIndex != -1) {
-				strippedPrefix = strippedPrefix.substring(0, paramIndex);
-			}
-
 			Path p = Paths.get(directory + strippedPrefix);
 			if (Files.isReadable(p)) {
 
@@ -129,7 +128,7 @@ public interface HttpServerRoutes extends
 				return resp.sendFile(p.toFile());
 			}
 			else {
-				throw HttpServer.NotFoundException.instance;
+				throw DefaultHttpServerRoutes.NotFoundException.instance;
 			}
 		});
 	}
@@ -137,7 +136,7 @@ public interface HttpServerRoutes extends
 	/**
 	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -146,14 +145,14 @@ public interface HttpServerRoutes extends
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes file(String path, final File file) {
+	default HttpServerRoutes file(String path, File file) {
 		return file(HttpPredicate.get(path), file.getAbsolutePath(), null);
 	}
 
 	/**
 	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this path, pattern
@@ -162,14 +161,14 @@ public interface HttpServerRoutes extends
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes file(String path, final String filepath) {
+	default HttpServerRoutes file(String path, String filepath) {
 		return file(HttpPredicate.get(path), filepath, null);
 	}
 
 	/**
 	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -180,12 +179,12 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes file(Predicate<HttpServerRequest> path,
-			final String filepath,
-			final Function<HttpServerResponse, HttpServerResponse> interceptor) {
-		final File file = new File(filepath);
+			String filepath,
+			Function<HttpServerResponse, HttpServerResponse> interceptor) {
+		File file = new File(filepath);
 		return route(path, (req, resp) -> {
 			if(!file.exists()){
-				throw HttpServer.NotFoundException.instance;
+				throw DefaultHttpServerRoutes.NotFoundException.instance;
 			}
 			if (interceptor != null) {
 				return interceptor.apply(resp)
@@ -198,7 +197,7 @@ public interface HttpServerRoutes extends
 	/**
 	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -208,14 +207,25 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes get(String path,
-			final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		return route(HttpPredicate.get(path), handler);
+	}
+
+	/**
+	 * This route will be invoked when GET "/path" or "/path/" like uri are requested.
+	 *
+	 * @param handler an handler to invoke on index/root request
+	 *
+	 * @return this {@link HttpServerRoutes}
+	 */
+	default HttpServerRoutes index(final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+		return route(INDEX_PREDICATE, handler);
 	}
 
 	/**
 	 * Listen for HTTP POST on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -225,14 +235,14 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes post(String path,
-			final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		return route(HttpPredicate.post(path), handler);
 	}
 
 	/**
 	 * Listen for HTTP PUT on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -242,13 +252,15 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes put(String path,
-			final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		return route(HttpPredicate.put(path), handler);
 	}
 
 	/**
-	 * @param condition
-	 * @param handler
+	 * A generic route predicate that if matched invoke the passed req/resp handler.
+	 *
+	 * @param condition a predicate given each inbound request
+	 * @param handler the handler to invoke on match
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
@@ -258,7 +270,7 @@ public interface HttpServerRoutes extends
 	/**
 	 * Listen for WebSocket on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
@@ -268,40 +280,48 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(String path,
-			final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		return ws(path, handler, null);
 	}
 
 	/**
 	 * Listen for WebSocket on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available when reactor-bus is on the classpath. e.g.
+	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
 	 * path, pattern matching and capture are supported
 	 * @param handler an handler to invoke for the given condition
-	 * @param protocols
+	 * @param protocols sub-protocol to use in WS handshake signature
 	 *
 	 * @return a new handler
 	 */
 	@SuppressWarnings("unchecked")
 	default HttpServerRoutes ws(String path,
-			final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-			final String protocols) {
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
+			String protocols) {
 		Predicate<HttpServerRequest> condition = HttpPredicate.get(path);
 
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
-			       .contains(HttpHeaderNames.CONNECTION,
-					       HttpHeaderValues.UPGRADE, true)) {
+			       .contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 
 				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), protocols, false,
-						(BiFunction<HttpInbound, HttpOutbound, Publisher<Void>>)handler);
+				return ops.withWebsocketSupport(req.uri(), protocols, false, (BiFunction<HttpInbound, HttpOutbound, Publisher<Void>>)handler);
 			}
 			return handler.apply(req, resp);
 		});
 	}
+
+	Predicate<HttpServerRequest> INDEX_PREDICATE = req -> {
+		URI uri = URI.create(req.uri());
+		return req.method() == HttpMethod.GET && (uri.getPath()
+		                                             .endsWith("/") || uri.getPath()
+		                                                                  .indexOf(".",
+				                                                                  uri.getPath()
+				                                                                     .lastIndexOf(
+						                                                                     "/")) == -1);
+	};
 
 }

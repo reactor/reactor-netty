@@ -131,27 +131,7 @@ public final class HttpServer
 		Objects.requireNonNull(routesBuilder, "routeBuilder");
 		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
 		routesBuilder.accept(routes);
-		return newHandler((req, resp) -> {
-			try {
-				return routes.apply(req, resp) //apply route
-				             .apply(req, resp); //apply routed handler
-			}
-			catch (NotFoundException nfe) {
-				return empty(resp); //404
-			}
-			catch (Throwable t) {
-				Exceptions.throwIfFatal(t);
-				return Mono.error(t); //500
-			}
-		});
-	}
-
-	static Publisher<Void> empty(HttpServerResponse resp) {
-		resp.responseHeaders()
-		    .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
-		resp.status(HttpResponseStatus.NOT_FOUND);
-		resp.disableChunkedTransfer();
-		return resp.sendHeaders();
+		return newHandler(routes);
 	}
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
@@ -170,16 +150,6 @@ public final class HttpServer
 					options,
 					loggingHandler,
 					(ch, c) -> HttpServerOperations.bindHttp(ch, handler, c));
-		}
-	}
-
-	static final class NotFoundException extends RuntimeException {
-
-		static final NotFoundException instance = new NotFoundException();
-
-		@Override
-		public synchronized Throwable fillInStackTrace() {
-			return this;
 		}
 	}
 }

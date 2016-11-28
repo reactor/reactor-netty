@@ -273,6 +273,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public Mono<Void> sendNotFound() {
+		this.responseHeaders()
+		    .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+		return this.status(HttpResponseStatus.NOT_FOUND)
+		           .disableChunkedTransfer()
+		           .sendHeaders();
+	}
+
+	@Override
 	public Mono<Void> sendRedirect(String location) {
 		Objects.requireNonNull(location, "location");
 		return this.status(HttpResponseStatus.FOUND)

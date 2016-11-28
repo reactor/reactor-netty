@@ -25,11 +25,14 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
+import reactor.core.Exceptions;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Stephane Maldini
  */
 final class DefaultHttpServerRoutes implements HttpServerRoutes {
+
 
 	private final CopyOnWriteArrayList<HttpRouteHandler> handlers =
 			new CopyOnWriteArrayList<>();
@@ -49,19 +52,27 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 	}
 
 	@Override
-	public BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> apply(
-			HttpServerRequest request,
-			HttpServerResponse response) {
+	public Publisher<Void> apply(HttpServerRequest request, HttpServerResponse response) {
 		final Iterator<HttpRouteHandler> iterator = handlers.iterator();
 		HttpRouteHandler cursor;
 
-		while (iterator.hasNext()) {
-			cursor = iterator.next();
-			if (cursor.test(request)) {
-				return cursor;
+		try {
+			while (iterator.hasNext()) {
+				cursor = iterator.next();
+				if (cursor.test(request)) {
+					return cursor.apply(request, response);
+				}
 			}
 		}
-		throw HttpServer.NotFoundException.instance;
+		catch (NotFoundException nfe) {
+			return response.sendNotFound();
+		}
+		catch (Throwable t) {
+			Exceptions.throwIfFatal(t);
+			return Mono.error(t); //500
+		}
+
+		return response.sendNotFound();
 	}
 
 	/**
@@ -92,6 +103,17 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		@Override
 		public boolean test(HttpServerRequest o) {
 			return condition.test(o);
+		}
+	}
+
+
+	static final class NotFoundException extends RuntimeException {
+
+		static final NotFoundException instance = new NotFoundException();
+
+		@Override
+		public synchronized Throwable fillInStackTrace() {
+			return this;
 		}
 	}
 }
