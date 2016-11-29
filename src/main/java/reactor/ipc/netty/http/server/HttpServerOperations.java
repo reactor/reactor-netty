@@ -16,6 +16,9 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
@@ -269,6 +272,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return nettyRequest.headers();
 		}
 		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public Mono<Void> sendFile(Path file) {
+		try {
+			return sendFile(file, 0L, Files.size(file));
+		}
+		catch (IOException e) {
+			if(log.isDebugEnabled()){
+				log.debug("Path not resolved",e);
+			}
+			return sendNotFound();
+		}
 	}
 
 	@Override

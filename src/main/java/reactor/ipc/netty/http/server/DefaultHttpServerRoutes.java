@@ -45,11 +45,9 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 			new CopyOnWriteArrayList<>();
 
 	@Override
-	public HttpServerRoutes directory(String uri, FileSystem fileSystem, String directory,
+	public HttpServerRoutes directory(String uri, Path directory,
 			Function<HttpServerResponse, HttpServerResponse> interceptor) {
 		Objects.requireNonNull(directory, "directory");
-		Objects.requireNonNull(fileSystem, "fileSystem");
-		Path root = fileSystem.getPath(directory);
 		return route(HttpPredicate.prefix(uri), (req, resp) -> {
 
 			String prefix = URI.create(req.uri())
@@ -60,7 +58,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 				prefix = prefix.substring(1);
 			}
 
-			Path p = root.resolve(prefix);
+			Path p = directory.resolve(prefix);
 			if (Files.isReadable(p)) {
 
 				if (interceptor != null) {

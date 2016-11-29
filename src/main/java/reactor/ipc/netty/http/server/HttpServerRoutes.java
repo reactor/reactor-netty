@@ -85,7 +85,7 @@ public interface HttpServerRoutes extends
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes directory(String uri, String directory) {
+	default HttpServerRoutes directory(String uri, Path directory) {
 		return directory(uri, directory, null);
 	}
 
@@ -95,53 +95,15 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
-	 * @param fileSystem the File System to resolve directory from, e.g. "FileSystems
-	 * .newFileSystem("some.jar")"
-	 * @param directory the root prefix to serve from in file system, e.g.
-	 * "BOOT-INF/classes/static"
-	 *
-	 * @return this {@link HttpServerRoutes}
-	 */
-	default HttpServerRoutes directory(String path, FileSystem fileSystem, String
-			directory) {
-		return directory(path, fileSystem, directory, null);
-	}
-
-	/**
-	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
-	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available e.g.
-	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
-	 *
 	 * @param uri The {@link HttpPredicate} to resolve against this
 	 * path, pattern matching and capture are supported
 	 * @param directory the root prefix to serve from in file system, e.g.
 	 * "/Users/me/resources"
+	 * @param interceptor a pre response processor
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes directory(String uri, String directory,
-			Function<HttpServerResponse, HttpServerResponse> interceptor){
-		return directory(uri, FileSystems.getDefault(), directory, interceptor);
-	}
-
-	/**
-	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
-	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available e.g.
-	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
-	 *
-	 * @param uri The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
-	 * @param fileSystem the File System to resolve directory from
-	 * @param directory the root prefix to serve from in file system, e.g.
-	 * "/Users/me/resources"
-	 *
-	 * @return this {@link HttpServerRoutes}
-	 */
-	HttpServerRoutes directory(String uri, FileSystem fileSystem, String directory,
+	HttpServerRoutes directory(String uri, Path directory,
 			Function<HttpServerResponse, HttpServerResponse> interceptor);
 
 	/**

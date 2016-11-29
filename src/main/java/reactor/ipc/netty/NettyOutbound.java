@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +28,6 @@ import java.nio.file.Path;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.DefaultFileRegion;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -42,6 +42,7 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 
 	/**
 	 * Return the underlying {@link Channel}
+	 *
 	 * @return the underlying {@link Channel}
 	 */
 	Channel channel();
@@ -56,15 +57,18 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 
 	/**
 	 * Return true  if underlying channel is closed or inbound bridge is detached
+	 *
 	 * @return true if underlying channel is closed or inbound bridge is detached
 	 */
 	boolean isDisposed();
 
 	/**
-	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given timeout.
+	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given
+	 * timeout.
 	 *
 	 * @param idleTimeout the idle timeout
 	 * @param onWriteIdle the idle timeout handler
+	 *
 	 * @return {@literal this}
 	 */
 	NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle);
@@ -125,9 +129,19 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	}
 
 	/**
-	 * Send File with zero-byte copy to the peer, listen for any error on write and close
+	 * Send content from given {@link Path} using
+	 * {@link java.nio.channels.FileChannel#transferTo(long, long, WritableByteChannel)}
+	 * support. If the system supports it and the path resolves to a local file
+	 * system {@link File} then transfer will use zero-byte copy
+	 * to the peer.
+	 * <p>It will
+	 * listen for any error on
+	 * write and close
 	 * on terminal signal (complete|error). If more than one publisher is attached
 	 * (multiple calls to send()) completion occurs after all publishers complete.
+	 *
+	 * Note: this will emit {@link io.netty.channel.FileRegion} in the outbound
+	 * {@link io.netty.channel.ChannelPipeline}
 	 *
 	 * @param file the file Path
 	 *
@@ -144,9 +158,19 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	}
 
 	/**
-	 * Send File with zero-byte copy to the peer, listen for any error on write and close
+	 * Send content from given {@link Path} using
+	 * {@link java.nio.channels.FileChannel#transferTo(long, long, WritableByteChannel)}
+	 * support. If the system supports it and the path resolves to a local file
+	 * system {@link File} then transfer will use zero-byte copy
+	 * to the peer.
+	 * <p>It will
+	 * listen for any error on
+	 * write and close
 	 * on terminal signal (complete|error). If more than one publisher is attached
 	 * (multiple calls to send()) completion occurs after all publishers complete.
+	 *
+	 * Note: this will emit {@link io.netty.channel.FileRegion} in the outbound
+	 * {@link io.netty.channel.ChannelPipeline}
 	 *
 	 * @param file the file Path
 	 * @param position where to start
@@ -167,8 +191,7 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A {@link Mono} to signal successful sequence write (e.g. after "flush") or
 	 * any error during write
 	 */
-	default Mono<Void> sendGroups(Publisher<? extends Publisher<? extends ByteBuf>>
-			dataStreams) {
+	default Mono<Void> sendGroups(Publisher<? extends Publisher<? extends ByteBuf>> dataStreams) {
 		return Flux.from(dataStreams)
 		           .concatMapDelayError(this::send, false, 32)
 		           .then();

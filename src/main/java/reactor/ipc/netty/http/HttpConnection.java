@@ -16,6 +16,7 @@
 package reactor.ipc.netty.http;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,11 +30,12 @@ import io.netty.handler.codec.http.cookie.Cookie;
  * URI, method, websocket...
  *
  * @author Stephane Maldini
- * @since 2.5
+ * @since 0.5
  */
 public interface HttpConnection {
 
 	/**
+	 * Return resolved HTTP cookies
 	 * @return Resolved HTTP cookies
 	 */
 	Map<CharSequence, Set<Cookie>> cookies();
@@ -52,9 +54,30 @@ public interface HttpConnection {
 	boolean isWebsocket();
 
 	/**
+	 * Return the resolved request method (HTTP 1.1 etc)
 	 * @return the resolved request method (HTTP 1.1 etc)
 	 */
 	HttpMethod method();
+
+	/**
+	 * Return a normalized {@link #uri()} without the leading and trailing '/' if present
+	 * @return a normalized {@link #uri()} without the leading and trailing
+	 */
+	default String path() {
+		String uri = URI.create(uri()).getPath();
+		if (!uri.isEmpty()) {
+			if(uri.charAt(0) == '/'){
+				uri = uri.substring(1);
+				if(uri.length() <= 1){
+					return uri;
+				}
+			}
+			if(uri.charAt(uri.length() - 1) == '/'){
+				return uri.substring(0, uri.length() - 1);
+			}
+		}
+		return uri;
+	}
 
 	/**
 	 * Get the address of the remote peer.
@@ -64,11 +87,13 @@ public interface HttpConnection {
 	InetSocketAddress remoteAddress();
 
 	/**
+	 * Return the resolved target address
 	 * @return the resolved target address
 	 */
 	String uri();
 
 	/**
+	 * Return the resolved request version (HTTP 1.1 etc)
 	 * @return the resolved request version (HTTP 1.1 etc)
 	 */
 	HttpVersion version();

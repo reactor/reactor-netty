@@ -16,6 +16,8 @@
 
 package reactor.ipc.netty.http;
 
+import java.nio.file.Paths;
+
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.ipc.netty.NettyContext;
@@ -32,8 +34,8 @@ public class HttpServerTests {
 	public void keepAlive() {
 		NettyContext c = HttpServer.create(0)
 		                           .newRouter(routes -> routes.directory("/test",
-				                           getClass().getResource("/public")
-				                                     .getFile()))
+				                           Paths.get(getClass().getResource("/public")
+				                                               .getFile())))
 		                           .block();
 
 		HttpClientResponse response0 = HttpClient.create(c.address().getPort())
