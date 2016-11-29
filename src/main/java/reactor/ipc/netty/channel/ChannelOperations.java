@@ -19,6 +19,9 @@ package reactor.ipc.netty.channel;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +33,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -50,6 +54,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
@@ -319,6 +324,27 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public long requestedFromDownstream() {
 		return receiverDemand;
+	}
+
+	@Override
+	public Mono<Void> sendFile(Path file, long position, long count) {
+		Objects.requireNonNull(file);
+
+		return Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
+				fc -> ChannelFutureMono.from(channel.writeAndFlush(new DefaultFileRegion(
+						fc,
+						position,
+						count))),
+				fc -> {
+					try {
+						fc.close();
+					}
+					catch (IOException ioe) {
+						if (log.isDebugEnabled()) {
+							log.error("failed closing FileChannel", ioe);
+						}
+					}
+				});
 	}
 
 	@Override

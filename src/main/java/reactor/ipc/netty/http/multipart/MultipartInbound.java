@@ -50,10 +50,10 @@ public interface MultipartInbound extends NettyInbound {
 
 	@Override
 	default ByteBufFlux receive() {
-		return ByteBufFlux.from(receiveParts().onBackpressureError()
-		                                      .concatMap(parts -> parts.aggregate()
+		return ByteBufFlux.fromInbound(receiveParts().onBackpressureError()
+		                                             .concatMap(parts -> parts.aggregate()
 		                                                               .retain())
-		                                      .concatMap(bb -> Flux.using(() -> bb,
+		                                             .concatMap(bb -> Flux.using(() -> bb,
 				                                      Flux::just,
 				                                      ReferenceCounted::release)),
 				channel().alloc());

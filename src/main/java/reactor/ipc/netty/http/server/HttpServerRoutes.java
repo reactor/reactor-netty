@@ -16,11 +16,14 @@
 
 package reactor.ipc.netty.http.server;
 
-import java.io.File;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -29,6 +32,8 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
+import reactor.core.Exceptions;
+import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOutbound;
 
@@ -73,14 +78,15 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
+	 * @param uri The {@link HttpPredicate} to resolve against this
 	 * path, pattern matching and capture are supported
-	 * @param directory the File to serve
+	 * @param directory the root prefix to serve from in file system, e.g.
+	 * "/Users/me/resources"
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes directory(String path, File directory) {
-		return directory(path, directory.getAbsolutePath());
+	default HttpServerRoutes directory(String uri, String directory) {
+		return directory(uri, directory, null);
 	}
 
 	/**
@@ -91,12 +97,16 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param path The {@link HttpPredicate} to resolve against this
 	 * path, pattern matching and capture are supported
-	 * @param directory the Path to the file to serve
+	 * @param fileSystem the File System to resolve directory from, e.g. "FileSystems
+	 * .newFileSystem("some.jar")"
+	 * @param directory the root prefix to serve from in file system, e.g.
+	 * "BOOT-INF/classes/static"
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes directory(String path, String directory) {
-		return directory(path, directory, null);
+	default HttpServerRoutes directory(String path, FileSystem fileSystem, String
+			directory) {
+		return directory(path, fileSystem, directory, null);
 	}
 
 	/**
@@ -105,32 +115,16 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
+	 * @param uri The {@link HttpPredicate} to resolve against this
 	 * path, pattern matching and capture are supported
-	 * @param directory the Path to the file to serve
+	 * @param directory the root prefix to serve from in file system, e.g.
+	 * "/Users/me/resources"
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes directory(String path,
-			String directory,
-			Function<HttpServerResponse, HttpServerResponse> interceptor) {
-		return route(HttpPredicate.prefix(path), (req, resp) -> {
-			String strippedPrefix = URI.create(req.uri())
-			                           .getPath()
-			                           .replaceFirst(path, "");
-			Path p = Paths.get(directory + strippedPrefix);
-			if (Files.isReadable(p)) {
-
-				if (interceptor != null) {
-					return interceptor.apply(resp)
-					                  .sendFile(p.toFile());
-				}
-				return resp.sendFile(p.toFile());
-			}
-			else {
-				throw DefaultHttpServerRoutes.NotFoundException.instance;
-			}
-		});
+	default HttpServerRoutes directory(String uri, String directory,
+			Function<HttpServerResponse, HttpServerResponse> interceptor){
+		return directory(uri, FileSystems.getDefault(), directory, interceptor);
 	}
 
 	/**
@@ -139,14 +133,30 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
+	 * @param uri The {@link HttpPredicate} to resolve against this
 	 * path, pattern matching and capture are supported
-	 * @param file the File to serve
+	 * @param fileSystem the File System to resolve directory from
+	 * @param directory the root prefix to serve from in file system, e.g.
+	 * "/Users/me/resources"
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes file(String path, File file) {
-		return file(HttpPredicate.get(path), file.getAbsolutePath(), null);
+	HttpServerRoutes directory(String uri, FileSystem fileSystem, String directory,
+			Function<HttpServerResponse, HttpServerResponse> interceptor);
+
+	/**
+	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
+	 * connections will query the internal registry to invoke the matching handlers. <p>
+	 * Additional regex matching is available e.g.
+	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 *
+	 * @param uri The GET path used by clients
+	 * @param path the resource Path to serve
+	 *
+	 * @return this {@link HttpServerRoutes}
+	 */
+	default HttpServerRoutes file(String uri, Path path) {
+		return file(HttpPredicate.get(uri), path, null);
 	}
 
 	/**
@@ -155,14 +165,13 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this path, pattern
-	 * matching and capture are supported
-	 * @param filepath the Path to the file to serve
+	 * @param uri The GET path used by clients
+	 * @param path the resource path to serve
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes file(String path, String filepath) {
-		return file(HttpPredicate.get(path), filepath, null);
+	default HttpServerRoutes file(String uri, String path) {
+		return file(HttpPredicate.get(uri), Paths.get(path), null);
 	}
 
 	/**
@@ -171,26 +180,25 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
+	 * @param uri The {@link HttpPredicate} to resolve against this
 	 * path, pattern matching and capture are supported
-	 * @param filepath the Path to the file to serve
+	 * @param path the Path to the file to serve
 	 * @param interceptor a channel pre-intercepting handler e.g. for content type header
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes file(Predicate<HttpServerRequest> path,
-			String filepath,
+	default HttpServerRoutes file(Predicate<HttpServerRequest> uri, Path path,
 			Function<HttpServerResponse, HttpServerResponse> interceptor) {
-		File file = new File(filepath);
-		return route(path, (req, resp) -> {
-			if(!file.exists()){
-				throw DefaultHttpServerRoutes.NotFoundException.instance;
+		Objects.requireNonNull(path, "path");
+		return route(uri, (req, resp) -> {
+			if (!Files.isReadable(path)) {
+				return resp.send(ByteBufFlux.fromPath(path));
 			}
 			if (interceptor != null) {
 				return interceptor.apply(resp)
-				                  .sendFile(file);
+				                  .sendFile(path);
 			}
-			return resp.sendFile(file);
+			return resp.sendFile(path);
 		});
 	}
 

@@ -17,9 +17,12 @@
 package reactor.ipc.netty;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -126,13 +129,18 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * on terminal signal (complete|error). If more than one publisher is attached
 	 * (multiple calls to send()) completion occurs after all publishers complete.
 	 *
-	 * @param file the dataStream publishing Buffer items to write on this channel
+	 * @param file the file Path
 	 *
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default Mono<Void> sendFile(File file) {
-		return sendFile(file, 0L, file.length());
+	default Mono<Void> sendFile(Path file) {
+		try {
+			return sendFile(file, 0L, Files.size(file));
+		}
+		catch (IOException e) {
+			return Mono.error(e);
+		}
 	}
 
 	/**
@@ -140,16 +148,14 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * on terminal signal (complete|error). If more than one publisher is attached
 	 * (multiple calls to send()) completion occurs after all publishers complete.
 	 *
-	 * @param file the dataStream publishing Buffer items to write on this channel
+	 * @param file the file Path
+	 * @param position where to start
+	 * @param count how much to transfer
 	 *
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default Mono<Void> sendFile(File file, long position, long count) {
-		return ChannelFutureMono.from(channel().writeAndFlush(new DefaultFileRegion(file,
-				position,
-				count)));
-	}
+	Mono<Void> sendFile(Path file, long position, long count);
 
 	/**
 	 * Send data to the peer, listen for any error on write and close on terminal signal

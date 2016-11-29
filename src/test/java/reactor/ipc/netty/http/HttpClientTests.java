@@ -56,7 +56,7 @@ public class HttpClientTests {
 	//@Test
 	public void postUpload() throws Exception {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
-		//File f = new File("/Users/smaldini/Downloads/IMG_6702.mp4");
+		//Path f = Paths.get("/Users/smaldini/Downloads/IMG_6702.mp4");
 		int res = HttpClient.create("google.com")
 		                    .put("/post",
 				                    c -> c.sendMultipart(form -> form.file("test", f)

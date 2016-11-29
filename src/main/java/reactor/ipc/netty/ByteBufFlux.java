@@ -16,9 +16,13 @@
 
 package reactor.ipc.netty;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.util.Objects;
 import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
@@ -42,13 +46,105 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	 * Decorate as {@link ByteBufFlux}
 	 *
 	 * @param source publisher to decorate
+	 *
+	 * @return a {@link ByteBufFlux}
+	 */
+	public static ByteBufFlux fromInbound(Publisher<?> source) {
+		return fromInbound(source, ByteBufAllocator.DEFAULT);
+	}
+
+	/**
+	 * Decorate as {@link ByteBufFlux}
+	 *
+	 * @param source publisher to decorate
 	 * @param allocator the channel {@link ByteBufAllocator}
 	 *
 	 * @return a {@link ByteBufFlux}
 	 */
-	public final static ByteBufFlux from(Publisher<?> source,
+	public static ByteBufFlux fromInbound(Publisher<?> source,
 			ByteBufAllocator allocator) {
-		return new ByteBufFlux(Flux.from(source), allocator);
+		Objects.requireNonNull(allocator, "allocator");
+		return new ByteBufFlux(Flux.from(source)
+		                           .map(objectMapper), allocator);
+	}
+
+	/**
+	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
+	 * {@link ByteBuf }chunks with
+	 * a given maximum size into the returned {@link ByteBufFlux}
+	 *
+	 * @param path the path to the resource to stream
+	 *
+	 * @return a {@link ByteBufFlux}
+	 */
+	public static ByteBufFlux fromPath(Path path) {
+		return fromPath(path, MAX_CHUNK_SIZE);
+	}
+
+	/**
+	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
+	 * {@link ByteBuf }chunks with
+	 * a given maximum size into the returned {@link ByteBufFlux}
+	 *
+	 * @param path the path to the resource to stream
+	 * @param maxChunkSize the maximum per-item ByteBuf size
+	 *
+	 * @return a {@link ByteBufFlux}
+	 */
+	public static ByteBufFlux fromPath(Path path, int maxChunkSize) {
+		return fromPath(path, maxChunkSize, ByteBufAllocator.DEFAULT);
+	}
+
+	/**
+	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
+	 * {@link ByteBuf }chunks with
+	 * a given maximum size into the returned {@link ByteBufFlux}
+	 *
+	 * @param path the path to the resource to stream
+	 * @param allocator the channel {@link ByteBufAllocator}
+	 *
+	 * @return a {@link ByteBufFlux}
+	 */
+	public static ByteBufFlux fromPath(Path path, ByteBufAllocator allocator) {
+		return fromPath(path, MAX_CHUNK_SIZE, allocator);
+	}
+
+	/**
+	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
+	 * {@link ByteBuf }chunks with
+	 * a given maximum size into the returned {@link ByteBufFlux}
+	 *
+	 * @param path the path to the resource to stream
+	 * @param maxChunkSize the maximum per-item ByteBuf size
+	 * @param allocator the channel {@link ByteBufAllocator}
+	 *
+	 * @return a {@link ByteBufFlux}
+	 */
+	public static ByteBufFlux fromPath(Path path,
+			int maxChunkSize,
+			ByteBufAllocator allocator) {
+		Objects.requireNonNull(path, "path");
+		Objects.requireNonNull(allocator, "allocator");
+		if (maxChunkSize < 1) {
+			throw new IllegalArgumentException("chunk size must be strictly positive, " + "was: " + maxChunkSize);
+		}
+		return new ByteBufFlux(Flux.generate(() -> FileChannel.open(path), (fc, sink) -> {
+			try {
+				ByteBuf buf = allocator.buffer();
+				long pos;
+				if ((pos = buf.writeBytes(fc, maxChunkSize)) < 0) {
+					sink.complete();
+				}
+				else {
+					fc.position(pos + fc.position());
+					sink.next(buf);
+				}
+			}
+			catch (IOException e) {
+				sink.error(e);
+			}
+			return fc;
+		}), allocator);
 	}
 
 	/**
@@ -137,8 +233,8 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 
 	final ByteBufAllocator alloc;
 
-	protected ByteBufFlux(Flux<?> source, ByteBufAllocator allocator) {
-		super(source.map(objectMapper));
+	ByteBufFlux(Flux<ByteBuf> source, ByteBufAllocator allocator) {
+		super(source);
 		this.alloc = allocator;
 	}
 
@@ -160,4 +256,5 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 		throw new IllegalArgumentException("Object " + o + " of type " + o.getClass() + " " + "cannot be converted to ByteBuf");
 	};
 
+	final static int MAX_CHUNK_SIZE = 1024 * 512; //500k
 }

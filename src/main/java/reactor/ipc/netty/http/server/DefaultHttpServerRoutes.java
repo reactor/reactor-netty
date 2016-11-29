@@ -16,6 +16,12 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -27,6 +33,7 @@ import java.util.function.Predicate;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.ByteBufFlux;
 
 /**
  * @author Stephane Maldini
@@ -38,8 +45,41 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 			new CopyOnWriteArrayList<>();
 
 	@Override
+	public HttpServerRoutes directory(String uri, FileSystem fileSystem, String directory,
+			Function<HttpServerResponse, HttpServerResponse> interceptor) {
+		Objects.requireNonNull(directory, "directory");
+		Objects.requireNonNull(fileSystem, "fileSystem");
+		Path root = fileSystem.getPath(directory);
+		return route(HttpPredicate.prefix(uri), (req, resp) -> {
+
+			String prefix = URI.create(req.uri())
+			                   .getPath()
+			                   .replaceFirst(uri, "");
+
+			if(prefix.charAt(0) == '/'){
+				prefix = prefix.substring(1);
+			}
+
+			Path p = root.resolve(prefix);
+			if (Files.isReadable(p)) {
+
+				if (interceptor != null) {
+					return interceptor.apply(resp)
+					                  .sendFile(p);
+				}
+				return resp.sendFile(p);
+			}
+
+			return resp.sendNotFound();
+		});
+	}
+
+	@Override
 	public HttpServerRoutes route(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+		Objects.requireNonNull(condition, "condition");
+		Objects.requireNonNull(handler, "handler");
+
 		if (condition instanceof HttpPredicate) {
 			handlers.add(new HttpRouteHandler(condition,
 					handler,
@@ -63,9 +103,6 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 					return cursor.apply(request, response);
 				}
 			}
-		}
-		catch (NotFoundException nfe) {
-			return response.sendNotFound();
 		}
 		catch (Throwable t) {
 			Exceptions.throwIfFatal(t);
@@ -106,14 +143,4 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		}
 	}
 
-
-	static final class NotFoundException extends RuntimeException {
-
-		static final NotFoundException instance = new NotFoundException();
-
-		@Override
-		public synchronized Throwable fillInStackTrace() {
-			return this;
-		}
-	}
 }

@@ -83,7 +83,7 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 */
 	@Override
 	default ByteBufFlux receive() {
-		return new ByteBufFlux(receiveObject(), channel().alloc());
+		return ByteBufFlux.fromInbound(receiveObject(), channel().alloc());
 	}
 
 

@@ -18,6 +18,8 @@ package reactor.ipc.netty.http;
 
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
 
@@ -122,7 +124,9 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	}
 
 	@Override
-	public final Mono<Void> sendFile(File file, long position, long count) {
+	public final Mono<Void> sendFile(Path file, long position, long count) {
+		Objects.requireNonNull(file);
+
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
