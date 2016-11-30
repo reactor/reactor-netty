@@ -220,6 +220,16 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	/**
 	 * Select a channel pool from the given address.
 	 *
+	 * @return an eventual {@link ChannelPool}
+	 */
+	public final ChannelPool getPool() {
+		return getPool(null);
+	}
+
+
+	/**
+	 * Select a channel pool from the given address.
+	 *
 	 * @param address the optional address to use
 	 *
 	 * @return an eventual {@link ChannelPool}

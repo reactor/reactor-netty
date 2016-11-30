@@ -97,7 +97,8 @@ public final class HttpResources {
 						public void channelCreated(Channel ch) throws Exception {
 							log.debug("Created: {}", ch.toString());
 						}
-					},1);
+					}, Math.max(4, Runtime.getRuntime()
+					         .availableProcessors() / 2));
 			if (channelPools.putIfAbsent(remote, pool) == null) {
 				return pool;
 			}
