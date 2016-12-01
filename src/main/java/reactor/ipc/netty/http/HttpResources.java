@@ -16,98 +16,71 @@
 
 package reactor.ipc.netty.http;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.pool.ChannelPool;
-import io.netty.channel.pool.ChannelPoolHandler;
-import io.netty.channel.pool.FixedChannelPool;
-import reactor.ipc.netty.options.ChannelResources;
-import reactor.util.Logger;
-import reactor.util.Loggers;
+import reactor.ipc.netty.resources.LoopResources;
+import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.tcp.TcpResources;
 
 /**
- * Hold the default Http event loops
+ * Hold the default Http resources
  *
  * @author Stephane Maldini
  * @since 0.6
  */
-public final class HttpResources {
+public final class HttpResources extends TcpResources {
 
 	/**
-	 * Return the global HTTP event loop selector
+	 * Return the global HTTP resources for event loops and pooling
 	 *
-	 * @return the global HTTP event loop selector
+	 * @return the global HTTP resources for event loops and pooling
 	 */
-	public static ChannelResources defaultHttpLoops() {
-		return DEFAULT_HTTP_LOOPS;
+	public static HttpResources get() {
+		return getOrCreate(httpResources, null, null, ON_HTTP_NEW);
 	}
 
 	/**
-	 * Return the global HTTP client pool selector
+	 * Update event loops resources and return the global HTTP resources
 	 *
-	 * @return the global HTTP client pool selector
+	 * @return the global HTTP resources
 	 */
-	public static BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool> defaultPool() {
-		return DEFAULT_POOL_SELECTOR;
+	public static HttpResources set(PoolResources pools) {
+		return getOrCreate(httpResources, null, pools, ON_HTTP_NEW);
 	}
 
-	static final ConcurrentMap<InetSocketAddress, ChannelPool> channelPools;
-	static final ChannelResources                              DEFAULT_HTTP_LOOPS;
-	static final BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool>
-	                                                           DEFAULT_POOL_SELECTOR;
+	/**
+	 * Update pooling resources and return the global HTTP resources
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static HttpResources set(LoopResources loops) {
+		return getOrCreate(httpResources, loops, null, ON_HTTP_NEW);
+	}
+
+	/**
+	 * Reset http resources to default and return its instance
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static HttpResources reset() {
+		HttpResources resources = httpResources.getAndSet(null);
+		if (resources != null) {
+			resources._dispose();
+		}
+		return getOrCreate(httpResources, null, null, ON_HTTP_NEW);
+	}
+
+	HttpResources(LoopResources loops, PoolResources pools) {
+		super(loops, pools);
+	}
+
+	static final AtomicReference<HttpResources>                          httpResources;
+	static final BiFunction<LoopResources, PoolResources, HttpResources> ON_HTTP_NEW;
 
 	static {
-		DEFAULT_POOL_SELECTOR = HttpResources::pool;
-		channelPools = new ConcurrentHashMap<>(8);
-		DEFAULT_HTTP_LOOPS = ChannelResources.create("http");
+		ON_HTTP_NEW = HttpResources::new;
+		httpResources = new AtomicReference<>();
 	}
 
-	static ChannelPool pool(InetSocketAddress remote,
-			Supplier<? extends Bootstrap> bootstrap) {
-		for (; ; ) {
-			ChannelPool pool = channelPools.get(remote);
-			if (pool != null) {
-				return pool;
-			}
-			if (log.isDebugEnabled()) {
-				log.debug("Creating new HTTP client pool for {}", remote);
-			}
-			//pool = new SimpleChannelPool(bootstrap);
-			Bootstrap b = bootstrap.get();
-			b.remoteAddress(remote);
-			pool = new FixedChannelPool(b,
-					new ChannelPoolHandler() {
-						@Override
-						public void channelReleased(Channel ch) throws Exception {
-							log.debug("Released: {}", ch.toString());
-						}
-
-						@Override
-						public void channelAcquired(Channel ch) throws Exception {
-							log.debug("Acquired: {}", ch.toString());
-						}
-
-						@Override
-						public void channelCreated(Channel ch) throws Exception {
-							log.debug("Created: {}", ch.toString());
-						}
-					}, Math.max(4, Runtime.getRuntime()
-					         .availableProcessors() / 2));
-			if (channelPools.putIfAbsent(remote, pool) == null) {
-				return pool;
-			}
-			pool.close();
-		}
-	}
-
-	static final Logger log = Loggers.getLogger(HttpResources.class);
-
-	HttpResources() {
-	}
 }

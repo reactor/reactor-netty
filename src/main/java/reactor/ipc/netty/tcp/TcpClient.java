@@ -104,8 +104,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	public static TcpClient create(Consumer<? super ClientOptions> options) {
 		Objects.requireNonNull(options, "options");
 		ClientOptions clientOptions = ClientOptions.create();
-		clientOptions.channelResources(TcpResources.DEFAULT_TCP_LOOPS)
-		             .poolSelector(TcpResources.DEFAULT_POOL);
+		clientOptions.loopResources(TcpResources.get())
+		             .poolResources(TcpResources.get());
 		options.accept(clientOptions);
 		return new TcpClient(clientOptions.duplicate());
 	}

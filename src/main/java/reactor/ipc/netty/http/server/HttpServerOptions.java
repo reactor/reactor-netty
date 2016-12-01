@@ -17,10 +17,8 @@
 package reactor.ipc.netty.http.server;
 
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.time.Duration;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.channel.Channel;
@@ -30,8 +28,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.AttributeKey;
-import io.netty.util.NetUtil;
-import reactor.ipc.netty.options.ChannelResources;
+import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.options.ServerOptions;
 
 /**
@@ -75,8 +72,8 @@ public final class HttpServerOptions extends ServerOptions {
 	}
 
 	@Override
-	public HttpServerOptions channelResources(ChannelResources eventLoopSelector) {
-		super.channelResources(eventLoopSelector);
+	public HttpServerOptions loopResources(LoopResources eventLoopSelector) {
+		super.loopResources(eventLoopSelector);
 		return this;
 	}
 

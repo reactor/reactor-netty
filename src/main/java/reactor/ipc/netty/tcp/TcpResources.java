@@ -16,73 +16,193 @@
 
 package reactor.ipc.netty.tcp;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.net.SocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.channel.pool.ChannelPoolHandler;
-import io.netty.channel.pool.FixedChannelPool;
-import reactor.ipc.netty.options.ChannelResources;
-import reactor.util.Logger;
-import reactor.util.Loggers;
+import io.netty.channel.socket.DatagramChannel;
+import reactor.ipc.netty.resources.LoopResources;
+import reactor.ipc.netty.resources.PoolResources;
 
 /**
+ * Hold the default Tcp resources
+ *
  * @author Stephane Maldini
+ * @since 0.6
  */
-final class TcpResources {
+public class TcpResources implements PoolResources, LoopResources {
 
-	static final ChannelResources                              DEFAULT_TCP_LOOPS;
-	static final ConcurrentMap<InetSocketAddress, ChannelPool> channelPools;
-	static final BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool>
-	                                                           DEFAULT_POOL;
-
-	static {
-		DEFAULT_TCP_LOOPS = ChannelResources.create("tcp");
-		channelPools = new ConcurrentHashMap<>(8);
-		DEFAULT_POOL = TcpResources::pool;
+	/**
+	 * Return the global HTTP resources for event loops and pooling
+	 *
+	 * @return the global HTTP resources for event loops and pooling
+	 */
+	public static TcpResources get() {
+		return getOrCreate(tcpResources, null, null, ON_TCP_NEW);
 	}
 
-	static ChannelPool pool(InetSocketAddress remote,
+	/**
+	 * Update event loops resources and return the global HTTP resources
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static TcpResources set(PoolResources pools) {
+		return getOrCreate(tcpResources, null, pools, ON_TCP_NEW);
+	}
+
+	/**
+	 * Update pooling resources and return the global HTTP resources
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static TcpResources set(LoopResources loops) {
+		return getOrCreate(tcpResources, loops, null, ON_TCP_NEW);
+	}
+
+	/**
+	 * Reset http resources to default and return its instance
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static TcpResources reset() {
+		TcpResources resources = tcpResources.getAndSet(null);
+		if (resources != null) {
+			resources._dispose();
+		}
+		return getOrCreate(tcpResources, null, null, ON_TCP_NEW);
+	}
+
+	final PoolResources defaultPools;
+	final LoopResources defaultLoops;
+
+	protected TcpResources(LoopResources defaultLoops, PoolResources defaultPools) {
+		this.defaultLoops = defaultLoops;
+		this.defaultPools = defaultPools;
+	}
+
+	@Override
+	public void dispose() {
+		//noop on global by default
+	}
+
+	/**
+	 * Dispose underlying resources
+	 */
+	protected void _dispose(){
+		defaultPools.dispose();
+		defaultLoops.dispose();
+	}
+
+	@Override
+	public ChannelPool selectOrCreate(SocketAddress address,
 			Supplier<? extends Bootstrap> bootstrap) {
+		return defaultPools.selectOrCreate(address, bootstrap);
+	}
+
+	@Override
+	public Class<? extends Channel> onChannel(EventLoopGroup group) {
+		return defaultLoops.onChannel(group);
+	}
+
+	@Override
+	public EventLoopGroup onClient(boolean useNative) {
+		return defaultLoops.onClient(useNative);
+	}
+
+	@Override
+	public Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
+		return defaultLoops.onDatagramChannel(group);
+	}
+
+	@Override
+	public EventLoopGroup onServer(boolean useNative) {
+		return defaultLoops.onServer(useNative);
+	}
+
+	@Override
+	public Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
+		return defaultLoops.onServerChannel(group);
+	}
+
+	@Override
+	public EventLoopGroup onServerSelect(boolean useNative) {
+		return defaultLoops.onServerSelect(useNative);
+	}
+
+	@Override
+	public boolean preferNative() {
+		return defaultLoops.preferNative();
+	}
+
+	@Override
+	public boolean daemon() {
+		return defaultLoops.daemon();
+	}
+
+	/**
+	 * Safely check if existing resource exist and proceed to update/cleanup if new
+	 * resources references are passed.
+	 *
+	 * @param ref the resources atomic reference
+	 * @param loops the eventual new {@link LoopResources}
+	 * @param pools the eventual new {@link PoolResources}
+	 * @param onNew a {@link TcpResources} factory
+	 * @param <T> the reified type of {@link TcpResources}
+	 *
+	 * @return an existing or new {@link TcpResources}
+	 */
+	protected static <T extends TcpResources> T getOrCreate(AtomicReference<T> ref,
+			LoopResources loops,
+			PoolResources pools,
+			BiFunction<LoopResources, PoolResources, T> onNew) {
+		T update;
 		for (; ; ) {
-			ChannelPool pool = channelPools.get(remote);
-			if (pool != null) {
-				return pool;
+			T resources = ref.get();
+			if (resources == null || loops != null || pools != null) {
+				update = create(resources, loops, pools, "http", onNew);
+				if (ref.compareAndSet(resources, update)) {
+					if(resources != null){
+						resources._dispose();
+					}
+					return update;
+				}
+				else {
+					update._dispose();
+				}
 			}
-			if (log.isDebugEnabled()) {
-				log.debug("New TCP client pool for {}", remote);
+			else {
+				return resources;
 			}
-			//pool = new SimpleChannelPool(bootstrap);
-			pool = new FixedChannelPool(bootstrap.get(),
-					new ChannelPoolHandler() {
-						@Override
-						public void channelReleased(Channel ch) throws Exception {
-							log.debug("Released {}", ch.toString());
-						}
-
-						@Override
-						public void channelAcquired(Channel ch) throws Exception {
-							log.debug("Acquired {}", ch.toString());
-						}
-
-						@Override
-						public void channelCreated(Channel ch) throws Exception {
-							log.debug("Created {}", ch.toString());
-						}
-					},
-					Runtime.getRuntime()
-					       .availableProcessors());
-			if (channelPools.putIfAbsent(remote, pool) == null) {
-				return pool;
-			}
-			pool.close();
 		}
 	}
 
-	static final Logger log = Loggers.getLogger(TcpResources.class);
+	static final AtomicReference<TcpResources>                          tcpResources;
+	static final BiFunction<LoopResources, PoolResources, TcpResources> ON_TCP_NEW;
+
+	static {
+		ON_TCP_NEW = TcpResources::new;
+		tcpResources  = new AtomicReference<>();
+	}
+
+	static <T extends TcpResources> T create(T previous,
+			LoopResources loops,
+			PoolResources pools,
+			String name,
+			BiFunction<LoopResources, PoolResources, T> onNew) {
+		if (previous == null) {
+			loops = loops == null ? LoopResources.create("reactor-" + name) : loops;
+			pools = pools == null ? PoolResources.fixed(name) : pools;
+		}
+		else {
+			loops = loops == null ? previous.defaultLoops : loops;
+			pools = pools == null ? previous.defaultPools : pools;
+		}
+		return onNew.apply(loops, pools);
+	}
 }

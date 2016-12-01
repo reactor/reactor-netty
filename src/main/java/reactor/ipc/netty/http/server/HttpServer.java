@@ -21,12 +21,9 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
@@ -66,7 +63,7 @@ public final class HttpServer
 	public static HttpServer create(Consumer<? super HttpServerOptions> options) {
 		Objects.requireNonNull(options, "options");
 		HttpServerOptions serverOptions = HttpServerOptions.create();
-		serverOptions.channelResources(HttpResources.defaultHttpLoops());
+		serverOptions.loopResources(HttpResources.get());
 		options.accept(serverOptions);
 		return new HttpServer(serverOptions.duplicate());
 	}

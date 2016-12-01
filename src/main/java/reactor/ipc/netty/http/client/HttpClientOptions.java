@@ -38,8 +38,9 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.AttributeKey;
-import reactor.ipc.netty.options.ChannelResources;
+import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.resources.PoolResources;
 
 /**
  * An http client connector builder with low-level connection options including
@@ -85,8 +86,8 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	@Override
-	public HttpClientOptions channelResources(ChannelResources eventLoopSelector) {
-		super.channelResources(eventLoopSelector);
+	public HttpClientOptions loopResources(LoopResources eventLoopSelector) {
+		super.loopResources(eventLoopSelector);
 		return this;
 	}
 
@@ -158,8 +159,8 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	@Override
-	public HttpClientOptions poolSelector(BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool> poolSelector) {
-		super.poolSelector(poolSelector);
+	public HttpClientOptions poolResources(PoolResources poolResources) {
+		super.poolResources(poolResources);
 		return this;
 	}
 

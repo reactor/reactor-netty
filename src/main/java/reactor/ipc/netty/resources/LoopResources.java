@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.options;
+package reactor.ipc.netty.resources;
 
 import java.util.Objects;
 
@@ -24,6 +24,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import reactor.core.Cancellation;
 
 /**
  * An {@link EventLoopGroup} selector with associated
@@ -33,20 +34,20 @@ import io.netty.channel.socket.nio.NioSocketChannel;
  * @since 0.6
  */
 @FunctionalInterface
-public interface ChannelResources {
+public interface LoopResources extends Cancellation {
 
 	/**
 	 * Default worker thread count, fallback to available processor
 	 */
 	int DEFAULT_IO_WORKER_COUNT = Integer.parseInt(System.getProperty(
-			"reactor.tcp.workerCount",
+			"reactor.ipc.netty.workerCount",
 			"" + Runtime.getRuntime()
 			            .availableProcessors()));
 	/**
 	 * Default selector thread count, fallback to -1 (no selector thread)
 	 */
 	int DEFAULT_IO_SELECT_COUNT = Integer.parseInt(System.getProperty(
-			"reactor.tcp.selectCount",
+			"reactor.ipc.netty.selectCount",
 			"" + -1));
 
 	/**
@@ -64,25 +65,25 @@ public interface ChannelResources {
 	}
 
 	/**
-	 * Create a simple {@link ChannelResources} to provide automatically for {@link
+	 * Create a simple {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 *
 	 * @param prefix the event loop thread name prefix
 	 * @param workerCount number of worker threads
 	 * @param daemon shoult the thread be released on jvm shutdown
 	 *
-	 * @return a new {@link ChannelResources} to provide automatically for {@link
+	 * @return a new {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
-	static ChannelResources create(String prefix, int workerCount, boolean daemon) {
+	static LoopResources create(String prefix, int workerCount, boolean daemon) {
 		if (workerCount < 1) {
 			throw new IllegalArgumentException("Must provide a strictly positive " + "worker number, " + "was: " + workerCount);
 		}
-		return new DefaultChannelResources(prefix, workerCount, daemon);
+		return new DefaultLoopResources(prefix, workerCount, daemon);
 	}
 
 	/**
-	 * Create a simple {@link ChannelResources} to provide automatically for {@link
+	 * Create a simple {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 *
 	 * @param prefix the event loop thread name prefix
@@ -90,10 +91,10 @@ public interface ChannelResources {
 	 * @param workerCount number of worker threads
 	 * @param daemon shoult the thread be released on jvm shutdown
 	 *
-	 * @return a new {@link ChannelResources} to provide automatically for {@link
+	 * @return a new {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
-	static ChannelResources create(String prefix,
+	static LoopResources create(String prefix,
 			int selectCount,
 			int workerCount,
 			boolean daemon) {
@@ -107,20 +108,20 @@ public interface ChannelResources {
 		if (selectCount < 1) {
 			throw new IllegalArgumentException("Must provide a strictly positive " + "worker number, " + "was: " + workerCount);
 		}
-		return new DefaultChannelResources(prefix, selectCount, workerCount, daemon);
+		return new DefaultLoopResources(prefix, selectCount, workerCount, daemon);
 	}
 
 	/**
-	 * Create a simple {@link ChannelResources} to provide automatically for {@link
+	 * Create a simple {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 *
 	 * @param prefix the event loop thread name prefix
 	 *
-	 * @return a new {@link ChannelResources} to provide automatically for {@link
+	 * @return a new {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
-	static ChannelResources create(String prefix) {
-		return new DefaultChannelResources(prefix, DEFAULT_IO_SELECT_COUNT,
+	static LoopResources create(String prefix) {
+		return new DefaultLoopResources(prefix, DEFAULT_IO_SELECT_COUNT,
 				DEFAULT_IO_WORKER_COUNT,
 				true);
 
@@ -134,7 +135,7 @@ public interface ChannelResources {
 	 * @return a {@link Class} target for the underlying {@link Channel} factory
 	 */
 	default Class<? extends Channel> onChannel(EventLoopGroup group) {
-		return preferNative() ? SafeEpollDetector.getChannel(group) :
+		return preferNative() ? DefaultLoopEpollDetector.getChannel(group) :
 				NioSocketChannel.class;
 	}
 
@@ -158,7 +159,7 @@ public interface ChannelResources {
 	 * @return a {@link Class} target for the underlying {@link Channel} factory
 	 */
 	default Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
-		return preferNative() ? SafeEpollDetector.getDatagramChannel(group) :
+		return preferNative() ? DefaultLoopEpollDetector.getDatagramChannel(group) :
 				NioDatagramChannel.class;
 	}
 
@@ -180,7 +181,7 @@ public interface ChannelResources {
 	 * @return a {@link Class} target for the underlying {@link ServerChannel} factory
 	 */
 	default Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
-		return preferNative() ? SafeEpollDetector.getServerChannel(group) :
+		return preferNative() ? DefaultLoopEpollDetector.getServerChannel(group) :
 				NioServerSocketChannel.class;
 	}
 
@@ -202,7 +203,7 @@ public interface ChannelResources {
 	 * @return true if should default to native {@link EventLoopGroup} and {@link Channel}
 	 */
 	default boolean preferNative() {
-		return SafeEpollDetector.hasEpoll();
+		return DefaultLoopEpollDetector.hasEpoll();
 	}
 
 	/**
@@ -212,5 +213,10 @@ public interface ChannelResources {
 	 */
 	default boolean daemon() {
 		return false;
+	}
+
+	@Override
+	default void dispose() {
+		//noop default
 	}
 }

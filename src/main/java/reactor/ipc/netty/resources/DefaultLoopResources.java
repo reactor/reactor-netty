@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.options;
+package reactor.ipc.netty.resources;
 
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -28,7 +29,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
  *
  * @since 0.6
  */
-final class DefaultChannelResources extends AtomicLong implements ChannelResources {
+final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 	final String                          prefix;
 	final boolean                         daemon;
@@ -40,22 +41,23 @@ final class DefaultChannelResources extends AtomicLong implements ChannelResourc
 	final AtomicReference<EventLoopGroup> cacheNativeClientLoops;
 	final AtomicReference<EventLoopGroup> cacheNativeServerLoops;
 	final AtomicReference<EventLoopGroup> cacheNativeSelectLoops;
+	final AtomicBoolean                   running;
 
-	static ThreadFactory threadFactory(DefaultChannelResources parent, String prefix) {
+	static ThreadFactory threadFactory(DefaultLoopResources parent, String prefix) {
 		return new EventLoopSelectorFactory(parent.daemon,
 				parent.prefix + "-" + prefix,
 				parent);
 	}
 
-	DefaultChannelResources(String prefix, int workerCount, boolean daemon) {
+	DefaultLoopResources(String prefix, int workerCount, boolean daemon) {
 		this(prefix, -1, workerCount, daemon);
 	}
 
-	DefaultChannelResources(String prefix,
+	DefaultLoopResources(String prefix,
 			int selectCount,
 			int workerCount,
 			boolean daemon) {
-
+		this.running = new AtomicBoolean();
 		this.daemon = daemon;
 		this.workerCount = workerCount;
 		this.prefix = prefix;
@@ -63,8 +65,7 @@ final class DefaultChannelResources extends AtomicLong implements ChannelResourc
 		this.serverLoops = new NioEventLoopGroup(workerCount,
 				threadFactory(this, "nio"));
 
-		this.clientLoops =
-				ChannelResources.colocate(serverLoops);
+		this.clientLoops = LoopResources.colocate(serverLoops);
 
 		this.cacheNativeClientLoops = new AtomicReference<>();
 		this.cacheNativeServerLoops = new AtomicReference<>();
@@ -79,6 +80,28 @@ final class DefaultChannelResources extends AtomicLong implements ChannelResourc
 			this.serverSelectLoops =
 					new NioEventLoopGroup(selectCount, threadFactory(this, "select-nio"));
 			this.cacheNativeSelectLoops = new AtomicReference<>();
+		}
+	}
+
+	@Override
+	public void dispose() {
+		if(running.compareAndSet(false, true)){
+			serverLoops.shutdownGracefully();
+			clientLoops.shutdownGracefully();
+			serverSelectLoops.shutdownGracefully();
+
+			EventLoopGroup group = cacheNativeClientLoops.get();
+			if(group != null){
+				group.shutdownGracefully();
+			}
+			group = cacheNativeSelectLoops.get();
+			if(group != null){
+				group.shutdownGracefully();
+			}
+			group = cacheNativeServerLoops.get();
+			if(group != null){
+				group.shutdownGracefully();
+			}
 		}
 	}
 
@@ -113,7 +136,7 @@ final class DefaultChannelResources extends AtomicLong implements ChannelResourc
 
 		EventLoopGroup eventLoopGroup = cacheNativeSelectLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = SafeEpollDetector.newEventLoopGroup(
+			EventLoopGroup newEventLoopGroup = DefaultLoopEpollDetector.newEventLoopGroup(
 					selectCount,
 					threadFactory(this, "select-epoll"));
 			if (!cacheNativeSelectLoops.compareAndSet(null, newEventLoopGroup)) {
@@ -127,7 +150,7 @@ final class DefaultChannelResources extends AtomicLong implements ChannelResourc
 	EventLoopGroup cacheNativeServerLoops() {
 		EventLoopGroup eventLoopGroup = cacheNativeServerLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = SafeEpollDetector.newEventLoopGroup(
+			EventLoopGroup newEventLoopGroup = DefaultLoopEpollDetector.newEventLoopGroup(
 					workerCount,
 					threadFactory(this, "server-epoll"));
 			if (!cacheNativeServerLoops.compareAndSet(null, newEventLoopGroup)) {
@@ -141,10 +164,10 @@ final class DefaultChannelResources extends AtomicLong implements ChannelResourc
 	EventLoopGroup cacheNativeClientLoops() {
 		EventLoopGroup eventLoopGroup = cacheNativeClientLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = SafeEpollDetector.newEventLoopGroup(
+			EventLoopGroup newEventLoopGroup = DefaultLoopEpollDetector.newEventLoopGroup(
 					workerCount,
 					threadFactory(this, "client-epoll"));
-			newEventLoopGroup = ChannelResources.colocate(newEventLoopGroup);
+			newEventLoopGroup = LoopResources.colocate(newEventLoopGroup);
 			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}

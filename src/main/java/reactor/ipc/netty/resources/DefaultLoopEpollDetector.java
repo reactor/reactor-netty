@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.options;
+package reactor.ipc.netty.resources;
 
 import java.util.concurrent.ThreadFactory;
 
@@ -35,9 +35,9 @@ import reactor.util.Loggers;
 /**
  * @author Stephane Maldini
  */
-final class SafeEpollDetector {
+final class DefaultLoopEpollDetector {
 
-	static final Logger log = Loggers.getLogger(SafeEpollDetector.class);
+	static final Logger log = Loggers.getLogger(DefaultLoopEpollDetector.class);
 
 	private static final boolean epoll;
 

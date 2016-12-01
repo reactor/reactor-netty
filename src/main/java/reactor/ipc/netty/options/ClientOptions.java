@@ -18,7 +18,6 @@ package reactor.ipc.netty.options;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -41,6 +40,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.NetUtil;
 import reactor.core.Exceptions;
+import reactor.ipc.netty.resources.LoopResources;
+import reactor.ipc.netty.resources.PoolResources;
 
 /**
  * A client connector builder with low-level connection options including connection pooling and
@@ -68,8 +69,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	/**
 	 * Client connection pool selector
 	 */
-	BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool>
-			poolSelector;
+	PoolResources poolResources;
 
 	/**
 	 * Proxy options
@@ -114,7 +114,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		this.proxyAddress = options.proxyAddress;
 		this.proxyType = options.proxyType;
 		this.connectAddress = options.connectAddress;
-		this.poolSelector = options.poolSelector;
+		this.poolResources = options.poolResources;
 		this.protocolFamily = options.protocolFamily;
 	}
 
@@ -165,12 +165,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * Disable current {@link #poolSelector}
+	 * Disable current {@link #poolResources}
 	 *
 	 * @return {@code this}
 	 */
 	public ClientOptions disablePool() {
-		this.poolSelector = null;
+		this.poolResources = null;
 		return this;
 	}
 
@@ -235,12 +235,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * @return an eventual {@link ChannelPool}
 	 */
 	public final ChannelPool getPool(InetSocketAddress address) {
-		if (poolSelector == null) {
+		if (poolResources == null) {
 			return null;
 		}
 		address = address == null && connectAddress != null ? connectAddress.get() :
 				address;
-		return poolSelector.apply(address, this);
+		return poolResources.selectOrCreate(address, this);
 	}
 
 	/**
@@ -286,14 +286,14 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * Configures the {@link ChannelPool} selector for the socket. Will effectively
 	 * enable client connection-pooling.
 	 *
-	 * @param poolSelector the {@link BiFunction} to compute a {@link ChannelPool} given
+	 * @param poolResources the {@link PoolResources} given
 	 * an {@link InetSocketAddress}
 	 *
 	 * @return {@code this}
 	 */
-	public ClientOptions poolSelector(BiFunction<? super InetSocketAddress, Supplier<? extends Bootstrap>, ? extends ChannelPool> poolSelector) {
-		Objects.requireNonNull(poolSelector, "poolSelector");
-		this.poolSelector = poolSelector;
+	public ClientOptions poolResources(PoolResources poolResources) {
+		Objects.requireNonNull(poolResources, "poolResources");
+		this.poolResources = poolResources;
 		return this;
 	}
 
@@ -463,8 +463,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	final void groupAndChannel(Bootstrap bootstrap) {
-		ChannelResources loops =
-				Objects.requireNonNull(this.channelResources, "channelResources");
+		LoopResources loops = Objects.requireNonNull(this.loopResources, "loopResources");
 
 		boolean useNative =
 				protocolFamily == null && preferNative && !(sslContext instanceof JdkSslContext);

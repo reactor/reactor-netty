@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
@@ -67,7 +66,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	public static TcpServer create(Consumer<? super ServerOptions> options) {
 		Objects.requireNonNull(options, "options");
 		ServerOptions serverOptions = ServerOptions.create();
-		serverOptions.channelResources(TcpResources.DEFAULT_TCP_LOOPS);
+		serverOptions.loopResources(TcpResources.get());
 		options.accept(serverOptions);
 		return new TcpServer(serverOptions.duplicate());
 	}

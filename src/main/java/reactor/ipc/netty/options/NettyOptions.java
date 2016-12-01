@@ -33,6 +33,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
+import reactor.ipc.netty.resources.LoopResources;
 
 /**
  * A common connector builder with low-level connection options including sslContext, tcp
@@ -60,14 +61,14 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 
 	final BOOSTRAP bootstrapTemplate;
 
-	boolean                        preferNative              = DEFAULT_NATIVE;
-	ChannelResources               channelResources          = null;
-	ChannelGroup                   channelGroup              = null;
-	SslContext                     sslContext                = null;
-	long                           sslHandshakeTimeoutMillis = 10000L;
-	Consumer<? super Channel>      afterChannelInit          = null;
-	Consumer<? super Channel>      afterChannelInitUser      = null;
-	Predicate<? super Channel>     onChannelInit             = null;
+	boolean                    preferNative              = DEFAULT_NATIVE;
+	LoopResources              loopResources             = null;
+	ChannelGroup               channelGroup              = null;
+	SslContext                 sslContext                = null;
+	long                       sslHandshakeTimeoutMillis = 10000L;
+	Consumer<? super Channel>  afterChannelInit          = null;
+	Consumer<? super Channel>  afterChannelInitUser      = null;
+	Predicate<? super Channel> onChannelInit             = null;
 
 	NettyOptions(BOOSTRAP bootstrapTemplate) {
 		this.bootstrapTemplate = bootstrapTemplate;
@@ -83,7 +84,7 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 		this.afterChannelInitUser = options.afterChannelInitUser;
 		this.onChannelInit = options.onChannelInit;
 		this.channelGroup = options.channelGroup;
-		this.channelResources = options.channelResources;
+		this.loopResources = options.loopResources;
 		this.preferNative = options.preferNative;
 	}
 
@@ -171,9 +172,9 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	 *
 	 * @return this builder
 	 */
-	public SO channelResources(ChannelResources channelResources) {
-		Objects.requireNonNull(channelResources, "channelResources");
-		this.channelResources = channelResources;
+	public SO loopResources(LoopResources channelResources) {
+		Objects.requireNonNull(channelResources, "loopResources");
+		this.loopResources = channelResources;
 		return (SO) this;
 	}
 
@@ -195,7 +196,7 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	 */
 	public SO eventLoopGroup(EventLoopGroup eventLoopGroup) {
 		Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
-		return channelResources(preferNative -> eventLoopGroup);
+		return loopResources(preferNative -> eventLoopGroup);
 	}
 
 	@Override
@@ -319,7 +320,7 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 
 	@Override
 	public String toString() {
-		return "NettyOptions{" + "bootstrapTemplate=" + bootstrapTemplate + ", sslHandshakeTimeoutMillis=" + sslHandshakeTimeoutMillis + ", sslContext=" + sslContext + ", preferNative=" + preferNative + ", afterChannelInit=" + afterChannelInit + ", onChannelInit=" + onChannelInit + ", channelResources=" + channelResources + '}';
+		return "NettyOptions{" + "bootstrapTemplate=" + bootstrapTemplate + ", sslHandshakeTimeoutMillis=" + sslHandshakeTimeoutMillis + ", sslContext=" + sslContext + ", preferNative=" + preferNative + ", afterChannelInit=" + afterChannelInit + ", onChannelInit=" + onChannelInit + ", loopResources=" + loopResources + '}';
 	}
 
 	static final boolean DEFAULT_NATIVE =

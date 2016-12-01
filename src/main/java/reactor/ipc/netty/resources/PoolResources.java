@@ -1,0 +1,122 @@
+/*
+ * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package reactor.ipc.netty.resources;
+
+import java.net.SocketAddress;
+import java.util.function.Supplier;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.pool.ChannelPool;
+import io.netty.channel.pool.FixedChannelPool;
+import io.netty.channel.pool.SimpleChannelPool;
+import reactor.core.Cancellation;
+
+/**
+ * A {@link io.netty.channel.pool.ChannelPool} selector with associated factories.
+ *
+ * @author Stephane Maldini
+ * @since 0.6
+ */
+@FunctionalInterface
+public interface PoolResources extends Cancellation {
+
+	/**
+	 * Default max connection, if -1 will never wait to acquire before opening new
+	 * connection in an unboundd fashion. Fallback to
+	 * available number of processors.
+	 */
+	int DEFAULT_POOL_MAX_CONNECTION =
+			Integer.parseInt(System.getProperty("reactor.ipc.netty.pool.maxConnections",
+			"" + Runtime.getRuntime()
+			            .availableProcessors()));
+
+	/**
+	 * Create an uncapped {@link PoolResources} to provide automatically for {@link
+	 * ChannelPool}.
+	 * <p>An elastic {@link PoolResources} will never wait before opening a new
+	 * connection. The reuse window is limited but it cannot starve an undetermined volume
+	 * of clients using it.
+	 *
+	 * @param name the channel pool map name
+	 *
+	 * @return a new {@link PoolResources} to provide automatically for {@link
+	 * ChannelPool}
+	 */
+	static PoolResources elastic(String name) {
+		return new DefaultPoolResources(name, SimpleChannelPool::new);
+	}
+
+	/**
+	 * Create a capped {@link PoolResources} to provide automatically for {@link
+	 * ChannelPool}.
+	 * <p>A Fixed {@link PoolResources} will open up to the given max number of
+	 * processors observed by this jvm (minimum 4).
+	 * Further connections will be pending acquisition indefinitely.
+	 *
+	 * @param name the channel pool map name
+	 *
+	 * @return a new {@link PoolResources} to provide automatically for {@link
+	 * ChannelPool}
+	 */
+	static PoolResources fixed(String name) {
+		return fixed(name, DEFAULT_POOL_MAX_CONNECTION);
+	}
+
+	/**
+	 * Create a capped {@link PoolResources} to provide automatically for {@link
+	 * ChannelPool}.
+	 * <p>A Fixed {@link PoolResources} will open up to the given max connection value.
+	 * Further connections will be pending acquisition indefinitely.
+	 *
+	 * @param name the channel pool map name
+	 * @param maxConnections the maximum number of connections before starting pending
+	 * acquisition on existing ones
+	 *
+	 * @return a new {@link PoolResources} to provide automatically for {@link
+	 * ChannelPool}
+	 */
+	static PoolResources fixed(String name, int maxConnections) {
+		if (maxConnections < 1) {
+			throw new IllegalArgumentException("Max Connections value must be strictly " + "positive");
+		}
+		return new DefaultPoolResources(name,
+				(bootstrap, handler) -> new FixedChannelPool(bootstrap,
+						handler,
+						maxConnections));
+
+	}
+
+	/**
+	 * Return an existing or new {@link ChannelPool}. The implementation will take care
+	 * of
+	 * pulling {@link Bootstrap} lazily when a {@link ChannelPool} creation is actually
+	 * needed.
+	 *
+	 * @param address the remote address to resolve for existing or
+	 * new {@link ChannelPool}
+	 * @param bootstrap the {@link Bootstrap} supplier if a {@link ChannelPool} must be
+	 * created
+	 * @return an existing or new {@link ChannelPool}
+	 */
+	ChannelPool selectOrCreate(SocketAddress address,
+			Supplier<? extends Bootstrap> bootstrap);
+
+	@Override
+	default void dispose() {
+		//noop default
+	}
+}

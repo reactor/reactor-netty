@@ -15,6 +15,11 @@
  */
 
 /**
- * Configuration of the various Reactor Netty parameters, for clients and servers.
+ * Provider or Netty reusable component given various Reactor Netty parameters, for
+ * clients
+ * and servers.
+ * This will produce {@link io.netty.bootstrap.Bootstrap} and
+ * {@link io.netty.bootstrap.ServerBootstrap} along with some specific helper like
+ * {@link io.netty.channel.pool.ChannelPool}.
  */
 package reactor.ipc.netty.options;

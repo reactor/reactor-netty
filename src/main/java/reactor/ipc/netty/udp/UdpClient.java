@@ -21,7 +21,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.handler.logging.LoggingHandler;
@@ -34,7 +33,7 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.ipc.netty.options.ChannelResources;
+import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
 
@@ -110,7 +109,7 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	public static UdpClient create(Consumer<? super ClientOptions> options) {
 		Objects.requireNonNull(options, "options");
 		UdpClientOptions clientOptions = new UdpClientOptions();
-		clientOptions.channelResources(DEFAULT_UDP_LOOPS);
+		clientOptions.loopResources(DEFAULT_UDP_LOOPS);
 		options.accept(clientOptions);
 		return new UdpClient(clientOptions.duplicate());
 	}
@@ -159,6 +158,6 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(UdpClient.class);
 
-	static final ChannelResources DEFAULT_UDP_LOOPS =
-			ChannelResources.create("udp", DEFAULT_UDP_THREAD_COUNT, true);
+	static final LoopResources DEFAULT_UDP_LOOPS =
+			LoopResources.create("udp", DEFAULT_UDP_THREAD_COUNT, true);
 }

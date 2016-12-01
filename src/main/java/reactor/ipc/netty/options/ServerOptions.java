@@ -31,6 +31,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AttributeKey;
 import reactor.core.Exceptions;
+import reactor.ipc.netty.resources.LoopResources;
 
 /**
  * Encapsulates configuration options for server connectors.
@@ -254,8 +255,8 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 	}
 
 	final void groupAndChannel(ServerBootstrap bootstrap) {
-		ChannelResources loops =
-				Objects.requireNonNull(this.channelResources, "channelResources");
+		LoopResources loops =
+				Objects.requireNonNull(this.loopResources, "loopResources");
 
 		boolean useNative = preferNative && !(sslContext instanceof JdkSslContext);
 		final EventLoopGroup selectorGroup = loops.onServerSelect(useNative);
