@@ -44,7 +44,7 @@ public class TcpResources implements PoolResources, LoopResources {
 	 * @return the global HTTP resources for event loops and pooling
 	 */
 	public static TcpResources get() {
-		return getOrCreate(tcpResources, null, null, ON_TCP_NEW);
+		return getOrCreate(tcpResources, null, null, ON_TCP_NEW,  "tcp");
 	}
 
 	/**
@@ -53,7 +53,7 @@ public class TcpResources implements PoolResources, LoopResources {
 	 * @return the global HTTP resources
 	 */
 	public static TcpResources set(PoolResources pools) {
-		return getOrCreate(tcpResources, null, pools, ON_TCP_NEW);
+		return getOrCreate(tcpResources, null, pools, ON_TCP_NEW, "tcp");
 	}
 
 	/**
@@ -62,7 +62,7 @@ public class TcpResources implements PoolResources, LoopResources {
 	 * @return the global HTTP resources
 	 */
 	public static TcpResources set(LoopResources loops) {
-		return getOrCreate(tcpResources, loops, null, ON_TCP_NEW);
+		return getOrCreate(tcpResources, loops, null, ON_TCP_NEW ,"tcp");
 	}
 
 	/**
@@ -75,7 +75,7 @@ public class TcpResources implements PoolResources, LoopResources {
 		if (resources != null) {
 			resources._dispose();
 		}
-		return getOrCreate(tcpResources, null, null, ON_TCP_NEW);
+		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
 	}
 
 	final PoolResources defaultPools;
@@ -153,6 +153,7 @@ public class TcpResources implements PoolResources, LoopResources {
 	 * @param loops the eventual new {@link LoopResources}
 	 * @param pools the eventual new {@link PoolResources}
 	 * @param onNew a {@link TcpResources} factory
+	 * @param name a name for resources
 	 * @param <T> the reified type of {@link TcpResources}
 	 *
 	 * @return an existing or new {@link TcpResources}
@@ -160,15 +161,21 @@ public class TcpResources implements PoolResources, LoopResources {
 	protected static <T extends TcpResources> T getOrCreate(AtomicReference<T> ref,
 			LoopResources loops,
 			PoolResources pools,
-			BiFunction<LoopResources, PoolResources, T> onNew) {
+			BiFunction<LoopResources, PoolResources, T> onNew,
+			String name) {
 		T update;
 		for (; ; ) {
 			T resources = ref.get();
 			if (resources == null || loops != null || pools != null) {
-				update = create(resources, loops, pools, "http", onNew);
+				update = create(resources, loops, pools, name, onNew);
 				if (ref.compareAndSet(resources, update)) {
 					if(resources != null){
-						resources._dispose();
+						if(loops != null){
+							resources.defaultLoops.dispose();
+						}
+						if(pools != null){
+							resources.defaultPools.dispose();
+						}
 					}
 					return update;
 				}

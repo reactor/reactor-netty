@@ -18,6 +18,7 @@ package reactor.ipc.netty.resources;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
@@ -76,7 +77,8 @@ final class DefaultPoolResources implements PoolResources {
 		}
 	}
 
-	final static class Pool implements ChannelPoolHandler, ChannelPool {
+	final static class Pool extends AtomicBoolean
+			implements ChannelPoolHandler, ChannelPool {
 
 		final ChannelPool pool;
 
@@ -109,13 +111,15 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public void close() {
-			pool.close();
+			if(compareAndSet(false, true)) {
+				pool.close();
+			}
 		}
 
 		@Override
 		public void channelReleased(Channel ch) throws Exception {
+			activeConnections--;
 			if (log.isDebugEnabled()) {
-				activeConnections--;
 				log.debug("Released {}, now {} active connections",
 						ch.toString(),
 						activeConnections);
@@ -124,8 +128,8 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public void channelAcquired(Channel ch) throws Exception {
+			activeConnections++;
 			if (log.isDebugEnabled()) {
-				activeConnections++;
 				log.debug("Acquired {}, now {} active connections",
 						ch.toString(),
 						activeConnections);
@@ -134,8 +138,8 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public void channelCreated(Channel ch) throws Exception {
+			activeConnections++;
 			if (log.isDebugEnabled()) {
-				activeConnections++;
 				log.debug("Created {}, now {} active connections",
 						ch.toString(),
 						activeConnections);

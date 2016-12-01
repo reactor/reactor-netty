@@ -37,7 +37,7 @@ public final class HttpResources extends TcpResources {
 	 * @return the global HTTP resources for event loops and pooling
 	 */
 	public static HttpResources get() {
-		return getOrCreate(httpResources, null, null, ON_HTTP_NEW);
+		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
 	}
 
 	/**
@@ -46,7 +46,7 @@ public final class HttpResources extends TcpResources {
 	 * @return the global HTTP resources
 	 */
 	public static HttpResources set(PoolResources pools) {
-		return getOrCreate(httpResources, null, pools, ON_HTTP_NEW);
+		return getOrCreate(httpResources, null, pools, ON_HTTP_NEW, "http");
 	}
 
 	/**
@@ -55,7 +55,7 @@ public final class HttpResources extends TcpResources {
 	 * @return the global HTTP resources
 	 */
 	public static HttpResources set(LoopResources loops) {
-		return getOrCreate(httpResources, loops, null, ON_HTTP_NEW);
+		return getOrCreate(httpResources, loops, null, ON_HTTP_NEW, "http");
 	}
 
 	/**
@@ -68,7 +68,7 @@ public final class HttpResources extends TcpResources {
 		if (resources != null) {
 			resources._dispose();
 		}
-		return getOrCreate(httpResources, null, null, ON_HTTP_NEW);
+		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
 	}
 
 	HttpResources(LoopResources loops, PoolResources pools) {

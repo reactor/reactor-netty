@@ -86,9 +86,9 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	@Override
 	public void dispose() {
 		if(running.compareAndSet(false, true)){
-			serverLoops.shutdownGracefully();
 			clientLoops.shutdownGracefully();
 			serverSelectLoops.shutdownGracefully();
+			serverLoops.shutdownGracefully();
 
 			EventLoopGroup group = cacheNativeClientLoops.get();
 			if(group != null){

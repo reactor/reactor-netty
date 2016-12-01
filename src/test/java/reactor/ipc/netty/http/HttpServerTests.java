@@ -33,13 +33,13 @@ public class HttpServerTests {
 
 	@Test
 	public void keepAlive() {
-		HttpResources.set(PoolResources.fixed("http", 1));
-
 		NettyContext c = HttpServer.create(0)
 		                           .newRouter(routes -> routes.directory("/test",
 				                           Paths.get(getClass().getResource("/public")
 				                                               .getFile())))
 		                           .block();
+
+		HttpResources.set(PoolResources.fixed("http", 1));
 
 		HttpClientResponse response0 = HttpClient.create(c.address().getPort())
 		                                        .get("/test/index.html")
@@ -71,7 +71,6 @@ public class HttpServerTests {
 		                                         .get("/test/test5.css")
 		                                         .block();
 
-		HttpResources.reset();
 
 		Assert.assertEquals(response0.channel(), response1.channel());
 		Assert.assertEquals(response0.channel(), response2.channel());
@@ -79,6 +78,8 @@ public class HttpServerTests {
 		Assert.assertEquals(response0.channel(), response4.channel());
 		Assert.assertEquals(response0.channel(), response5.channel());
 		Assert.assertNotEquals(response0.channel(), response6.channel());
+
+		HttpResources.reset();
 	}
 
 }
