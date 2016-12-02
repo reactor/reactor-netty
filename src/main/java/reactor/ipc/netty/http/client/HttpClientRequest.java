@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.function.Consumer;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
@@ -37,6 +38,13 @@ import reactor.ipc.netty.http.HttpOutbound;
  * @author Stephane Maldini
  */
 public interface HttpClientRequest extends HttpOutbound {
+
+
+	@Override
+	HttpClientRequest addChannelHandler(ChannelHandler handler);
+
+	@Override
+	HttpClientRequest addChannelHandler(String name, ChannelHandler handler);
 
 	@Override
 	HttpClientRequest addCookie(Cookie cookie);

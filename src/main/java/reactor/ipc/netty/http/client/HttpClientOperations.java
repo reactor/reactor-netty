@@ -647,11 +647,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 
 		void _subscribe(Subscriber<? super Long> s) {
-			if (parent.channel()
-			          .pipeline()
-			          .context(NettyHandlerNames.ChunkedWriter) != null) {
+			if (parent.markHeadersAsSent()) {
 				Operators.error(s,
-						new IllegalStateException("A " + "sendForm or sendMultipart subscription has already " + "started"));
+						new IllegalStateException("headers have already " + "been sent"));
 				return;
 			}
 
@@ -666,21 +664,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 				encoder = encoder.applyChanges(parent.nettyRequest);
 
-				if (!parent.markHeadersAsSent()) {
-					Operators.error(s,
-							new IllegalStateException("headers have already " + "been sent"));
-					return;
-				}
-
 				if (!multipart) {
 					parent.disableChunkedTransfer();
 				}
 
-				parent.channel()
-				      .pipeline()
-				      .addBefore(NettyHandlerNames.ReactiveBridge,
-						      NettyHandlerNames.ChunkedWriter,
-						      new ChunkedWriteHandler());
+					parent.addChannelHandler(NettyHandlerNames.ChunkedWriter,
+							      new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
 

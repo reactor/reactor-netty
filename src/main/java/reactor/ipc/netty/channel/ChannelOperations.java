@@ -166,12 +166,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public NettyInbound addChannelHandler(ChannelHandler handler) {
+	public ChannelOperations<INBOUND, OUTBOUND> addChannelHandler(ChannelHandler handler) {
 		return addChannelHandler(Objects.toString(handler),	handler);
 	}
 
 	@Override
-	public NettyInbound addChannelHandler(String name, ChannelHandler handler) {
+	public ChannelOperations<INBOUND, OUTBOUND> addChannelHandler(String name, ChannelHandler
+			handler) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
 		channel.pipeline()
@@ -179,12 +180,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 				       name,
 				       handler);
 
-		return onClose(() -> {
+		onClose(() -> {
 			if(channel.isOpen() &&
 					channel.pipeline().context(handler) != null){
 				channel.pipeline().remove(handler);
 			}
 		});
+		return this;
 	}
 
 	@Override

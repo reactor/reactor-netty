@@ -15,6 +15,7 @@
  */
 package reactor.ipc.netty.http.server;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -31,6 +32,12 @@ import reactor.ipc.netty.http.HttpOutbound;
  * @since 2.5
  */
 public interface HttpServerResponse extends HttpOutbound {
+
+	@Override
+	HttpServerResponse addChannelHandler(ChannelHandler handler);
+
+	@Override
+	HttpServerResponse addChannelHandler(String name, ChannelHandler handler);
 
 	@Override
 	HttpServerResponse addCookie(Cookie cookie);

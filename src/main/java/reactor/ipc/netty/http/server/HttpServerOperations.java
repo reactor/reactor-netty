@@ -111,13 +111,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public final HttpServerRequest addChannelHandler(ChannelHandler handler) {
+	public final HttpServerOperations addChannelHandler(ChannelHandler handler) {
 		super.addChannelHandler(handler);
 		return this;
 	}
 
 	@Override
-	public final HttpServerRequest addChannelHandler(String name, ChannelHandler
+	public final HttpServerOperations addChannelHandler(String name, ChannelHandler
 			handler) {
 		super.addChannelHandler(name, handler);
 		return this;

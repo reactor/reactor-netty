@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -39,6 +40,29 @@ import static reactor.core.publisher.Flux.just;
  * @author Stephane Maldini
  */
 public interface NettyOutbound extends Outbound<ByteBuf> {
+
+	/**
+	 * Add a {@link ChannelHandler} to the pipeline, before {@link
+	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
+	 * made inactive (pool release).
+	 *
+	 * @param handler handler instance
+	 *
+	 * @return this inbound
+	 */
+	NettyOutbound addChannelHandler(ChannelHandler handler);
+
+	/**
+	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline}, before {@link
+	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
+	 * made inactive (pool release).
+	 *
+	 * @param name handler name
+	 * @param handler handler instance
+	 *
+	 * @return this inbound
+	 */
+	NettyOutbound addChannelHandler(String name, ChannelHandler handler);
 
 	/**
 	 * Return the underlying {@link Channel}
