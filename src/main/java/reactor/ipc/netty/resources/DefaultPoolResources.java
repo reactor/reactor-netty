@@ -145,6 +145,12 @@ final class DefaultPoolResources implements PoolResources {
 						activeConnections);
 			}
 		}
+
+		@Override
+		public String toString() {
+			return pool.getClass()
+			           .getSimpleName() + "{" + "activeConnections=" + activeConnections + '}';
+		}
 	}
 
 	@Override

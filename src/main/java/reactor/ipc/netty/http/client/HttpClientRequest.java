@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpOutbound;
 
@@ -41,13 +42,10 @@ public interface HttpClientRequest extends HttpOutbound {
 	HttpClientRequest addCookie(Cookie cookie);
 
 	@Override
-	HttpClientRequest keepAlive(boolean keepAlive);
+	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
 	@Override
 	HttpClientRequest disableChunkedTransfer();
-
-	@Override
-	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
 	@Override
 	HttpClientRequest flushEach();
@@ -68,6 +66,12 @@ public interface HttpClientRequest extends HttpOutbound {
 	 * @return true if redirected will be followed
 	 */
 	boolean isFollowRedirect();
+
+	@Override
+	HttpClientRequest keepAlive(boolean keepAlive);
+
+	@Override
+	HttpClientRequest onWriteIdle(long idleTimeout, Runnable onWriteIdle);
 
 	/**
 	 * Return the previous redirections or empty array
@@ -102,21 +106,21 @@ public interface HttpClientRequest extends HttpOutbound {
 	Flux<Long> sendMultipart(Consumer<Form> formCallback);
 
 	/**
-	 * Upgrade connection to Websocket
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	default Mono<Void> upgradeToWebsocket() {
-		return upgradeToWebsocket(uri(), false, ChannelOperations.noopHandler());
-	}
-
-	/**
 	 * Upgrade connection to Websocket with text plain payloads
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> upgradeToTextWebsocket() {
 		return upgradeToWebsocket(uri(), true, ChannelOperations.noopHandler());
+	}
+
+	/**
+	 * Upgrade connection to Websocket
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> upgradeToWebsocket() {
+		return upgradeToWebsocket(uri(), false, ChannelOperations.noopHandler());
 	}
 
 	/**
@@ -153,6 +157,15 @@ public interface HttpClientRequest extends HttpOutbound {
 		 * @return this builder
 		 */
 		Form cleanOnTerminate(boolean clean);
+
+		/**
+		 * Set Form encoding
+		 *
+		 * @param mode the encoding mode for this form
+		 * encoding
+		 * @return this builder
+		 */
+		Form encoding(HttpPostRequestEncoder.EncoderMode mode);
 
 		/**
 		 * Add an HTTP File Upload attribute
@@ -246,15 +259,6 @@ public interface HttpClientRequest extends HttpOutbound {
 		 * @return this builder
 		 */
 		Form files(String name, File[] files, String[] contentTypes, boolean[] textFiles);
-
-		/**
-		 * Set Form encoding
-		 *
-		 * @param mode the encoding mode for this form
-		 * encoding
-		 * @return this builder
-		 */
-		Form encoding(HttpPostRequestEncoder.EncoderMode mode);
 
 		/**
 		 * Add an HTTP File Upload attribute

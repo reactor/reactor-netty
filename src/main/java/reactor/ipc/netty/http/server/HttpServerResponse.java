@@ -19,6 +19,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpOutbound;
 
 /**
@@ -52,6 +53,22 @@ public interface HttpServerResponse extends HttpOutbound {
 	@Override
 	HttpServerResponse keepAlive(boolean keepAlive);
 
+	@Override
+	HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle);
+
+	/**
+	 * Return headers sent back to the clients
+	 * @return headers sent back to the clients
+	 */
+	HttpHeaders responseHeaders();
+
+	/**
+	 * Send 404 status {@link HttpResponseStatus#NOT_FOUND}.
+	 *
+	 * @return a {@link Mono} successful on flush confirmation
+	 */
+	Mono<Void> sendNotFound();
+
 	/**
 	 * Send redirect status {@link HttpResponseStatus#FOUND} along with a location
 	 * header to the remote client.
@@ -61,18 +78,6 @@ public interface HttpServerResponse extends HttpOutbound {
 	 * @return a {@link Mono} successful on flush confirmation
 	 */
 	Mono<Void> sendRedirect(String location);
-
-	/**
-	 *
-	 * @return a
-	 */
-	Mono<Void> sendNotFound();
-
-	/**
-	 * Return headers sent back to the clients
-	 * @return headers sent back to the clients
-	 */
-	HttpHeaders responseHeaders();
 
 	/**
 	 * Add Server-Side-Event content-type

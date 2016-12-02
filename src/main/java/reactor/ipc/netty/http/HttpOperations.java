@@ -16,19 +16,22 @@
 
 package reactor.ipc.netty.http;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -42,6 +45,8 @@ import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * An HTTP ready {@link ChannelOperations} with state management for status and headers
@@ -93,24 +98,6 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	}
 
 	@Override
-	public final Mono<Void> sendAggregate(Publisher<? extends ByteBuf> source) {
-		ByteBufAllocator alloc = channel().alloc();
-		return Flux.from(source)
-		           .doOnNext(ByteBuf::retain)
-		           .collect(alloc::buffer, ByteBuf::writeBytes)
-		           .then(agg -> {
-			           if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
-					           outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-					           outboundHttpMessage())) {
-				           outboundHttpMessage().headers()
-				                                .setInt(HttpHeaderNames.CONTENT_LENGTH,
-						                                agg.readableBytes());
-			           }
-			           return sendHeaders().then(super.send(Mono.just(agg)));
-		           });
-	}
-
-	@Override
 	public final Mono<Void> sendHeaders() {
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
@@ -136,14 +123,34 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 					outboundHttpMessage()) && count < Integer.MAX_VALUE) {
 				outboundHttpMessage().headers()
 				                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
+				return sendHeaders().then(() -> Mono.using(() -> FileChannel.open(file,
+						StandardOpenOption.READ),
+						fc -> {
+							channel().write(new
+									DefaultFileRegion(
+									fc,
+									position,
+									count));
+							return ChannelFutureMono.from(channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT));
+						} ,
+						fc -> {
+							try {
+								fc.close();
+							}
+							catch (IOException ioe) {
+								if (log.isDebugEnabled()) {
+									log.error("failed closing FileChannel", ioe);
+								}
+							}
+						}));
 			}
 			else if (!HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 				outboundHttpMessage().headers()
 				                     .remove(HttpHeaderNames.CONTENT_LENGTH)
 				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
 				HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
+				return sendHeaders().then(() -> super.sendFile(file, position, count));
 			}
-			return sendHeaders().then(() -> super.sendFile(file, position, count));
 		}
 		return super.sendFile(file, position, count);
 	}
@@ -319,4 +326,5 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		}
 	}
 
+	static final Logger log = Loggers.getLogger(HttpOperations.class);
 }

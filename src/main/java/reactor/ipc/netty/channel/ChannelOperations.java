@@ -31,6 +31,7 @@ import java.util.function.BiFunction;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultFileRegion;
@@ -132,7 +133,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	protected ChannelOperations(Channel channel,
 			ChannelOperations<INBOUND, OUTBOUND> replaced) {
-		this(channel, replaced.handler, replaced.context);
+		this(channel, replaced.handler, replaced.context, replaced.onInactive);
 		this.receiver = replaced.receiver;
 		this.receiverFastpath = replaced.receiverFastpath;
 		this.inboundQueue = replaced.inboundQueue;
@@ -146,15 +147,44 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected ChannelOperations(Channel channel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
+		this(channel, handler, context, DirectProcessor.create());
+	}
+
+	protected ChannelOperations(Channel channel,
+			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
+			ContextHandler<?> context,
+			DirectProcessor<Void> processor) {
 		this.handler = Objects.requireNonNull(handler, "handler");
 		this.channel = Objects.requireNonNull(channel, "channel");
 		this.context = Objects.requireNonNull(context, "context");
 		this.ioScheduler = Schedulers.fromExecutor(channel.eventLoop());
 		this.inbound = Flux.from(this)
 		                   .subscribeOn(ioScheduler);
-		this.onInactive = DirectProcessor.create();
+		this.onInactive = processor;
 		channel.closeFuture()
 		       .addListener(this);
+	}
+
+	@Override
+	public NettyInbound addChannelHandler(ChannelHandler handler) {
+		return addChannelHandler(Objects.toString(handler),	handler);
+	}
+
+	@Override
+	public NettyInbound addChannelHandler(String name, ChannelHandler handler) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(handler, "handler");
+		channel.pipeline()
+		       .addBefore(NettyHandlerNames.ReactiveBridge,
+				       name,
+				       handler);
+
+		return onClose(() -> {
+			if(channel.isOpen() &&
+					channel.pipeline().context(handler) != null){
+				channel.pipeline().remove(handler);
+			}
+		});
 	}
 
 	@Override
@@ -250,8 +280,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final ChannelOperations<INBOUND, OUTBOUND> onClose(final Runnable onClose) {
-		onInactive.subscribe(null, null, onClose);
+	public NettyInbound onClose(final Runnable onClose) {
+		onInactive.subscribe(null, e -> onClose.run(), onClose);
 		return this;
 	}
 
@@ -266,26 +296,23 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final ChannelOperations<INBOUND, OUTBOUND> onReadIdle(long idleTimeout,
+	public NettyInbound onReadIdle(long idleTimeout,
 			final Runnable onReadIdle) {
-		channel.pipeline()
-		       .addBefore(NettyHandlerNames.ReactiveBridge,
-				       NettyHandlerNames.OnChannelReadIdle,
-				       new IdleStateHandler(idleTimeout, 0, 0, TimeUnit.MILLISECONDS) {
-					       @Override
-					       protected void channelIdle(ChannelHandlerContext ctx,
-							       IdleStateEvent evt) throws Exception {
-						       if (evt.state() == IdleState.READER_IDLE) {
-							       onReadIdle.run();
-						       }
-						       super.channelIdle(ctx, evt);
-					       }
-				       });
-		return this;
+		return addChannelHandler(NettyHandlerNames.OnChannelReadIdle,
+				new IdleStateHandler(idleTimeout, 0, 0, TimeUnit.MILLISECONDS) {
+					@Override
+					protected void channelIdle(ChannelHandlerContext ctx,
+							IdleStateEvent evt) throws Exception {
+						if (evt.state() == IdleState.READER_IDLE) {
+							onReadIdle.run();
+						}
+						super.channelIdle(ctx, evt);
+					}
+				});
 	}
 
 	@Override
-	public final ChannelOperations<INBOUND, OUTBOUND> onWriteIdle(long idleTimeout,
+	public NettyOutbound onWriteIdle(long idleTimeout,
 			final Runnable onWriteIdle) {
 		channel.pipeline()
 		       .addAfter(NettyHandlerNames.ReactiveBridge,

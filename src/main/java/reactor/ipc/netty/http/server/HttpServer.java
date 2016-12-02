@@ -148,5 +148,10 @@ public final class HttpServer
 					loggingHandler,
 					(ch, c) -> HttpServerOperations.bindHttp(ch, handler, c));
 		}
+
+		@Override
+		protected LoggingHandler loggingHandler() {
+			return loggingHandler;
+		}
 	}
 }

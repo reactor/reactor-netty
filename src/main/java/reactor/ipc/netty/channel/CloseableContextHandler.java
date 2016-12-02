@@ -97,11 +97,6 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 			}
 		}
 		else {
-			if(log.isDebugEnabled()) {
-				log.debug("Connected new channel {}",
-						f.channel()
-						 .toString());
-			}
 			doStarted(f.channel());
 		}
 	}

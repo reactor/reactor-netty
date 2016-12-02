@@ -19,6 +19,7 @@ package reactor.ipc.netty.http;
 import java.util.function.BiFunction;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.cookie.Cookie;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -91,22 +92,21 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	boolean hasSentHeaders();
 
 	/**
+	 * Send headers and empty content thus delimiting a full empty body http request
+	 *
+	 * @return a {@link Mono} successful on committed response
+	 * @see #send(Publisher)
+	 */
+	default Mono<Void> send(){
+		return send(Unpooled.EMPTY_BUFFER);
+	}
+
+	/**
 	 * Return a {@link Mono} successful on committed response
 	 *
 	 * @return a {@link Mono} successful on committed response
 	 */
 	Mono<Void> sendHeaders();
-
-	/**
-	 * Collect all {@link io.netty.buffer.ByteBuf} and set the content-length if
-	 * headers haven't been previously committed
-	 *
-	 * @param source the input source to send to the remote outbound.
-	 *
-	 * @return a {@link Mono} successful on committed response
-	 * @see #send(Publisher)
-	 */
-	Mono<Void> sendAggregate(Publisher<? extends ByteBuf> source);
 
 
 

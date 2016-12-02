@@ -26,11 +26,15 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpConstants;
@@ -62,6 +66,7 @@ import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
@@ -69,6 +74,8 @@ import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.HttpOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 
 /**
  * @author Stephane Maldini
@@ -85,7 +92,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	final String[]    redirectedFrom;
 	final boolean     isSecure;
 	final HttpRequest nettyRequest;
-	final HttpHeaders headers;
+	final HttpHeaders requestHeaders;
 
 	volatile ResponseState responseState;
 	int inboundPrefetch;
@@ -100,7 +107,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.responseState = replaced.responseState;
 		this.redirectable = replaced.redirectable;
 		this.inboundPrefetch = replaced.inboundPrefetch;
-		this.headers = replaced.headers;
+		this.requestHeaders = replaced.requestHeaders;
 	}
 
 	HttpClientOperations(Channel channel,
@@ -114,19 +121,44 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.redirectedFrom = redirects == null ? EMPTY_REDIRECTIONS : redirects;
 		this.nettyRequest =
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-		this.headers = nettyRequest.headers();
+		this.requestHeaders = nettyRequest.headers();
 		this.inboundPrefetch = 16;
 	}
 
 	@Override
 	public HttpClientRequest addCookie(Cookie cookie) {
 		if (!hasSentHeaders()) {
-			this.headers.add(HttpHeaderNames.COOKIE,
+			this.requestHeaders.add(HttpHeaderNames.COOKIE,
 					ClientCookieEncoder.STRICT.encode(cookie));
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
 		}
+		return this;
+	}
+
+	@Override
+	public final HttpClientOperations addChannelHandler(ChannelHandler handler) {
+		super.addChannelHandler(handler);
+		return this;
+	}
+
+	@Override
+	public final HttpClientOperations addChannelHandler(String name, ChannelHandler
+			handler) {
+		super.addChannelHandler(name, handler);
+		return this;
+	}
+
+	@Override
+	public final HttpClientOperations onReadIdle(long idleTimeout, Runnable onReadIdle) {
+		super.onReadIdle(idleTimeout, onReadIdle);
+		return this;
+	}
+
+	@Override
+	public final HttpClientOperations onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
+		super.onWriteIdle(idleTimeout, onWriteIdle);
 		return this;
 	}
 
@@ -142,7 +174,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpClientRequest addHeader(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
-			this.headers.add(name, value);
+			this.requestHeaders.add(name, value);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -176,8 +208,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public HttpClientRequest disableChunkedTransfer() {
+	public final HttpClientRequest disableChunkedTransfer() {
 		HttpUtil.setTransferEncodingChunked(nettyRequest, false);
+		return this;
+	}
+
+	@Override
+	public final HttpClientOperations onClose(Runnable onClose) {
+		super.onClose(onClose);
 		return this;
 	}
 
@@ -209,7 +247,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpClientRequest header(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
-			this.headers.set(name, value);
+			this.requestHeaders.set(name, value);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -267,11 +305,40 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public Mono<Void> send(Publisher<? extends ByteBuf> dataStream) {
-		if (method() == HttpMethod.GET || method() == HttpMethod.HEAD) {
-			return sendAggregate(dataStream);
+	public Mono<Void> send() {
+		if (isDisposed()) {
+			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		return super.send(dataStream);
+		if (markHeadersAsSent()) {
+			return ChannelFutureMono.deferFuture(() -> channel().writeAndFlush(
+					new DefaultFullHttpRequest(version(), method(), uri(), EMPTY_BUFFER,
+							requestHeaders, EmptyHttpHeaders.INSTANCE)
+			));
+		}
+		else {
+			return Mono.empty();
+		}
+	}
+
+	@Override
+	public Mono<Void> send(Publisher<? extends ByteBuf> source) {
+		if (method() == HttpMethod.GET || method() == HttpMethod.HEAD) {
+			ByteBufAllocator alloc = channel().alloc();
+			Flux.from(source)
+			    .doOnNext(ByteBuf::retain)
+			    .collect(alloc::buffer, ByteBuf::writeBytes)
+			    .then(agg -> {
+				    if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
+						    outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
+						    outboundHttpMessage())) {
+					    outboundHttpMessage().headers()
+					                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
+							                         agg.readableBytes());
+				    }
+				    return sendHeaders().then(super.send(Mono.just(agg)));
+			    });
+		}
+		return super.send(source);
 	}
 
 	@Override
@@ -357,10 +424,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onChannelActive(final ChannelHandlerContext ctx) {
-		ctx.pipeline()
-		   .addBefore(NettyHandlerNames.ReactiveBridge,
-				   NettyHandlerNames.HttpCodecHandler,
-				   new HttpClientCodec());
+
+		if(ctx.pipeline().context(NettyHandlerNames.HttpCodecHandler) == null) {
+			ctx.pipeline()
+			   .addBefore(NettyHandlerNames.ReactiveBridge,
+					   NettyHandlerNames.HttpCodecHandler,
+					   new HttpClientCodec());
+		}
 
 		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
 

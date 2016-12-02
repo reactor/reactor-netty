@@ -23,14 +23,9 @@ import java.util.function.BiFunction;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.ChannelFutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
@@ -79,13 +74,8 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			future = datagramChannel.joinGroup(multicastAddress);
 		}
 
-		return new ChannelFutureMono<Future<?>>(future) {
-			@Override
-			protected void doComplete(Future<?> future, Subscriber<? super Void> s) {
-				log.info("JOIN {}", multicastAddress);
-				super.doComplete(future, s);
-			}
-		};
+		return ChannelFutureMono.from(future)
+		                        .doOnSuccess(v -> log.info("JOIN {}", multicastAddress));
 	}
 
 	/**
@@ -110,13 +100,8 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 			future = datagramChannel.leaveGroup(multicastAddress);
 		}
 
-		return new ChannelFutureMono<Future<?>>(future) {
-			@Override
-			protected void doComplete(Future<?> future, Subscriber<? super Void> s) {
-				log.info("LEAVE {}", multicastAddress);
-				super.doComplete(future, s);
-			}
-		};
+		return ChannelFutureMono.from(future)
+		                        .doOnSuccess(v -> log.info("JOIN {}", multicastAddress));
 	}
 
 	static final Logger log = Loggers.getLogger(UdpOperations.class);

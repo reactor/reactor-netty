@@ -18,6 +18,7 @@ package reactor.ipc.netty.http;
 
 import java.nio.file.Paths;
 
+import io.netty.handler.ssl.OpenSsl;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.ipc.netty.NettyContext;

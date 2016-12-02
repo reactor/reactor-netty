@@ -111,8 +111,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 					return parent.handler.apply(ch);
 				}
 				else {
-					ch.disableChunkedTransfer();
-					return ch.sendHeaders();
+					return ch.send();
 				}
 			}
 			catch (Throwable t) {

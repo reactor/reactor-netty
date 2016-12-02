@@ -15,6 +15,7 @@
  */
 package reactor.ipc.netty;
 
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.netty.util.concurrent.Future;
@@ -24,65 +25,86 @@ import org.reactivestreams.Subscription;
 import reactor.core.publisher.Mono;
 
 /**
+ * Convert Netty Future into void {@link Mono}.
+ *
+ * @param <T> the type of the future result
+ * @param <F> the future type
  * @author Stephane Maldini
  */
-public class ChannelFutureMono<C extends Future> extends Mono<Void> {
+public final class ChannelFutureMono<T, F extends Future<T>> extends Mono<T> {
 
-	public static Mono<Void> from(Future future){
+	/**
+	 * Convert a {@link Future} into {@link Mono}. {@link Mono#subscribe(Subscriber)}
+	 * will bridge to {@link Future#addListener(GenericFutureListener)}.
+	 *
+	 * @param future the future to convert from
+	 * @param <T> the type of the future result
+	 * @param <F> the future type
+	 *
+	 * @return A {@link Mono} forwarding {@link Future} success or failure
+	 */
+	public static <T, F extends Future<T>> Mono<T> from(F future){
 		return new ChannelFutureMono<>(future);
 	}
 
-	public static Mono<Void> from(Supplier<? extends Future> deferredFuture){
-		return Mono.defer(() -> new ChannelFutureMono<Future>(deferredFuture.get()));
+	/**
+	 * Convert a supplied {@link Future} for each subscriber into {@link Mono}.
+	 * {@link Mono#subscribe(Subscriber)}
+	 * will bridge to {@link Future#addListener(GenericFutureListener)}.
+	 *
+	 * @param deferredFuture the future to evaluate and convert from
+	 * @param <T> the type of the future result
+	 * @param <F> the future type
+	 *
+	 * @return A {@link Mono} forwarding {@link Future} success or failure
+	 */
+	public static <T, F extends Future<T>> Mono<T> deferFuture(Supplier<F> deferredFuture){
+		Objects.requireNonNull(deferredFuture, "deferredFuture");
+		return Mono.defer(() -> new ChannelFutureMono<>(deferredFuture.get()));
 	}
 
-	final C future;
+	final F future;
 
-	protected ChannelFutureMono(C future) {
-		this.future = future;
+	ChannelFutureMono(F future) {
+		this.future = Objects.requireNonNull(future, "future");
 	}
+
 	@Override
-	@SuppressWarnings("unchecked")
-	public final void subscribe(final Subscriber<? super Void> s) {
-		future.addListener(new SubscriberFutureBridge(s));
+	public final void subscribe(final Subscriber<? super T> s) {
+		FutureSubscription<T, F> fs = new FutureSubscription<>(future, s);
+		s.onSubscribe(fs);
+		future.addListener(fs);
 	}
 
-	protected void doComplete(C future, Subscriber<? super Void> s) {
-		s.onComplete();
-	}
+	final static class FutureSubscription<T, F extends Future<T>> implements
+	                                                GenericFutureListener<F>,
+	                                                Subscription {
+		final Subscriber<? super T> s;
+		final F future;
 
-	protected void doError(Subscriber<? super Void> s, Throwable throwable) {
-		s.onError(throwable);
-	}
-
-	final class SubscriberFutureBridge implements GenericFutureListener<Future<?>> {
-
-		private final Subscriber<? super Void> s;
-
-		public SubscriberFutureBridge(Subscriber<? super Void> s) {
+		FutureSubscription(F future, Subscriber<? super T> s) {
 			this.s = s;
-			s.onSubscribe(new Subscription() {
-				@Override
-				public void request(long n) {
+			this.future = future;
+		}
 
-				}
+		@Override
+		public void request(long n) {
+			//noop
+		}
 
-				@Override
-				@SuppressWarnings("unchecked")
-				public void cancel() {
-					future.removeListener(SubscriberFutureBridge.this);
-				}
-			});
+		@Override
+		public void cancel() {
+			future.removeListener(this);
 		}
 
 		@Override
 		@SuppressWarnings("unchecked")
-		public void operationComplete(Future<?> future) throws Exception {
+		public void operationComplete(F future) throws Exception {
 			if (!future.isSuccess()) {
-				doError(s, future.cause());
+				s.onError(future.cause());
 			}
 			else {
-				doComplete((C) future, s);
+				s.onComplete();
 			}
 		}
 	}

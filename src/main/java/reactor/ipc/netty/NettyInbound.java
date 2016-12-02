@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import reactor.core.publisher.Flux;
@@ -32,6 +33,29 @@ import reactor.ipc.connector.Inbound;
  * @since 0.6
  */
 public interface NettyInbound extends Inbound<ByteBuf> {
+
+	/**
+	 * Add a {@link ChannelHandler} to the pipeline, before {@link
+	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
+	 * made inactive (pool release).
+	 *
+	 * @param handler handler instance
+	 *
+	 * @return this inbound
+	 */
+	NettyInbound addChannelHandler(ChannelHandler handler);
+
+	/**
+	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline}, before {@link
+	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
+	 * made inactive (pool release).
+	 *
+	 * @param name handler name
+	 * @param handler handler instance
+	 *
+	 * @return this inbound
+	 */
+	NettyInbound addChannelHandler(String name, ChannelHandler handler);
 
 	/**
 	 * Return a pre-configured attribute stored in every inbound channel

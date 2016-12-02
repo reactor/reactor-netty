@@ -41,8 +41,8 @@ public interface LoopResources extends Cancellation {
 	 */
 	int DEFAULT_IO_WORKER_COUNT = Integer.parseInt(System.getProperty(
 			"reactor.ipc.netty.workerCount",
-			"" + Runtime.getRuntime()
-			            .availableProcessors()));
+			"" + Math.max(Runtime.getRuntime()
+			            .availableProcessors(), 4)));
 	/**
 	 * Default selector thread count, fallback to -1 (no selector thread)
 	 */

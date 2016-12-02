@@ -227,8 +227,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			onReleaseEmitter.onComplete();
 			return;
 		}
-		cleanHandlers(c);
-
 		pool.release(c);
 
 	}

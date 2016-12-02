@@ -227,31 +227,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		dispose();
 	}
 
-	/**
-	 * clean all handler until marked tail
-	 *
-	 * @param channel the target channel to cleanup
-	 */
-	protected static void cleanHandlers(Channel channel) {
-		ChannelPipeline pipeline = channel.pipeline();
-
-		if(pipeline.context(NettyHandlerNames.BridgeSetup) == null) {
-			return;
-		}
-
-		List<String> handlers = channel.pipeline().names();
-		int max = handlers.size() - 1;
-
-		for(String h : handlers){
-			if (!NettyHandlerNames.isPersistent(h)) {
-				channel.pipeline().remove(h);
-			}
-			if(--max == 0){
-				return;
-			}
-		}
-	}
-
 	static final IllegalStateException ABORTED =
 			new IllegalStateException("Connection " + "has been aborted by the remote " + "peer") {
 				@Override

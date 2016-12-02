@@ -28,9 +28,11 @@ import java.util.function.Function;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
@@ -58,6 +60,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.ChannelFutureMono;
 import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpInbound;
@@ -105,6 +108,31 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		responseHeaders.add(HttpHeaderNames.DATE, new Date());
+	}
+
+	@Override
+	public final HttpServerRequest addChannelHandler(ChannelHandler handler) {
+		super.addChannelHandler(handler);
+		return this;
+	}
+
+	@Override
+	public final HttpServerRequest addChannelHandler(String name, ChannelHandler
+			handler) {
+		super.addChannelHandler(name, handler);
+		return this;
+	}
+
+	@Override
+	public final HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle) {
+		super.onReadIdle(idleTimeout, onReadIdle);
+		return this;
+	}
+
+	@Override
+	public final HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
+		super.onWriteIdle(idleTimeout, onWriteIdle);
+		return this;
 	}
 
 	@Override
@@ -230,6 +258,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return null != params ? params.get(key) : null;
 	}
 
+	@Override
+	public final HttpServerOperations onClose(Runnable onClose) {
+		super.onClose(onClose);
+		return this;
+	}
+
 	/**
 	 * Read all URI params
 	 *
@@ -258,7 +292,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//       No need to notify the upstream handlers - just log.
 		//       If decoding a response, just throw an error.
 		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
-			return ChannelFutureMono.from(() -> channel().writeAndFlush(CONTINUE))
+			return ChannelFutureMono.deferFuture(() -> channel().writeAndFlush(CONTINUE))
 			                        .thenMany(super.receiveObject());
 		}
 		else {
@@ -288,12 +322,29 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public Mono<Void> send() {
+		if (isDisposed()) {
+			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
+		}
+		if (markHeadersAsSent()) {
+			disableChunkedTransfer();
+			responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+			return ChannelFutureMono.deferFuture(() -> channel().writeAndFlush(new DefaultFullHttpResponse(
+					version(),
+					status(),
+					EMPTY_BUFFER,
+					responseHeaders,
+					EmptyHttpHeaders.INSTANCE)));
+		}
+		else {
+			return Mono.empty();
+		}
+	}
+
+	@Override
 	public Mono<Void> sendNotFound() {
-		this.responseHeaders()
-		    .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
 		return this.status(HttpResponseStatus.NOT_FOUND)
-		           .disableChunkedTransfer()
-		           .sendHeaders();
+		           .send();
 	}
 
 	@Override
@@ -301,7 +352,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		Objects.requireNonNull(location, "location");
 		return this.status(HttpResponseStatus.FOUND)
 		           .header(HttpHeaderNames.LOCATION, location)
-		           .sendHeaders();
+		           .send();
 	}
 
 	@Override
@@ -367,11 +418,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onChannelActive(ChannelHandlerContext ctx) {
-		ctx.pipeline()
-		   .addBefore(NettyHandlerNames.ReactiveBridge,
-				   NettyHandlerNames.HttpCodecHandler,
-				   new HttpServerCodec());
 
+		if (ctx.pipeline()
+		       .context(NettyHandlerNames.HttpCodecHandler) == null) {
+			ctx.pipeline()
+			   .addBefore(NettyHandlerNames.ReactiveBridge,
+					   NettyHandlerNames.HttpCodecHandler,
+					   new HttpServerCodec());
+		}
 		if (ctx.pipeline()
 		       .context(NettyHandlerNames.HttpKeepAlive) == null) {
 			ctx.pipeline()
@@ -379,7 +433,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					   NettyHandlerNames.HttpKeepAlive,
 					   new HttpServerKeepAliveHandler());
 		}
-
 		ctx.read();
 	}
 
@@ -396,7 +449,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				return;
 			}
 
-			if (isWebsocket()) {
+			if (isWebsocket() && ctx.pipeline()
+			                        .context(NettyHandlerNames.HttpAggregator) == null) {
 				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
 				channel().pipeline()
 				         .addBefore(NettyHandlerNames.ReactiveBridge,
@@ -456,7 +510,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (markHeadersAsSent()) {
 			log.error("Error starting response. Replying error status", err);
 
-			HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
+			HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.INTERNAL_SERVER_ERROR);
 			response.headers()
 			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);

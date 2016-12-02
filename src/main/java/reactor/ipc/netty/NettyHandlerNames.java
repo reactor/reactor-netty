@@ -57,29 +57,4 @@ public interface NettyHandlerNames {
 	String OnChannelReadIdle  = "onChannelReadIdle";
 	String ChunkedWriter      = "chunkedWriter";
 	String LoggingHandler     = "loggingHandler";
-
-	/**
-	 * Handlers that are not removed on multiplexed/kept-alive connections.
-	 */
-	String[] persistent =
-			{SslHandler, SslReader, SslLoggingHandler, BridgeSetup, ProxyHandler,
-					HttpKeepAlive, ReactiveBridge, LoggingHandler};
-
-	/**
-	 * Test if handler is persistent
-	 *
-	 * @param handlerName target handler name
-	 *
-	 * @return true if persistent
-	 */
-	static boolean isPersistent(String handlerName) {
-		Objects.requireNonNull(handlerName, "handlerName");
-		int i;
-		for (i = 0; i < persistent.length; i++) {
-			if (handlerName.equals(persistent[i])) {
-				return true;
-			}
-		}
-		return false;
-	}
 }

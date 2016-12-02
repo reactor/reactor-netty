@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.client;
 import java.net.InetSocketAddress;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.Attribute;
@@ -43,6 +44,18 @@ public interface HttpClientResponse extends HttpInbound, NettyContext {
 
 
 
+	@Override
+	HttpClientResponse addChannelHandler(ChannelHandler handler);
+
+	@Override
+	HttpClientResponse addChannelHandler(String name, ChannelHandler handler);
+
+	@Override
+	HttpClientResponse onClose(Runnable onClose);
+
+	@Override
+	HttpClientResponse onReadIdle(long idleTimeout, Runnable onReadIdle);
+
 	/**
 	 * a {@literal byte[]} inbound {@link Flux}
 	 *
@@ -51,6 +64,16 @@ public interface HttpClientResponse extends HttpInbound, NettyContext {
 	default MultipartInbound receiveMultipart() {
 		HttpClientResponse thiz = this;
 		return new MultipartInbound() {
+			@Override
+			public NettyInbound addChannelHandler(ChannelHandler handler) {
+				return thiz.addChannelHandler(handler);
+			}
+
+			@Override
+			public NettyInbound addChannelHandler(String name, ChannelHandler handler) {
+				return thiz.addChannelHandler(name, handler);
+			}
+
 			@Override
 			public <T> Attribute<T> attr(AttributeKey<T> key) {
 				return thiz.attr(key);
@@ -62,8 +85,8 @@ public interface HttpClientResponse extends HttpInbound, NettyContext {
 			}
 
 			@Override
-			public Flux<ByteBufFlux> receiveParts() {
-				return MultipartInbound.from(thiz);
+			public boolean isDisposed() {
+				return thiz.isDisposed();
 			}
 
 			@Override
@@ -77,8 +100,8 @@ public interface HttpClientResponse extends HttpInbound, NettyContext {
 			}
 
 			@Override
-			public boolean isDisposed() {
-				return thiz.isDisposed();
+			public Flux<ByteBufFlux> receiveParts() {
+				return MultipartInbound.from(thiz);
 			}
 
 			@Override

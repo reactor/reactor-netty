@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.server;
 import java.util.Map;
 import java.util.function.Function;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import reactor.ipc.netty.http.HttpInbound;
 
@@ -27,20 +28,32 @@ import reactor.ipc.netty.http.HttpInbound;
  * URI, method, websocket...
  *
  * @author Stephane Maldini
- * @since 2.5
+ * @since 0.5
  */
 public interface HttpServerRequest extends HttpInbound {
 
+	@Override
+	HttpServerRequest addChannelHandler(ChannelHandler handler);
+
+	@Override
+	HttpServerRequest addChannelHandler(String name, ChannelHandler handler);
+
+	@Override
+	HttpServerRequest onClose(Runnable onClose);
+
+	@Override
+	HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle);
+
 	/**
-	 *
-	 * @param key
-	 * @return
+	 * URI parameter captured via {} "/test/{var}"
+	 * @param key param var name
+	 * @return the param captured value
 	 */
 	Object param(CharSequence key);
 
 	/**
-	 *
-	 * @return
+	 * Return the param captured key/value map
+	 * @return the param captured key/value map
 	 */
 	Map<String, Object> params();
 
@@ -52,8 +65,8 @@ public interface HttpServerRequest extends HttpInbound {
 	HttpServerRequest paramsResolver(Function<? super String, Map<String, Object>> headerResolver);
 
 	/**
-	 *
-	 * @return
+	 * Return inbound {@link HttpHeaders}
+	 * @return inbound {@link HttpHeaders}
 	 */
 	HttpHeaders requestHeaders();
 

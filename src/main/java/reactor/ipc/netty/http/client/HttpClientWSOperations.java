@@ -77,6 +77,16 @@ final class HttpClientWSOperations extends HttpClientOperations {
 			          }
 			          channel().read();
 		          });
+		onClose(() -> {
+			if(channel.isOpen()){
+				if(channel.pipeline().context("ws-encoder") != null){
+					channel.pipeline().remove("ws-encoder");
+				}
+				if(channel.pipeline().context("ws-decoder") != null){
+					channel.pipeline().remove("ws-decoder");
+				}
+			}
+		});
 	}
 
 	@Override
@@ -112,7 +122,7 @@ final class HttpClientWSOperations extends HttpClientOperations {
 		}
 		if (CloseWebSocketFrame.class.isAssignableFrom(messageClass)) {
 			if (log.isDebugEnabled()) {
-				log.debug("Closing Websocket");
+				log.debug("CloseWebSocketFrame detected. Closing Websocket");
 			}
 			onChannelInactive();
 		}

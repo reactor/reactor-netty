@@ -65,13 +65,26 @@ final class HttpServerWSOperations extends HttpServerOperations {
 					replaced.nettyRequest.headers(),
 					channel.newPromise())
 			                             .addListener(f -> channel.read());
+			onClose(() -> {
+				if (channel.isOpen()) {
+					if (channel.pipeline()
+					           .context("wsencoder") != null) {
+						channel.pipeline()
+						       .remove("wsencoder");
+					}
+					if (channel.pipeline()
+					           .context("wsdecoder") != null) {
+						channel.pipeline()
+						       .remove("wsdecoder");
+					}
+				}
+			});
 		}
 	}
 
 	@Override
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame) {
-			ctx.writeAndFlush(((CloseWebSocketFrame) frame).retain());
 			onInboundComplete();
 			return;
 		}
