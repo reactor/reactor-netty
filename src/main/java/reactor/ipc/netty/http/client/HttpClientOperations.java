@@ -647,7 +647,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 
 		void _subscribe(Subscriber<? super Long> s) {
-			if (parent.markHeadersAsSent()) {
+			if (!parent.markHeadersAsSent()) {
 				Operators.error(s,
 						new IllegalStateException("headers have already " + "been sent"));
 				return;
