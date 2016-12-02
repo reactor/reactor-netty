@@ -553,7 +553,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 				}
 			}
-			else if (!HttpUtil.isContentLengthSet(nettyResponse)) {
+			else  {
 				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 			}
 
