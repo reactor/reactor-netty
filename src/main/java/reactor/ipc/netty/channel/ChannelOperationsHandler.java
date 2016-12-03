@@ -94,6 +94,15 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler {
 		}
 	}
 
+	@Override
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
+			throws Exception {
+		if(log.isTraceEnabled()){
+			log.trace("User event {}", evt);
+		}
+		super.userEventTriggered(ctx, evt);
+	}
+
 	static ChannelOperations<?, ?> operations(ChannelHandlerContext ctx) {
 		return ctx.channel()
 		          .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)

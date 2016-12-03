@@ -31,7 +31,6 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -43,6 +42,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ChannelFutureMono;
+import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
@@ -123,18 +123,21 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 					outboundHttpMessage()) && count < Integer.MAX_VALUE) {
 				outboundHttpMessage().headers()
 				                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
-				return sendHeaders().then(() -> Mono.using(() -> FileChannel.open(file,
+				return sendHeaders().then(Mono.using(() -> FileChannel.open(file,
 						StandardOpenOption.READ),
-						fc -> {
-							channel().write(new
-									DefaultFileRegion(
-									fc,
-									position,
-									count));
-							return ChannelFutureMono.from(channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT));
-						} ,
+						fc -> ChannelFutureMono.from(channel().writeAndFlush(new DefaultFileRegion(
+								fc,
+								position,
+								count))),
 						fc -> {
 							try {
+								onClose(() -> {
+									if (channel().pipeline()
+									             .get(NettyHandlerNames.HttpCodecHandler) != null) {
+										channel().pipeline()
+										         .remove(NettyHandlerNames.HttpCodecHandler);
+									}
+								});
 								fc.close();
 							}
 							catch (IOException ioe) {
@@ -142,7 +145,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 									log.error("failed closing FileChannel", ioe);
 								}
 							}
-						}));
+						}))
+				                    .cache();
 			}
 			else if (!HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 				outboundHttpMessage().headers()
