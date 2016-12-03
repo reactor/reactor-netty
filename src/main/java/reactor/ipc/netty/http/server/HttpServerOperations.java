@@ -124,18 +124,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public final HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		super.onReadIdle(idleTimeout, onReadIdle);
-		return this;
-	}
-
-	@Override
-	public final HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
-		super.onWriteIdle(idleTimeout, onWriteIdle);
-		return this;
-	}
-
-	@Override
 	public HttpServerResponse addCookie(Cookie cookie) {
 		if (!hasSentHeaders()) {
 			this.responseHeaders.add(HttpHeaderNames.SET_COOKIE,
@@ -147,15 +135,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return this;
 	}
 
-	/**
-	 * Accumulate a response HTTP header for the given key name, appending ";" for each
-	 * new value
-	 *
-	 * @param name the HTTP response header name
-	 * @param value the HTTP response header value
-	 *
-	 * @return this
-	 */
 	@Override
 	public HttpServerResponse addHeader(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
@@ -199,14 +178,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return this;
 	}
 
-	/**
-	 * Define the response HTTP header for the given key
-	 *
-	 * @param name the HTTP response header key to override
-	 * @param value the HTTP response header content
-	 *
-	 * @return this
-	 */
 	@Override
 	public HttpServerResponse header(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
@@ -241,13 +212,24 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return nettyRequest.method();
 	}
 
-	/**
-	 * Read URI param from the given key
-	 *
-	 * @param key matching key
-	 *
-	 * @return the resolved parameter for the given key name
-	 */
+	@Override
+	public final HttpServerOperations onClose(Runnable onClose) {
+		super.onClose(onClose);
+		return this;
+	}
+
+	@Override
+	public final HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle) {
+		super.onReadIdle(idleTimeout, onReadIdle);
+		return this;
+	}
+
+	@Override
+	public final HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
+		super.onWriteIdle(idleTimeout, onWriteIdle);
+		return this;
+	}
+
 	@Override
 	public Object param(CharSequence key) {
 		Objects.requireNonNull(key, "key");
@@ -259,25 +241,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public final HttpServerOperations onClose(Runnable onClose) {
-		super.onClose(onClose);
-		return this;
-	}
-
-	/**
-	 * Read all URI params
-	 *
-	 * @return a map of resolved parameters against their matching key name
-	 */
-	@Override
 	public Map<String, Object> params() {
 		return null != paramsResolver ? paramsResolver.apply(uri()) : null;
 	}
 
-	/**
-	 * @param headerResolver a selector accepting the current URI string and returning
-	 * grouped parameters.
-	 */
 	@Override
 	public HttpServerRequest paramsResolver(Function<? super String, Map<String, Object>> headerResolver) {
 		this.paramsResolver = headerResolver;
@@ -309,16 +276,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Mono<Void> sendFile(Path file) {
-		try {
-			return sendFile(file, 0L, Files.size(file));
-		}
-		catch (IOException e) {
-			if(log.isDebugEnabled()){
-				log.debug("Path not resolved",e);
-			}
-			return sendNotFound();
-		}
+	public HttpHeaders responseHeaders() {
+		return responseHeaders;
 	}
 
 	@Override
@@ -342,6 +301,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public Mono<Void> sendFile(Path file) {
+		try {
+			return sendFile(file, 0L, Files.size(file));
+		}
+		catch (IOException e) {
+			if(log.isDebugEnabled()){
+				log.debug("Path not resolved",e);
+			}
+			return sendNotFound();
+		}
+	}
+
+	@Override
 	public Mono<Void> sendNotFound() {
 		return this.status(HttpResponseStatus.NOT_FOUND)
 		           .send();
@@ -353,11 +325,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return this.status(HttpResponseStatus.FOUND)
 		           .header(HttpHeaderNames.LOCATION, location)
 		           .send();
-	}
-
-	@Override
-	public HttpHeaders responseHeaders() {
-		return responseHeaders;
 	}
 
 	/**
@@ -375,13 +342,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		                                                    .code());
 	}
 
-	/**
-	 * Set the response status to an outgoing response
-	 *
-	 * @param status the status to define
-	 *
-	 * @return this
-	 */
 	@Override
 	public HttpServerResponse status(HttpResponseStatus status) {
 		if (!hasSentHeaders()) {
@@ -419,13 +379,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onChannelActive(ChannelHandlerContext ctx) {
 
-		if (ctx.pipeline()
-		       .context(NettyHandlerNames.HttpCodecHandler) == null) {
-			ctx.pipeline()
-			   .addBefore(NettyHandlerNames.ReactiveBridge,
-					   NettyHandlerNames.HttpCodecHandler,
-					   new HttpServerCodec());
-		}
+		addChannelHandler(NettyHandlerNames.HttpCodecHandler, new HttpServerCodec());
 		if (ctx.pipeline()
 		       .context(NettyHandlerNames.HttpKeepAlive) == null) {
 			ctx.pipeline()
@@ -553,7 +507,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 				}
 			}
-			else  {
+			else if (!HttpUtil.isContentLengthSet(nettyResponse)) {
 				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 			}
 
