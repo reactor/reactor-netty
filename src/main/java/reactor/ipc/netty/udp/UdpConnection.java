@@ -16,15 +16,10 @@
 package reactor.ipc.netty.udp;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.ChannelFutureMono;
 
 /**
  * @author Stephane Maldini

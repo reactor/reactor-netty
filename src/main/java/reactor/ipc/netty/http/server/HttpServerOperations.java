@@ -58,7 +58,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
-import reactor.ipc.netty.ChannelFutureMono;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
@@ -258,8 +258,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//       No need to notify the upstream handlers - just log.
 		//       If decoding a response, just throw an error.
 		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
-			return ChannelFutureMono.deferFuture(() -> channel().writeAndFlush(CONTINUE))
-			                        .thenMany(super.receiveObject());
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(CONTINUE))
+			                 .thenMany(super.receiveObject());
 		}
 		else {
 			return super.receiveObject();
@@ -287,7 +287,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (markHeadersAsSent()) {
 			disableChunkedTransfer();
 			responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
-			return ChannelFutureMono.deferFuture(() -> channel().writeAndFlush(new DefaultFullHttpResponse(
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(new DefaultFullHttpResponse(
 					version(),
 					status(),
 					EMPTY_BUFFER,
@@ -548,8 +548,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
 			             .compareAndSet(this, ops)) {
-				return ChannelFutureMono.from(ops.handshakerResult)
-				                        .then(() -> MonoSource.wrap(websocketHandler.apply(
+				return FutureMono.from(ops.handshakerResult)
+				                 .then(() -> MonoSource.wrap(websocketHandler.apply(
 						                        ops,
 						                        ops)));
 			}

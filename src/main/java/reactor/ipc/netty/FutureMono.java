@@ -31,7 +31,7 @@ import reactor.core.publisher.Mono;
  * @param <F> the future type
  * @author Stephane Maldini
  */
-public final class ChannelFutureMono<T, F extends Future<T>> extends Mono<T> {
+public final class FutureMono<T, F extends Future<T>> extends Mono<T> {
 
 	/**
 	 * Convert a {@link Future} into {@link Mono}. {@link Mono#subscribe(Subscriber)}
@@ -44,7 +44,7 @@ public final class ChannelFutureMono<T, F extends Future<T>> extends Mono<T> {
 	 * @return A {@link Mono} forwarding {@link Future} success or failure
 	 */
 	public static <T, F extends Future<T>> Mono<T> from(F future){
-		return new ChannelFutureMono<>(future);
+		return new FutureMono<>(future);
 	}
 
 	/**
@@ -60,12 +60,12 @@ public final class ChannelFutureMono<T, F extends Future<T>> extends Mono<T> {
 	 */
 	public static <T, F extends Future<T>> Mono<T> deferFuture(Supplier<F> deferredFuture){
 		Objects.requireNonNull(deferredFuture, "deferredFuture");
-		return Mono.defer(() -> new ChannelFutureMono<>(deferredFuture.get()));
+		return Mono.defer(() -> new FutureMono<>(deferredFuture.get()));
 	}
 
 	final F future;
 
-	ChannelFutureMono(F future) {
+	FutureMono(F future) {
 		this.future = Objects.requireNonNull(future, "future");
 	}
 

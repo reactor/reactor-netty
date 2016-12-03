@@ -98,7 +98,7 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	 * @see #send(Publisher)
 	 */
 	default Mono<Void> send(){
-		return send(Unpooled.EMPTY_BUFFER);
+		return sendObject(Unpooled.EMPTY_BUFFER);
 	}
 
 	/**

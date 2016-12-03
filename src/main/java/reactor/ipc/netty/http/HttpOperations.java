@@ -41,7 +41,7 @@ import reactor.core.Receiver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
-import reactor.ipc.netty.ChannelFutureMono;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
@@ -125,7 +125,7 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 				                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
 				return sendHeaders().then(Mono.using(() -> FileChannel.open(file,
 						StandardOpenOption.READ),
-						fc -> ChannelFutureMono.from(channel().writeAndFlush(new DefaultFileRegion(
+						fc -> FutureMono.from(channel().writeAndFlush(new DefaultFileRegion(
 								fc,
 								position,
 								count))),
@@ -220,8 +220,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	 * failing with root cause.
 	 */
 	final void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
-		ChannelFutureMono.from(channel().writeAndFlush(outboundHttpMessage()))
-		                 .subscribe(s);
+		FutureMono.from(channel().writeAndFlush(outboundHttpMessage()))
+		          .subscribe(s);
 	}
 
 

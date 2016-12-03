@@ -55,7 +55,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.ChannelFutureMono;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
@@ -360,7 +360,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		Objects.requireNonNull(file);
 
 		return Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> ChannelFutureMono.from(channel.writeAndFlush(new DefaultFileRegion(
+				fc -> FutureMono.from(channel.writeAndFlush(new DefaultFileRegion(
 						fc,
 						position,
 						count))),

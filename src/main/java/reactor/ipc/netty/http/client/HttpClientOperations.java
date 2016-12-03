@@ -63,7 +63,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.core.publisher.Operators;
-import reactor.ipc.netty.ChannelFutureMono;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.ContextHandler;
@@ -309,7 +309,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		if (markHeadersAsSent()) {
-			return ChannelFutureMono.deferFuture(() -> channel().writeAndFlush(
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(
 					new DefaultFullHttpRequest(version(), method(), uri(), EMPTY_BUFFER,
 							requestHeaders, EmptyHttpHeaders.INSTANCE)
 			));
@@ -585,8 +585,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
 			             .compareAndSet(this, ops)) {
-				return ChannelFutureMono.from(ops.handshakerResult)
-				                        .then(() -> MonoSource.wrap(websocketHandler.apply(
+				return FutureMono.from(ops.handshakerResult)
+				                 .then(() -> MonoSource.wrap(websocketHandler.apply(
 						                        ops,
 						                        ops)));
 			}

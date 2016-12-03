@@ -110,19 +110,6 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	}
 
 	/**
-	 * Send data to the peer, listen for any error on write and close on terminal signal
-	 * (complete|error).
-	 *
-	 * @param chunk the chunk to publish
-	 *
-	 * @return A {@link Mono} to signal successful sequence write (e.g. after "flush") or
-	 * any error during write
-	 */
-	default Mono<Void> send(ByteBuf chunk) {
-		return ChannelFutureMono.deferFuture(() -> channel().writeAndFlush(chunk));
-	}
-
-	/**
 	 * /** Send bytes to the peer, listen for any error on write and close on terminal
 	 * signal (complete|error). If more than one publisher is attached (multiple calls to
 	 * send()) completion occurs after all publishers complete.
@@ -243,7 +230,7 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * any error during write
 	 */
 	default Mono<Void> sendObject(Object msg) {
-		return ChannelFutureMono.deferFuture(() -> channel().writeAndFlush(msg));
+		return FutureMono.deferFuture(() -> channel().writeAndFlush(msg));
 	}
 
 

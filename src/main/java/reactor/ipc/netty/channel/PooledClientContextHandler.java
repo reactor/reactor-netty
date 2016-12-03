@@ -33,7 +33,7 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.MonoSource;
-import reactor.ipc.netty.ChannelFutureMono;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.options.ClientOptions;
@@ -99,7 +99,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	public Mono<Void> onClose() {
 		return MonoSource.wrap(onReleaseEmitter)
-		                 .or(ChannelFutureMono.from(channel().closeFuture()));
+		                 .or(FutureMono.from(channel().closeFuture()));
 	}
 
 	@Override
