@@ -116,7 +116,7 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> upgradeToWebsocket(BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return upgradeToWebsocket(uri(), false, websocketHandler);
+		return upgradeToWebsocket(null, false, websocketHandler);
 	}
 
 	/**
@@ -125,7 +125,7 @@ public interface HttpOutbound extends HttpConnection, NettyOutbound {
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> upgradeToTextWebsocket(BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return upgradeToWebsocket(uri(), true, websocketHandler);
+		return upgradeToWebsocket(null, true, websocketHandler);
 	}
 
 
