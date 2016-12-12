@@ -16,37 +16,26 @@
 
 package reactor.ipc.netty.http;
 
-import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-import reactor.core.Loopback;
-import reactor.core.Producer;
-import reactor.core.Receiver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Operators;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 /**
  * An HTTP ready {@link ChannelOperations} with state management for status and headers
@@ -54,8 +43,8 @@ import reactor.util.Loggers;
  *
  * @author Stephane Maldini
  */
-public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND extends HttpOutbound>
-		extends ChannelOperations<INBOUND, OUTBOUND> implements HttpInbound, HttpOutbound {
+public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
+		extends ChannelOperations<INBOUND, OUTBOUND> implements HttpInfos {
 
 
 	volatile int statusAndHeadersSent = 0;
@@ -71,7 +60,6 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		super(ioChannel, handler, context);
 	}
 
-	@Override
 	public final boolean hasSentHeaders() {
 		return statusAndHeadersSent == 1;
 	}
@@ -86,24 +74,26 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		if (!hasSentHeaders()) {
-			if (!HttpUtil.isContentLengthSet(outboundHttpMessage()) && !outboundHttpMessage().headers()
-			                                                                                 .contains(
-					                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {
-				HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
-			}
-			return new MonoHttpSendWithHeaders(dataStream);
+
+		if (hasSentHeaders()) {
+			return super.send(dataStream);
 		}
-		return super.send(dataStream);
+
+		if (!HttpUtil.isContentLengthSet(outboundHttpMessage()) && !outboundHttpMessage().headers()
+		                                                                                 .contains(
+				                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {
+			HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
+		}
+		return sendHeaders().then(super.sendObject(dataStream));
 	}
 
-	@Override
 	public final Mono<Void> sendHeaders() {
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
-		if (!hasSentHeaders()) {
-			return new MonoSendHeaders();
+		if (markHeadersAsSent()) {
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(
+					outboundHttpMessage()));
 		}
 		else {
 			return Mono.empty();
@@ -118,45 +108,23 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 
-		if (!hasSentHeaders()) {
-			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-					outboundHttpMessage()) && count < Integer.MAX_VALUE) {
-				outboundHttpMessage().headers()
-				                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
-				return sendHeaders().then(Mono.using(() -> FileChannel.open(file,
-						StandardOpenOption.READ),
-						fc -> FutureMono.from(channel().writeAndFlush(new DefaultFileRegion(
-								fc,
-								position,
-								count))),
-						fc -> {
-							try {
-								onClose(() -> {
-									if (channel().pipeline()
-									             .get(NettyHandlerNames.HttpCodecHandler) != null) {
-										channel().pipeline()
-										         .remove(NettyHandlerNames.HttpCodecHandler);
-									}
-								});
-								fc.close();
-							}
-							catch (IOException ioe) {
-								if (log.isDebugEnabled()) {
-									log.error("failed closing FileChannel", ioe);
-								}
-							}
-						}))
-				                    .cache();
-			}
-			else if (!HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-				outboundHttpMessage().headers()
-				                     .remove(HttpHeaderNames.CONTENT_LENGTH)
-				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
-				HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
-				return sendHeaders().then(() -> super.sendFile(file, position, count));
-			}
+		if (hasSentHeaders()) {
+			return super.sendFile(file, position, count);
 		}
-		return super.sendFile(file, position, count);
+
+		if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
+				outboundHttpMessage()) && count < Integer.MAX_VALUE) {
+			outboundHttpMessage().headers()
+			                     .setInt(HttpHeaderNames.CONTENT_LENGTH, (int) count);
+		}
+		else if (!HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+			outboundHttpMessage().headers()
+			                     .remove(HttpHeaderNames.CONTENT_LENGTH)
+			                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
+			HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
+		}
+
+		return sendHeaders().then(super.sendFile(file, position, count));
 	}
 
 	@Override
@@ -167,15 +135,12 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 		if (hasSentHeaders()) {
 			return super.sendObject(source);
 		}
-		return new MonoHttpSendWithHeaders(source);
+		return sendHeaders().then(super.sendObject(source));
 	}
 
 	@Override
 	public final Mono<Void> sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
 		if (isWebsocket()) {
 			return sendObject(Flux.from(dataStream)
 			                      .map(TextWebSocketFrame::new));
@@ -212,123 +177,8 @@ public abstract class HttpOperations<INBOUND extends HttpInbound, OUTBOUND exten
 	 */
 	protected abstract HttpMessage outboundHttpMessage();
 
-	/**
-	 * Write and send the initial {@link io.netty.handler.codec.http.HttpRequest}
-	 * mssage that will commit the status and response headers.
-	 *
-	 * @param s the {@link Subscriber} callback completing on confirmed commit or
-	 * failing with root cause.
-	 */
-	final void sendHeadersAndSubscribe(Subscriber<? super Void> s) {
-		FutureMono.from(channel().writeAndFlush(outboundHttpMessage()))
-		          .subscribe(s);
-	}
-
 
 	final static AtomicIntegerFieldUpdater<HttpOperations> HEADERS_SENT =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");
-
-	final class MonoHttpSendWithHeaders
-			extends Mono<Void> implements Receiver, Loopback {
-
-		final Publisher<?> source;
-
-		public MonoHttpSendWithHeaders(Publisher<?> source) {
-			this.source = source;
-		}
-
-		@Override
-		public Object connectedInput() {
-			return HttpOperations.this;
-		}
-
-		@Override
-		public Object connectedOutput() {
-			return HttpOperations.this;
-		}
-
-		@Override
-		public void subscribe(final Subscriber<? super Void> s) {
-			if (markHeadersAsSent()) {
-				sendHeadersAndSubscribe(new HttpSendSubscriber(s));
-			}
-			else {
-				onOuboundSend(source, s);
-			}
-		}
-
-		@Override
-		public Object upstream() {
-			return source;
-		}
-
-		final class HttpSendSubscriber implements Subscriber<Void>, Receiver, Producer {
-
-			final Subscriber<? super Void> s;
-			Subscription subscription;
-
-			public HttpSendSubscriber(Subscriber<? super Void> s) {
-				this.s = s;
-			}
-
-			@Override
-			public Subscriber downstream() {
-				return s;
-			}
-
-			@Override
-			public void onComplete() {
-				this.subscription = null;
-				onOuboundSend(source, s);
-			}
-
-			@Override
-			public void onError(Throwable t) {
-				this.subscription = null;
-				s.onError(t);
-			}
-
-			@Override
-			public void onNext(Void aVoid) {
-				//Ignore
-			}
-
-			@Override
-			public void onSubscribe(Subscription sub) {
-				this.subscription = sub;
-				sub.request(Long.MAX_VALUE);
-			}
-
-			@Override
-			public Object upstream() {
-				return subscription;
-			}
-		}
-	}
-
-	final class MonoSendHeaders extends Mono<Void> implements Loopback {
-
-		@Override
-		public Object connectedInput() {
-			return HttpOperations.this;
-		}
-
-		@Override
-		public Object connectedOutput() {
-			return HttpOperations.this;
-		}
-
-		@Override
-		public void subscribe(Subscriber<? super Void> s) {
-			if(markHeadersAsSent()) {
-				sendHeadersAndSubscribe(s);
-			}
-			else{
-				Operators.complete(s);
-			}
-		}
-	}
-
-	static final Logger log = Loggers.getLogger(HttpOperations.class);
 }

@@ -18,9 +18,9 @@ package reactor.ipc.netty.http.server;
 import java.util.Map;
 import java.util.function.Function;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
-import reactor.ipc.netty.http.HttpInbound;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.http.HttpInfos;
 
 /**
  *
@@ -30,39 +30,34 @@ import reactor.ipc.netty.http.HttpInbound;
  * @author Stephane Maldini
  * @since 0.5
  */
-public interface HttpServerRequest extends HttpInbound {
+public interface HttpServerRequest extends NettyInbound, HttpInfos {
 
 	@Override
-	HttpServerRequest addChannelHandler(ChannelHandler handler);
-
-	@Override
-	HttpServerRequest addChannelHandler(String name, ChannelHandler handler);
-
-	@Override
-	HttpServerRequest onClose(Runnable onClose);
-
-	@Override
-	HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle);
+	default HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle){
+		NettyInbound.super.onReadIdle(idleTimeout, onReadIdle);
+		return this;
+	}
 
 	/**
 	 * URI parameter captured via {} "/test/{var}"
 	 * @param key param var name
 	 * @return the param captured value
 	 */
-	Object param(CharSequence key);
+	String param(CharSequence key);
 
 	/**
 	 * Return the param captured key/value map
 	 * @return the param captured key/value map
 	 */
-	Map<String, Object> params();
+	Map<String, String> params();
 
 	/**
 	 *
-	 * @param headerResolver
-	 * @return
+	 * @param headerResolver provide a params
+	 * @return this request
 	 */
-	HttpServerRequest paramsResolver(Function<? super String, Map<String, Object>> headerResolver);
+	HttpServerRequest paramsResolver(Function<? super String, Map<String, String>>
+			headerResolver);
 
 	/**
 	 * Return inbound {@link HttpHeaders}

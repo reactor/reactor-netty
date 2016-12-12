@@ -42,7 +42,7 @@ public class WebsocketTests {
 
 	private void setupServer() throws InterruptedException {
 		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.upgradeToTextWebsocket((i, o) -> o.sendString(
+		                       .newHandler((in, out) -> out.sendWebsocketText((i, o) -> o.sendString(
 				                       Mono.just("test"))))
 		                       .block();
 	}
@@ -53,7 +53,7 @@ public class WebsocketTests {
 		                                         .getPort())
 		                       .get("/test",
 				                       out -> out.addHeader("Authorization", auth)
-				                                 .upgradeToTextWebsocket())
+				                                 .sendWebsocketText())
 		                       .flatMap(in -> in.receive()
 		                                        .asString())
 		                       .log()
@@ -66,7 +66,7 @@ public class WebsocketTests {
 		                                         .getPort())
 		                       .get("/test",
 				                       out -> out.addHeader("Authorization", auth)
-				                                 .upgradeToTextWebsocket())
+				                                 .sendWebsocketText())
 		                       .flatMap(in -> in.receive()
 		                                        .asString())
 		                       .log()

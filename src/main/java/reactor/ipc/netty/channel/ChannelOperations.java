@@ -19,26 +19,17 @@ package reactor.ipc.netty.channel;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.FileChannel;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultFileRegion;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.Attribute;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
@@ -47,15 +38,14 @@ import org.reactivestreams.Subscription;
 import reactor.core.Cancellation;
 import reactor.core.Loopback;
 import reactor.core.Producer;
-import reactor.core.Receiver;
 import reactor.core.Trackable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSource;
 import reactor.core.publisher.Operators;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
@@ -75,7 +65,7 @@ import reactor.util.concurrent.QueueSupplier;
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
 		implements Trackable, NettyInbound, NettyOutbound, Subscription, Producer,
-		           Loopback, Publisher<Object>, ChannelFutureListener {
+		           Loopback, NettyContext, Publisher<Object> {
 
 	/**
 	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}
@@ -113,7 +103,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
 			handler;
-
 	final Channel               channel;
 	final Scheduler             ioScheduler;
 	final Flux<?>               inbound;
@@ -161,37 +150,62 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.inbound = Flux.from(this)
 		                   .subscribeOn(ioScheduler);
 		this.onInactive = processor;
-		channel.closeFuture()
-		       .addListener(this);
+		context.onCloseOrRelease(channel)
+		       .subscribe(onInactive);
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> addChannelHandler(ChannelHandler handler) {
-		return addChannelHandler(Objects.toString(handler),	handler);
+	public ChannelOperations<INBOUND, OUTBOUND> addHandler(ChannelHandler handler) {
+		return addHandler(Objects.toString(handler), handler);
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> addChannelHandler(String name, ChannelHandler
+	public ChannelOperations<INBOUND, OUTBOUND> addHandler(String name, ChannelHandler
 			handler) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
+
 		channel.pipeline()
 		       .addBefore(NettyHandlerNames.ReactiveBridge,
 				       name,
 				       handler);
 
-		onClose(() -> {
-			if(channel.isOpen() &&
-					channel.pipeline().context(handler) != null){
-				channel.pipeline().remove(handler);
-			}
-		});
+		onClose(() -> removeHandler(name));
 		return this;
 	}
 
+	protected final void removeHandler(String name) {
+		if (channel.isOpen() && channel.pipeline()
+		                               .context(name) != null) {
+			channel.pipeline()
+			       .remove(name);
+			if (log.isDebugEnabled()) {
+				log.debug("[{}] Removed handler: {}, pipeline: {}",
+						formatName(),
+						name,
+						channel.pipeline());
+			}
+		}
+		else if (log.isDebugEnabled()) {
+			log.debug("[{}] Non Removed handler: {}, context: {}, pipeline: {}",
+					formatName(),
+					name,
+					channel.pipeline()
+					       .context(name),
+					channel.pipeline());
+		}
+	}
+
 	@Override
-	public <T> Attribute<T> attr(AttributeKey<T> key) {
-		return channel.attr(key);
+	public InetSocketAddress address() {
+		Channel c = channel();
+		if (c instanceof SocketChannel) {
+			return ((SocketChannel) c).remoteAddress();
+		}
+		if (c instanceof DatagramChannel) {
+			return ((DatagramChannel) c).localAddress();
+		}
+		throw new IllegalStateException("Does not have an InetSocketAddress");
 	}
 
 	@Override
@@ -235,6 +249,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	public void dispose() {
+		cancel();
+	}
+
+	@Override
 	final public Object downstream() {
 		return receiver;
 	}
@@ -266,9 +285,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public boolean isDisposed() {
+	public final boolean isDisposed() {
 		return channel.attr(OPERATIONS_ATTRIBUTE_KEY)
 		              .get() != this;
+	}
+
+	@Override
+	public final Mono<Void> onClose() {
+		return MonoSource.wrap(onInactive);
 	}
 
 	@Override
@@ -282,53 +306,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public NettyInbound onClose(final Runnable onClose) {
+	public NettyContext onClose(final Runnable onClose) {
 		onInactive.subscribe(null, e -> onClose.run(), onClose);
-		return this;
-	}
-
-	@Override
-	public void operationComplete(ChannelFuture future) throws Exception {
-		if (!future.isSuccess()) {
-			onInactive.onError(future.cause());
-		}
-		else {
-			onInactive.onComplete();
-		}
-	}
-
-	@Override
-	public NettyInbound onReadIdle(long idleTimeout,
-			final Runnable onReadIdle) {
-		return addChannelHandler(NettyHandlerNames.OnChannelReadIdle,
-				new IdleStateHandler(idleTimeout, 0, 0, TimeUnit.MILLISECONDS) {
-					@Override
-					protected void channelIdle(ChannelHandlerContext ctx,
-							IdleStateEvent evt) throws Exception {
-						if (evt.state() == IdleState.READER_IDLE) {
-							onReadIdle.run();
-						}
-						super.channelIdle(ctx, evt);
-					}
-				});
-	}
-
-	@Override
-	public NettyOutbound onWriteIdle(long idleTimeout,
-			final Runnable onWriteIdle) {
-		channel.pipeline()
-		       .addAfter(NettyHandlerNames.ReactiveBridge,
-				       NettyHandlerNames.OnChannelWriteIdle,
-				       new IdleStateHandler(0, idleTimeout, 0, TimeUnit.MILLISECONDS) {
-					       @Override
-					       protected void channelIdle(ChannelHandlerContext ctx,
-							       IdleStateEvent evt) throws Exception {
-						       if (evt.state() == IdleState.WRITER_IDLE) {
-							       onWriteIdle.run();
-						       }
-						       super.channelIdle(ctx, evt);
-					       }
-				       });
 		return this;
 	}
 
@@ -338,7 +317,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public InetSocketAddress remoteAddress() {
+	public final InetSocketAddress remoteAddress() {
 		return (InetSocketAddress) channel.remoteAddress();
 	}
 
@@ -353,35 +332,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public long requestedFromDownstream() {
 		return receiverDemand;
-	}
-
-	@Override
-	public Mono<Void> sendFile(Path file, long position, long count) {
-		Objects.requireNonNull(file);
-
-		return Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> FutureMono.from(channel.writeAndFlush(new DefaultFileRegion(
-						fc,
-						position,
-						count))),
-				fc -> {
-					try {
-						fc.close();
-					}
-					catch (IOException ioe) {
-						if (log.isDebugEnabled()) {
-							log.error("failed closing FileChannel", ioe);
-						}
-					}
-				});
-	}
-
-	@Override
-	public Mono<Void> sendObject(final Publisher<?> dataStream) {
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
-		return new MonoSend(dataStream);
 	}
 
 	@Override
@@ -417,8 +367,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		return channel.toString();
 	}
 
-	protected NettyContext context(){
-		return context;
+	@Override
+	public final NettyContext context() {
+		return this;
 	}
 
 	/**
@@ -429,7 +380,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@SuppressWarnings("unchecked")
 	protected void onChannelActive(ChannelHandlerContext ctx) {
 		applyHandler();
-		context.fireContextActive(context());
+		context.fireContextActive(this);
 	}
 
 	/**
@@ -485,7 +436,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (receiverFastpath && receiver != null) {
 			receiver.onComplete();
 			cancelReceiver();
-			context.fireContextActive(context());
+			context.fireContextActive(this);
 		}
 		else {
 			drainReceiver();
@@ -532,7 +483,18 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			log.debug("[{}] handler is being applied: {}", formatName(), handler);
 		}
 		handler.apply((INBOUND) this, (OUTBOUND) this)
-		       .subscribe(new OutboundCloseSubscriber(this));
+		       .subscribe(closeSubscriber(this));
+	}
+
+	/**
+	 * Return a new {@code OutboundCloseSubscriber} given an operations instance
+	 *
+	 * @param ops the operation to callback on complete/error.
+	 *
+	 * @return a new {@code OutboundCloseSubscriber} given an operations instance
+	 */
+	protected final Subscriber<? super Void> closeSubscriber(ChannelOperations<INBOUND, OUTBOUND> ops) {
+		return new OutboundCloseSubscriber(ops);
 	}
 
 	/**
@@ -562,11 +524,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * Final release/close (last packet)
 	 */
 	protected final void onChannelInactive() {
-		channel.closeFuture()
-		       .removeListener(this);
 		try {
-			onInboundComplete(); // signal receiver
 			onInactive.onComplete(); //signal senders and other interests
+			onInboundComplete(); // signal receiver
 		}
 		finally {
 			context.terminateChannel(channel); // release / cleanup channel
@@ -600,87 +560,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			drainReceiver();
 		}
 		context.fireContextError(err);
-	}
-
-	/**
-	 * Callback when a writer {@link Subscriber} has effectively terminated listening
-	 * on further {@link Publisher} signals.
-	 *
-	 * @param last an optional callback for the last written payload
-	 * @param promise the promise to fulfil for acknowledging termination success
-	 * @param exception non null if the writer has terminated with a failure
-	 */
-	protected final void onTerminatedSend(ChannelFuture last,
-			final ChannelPromise promise,
-			final Throwable exception) {
-		if (channel.isOpen() && last != null) {
-			ChannelFutureListener listener = future -> {
-				if (exception != null) {
-					promise.tryFailure(exception);
-				}
-				else if (future.isSuccess()) {
-					promise.trySuccess();
-				}
-				else {
-					promise.tryFailure(future.cause());
-				}
-			};
-
-			last.addListener(listener);
-		}
-		else {
-			if (exception != null) {
-				promise.setFailure(exception);
-			}
-			else {
-				promise.setSuccess();
-			}
-		}
-	}
-
-	/**
-	 * Attach a {@link Publisher} as a {@link Channel} writer. Forward write listener
-	 * commit/failures events to the passed {@link Subscriber}
-	 *
-	 * @param encodedWriter the {@link Publisher} to write from
-	 * @param postWriter the {@link Subscriber} to forward commit success/failure
-	 */
-	final protected void onOuboundSend(final Publisher<?> encodedWriter,
-			final Subscriber<? super Void> postWriter) {
-
-		if (log.isDebugEnabled()) {
-			log.debug("[{}] New Outbound Sender: {}", formatName(), encodedWriter);
-		}
-
-		final ChannelFutureListener postWriteListener = future -> {
-			postWriter.onSubscribe(Operators.emptySubscription());
-			if (future.isSuccess()) {
-				postWriter.onComplete();
-			}
-			else {
-				postWriter.onError(future.cause());
-			}
-		};
-
-		ChannelPromise p = channel.newPromise();
-		p.addListener(postWriteListener);
-
-		FlushMode mode;
-		if (outboundFlushEach) {
-			mode = FlushMode.AUTO_EACH;
-		}
-		else {
-			mode = FlushMode.MANUAL_COMPLETE;
-		}
-
-		if (channel.eventLoop()
-		           .inEventLoop()) {
-			doOutboundSend(encodedWriter, mode, p);
-		}
-		else {
-			channel.eventLoop()
-			       .execute(() -> doOutboundSend(encodedWriter, mode, p));
-		}
 	}
 
 	/**
@@ -732,24 +611,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			}
 		}
 		return false;
-	}
-
-	/**
-	 * React on new outbound {@link Publisher} writer
-	 *
-	 * @param writeStream the {@link Publisher} to send
-	 * @param flushMode the flush strategy
-	 * @param promise an actual promise fulfilled on writer success/error
-	 */
-	final void doOutboundSend(Publisher<?> writeStream,
-			FlushMode flushMode,
-			ChannelPromise promise) {
-		if (flushMode == FlushMode.MANUAL_COMPLETE) {
-			writeStream.subscribe(new OutboundFlushLastSubscriber(this, promise));
-		}
-		else {
-			writeStream.subscribe(new OutboundFlushEachSubscriber(this, promise));
-		}
 	}
 
 	final boolean drainReceiver() {
@@ -844,7 +705,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		else {
 			a.onComplete();
 		}
-		context.fireContextActive(context());
+		context.fireContextActive(this);
 	}
 
 	final void unsubscribeReceiver() {
@@ -862,38 +723,5 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	static final BiFunction                                                   PING   =
 			(i, o) -> Flux.empty();
 
-	final class MonoSend extends Mono<Void> implements Receiver, Loopback {
-
-		final Publisher<?> dataStream;
-
-		public MonoSend(Publisher<?> dataStream) {
-			this.dataStream = dataStream;
-		}
-
-		@Override
-		public Object connectedInput() {
-			return ChannelOperations.this;
-		}
-
-		@Override
-		public Object connectedOutput() {
-			return ChannelOperations.this;
-		}
-
-		@Override
-		public void subscribe(Subscriber<? super Void> s) {
-			try {
-				onOuboundSend(dataStream, s);
-			}
-			catch (Throwable throwable) {
-				Operators.error(s, throwable);
-			}
-		}
-
-		@Override
-		public Object upstream() {
-			return dataStream;
-		}
-	}
 
 }

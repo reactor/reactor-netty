@@ -267,8 +267,8 @@ public class ClientServerHttpTests {
 				                                                    .concatWith(Flux.just(
 						                                                    new ArrayList<>()))
 				                                                    .map(new DummyListEncoder(
-						                                                    req.channel()
-						                                                       .alloc())))))
+						                                                    resp.alloc()
+				                                                    )))))
 		                       .block();
 	}
 

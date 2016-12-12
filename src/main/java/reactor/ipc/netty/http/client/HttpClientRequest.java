@@ -19,17 +19,21 @@ package reactor.ipc.netty.http.client;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import io.netty.channel.ChannelHandler;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.http.HttpOutbound;
+import reactor.ipc.netty.http.HttpInfos;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
  * An Http Reactive client write contract for outgoing requests. It inherits several
@@ -37,22 +41,39 @@ import reactor.ipc.netty.http.HttpOutbound;
  *
  * @author Stephane Maldini
  */
-public interface HttpClientRequest extends HttpOutbound {
+public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 
-
-	@Override
-	HttpClientRequest addChannelHandler(ChannelHandler handler);
-
-	@Override
-	HttpClientRequest addChannelHandler(String name, ChannelHandler handler);
-
-	@Override
+	/**
+	 * add an outbound cookie
+	 *
+	 * @return this outbound
+	 */
 	HttpClientRequest addCookie(Cookie cookie);
 
-	@Override
+	/**
+	 * Add an outbound http header
+	 *
+	 * @param name header name
+	 * @param value header value
+	 *
+	 * @return this outbound
+	 */
 	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
-	@Override
+	/**
+	 * Set transfer-encoding header
+	 *
+	 * @param chunked true if transfer-encoding:chunked
+	 *
+	 * @return this outbound
+	 */
+	HttpClientRequest chunkedTransfer(boolean chunked);
+
+	/**
+	 * Remove transfer-encoding: chunked header
+	 *
+	 * @return this outbound
+	 */
 	HttpClientRequest disableChunkedTransfer();
 
 	@Override
@@ -65,7 +86,21 @@ public interface HttpClientRequest extends HttpOutbound {
 	 */
 	HttpClientRequest followRedirect();
 
-	@Override
+	/**
+	 * Return  true if headers and status have been sent to the client
+	 *
+	 * @return true if headers and status have been sent to the client
+	 */
+	boolean hasSentHeaders();
+
+	/**
+	 * Set an outbound header
+	 *
+	 * @param name headers key
+	 * @param value header value
+	 *
+	 * @return this outbound
+	 */
 	HttpClientRequest header(CharSequence name, CharSequence value);
 
 	/**
@@ -75,11 +110,18 @@ public interface HttpClientRequest extends HttpOutbound {
 	 */
 	boolean isFollowRedirect();
 
-	@Override
+	/**
+	 * set the request keepAlive if true otherwise remove the existing connection keep alive header
+	 *
+	 * @return this outbound
+	 */
 	HttpClientRequest keepAlive(boolean keepAlive);
 
 	@Override
-	HttpClientRequest onWriteIdle(long idleTimeout, Runnable onWriteIdle);
+	default HttpClientRequest onWriteIdle(long idleTimeout, Runnable onWriteIdle){
+		NettyOutbound.super.onWriteIdle(idleTimeout, onWriteIdle);
+		return this;
+	}
 
 	/**
 	 * Return the previous redirections or empty array
@@ -96,6 +138,17 @@ public interface HttpClientRequest extends HttpOutbound {
 	HttpHeaders requestHeaders();
 
 	/**
+	 * Send headers and empty content thus delimiting a full empty body http request
+	 *
+	 * @return a {@link Mono} successful on committed response
+	 *
+	 * @see #send(Publisher)
+	 */
+	default Mono<Void> send() {
+		return sendObject(Unpooled.EMPTY_BUFFER);
+	}
+
+	/**
 	 * Prepare to send an HTTP Form excluding multipart
 	 *
 	 * @param formCallback called when form frames generator is created
@@ -103,6 +156,13 @@ public interface HttpClientRequest extends HttpOutbound {
 	 * @return a {@link Flux} of latest in-flight or uploaded bytes,
 	 */
 	Flux<Long> sendForm(Consumer<Form> formCallback);
+
+	/**
+	 * Return a {@link Mono} successful on committed response
+	 *
+	 * @return a {@link Mono} successful on committed response
+	 */
+	Mono<Void> sendHeaders();
 
 	/**
 	 * Prepare to send an HTTP Form in multipart mode for file upload facilities
@@ -114,21 +174,56 @@ public interface HttpClientRequest extends HttpOutbound {
 	Flux<Long> sendMultipart(Consumer<Form> formCallback);
 
 	/**
-	 * Upgrade connection to Websocket with text plain payloads
+	 * Upgrade connection to Websocket
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	default Mono<Void> upgradeToTextWebsocket() {
-		return upgradeToWebsocket(uri(), true, ChannelOperations.noopHandler());
+	default Mono<Void> sendWebsocket() {
+		return sendWebsocket(uri(), false, ChannelOperations.noopHandler());
 	}
 
 	/**
 	 * Upgrade connection to Websocket
 	 *
+	 * @param websocketHandler the in/out handler for ws transport
+	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	default Mono<Void> upgradeToWebsocket() {
-		return upgradeToWebsocket(uri(), false, ChannelOperations.noopHandler());
+	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return sendWebsocket(uri(), false, websocketHandler);
+	}
+
+	/**
+	 * Upgrade connection to Websocket
+	 *
+	 * @param protocols
+	 * @param textPlain
+	 * @param websocketHandler the in/out handler for ws transport
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	Mono<Void> sendWebsocket(String protocols,
+			boolean textPlain,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
+
+	/**
+	 * Upgrade connection to Websocket with text plain payloads
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> sendWebsocketText() {
+		return sendWebsocket(uri(), true, ChannelOperations.noopHandler());
+	}
+
+	/**
+	 * Upgrade connection to Websocket with text plain payloads
+	 *
+	 * @param websocketHandler the in/out handler for ws transport
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> sendWebsocketText(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return sendWebsocket(uri(), true, websocketHandler);
 	}
 
 	/**

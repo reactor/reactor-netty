@@ -291,7 +291,7 @@ public class SmokeTests {
 			                                                        .map(dummy ?
 					                                                        Function.identity() :
 					                                                        new GpdistCodec(
-							                                                        request.channel()
+							                                                        response
 							                                                               .alloc())));
 		                       }))
 		                       .block();

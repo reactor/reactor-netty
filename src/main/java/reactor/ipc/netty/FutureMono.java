@@ -22,29 +22,29 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Operators;
 
 /**
  * Convert Netty Future into void {@link Mono}.
  *
- * @param <T> the type of the future result
  * @param <F> the future type
  * @author Stephane Maldini
  */
-public final class FutureMono<T, F extends Future<T>> extends Mono<T> {
+public abstract class FutureMono<F extends Future<Void>> extends Mono<Void> {
 
 	/**
 	 * Convert a {@link Future} into {@link Mono}. {@link Mono#subscribe(Subscriber)}
 	 * will bridge to {@link Future#addListener(GenericFutureListener)}.
 	 *
 	 * @param future the future to convert from
-	 * @param <T> the type of the future result
 	 * @param <F> the future type
 	 *
 	 * @return A {@link Mono} forwarding {@link Future} success or failure
 	 */
-	public static <T, F extends Future<T>> Mono<T> from(F future){
-		return new FutureMono<>(future);
+	public static <F extends Future<Void>> Mono<Void> from(F future) {
+		return new ImmediateFutureMono<>(future);
 	}
 
 	/**
@@ -53,36 +53,71 @@ public final class FutureMono<T, F extends Future<T>> extends Mono<T> {
 	 * will bridge to {@link Future#addListener(GenericFutureListener)}.
 	 *
 	 * @param deferredFuture the future to evaluate and convert from
-	 * @param <T> the type of the future result
 	 * @param <F> the future type
 	 *
 	 * @return A {@link Mono} forwarding {@link Future} success or failure
 	 */
-	public static <T, F extends Future<T>> Mono<T> deferFuture(Supplier<F> deferredFuture){
-		Objects.requireNonNull(deferredFuture, "deferredFuture");
-		return Mono.defer(() -> new FutureMono<>(deferredFuture.get()));
+	public static <F extends Future<Void>> Mono<Void> deferFuture(Supplier<F> deferredFuture) {
+		return new DeferredFutureMono<>(deferredFuture);
 	}
 
-	final F future;
+	final static class ImmediateFutureMono<F extends Future<Void>> extends FutureMono<F> {
 
-	FutureMono(F future) {
-		this.future = Objects.requireNonNull(future, "future");
-	}
-
-	@Override
-	public final void subscribe(final Subscriber<? super T> s) {
-		FutureSubscription<T, F> fs = new FutureSubscription<>(future, s);
-		s.onSubscribe(fs);
-		future.addListener(fs);
-	}
-
-	final static class FutureSubscription<T, F extends Future<T>> implements
-	                                                GenericFutureListener<F>,
-	                                                Subscription {
-		final Subscriber<? super T> s;
 		final F future;
 
-		FutureSubscription(F future, Subscriber<? super T> s) {
+		ImmediateFutureMono(F future) {
+			this.future = Objects.requireNonNull(future, "future");
+		}
+
+		@Override
+		public final void subscribe(final Subscriber<? super Void> s) {
+			if (s == null) {
+				throw Exceptions.argumentIsNullException();
+			}
+			FutureSubscription<F> fs = new FutureSubscription<>(future, s);
+			s.onSubscribe(fs);
+			future.addListener(fs);
+		}
+	}
+
+	final static class DeferredFutureMono<F extends Future<Void>> extends FutureMono<F> {
+
+		final Supplier<F> deferredFuture;
+
+		DeferredFutureMono(Supplier<F> deferredFuture) {
+			this.deferredFuture =
+					Objects.requireNonNull(deferredFuture, "deferredFuture");
+		}
+
+		@Override
+		public void subscribe(Subscriber<? super Void> s) {
+			if (s == null) {
+				throw Exceptions.argumentIsNullException();
+			}
+
+			F f = deferredFuture.get();
+
+			if (f == null) {
+				Operators.error(s,
+						Operators.onOperatorError(new NullPointerException(
+								"Deferred supplied null")));
+				return;
+			}
+
+			FutureSubscription<F> fs = new FutureSubscription<>(f, s);
+			s.onSubscribe(fs);
+			f.addListener(fs);
+		}
+	}
+
+	final static class FutureSubscription<F extends Future<Void>> implements
+	                                                GenericFutureListener<F>,
+	                                                Subscription {
+
+		final Subscriber<? super Void> s;
+		final F                        future;
+
+		FutureSubscription(F future, Subscriber<? super Void> s) {
 			this.s = s;
 			this.future = future;
 		}

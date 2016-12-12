@@ -277,11 +277,12 @@ public class TcpClientTests {
 				                             );
 
 		NettyContext s = client.newHandler((in, out) -> {
-			in.onClose(close::countDown)
-			  .onReadIdle(500, () -> {
+			in.onReadIdle(500, () -> {
 				  totalDelay.addAndGet(System.currentTimeMillis() - start);
 				  latch.countDown();
-			  });
+			})
+			  .context()
+			  .onClose(close::countDown);
 
 			out.onWriteIdle(500, () -> {
 				totalDelay.addAndGet(System.currentTimeMillis() - start);

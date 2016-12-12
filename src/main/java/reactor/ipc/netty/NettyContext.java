@@ -16,14 +16,14 @@
 package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
-import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import reactor.core.Cancellation;
 import reactor.core.publisher.Mono;
 
 /**
- * Hold contextual information for each {@link NettyConnector#newHandler(BiFunction)}
+ * Hold contextual information for the underlying {@link Channel}
  *
  * @author Stephane Maldini
  * @since 0.6
@@ -31,19 +31,52 @@ import reactor.core.publisher.Mono;
 public interface NettyContext extends Cancellation {
 
 	/**
-	 * Return remote address if client {@link NettyContext} otherwise local address if
-	 * server.
+	 * Add a {@link ChannelHandler} to the pipeline, before {@link
+	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
+	 * made inactive (pool release).
+	 *
+	 * @param handler handler instance
+	 *
+	 * @return this inbound
+	 */
+	NettyContext addHandler(ChannelHandler handler);
+
+	/**
+	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline},
+	 * before {@link NettyHandlerNames#ReactiveBridge}. The handler will be safely removed
+	 * when the made inactive (pool release).
+	 *
+	 * @param name handler name
+	 * @param handler handler instance
+	 *
+	 * @return this inbound
+	 */
+	NettyContext addHandler(String name, ChannelHandler handler);
+
+	/**
+	 * Return remote address if remote channel {@link NettyContext} otherwise local
+	 * address if server selector channel.
 	 *
 	 * @return remote or local {@link InetSocketAddress}
 	 */
 	InetSocketAddress address();
 
 	/**
-	 * Return the underlying {@link Channel}
+	 * Return the underlying {@link Channel}. Direct interaction might be considered
+	 * insecure if that affects the
+	 * underlying IO processing such as read, write or close or state such as pipeline
+	 * handler addition/removal.
+	 *
 	 * @return the underlying {@link Channel}
 	 */
 	Channel channel();
 
+	/**
+	 * Return true  if underlying channel is closed or inbound bridge is detached
+	 *
+	 * @return true if underlying channel is closed or inbound bridge is detached
+	 */
+	boolean isDisposed();
 
 	/**
 	 * Return an observing {@link Mono} terminating with success when shutdown
@@ -53,4 +86,13 @@ public interface NettyContext extends Cancellation {
 	 * @return a {@link Mono} terminating with success if shutdown successfully or error
 	 */
 	Mono<Void> onClose();
+
+	/**
+	 * Assign a {@link Runnable} to be invoked when the channel is closed.
+	 *
+	 * @param onClose the close event handler
+	 *
+	 * @return {@literal this}
+	 */
+	NettyContext onClose(Runnable onClose);
 }

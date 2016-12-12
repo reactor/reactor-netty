@@ -18,29 +18,41 @@ package reactor.ipc.netty.channel;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.Cancellation;
 import reactor.core.publisher.Operators;
 
 /**
  * @author Stephane Maldini
  */
-final class OutboundCloseSubscriber implements Subscriber<Void> {
+final class OutboundCloseSubscriber implements Subscriber<Void>, Runnable {
 
 	final ChannelOperations<?, ?> parent;
 
+	Cancellation c;
+	boolean      done;
 	Subscription subscription;
 
-	public OutboundCloseSubscriber(ChannelOperations<?, ?> ops) {
+	OutboundCloseSubscriber(ChannelOperations<?, ?> ops) {
 		this.parent = ops;
 	}
 
 	@Override
 	public void onComplete() {
+		if (done) {
+			return;
+		}
+		done = true;
 		parent.channel.eventLoop()
 		              .execute(parent::onOutboundComplete);
 	}
 
 	@Override
 	public void onError(Throwable t) {
+		if (done) {
+			Operators.onErrorDropped(t);
+			return;
+		}
+		done = true;
 		parent.channel.eventLoop()
 		              .execute(() -> parent.onOutboundError(t));
 	}
@@ -52,12 +64,30 @@ final class OutboundCloseSubscriber implements Subscriber<Void> {
 	@Override
 	public void onSubscribe(Subscription s) {
 		if (Operators.validate(subscription, s)) {
-			subscription = s;
-			s.request(Long.MAX_VALUE);
-			if (!parent.context.getClass()
-			                   .equals(ServerContextHandler.class)) {
-				parent.channel.read();
+			if (parent.channel.isOpen()) {
+				subscription = s;
+
+				this.c = parent.onInactive.subscribe(null, null, this);
+
+				s.request(Long.MAX_VALUE);
+				if (!parent.context.getClass()
+				                   .equals(ServerContextHandler.class)) {
+					parent.channel.read();
+				}
+			}
+			else {
+				s.cancel();
 			}
 		}
 	}
+
+	@Override
+	public void run() {
+		Subscription subscription = this.subscription;
+		this.subscription = null;
+		if (subscription != null) {
+			subscription.cancel();
+		}
+	}
+
 }

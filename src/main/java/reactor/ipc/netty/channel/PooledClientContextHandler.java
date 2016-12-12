@@ -17,23 +17,18 @@
 package reactor.ipc.netty.channel;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
-import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-import reactor.core.publisher.MonoSource;
-import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.options.ClientOptions;
@@ -80,29 +75,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public InetSocketAddress address() {
-		Channel c = channel();
-		if (c instanceof SocketChannel) {
-			return ((SocketChannel) c).remoteAddress();
-		}
-		if (c instanceof DatagramChannel) {
-			return ((DatagramChannel) c).localAddress();
-		}
-		throw new IllegalStateException("Does not have an InetSocketAddress");
-	}
-
-	@Override
-	public Channel channel() {
-		return f.getNow();
-	}
-
-	@Override
-	public Mono<Void> onClose() {
-		return MonoSource.wrap(onReleaseEmitter)
-		                 .or(FutureMono.from(channel().closeFuture()));
-	}
-
-	@Override
 	@SuppressWarnings("unchecked")
 	public void setFuture(Future<?> future) {
 		Objects.requireNonNull(future, "future");
@@ -142,6 +114,16 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			c.eventLoop()
 			 .execute(() -> connectOrAcquire(c));
 		}
+	}
+
+	@Override
+	protected void terminateChannel(Channel channel) {
+		dispose();
+	}
+
+	@Override
+	protected Publisher<Void> onCloseOrRelease(Channel channel) {
+		return onReleaseEmitter;
 	}
 
 	final void connectOrAcquire(CHANNEL c) {
@@ -227,7 +209,14 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			onReleaseEmitter.onComplete();
 			return;
 		}
-		pool.release(c);
+		pool.release(c).addListener(f -> {
+			if(f.isSuccess()){
+				onReleaseEmitter.onComplete();
+			}
+			else{
+				onReleaseEmitter.onError(f.cause());
+			}
+		});
 
 	}
 

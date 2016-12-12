@@ -23,7 +23,7 @@ import spock.lang.Specification
 /**
  * @author Anatoly Kadyshev
  */
-public class HttpResponseStatusCodesHandlingSpec extends Specification {
+class HttpResponseStatusCodesHandlingSpec extends Specification {
 
   def "http status code 404 is handled by the client"() {
 	when: "the server is prepared"
@@ -64,13 +64,14 @@ public class HttpResponseStatusCodesHandlingSpec extends Specification {
 	def exceptionMessage = ""
 
 	try {
-	  content.block();
+	  content.block()
 	}
 	catch (RuntimeException ex) {
-	  exceptionMessage = ex.getMessage();
+	  exceptionMessage = ex.getMessage()
 	}
 
-	exceptionMessage == "HTTP request failed with code: 404"
+	exceptionMessage == "HTTP request failed with code: 404.\nFailing URI: " +
+			"/unsupportedURI"
 	replyReceived == ""
 
 	cleanup: "the client/server where stopped"

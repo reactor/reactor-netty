@@ -119,11 +119,11 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 		final Predicate<? super HttpServerRequest>          condition;
 		final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>>
 		                                                    handler;
-		final Function<? super String, Map<String, Object>> resolver;
+		final Function<? super String, Map<String, String>> resolver;
 
 		HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
 				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-				Function<? super String, Map<String, Object>> resolver) {
+				Function<? super String, Map<String, String>> resolver) {
 			this.condition = Objects.requireNonNull(condition, "condition");
 			this.handler = Objects.requireNonNull(handler, "handler");
 			this.resolver = resolver;

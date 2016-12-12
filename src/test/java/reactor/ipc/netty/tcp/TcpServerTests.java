@@ -144,8 +144,7 @@ public class TcpServerTests {
 			                    .map(s -> {
 				                    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
 					                    m.writeValue(os, s);
-					                    return in.channel()
-					                             .alloc()
+					                    return out.alloc()
 					                             .buffer()
 					                             .writeBytes(os.toByteArray());
 				                    }
@@ -224,8 +223,7 @@ public class TcpServerTests {
 		                               .block();
 
 		client.newHandler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
-		                                            .map(b -> in.channel()
-		                                                        .alloc()
+		                                            .map(b -> out.alloc()
 		                                                        .buffer()
 		                                                        .writeBytes(b.getBytes()))))
 		      .block();
@@ -333,7 +331,7 @@ public class TcpServerTests {
 		server.newRouter(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.create()
 				                       .get("ws://localhost:3000",
-						                       requestOut -> requestOut.upgradeToTextWebsocket(
+						                       requestOut -> requestOut.sendWebsocketText(
 								                       (i, o) -> o.sendString(Mono.just(
 										                       "ping"))))
 				                       .flatMap(repliesOut -> out.sendGroups(repliesOut.receive()

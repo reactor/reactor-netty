@@ -20,7 +20,6 @@ import java.net.InetSocketAddress;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import reactor.core.publisher.Flux;
@@ -35,60 +34,24 @@ import reactor.ipc.connector.Inbound;
 public interface NettyInbound extends Inbound<ByteBuf> {
 
 	/**
-	 * Add a {@link ChannelHandler} to the pipeline, before {@link
-	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
-	 * made inactive (pool release).
-	 *
-	 * @param handler handler instance
-	 *
-	 * @return this inbound
-	 */
-	NettyInbound addChannelHandler(ChannelHandler handler);
-
-	/**
-	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline}, before {@link
-	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
-	 * made inactive (pool release).
-	 *
-	 * @param name handler name
-	 * @param handler handler instance
-	 *
-	 * @return this inbound
-	 */
-	NettyInbound addChannelHandler(String name, ChannelHandler handler);
-
-	/**
 	 * Return a pre-configured attribute stored in every inbound channel
 	 * @param key attribute key
 	 * @param <T> a channel attribute type
 	 * @return a {@link Channel} attribute
 	 * @see Channel#attr(AttributeKey)
 	 */
-	<T> Attribute<T> attr(AttributeKey<T> key);
+	default <T> Attribute<T> attr(AttributeKey<T> key) {
+		return context().channel()
+		                .attr(key);
+	}
 
 	/**
-	 * Return the underlying {@link Channel}. Direct interaction might be considered
-	 * insecure if that affects the
-	 * underlying IO processing such as read, write or close or state such as pipeline
-	 * handler addition/removal.
+	 * Return a {@link NettyContext} to operate on the underlying
+	 * {@link Channel} state.
 	 *
-	 * @return the underlying {@link Channel}
+	 * @return the {@link NettyContext}
 	 */
-	Channel channel();
-
-	/**
-	 * Return true  if underlying channel is closed or inbound bridge is detached
-	 * @return true if underlying channel is closed or inbound bridge is detached
-	 */
-	boolean isDisposed();
-
-	/**
-	 * Assign a {@link Runnable} to be invoked when the channel is closed.
-	 *
-	 * @param onClose the close event handler
-	 * @return {@literal this}
-	 */
-	NettyInbound onClose(Runnable onClose);
+	NettyContext context();
 
 	/**
 	 * Assign a {@link Runnable} to be invoked when reads have become idle for the given
@@ -99,7 +62,11 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 *
 	 * @return {@literal this}
 	 */
-	NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle);
+	default NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
+		context().addHandler(NettyHandlerNames.OnChannelReadIdle,
+				new ByteBufFlux.InboundIdleStateHandler(idleTimeout, onReadIdle));
+		return this;
+	}
 
 	/**
 	 * A {@link Flux} extension that allows for extra decoding operators
@@ -107,7 +74,9 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 */
 	@Override
 	default ByteBufFlux receive() {
-		return ByteBufFlux.fromInbound(receiveObject(), channel().alloc());
+		return ByteBufFlux.fromInbound(receiveObject(),
+				context().channel()
+				         .alloc());
 	}
 
 
@@ -123,6 +92,8 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 *
 	 * @return the peer's address
 	 */
-	InetSocketAddress remoteAddress();
+	default InetSocketAddress remoteAddress() {
+		return context().address();
+	}
 
 }

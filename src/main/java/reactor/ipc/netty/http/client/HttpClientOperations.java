@@ -61,16 +61,14 @@ import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSource;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
-import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOperations;
-import reactor.ipc.netty.http.HttpOutbound;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -137,27 +135,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public final HttpClientOperations addChannelHandler(ChannelHandler handler) {
-		super.addChannelHandler(handler);
+	public final HttpClientOperations addHandler(ChannelHandler handler) {
+		super.addHandler(handler);
 		return this;
 	}
 
 	@Override
-	public final HttpClientOperations addChannelHandler(String name, ChannelHandler
+	public final HttpClientOperations addHandler(String name, ChannelHandler
 			handler) {
-		super.addChannelHandler(name, handler);
-		return this;
-	}
-
-	@Override
-	public final HttpClientOperations onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		super.onReadIdle(idleTimeout, onReadIdle);
-		return this;
-	}
-
-	@Override
-	public final HttpClientOperations onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
-		super.onWriteIdle(idleTimeout, onWriteIdle);
+		super.addHandler(name, handler);
 		return this;
 	}
 
@@ -219,11 +205,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public void dispose() {
-		cancel();
-	}
-
-	@Override
 	public HttpClientRequest flushEach() {
 		super.flushEach();
 		return this;
@@ -273,11 +254,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpMethod method() {
 		return nettyRequest.method();
-	}
-
-	@Override
-	public Mono<Void> onClose() {
-		return parentContext().onClose();
 	}
 
 	@Override
@@ -367,9 +343,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public Mono<Void> upgradeToWebsocket(String protocols,
+	public Mono<Void> sendWebsocket(String protocols,
 			boolean textPlain,
-			BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		ChannelPipeline pipeline = channel().pipeline();
 
@@ -417,19 +393,18 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected NettyContext context() {
-		return this;
+	public boolean isWebsocket() {
+		return attr(OPERATIONS_ATTRIBUTE_KEY).get()
+		                                     .getClass()
+		                                     .equals(HttpClientWSOperations.class);
 	}
 
 	@Override
 	protected void onChannelActive(final ChannelHandlerContext ctx) {
 
-		if(ctx.pipeline().context(NettyHandlerNames.HttpCodecHandler) == null) {
-			ctx.pipeline()
-			   .addBefore(NettyHandlerNames.ReactiveBridge,
+		addHandler(
 					   NettyHandlerNames.HttpCodecHandler,
 					   new HttpClientCodec());
-		}
 
 		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
 
@@ -573,7 +548,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	final Mono<Void> withWebsocketSupport(URI url,
 			String protocols,
 			boolean textPlain,
-			BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
@@ -586,9 +561,10 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
 			             .compareAndSet(this, ops)) {
 				return FutureMono.from(ops.handshakerResult)
-				                 .then(() -> MonoSource.wrap(websocketHandler.apply(
-						                        ops,
-						                        ops)));
+				                 .doOnSuccess(v -> websocketHandler.apply(ops, ops)
+				                                                   .subscribe(
+						                                                   closeSubscriber(
+								                                                   ops)));
 			}
 		}
 		else {
@@ -667,7 +643,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					parent.disableChunkedTransfer();
 				}
 
-					parent.addChannelHandler(NettyHandlerNames.ChunkedWriter,
+				parent.addHandler(NettyHandlerNames.ChunkedWriter,
 							      new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);

@@ -17,6 +17,7 @@ package reactor.ipc.netty.http
 
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
 import reactor.ipc.netty.http.client.HttpClient
 import reactor.ipc.netty.http.client.HttpClientException
 import reactor.ipc.netty.http.server.HttpServer
@@ -25,6 +26,7 @@ import spock.lang.Specification
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Function
 
 /**
@@ -176,7 +178,7 @@ class HttpSpec extends Specification {
 	  Mono.just(replies.status().code())
 			  .log("received-status-1")
 	} as Function)
-			.block(Duration.ofSeconds(5000))
+			.block()
 
 
 
@@ -191,7 +193,7 @@ class HttpSpec extends Specification {
 			.flatMap { replies -> replies.receive().log("received-status-2")
 	}
 	.next()
-			.block(Duration.ofSeconds(2))
+			.block()
 
 	then: "data was recieved"
 	//the produced reply should be there soon
@@ -223,8 +225,8 @@ class HttpSpec extends Specification {
 
 	//Listen on localhost using default impl (Netty) and assign a global codec to receive/reply String data
 
-	def clientRes = 0
-	def serverRes = 0
+	AtomicInteger clientRes = new AtomicInteger()
+	AtomicInteger serverRes = new AtomicInteger()
 
 	when: "the server is prepared"
 
@@ -237,11 +239,12 @@ class HttpSpec extends Specification {
 		  //log then transform then log received http request content from the request body and the resolved URL parameter "param"
 		  //the returned stream is bound to the request stream and will auto read/close accordingly
 		  resp.header("content-type", "text/plain")
-				  .upgradeToWebsocket { i, o ->
+				  .sendWebsocket { i, o ->
 			o.flushEach()
 					.sendString(i.receive()
 					.asString()
-					.doOnNext { serverRes++ }
+					.publishOn(Schedulers.single())
+					.doOnNext { serverRes.incrementAndGet() }
 					.map { it + ' ' + req.param('param') + '!' }
 					.log('server-reply'))
 		  }
@@ -258,10 +261,12 @@ class HttpSpec extends Specification {
 
 	  //return a producing stream to send some data along the request
 	  req.flushEach()
-			  .upgradeToTextWebsocket { i, o ->
+			  .sendWebsocketText { i, o ->
 				o.sendString(Flux
 				  .range(1, 1000)
 				  .log('client-send')
+						.publishOn(Schedulers.parallel())
+				.doOnComplete{ println 'complete' }
 				  .map { it.toString() })
 			  }
 
@@ -273,7 +278,8 @@ class HttpSpec extends Specification {
 				.receive()
 				.asString()
 				.log('client-received')
-				.doOnNext { clientRes++ }
+				.publishOn(Schedulers.parallel())
+				.doOnNext { clientRes.incrementAndGet() }
 	}
 	.take(1000)
 			.collectList()
@@ -284,14 +290,15 @@ class HttpSpec extends Specification {
 	}
 
 
-	println "server: $serverRes / client: $clientRes"
+	println "STARTING: server[$serverRes] / client[$clientRes]"
 
 	then: "data was recieved"
 	//the produced reply should be there soon
 	//content.block(Duration.ofSeconds(15))[1000 - 1] == "1000 World!"
-	content.block(Duration.ofSeconds(15))[1000 - 1] == "1000 World!"
+	content.block()[1000 - 1] == "1000 World!"
 
 	cleanup: "the client/server where stopped"
+	println "FINISHED: server[$serverRes] / client[$clientRes]"
 	//note how we order first the client then the server shutdown
 	server?.dispose()
   }

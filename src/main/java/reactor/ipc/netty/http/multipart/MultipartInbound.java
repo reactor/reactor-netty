@@ -56,7 +56,7 @@ public interface MultipartInbound extends NettyInbound {
 		                                             .concatMap(bb -> Flux.using(() -> bb,
 				                                      Flux::just,
 				                                      ReferenceCounted::release)),
-				channel().alloc());
+				context().channel().alloc());
 	}
 
 	@Override

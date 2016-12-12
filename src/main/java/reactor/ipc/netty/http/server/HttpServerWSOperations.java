@@ -29,13 +29,16 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import reactor.ipc.netty.http.HttpOperations;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}
  *
  * @author Stephane Maldini
  */
-final class HttpServerWSOperations extends HttpServerOperations {
+final class HttpServerWSOperations extends HttpServerOperations
+		implements WebsocketInbound, WebsocketOutbound {
 
 	final WebSocketServerHandshaker handshaker;
 	final ChannelFuture             handshakerResult;
@@ -66,18 +69,8 @@ final class HttpServerWSOperations extends HttpServerOperations {
 					channel.newPromise())
 			                             .addListener(f -> channel.read());
 			onClose(() -> {
-				if (channel.isOpen()) {
-					if (channel.pipeline()
-					           .context("wsencoder") != null) {
-						channel.pipeline()
-						       .remove("wsencoder");
-					}
-					if (channel.pipeline()
-					           .context("wsdecoder") != null) {
-						channel.pipeline()
-						       .remove("wsdecoder");
-					}
-				}
+				removeHandler("wsencoder");
+				removeHandler("wsdecoder");
 			});
 		}
 	}
@@ -85,8 +78,16 @@ final class HttpServerWSOperations extends HttpServerOperations {
 	@Override
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame) {
-			onInboundComplete();
+			if (isTerminated()) {
+				release();
+			}
+			else {
+				onInboundComplete();
+			}
 			return;
+		}
+		if (isTerminated()) {
+			ctx.read();
 		}
 		if (frame instanceof PingWebSocketFrame) {
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
@@ -94,6 +95,14 @@ final class HttpServerWSOperations extends HttpServerOperations {
 			return;
 		}
 		super.onInboundNext(ctx, frame);
+	}
+
+	@Override
+	protected void onOutboundComplete() {
+		if (channel().isOpen()) {
+			handshakerResult.addListener(f -> channel().writeAndFlush(new CloseWebSocketFrame())
+			                                           .addListener(f2 -> super.onOutboundComplete()));
+		}
 	}
 
 	@Override

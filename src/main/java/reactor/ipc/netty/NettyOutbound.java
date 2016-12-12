@@ -18,23 +18,23 @@ package reactor.ipc.netty;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Objects;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
+import io.netty.channel.DefaultFileRegion;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.connector.Outbound;
-
-import static reactor.core.publisher.Flux.just;
 
 /**
  * @author Stephane Maldini
@@ -42,49 +42,30 @@ import static reactor.core.publisher.Flux.just;
 public interface NettyOutbound extends Outbound<ByteBuf> {
 
 	/**
-	 * Add a {@link ChannelHandler} to the pipeline, before {@link
-	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
-	 * made inactive (pool release).
+	 * Return the assigned {@link ByteBufAllocator}.
 	 *
-	 * @param handler handler instance
-	 *
-	 * @return this inbound
+	 * @return the {@link ByteBufAllocator}
 	 */
-	NettyOutbound addChannelHandler(ChannelHandler handler);
+	default ByteBufAllocator alloc() {
+		return context().channel()
+		                .alloc();
+	}
 
 	/**
-	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline}, before {@link
-	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
-	 * made inactive (pool release).
+	 * Return a {@link NettyContext} to operate on the underlying
+	 * {@link Channel} state.
 	 *
-	 * @param name handler name
-	 * @param handler handler instance
-	 *
-	 * @return this inbound
+	 * @return the {@link NettyContext}
 	 */
-	NettyOutbound addChannelHandler(String name, ChannelHandler handler);
-
-	/**
-	 * Return the underlying {@link Channel}
-	 *
-	 * @return the underlying {@link Channel}
-	 */
-	Channel channel();
+	NettyContext context();
 
 	/**
 	 * Enable flush on each packet sent via {@link #send}, {@link #sendString},
-	 * {@link #sendObject},{@link #sendByteArray}, {@link #sendByteBuffer}.
+	 * {@link #sendObject},{@link #sendByteArray}.
 	 *
 	 * @return {@code this} instance
 	 */
 	NettyOutbound flushEach();
-
-	/**
-	 * Return true  if underlying channel is closed or inbound bridge is detached
-	 *
-	 * @return true if underlying channel is closed or inbound bridge is detached
-	 */
-	boolean isDisposed();
 
 	/**
 	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given
@@ -95,14 +76,11 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 *
 	 * @return {@literal this}
 	 */
-	NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle);
-
-	/**
-	 * Get the address of the remote peer.
-	 *
-	 * @return the peer's address
-	 */
-	InetSocketAddress remoteAddress();
+	default NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
+		context().addHandler(NettyHandlerNames.OnChannelWriteIdle,
+				new ByteBufFlux.OutboundIdleStateHandler(idleTimeout, onWriteIdle));
+		return this;
+	}
 
 	@Override
 	default Mono<Void> send(Publisher<? extends ByteBuf> dataStream) {
@@ -125,21 +103,6 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	}
 
 	/**
-	 * Send bytes to the peer, listen for any error on write and close on terminal signal
-	 * (complete|error). If more than one publisher is attached (multiple calls to send())
-	 * completion occurs after all publishers complete.
-	 *
-	 * @param dataStream the dataStream publishing Buffer items to write on this channel
-	 *
-	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
-	 * error during write
-	 */
-	default Mono<Void> sendByteBuffer(Publisher<? extends ByteBuffer> dataStream) {
-		return send(Flux.from(dataStream)
-		                .map(Unpooled::wrappedBuffer));
-	}
-
-	/**
 	 * Send content from given {@link Path} using
 	 * {@link java.nio.channels.FileChannel#transferTo(long, long, WritableByteChannel)}
 	 * support. If the system supports it and the path resolves to a local file
@@ -150,7 +113,7 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * write and close
 	 * on terminal signal (complete|error). If more than one publisher is attached
 	 * (multiple calls to send()) completion occurs after all publishers complete.
-	 *
+	 * <p>
 	 * Note: this will emit {@link io.netty.channel.FileRegion} in the outbound
 	 * {@link io.netty.channel.ChannelPipeline}
 	 *
@@ -179,7 +142,7 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * write and close
 	 * on terminal signal (complete|error). If more than one publisher is attached
 	 * (multiple calls to send()) completion occurs after all publishers complete.
-	 *
+	 * <p>
 	 * Note: this will emit {@link io.netty.channel.FileRegion} in the outbound
 	 * {@link io.netty.channel.ChannelPipeline}
 	 *
@@ -190,7 +153,20 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	Mono<Void> sendFile(Path file, long position, long count);
+	default Mono<Void> sendFile(Path file, long position, long count) {
+		Objects.requireNonNull(file);
+		return Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
+				fc -> FutureMono.from(context().channel()
+				                               .writeAndFlush(new DefaultFileRegion(fc,
+						                               position,
+						                               count))),
+				fc -> {
+					try {
+						fc.close();
+					}
+					catch (IOException ioe) {/*IGNORE*/}
+				});
+	}
 
 	/**
 	 * Send data to the peer, listen for any error on write and close on terminal signal
@@ -218,7 +194,10 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	Mono<Void> sendObject(Publisher<?> dataStream);
+	default Mono<Void> sendObject(Publisher<?> dataStream) {
+		return FutureMono.deferFuture(() -> context().channel()
+		                                             .writeAndFlush(dataStream));
+	}
 
 	/**
 	 * Send data to the peer, listen for any error on write and close on terminal signal
@@ -230,9 +209,9 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * any error during write
 	 */
 	default Mono<Void> sendObject(Object msg) {
-		return FutureMono.deferFuture(() -> channel().writeAndFlush(msg));
+		return FutureMono.deferFuture(() -> context().channel()
+		                                             .write(msg));
 	}
-
 
 	/**
 	 * Send String to the peer, listen for any error on write and close on terminal signal
@@ -262,8 +241,10 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	default Mono<Void> sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
 		return send(Flux.from(dataStream)
-		                .map(s -> channel().alloc()
+		                .map(s -> context().channel()
+		                                   .alloc()
 		                                   .buffer()
 		                                   .writeBytes(s.getBytes(charset))));
 	}
+
 }

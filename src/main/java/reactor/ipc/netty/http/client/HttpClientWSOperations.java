@@ -35,11 +35,14 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
  * @author Stephane Maldini
  */
-final class HttpClientWSOperations extends HttpClientOperations {
+final class HttpClientWSOperations extends HttpClientOperations
+		implements WebsocketInbound, WebsocketOutbound {
 
 	final WebSocketClientHandshaker handshaker;
 	final ChannelPromise            handshakerResult;
@@ -78,14 +81,8 @@ final class HttpClientWSOperations extends HttpClientOperations {
 			          channel().read();
 		          });
 		onClose(() -> {
-			if(channel.isOpen()){
-				if(channel.pipeline().context("ws-encoder") != null){
-					channel.pipeline().remove("ws-encoder");
-				}
-				if(channel.pipeline().context("ws-decoder") != null){
-					channel.pipeline().remove("ws-decoder");
-				}
-			}
+			removeHandler("ws-encoder");
+			removeHandler("ws-decoder");
 		});
 	}
 
@@ -128,6 +125,13 @@ final class HttpClientWSOperations extends HttpClientOperations {
 		}
 		else {
 			super.onInboundNext(ctx, msg);
+		}
+	}
+
+	@Override
+	protected void onOutboundComplete() {
+		if (channel().isOpen()) {
+			handshakerResult.addListener(f -> channel().writeAndFlush(new CloseWebSocketFrame()));
 		}
 	}
 

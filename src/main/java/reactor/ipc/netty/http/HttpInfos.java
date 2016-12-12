@@ -15,7 +15,6 @@
  */
 package reactor.ipc.netty.http;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
@@ -32,7 +31,7 @@ import io.netty.handler.codec.http.cookie.Cookie;
  * @author Stephane Maldini
  * @since 0.5
  */
-public interface HttpConnection {
+public interface HttpInfos {
 
 	/**
 	 * Return resolved HTTP cookies
@@ -78,13 +77,6 @@ public interface HttpConnection {
 		}
 		return uri;
 	}
-
-	/**
-	 * Get the address of the remote peer.
-	 *
-	 * @return the peer's address
-	 */
-	InetSocketAddress remoteAddress();
 
 	/**
 	 * Return the resolved target address

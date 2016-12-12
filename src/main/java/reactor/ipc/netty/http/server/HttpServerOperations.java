@@ -57,14 +57,13 @@ import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
-import reactor.ipc.netty.http.HttpInbound;
 import reactor.ipc.netty.http.HttpOperations;
-import reactor.ipc.netty.http.HttpOutbound;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -89,7 +88,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	Cookies                                       cookieHolder;
 	HttpRequest                                   nettyRequest;
-	Function<? super String, Map<String, Object>> paramsResolver;
+	Function<? super String, Map<String, String>> paramsResolver;
 
 	HttpServerOperations(Channel ch, HttpServerOperations replaced) {
 		super(ch, replaced);
@@ -110,15 +109,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public final HttpServerOperations addChannelHandler(ChannelHandler handler) {
-		super.addChannelHandler(handler);
+	public final HttpServerOperations addHandler(ChannelHandler handler) {
+		super.addHandler(handler);
 		return this;
 	}
 
 	@Override
-	public final HttpServerOperations addChannelHandler(String name, ChannelHandler
+	public final HttpServerOperations addHandler(String name, ChannelHandler
 			handler) {
-		super.addChannelHandler(name, handler);
+		super.addHandler(name, handler);
 		return this;
 	}
 
@@ -212,27 +211,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public final HttpServerOperations onClose(Runnable onClose) {
-		super.onClose(onClose);
-		return this;
-	}
-
-	@Override
-	public final HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		super.onReadIdle(idleTimeout, onReadIdle);
-		return this;
-	}
-
-	@Override
-	public final HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
-		super.onWriteIdle(idleTimeout, onWriteIdle);
-		return this;
-	}
-
-	@Override
-	public Object param(CharSequence key) {
+	public String param(CharSequence key) {
 		Objects.requireNonNull(key, "key");
-		Map<String, Object> params = null;
+		Map<String, String> params = null;
 		if (paramsResolver != null) {
 			params = this.paramsResolver.apply(uri());
 		}
@@ -240,12 +221,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Map<String, Object> params() {
+	public Map<String, String> params() {
 		return null != paramsResolver ? paramsResolver.apply(uri()) : null;
 	}
 
 	@Override
-	public HttpServerRequest paramsResolver(Function<? super String, Map<String, Object>> headerResolver) {
+	public HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> headerResolver) {
 		this.paramsResolver = headerResolver;
 		return this;
 	}
@@ -353,9 +334,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Mono<Void> upgradeToWebsocket(String protocols,
+	public Mono<Void> sendWebsocket(String protocols,
 			boolean textPlain,
-			BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return withWebsocketSupport(uri(), protocols, textPlain, websocketHandler);
 	}
 
@@ -378,7 +359,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onChannelActive(ChannelHandlerContext ctx) {
 
-		addChannelHandler(NettyHandlerNames.HttpCodecHandler, new HttpServerCodec());
+		addHandler(NettyHandlerNames.HttpCodecHandler, new HttpServerCodec());
 		if (ctx.pipeline()
 		       .context(NettyHandlerNames.HttpKeepAlive) == null) {
 			ctx.pipeline()
@@ -444,7 +425,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (log.isDebugEnabled()) {
 			log.debug("User Handler requesting a last HTTP frame write", formatName());
 		}
-		if (markReceiving() || isWebsocket()) {
+		if (markReceiving()) {
 			release();
 		}
 		else {
@@ -513,10 +494,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (isKeepAlive()) {
 				if (f != null) {
 					f.addListener(s -> {
+						super.onChannelTerminate();
 						if (!s.isSuccess() && log.isDebugEnabled()) {
 							log.error("Failed flushing last frame", s.cause());
 						}
-						super.onChannelTerminate();
 					});
 					return;
 				}
@@ -526,10 +507,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			f = channel().writeAndFlush(new CloseWebSocketFrame());
 			f.addListener(s -> {
+				super.onChannelTerminate();
 				if (!s.isSuccess() && log.isDebugEnabled()) {
 					log.error("Failed flushing last frame", s.cause());
 				}
-				super.onChannelTerminate();
 			});
 		}
 	}
@@ -537,7 +518,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final Mono<Void> withWebsocketSupport(String url,
 			String protocols,
 			boolean textPlain,
-			BiFunction<? super HttpInbound, ? super HttpOutbound, ? extends Publisher<Void>> websocketHandler) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
@@ -549,9 +530,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
 			             .compareAndSet(this, ops)) {
 				return FutureMono.from(ops.handshakerResult)
-				                 .then(() -> MonoSource.wrap(websocketHandler.apply(
-						                        ops,
-						                        ops)));
+				                 .doOnSuccess(v -> websocketHandler.apply(
+						                        ops, ops)
+				                                                   .subscribe(
+						                                                   closeSubscriber(
+								                                                   ops)));
 			}
 		}
 		else {

@@ -16,10 +16,7 @@
 
 package reactor.ipc.netty.http.server;
 
-import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,10 +29,9 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
-import reactor.core.Exceptions;
 import reactor.ipc.netty.ByteBufFlux;
-import reactor.ipc.netty.http.HttpInbound;
-import reactor.ipc.netty.http.HttpOutbound;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
  * Server routes are unique and only the first matching in order of declaration will be
@@ -250,7 +246,8 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(String path,
-			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
+					Publisher<Void>> handler) {
 		return ws(path, handler, null);
 	}
 
@@ -269,7 +266,8 @@ public interface HttpServerRoutes extends
 	 */
 	@SuppressWarnings("unchecked")
 	default HttpServerRoutes ws(String path,
-			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
+					Publisher<Void>> handler,
 			String protocols) {
 		Predicate<HttpServerRequest> condition = HttpPredicate.get(path);
 
@@ -278,9 +276,10 @@ public interface HttpServerRoutes extends
 			       .contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 
 				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), protocols, false, (BiFunction<HttpInbound, HttpOutbound, Publisher<Void>>)handler);
+				return ops.withWebsocketSupport(req.uri(), protocols, false,
+						handler);
 			}
-			return handler.apply(req, resp);
+			return resp.sendNotFound();
 		});
 	}
 

@@ -16,12 +16,19 @@
 
 package reactor.ipc.netty.channel;
 
+import java.net.InetSocketAddress;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyHandlerNames;
 import reactor.ipc.netty.options.ServerOptions;
@@ -30,8 +37,8 @@ import reactor.ipc.netty.options.ServerOptions;
  *
  * @author Stephane Maldini
  */
-final class ServerContextHandler
-		extends CloseableContextHandler<Channel> {
+final class ServerContextHandler extends CloseableContextHandler<Channel>
+		implements NettyContext {
 
 	final ServerOptions serverOptions;
 
@@ -50,7 +57,7 @@ final class ServerContextHandler
 
 	@Override
 	public final void fireContextActive(NettyContext context) {
-		//Ignore, child channels cannot trigger context active
+		//Ignore, child channels cannot trigger context innerActive
 	}
 
 	@Override
@@ -59,16 +66,69 @@ final class ServerContextHandler
 	}
 
 	@Override
+	public InetSocketAddress address() {
+		Channel c = f.channel();
+		if (c instanceof SocketChannel) {
+			return ((SocketChannel) c).remoteAddress();
+		}
+		if (c instanceof ServerSocketChannel) {
+			return ((ServerSocketChannel) c).localAddress();
+		}
+		if (c instanceof DatagramChannel) {
+			return ((DatagramChannel) c).localAddress();
+		}
+		throw new IllegalStateException("Does not have an InetSocketAddress");
+	}
+
+	@Override
+	public NettyContext addHandler(ChannelHandler handler) {
+		channel().pipeline()
+		         .addLast(handler);
+		return this;
+	}
+
+	@Override
+	public NettyContext addHandler(String name, ChannelHandler handler) {
+		channel().pipeline()
+		         .addLast(name, handler);
+		return this;
+	}
+
+	@Override
+	public NettyContext onClose(Runnable onClose) {
+		onClose().subscribe(null, e -> onClose(), onClose);
+		return this;
+	}
+
+	@Override
+	public Channel channel() {
+		return f.channel();
+	}
+
+	@Override
+	public boolean isDisposed() {
+		return !f.channel()
+		         .isOpen();
+	}
+
+	@Override
+	public Mono<Void> onClose() {
+		return FutureMono.from(f.channel()
+		                        .closeFuture());
+	}
+
+	@Override
 	public void terminateChannel(Channel channel) {
 		if(channel.eventLoop().inEventLoop()){
-			cleanChannel(channel);
+			recycleHandler(channel);
 		}
 		else{
-			channel.eventLoop().execute(() -> cleanChannel(channel));
+			channel.eventLoop()
+			       .execute(() -> recycleHandler(channel));
 		}
 	}
 
-	final void cleanChannel(Channel channel){
+	final void recycleHandler(Channel channel) {
 		if(!channel.isOpen()) {
 			return;
 		}

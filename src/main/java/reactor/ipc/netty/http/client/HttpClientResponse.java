@@ -15,19 +15,14 @@
  */
 package reactor.ipc.netty.http.client;
 
-import java.net.InetSocketAddress;
-
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Flux;
 import reactor.ipc.netty.ByteBufFlux;
-import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.http.HttpInbound;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.http.HttpInfos;
 import reactor.ipc.netty.http.multipart.MultipartInbound;
 
 /**
@@ -38,75 +33,42 @@ import reactor.ipc.netty.http.multipart.MultipartInbound;
  * URI, method, websocket...
  *
  * @author Stephane Maldini
- * @since 2.5
+ * @since 0.5
  */
-public interface HttpClientResponse extends HttpInbound, NettyContext {
-
-
+public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContext {
 
 	@Override
-	HttpClientResponse addChannelHandler(ChannelHandler handler);
+	HttpClientResponse addHandler(ChannelHandler handler);
 
 	@Override
-	HttpClientResponse addChannelHandler(String name, ChannelHandler handler);
+	HttpClientResponse addHandler(String name, ChannelHandler handler);
 
 	@Override
 	HttpClientResponse onClose(Runnable onClose);
 
 	@Override
-	HttpClientResponse onReadIdle(long idleTimeout, Runnable onReadIdle);
+	default HttpClientResponse onReadIdle(long idleTimeout, Runnable onReadIdle){
+		NettyInbound.super.onReadIdle(idleTimeout, onReadIdle);
+		return this;
+	}
 
 	/**
-	 * a {@literal byte[]} inbound {@link Flux}
+	 * Return a decoded {@link MultipartInbound}
 	 *
-	 * @return a {@literal byte[]} inbound {@link Flux}
+	 * @return a decoded {@link MultipartInbound}
 	 */
 	default MultipartInbound receiveMultipart() {
 		HttpClientResponse thiz = this;
 		return new MultipartInbound() {
-			@Override
-			public NettyInbound addChannelHandler(ChannelHandler handler) {
-				return thiz.addChannelHandler(handler);
-			}
 
 			@Override
-			public NettyInbound addChannelHandler(String name, ChannelHandler handler) {
-				return thiz.addChannelHandler(name, handler);
-			}
-
-			@Override
-			public <T> Attribute<T> attr(AttributeKey<T> key) {
-				return thiz.attr(key);
-			}
-
-			@Override
-			public Channel channel() {
-				return thiz.channel();
-			}
-
-			@Override
-			public boolean isDisposed() {
-				return thiz.isDisposed();
-			}
-
-			@Override
-			public NettyInbound onClose(Runnable onClose) {
-				return thiz.onClose(onClose);
-			}
-
-			@Override
-			public NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
-				return thiz.onReadIdle(idleTimeout, onReadIdle);
+			public NettyContext context() {
+				return thiz.context();
 			}
 
 			@Override
 			public Flux<ByteBufFlux> receiveParts() {
 				return MultipartInbound.from(thiz);
-			}
-
-			@Override
-			public InetSocketAddress remoteAddress() {
-				return thiz.remoteAddress();
 			}
 		};
 	}
@@ -119,8 +81,9 @@ public interface HttpClientResponse extends HttpInbound, NettyContext {
 	String[] redirectedFrom();
 
 	/**
+	 * Return response HTTP headers.
 	 *
-	 * @return
+	 * @return response HTTP headers.
 	 */
 	HttpHeaders responseHeaders();
 

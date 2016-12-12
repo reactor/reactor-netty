@@ -24,11 +24,13 @@ import java.util.function.BiFunction;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.FutureMono;
@@ -57,28 +59,8 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public final InetSocketAddress address() {
-		Channel c = f.channel();
-		if (c instanceof SocketChannel) {
-			return ((SocketChannel) c).remoteAddress();
-		}
-		if (c instanceof ServerSocketChannel) {
-			return ((ServerSocketChannel) c).localAddress();
-		}
-		if (c instanceof DatagramChannel) {
-			return ((DatagramChannel) c).localAddress();
-		}
-		throw new IllegalStateException("Does not have an InetSocketAddress");
-	}
-
-	@Override
-	public final Channel channel() {
-		return f.channel();
-	}
-
-	@Override
-	public final Mono<Void> onClose() {
-		return FutureMono.from(f.channel().closeFuture());
+	protected Publisher<Void> onCloseOrRelease(Channel channel) {
+		return FutureMono.from(channel.closeFuture());
 	}
 
 	@Override

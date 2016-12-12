@@ -248,7 +248,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	public final Mono<HttpClientResponse> ws(String url) {
 		return request(WS,
 				url,
-				req -> req.upgradeToWebsocket(ChannelOperations.noopHandler()));
+				req -> req.sendWebsocket(ChannelOperations.noopHandler()));
 	}
 
 	/**
@@ -264,7 +264,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 			final Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
 		return request(WS,
 				url,
-				ch -> ch.upgradeToWebsocket((in, out) -> handler.apply((HttpClientRequest) out)));
+				ch -> ch.sendWebsocket((in, out) -> handler.apply((HttpClientRequest) out)));
 	}
 
 	static final HttpMethod     WS             = new HttpMethod("WS");

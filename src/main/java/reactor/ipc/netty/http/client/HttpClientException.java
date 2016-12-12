@@ -28,7 +28,8 @@ public class HttpClientException extends RuntimeException {
 	private final HttpClientResponse response;
 
 	public HttpClientException(HttpClientResponse response) {
-		super("HTTP request failed with code: " + response.status().code());
+		super("HTTP request failed with code: " + response.status().code() + ".\n" +
+				"Failing URI: "+response.uri());
 		this.response = response;
 	}
 

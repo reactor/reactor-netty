@@ -15,13 +15,18 @@
  */
 package reactor.ipc.netty.http.server;
 
-import io.netty.channel.ChannelHandler;
+import java.util.function.BiFunction;
+
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cookie.Cookie;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.http.HttpOutbound;
+import reactor.ipc.netty.http.HttpInfos;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
  *
@@ -29,39 +34,123 @@ import reactor.ipc.netty.http.HttpOutbound;
  * URI, method, websocket...
  *
  * @author Stephane Maldini
- * @since 2.5
+ * @since 0.5
  */
-public interface HttpServerResponse extends HttpOutbound {
+public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 
-	@Override
-	HttpServerResponse addChannelHandler(ChannelHandler handler);
-
-	@Override
-	HttpServerResponse addChannelHandler(String name, ChannelHandler handler);
-
-	@Override
+	/**
+	 * add an outbound cookie
+	 *
+	 * @return this outbound
+	 */
 	HttpServerResponse addCookie(Cookie cookie);
 
-	@Override
+	/**
+	 * Add an outbound http header
+	 *
+	 * @param name header name
+	 * @param value header value
+	 *
+	 * @return this outbound
+	 */
 	HttpServerResponse addHeader(CharSequence name, CharSequence value);
 
-	@Override
-	HttpServerResponse chunkedTransfer(boolean chunked);
-
-	@Override
-	HttpServerResponse disableChunkedTransfer();
-
-	@Override
-	HttpServerResponse flushEach();
-
-	@Override
+	/**
+	 * Set an outbound header
+	 *
+	 * @param name headers key
+	 * @param value header value
+	 *
+	 * @return this outbound
+	 */
 	HttpServerResponse header(CharSequence name, CharSequence value);
 
-	@Override
+	/**
+	 * set the request keepAlive if true otherwise remove the existing connection keep alive header
+	 *
+	 * @return this outbound
+	 */
 	HttpServerResponse keepAlive(boolean keepAlive);
 
+	/**
+	 * Remove transfer-encoding: chunked header
+	 *
+	 * @return this outbound
+	 */
+	HttpServerResponse disableChunkedTransfer();
+
+	/**
+	 * Set transfer-encoding header
+	 *
+	 * @param chunked true if transfer-encoding:chunked
+	 *
+	 * @return this outbound
+	 */
+	HttpServerResponse chunkedTransfer(boolean chunked);
+
+	/**
+	 * Return  true if headers and status have been sent to the client
+	 *
+	 * @return true if headers and status have been sent to the client
+	 */
+	boolean hasSentHeaders();
+
+	/**
+	 * Send headers and empty content thus delimiting a full empty body http request
+	 *
+	 * @return a {@link Mono} successful on committed response
+	 * @see #send(Publisher)
+	 */
+	default Mono<Void> send(){
+		return sendObject(Unpooled.EMPTY_BUFFER);
+	}
+
+	/**
+	 * Return a {@link Mono} successful on committed response
+	 *
+	 * @return a {@link Mono} successful on committed response
+	 */
+	Mono<Void> sendHeaders();
+
+
+
+	/**
+	 * Upgrade connection to Websocket
+	 * @param websocketHandler the in/out handler for ws transport
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return sendWebsocket(uri(), false, websocketHandler);
+	}
+
+	/**
+	 * Upgrade connection to Websocket
+	 * @param protocols
+	 * @param textPlain
+	 * @param websocketHandler the in/out handler for ws transport
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	Mono<Void> sendWebsocket(String protocols,
+			boolean textPlain,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
+
+	/**
+	 * Upgrade connection to Websocket with text plain payloads
+	 *
+	 * @param websocketHandler the in/out handler for ws transport
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> sendWebsocketText(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return sendWebsocket(uri(), true, websocketHandler);
+	}
+
 	@Override
-	HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle);
+	default HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle){
+		NettyOutbound.super.onWriteIdle(idleTimeout, onWriteIdle);
+		return this;
+	}
 
 	/**
 	 * Return headers sent back to the clients

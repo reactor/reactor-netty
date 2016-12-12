@@ -97,7 +97,7 @@ public final class ByteBufMono extends MonoSource<ByteBuf, ByteBuf> {
 	}
 
 	protected ByteBufMono(Mono<?> source) {
-		super(source.map(ByteBufFlux.objectMapper));
+		super(source.map(ByteBufFlux.bytebufExtractor));
 	}
 
 	static final class ReleasingInputStream extends ByteBufInputStream {

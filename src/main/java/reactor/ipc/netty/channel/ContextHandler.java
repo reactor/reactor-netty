@@ -16,12 +16,10 @@
 
 package reactor.ipc.netty.channel;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
@@ -30,7 +28,9 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
+import org.reactivestreams.Publisher;
 import reactor.core.Cancellation;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
@@ -42,7 +42,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
- * A one time-set channel pipeline callback and {@link NettyContext} state for clean
+ * A one time-set channel pipeline callback to emit {@link NettyContext} state for clean
  * disposing. A {@link ContextHandler} is bound to a user-facing {@link MonoSink}
  *
  * @param <CHANNEL> the channel type
@@ -50,7 +50,7 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 public abstract class ContextHandler<CHANNEL extends Channel>
-		extends ChannelInitializer<CHANNEL> implements Cancellation, NettyContext {
+		extends ChannelInitializer<CHANNEL> implements Cancellation {
 
 	/**
 	 * Create a new client context
@@ -227,6 +227,15 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		dispose();
 	}
 
+	/**
+	 * Return a Publisher to signal onComplete on {@link Channel} close or release.
+	 *
+	 * @param channel the channel to monitor
+	 *
+	 * @return a Publisher to signal onComplete on {@link Channel} close or release.
+	 */
+	protected abstract Publisher<Void> onCloseOrRelease(Channel channel);
+
 	static final IllegalStateException ABORTED =
 			new IllegalStateException("Connection " + "has been aborted by the remote " + "peer") {
 				@Override
@@ -236,8 +245,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 			};
 
-	static final Logger         log    = Loggers.getLogger(ContextHandler.class);
-	static final ChannelHandler BRIDGE = new ChannelOperationsHandler();
+	static final Logger         log      = Loggers.getLogger(ContextHandler.class);
 
 	static void addSslAndLogHandlers(NettyOptions<?, ?> options,
 			MonoSink<NettyContext> sink,
@@ -321,8 +329,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 					ctx.pipeline()
 					   .addAfter(NettyHandlerNames.BridgeSetup,
-							   NettyHandlerNames.ReactiveBridge,
-							   BRIDGE);
+							   NettyHandlerNames.ReactiveBridge, new ChannelOperationsHandler());
 
 					op.onChannelActive(ctx);
 				}

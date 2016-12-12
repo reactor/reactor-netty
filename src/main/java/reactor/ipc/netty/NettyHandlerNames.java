@@ -16,8 +16,6 @@
 
 package reactor.ipc.netty;
 
-import java.util.Objects;
-
 /**
  * Constant for names used when adding/removing {@link io.netty.channel.ChannelHandler}.
  *

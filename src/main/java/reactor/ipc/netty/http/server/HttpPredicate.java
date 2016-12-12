@@ -35,7 +35,7 @@ import io.netty.handler.codec.http.HttpVersion;
  * @author Stephane Maldini
  */
 final class HttpPredicate
-		implements Predicate<HttpServerRequest>, Function<Object, Map<String, Object>> {
+		implements Predicate<HttpServerRequest>, Function<Object, Map<String, String>> {
 
 	/**
 	 * An alias for {@link HttpPredicate#http}.
@@ -179,11 +179,11 @@ final class HttpPredicate
 	}
 
 	@Override
-	public Map<String, Object> apply(Object key) {
+	public Map<String, String> apply(Object key) {
 		if (template == null) {
 			return null;
 		}
-		Map<String, Object> headers = template.match(key.toString());
+		Map<String, String> headers = template.match(key.toString());
 		if (null != headers && !headers.isEmpty()) {
 			return headers;
 		}
@@ -227,7 +227,7 @@ final class HttpPredicate
 				new ArrayList<>();
 		private final HashMap<String, Matcher>             matchers      =
 				new HashMap<>();
-		private final HashMap<String, Map<String, Object>> vars          =
+		private final HashMap<String, Map<String, String>> vars          =
 				new HashMap<>();
 
 		private final Pattern uriPattern;
@@ -290,13 +290,13 @@ final class HttpPredicate
 		 *
 		 * @return the path parameters from the uri. Never {@code null}.
 		 */
-		public Map<String, Object> match(String uri) {
-			Map<String, Object> pathParameters = vars.get(uri);
+		final Map<String, String> match(String uri) {
+			Map<String, String> pathParameters = vars.get(uri);
 			if (null != pathParameters) {
 				return pathParameters;
 			}
 
-			pathParameters = new HashMap<String, Object>();
+			pathParameters = new HashMap<>();
 			Matcher m = matcher(uri);
 			if (m.matches()) {
 				int i = 1;

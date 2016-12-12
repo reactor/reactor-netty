@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.http;
+
+package reactor.ipc.netty.http.websocket;
 
 import reactor.ipc.netty.NettyInbound;
 
 /**
- * An Http Reactive read contract for incoming response. It inherits several accessor related to HTTP
- * flow : headers, params,
- * URI, method, websocket...
+ * A websocket framed inbound
  *
  * @author Stephane Maldini
  * @since 0.6
  */
-public interface HttpInbound extends HttpConnection, NettyInbound {
+public interface WebsocketInbound extends NettyInbound {
+
 }
