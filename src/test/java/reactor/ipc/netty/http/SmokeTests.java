@@ -45,6 +45,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 
@@ -269,7 +270,7 @@ public class SmokeTests {
 			                                      .addHeader("X-GP-PROTO", "1")
 			                                      .addHeader("Cache-Control", "no-cache")
 			                                      .addHeader("Connection", "close")
-			                                      .flushEach()
+			                                      .options(NettyPipeline.SendOptions::flushOnEach)
 			                                      .send(bufferStream.doOnNext(d -> integer.getAndIncrement())
 			                                                        .take(takeCount)
 			                                                        .doOnNext(d -> integerPostTake.getAndIncrement())

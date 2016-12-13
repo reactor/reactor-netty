@@ -19,14 +19,12 @@ package reactor.ipc.netty.channel;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyHandler;
-import io.netty.handler.ssl.SslHandler;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -81,7 +79,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline) {
 		ProxyHandler proxy = clientOptions.getProxyHandler();
 		if (proxy != null) {
-			pipeline.addFirst(NettyHandlerNames.ProxyHandler, proxy);
+			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy);
 		}
 	}
 }

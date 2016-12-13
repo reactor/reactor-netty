@@ -105,9 +105,7 @@ class NettyTcpServerSpec extends Specification {
 			  .log('send')
 			  .collectList()
 			  .map(jsonEncoder))
-			  .subscribe()
-
-	  Flux.never()
+	    .neverComplete()
 	}.block()
 
 	then: "the client/server were started"
@@ -155,9 +153,9 @@ class NettyTcpServerSpec extends Specification {
 	  o.send(Flux.range(1, elem)
 			  .map { new Pojo(name: 'test' + it) }
 			  .log('send')
-			  .collectList().map(jsonEncoder)).subscribe()
+			  .collectList().map(jsonEncoder))
+			  .neverComplete()
 
-	  Flux.never()
 	}.block()
 
 	then: "the client/server were started"

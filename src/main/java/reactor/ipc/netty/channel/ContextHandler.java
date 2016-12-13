@@ -27,14 +27,14 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import reactor.core.Cancellation;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.options.ServerOptions;
@@ -160,7 +160,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	protected void initChannel(CHANNEL ch) throws Exception {
 		doPipeline(ch.pipeline());
 		ch.pipeline()
-		  .addLast(NettyHandlerNames.BridgeSetup, new BridgeSetupHandler(this));
+		  .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
 		if (log.isDebugEnabled()) {
 			log.debug("After pipeline {}",
 					ch.pipeline()
@@ -262,31 +262,31 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 						          .getSimpleName());
 			}
 			if (log.isTraceEnabled()) {
-				pipeline.addFirst(NettyHandlerNames.SslLoggingHandler, new
+				pipeline.addFirst(NettyPipeline.SslLoggingHandler, new
 						LoggingHandler(SslReadHandler.class));
-				pipeline.addAfter(NettyHandlerNames.SslLoggingHandler,
-						NettyHandlerNames.SslHandler,
+				pipeline.addAfter(NettyPipeline.SslLoggingHandler,
+						NettyPipeline.SslHandler,
 						sslHandler);
 			}
 			else {
-				pipeline.addFirst(NettyHandlerNames.SslHandler, sslHandler);
+				pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
 			}
 			if (log.isDebugEnabled()) {
-				pipeline.addAfter(NettyHandlerNames.SslHandler,
-						NettyHandlerNames.LoggingHandler,
+				pipeline.addAfter(NettyPipeline.SslHandler,
+						NettyPipeline.LoggingHandler,
 						loggingHandler);
-				pipeline.addAfter(NettyHandlerNames.LoggingHandler,
-						NettyHandlerNames.SslReader,
+				pipeline.addAfter(NettyPipeline.LoggingHandler,
+						NettyPipeline.SslReader,
 						new SslReadHandler(sink));
 			}
 			else {
-				pipeline.addAfter(NettyHandlerNames.SslHandler,
-						NettyHandlerNames.SslReader,
+				pipeline.addAfter(NettyPipeline.SslHandler,
+						NettyPipeline.SslReader,
 						new SslReadHandler(sink));
 			}
 		}
 		else if (log.isDebugEnabled()) {
-			pipeline.addFirst(NettyHandlerNames.LoggingHandler, loggingHandler);
+			pipeline.addFirst(NettyPipeline.LoggingHandler, loggingHandler);
 		}
 	}
 
@@ -328,8 +328,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					   .set(op);
 
 					ctx.pipeline()
-					   .addAfter(NettyHandlerNames.BridgeSetup,
-							   NettyHandlerNames.ReactiveBridge, new ChannelOperationsHandler());
+					   .addAfter(NettyPipeline.BridgeSetup,
+							   NettyPipeline.ReactiveBridge, new ChannelOperationsHandler());
 
 					op.onChannelActive(ctx);
 				}
@@ -373,4 +373,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			ctx.fireExceptionCaught(cause);
 		}
 	}
+
+	static final AttributeKey<Boolean> CLOSE_CHANNEL =
+			AttributeKey.newInstance("CLOSE_CHANNEL");
 }

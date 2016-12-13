@@ -13,28 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package reactor.ipc.netty.channel;
 
-package reactor.ipc.netty.http.websocket;
-
-import java.nio.charset.Charset;
-
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
 
 /**
- * A websocket framed outbound
- *
  * @author Stephane Maldini
- * @since 0.6
  */
-public interface WebsocketOutbound extends NettyOutbound {
+final class OutboundSend implements NettyOutbound {
+
+	final NettyOutbound parent;
+
+	OutboundSend(NettyOutbound parent) {
+		this.parent = parent;
+	}
 
 	@Override
-	default NettyOutbound sendString(Publisher<? extends String> dataStream,
-			Charset charset) {
-		return sendObject(Flux.from(dataStream)
-		                      .map(TextWebSocketFrame::new));
+	public NettyContext context() {
+		return parent.context();
 	}
 }

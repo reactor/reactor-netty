@@ -32,7 +32,7 @@ public interface NettyContext extends Cancellation {
 
 	/**
 	 * Add a {@link ChannelHandler} to the pipeline, before {@link
-	 * NettyHandlerNames#ReactiveBridge}. The handler will be safely removed when the
+	 * NettyPipeline#ReactiveBridge}. The handler will be safely removed when the
 	 * made inactive (pool release).
 	 *
 	 * @param handler handler instance
@@ -43,7 +43,7 @@ public interface NettyContext extends Cancellation {
 
 	/**
 	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline},
-	 * before {@link NettyHandlerNames#ReactiveBridge}. The handler will be safely removed
+	 * before {@link NettyPipeline#ReactiveBridge}. The handler will be safely removed
 	 * when the made inactive (pool release).
 	 *
 	 * @param name handler name

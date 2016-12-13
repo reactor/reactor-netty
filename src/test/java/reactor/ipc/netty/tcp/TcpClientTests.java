@@ -40,7 +40,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 
@@ -106,10 +106,8 @@ public class TcpClientTests {
 			                                 .log("conn")
 			                                 .subscribe(s -> latch.countDown());
 
-			                               out.sendString(Flux.just("Hello World!"))
-			                                  .subscribe();
-
-			                               return Flux.never();
+			                               return out.sendString(Flux.just("Hello World!"))
+			                                  .neverComplete();
 		                               })
 		                               .block();
 
@@ -130,10 +128,9 @@ public class TcpClientTests {
 		NettyContext s = client.newHandler((in, out) -> {
 			in.receive()
 			  .subscribe(d -> latch.countDown());
-			out.sendString(Flux.just("Hello"))
-			   .subscribe();
 
-			return Flux.never();
+			return out.sendString(Flux.just("Hello"))
+			   .neverComplete();
 		})
 		                       .block(Duration.ofSeconds(5));
 
@@ -155,7 +152,7 @@ public class TcpClientTests {
 				TcpClient.create(opts -> opts.connect("localhost", echoServerPort)
 				                             .afterChannelInit(c -> c.pipeline()
 				                                                     .addBefore(
-						                                                     NettyHandlerNames.ReactiveBridge,
+						                                                     NettyPipeline.ReactiveBridge,
 						                                                     "codec",
 						                                                     new LineBasedFrameDecoder(
 								                                                     8 * 1024))))
@@ -169,12 +166,10 @@ public class TcpClientTests {
 						           latch.countDown();
 					           });
 
-					         out.sendString(Flux.range(1, messages)
+					         return out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
-					            .subscribe();
-
-					         return Flux.never();
+					            .neverComplete();
 				         })
 				         .block(Duration.ofSeconds(5));
 

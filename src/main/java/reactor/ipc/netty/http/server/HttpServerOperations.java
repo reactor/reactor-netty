@@ -52,13 +52,13 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -171,12 +171,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerResponse flushEach() {
-		super.flushEach();
-		return this;
-	}
-
-	@Override
 	public HttpServerResponse header(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
 			this.responseHeaders.set(name, value);
@@ -281,7 +275,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Mono<Void> sendFile(Path file) {
+	public NettyOutbound sendFile(Path file) {
 		try {
 			return sendFile(file, 0L, Files.size(file));
 		}
@@ -289,7 +283,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if(log.isDebugEnabled()){
 				log.debug("Path not resolved",e);
 			}
-			return sendNotFound();
+			return then(sendNotFound());
 		}
 	}
 
@@ -335,9 +329,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public Mono<Void> sendWebsocket(String protocols,
-			boolean textPlain,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return withWebsocketSupport(uri(), protocols, textPlain, websocketHandler);
+		return withWebsocketSupport(uri(), protocols, websocketHandler);
 	}
 
 	@Override
@@ -359,12 +352,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onChannelActive(ChannelHandlerContext ctx) {
 
-		addHandler(NettyHandlerNames.HttpCodecHandler, new HttpServerCodec());
+		addHandler(NettyPipeline.HttpCodecHandler, new HttpServerCodec());
 		if (ctx.pipeline()
-		       .context(NettyHandlerNames.HttpKeepAlive) == null) {
+		       .context(NettyPipeline.HttpKeepAlive) == null) {
 			ctx.pipeline()
-			   .addBefore(NettyHandlerNames.ReactiveBridge,
-					   NettyHandlerNames.HttpKeepAlive,
+			   .addBefore(NettyPipeline.ReactiveBridge,
+					   NettyPipeline.HttpKeepAlive,
 					   new HttpServerKeepAliveHandler());
 		}
 		ctx.read();
@@ -384,11 +377,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 
 			if (isWebsocket() && ctx.pipeline()
-			                        .context(NettyHandlerNames.HttpAggregator) == null) {
+			                        .context(NettyPipeline.HttpAggregator) == null) {
 				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
 				channel().pipeline()
-				         .addBefore(NettyHandlerNames.ReactiveBridge,
-						         NettyHandlerNames.HttpAggregator,
+				         .addBefore(NettyPipeline.ReactiveBridge,
+						         NettyPipeline.HttpAggregator,
 						         agg);
 			}
 
@@ -422,10 +415,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onOutboundComplete() {
+		if(!channel().isOpen() || isDisposed()){
+			return;
+		}
+
 		if (log.isDebugEnabled()) {
 			log.debug("User Handler requesting a last HTTP frame write", formatName());
 		}
-		if (markReceiving()) {
+		if (markInboundDone()) {
 			release();
 		}
 		else {
@@ -469,11 +466,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	final void release() {
-		if (log.isDebugEnabled()) {
-			log.debug("Last HTTP response frame");
-		}
 		ChannelFuture f = null;
 		if (!isWebsocket()) {
+			if (log.isDebugEnabled()) {
+				log.debug("Last HTTP response frame");
+			}
 			if (markHeadersAsSent()) {
 				if (!HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
 						nettyResponse)) {
@@ -504,37 +501,23 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onChannelTerminate();
 			}
 		}
-		else {
-			f = channel().writeAndFlush(new CloseWebSocketFrame());
-			f.addListener(s -> {
-				super.onChannelTerminate();
-				if (!s.isSuccess() && log.isDebugEnabled()) {
-					log.error("Failed flushing last frame", s.cause());
-				}
-			});
-		}
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,
 			String protocols,
-			boolean textPlain,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (isDisposed()) {
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		if (markHeadersAsSent()) {
-			HttpServerWSOperations ops =
-					new HttpServerWSOperations(url, protocols, this, textPlain);
+			HttpServerWSOperations ops = new HttpServerWSOperations(url, protocols, this);
 
 			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
 			             .compareAndSet(this, ops)) {
 				return FutureMono.from(ops.handshakerResult)
-				                 .doOnSuccess(v -> websocketHandler.apply(
-						                        ops, ops)
-				                                                   .subscribe(
-						                                                   closeSubscriber(
-								                                                   ops)));
+				                 .then(() -> Mono.from(websocketHandler.apply(ops, ops)))
+				                 .doAfterTerminate(ops);
 			}
 		}
 		else {

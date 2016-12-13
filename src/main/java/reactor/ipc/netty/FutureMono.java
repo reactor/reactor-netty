@@ -29,10 +29,9 @@ import reactor.core.publisher.Operators;
 /**
  * Convert Netty Future into void {@link Mono}.
  *
- * @param <F> the future type
  * @author Stephane Maldini
  */
-public abstract class FutureMono<F extends Future<Void>> extends Mono<Void> {
+public abstract class FutureMono extends Mono<Void> {
 
 	/**
 	 * Convert a {@link Future} into {@link Mono}. {@link Mono#subscribe(Subscriber)}
@@ -61,7 +60,7 @@ public abstract class FutureMono<F extends Future<Void>> extends Mono<Void> {
 		return new DeferredFutureMono<>(deferredFuture);
 	}
 
-	final static class ImmediateFutureMono<F extends Future<Void>> extends FutureMono<F> {
+	final static class ImmediateFutureMono<F extends Future<Void>> extends FutureMono {
 
 		final F future;
 
@@ -80,7 +79,7 @@ public abstract class FutureMono<F extends Future<Void>> extends Mono<Void> {
 		}
 	}
 
-	final static class DeferredFutureMono<F extends Future<Void>> extends FutureMono<F> {
+	final static class DeferredFutureMono<F extends Future<Void>> extends FutureMono {
 
 		final Supplier<F> deferredFuture;
 

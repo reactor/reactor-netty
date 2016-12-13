@@ -45,10 +45,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -119,7 +119,7 @@ public class TcpServerTests {
 			  });
 
 			return out.sendString(Mono.just("Hi"))
-			          .concatWith(Flux.never());
+			          .neverComplete();
 		})
 		                                     .block();
 
@@ -152,7 +152,7 @@ public class TcpServerTests {
 					                    throw Exceptions.propagate(ioe);
 				                    }
 			                    }))
-			          .concatWith(Flux.never());
+			          .neverComplete();
 //			return Mono.empty();
 		})
 		                                     .block();
@@ -213,7 +213,7 @@ public class TcpServerTests {
 		TcpServer server = TcpServer.create(opts -> opts
 		                                                 .afterChannelInit(c -> c.pipeline()
 		                                                                         .addBefore(
-				                                                 NettyHandlerNames.ReactiveBridge,
+				                                                 NettyPipeline.ReactiveBridge,
 				                                                 "codec",
 				                                                 new LineBasedFrameDecoder(
 						                                                 8 * 1024)))
@@ -331,9 +331,8 @@ public class TcpServerTests {
 		server.newRouter(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.create()
 				                       .get("ws://localhost:3000",
-						                       requestOut -> requestOut.sendWebsocketText(
-								                       (i, o) -> o.sendString(Mono.just(
-										                       "ping"))))
+						                       requestOut -> requestOut.sendWebsocket()
+						                                               .sendString(Mono.just("ping")))
 				                       .flatMap(repliesOut -> out.sendGroups(repliesOut.receive()
 				                                                                       .window(100)))))
 		      .block()

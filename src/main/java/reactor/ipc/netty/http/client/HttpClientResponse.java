@@ -15,15 +15,21 @@
  */
 package reactor.ipc.netty.http.client;
 
+import java.util.function.BiFunction;
+
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.http.HttpInfos;
 import reactor.ipc.netty.http.multipart.MultipartInbound;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
  * An HttpClient Reactive read contract for incoming response. It inherits several
@@ -72,6 +78,32 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 			}
 		};
 	}
+
+	/**
+	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
+	 * success,
+	 * otherwise the returned {@link Mono} fail.
+	 *
+	 * @param websocketHandler the in/out handler for ws transport
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> receiveWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return receiveWebsocket(null, websocketHandler);
+	}
+
+	/**
+	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
+	 * success,
+	 * otherwise the returned {@link Mono} fail.
+	 *
+	 * @param protocols optional sub-protocol
+	 * @param websocketHandler the in/out handler for ws transport
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	Mono<Void> receiveWebsocket(String protocols,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
 
 	/**
 	 * Return the previous redirections or empty array

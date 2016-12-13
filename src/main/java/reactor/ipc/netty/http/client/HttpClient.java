@@ -25,6 +25,7 @@ import java.util.function.Function;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
 import org.reactivestreams.Publisher;
@@ -34,7 +35,6 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServerResponse;
@@ -246,25 +246,26 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * response
 	 */
 	public final Mono<HttpClientResponse> ws(String url) {
-		return request(WS,
-				url,
-				req -> req.sendWebsocket(ChannelOperations.noopHandler()));
+		return request(WS, url, HttpClientRequest::sendWebsocket);
 	}
 
 	/**
 	 * WebSocket to the passed URL.
 	 *
 	 * @param url the target remote URL
-	 * @param handler the {@link Function} to invoke on opened WS connection
+	 * @param headerBuilder the  header {@link Consumer} to invoke before sending websocket
+	 * handshake
 	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public final Mono<HttpClientResponse> ws(String url,
-			final Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
+			final Consumer<? super HttpHeaders> headerBuilder) {
 		return request(WS,
-				url,
-				ch -> ch.sendWebsocket((in, out) -> handler.apply((HttpClientRequest) out)));
+				url, ch -> {
+					headerBuilder.accept(ch.requestHeaders());
+					return ch.sendWebsocket();
+				});
 	}
 
 	static final HttpMethod     WS             = new HttpMethod("WS");

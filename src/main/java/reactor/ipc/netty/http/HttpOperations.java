@@ -70,9 +70,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
-	public Mono<Void> send(Publisher<? extends ByteBuf> dataStream) {
+	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
 		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
+			return then(Mono.error(new IllegalStateException("This outbound is not " +
+					"active "	+ "anymore")));
 		}
 
 		if (hasSentHeaders()) {
@@ -84,28 +85,28 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {
 			HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
 		}
-		return sendHeaders().then(super.sendObject(dataStream));
+		return sendHeaders().sendObject(dataStream);
 	}
 
-	public final Mono<Void> sendHeaders() {
+	public final NettyOutbound sendHeaders() {
 		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
+			return then(Mono.error(new IllegalStateException("This outbound is not " + "active " + "anymore")));
 		}
 		if (markHeadersAsSent()) {
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(
-					outboundHttpMessage()));
+			return then(FutureMono.deferFuture(() -> channel().writeAndFlush(
+					outboundHttpMessage())));
 		}
 		else {
-			return Mono.empty();
+			return this;
 		}
 	}
 
 	@Override
-	public final Mono<Void> sendFile(Path file, long position, long count) {
+	public final NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file);
 
 		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
+			return then(Mono.error(new IllegalStateException("This outbound is not " + "active " + "anymore")));
 		}
 
 		if (hasSentHeaders()) {
@@ -128,28 +129,15 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
-	public final Mono<Void> sendObject(final Publisher<?> source) {
+	public final NettyOutbound sendObject(final Publisher<?> source) {
 		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
+			return then(Mono.error(new IllegalStateException("This outbound is not " +
+					"active "	+ "anymore")));
 		}
 		if (hasSentHeaders()) {
 			return super.sendObject(source);
 		}
 		return sendHeaders().then(super.sendObject(source));
-	}
-
-	@Override
-	public final Mono<Void> sendString(Publisher<? extends String> dataStream,
-			Charset charset) {
-		if (isWebsocket()) {
-			return sendObject(Flux.from(dataStream)
-			                      .map(TextWebSocketFrame::new));
-		}
-
-		return send(Flux.from(dataStream)
-		                .map(s -> channel().alloc()
-		                                   .buffer()
-		                                   .writeBytes(s.getBytes(charset))));
 	}
 
 	@Override

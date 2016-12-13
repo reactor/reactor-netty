@@ -16,18 +16,21 @@
 
 package reactor.ipc.netty.http.server;
 
-import io.netty.buffer.ByteBuf;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.BiConsumer;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
+import io.netty.util.ReferenceCountUtil;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
@@ -38,18 +41,16 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
  * @author Stephane Maldini
  */
 final class HttpServerWSOperations extends HttpServerOperations
-		implements WebsocketInbound, WebsocketOutbound {
+		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
 
 	final WebSocketServerHandshaker handshaker;
 	final ChannelFuture             handshakerResult;
-	final boolean                   plainText;
+
+	volatile int closeSent;
 
 	public HttpServerWSOperations(String wsUrl,
-			String protocols,
-			HttpServerOperations replaced,
-			boolean plainText) {
+			String protocols, HttpServerOperations replaced) {
 		super(replaced.channel(), replaced);
-		this.plainText = plainText;
 
 		Channel channel = replaced.channel();
 
@@ -67,27 +68,23 @@ final class HttpServerWSOperations extends HttpServerOperations
 					replaced.nettyRequest,
 					replaced.nettyRequest.headers(),
 					channel.newPromise())
-			                             .addListener(f -> channel.read());
-			onClose(() -> {
-				removeHandler("wsencoder");
-				removeHandler("wsdecoder");
-			});
+			                             .addListener(f -> {
+				                             ignoreChannelPersistence();
+				                             removeHandler(NettyPipeline.HttpKeepAlive);
+				                             channel.read();
+			                             });
 		}
 	}
 
 	@Override
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame) {
-			if (isTerminated()) {
-				release();
-			}
-			else {
-				onInboundComplete();
-			}
+			CloseWebSocketFrame close = (CloseWebSocketFrame) frame;
+			sendClose(new CloseWebSocketFrame(close.isFinalFragment(),
+					close.rsv(),
+					close.content()
+					     .retain()), f -> onChannelInactive());
 			return;
-		}
-		if (isTerminated()) {
-			ctx.read();
 		}
 		if (frame instanceof PingWebSocketFrame) {
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
@@ -99,28 +96,42 @@ final class HttpServerWSOperations extends HttpServerOperations
 
 	@Override
 	protected void onOutboundComplete() {
-		if (channel().isOpen()) {
-			handshakerResult.addListener(f -> channel().writeAndFlush(new CloseWebSocketFrame())
-			                                           .addListener(f2 -> super.onOutboundComplete()));
-		}
 	}
 
 	@Override
-	protected ChannelFuture sendNext(Object data) {
-		if (data instanceof ByteBuf) {
-			if (plainText) {
-				return channel().write(new TextWebSocketFrame((ByteBuf) data));
+	public void accept(Void aVoid, Throwable throwable) {
+		if (throwable == null) {
+			if (channel().isOpen()) {
+				sendClose(null, f -> onChannelInactive());
 			}
-			return channel().write(new BinaryWebSocketFrame((ByteBuf) data));
 		}
-		else if (data instanceof String) {
-			return channel().write(new TextWebSocketFrame((String) data));
+		else {
+			onOutboundError(throwable);
 		}
-		return channel().write(data);
+	}
+
+	void sendClose(CloseWebSocketFrame frame, ChannelFutureListener listener) {
+		if (frame != null && !frame.isFinalFragment()) {
+			channel().writeAndFlush(frame);
+			return;
+		}
+		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+			ChannelFuture f = channel().writeAndFlush(
+					frame == null ? new CloseWebSocketFrame() : frame);
+			if (listener != null) {
+				f.addListener(listener);
+			}
+			return;
+		}
+		ReferenceCountUtil.retain(frame);
 	}
 
 	@Override
 	public boolean isWebsocket() {
 		return true;
 	}
+
+	static final AtomicIntegerFieldUpdater<HttpServerWSOperations> CLOSE_SENT =
+			AtomicIntegerFieldUpdater.newUpdater(HttpServerWSOperations.class,
+					"closeSent");
 }

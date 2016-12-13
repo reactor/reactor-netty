@@ -19,7 +19,6 @@ package reactor.ipc.netty.http.client;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.buffer.Unpooled;
@@ -30,9 +29,8 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
-import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
@@ -77,7 +75,10 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest disableChunkedTransfer();
 
 	@Override
-	HttpClientRequest flushEach();
+	default HttpClientRequest options(Consumer<? super NettyPipeline.SendOptions> configurator){
+		NettyOutbound.super.options(configurator);
+		return this;
+	}
 
 	/**
 	 * Enable http status 302 auto-redirect support
@@ -145,7 +146,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * @see #send(Publisher)
 	 */
 	default Mono<Void> send() {
-		return sendObject(Unpooled.EMPTY_BUFFER);
+		return sendObject(Unpooled.EMPTY_BUFFER).then();
 	}
 
 	/**
@@ -162,7 +163,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 *
 	 * @return a {@link Mono} successful on committed response
 	 */
-	Mono<Void> sendHeaders();
+	NettyOutbound sendHeaders();
 
 	/**
 	 * Prepare to send an HTTP Form in multipart mode for file upload facilities
@@ -174,57 +175,12 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	Flux<Long> sendMultipart(Consumer<Form> formCallback);
 
 	/**
-	 * Upgrade connection to Websocket
+	 * Upgrade connection to Websocket and immediately send closed websocket frame
+	 * otherwise the returned {@link Mono} fail.
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	default Mono<Void> sendWebsocket() {
-		return sendWebsocket(uri(), false, ChannelOperations.noopHandler());
-	}
-
-	/**
-	 * Upgrade connection to Websocket
-	 *
-	 * @param websocketHandler the in/out handler for ws transport
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(uri(), false, websocketHandler);
-	}
-
-	/**
-	 * Upgrade connection to Websocket
-	 *
-	 * @param protocols
-	 * @param textPlain
-	 * @param websocketHandler the in/out handler for ws transport
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	Mono<Void> sendWebsocket(String protocols,
-			boolean textPlain,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
-
-	/**
-	 * Upgrade connection to Websocket with text plain payloads
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	default Mono<Void> sendWebsocketText() {
-		return sendWebsocket(uri(), true, ChannelOperations.noopHandler());
-	}
-
-	/**
-	 * Upgrade connection to Websocket with text plain payloads
-	 *
-	 * @param websocketHandler the in/out handler for ws transport
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	default Mono<Void> sendWebsocketText(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(uri(), true, websocketHandler);
-	}
+	WebsocketOutbound sendWebsocket();
 
 	/**
 	 * Add an HTTP Form builder

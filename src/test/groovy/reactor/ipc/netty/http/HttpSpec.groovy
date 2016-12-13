@@ -18,6 +18,7 @@ package reactor.ipc.netty.http
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
+import reactor.ipc.netty.NettyOutbound
 import reactor.ipc.netty.http.client.HttpClient
 import reactor.ipc.netty.http.client.HttpClientException
 import reactor.ipc.netty.http.server.HttpServer
@@ -152,6 +153,7 @@ class HttpSpec extends Specification {
 			  }
 			  .get('/test2') { req, res ->
 				 res.send(Flux.error(new Exception()))
+				    .then()
 				    .log("send")
 					.doOnError {
 		  				errored.countDown()
@@ -240,14 +242,14 @@ class HttpSpec extends Specification {
 		  //the returned stream is bound to the request stream and will auto read/close accordingly
 		  resp.header("content-type", "text/plain")
 				  .sendWebsocket { i, o ->
-			o.flushEach()
-					.sendString(i.receive()
-					.asString()
-					.publishOn(Schedulers.single())
-					.doOnNext { serverRes.incrementAndGet() }
-					.map { it + ' ' + req.param('param') + '!' }
-					.log('server-reply'))
-		  }
+			         o.options{ x -> x.flushOnEach() }
+					  .sendString(i.receive()
+						.asString()
+						.publishOn(Schedulers.single())
+						.doOnNext { serverRes.incrementAndGet() }
+						.map { it + ' ' + req.param('param') + '!' }
+						.log('server-reply'))
+				  }
 	  }
 	}.block(Duration.ofSeconds(5))
 
@@ -260,17 +262,13 @@ class HttpSpec extends Specification {
 	  req.header('Content-Type', 'text/plain').header("test", "test")
 
 	  //return a producing stream to send some data along the request
-	  req.flushEach()
-			  .sendWebsocketText { i, o ->
-				o.sendString(Flux
-				  .range(1, 1000)
-				  .log('client-send')
-						.publishOn(Schedulers.parallel())
-				.doOnComplete{ println 'complete' }
-				  .map { it.toString() })
-			  }
-
-		}.flatMap {
+	  req.options { o -> o.flushOnEach() }
+			  .sendWebsocket()
+			  .sendString(Flux
+				.range(1, 1000)
+				.log('client-send')
+				.map { it.toString() })
+	}.flatMap {
 	  replies
 		->
 		//successful handshake, listen for the first returned next replies and pass it downstream

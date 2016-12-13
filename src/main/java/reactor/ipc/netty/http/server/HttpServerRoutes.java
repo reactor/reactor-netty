@@ -276,7 +276,7 @@ public interface HttpServerRoutes extends
 			       .contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 
 				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), protocols, false,
+				return ops.withWebsocketSupport(req.uri(), protocols,
 						handler);
 			}
 			return resp.sendNotFound();

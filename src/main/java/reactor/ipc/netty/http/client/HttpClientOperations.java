@@ -30,7 +30,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -63,7 +62,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -112,7 +113,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			ContextHandler<?> context) {
 		super(channel, handler, context);
 		this.isSecure = channel.pipeline()
-		                       .get(NettyHandlerNames.SslHandler) != null;
+		                       .get(NettyPipeline.SslHandler) != null;
 		String[] redirects = channel.attr(REDIRECT_ATTR_KEY)
 		                            .get();
 		this.redirectedFrom = redirects == null ? EMPTY_REDIRECTIONS : redirects;
@@ -141,8 +142,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public final HttpClientOperations addHandler(String name, ChannelHandler
-			handler) {
+	public final HttpClientOperations addHandler(String name, ChannelHandler handler) {
 		super.addHandler(name, handler);
 		return this;
 	}
@@ -199,18 +199,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public final HttpClientOperations onClose(Runnable onClose) {
-		super.onClose(onClose);
-		return this;
-	}
-
-	@Override
-	public HttpClientRequest flushEach() {
-		super.flushEach();
-		return this;
-	}
-
-	@Override
 	public HttpClientRequest followRedirect() {
 		redirectable = true;
 		return this;
@@ -246,6 +234,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public boolean isWebsocket() {
+		return attr(OPERATIONS_ATTRIBUTE_KEY).get()
+		                                     .getClass()
+		                                     .equals(HttpClientWSOperations.class);
+	}
+
+	@Override
 	public HttpClientRequest keepAlive(boolean keepAlive) {
 		HttpUtil.setKeepAlive(nettyRequest, keepAlive);
 		return this;
@@ -254,6 +249,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpMethod method() {
 		return nettyRequest.method();
+	}
+
+	@Override
+	public final HttpClientOperations onClose(Runnable onClose) {
+		super.onClose(onClose);
+		return this;
 	}
 
 	@Override
@@ -285,10 +286,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
 		}
 		if (markHeadersAsSent()) {
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(
-					new DefaultFullHttpRequest(version(), method(), uri(), EMPTY_BUFFER,
-							requestHeaders, EmptyHttpHeaders.INSTANCE)
-			));
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(new DefaultFullHttpRequest(
+					version(),
+					method(),
+					uri(),
+					EMPTY_BUFFER,
+					requestHeaders,
+					EmptyHttpHeaders.INSTANCE)));
 		}
 		else {
 			return Mono.empty();
@@ -296,7 +300,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public Mono<Void> send(Publisher<? extends ByteBuf> source) {
+	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
 		if (method() == HttpMethod.GET || method() == HttpMethod.HEAD) {
 			ByteBufAllocator alloc = channel().alloc();
 			Flux.from(source)
@@ -310,7 +314,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
 							                         agg.readableBytes());
 				    }
-				    return sendHeaders().then(super.send(Mono.just(agg)));
+				    return sendHeaders().send(Mono.just(agg)).then();
 			    });
 		}
 		return super.send(source);
@@ -333,22 +337,31 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public HttpResponseStatus status() {
-		ResponseState responseState = this.responseState;
-		if (responseState != null) {
-			return HttpResponseStatus.valueOf(responseState.response.status()
-			                                                        .code());
-		}
-		return null;
+	public WebsocketOutbound sendWebsocket() {
+
+		Mono<Void> m = withWebsocketSupport(websocketUri(), null, noopHandler());
+
+		return new WebsocketOutbound() {
+			@Override
+			public NettyContext context() {
+				return HttpClientOperations.this;
+			}
+
+			@Override
+			public Mono<Void> then() {
+				return m;
+			}
+		};
 	}
 
 	@Override
-	public Mono<Void> sendWebsocket(String protocols,
-			boolean textPlain,
+	public Mono<Void> receiveWebsocket(String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
-		ChannelPipeline pipeline = channel().pipeline();
+		return withWebsocketSupport(websocketUri(), protocols, websocketHandler);
+	}
 
+	final URI websocketUri() {
 		URI uri;
 		try {
 			String url = uri();
@@ -367,12 +380,17 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		catch (URISyntaxException e) {
 			throw Exceptions.bubble(e);
 		}
+		return uri;
+	}
 
-		pipeline.addBefore(NettyHandlerNames.ReactiveBridge,
-				NettyHandlerNames.HttpAggregator,
-				new HttpObjectAggregator(8192));
-
-		return withWebsocketSupport(uri, protocols, textPlain, websocketHandler);
+	@Override
+	public HttpResponseStatus status() {
+		ResponseState responseState = this.responseState;
+		if (responseState != null) {
+			return HttpResponseStatus.valueOf(responseState.response.status()
+			                                                        .code());
+		}
+		return null;
 	}
 
 	@Override
@@ -393,18 +411,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public boolean isWebsocket() {
-		return attr(OPERATIONS_ATTRIBUTE_KEY).get()
-		                                     .getClass()
-		                                     .equals(HttpClientWSOperations.class);
-	}
-
-	@Override
 	protected void onChannelActive(final ChannelHandlerContext ctx) {
 
-		addHandler(
-					   NettyHandlerNames.HttpCodecHandler,
-					   new HttpClientCodec());
+		addHandler(NettyPipeline.HttpCodecHandler, new HttpClientCodec());
 
 		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
 
@@ -417,27 +426,25 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			super.onChannelTerminate();
 		}
 		else if (log.isDebugEnabled()) {
-				log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
+			log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
 		}
 	}
 
 	@Override
 	protected void onOutboundComplete() {
-		if (channel().isOpen()) {
-			if (!isWebsocket()) {
-				boolean chunked = HttpUtil.isTransferEncodingChunked(nettyRequest);
-				if (markHeadersAsSent()) {
-					if(!chunked){
-						channel().writeAndFlush(nettyRequest);
-						return;
-					}
-					else{
-						channel().write(nettyRequest);
-					}
+		if (channel().isOpen() && !isDisposed()) {
+			boolean chunked = HttpUtil.isTransferEncodingChunked(nettyRequest);
+			if (markHeadersAsSent()) {
+				if (!chunked) {
+					channel().writeAndFlush(nettyRequest);
+					return;
 				}
-				if(chunked) {
-					channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+				else {
+					channel().write(nettyRequest);
 				}
+			}
+			if (chunked) {
+				channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 			}
 		}
 	}
@@ -466,7 +473,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				prefetchMore(ctx);
 				parentContext().fireContextActive(this);
 			}
-			if(msg instanceof FullHttpResponse) {
+			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
 				onChannelInactive();
 			}
@@ -476,7 +483,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (log.isDebugEnabled()) {
 				log.debug("Received last HTTP packet");
 			}
-			if(msg != LastHttpContent.EMPTY_LAST_CONTENT) {
+			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
 			}
 			onChannelInactive();
@@ -529,9 +536,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return nettyRequest;
 	}
 
-	final void prefetchMore(ChannelHandlerContext ctx){
+	final void prefetchMore(ChannelHandlerContext ctx) {
 		int inboundPrefetch = this.inboundPrefetch - 1;
-		if(inboundPrefetch >= 0){
+		if (inboundPrefetch >= 0) {
 			this.inboundPrefetch = inboundPrefetch;
 			ctx.read();
 		}
@@ -547,7 +554,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	final Mono<Void> withWebsocketSupport(URI url,
 			String protocols,
-			boolean textPlain,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 
 		if (isDisposed()) {
@@ -555,16 +561,20 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 		//prevent further header to be sent for handshaking
 		if (markHeadersAsSent()) {
-			HttpClientWSOperations ops =
-					new HttpClientWSOperations(url, protocols, this, textPlain);
+			addHandler(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+
+			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
 			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
 			             .compareAndSet(this, ops)) {
-				return FutureMono.from(ops.handshakerResult)
-				                 .doOnSuccess(v -> websocketHandler.apply(ops, ops)
-				                                                   .subscribe(
-						                                                   closeSubscriber(
-								                                                   ops)));
+				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
+				                                 .then(() -> Mono.from(
+						                                 websocketHandler.apply(ops,
+								                                 ops)));
+				if (websocketHandler != noopHandler()) {
+					handshake = handshake.doAfterTerminate(ops);
+				}
+				return handshake;
 			}
 		}
 		else {
@@ -643,14 +653,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					parent.disableChunkedTransfer();
 				}
 
-				parent.addHandler(NettyHandlerNames.ChunkedWriter,
-							      new ChunkedWriteHandler());
+				parent.addHandler(NettyPipeline.ChunkedWriter,
+						new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
 
 				HttpRequest r = encoder.finalizeRequest();
 
-				if(!chunked){
+				if (!chunked) {
 					HttpUtil.setTransferEncodingChunked(r, false);
 					HttpUtil.setContentLength(r, encoder.length());
 				}

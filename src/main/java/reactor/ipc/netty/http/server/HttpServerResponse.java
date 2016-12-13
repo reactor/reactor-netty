@@ -16,6 +16,7 @@
 package reactor.ipc.netty.http.server;
 
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -24,6 +25,7 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
@@ -56,6 +58,29 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse addHeader(CharSequence name, CharSequence value);
 
 	/**
+	 * Set transfer-encoding header
+	 *
+	 * @param chunked true if transfer-encoding:chunked
+	 *
+	 * @return this outbound
+	 */
+	HttpServerResponse chunkedTransfer(boolean chunked);
+
+	/**
+	 * Remove transfer-encoding: chunked header
+	 *
+	 * @return this outbound
+	 */
+	HttpServerResponse disableChunkedTransfer();
+
+	/**
+	 * Return  true if headers and status have been sent to the client
+	 *
+	 * @return true if headers and status have been sent to the client
+	 */
+	boolean hasSentHeaders();
+
+	/**
 	 * Set an outbound header
 	 *
 	 * @param name headers key
@@ -72,83 +97,15 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 */
 	HttpServerResponse keepAlive(boolean keepAlive);
 
-	/**
-	 * Remove transfer-encoding: chunked header
-	 *
-	 * @return this outbound
-	 */
-	HttpServerResponse disableChunkedTransfer();
-
-	/**
-	 * Set transfer-encoding header
-	 *
-	 * @param chunked true if transfer-encoding:chunked
-	 *
-	 * @return this outbound
-	 */
-	HttpServerResponse chunkedTransfer(boolean chunked);
-
-	/**
-	 * Return  true if headers and status have been sent to the client
-	 *
-	 * @return true if headers and status have been sent to the client
-	 */
-	boolean hasSentHeaders();
-
-	/**
-	 * Send headers and empty content thus delimiting a full empty body http request
-	 *
-	 * @return a {@link Mono} successful on committed response
-	 * @see #send(Publisher)
-	 */
-	default Mono<Void> send(){
-		return sendObject(Unpooled.EMPTY_BUFFER);
-	}
-
-	/**
-	 * Return a {@link Mono} successful on committed response
-	 *
-	 * @return a {@link Mono} successful on committed response
-	 */
-	Mono<Void> sendHeaders();
-
-
-
-	/**
-	 * Upgrade connection to Websocket
-	 * @param websocketHandler the in/out handler for ws transport
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(uri(), false, websocketHandler);
-	}
-
-	/**
-	 * Upgrade connection to Websocket
-	 * @param protocols
-	 * @param textPlain
-	 * @param websocketHandler the in/out handler for ws transport
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	Mono<Void> sendWebsocket(String protocols,
-			boolean textPlain,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
-
-	/**
-	 * Upgrade connection to Websocket with text plain payloads
-	 *
-	 * @param websocketHandler the in/out handler for ws transport
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	default Mono<Void> sendWebsocketText(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(uri(), true, websocketHandler);
-	}
-
 	@Override
 	default HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle){
 		NettyOutbound.super.onWriteIdle(idleTimeout, onWriteIdle);
+		return this;
+	}
+
+	@Override
+	default HttpServerResponse options(Consumer<? super NettyPipeline.SendOptions> configurator){
+		NettyOutbound.super.options(configurator);
 		return this;
 	}
 
@@ -157,6 +114,23 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return headers sent back to the clients
 	 */
 	HttpHeaders responseHeaders();
+
+	/**
+	 * Send headers and empty content thus delimiting a full empty body http request
+	 *
+	 * @return a {@link Mono} successful on committed response
+	 * @see #send(Publisher)
+	 */
+	default Mono<Void> send(){
+		return sendObject(Unpooled.EMPTY_BUFFER).then();
+	}
+
+	/**
+	 * Return a {@link Mono} successful on committed response
+	 *
+	 * @return a {@link Mono} successful on committed response
+	 */
+	NettyOutbound sendHeaders();
 
 	/**
 	 * Send 404 status {@link HttpResponseStatus#NOT_FOUND}.
@@ -174,6 +148,32 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return a {@link Mono} successful on flush confirmation
 	 */
 	Mono<Void> sendRedirect(String location);
+
+	/**
+	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
+	 * success,
+	 * otherwise the returned {@link Mono} fail.
+	 *
+	 * @param websocketHandler the in/out handler for ws transport
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return sendWebsocket(uri(), websocketHandler);
+	}
+
+	/**
+	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
+	 * success,
+	 * otherwise the returned {@link Mono} fail.
+	 *
+	 * @param protocols optional sub-protocol
+	 * @param websocketHandler the in/out handler for ws transport
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	Mono<Void> sendWebsocket(String protocols,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
+
 
 	/**
 	 * Add Server-Side-Event content-type

@@ -41,6 +41,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
@@ -52,21 +53,22 @@ import reactor.util.concurrent.QueueSupplier;
  * @author Stephane Maldini
  */
 final class ChannelOperationsHandler extends ChannelDuplexHandler
-		implements ChannelFutureListener {
+		implements ChannelFutureListener, NettyPipeline.SendOptions {
 
-	final Queue<?>                            pendingWrites;
 	final PublisherSender                     inner;
+	final BiConsumer<?, ? super ByteBuf>      encoder;
+	final int                                 prefetch;
+	final int                                 limit;
+	long                  pendingBytes;
+
 	/**
 	 * Cast the supplied queue (SpscLinkedArrayQueue) to use its atomic dual-insert
 	 * backed by {@link BiPredicate#test)
 	 **/
-	final BiPredicate<ChannelPromise, Object> pendingWriteOffer;
-	final BiConsumer<?, ? super ByteBuf>      encoder;
-	final int                                 prefetch;
-	final int                                 limit;
-
-	long                  pendingBytes;
-	ChannelHandlerContext ctx;
+	BiPredicate<ChannelPromise, Object> pendingWriteOffer;
+	Queue<?>                            pendingWrites;
+	ChannelHandlerContext               ctx;
+	boolean                             flushOnEach;
 
 	volatile boolean innerActive;
 	volatile boolean removed;
@@ -74,9 +76,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	@SuppressWarnings("unchecked")
 	ChannelOperationsHandler() {
-		this.pendingWrites = QueueSupplier.unbounded()
-		                                  .get();
-		this.pendingWriteOffer = (BiPredicate<ChannelPromise, Object>) pendingWrites;
 		this.inner = new PublisherSender(this);
 		this.prefetch = 32;
 		this.limit = prefetch - (prefetch >> 2);
@@ -136,13 +135,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	final public void exceptionCaught(ChannelHandlerContext ctx, Throwable err)
 			throws Exception {
-		if(log.isDebugEnabled()){
-			log.error("handler failure", err);
-		}
 		Exceptions.throwIfFatal(err);
 		ChannelOperations<?, ?> ops = inbound();
 		if(ops != null){
 			ops.onInboundError(err);
+		}
+		if(log.isDebugEnabled()){
+			log.error("Handler failure while no operation was present", err);
 		}
 	}
 
@@ -179,14 +178,30 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		if(log.isTraceEnabled()){
 			log.trace("User event {}", evt);
 		}
-		ctx.fireUserEventTriggered(evt);
+		if (evt instanceof NettyPipeline.SendOptionsChangeEvent) {
+			if (log.isDebugEnabled()) {
+				log.debug("New sending options");
+			}
+			((NettyPipeline.SendOptionsChangeEvent) evt).configurator()
+			                                            .accept(this);
+		}
+		else {
+			ctx.fireUserEventTriggered(evt);
+		}
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
 			throws Exception {
 		if (log.isDebugEnabled()) {
 			log.debug("Writing object {}", msg);
+		}
+
+		if (pendingWrites == null) {
+			this.pendingWrites = QueueSupplier.unbounded()
+			                                  .get();
+			this.pendingWriteOffer = (BiPredicate<ChannelPromise, Object>) pendingWrites;
 		}
 
 		if (!pendingWriteOffer.test(promise, msg)) {
@@ -194,22 +209,80 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 	}
 
+	@Override
+	public NettyPipeline.SendOptions flushOnBoundary() {
+		return this;
+	}
+
+	@Override
+	public NettyPipeline.SendOptions flushOnEach() {
+		flushOnEach = true;
+		return this;
+	}
+
+	@Override
+	public NettyPipeline.SendOptions flushOnMemoryUsed(long maxPendingBytes) {
+		return this;
+	}
+
+	@Override
+	public NettyPipeline.SendOptions prefetch(int prefetch) {
+		return this;
+	}
+
+	@Override
+	public NettyPipeline.SendOptions prefetchMemory(long prefetchBytes) {
+		return this;
+	}
+
+	@Override
+	public NettyPipeline.SendOptions prefetchMemory(int samplingPrefetch,
+			long prefetchBytes) {
+		return this;
+	}
+
+	@Override
+	public NettyPipeline.SendOptions requestOnWriteAvailable() {
+		return this;
+	}
+
+	@Override
+	public NettyPipeline.SendOptions requestOnWriteConfirm() {
+		return this;
+	}
+
+	@Override
+	public NettyPipeline.SendOptions trackPendingBytes(boolean shouldCount) {
+		return this;
+	}
+
 	ChannelFuture doWrite(Object msg, ChannelPromise promise, PublisherSender inner) {
-		if (inner == null && pendingWrites.isEmpty()) {
+		if (flushOnEach || inner == null && pendingWrites.isEmpty()) {
 			pendingBytes = 0L;
+			if(inner != null){
+				inner.justFlushed = true;
+			}
 			return ctx.writeAndFlush(msg, promise);
 		}
 		else {
-			if(msg instanceof ByteBuf){
-				pendingBytes += ((ByteBuf)msg).readableBytes();
+			if (msg instanceof ByteBuf) {
+				pendingBytes =
+						Operators.addCap(pendingBytes, ((ByteBuf) msg).readableBytes());
 			}
-			else if(msg instanceof ByteBufHolder){
-				pendingBytes += ((ByteBufHolder)msg).content().readableBytes();
+			else if (msg instanceof ByteBufHolder) {
+				pendingBytes = Operators.addCap(pendingBytes,
+						((ByteBufHolder) msg).content()
+						                     .readableBytes());
 			}
-			else if(msg instanceof FileRegion){
-				pendingBytes += ((FileRegion)msg).count();
+			else if (msg instanceof FileRegion) {
+				pendingBytes = Operators.addCap(pendingBytes, ((FileRegion) msg).count());
 			}
-			log.info("size = {}", pendingBytes);
+			if (log.isDebugEnabled()) {
+				log.debug("Pending write size = {}", pendingBytes);
+			}
+			if(inner != null && inner.justFlushed){
+				inner.justFlushed = false;
+			}
 			return ctx.write(msg, promise);
 		}
 	}
@@ -223,7 +296,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					return;
 				}
 
-				if (innerActive || !ctx.channel()
+				if (pendingWrites == null || innerActive || !ctx.channel()
 				                       .isWritable()) {
 					if (WIP.decrementAndGet(this) == 0) {
 						break;
@@ -350,7 +423,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (p != 0L) {
 				produced = 0L;
 				produced(p);
-				parent.ctx.flush();
+				if(!justFlushed) {
+					parent.ctx.flush();
+				}
 			}
 
 			if (f != null) {
@@ -371,7 +446,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (p != 0L) {
 				produced = 0L;
 				produced(p);
-				parent.ctx.flush();
+				if(!justFlushed) {
+					parent.ctx.flush();
+				}
 			}
 
 			if (f != null) {

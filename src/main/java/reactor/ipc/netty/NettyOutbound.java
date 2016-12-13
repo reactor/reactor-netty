@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -32,6 +33,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.connector.Outbound;
@@ -39,7 +41,7 @@ import reactor.ipc.connector.Outbound;
 /**
  * @author Stephane Maldini
  */
-public interface NettyOutbound extends Outbound<ByteBuf> {
+public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 
 	/**
 	 * Return the assigned {@link ByteBufAllocator}.
@@ -52,20 +54,28 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	}
 
 	/**
+	 * Provide a new {@link NettyOutbound} scoped configuration for sending. The
+	 * {@link NettyPipeline.SendOptions} changes will apply to the next written object or
+	 * {@link Publisher}.
+	 *
+	 * @param configurator the callback invoked to retrieve send configuration
+	 *
+	 * @return {@code this} instance
+	 */
+	default NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+		context().channel()
+		         .pipeline()
+		         .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator, null));
+		return this;
+	}
+
+	/**
 	 * Return a {@link NettyContext} to operate on the underlying
 	 * {@link Channel} state.
 	 *
 	 * @return the {@link NettyContext}
 	 */
 	NettyContext context();
-
-	/**
-	 * Enable flush on each packet sent via {@link #send}, {@link #sendString},
-	 * {@link #sendObject},{@link #sendByteArray}.
-	 *
-	 * @return {@code this} instance
-	 */
-	NettyOutbound flushEach();
 
 	/**
 	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given
@@ -77,13 +87,13 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return {@literal this}
 	 */
 	default NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
-		context().addHandler(NettyHandlerNames.OnChannelWriteIdle,
-				new ByteBufFlux.OutboundIdleStateHandler(idleTimeout, onWriteIdle));
+		context().addHandler(NettyPipeline.OnChannelWriteIdle,
+				new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle));
 		return this;
 	}
 
 	@Override
-	default Mono<Void> send(Publisher<? extends ByteBuf> dataStream) {
+	default NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
 		return sendObject(dataStream);
 	}
 
@@ -97,8 +107,8 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default Mono<Void> sendByteArray(Publisher<? extends byte[]> dataStream) {
-		return send(Flux.from(dataStream)
+	default NettyOutbound sendByteArray(Publisher<? extends byte[]> dataStream) {
+		return sendObject(Flux.from(dataStream)
 		                .map(Unpooled::wrappedBuffer));
 	}
 
@@ -122,12 +132,12 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default Mono<Void> sendFile(Path file) {
+	default NettyOutbound sendFile(Path file) {
 		try {
 			return sendFile(file, 0L, Files.size(file));
 		}
 		catch (IOException e) {
-			return Mono.error(e);
+			return then(Mono.error(e));
 		}
 	}
 
@@ -153,9 +163,9 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default Mono<Void> sendFile(Path file, long position, long count) {
+	default NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file);
-		return Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
+		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
 				fc -> FutureMono.from(context().channel()
 				                               .writeAndFlush(new DefaultFileRegion(fc,
 						                               position,
@@ -165,7 +175,7 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 						fc.close();
 					}
 					catch (IOException ioe) {/*IGNORE*/}
-				});
+				}));
 	}
 
 	/**
@@ -178,10 +188,10 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A {@link Mono} to signal successful sequence write (e.g. after "flush") or
 	 * any error during write
 	 */
-	default Mono<Void> sendGroups(Publisher<? extends Publisher<? extends ByteBuf>> dataStreams) {
-		return Flux.from(dataStreams)
+	default NettyOutbound sendGroups(Publisher<? extends Publisher<? extends ByteBuf>> dataStreams) {
+		return then(Flux.from(dataStreams)
 		           .concatMapDelayError(this::send, false, 32)
-		           .then();
+		           .then());
 	}
 
 	/**
@@ -194,9 +204,9 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default Mono<Void> sendObject(Publisher<?> dataStream) {
-		return FutureMono.deferFuture(() -> context().channel()
-		                                             .writeAndFlush(dataStream));
+	default NettyOutbound sendObject(Publisher<?> dataStream) {
+		return then(FutureMono.deferFuture(() -> context().channel()
+		                                                  .writeAndFlush(dataStream)));
 	}
 
 	/**
@@ -208,9 +218,9 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A {@link Mono} to signal successful sequence write (e.g. after "flush") or
 	 * any error during write
 	 */
-	default Mono<Void> sendObject(Object msg) {
-		return FutureMono.deferFuture(() -> context().channel()
-		                                             .write(msg));
+	default NettyOutbound sendObject(Object msg) {
+		return then(FutureMono.deferFuture(() -> context().channel()
+		                                                  .writeAndFlush(msg)));
 	}
 
 	/**
@@ -223,7 +233,7 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default Mono<Void> sendString(Publisher<? extends String> dataStream) {
+	default NettyOutbound sendString(Publisher<? extends String> dataStream) {
 		return sendString(dataStream, Charset.defaultCharset());
 	}
 
@@ -238,13 +248,37 @@ public interface NettyOutbound extends Outbound<ByteBuf> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default Mono<Void> sendString(Publisher<? extends String> dataStream,
+	default NettyOutbound sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
-		return send(Flux.from(dataStream)
-		                .map(s -> context().channel()
-		                                   .alloc()
+		return sendObject(Flux.from(dataStream)
+		                      .map(s -> alloc()
 		                                   .buffer()
 		                                   .writeBytes(s.getBytes(charset))));
+	}
+
+	/**
+	 * Subscribe a {@code Void} subscriber to this outbound and trigger all eventual
+	 * parent outbound send.
+	 *
+	 * @param s the {@link Subscriber} to listen for send sequence completion/failure
+	 */
+	@Override
+	default void subscribe(Subscriber<? super Void> s) {
+		then().subscribe(s);
+	}
+
+	/**
+	 * Append a {@link Publisher} task such as a Mono and return a new
+	 * {@link NettyOutbound} to sequence further send.
+	 *
+	 * @param other the {@link Publisher} to subscribe to when this pending outbound
+	 * {@link #then()} is complete;
+	 *
+	 * @return a new {@link NettyOutbound} that
+	 */
+	@Override
+	default NettyOutbound then(Publisher<Void> other) {
+		return new ReactorNetty.OutboundThen(this, other);
 	}
 
 }

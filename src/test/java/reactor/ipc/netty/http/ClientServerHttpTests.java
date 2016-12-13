@@ -38,6 +38,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 
@@ -258,7 +259,7 @@ public class ClientServerHttpTests {
 
 		httpServer = HttpServer.create(0)
 		                       .newRouter(r -> r.get("/data",
-				                       (req, resp) -> resp.flushEach()
+				                       (req, resp) -> resp.options(NettyPipeline.SendOptions::flushOnEach)
 				                                          .send(Flux.from(processor)
 				                                                    .log("server")
 				                                                    .timeout(Duration.ofSeconds(

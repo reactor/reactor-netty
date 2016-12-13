@@ -30,7 +30,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -128,13 +128,13 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	final void connectOrAcquire(CHANNEL c) {
 		if (c.pipeline()
-		     .get(NettyHandlerNames.BridgeSetup) == null) {
+		     .get(NettyPipeline.BridgeSetup) == null) {
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
 			doPipeline(c.pipeline());
 			c.pipeline()
-			 .addLast(NettyHandlerNames.BridgeSetup, new BridgeSetupHandler(this));
+			 .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
 			if (c.isRegistered()) {
 				c.pipeline()
 				 .fireChannelRegistered();
@@ -162,10 +162,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 					 .getAndSet(op);
 
 			if (previous != null) {
-				previous.cancel();
+				previous.inbound.cancel();
 			}
 			op.onChannelActive(c.pipeline()
-			                    .context(NettyHandlerNames.BridgeSetup));
+			                    .context(NettyPipeline.BridgeSetup));
 		}
 	}
 
@@ -209,12 +209,22 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			onReleaseEmitter.onComplete();
 			return;
 		}
+
+
+
 		pool.release(c).addListener(f -> {
 			if(f.isSuccess()){
 				onReleaseEmitter.onComplete();
 			}
 			else{
 				onReleaseEmitter.onError(f.cause());
+			}
+			if (!c.isOpen()) {
+				return;
+			}
+			Boolean attr = c.attr(CLOSE_CHANNEL).get();
+			if(attr != null && attr){
+				c.close();
 			}
 		});
 

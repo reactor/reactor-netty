@@ -261,43 +261,5 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 		throw new IllegalArgumentException("Object " + o + " of type " + o.getClass() + " " + "cannot be converted to ByteBuf");
 	};
 
-	final static class OutboundIdleStateHandler extends IdleStateHandler {
-
-		final Runnable onWriteIdle;
-
-		OutboundIdleStateHandler(long idleTimeout, Runnable onWriteIdle) {
-			super(0, idleTimeout, 0, TimeUnit.MILLISECONDS);
-			this.onWriteIdle = onWriteIdle;
-		}
-
-		@Override
-		protected void channelIdle(ChannelHandlerContext ctx,
-				IdleStateEvent evt) throws Exception {
-			if (evt.state() == IdleState.WRITER_IDLE) {
-				onWriteIdle.run();
-			}
-			super.channelIdle(ctx, evt);
-		}
-	}
-
-	final static class InboundIdleStateHandler extends IdleStateHandler {
-
-		final Runnable onReadIdle;
-
-		InboundIdleStateHandler(long idleTimeout, Runnable onReadIdle) {
-			super(idleTimeout, 0, 0, TimeUnit.MILLISECONDS);
-			this.onReadIdle = onReadIdle;
-		}
-
-		@Override
-		protected void channelIdle(ChannelHandlerContext ctx,
-				IdleStateEvent evt) throws Exception {
-			if (evt.state() == IdleState.READER_IDLE) {
-				onReadIdle.run();
-			}
-			super.channelIdle(ctx, evt);
-		}
-	}
-
 	final static int MAX_CHUNK_SIZE = 1024 * 512; //500k
 }

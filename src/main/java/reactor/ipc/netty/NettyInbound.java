@@ -63,8 +63,8 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 * @return {@literal this}
 	 */
 	default NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		context().addHandler(NettyHandlerNames.OnChannelReadIdle,
-				new ByteBufFlux.InboundIdleStateHandler(idleTimeout, onReadIdle));
+		context().addHandler(NettyPipeline.OnChannelReadIdle,
+				new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle));
 		return this;
 	}
 

@@ -30,7 +30,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyHandlerNames;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ServerOptions;
 
 /**
@@ -119,6 +119,15 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	public void terminateChannel(Channel channel) {
+		if (!f.channel()
+		     .isOpen()) {
+			return;
+		}
+		Boolean attr = channel.attr(CLOSE_CHANNEL).get();
+		if(attr != null && attr){
+			channel.close();
+			return;
+		}
 		if(channel.eventLoop().inEventLoop()){
 			recycleHandler(channel);
 		}
@@ -139,7 +148,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 		       .set(op);
 
 		op.onChannelActive(channel.pipeline()
-		                          .context(NettyHandlerNames.ReactiveBridge));
+		                          .context(NettyPipeline.ReactiveBridge));
 	}
 
 	@Override
