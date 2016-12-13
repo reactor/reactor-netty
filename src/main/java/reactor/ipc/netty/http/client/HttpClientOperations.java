@@ -666,7 +666,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				}
 
 				parent.channel()
-				      .write(r);
+				      .writeAndFlush(r);
 
 				Flux<Long> tail = encoder.progressFlux.onBackpressureLatest();
 
