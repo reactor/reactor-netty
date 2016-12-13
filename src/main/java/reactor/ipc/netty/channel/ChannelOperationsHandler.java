@@ -35,6 +35,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
+import io.netty.handler.stream.ChunkedInput;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -257,7 +258,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	ChannelFuture doWrite(Object msg, ChannelPromise promise, PublisherSender inner) {
-		if (flushOnEach || inner == null && pendingWrites.isEmpty()) {
+		if (flushOnEach || inner == null && pendingWrites.isEmpty() || msg instanceof ChunkedInput) {
 			pendingBytes = 0L;
 			if(inner != null){
 				inner.justFlushed = true;
