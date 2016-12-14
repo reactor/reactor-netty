@@ -258,7 +258,12 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	ChannelFuture doWrite(Object msg, ChannelPromise promise, PublisherSender inner) {
-		if (flushOnEach || inner == null && pendingWrites.isEmpty() || msg instanceof ChunkedInput) {
+		if (flushOnEach || //fastpath
+				msg instanceof ChunkedInput || //let chunkedwriterhandler process
+				inner == null && pendingWrites.isEmpty() || //last drained element
+				!ctx.channel()
+				    .isWritable() //force flush if write buffer full
+				) {
 			pendingBytes = 0L;
 			if(inner != null){
 				inner.justFlushed = true;

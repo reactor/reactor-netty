@@ -17,20 +17,51 @@
 package reactor.ipc.netty.http;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
 
-import io.netty.handler.ssl.OpenSsl;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import org.junit.Test;
 import org.testng.Assert;
+import reactor.core.publisher.Flux;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
+import reactor.test.StepVerifier;
 
 /**
  * @author Stephane Maldini
  */
 public class HttpServerTests {
+
+	@Test
+	public void flushOnComplete() {
+
+		Flux<ByteBuf> test = Flux.range(0, 20000)
+		                         .map(n -> String.format("%010d\n", n))
+		                         .log()
+		                         .map(value -> ByteBufAllocator.DEFAULT.buffer()
+		                                                               .writeBytes(value.getBytes()));
+
+		NettyContext c = HttpServer.create(0)
+		                           .newHandler((request, response) -> response.send(test))
+		                           .block();
+
+		Flux<String> client = HttpClient.create(c.address()
+		                                         .getPort())
+		                                .get("/")
+		                                .block()
+		                                .receive()
+		                                .asString()
+		                                .flatMapIterable(s -> Arrays.asList(s.split("\n")));
+
+		StepVerifier.create(client)
+		            .expectNextCount(20000)
+		            .expectComplete()
+		            .verify();
+	}
 
 	@Test
 	public void keepAlive() {
@@ -42,27 +73,33 @@ public class HttpServerTests {
 
 		HttpResources.set(PoolResources.fixed("http", 1));
 
-		HttpClientResponse response0 = HttpClient.create(c.address().getPort())
-		                                        .get("/test/index.html")
-		                                        .block();
+		HttpClientResponse response0 = HttpClient.create(c.address()
+		                                                  .getPort())
+		                                         .get("/test/index.html")
+		                                         .block();
 
-		HttpClientResponse response1 = HttpClient.create(c.address().getPort())
+		HttpClientResponse response1 = HttpClient.create(c.address()
+		                                                  .getPort())
 		                                         .get("/test/test.css")
 		                                         .block();
 
-		HttpClientResponse response2 = HttpClient.create(c.address().getPort())
+		HttpClientResponse response2 = HttpClient.create(c.address()
+		                                                  .getPort())
 		                                         .get("/test/test1.css")
 		                                         .block();
 
-		HttpClientResponse response3 = HttpClient.create(c.address().getPort())
+		HttpClientResponse response3 = HttpClient.create(c.address()
+		                                                  .getPort())
 		                                         .get("/test/test2.css")
 		                                         .block();
 
-		HttpClientResponse response4 = HttpClient.create(c.address().getPort())
+		HttpClientResponse response4 = HttpClient.create(c.address()
+		                                                  .getPort())
 		                                         .get("/test/test3.css")
 		                                         .block();
 
-		HttpClientResponse response5 = HttpClient.create(c.address().getPort())
+		HttpClientResponse response5 = HttpClient.create(c.address()
+		                                                  .getPort())
 		                                         .get("/test/test4.css")
 		                                         .block();
 
@@ -71,7 +108,6 @@ public class HttpServerTests {
 		                                                             .disablePool())
 		                                         .get("/test/test5.css")
 		                                         .block();
-
 
 		Assert.assertEquals(response0.channel(), response1.channel());
 		Assert.assertEquals(response0.channel(), response2.channel());
