@@ -163,6 +163,15 @@ public class TcpServerTests {
 		connectedServer.dispose();
 	}
 
+	@Test(timeout = 10000)
+	public void testHang() throws Exception {
+		NettyContext httpServer = HttpServer
+				.create(opts -> opts.listen("0.0.0.0", 0))
+				.newRouter(r -> r.get("/data", (request, response) -> {
+					return response.send(Mono.empty());
+				})).block();
+		httpServer.dispose();
+	}
 
 	@Test
 	public void exposesRemoteAddress() throws InterruptedException {

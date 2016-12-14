@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http;
 
-import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -27,9 +26,7 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyInbound;
@@ -60,6 +57,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		super(ioChannel, handler, context);
 	}
 
+	/**
+	 * Has headers been sent
+	 *
+	 * @return true if headers have been sent
+	 */
 	public final boolean hasSentHeaders() {
 		return statusAndHeadersSent == 1;
 	}
