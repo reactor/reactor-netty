@@ -81,13 +81,6 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	public NettyContext addHandler(ChannelHandler handler) {
-		channel().pipeline()
-		         .addLast(handler);
-		return this;
-	}
-
-	@Override
 	public NettyContext addHandler(String name, ChannelHandler handler) {
 		channel().pipeline()
 		         .addLast(name, handler);

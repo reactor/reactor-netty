@@ -44,10 +44,22 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContext {
 
 	@Override
-	HttpClientResponse addHandler(ChannelHandler handler);
+	default HttpClientResponse addHandler(ChannelHandler handler){
+		NettyContext.super.addHandler(handler);
+		return this;
+	}
 
 	@Override
 	HttpClientResponse addHandler(String name, ChannelHandler handler);
+
+	@Override
+	default HttpClientResponse addDecoder(ChannelHandler handler){
+		NettyContext.super.addDecoder(handler);
+		return this;
+	}
+
+	@Override
+	HttpClientResponse addDecoder(String name, ChannelHandler handler);
 
 	@Override
 	HttpClientResponse onClose(Runnable onClose);

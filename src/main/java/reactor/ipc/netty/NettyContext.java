@@ -16,6 +16,7 @@
 package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -39,7 +40,9 @@ public interface NettyContext extends Cancellation {
 	 *
 	 * @return this inbound
 	 */
-	NettyContext addHandler(ChannelHandler handler);
+	default NettyContext addHandler(ChannelHandler handler){
+		return addHandler(Objects.toString(handler), handler);
+	}
 
 	/**
 	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline},
@@ -52,6 +55,37 @@ public interface NettyContext extends Cancellation {
 	 * @return this inbound
 	 */
 	NettyContext addHandler(String name, ChannelHandler handler);
+
+	/**
+	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline},
+	 * before reactor configured decoder if any. The handler will be safely removed
+	 * when the made inactive (pool release).
+	 * <p> The handler in such position can usually decode raw frames before reactor
+	 * place its codec like HTTP.
+	 *
+	 * @param handler handler instance
+	 *
+	 * @return this inbound
+	 */
+	default NettyContext addDecoder(ChannelHandler handler){
+		return addDecoder(Objects.toString(handler), handler);
+	}
+
+	/**
+	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline},
+	 * before reactor configured decoder if any. The handler will be safely removed
+	 * when the made inactive (pool release).
+	 * <p> The handler in such position can usually decode raw frames before reactor
+	 * place its codec like HTTP.
+	 *
+	 * @param name handler name
+	 * @param handler handler instance
+	 *
+	 * @return this inbound
+	 */
+	default NettyContext addDecoder(String name, ChannelHandler handler){
+		return addHandler(name, handler);
+	}
 
 	/**
 	 * Return remote address if remote channel {@link NettyContext} otherwise local

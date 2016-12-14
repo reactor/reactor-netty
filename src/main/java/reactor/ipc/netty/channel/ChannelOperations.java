@@ -124,11 +124,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> addHandler(ChannelHandler handler) {
-		return addHandler(Objects.toString(handler), handler);
-	}
-
-	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> addHandler(String name,
 			ChannelHandler handler) {
 		Objects.requireNonNull(name, "name");

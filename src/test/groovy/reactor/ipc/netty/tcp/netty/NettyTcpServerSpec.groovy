@@ -18,6 +18,7 @@ package reactor.ipc.netty.tcp.netty
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.buffer.Unpooled
+import io.netty.handler.codec.json.JsonObjectDecoder
 import io.netty.util.NetUtil
 import reactor.core.publisher.Flux
 import reactor.ipc.netty.tcp.TcpClient
@@ -82,6 +83,7 @@ class NettyTcpServerSpec extends Specification {
 	when: "the client/server are prepared"
 	def latch = new CountDownLatch(10)
 	def server = TcpServer.create().newHandler { i, o ->
+	  i.context().addDecoder(new JsonObjectDecoder())
 	  i.receive()
 			  .asString()
 			  .log('serve')
@@ -93,6 +95,8 @@ class NettyTcpServerSpec extends Specification {
 
 	def client = TcpClient.create(server.address().port)
 	client.newHandler { i, o ->
+	  i.context().addDecoder(new JsonObjectDecoder())
+
 	  i.receive()
 			  .asString()
 			  .map { bb -> m.readValue(bb, Pojo[]) }

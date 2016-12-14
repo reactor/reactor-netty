@@ -346,6 +346,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 						              .accept(ctx.channel());
 					}
 				}
+				ctx.pipeline().remove(this);
 			}
 			ctx.fireChannelActive();
 		}
@@ -353,6 +354,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		@Override
 		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 			if (!active) {
+				ctx.pipeline().remove(this);
 				parent.fireContextError(ABORTED);
 			}
 			ctx.fireChannelInactive();
@@ -367,7 +369,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					                                                               .toString(),
 							cause);
 				}
-
+				ctx.pipeline().remove(this);
 				parent.fireContextError(cause);
 			}
 			ctx.fireExceptionCaught(cause);

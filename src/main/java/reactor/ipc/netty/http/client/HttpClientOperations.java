@@ -147,6 +147,24 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return this;
 	}
 
+	@Override
+	public HttpClientOperations addDecoder(ChannelHandler handler) {
+		super.addDecoder(handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations addDecoder(String name, ChannelHandler handler) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(handler, "handler");
+
+		channel().pipeline()
+		       .addBefore(NettyPipeline.HttpCodecHandler, name, handler);
+
+		onClose(() -> removeHandler(name));
+		return this;
+	}
+
 	/**
 	 * Accumulate a response HTTP header for the given key name, appending ";" for each
 	 * new value

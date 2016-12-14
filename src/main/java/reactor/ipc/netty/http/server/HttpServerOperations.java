@@ -57,8 +57,8 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -109,15 +109,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public final HttpServerOperations addHandler(ChannelHandler handler) {
-		super.addHandler(handler);
+	public HttpServerOperations addDecoder(ChannelHandler handler) {
+		super.addDecoder(handler);
 		return this;
 	}
 
 	@Override
-	public final HttpServerOperations addHandler(String name, ChannelHandler
-			handler) {
-		super.addHandler(name, handler);
+	public HttpServerOperations addDecoder(String name, ChannelHandler handler) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(handler, "handler");
+
+		channel().pipeline()
+		         .addBefore(NettyPipeline.HttpCodecHandler, name, handler);
+
+		onClose(() -> removeHandler(name));
 		return this;
 	}
 

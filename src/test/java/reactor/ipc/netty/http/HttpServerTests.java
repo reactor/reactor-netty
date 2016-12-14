@@ -19,8 +19,7 @@ package reactor.ipc.netty.http;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
@@ -29,6 +28,7 @@ import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 
 /**
@@ -39,26 +39,23 @@ public class HttpServerTests {
 	@Test
 	public void flushOnComplete() {
 
-		Flux<ByteBuf> test = Flux.range(0, 20000)
-		                         .map(n -> String.format("%010d\n", n))
-		                         .log()
-		                         .map(value -> ByteBufAllocator.DEFAULT.buffer()
-		                                                               .writeBytes(value.getBytes()));
+		Flux<String> test = Flux.range(0, 100)
+		                        .map(n -> String.format("%010d", n));
 
 		NettyContext c = HttpServer.create(0)
-		                           .newHandler((request, response) -> response.send(test))
+		                           .newHandler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
 		                           .block();
 
 		Flux<String> client = HttpClient.create(c.address()
 		                                         .getPort())
 		                                .get("/")
 		                                .block()
+		                                .addDecoder(new LineBasedFrameDecoder(10))
 		                                .receive()
-		                                .asString()
-		                                .flatMapIterable(s -> Arrays.asList(s.split("\n")));
+		                                .asString();
 
 		StepVerifier.create(client)
-		            .expectNextCount(20000)
+		            .expectNextSequence(test.toIterable())
 		            .expectComplete()
 		            .verify();
 	}
