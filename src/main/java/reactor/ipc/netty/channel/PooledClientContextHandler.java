@@ -128,7 +128,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	final void connectOrAcquire(CHANNEL c) {
 		if (c.pipeline()
-		     .get(NettyPipeline.BridgeSetup) == null) {
+		     .get(NettyPipeline.ReactiveBridge) == null) {
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
