@@ -173,9 +173,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 			channel.pipeline()
 		           .addAfter(name+"$extract", name, handler);
+
 			onClose(() -> {
 				removeHandler(name);
-				removeHandler(name+"$extract");
+				if(handler instanceof ByteToMessageDecoder) {
+					removeHandler(name + "$extract");
+				}
 			});
 		}
 		return this;
