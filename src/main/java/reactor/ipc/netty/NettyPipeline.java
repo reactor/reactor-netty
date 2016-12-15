@@ -185,5 +185,16 @@ public interface NettyPipeline {
 		public Publisher<?> source() {
 			return source;
 		}
+
+		static final Object TERMINATED = new Object();
+	}
+
+	/**
+	 * Return a marking event used when a netty connector handler terminates
+	 *
+	 * @return a marking event used when a netty connector handler terminates
+	 */
+	static Object handlerTerminatedEvent() {
+		return SendOptionsChangeEvent.TERMINATED;
 	}
 }

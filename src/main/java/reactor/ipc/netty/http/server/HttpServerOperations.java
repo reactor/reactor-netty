@@ -522,14 +522,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (isKeepAlive()) {
 				if (f != null) {
 					f.addListener(s -> {
-						super.onChannelTerminate();
+						onChannelTerminate();
 						if (!s.isSuccess() && log.isDebugEnabled()) {
 							log.error("Failed flushing last frame", s.cause());
 						}
 					});
 					return;
 				}
-				super.onChannelTerminate();
+				onChannelTerminate();
 			}
 		}
 	}

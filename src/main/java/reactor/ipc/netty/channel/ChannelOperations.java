@@ -405,6 +405,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * React on channel release/close event
 	 */
 	protected void onChannelTerminate() {
+		channel.pipeline().fireUserEventTriggered(NettyPipeline.handlerTerminatedEvent());
 		onChannelInactive();
 	}
 

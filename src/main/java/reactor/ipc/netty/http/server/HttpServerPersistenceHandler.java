@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.util.concurrent.QueueSupplier;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
@@ -130,23 +131,27 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 				}
 				promise.addListener(ChannelFutureListener.CLOSE);
 			}
-			else if (toRemove) {
-				toRemove = false;
-				pendingResponses -= 1;
-				ctx.write(msg, promise);
-				if (pipelined != null && !pipelined.isEmpty()) {
-					if (HttpServerOperations.log.isDebugEnabled()) {
-						HttpServerOperations.log.debug("Draining next pipelined " +
-										"request," + " pending response count: {}",
-								pendingResponses);
-					}
-					ctx.executor()
-					   .execute(this);
-				}
-				return;
-			}
 		}
 		ctx.write(msg, promise);
+	}
+
+	@Override
+	public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
+			throws Exception {
+		if (evt == NettyPipeline.handlerTerminatedEvent() && toRemove) {
+			toRemove = false;
+			pendingResponses -= 1;
+			if (pipelined != null && !pipelined.isEmpty()) {
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug("Draining next pipelined " + "request," + " pending response count: {}",
+							pendingResponses);
+				}
+				ctx.executor()
+				   .execute(this);
+			}
+		}
+
+		ctx.fireUserEventTriggered(evt);
 	}
 
 	void trackResponse(HttpResponse response) {
