@@ -164,8 +164,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			onClose(() -> removeHandler(name));
 		}
 		else {
+			if(handler instanceof ByteToMessageDecoder) {
+				channel.pipeline()
+				       .addAfter(lastCodec.getKey(),
+						       name + "$extract",
+						       ByteBufHolderHandler.INSTANCE);
+			}
+
 			channel.pipeline()
-			       .addAfter(lastCodec.getKey(), name+"$extract", ByteBufHolderHandler.INSTANCE)
 		           .addAfter(name+"$extract", name, handler);
 			onClose(() -> {
 				removeHandler(name);
