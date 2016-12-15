@@ -19,16 +19,21 @@ package reactor.ipc.netty.channel;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import reactor.core.Loopback;
 import reactor.core.Producer;
 import reactor.core.Trackable;
@@ -38,9 +43,9 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -133,6 +138,40 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		       .addBefore(NettyPipeline.ReactiveBridge, name, handler);
 
 		onClose(() -> removeHandler(name));
+		return this;
+	}
+
+	@Override
+	public ChannelOperations<INBOUND, OUTBOUND> addDecoder(String name,
+			ChannelHandler handler) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(handler, "handler");
+
+		Map.Entry<String, ChannelHandler> lastCodec = null;
+		ChannelHandler next;
+		for (Map.Entry<String, ChannelHandler> c : channel.pipeline()) {
+			next = c.getValue();
+			if (next instanceof MessageToMessageDecoder ||
+					next instanceof ByteToMessageDecoder ||
+					next instanceof CombinedChannelDuplexHandler) {
+				lastCodec = c;
+			}
+		}
+
+		if (lastCodec == null) {
+			channel.pipeline()
+			       .addBefore(NettyPipeline.ReactiveBridge, name, handler);
+			onClose(() -> removeHandler(name));
+		}
+		else {
+			channel.pipeline()
+			       .addAfter(lastCodec.getKey(), name+"$extract", ByteBufHolderHandler.INSTANCE)
+		           .addAfter(name+"$extract", name, handler);
+			onClose(() -> {
+				removeHandler(name);
+				removeHandler(name+"$extract");
+			});
+		}
 		return this;
 	}
 
@@ -232,6 +271,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		return channel.toString();
 	}
 
+	/**
+	 * Safely remove handler from pipeline
+	 *
+	 * @param name handler name
+	 */
 	protected final void removeHandler(String name) {
 		if (channel.isOpen() && channel.pipeline()
 		                               .context(name) != null) {
@@ -252,6 +296,15 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 					       .context(name),
 					channel.pipeline());
 		}
+	}
+
+	/**
+	 * Connector handler provided by user
+	 *
+	 * @return Connector handler provided by user
+	 */
+	protected final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler() {
+		return handler;
 	}
 
 	/**
@@ -277,6 +330,35 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return;
 		}
 		inbound.onInboundNext(msg);
+	}
+
+	/**
+	 * Replace and complete previous operation inbound
+	 *
+	 * @param ops a new operations
+	 *
+	 * @return true if replaced
+	 */
+	protected final boolean replace(ChannelOperations<?, ?> ops) {
+		if (channel.attr(OPERATIONS_ATTRIBUTE_KEY)
+		           .compareAndSet(this, ops)) {
+			if (channel.eventLoop()
+			           .inEventLoop()) {
+				Subscriber<?> s = inbound.receiver;
+				inbound.unsubscribeReceiver();
+				s.onComplete();
+			}
+			else {
+				channel.eventLoop()
+				       .execute(() -> {
+					       Subscriber<?> s = inbound.receiver;
+					       inbound.unsubscribeReceiver();
+					       s.onComplete();
+				       });
+			}
+			return true;
+		}
+		return false;
 	}
 
 	/**

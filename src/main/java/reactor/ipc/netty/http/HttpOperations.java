@@ -73,11 +73,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
-		if (isDisposed()) {
-			return then(Mono.error(new IllegalStateException("This outbound is not " +
-					"active "	+ "anymore")));
-		}
-
 		if (hasSentHeaders()) {
 			return super.send(dataStream);
 		}
@@ -91,9 +86,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	public final NettyOutbound sendHeaders() {
-		if (isDisposed()) {
-			return then(Mono.error(new IllegalStateException("This outbound is not " + "active " + "anymore")));
-		}
 		if (markHeadersAsSent()) {
 			return then(FutureMono.deferFuture(() -> channel().writeAndFlush(
 					outboundHttpMessage())));
@@ -106,10 +98,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public final NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file);
-
-		if (isDisposed()) {
-			return then(Mono.error(new IllegalStateException("This outbound is not " + "active " + "anymore")));
-		}
 
 		if (hasSentHeaders()) {
 			return super.sendFile(file, position, count);
@@ -132,10 +120,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	public final NettyOutbound sendObject(final Publisher<?> source) {
-		if (isDisposed()) {
-			return then(Mono.error(new IllegalStateException("This outbound is not " +
-					"active "	+ "anymore")));
-		}
 		if (hasSentHeaders()) {
 			return super.sendObject(source);
 		}

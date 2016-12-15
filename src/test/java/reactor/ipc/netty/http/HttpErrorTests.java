@@ -22,6 +22,7 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
@@ -43,9 +44,10 @@ public class HttpErrorTests {
 				                                }))
 		                                .block();
 
-		HttpClient client = HttpClient.create("localhost",
+		HttpClient client = HttpClient.create(opt -> opt.connect("localhost",
 				server.address()
-				      .getPort());
+				      .getPort())
+		                                                .disablePool());
 
 		HttpClientResponse r = client.get("/")
 		                             .block();
@@ -54,6 +56,11 @@ public class HttpErrorTests {
 		                    .asString(StandardCharsets.UTF_8)
 		                    .collectList()
 		                    .block();
+
+		System.out.println("END");
+
+		FutureMono.from(r.context().channel().closeFuture()).block();
+
 		Assert.assertTrue(result.isEmpty());
 		Assert.assertTrue(r.isDisposed());
 		server.dispose();

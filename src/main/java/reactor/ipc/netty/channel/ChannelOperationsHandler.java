@@ -295,85 +295,85 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	@SuppressWarnings("unchecked")
 	void drain() {
-		if (WIP.getAndIncrement(this) == 0) {
+			if (WIP.getAndIncrement(this) == 0) {
 
-			for (; ; ) {
-				if (removed) {
-					return;
-				}
-
-				if (pendingWrites == null || innerActive || !ctx.channel()
-				                       .isWritable()) {
-					if (WIP.decrementAndGet(this) == 0) {
-						break;
+				for (; ; ) {
+					if (removed) {
+						return;
 					}
-					continue;
-				}
 
-				ChannelPromise promise;
-
-				try {
-					promise = (ChannelPromise) pendingWrites.poll();
-				}
-				catch (Throwable e) {
-					ctx.fireExceptionCaught(e);
-					return;
-				}
-
-				boolean empty = promise == null;
-
-				if (empty) {
-					if (WIP.decrementAndGet(this) == 0) {
-						break;
+					if (pendingWrites == null || innerActive || !ctx.channel()
+					                                                .isWritable()) {
+						if (WIP.decrementAndGet(this) == 0) {
+							break;
+						}
+						continue;
 					}
-					continue;
-				}
 
-				Object v = pendingWrites.poll();
+					ChannelPromise promise;
+					Object v = pendingWrites.poll();
 
-				if (v instanceof Publisher) {
-					Publisher<?> p = (Publisher<?>) v;
+					try {
+						promise = (ChannelPromise) v;
+					}
+					catch (Throwable e) {
+						ctx.fireExceptionCaught(e);
+						return;
+					}
 
-					if (p instanceof Callable) {
-						@SuppressWarnings("unchecked") Callable<?> supplier =
-								(Callable<?>) p;
+					boolean empty = promise == null;
 
-						Object vr;
-
-						try {
-							vr = supplier.call();
+					if (empty) {
+						if (WIP.decrementAndGet(this) == 0) {
+							break;
 						}
-						catch (Throwable e) {
-							promise.setFailure(e);
-							continue;
-						}
+						continue;
+					}
 
-						if (vr == null) {
-							promise.setSuccess();
-							continue;
-						}
+					v = pendingWrites.poll();
 
-						if (inner.unbounded) {
-							doWrite(vr, promise, null);
+					if (v instanceof Publisher) {
+						Publisher<?> p = (Publisher<?>) v;
+
+						if (p instanceof Callable) {
+							@SuppressWarnings("unchecked") Callable<?> supplier = (Callable<?>) p;
+
+							Object vr;
+
+							try {
+								vr = supplier.call();
+							}
+							catch (Throwable e) {
+								promise.setFailure(e);
+								continue;
+							}
+
+							if (vr == null) {
+								promise.setSuccess();
+								continue;
+							}
+
+							if (inner.unbounded) {
+								doWrite(vr, promise, null);
+							}
+							else {
+								innerActive = true;
+								inner.promise = promise;
+								inner.onSubscribe(Operators.scalarSubscription(inner, vr));
+							}
 						}
 						else {
 							innerActive = true;
 							inner.promise = promise;
-							inner.onSubscribe(Operators.scalarSubscription(inner, vr));
+							p.subscribe(inner);
 						}
 					}
 					else {
-						innerActive = true;
-						inner.promise = promise;
-						p.subscribe(inner);
+						doWrite(v, promise, null);
 					}
-				}
-				else {
-					doWrite(v, promise, null);
 				}
 			}
 		}
-	}
 
 	//
 	final ChannelOperations<?, ?> inbound() {

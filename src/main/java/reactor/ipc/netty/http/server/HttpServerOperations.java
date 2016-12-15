@@ -46,7 +46,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpServerKeepAliveHandler;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -105,24 +104,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyResponse =
 				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
-		responseHeaders.add(HttpHeaderNames.DATE, new Date());
+		chunkedTransfer(true);
 	}
 
 	@Override
 	public HttpServerOperations addDecoder(ChannelHandler handler) {
-		super.addDecoder(handler);
-		return this;
+		return addDecoder(Objects.toString(handler), handler);
 	}
 
 	@Override
 	public HttpServerOperations addDecoder(String name, ChannelHandler handler) {
-		Objects.requireNonNull(name, "name");
-		Objects.requireNonNull(handler, "handler");
-
-		channel().pipeline()
-		         .addBefore(NettyPipeline.HttpCodecHandler, name, handler);
-
-		onClose(() -> removeHandler(name));
+		super.addDecoder(name, handler);
 		return this;
 	}
 
@@ -261,9 +253,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public Mono<Void> send() {
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
 		if (markHeadersAsSent()) {
 			disableChunkedTransfer();
 			responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
@@ -357,20 +346,44 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onChannelActive(ChannelHandlerContext ctx) {
 
-		addHandler(NettyPipeline.HttpCodecHandler, new HttpServerCodec());
+		if (ctx.pipeline()
+		       .context(NettyPipeline.HttpCodecHandler) == null) {
+			ctx.pipeline()
+			   .addBefore(NettyPipeline.ReactiveBridge,
+					   NettyPipeline.HttpCodecHandler,
+					   new HttpServerCodec());
+		}
 		if (ctx.pipeline()
 		       .context(NettyPipeline.HttpKeepAlive) == null) {
 			ctx.pipeline()
 			   .addBefore(NettyPipeline.ReactiveBridge,
 					   NettyPipeline.HttpKeepAlive,
-					   new HttpServerKeepAliveHandler());
+					   new HttpServerPersistenceHandler());
+			if (log.isDebugEnabled()) {
+				log.debug("New http connection, requesting read");
+			}
+			ctx.read();
 		}
-		ctx.read();
 	}
 
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
+			if (nettyRequest != null) {
+				HttpServerOperations newhttpOps = new HttpServerOperations(ctx.channel(),
+						handler(),
+						parentContext());
+
+				onInboundComplete();
+
+				ctx.channel()
+				   .attr(OPERATIONS_ATTRIBUTE_KEY)
+				   .set(newhttpOps);
+
+				newhttpOps.onInboundNext(ctx, msg);
+
+				return;
+			}
 			nettyRequest = (HttpRequest) msg;
 			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
 
@@ -410,6 +423,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				return;
 			}
 			if (isTerminated()) {
+				if (log.isDebugEnabled()) {
+					log.debug("Continuing read since Http handler terminated");
+				}
 				ctx.read();
 			}
 		}
@@ -420,7 +436,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onOutboundComplete() {
-		if(!channel().isOpen() || isDisposed()){
+		if (isDisposed()) {
 			return;
 		}
 
@@ -430,7 +446,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (markInboundDone()) {
 			release();
 		}
-		else {
+
+		if(isKeepAlive()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
 			}
@@ -512,16 +529,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
 		if (markHeadersAsSent()) {
 			HttpServerWSOperations ops = new HttpServerWSOperations(url, protocols, this);
 
-			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
-			             .compareAndSet(this, ops)) {
+			if (replace(ops)) {
 				return FutureMono.from(ops.handshakerResult)
-				                 .then(() -> Mono.from(websocketHandler.apply(ops, ops)))
+				                 .then(() -> {
+
+					                 return Mono.from(websocketHandler.apply(ops, ops));
+				                 })
 				                 .doAfterTerminate(ops);
 			}
 		}

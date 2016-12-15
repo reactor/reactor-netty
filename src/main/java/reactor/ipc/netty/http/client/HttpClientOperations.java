@@ -155,13 +155,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public HttpClientOperations addDecoder(String name, ChannelHandler handler) {
-		Objects.requireNonNull(name, "name");
-		Objects.requireNonNull(handler, "handler");
-
-		channel().pipeline()
-		       .addBefore(NettyPipeline.HttpCodecHandler, name, handler);
-
-		onClose(() -> removeHandler(name));
+		super.addDecoder(name, handler);
 		return this;
 	}
 
@@ -300,9 +294,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public Mono<Void> send() {
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
 		if (markHeadersAsSent()) {
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(new DefaultFullHttpRequest(
 					version(),
@@ -450,7 +441,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onOutboundComplete() {
-		if (channel().isOpen() && !isDisposed()) {
+		if (!isDisposed()) {
 			boolean chunked = HttpUtil.isTransferEncodingChunked(nettyRequest);
 			if (markHeadersAsSent()) {
 				if (!chunked) {
@@ -574,9 +565,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 
-		if (isDisposed()) {
-			return Mono.error(new IllegalStateException("This outbound is not active " + "anymore"));
-		}
 		//prevent further header to be sent for handshaking
 		if (markHeadersAsSent()) {
 			addHandler(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));

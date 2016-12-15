@@ -17,12 +17,23 @@
 package reactor.ipc.netty.http;
 
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
@@ -35,6 +46,54 @@ import reactor.test.StepVerifier;
  * @author Stephane Maldini
  */
 public class HttpServerTests {
+
+	@Test
+	public void httpPipelining() throws Exception {
+
+		AtomicInteger i = new AtomicInteger();
+
+		NettyContext c = HttpServer.create(0)
+		                           .newHandler((req, resp) -> resp.sendString(Mono.just(i.incrementAndGet())
+		                                                                          .then(d -> Mono.delay(
+				                                                                          Duration.ofSeconds(
+						                                                                          4 - d))
+		                                                                                         .map(x -> d + "\n"))))
+		                           .block();
+
+		DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+				HttpMethod.GET,
+				"/plaintext");
+
+		CountDownLatch latch = new CountDownLatch(6);
+
+		TcpClient.create(c.address()
+		                  .getPort())
+		         .newHandler((in, out) -> {
+			         in.context()
+			           .addHandler(new HttpClientCodec());
+
+			         in.receiveObject()
+			           .ofType(DefaultHttpContent.class)
+			           .as(ByteBufFlux::fromInbound)
+			           .asString()
+			           .map(s -> Integer.parseInt(s.substring(0, s.length() - 1)))
+			           .log()
+			           .subscribe(d -> {
+				           for (int x = 0; x < d; x++) {
+					           latch.countDown();
+				           }
+			           });
+
+			         return out.sendObject(Flux.just(request.retain(),
+					         request.retain(),
+					         request.retain()))
+			                   .neverComplete();
+		         })
+		         .block();
+
+		Assert.assertTrue(latch.await(10000, TimeUnit.SECONDS));
+
+	}
 
 	@Test
 	public void flushOnComplete() {

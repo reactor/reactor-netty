@@ -84,7 +84,7 @@ public interface NettyContext extends Cancellation {
 	 * @return this inbound
 	 */
 	default NettyContext addDecoder(String name, ChannelHandler handler){
-		return addHandler(name, handler);
+		return addDecoder(name, handler);
 	}
 
 	/**

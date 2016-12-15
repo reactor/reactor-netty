@@ -112,6 +112,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 		if (PingWebSocketFrame.class.isAssignableFrom(messageClass)) {
 			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()
 			                                                                         .retain()));
+			ctx.read();
 			return;
 		}
 		if (CloseWebSocketFrame.class.isAssignableFrom(messageClass)) {

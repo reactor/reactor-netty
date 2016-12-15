@@ -89,6 +89,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 		if (frame instanceof PingWebSocketFrame) {
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
 			                                                                           .retain()));
+			ctx.read();
 			return;
 		}
 		super.onInboundNext(ctx, frame);

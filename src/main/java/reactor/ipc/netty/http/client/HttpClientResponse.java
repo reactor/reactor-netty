@@ -15,6 +15,7 @@
  */
 package reactor.ipc.netty.http.client;
 
+import java.util.Objects;
 import java.util.function.BiFunction;
 
 import io.netty.channel.ChannelHandler;
@@ -54,8 +55,7 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 
 	@Override
 	default HttpClientResponse addDecoder(ChannelHandler handler){
-		NettyContext.super.addDecoder(handler);
-		return this;
+		return addDecoder(Objects.toString(handler), handler);
 	}
 
 	@Override
