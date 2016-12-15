@@ -447,6 +447,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			release();
 		}
 
+		onOutboundReadMore();
+	}
+
+	final void onOutboundReadMore(){
 		if(isKeepAlive()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
@@ -469,6 +473,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
 			channel().writeAndFlush(response)
 			         .addListener(r -> onChannelTerminate());
+			onOutboundReadMore();
 			return;
 		}
 		log.error("Error processing response. Sending last HTTP frame", err);
@@ -476,10 +481,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (HttpUtil.isContentLengthSet(nettyResponse)) {
 			channel().writeAndFlush(EMPTY_BUFFER)
 			         .addListener(r -> onChannelTerminate());
+			onOutboundReadMore();
 			return;
 		}
 		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
 		         .addListener(r -> onChannelTerminate());
+		if(isKeepAlive()) {
+			onOutboundReadMore();
+		}
 	}
 
 	@Override
