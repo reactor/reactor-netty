@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.util.concurrent.QueueSupplier;
 
@@ -166,6 +167,17 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 			ctx.fireChannelRead(pipelined.poll());
 		}
 		overflow = false;
+	}
+
+	@Override
+	public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+		if(pipelined != null && !pipelined.isEmpty()){
+			Object o;
+			while((o = pipelined.poll()) != null){
+				ReferenceCountUtil.release(o);
+			}
+
+		}
 	}
 
 	boolean shouldKeepAlive() {

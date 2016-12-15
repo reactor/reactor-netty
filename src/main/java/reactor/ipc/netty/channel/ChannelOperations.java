@@ -349,8 +349,27 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if replaced
 	 */
 	protected final boolean replace(ChannelOperations<?, ?> ops) {
-		return channel.attr(OPERATIONS_ATTRIBUTE_KEY)
-		              .compareAndSet(this, ops);
+		if (channel.attr(OPERATIONS_ATTRIBUTE_KEY)
+		           .compareAndSet(this, ops)) {
+			if (channel.eventLoop()
+			           .inEventLoop()) {
+				Subscriber<?> s = inbound.receiver;
+				if(s!= null) {
+					s.onComplete();
+				}
+			}
+			else {
+				channel.eventLoop()
+				       .execute(() -> {
+					       Subscriber<?> s = inbound.receiver;
+					       if(s!= null) {
+						       s.onComplete();
+					       }
+				       });
+			}
+			return true;
+		}
+		return false;
 	}
 
 	/**

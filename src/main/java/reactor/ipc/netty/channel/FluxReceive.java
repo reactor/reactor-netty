@@ -19,6 +19,7 @@ package reactor.ipc.netty.channel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Subscriber;
@@ -29,6 +30,7 @@ import reactor.core.Producer;
 import reactor.core.Trackable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
+import reactor.ipc.netty.NettyContext;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
@@ -39,8 +41,10 @@ import reactor.util.concurrent.QueueSupplier;
 final class FluxReceive extends Flux<Object>
 		implements Subscription, Trackable, Producer {
 
-	final ChannelOperations<?, ?> parent;
-	final EventLoop               eventLoop;
+	final Channel           channel;
+	final ContextHandler<?> parentContext;
+	final NettyContext      context;
+	final EventLoop         eventLoop;
 
 	Subscriber<? super Object> receiver;
 	boolean                    receiverFastpath;
@@ -53,8 +57,10 @@ final class FluxReceive extends Flux<Object>
 	volatile Cancellation receiverCancel;
 
 	FluxReceive(ChannelOperations<?, ?> parent) {
-		this.parent = parent;
-		this.eventLoop = parent.channel.eventLoop();
+		this.context = parent;
+		this.parentContext = parent.context;
+		this.channel = parent.channel;
+		this.eventLoop = channel.eventLoop();
 	}
 
 	@Override
@@ -87,7 +93,7 @@ final class FluxReceive extends Flux<Object>
 
 	@Override
 	final public boolean isStarted() {
-		return parent.channel.isActive();
+		return channel.isActive();
 	}
 
 	@Override
@@ -201,14 +207,14 @@ final class FluxReceive extends Flux<Object>
 		}
 
 		if (r == Long.MAX_VALUE) {
-			parent.channel.config()
-			              .setAutoRead(true);
-			parent.channel.read();
+			channel.config()
+			       .setAutoRead(true);
+			channel.read();
 			return true;
 		}
 
 		if ((receiverDemand -= e) > 0L || e > 0L) {
-			parent.channel.read();
+			channel.read();
 		}
 
 		return false;
@@ -217,8 +223,7 @@ final class FluxReceive extends Flux<Object>
 	final void startReceiver(Subscriber<? super Object> s) {
 		if (receiver == null) {
 			if (log.isDebugEnabled()) {
-				log.debug("[{}] Subscribing inbound receiver [pending: " + "" + getPending() + ", inboundDone: {}]",
-						parent.formatName(),
+				log.debug("Subscribing inbound receiver [pending: " + "" + getPending() + ", inboundDone: {}]",
 						inboundDone);
 			}
 			if (inboundDone && getPending() == 0) {
@@ -266,7 +271,7 @@ final class FluxReceive extends Flux<Object>
 	final void onInboundNext(Object msg) {
 		if (inboundDone) {
 			if (log.isDebugEnabled()) {
-				log.debug("[{}] Dropping frame {}", parent.formatName(), msg);
+				log.debug("Dropping frame {}", msg);
 			}
 			return;
 		}
@@ -340,7 +345,7 @@ final class FluxReceive extends Flux<Object>
 		else {
 			a.onComplete();
 		}
-		parent.context.fireContextActive(parent);
+		parentContext.fireContextActive(context);
 	}
 
 	final void unsubscribeReceiver() {
