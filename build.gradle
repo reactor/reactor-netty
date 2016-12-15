@@ -64,11 +64,11 @@ ext {
 				  "http://docs.oracle.com/javaee/6/api/",
 				  "http://fasterxml.github.io/jackson-databind/javadoc/2.5/",
 				  "http://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/",
-				  "http://projectreactor.io/core/docs/api/",
+				  "http://projectreactor.io/docs/core/release/api/",
 				  "http://netty.io/4.1/api/",
-				  "http://projectreactor.io/ipc/docs/api/",
+				  "http://projectreactor.io/docs/ipc/release/api/",
 				  "http://projectreactor.io/codec/docs/api/",
-				  "http://projectreactor.io/ext/docs/api/",] as String[]
+				  "http://projectreactor.io/docs/netty/release/api/",] as String[]
 }
 
 apply from: "$gradleScriptDir/setup.gradle"

@@ -8,7 +8,7 @@
 http://projectreactor.io/netty/docs/reference/ WIP
 
 ## Javadoc
-http://projectreactor.io/netty/docs/api/
+http://projectreactor.io/docs/netty/release/api/
 
 _Licensed under [Apache Software License 2.0](www.apache.org/licenses/LICENSE-2.0)_
 
