@@ -510,19 +510,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				log.debug("Last HTTP response frame");
 			}
 			if (markHeadersAsSent()) {
-				if (!HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
-						nettyResponse)) {
-					HttpUtil.setContentLength(nettyResponse, 0);
+				if(log.isDebugEnabled()){
+					log.debug("No sendHeaders() called before complete, sending " +
+							"zero-length header");
 				}
-				if (HttpUtil.isContentLengthSet(nettyResponse)) {
-					channel().writeAndFlush(nettyResponse);
-				}
-				else {
-					channel().write(nettyResponse);
-					f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-				}
+				HttpUtil.setContentLength(nettyResponse, 0);
+				responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+				channel().writeAndFlush(nettyResponse);
 			}
-			else if (!HttpUtil.isContentLengthSet(nettyResponse)) {
+			else if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
 				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 			}
 

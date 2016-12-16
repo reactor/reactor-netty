@@ -85,8 +85,16 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return sendHeaders().sendObject(dataStream);
 	}
 
-	public final NettyOutbound sendHeaders() {
+	//@Override
+	public NettyOutbound sendHeaders() {
 		if (markHeadersAsSent()) {
+			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
+					outboundHttpMessage())) {
+				HttpUtil.setContentLength(outboundHttpMessage(), 0);
+			}
+			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+				outboundHttpMessage().headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+			}
 			return then(FutureMono.deferFuture(() -> channel().writeAndFlush(
 					outboundHttpMessage())));
 		}
