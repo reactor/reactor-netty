@@ -89,6 +89,7 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 		Objects.requireNonNull(future, "future");
 		if (this.f != null) {
 			future.cancel(true);
+			return;
 		}
 		if(log.isDebugEnabled()){
 			log.debug("Connecting new channel: {}", future.toString());

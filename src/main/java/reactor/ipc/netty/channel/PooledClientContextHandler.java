@@ -80,6 +80,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		Objects.requireNonNull(future, "future");
 		if (this.f != null) {
 			future.cancel(true);
+			return;
 		}
 		if (log.isDebugEnabled()) {
 			log.debug("Acquiring existing channel from pool: {}", pool.toString());
@@ -175,7 +176,8 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Releasing pending channel acquisition: {}", f.toString());
 			}
-			f.cancel(true);
+			f.cancel(false);
+			pool.release(f.getNow());
 			return;
 		}
 		try {
@@ -201,9 +203,14 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	final void release(CHANNEL c) {
+		if(f.isCancelled()){
+			return;
+		}
+
 		if (log.isDebugEnabled()) {
 			log.debug("Releasing channel: {}", c.toString());
 		}
+
 
 		if(!c.isOpen()) {
 			onReleaseEmitter.onComplete();
@@ -213,18 +220,18 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 
 		pool.release(c).addListener(f -> {
-			if(f.isSuccess()){
-				onReleaseEmitter.onComplete();
-			}
-			else{
-				onReleaseEmitter.onError(f.cause());
-			}
 			if (!c.isOpen()) {
 				return;
 			}
 			Boolean attr = c.attr(CLOSE_CHANNEL).get();
 			if(attr != null && attr){
 				c.close();
+			}
+			else if(f.isSuccess()){
+				onReleaseEmitter.onComplete();
+			}
+			else{
+				onReleaseEmitter.onError(f.cause());
 			}
 		});
 

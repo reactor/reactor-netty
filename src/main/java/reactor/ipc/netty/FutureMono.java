@@ -43,6 +43,12 @@ public abstract class FutureMono extends Mono<Void> {
 	 * @return A {@link Mono} forwarding {@link Future} success or failure
 	 */
 	public static <F extends Future<Void>> Mono<Void> from(F future) {
+		if(future.isDone()){
+			if(!future.isSuccess()){
+				return Mono.error(future.cause());
+			}
+			return Mono.empty();
+		}
 		return new ImmediateFutureMono<>(future);
 	}
 
@@ -73,6 +79,17 @@ public abstract class FutureMono extends Mono<Void> {
 			if (s == null) {
 				throw Exceptions.argumentIsNullException();
 			}
+
+			if(future.isDone()){
+				if(future.isSuccess()){
+					Operators.complete(s);
+				}
+				else{
+					Operators.error(s, future.cause());
+				}
+				return;
+			}
+
 			FutureSubscription<F> fs = new FutureSubscription<>(future, s);
 			s.onSubscribe(fs);
 			future.addListener(fs);
@@ -100,6 +117,16 @@ public abstract class FutureMono extends Mono<Void> {
 				Operators.error(s,
 						Operators.onOperatorError(new NullPointerException(
 								"Deferred supplied null")));
+				return;
+			}
+
+			if(f.isDone()){
+				if(f.isSuccess()){
+					Operators.complete(s);
+				}
+				else{
+					Operators.error(s, f.cause());
+				}
 				return;
 			}
 

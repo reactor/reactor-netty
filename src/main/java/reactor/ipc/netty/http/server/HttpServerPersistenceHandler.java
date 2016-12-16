@@ -157,8 +157,10 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 
 			if (pipelined != null && !pipelined.isEmpty()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("Draining next pipelined " + "request," + " pending response count: {}",
-							pendingResponses);
+					HttpServerOperations.log.debug("draining next pipelined " +
+									"request," + " pending response count: {}, queued: " +
+									"{}",
+							pendingResponses, pipelined.size());
 				}
 				ctx.executor()
 				   .execute(this);
