@@ -40,7 +40,7 @@ final class ByteBufHolderHandler extends ChannelInboundHandlerAdapter {
 				ctx.fireChannelRead(msg);
 			}
 			else {
-				ctx.fireChannelRead(bb);
+				ctx.fireChannelRead(bb.retain());
 			}
 		}
 		else {
