@@ -160,15 +160,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return this;
 	}
 
-	/**
-	 * Accumulate a response HTTP header for the given key name, appending ";" for each
-	 * new value
-	 *
-	 * @param name the HTTP response header name
-	 * @param value the HTTP response header value
-	 *
-	 * @return this
-	 */
 	@Override
 	public HttpClientRequest addHeader(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
@@ -217,18 +208,21 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return this;
 	}
 
-	/**
-	 * Register an HTTP request header
-	 *
-	 * @param name Header name
-	 * @param value Header content
-	 *
-	 * @return this
-	 */
 	@Override
 	public HttpClientRequest header(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
 			this.requestHeaders.set(name, value);
+		}
+		else {
+			throw new IllegalStateException("Status and headers already sent");
+		}
+		return this;
+	}
+
+	@Override
+	public HttpClientRequest headers(HttpHeaders headers) {
+		if (!hasSentHeaders()) {
+			this.requestHeaders.set(headers);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");

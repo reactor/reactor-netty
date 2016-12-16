@@ -179,6 +179,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public HttpServerResponse headers(HttpHeaders headers) {
+		if (!hasSentHeaders()) {
+			this.responseHeaders.set(headers);
+		}
+		else {
+			throw new IllegalStateException("Status and headers already sent");
+		}
+		return this;
+	}
+
+	@Override
 	public boolean isKeepAlive() {
 		return HttpUtil.isKeepAlive(nettyRequest);
 	}

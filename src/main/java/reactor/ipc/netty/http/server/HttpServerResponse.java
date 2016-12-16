@@ -91,6 +91,15 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse header(CharSequence name, CharSequence value);
 
 	/**
+	 * Set outbound headers
+	 *
+	 * @param headers netty headers map
+	 *
+	 * @return this outbound
+	 */
+	HttpServerResponse headers(HttpHeaders headers);
+
+	/**
 	 * set the request keepAlive if true otherwise remove the existing connection keep alive header
 	 *
 	 * @return this outbound

@@ -105,6 +105,15 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest header(CharSequence name, CharSequence value);
 
 	/**
+	 * Set outbound headers
+	 *
+	 * @param headers a netty headers map
+	 *
+	 * @return this outbound
+	 */
+	HttpClientRequest headers(HttpHeaders headers);
+
+	/**
 	 * Return true  if redirected will be followed
 	 *
 	 * @return true if redirected will be followed
