@@ -222,7 +222,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpClientRequest headers(HttpHeaders headers) {
 		if (!hasSentHeaders()) {
+			String host = requestHeaders.get(HttpHeaderNames.HOST);
 			this.requestHeaders.set(headers);
+			this.requestHeaders.set(HttpHeaderNames.HOST, host);
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");

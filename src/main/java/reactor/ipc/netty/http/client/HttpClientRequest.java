@@ -105,7 +105,8 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest header(CharSequence name, CharSequence value);
 
 	/**
-	 * Set outbound headers
+	 * Set outbound headers from the passed headers. It will however ignore {@code
+	 * HOST} header key.
 	 *
 	 * @param headers a netty headers map
 	 *
