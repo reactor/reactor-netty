@@ -26,7 +26,7 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import org.junit.Test;
@@ -53,7 +53,8 @@ public class HttpServerTests {
 		AtomicInteger i = new AtomicInteger();
 
 		NettyContext c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> resp.sendString(Mono.just(i.incrementAndGet())
+		                           .newHandler((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
+		                                                          .sendString(Mono.just(i.incrementAndGet())
 		                                                                          .then(d -> Mono.delay(
 				                                                                          Duration.ofSeconds(
 						                                                                          4 - d))
@@ -76,8 +77,8 @@ public class HttpServerTests {
 			           .ofType(DefaultHttpContent.class)
 			           .as(ByteBufFlux::fromInbound)
 			           .asString()
-			           .map(s -> Integer.parseInt(s.substring(0, s.length() - 1)))
 			           .log()
+			           .map(Integer::parseInt)
 			           .subscribe(d -> {
 				           for (int x = 0; x < d; x++) {
 					           latch.countDown();

@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
@@ -69,10 +70,17 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 				pendingResponses += 1;
 				persistentConnection = isKeepAlive(request);
 			}
+			else {
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug("dropping pipelined HTTP request, " +
+									"previous response requested connection close");
+				}
+				ReferenceCountUtil.release(msg);
+				return;
+			}
 			if (overflow || pendingResponses > 1) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("Http pipelining requested "
-									+ ", pending response count: {}",
+					HttpServerOperations.log.debug("buffering pipelined HTTP request, pending response count: {}",
 							pendingResponses);
 				}
 				overflow = true;
@@ -85,8 +93,8 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 		}
 		else if (overflow) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug("Http pipelining enabled, buffering " +
-								"request. Pending response count: {}",
+				HttpServerOperations.log.debug("buffering pipelined HTTP content, " +
+								"pending response count: {}",
 						pendingResponses);
 			}
 			doPipeline(ctx, msg);
@@ -141,6 +149,12 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 		if (evt == NettyPipeline.handlerTerminatedEvent() && toRemove) {
 			toRemove = false;
 			pendingResponses -= 1;
+
+			ctx.pipeline()
+			   .replace(NettyPipeline.HttpEncoder,
+					   NettyPipeline.HttpEncoder,
+					   new HttpResponseEncoder());
+
 			if (pipelined != null && !pipelined.isEmpty()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug("Draining next pipelined " + "request," + " pending response count: {}",
@@ -164,7 +178,7 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 		boolean nextRequest = false;
 		while ((next = pipelined.peek()) != null) {
 			if (next instanceof HttpRequest) {
-				if (nextRequest) {
+				if (nextRequest || !persistentConnection) {
 					return;
 				}
 				nextRequest = true;
@@ -176,6 +190,10 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 
 	@Override
 	public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+		discard();
+	}
+
+	final void discard() {
 		if(pipelined != null && !pipelined.isEmpty()){
 			Object o;
 			while((o = pipelined.poll()) != null){

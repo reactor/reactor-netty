@@ -35,7 +35,6 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -43,7 +42,9 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
@@ -421,8 +422,22 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onChannelActive(final ChannelHandlerContext ctx) {
-
-		addHandler(NettyPipeline.HttpCodecHandler, new HttpClientCodec());
+		System.out.println(ctx);
+		System.out.println(ctx.pipeline());
+		if (ctx.pipeline()
+		       .context(NettyPipeline.HttpDecoder) == null) {
+			ctx.pipeline()
+			   .addBefore(NettyPipeline.ReactiveBridge,
+					   NettyPipeline.HttpDecoder,
+					   new HttpResponseDecoder());
+		}
+		if (ctx.pipeline()
+		       .context(NettyPipeline.HttpEncoder) == null) {
+			ctx.pipeline()
+			   .addBefore(NettyPipeline.ReactiveBridge,
+					   NettyPipeline.HttpEncoder,
+					   new HttpRequestEncoder());
+		}
 
 		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
 

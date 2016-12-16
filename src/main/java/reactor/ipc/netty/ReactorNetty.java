@@ -33,6 +33,8 @@ final class ReactorNetty {
 	ReactorNetty(){
 	}
 
+	static final class TerminatedHandlerEvent {}
+
 	/**
 	 * An appending write that delegates to its origin context and append the passed
 	 * publisher after the origin success if any.

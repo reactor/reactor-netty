@@ -53,7 +53,8 @@ public interface NettyPipeline {
 	String ProxyHandler       = "proxyHandler";
 	String ReactiveBridge     = "reactiveBridge";
 	String BridgeSetup        = "bridgeSetup";
-	String HttpCodecHandler   = "httpCodecHandler";
+	String HttpEncoder        = "httpEncoder";
+	String HttpDecoder        = "httpDecoder";
 	String HttpAggregator     = "reactorHttpAggregator";
 	String HttpKeepAlive      = "httpKeepAlive";
 	String OnChannelWriteIdle = "onChannelWriteIdle";
@@ -186,7 +187,7 @@ public interface NettyPipeline {
 			return source;
 		}
 
-		static final Object TERMINATED = new Object();
+		static final Object TERMINATED = new ReactorNetty.TerminatedHandlerEvent();
 	}
 
 	/**

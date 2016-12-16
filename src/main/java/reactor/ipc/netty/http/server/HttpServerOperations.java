@@ -19,7 +19,6 @@ package reactor.ipc.netty.http.server;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -43,9 +42,10 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -347,11 +347,18 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	protected void onChannelActive(ChannelHandlerContext ctx) {
 
 		if (ctx.pipeline()
-		       .context(NettyPipeline.HttpCodecHandler) == null) {
+		       .context(NettyPipeline.HttpDecoder) == null) {
 			ctx.pipeline()
 			   .addBefore(NettyPipeline.ReactiveBridge,
-					   NettyPipeline.HttpCodecHandler,
-					   new HttpServerCodec());
+					   NettyPipeline.HttpDecoder,
+					   new HttpRequestDecoder());
+		}
+		if (ctx.pipeline()
+		       .context(NettyPipeline.HttpEncoder) == null) {
+			ctx.pipeline()
+			   .addBefore(NettyPipeline.ReactiveBridge,
+					   NettyPipeline.HttpEncoder,
+					   new HttpResponseEncoder());
 		}
 		if (ctx.pipeline()
 		       .context(NettyPipeline.HttpKeepAlive) == null) {

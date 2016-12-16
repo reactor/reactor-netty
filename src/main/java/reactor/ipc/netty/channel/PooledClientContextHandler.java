@@ -165,7 +165,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				previous.inbound.cancel();
 			}
 			op.onChannelActive(c.pipeline()
-			                    .context(NettyPipeline.BridgeSetup));
+			                    .context(NettyPipeline.ReactiveBridge));
 		}
 	}
 
