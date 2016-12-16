@@ -422,8 +422,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onChannelActive(final ChannelHandlerContext ctx) {
-		System.out.println(ctx);
-		System.out.println(ctx.pipeline());
 		if (ctx.pipeline()
 		       .context(NettyPipeline.HttpDecoder) == null) {
 			ctx.pipeline()
