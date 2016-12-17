@@ -524,8 +524,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					log.debug("No sendHeaders() called before complete, sending " +
 							"zero-length header");
 				}
-				channel().writeAndFlush(new DefaultFullHttpResponse(version(), status()
-						, EMPTY_BUFFER));
+				HttpResponse res = new DefaultFullHttpResponse(version(), status()
+						, EMPTY_BUFFER);
+
+				res.headers().set(responseHeaders);
+				res.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+
+				channel().writeAndFlush(res);
 			}
 			else if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
 				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
