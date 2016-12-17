@@ -529,6 +529,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 				res.headers().set(responseHeaders);
 				res.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+				res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
 
 				channel().writeAndFlush(res);
 			}
