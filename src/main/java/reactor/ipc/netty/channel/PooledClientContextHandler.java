@@ -135,6 +135,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
+			c.closeFuture().addListener(f -> release(c));
 			doPipeline(c.pipeline());
 			c.pipeline()
 			 .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));

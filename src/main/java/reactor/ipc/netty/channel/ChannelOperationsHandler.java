@@ -36,6 +36,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.handler.stream.ChunkedInput;
+import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -111,6 +112,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);
 			exceptionCaught(ctx, err);
+		}
+		finally {
+			ReferenceCountUtil.release(msg);
 		}
 	}
 
@@ -688,5 +692,4 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	static final BiConsumer<?, ? super ByteBuf> NOOP_ENCODER = (a, b) -> {
 	};
-
 }
