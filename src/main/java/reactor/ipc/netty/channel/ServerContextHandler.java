@@ -89,7 +89,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	public NettyContext onClose(Runnable onClose) {
-		onClose().subscribe(null, e -> onClose(), onClose);
+		onClose().subscribe(null, e -> onClose.run(), onClose);
 		return this;
 	}
 

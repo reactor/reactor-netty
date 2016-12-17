@@ -524,9 +524,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					log.debug("No sendHeaders() called before complete, sending " +
 							"zero-length header");
 				}
-				HttpUtil.setContentLength(nettyResponse, 0);
-				responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
-				channel().writeAndFlush(nettyResponse);
+				channel().writeAndFlush(new DefaultFullHttpResponse(version(), status()
+						, EMPTY_BUFFER));
 			}
 			else if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
 				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -542,8 +541,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					});
 					return;
 				}
-				onChannelTerminate();
 			}
+			onChannelTerminate();
 		}
 	}
 

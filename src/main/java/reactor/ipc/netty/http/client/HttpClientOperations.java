@@ -439,16 +439,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void onChannelTerminate() {
-		if (!isKeepAlive()) {
-			super.onChannelTerminate();
-		}
-		else if (log.isDebugEnabled()) {
-			log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
-		}
-	}
-
-	@Override
 	protected void onOutboundComplete() {
 		if (!isDisposed()) {
 			boolean chunked = HttpUtil.isTransferEncodingChunked(nettyRequest);

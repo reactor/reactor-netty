@@ -95,9 +95,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			Exceptions.throwIfFatal(err);
 			exceptionCaught(ctx, err);
 		}
-		finally {
-			ctx.fireChannelInactive();
-		}
 	}
 
 	@Override
@@ -110,7 +107,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				return;
 			}
 			inbound().onInboundNext(ctx, msg);
-			ctx.fireChannelRead(msg);
 		}
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);
@@ -125,7 +121,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					ctx.channel()
 					   .isWritable());
 		}
-		ctx.fireChannelWritabilityChanged();
 		if (ctx.channel()
 		       .isWritable()) {
 			inner.request(1L);
@@ -185,9 +180,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 			((NettyPipeline.SendOptionsChangeEvent) evt).configurator()
 			                                            .accept(this);
-		}
-		else {
-			ctx.fireUserEventTriggered(evt);
 		}
 	}
 

@@ -186,6 +186,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 */
 	public void fireContextError(Throwable t) {
 		if (!fired) {
+			fired = true;
 			sink.error(t);
 		}
 	}

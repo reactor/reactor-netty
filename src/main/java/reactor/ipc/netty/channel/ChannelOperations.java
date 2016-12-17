@@ -429,8 +429,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if filtered
 	 */
 	protected final boolean discreteRemoteClose(Throwable err) {
-		if (err instanceof IOException && (err.getMessage()
-		                                      .contains("Broken pipe") || err.getMessage()
+		if (err instanceof IOException && (err.getMessage() == null || err.getMessage()
+		                                                                  .contains("Broken pipe") || err.getMessage()
 		                                                                     .contains(
 				                                                                     "Connection reset by peer"))) {
 			if (log.isDebugEnabled()) {

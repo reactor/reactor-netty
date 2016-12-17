@@ -20,6 +20,7 @@ import java.net.SocketAddress;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
@@ -43,6 +44,16 @@ public interface PoolResources extends Cancellation {
 			Integer.parseInt(System.getProperty("reactor.ipc.netty.pool.maxConnections",
 			"" + Runtime.getRuntime()
 			            .availableProcessors()));
+
+	/**
+	 * Default acquisition timeout before error. If -1 will never wait to
+	 * acquire before opening new
+	 * connection in an unboundd fashion. Fallback to
+	 * available number of processors.
+	 */
+	long DEFAULT_POOL_ACQUIRE_TIMEOUT = Long.parseLong(System.getProperty(
+			"reactor.ipc.netty.pool.acquireTimeout",
+			"" + 45000));
 
 	/**
 	 * Create an uncapped {@link PoolResources} to provide automatically for {@link
@@ -90,13 +101,39 @@ public interface PoolResources extends Cancellation {
 	 * ChannelPool}
 	 */
 	static PoolResources fixed(String name, int maxConnections) {
-		if (maxConnections < 1) {
+		return fixed(name, maxConnections, DEFAULT_POOL_ACQUIRE_TIMEOUT);
+
+	}
+
+	/**
+	 * Create a capped {@link PoolResources} to provide automatically for {@link
+	 * ChannelPool}.
+	 * <p>A Fixed {@link PoolResources} will open up to the given max connection value.
+	 * Further connections will be pending acquisition indefinitely.
+	 *
+	 * @param name the channel pool map name
+	 * @param maxConnections the maximum number of connections before starting pending
+	 * @param acquireTimeout the maximum time in millis to wait for aquiring
+	 *
+	 * @return a new {@link PoolResources} to provide automatically for {@link
+	 * ChannelPool}
+	 */
+	static PoolResources fixed(String name, int maxConnections, long acquireTimeout) {
+		if (maxConnections != -1 && maxConnections <= 0) {
 			throw new IllegalArgumentException("Max Connections value must be strictly " + "positive");
+		}
+		if (acquireTimeout != -1L && acquireTimeout < 0) {
+			throw new IllegalArgumentException("Acquire Timeout value must " + "be " + "positive");
 		}
 		return new DefaultPoolResources(name,
 				(bootstrap, handler) -> new FixedChannelPool(bootstrap,
 						handler,
-						maxConnections));
+						ChannelHealthChecker.ACTIVE,
+						FixedChannelPool.AcquireTimeoutAction.FAIL,
+						acquireTimeout,
+						maxConnections,
+						Integer.MAX_VALUE
+						));
 
 	}
 

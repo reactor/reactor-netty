@@ -87,16 +87,18 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 		this.f = (Future<CHANNEL>) future;
 		f.addListener(this);
-		sink.setCancellation(this);
 	}
 
 	@Override
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
-		if (!future.isSuccess()) {
-			if (future.isCancelled()) {
+		sink.setCancellation(this);
+		if (future.isCancelled()) {
+			if(log.isDebugEnabled()) {
 				log.debug("Cancelled {}", future.toString());
-				return;
 			}
+			return;
+		}
+		if (!future.isSuccess()) {
 			if (future.cause() != null) {
 				sink.error(future.cause());
 			}
@@ -176,8 +178,11 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Releasing pending channel acquisition: {}", f.toString());
 			}
+			CHANNEL c = f.getNow();
 			f.cancel(false);
-			pool.release(f.getNow());
+			if(c != null) {
+				pool.release(c);
+			}
 			return;
 		}
 		try {
@@ -210,14 +215,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		if (log.isDebugEnabled()) {
 			log.debug("Releasing channel: {}", c.toString());
 		}
-
-
-		if(!c.isOpen()) {
-			onReleaseEmitter.onComplete();
-			return;
-		}
-
-
 
 		pool.release(c).addListener(f -> {
 			if (!c.isOpen()) {
