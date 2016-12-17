@@ -16,6 +16,8 @@
 
 package reactor.ipc.netty.channel;
 
+import java.util.function.Consumer;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.Cancellation;
@@ -24,7 +26,8 @@ import reactor.core.publisher.Operators;
 /**
  * @author Stephane Maldini
  */
-final class OutboundCloseSubscriber implements Subscriber<Void>, Runnable {
+final class OutboundCloseSubscriber implements Subscriber<Void>, Runnable,
+                                               Consumer<Throwable> {
 
 	final ChannelOperations<?, ?> parent;
 
@@ -34,6 +37,15 @@ final class OutboundCloseSubscriber implements Subscriber<Void>, Runnable {
 
 	OutboundCloseSubscriber(ChannelOperations<?, ?> ops) {
 		this.parent = ops;
+	}
+
+	@Override
+	public void accept(Throwable throwable) {
+		Subscription subscription = this.subscription;
+		this.subscription = null;
+		if (subscription != null) {
+			subscription.cancel();
+		}
 	}
 
 	@Override
@@ -67,7 +79,7 @@ final class OutboundCloseSubscriber implements Subscriber<Void>, Runnable {
 			if (parent.channel.isOpen()) {
 				subscription = s;
 
-				this.c = parent.onInactive.subscribe(null, null, this);
+				this.c = parent.onInactive.subscribe(null, this, this);
 
 				s.request(Long.MAX_VALUE);
 				if (!parent.context.getClass()
