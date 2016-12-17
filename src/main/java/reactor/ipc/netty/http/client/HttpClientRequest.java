@@ -88,6 +88,20 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest followRedirect();
 
 	/**
+	 * Enable http status 302 auto-redirect support
+	 *
+	 * @return {@literal this}
+	 */
+	HttpClientRequest failOnClientError(boolean shouldFail);
+
+	/**
+	 * Enable http status 302 auto-redirect support
+	 *
+	 * @return {@literal this}
+	 */
+	HttpClientRequest failOnServerError(boolean shouldFail);
+
+	/**
 	 * Return  true if headers and status have been sent to the client
 	 *
 	 * @return true if headers and status have been sent to the client

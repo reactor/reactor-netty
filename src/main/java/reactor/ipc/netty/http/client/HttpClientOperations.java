@@ -96,6 +96,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	volatile ResponseState responseState;
 	int inboundPrefetch;
 
+	boolean clientError = true;
+	boolean serverError = true;
 	boolean redirectable;
 
 	HttpClientOperations(Channel channel, HttpClientOperations replaced) {
@@ -205,6 +207,18 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpClientRequest followRedirect() {
 		redirectable = true;
+		return this;
+	}
+
+	@Override
+	public HttpClientRequest failOnClientError(boolean shouldFail) {
+		clientError = shouldFail;
+		return this;
+	}
+
+	@Override
+	public HttpClientRequest failOnServerError(boolean shouldFail) {
+		serverError = shouldFail;
 		return this;
 	}
 
@@ -516,7 +530,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	final boolean checkResponseCode(HttpResponse response) {
 		int code = response.status()
 		                   .code();
-		if (code >= 400) {
+		if (code >= 500 && serverError) {
 			if (log.isDebugEnabled()) {
 				log.debug("Received Server Error, stop reading: {}", response.toString());
 			}
@@ -525,7 +539,18 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			onChannelTerminate();
 			return false;
 		}
-		if (code >= 300 && isFollowRedirect()) {
+
+		if (code >= 400 && clientError) {
+			if (log.isDebugEnabled()) {
+				log.debug("Received Request Error, stop reading: {}",
+						response.toString());
+			}
+			Exception ex = new HttpClientException(this);
+			parentContext().fireContextError(ex);
+			onChannelTerminate();
+			return false;
+		}
+		if (code == 301 || code == 302 && isFollowRedirect()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Received Redirect location: {}",
 						response.headers()
