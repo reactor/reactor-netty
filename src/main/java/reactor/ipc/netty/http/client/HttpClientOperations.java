@@ -33,7 +33,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -42,9 +41,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
@@ -73,8 +70,6 @@ import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 
 /**
  * @author Stephane Maldini
@@ -304,15 +299,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 	}
 
+
+
 	@Override
 	public Mono<Void> send() {
 		if (markHeadersAsSent()) {
-			HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri());
-
-			request.headers()
-			       .set(requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			                          .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
-
+			HttpMessage request = newFullEmptyBodyMessage();
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
 		}
 		else {
@@ -442,13 +434,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (markHeadersAsSent()) {
-			HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri());
-
-			request.headers()
-			       .set(requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			                          .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
-
-			channel().writeAndFlush(nettyRequest);
+			channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
 		else if (HttpUtil.isTransferEncodingChunked(nettyRequest)) {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -548,6 +534,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	protected HttpMessage newFullEmptyBodyMessage() {
+		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri());
+
+		request.headers()
+		       .set(requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+		                          .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+		return request;
 	}
 
 	final HttpRequest getNettyRequest() {

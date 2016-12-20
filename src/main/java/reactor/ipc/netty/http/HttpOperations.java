@@ -27,7 +27,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -77,31 +76,36 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return super.send(dataStream);
 		}
 
-		if (!HttpUtil.isContentLengthSet(outboundHttpMessage()) && !outboundHttpMessage().headers()
-		                                                                                 .contains(
-				                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {
-			HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
-		}
-		return sendHeaders().sendObject(dataStream);
+		return sendObject(dataStream);
 	}
 
 	//@Override
 	public NettyOutbound sendHeaders() {
 		if (markHeadersAsSent()) {
-			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-					outboundHttpMessage())) {
-				HttpUtil.setContentLength(outboundHttpMessage(), 0);
-			}
 			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-				outboundHttpMessage().headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+				outboundHttpMessage().headers()
+				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
 			}
-			return then(FutureMono.deferFuture(() -> channel().writeAndFlush(
-					outboundHttpMessage())));
+			else if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())) {
+				HttpUtil.setContentLength(outboundHttpMessage(), 0L);
+			}
+			HttpMessage message;
+			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && HttpUtil.getContentLength(
+					outboundHttpMessage(),
+					0L) == 0L) {
+				message = newFullEmptyBodyMessage();
+			}
+			else {
+				message = outboundHttpMessage();
+			}
+			return then(FutureMono.deferFuture(() -> channel().writeAndFlush(message)));
 		}
 		else {
 			return this;
 		}
 	}
+
+	protected abstract HttpMessage newFullEmptyBodyMessage();
 
 	@Override
 	public final NettyOutbound sendFile(Path file, long position, long count) {
@@ -130,6 +134,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	public final NettyOutbound sendObject(final Publisher<?> source) {
 		if (hasSentHeaders()) {
 			return super.sendObject(source);
+		}
+		if (!HttpUtil.isContentLengthSet(outboundHttpMessage()) && !outboundHttpMessage().headers()
+		                                                                                 .contains(
+				                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {
+			HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
 		}
 		return sendHeaders().then(super.sendObject(source));
 	}

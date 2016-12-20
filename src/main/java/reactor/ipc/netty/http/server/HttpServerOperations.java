@@ -110,6 +110,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	protected HttpMessage newFullEmptyBodyMessage() {
+		HttpResponse res =
+				new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
+
+		res.headers()
+		   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+		                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+		return res;
+	}
+
+	@Override
 	public HttpServerOperations addDecoder(ChannelHandler handler) {
 		return addDecoder(Objects.toString(handler), handler);
 	}
@@ -267,14 +278,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public Mono<Void> send() {
 		if (markHeadersAsSent()) {
-			HttpResponse res =
-					new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
-
-			res.headers()
-			   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
-
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(nettyResponse));
+			HttpMessage response = newFullEmptyBodyMessage();
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(response));
 		}
 		else {
 			return Mono.empty();
@@ -398,14 +403,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
 			}
 
-			HttpResponse res =
-					new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
-
-			res.headers()
-			   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
-
-			f = channel().writeAndFlush(res);
+			f = channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
 		else if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);

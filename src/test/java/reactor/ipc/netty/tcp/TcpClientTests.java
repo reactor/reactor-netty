@@ -253,10 +253,7 @@ public class TcpClientTests {
 			assertTrue("A reconnect attempt was made", reconnectionLatch.await(5, TimeUnit.SECONDS));
 		}
 		catch (AbortedException ise){
-			if(ise.getMessage().contains("aborted")){
-				return;
-			}
-			throw ise;
+			return;
 		}
 	}
 
