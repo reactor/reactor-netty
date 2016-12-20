@@ -18,7 +18,6 @@ package reactor.ipc.netty.channel;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -51,15 +50,17 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	final ChannelPool           pool;
 	final DirectProcessor<Void> onReleaseEmitter;
 
+	volatile boolean cancelled;
+
 	Future<CHANNEL> f;
 
-	PooledClientContextHandler(BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	PooledClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			ClientOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			ChannelPool pool) {
-		super(channelOpSelector, options, sink, loggingHandler);
+		super(channelOpFactory, options, sink, loggingHandler);
 		this.clientOptions = options;
 		this.secure = secure;
 		this.pool = pool;
@@ -92,7 +93,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
 		sink.setCancellation(this);
-		if (future.isCancelled()) {
+		if (future.isCancelled() || cancelled) {
 			if(log.isDebugEnabled()) {
 				log.debug("Cancelled {}", future.toString());
 			}
@@ -120,22 +121,18 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void terminateChannel(Channel channel) {
-		dispose();
-	}
-
-	@Override
 	protected Publisher<Void> onCloseOrRelease(Channel channel) {
 		return onReleaseEmitter;
 	}
 
+	@SuppressWarnings("unchecked")
 	final void connectOrAcquire(CHANNEL c) {
-		if (c.pipeline()
-		     .get(NettyPipeline.ReactiveBridge) == null) {
+		ChannelOperationsHandler handler = (ChannelOperationsHandler) c.pipeline()
+		                                                               .get(NettyPipeline.ReactiveBridge);
+		if (handler == null) {
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
-			c.closeFuture().addListener(f -> release(c));
 			doPipeline(c.pipeline());
 			c.pipeline()
 			 .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
@@ -159,36 +156,35 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Acquired existing channel: {}", c.toString());
 			}
-			ChannelOperations<?, ?> op = channelOpSelector.apply(c, this);
-
-			ChannelOperations<?, ?> previous =
-					c.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-					 .getAndSet(op);
-
-			if (previous != null) {
-				previous.inbound.cancel();
-			}
-			op.onChannelActive(c.pipeline()
-			                    .context(NettyPipeline.ReactiveBridge));
+			c.pipeline()
+			 .replace(NettyPipeline.ReactiveBridge,
+					 NettyPipeline.ReactiveBridge,
+					 new ChannelOperationsHandler(this));
 		}
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public void dispose() {
+		if (cancelled) {
+			return;
+		}
+		cancelled = true;
 		if (!f.isDone()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Releasing pending channel acquisition: {}", f.toString());
 			}
-			CHANNEL c = f.getNow();
-			f.cancel(false);
-			if(c != null) {
-				pool.release(c);
-			}
+			f.addListener(ff -> {
+				if(ff.isSuccess()) {
+					release((CHANNEL) ff.get());
+				}
+			});
 			return;
 		}
 		try {
 			CHANNEL c = f.get();
 			if (!c.isActive()) {
+				release(c);
 				return;
 			}
 
@@ -209,10 +205,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	final void release(CHANNEL c) {
-		if(f.isCancelled()){
-			return;
-		}
-
 		if (log.isDebugEnabled()) {
 			log.debug("Releasing channel: {}", c.toString());
 		}
@@ -238,7 +230,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	protected void doDropped(Channel channel) {
 		dispose();
-		sink.success();
+		fireContextError(ABORTED);
 	}
 
 	@Override

@@ -26,9 +26,10 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -61,7 +62,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 				WebSocketVersion.V13,
 				protocols,
 				true,
-				replaced.requestHeaders());
+				replaced.requestHeaders().remove(HttpHeaderNames.HOST));
 
 		handshakerResult = channel.newPromise();
 
@@ -75,12 +76,8 @@ final class HttpClientWSOperations extends HttpClientOperations
 		}
 		handshaker.handshake(channel)
 		          .addListener(f -> {
-			          if (!f.isSuccess()) {
-				          handshakerResult.tryFailure(f.cause());
-				          return;
-			          }
 			          ignoreChannelPersistence();
-			          channel().read();
+			          channel.read();
 		          });
 	}
 
@@ -97,6 +94,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			channel().pipeline()
 			         .remove(HttpObjectAggregator.class);
 			FullHttpResponse response = (FullHttpResponse) msg;
+
 			setNettyResponse(response);
 
 			if (checkResponseCode(response)) {
@@ -104,9 +102,9 @@ final class HttpClientWSOperations extends HttpClientOperations
 				if (!handshaker.isHandshakeComplete()) {
 					handshaker.finishHandshake(channel(), response);
 				}
-				handshakerResult.trySuccess();
 
 				parentContext().fireContextActive(this);
+				handshakerResult.trySuccess();
 			}
 			return;
 		}

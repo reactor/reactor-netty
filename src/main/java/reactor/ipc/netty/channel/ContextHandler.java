@@ -17,6 +17,7 @@
 package reactor.ipc.netty.channel;
 
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
@@ -59,7 +60,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param options
 	 * @param loggingHandler
 	 * @param secure
-	 * @param channelOpSelector
+	 * @param channelOpFactory
 	 * @param <CHANNEL>
 	 *
 	 * @return a new {@link ContextHandler} for clients
@@ -68,14 +69,13 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			MonoSink<NettyContext> sink,
 			ClientOptions options,
 			LoggingHandler loggingHandler,
-			boolean secure,
-			BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector) {
+			boolean secure, ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
 		return newClientContext(sink,
 				options,
 				loggingHandler,
 				secure,
 				null,
-				channelOpSelector);
+				channelOpFactory);
 	}
 
 	/**
@@ -85,7 +85,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param options
 	 * @param loggingHandler
 	 * @param secure
-	 * @param channelOpSelector
+	 * @param channelOpFactory
 	 * @param pool
 	 * @param <CHANNEL>
 	 *
@@ -96,17 +96,16 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			ClientOptions options,
 			LoggingHandler loggingHandler,
 			boolean secure,
-			ChannelPool pool,
-			BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector) {
+			ChannelPool pool, ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
 		if (pool != null) {
-			return new PooledClientContextHandler<>(channelOpSelector,
+			return new PooledClientContextHandler<>(channelOpFactory,
 					options,
 					sink,
 					loggingHandler,
 					secure,
 					pool);
 		}
-		return new ClientContextHandler<>(channelOpSelector,
+		return new ClientContextHandler<>(channelOpFactory,
 				options,
 				sink,
 				loggingHandler,
@@ -119,53 +118,101 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param sink
 	 * @param options
 	 * @param loggingHandler
-	 * @param channelOpSelector
+	 * @param channelOpFactory
 	 *
 	 * @return a new {@link ContextHandler} for servers
 	 */
 	public static ContextHandler<Channel> newServerContext(MonoSink<NettyContext> sink,
 			ServerOptions options,
 			LoggingHandler loggingHandler,
-			BiFunction<? super Channel, ? super ContextHandler<Channel>, ? extends ChannelOperations<?, ?>> channelOpSelector) {
-		return new ServerContextHandler(channelOpSelector, options, sink, loggingHandler);
+			ChannelOperations.OnNew<Channel> channelOpFactory) {
+		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler);
 	}
 
-	final MonoSink<NettyContext> sink;
-	final NettyOptions<?, ?>     options;
-	final LoggingHandler         loggingHandler;
-	final BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>>
-	                             channelOpSelector;
+	final MonoSink<NettyContext>           sink;
+	final NettyOptions<?, ?>               options;
+	final LoggingHandler                   loggingHandler;
+	final ChannelOperations.OnNew<CHANNEL> channelOpFactory;
 
-	boolean fired;
+	BiConsumer<ChannelPipeline, ContextHandler<Channel>> pipelineConfigurator;
+	boolean                                              fired;
+	boolean                                              autoCreateOperations;
 
 	/**
-	 * @param channelOpSelector
+	 * @param channelOpFactory
 	 * @param options
 	 * @param sink
 	 * @param loggingHandler
 	 */
 	@SuppressWarnings("unchecked")
-	protected ContextHandler(BiFunction<? super CHANNEL, ? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	protected ContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			NettyOptions<?, ?> options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler) {
 		this.options = options;
-		this.channelOpSelector =
-				Objects.requireNonNull(channelOpSelector, "channelOpSelector");
+		this.channelOpFactory =
+				Objects.requireNonNull(channelOpFactory, "channelOpFactory");
 		this.sink = sink;
 		this.loggingHandler = loggingHandler;
+		this.autoCreateOperations = true;
 	}
 
-	@Override
-	protected void initChannel(CHANNEL ch) throws Exception {
-		doPipeline(ch.pipeline());
-		ch.pipeline()
-		  .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
-		if (log.isDebugEnabled()) {
-			log.debug("After pipeline {}",
-					ch.pipeline()
-					  .toString());
+	/**
+	 * Setup protocol specific handlers such as HTTP codec. Should be called before
+	 * binding the context to any channel or bootstrap.
+	 *
+	 * @param pipelineConfigurator a configurator for extra codecs in the {@link
+	 * ChannelPipeline}
+	 *
+	 * @return this context
+	 */
+	public final ContextHandler<CHANNEL> onPipeline(BiConsumer<ChannelPipeline, ContextHandler<Channel>> pipelineConfigurator) {
+		this.pipelineConfigurator =
+				Objects.requireNonNull(pipelineConfigurator, "pipelineConfigurator");
+		return this;
+	}
+
+	/**
+	 * Allow the {@link ChannelOperations} to be created automatically on pipeline setup
+	 *
+	 * @param autoCreateOperations should auto create {@link ChannelOperations}
+	 *
+	 * @return this context
+	 */
+	public final ContextHandler<CHANNEL> autoCreateOperations(boolean autoCreateOperations) {
+		this.autoCreateOperations = autoCreateOperations;
+		return this;
+	}
+
+	/**
+	 * Return a new {@link ChannelOperations} or null if one of the two
+	 * following conditions are not met:
+	 * <ul>
+	 * <li>{@link #autoCreateOperations(boolean)} is true
+	 * </li>
+	 * <li>The passed message is not null</li>
+	 * </ul>
+	 *
+	 * @param channel the current {@link Channel}
+	 * @param msg an optional message inbound, meaning the channel has already been
+	 * started before
+	 *
+	 * @return a new {@link ChannelOperations}
+	 */
+	@SuppressWarnings("unchecked")
+	public final ChannelOperations<?, ?> createOperations(Channel channel, Object msg) {
+
+		if (autoCreateOperations || msg != null) {
+			ChannelOperations<?, ?> op =
+					channelOpFactory.create((CHANNEL) channel, this, msg);
+			channel.attr(ChannelOperations.OPERATIONS_KEY)
+			       .set(op);
+
+			channel.eventLoop().execute(op::onHandlerStart);
+			return op;
 		}
+
+		return null;
 	}
 
 	/**
@@ -205,6 +252,18 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		//ignore
 	}
 
+	@Override
+	protected void initChannel(CHANNEL ch) throws Exception {
+		doPipeline(ch.pipeline());
+		ch.pipeline()
+		  .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
+		if (log.isDebugEnabled()) {
+			log.debug("After pipeline {}",
+					ch.pipeline()
+					  .toString());
+		}
+	}
+
 	/**
 	 * @param channel
 	 */
@@ -237,8 +296,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 */
 	protected abstract Publisher<Void> onCloseOrRelease(Channel channel);
 
-	static final IllegalStateException ABORTED =
-			new IllegalStateException("Connection " + "has been aborted by the remote " + "peer") {
+	static final AbortedException ABORTED =
+			new AbortedException() {
 				@Override
 				public synchronized Throwable fillInStackTrace() {
 					return this;
@@ -321,18 +380,12 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 				}
 
 				try {
-					ChannelOperations<?, ?> op =
-							parent.channelOpSelector.apply(ctx.channel(), parent);
-
-					ctx.channel()
-					   .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-					   .set(op);
-
+					if (parent.pipelineConfigurator != null) {
+						parent.pipelineConfigurator.accept(ctx.pipeline(), parent);
+					}
 					ctx.pipeline()
-					   .addAfter(NettyPipeline.BridgeSetup,
-							   NettyPipeline.ReactiveBridge, new ChannelOperationsHandler());
-
-					op.onChannelActive(ctx);
+					   .addLast(NettyPipeline.ReactiveBridge,
+							   new ChannelOperationsHandler(parent));
 				}
 				catch (Exception t) {
 					if (log.isErrorEnabled()) {
@@ -356,6 +409,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 			if (!active) {
 				ctx.pipeline().remove(this);
+				parent.terminateChannel(ctx.channel());
 				parent.fireContextError(ABORTED);
 			}
 			ctx.fireChannelInactive();
@@ -371,6 +425,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 							cause);
 				}
 				ctx.pipeline().remove(this);
+				parent.terminateChannel(ctx.channel());
 				parent.fireContextError(cause);
 			}
 			ctx.fireExceptionCaught(cause);

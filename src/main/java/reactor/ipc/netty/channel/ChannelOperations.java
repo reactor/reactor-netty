@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
@@ -34,13 +35,14 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import reactor.core.Loopback;
 import reactor.core.Producer;
-import reactor.core.Trackable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSource;
+import reactor.core.publisher.Operators;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
@@ -60,18 +62,31 @@ import static reactor.ipc.netty.channel.ContextHandler.CLOSE_CHANNEL;
  * @since 0.6
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
-		implements NettyInbound, NettyOutbound, Producer, Trackable, Loopback,
-		           NettyContext {
+		implements NettyInbound, NettyOutbound, Producer, Loopback, NettyContext,
+		           Subscriber<Void> {
 
 	/**
-	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}
+	 * A {@link ChannelOperations} factory
 	 */
-	public static final AttributeKey<ChannelOperations> OPERATIONS_ATTRIBUTE_KEY =
-			AttributeKey.newInstance("nettyOperations");
+	@FunctionalInterface
+	public interface OnNew<CHANNEL extends Channel> {
+
+		/**
+		 * Create a new {@link ChannelOperations} given a netty channel, a parent
+		 * {@link ContextHandler} and an optional message (nullable).
+		 *
+		 * @param c a {@link Channel}
+		 * @param contextHandler a {@link ContextHandler}
+		 * @param msg an optional message
+		 *
+		 * @return a new {@link ChannelOperations}
+		 */
+		ChannelOperations<?, ?> create(CHANNEL c, ContextHandler<?> contextHandler, Object msg);
+	}
 
 	/**
 	 * Create a new {@link ChannelOperations} attached to the {@link Channel} attribute
-	 * {@link #OPERATIONS_ATTRIBUTE_KEY}.
+	 * {@link #OPERATIONS_KEY}.
 	 * Attach the {@link NettyPipeline#ReactiveBridge} handle.
 	 *
 	 * @param channel the new {@link Channel} connection
@@ -92,10 +107,23 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		return ops;
 	}
 
+	/**
+	 * Return a Noop {@link BiFunction} handler
+	 *
+	 * @param <INBOUND> reified inbound type
+	 * @param <OUTBOUND> reified outbound type
+	 *
+	 * @return a Noop {@link BiFunction} handler
+	 */
 	@SuppressWarnings("unchecked")
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> noopHandler() {
 		return PING;
 	}
+
+	/**
+	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}
+	 */
+	protected static final AttributeKey<ChannelOperations> OPERATIONS_KEY = AttributeKey.newInstance("nettyOperations");
 
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
 			                    handler;
@@ -103,6 +131,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final FluxReceive           inbound;
 	final DirectProcessor<Void> onInactive;
 	final ContextHandler<?>     context;
+
+	@SuppressWarnings("unchecked")
+	volatile Subscription outboundSubscription;
 
 	protected ChannelOperations(Channel channel,
 			ChannelOperations<INBOUND, OUTBOUND> replaced) {
@@ -117,8 +148,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	protected ChannelOperations(Channel channel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
-			ContextHandler<?> context,
-			DirectProcessor<Void> processor) {
+			ContextHandler<?> context, DirectProcessor<Void> processor) {
 		this.handler = Objects.requireNonNull(handler, "handler");
 		this.channel = Objects.requireNonNull(channel, "channel");
 		this.context = Objects.requireNonNull(context, "context");
@@ -126,6 +156,38 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.onInactive = processor;
 		context.onCloseOrRelease(channel)
 		       .subscribe(onInactive);
+	}
+
+	@Override
+	public final void onSubscribe(Subscription s) {
+		if (Operators.setOnce(OUTBOUND_CLOSE, this, s)) {
+			s.request(Long.MAX_VALUE);
+		}
+	}
+
+	@Override
+	public final void onNext(Void aVoid) {
+	}
+
+	@Override
+	public final void onError(Throwable t) {
+		Subscription s =
+				OUTBOUND_CLOSE.getAndSet(this, Operators.cancelledSubscription());
+		if (s == Operators.cancelledSubscription() || isDisposed()) {
+			Operators.onErrorDropped(t);
+			return;
+		}
+		onOutboundError(t);
+	}
+
+	@Override
+	public final void onComplete() {
+		Subscription s =
+				OUTBOUND_CLOSE.getAndSet(this, Operators.cancelledSubscription());
+		if (s == Operators.cancelledSubscription() || isDisposed()) {
+			return;
+		}
+		onOutboundComplete();
 	}
 
 	@Override
@@ -230,7 +292,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public void dispose() {
-		inbound.cancel();
+		onHandlerTerminate();
 	}
 
 	@Override
@@ -240,18 +302,26 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final boolean isDisposed() {
-		return !channel.isOpen() || channel.attr(OPERATIONS_ATTRIBUTE_KEY)
+		return channel.attr(OPERATIONS_KEY)
 		              .get() != this;
 	}
 
-	@Override
-	public boolean isTerminated() {
-		return inbound.isTerminated();
+	/**
+	 * Return true if inbound traffic is not expected anymore
+	 *
+	 * @return true if inbound traffic is not expected anymore
+	 */
+	protected final boolean isInboundDone() {
+		return inbound.isTerminated() || !channel.isOpen();
 	}
 
-	@Override
-	public final boolean isStarted() {
-		return inbound.isStarted();
+	/**
+	 * Return true if inbound traffic is not expected anymore
+	 *
+	 * @return true if inbound traffic is not expected anymore
+	 */
+	protected final boolean isOutboundDone() {
+		return outboundSubscription == Operators.cancelledSubscription() || !channel.isOpen();
 	}
 
 	@Override
@@ -319,10 +389,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	/**
 	 * React on input initialization
 	 *
-	 * @param ctx the current {@link ChannelHandlerContext}
 	 */
 	@SuppressWarnings("unchecked")
-	protected void onChannelActive(ChannelHandlerContext ctx) {
+	protected void onHandlerStart() {
 		applyHandler();
 		context.fireContextActive(this);
 	}
@@ -349,27 +418,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if replaced
 	 */
 	protected final boolean replace(ChannelOperations<?, ?> ops) {
-		if (channel.attr(OPERATIONS_ATTRIBUTE_KEY)
-		           .compareAndSet(this, ops)) {
-			if (channel.eventLoop()
-			           .inEventLoop()) {
-				Subscriber<?> s = inbound.receiver;
-				if(s!= null) {
-					s.onComplete();
-				}
-			}
-			else {
-				channel.eventLoop()
-				       .execute(() -> {
-					       Subscriber<?> s = inbound.receiver;
-					       if(s!= null) {
-						       s.onComplete();
-					       }
-				       });
-			}
-			return true;
-		}
-		return false;
+		return channel.attr(OPERATIONS_KEY)
+		              .compareAndSet(this, ops);
 	}
 
 	/**
@@ -388,7 +438,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (log.isDebugEnabled()) {
 			log.debug("[{}] User Handler requesting close connection", formatName());
 		}
-		onChannelTerminate();
+		channel.attr(CLOSE_CHANNEL).set(true);
+		onHandlerTerminate();
 	}
 
 	/**
@@ -398,15 +449,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onOutboundError(Throwable err) {
 		discreteRemoteClose(err);
-		onChannelTerminate();
-	}
-
-	/**
-	 * React on channel release/close event
-	 */
-	protected void onChannelTerminate() {
-		channel.pipeline().fireUserEventTriggered(NettyPipeline.handlerTerminatedEvent());
-		onChannelInactive();
+		channel.attr(CLOSE_CHANNEL).set(true);
+		onHandlerTerminate();
 	}
 
 	/**
@@ -414,11 +458,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	@SuppressWarnings("unchecked")
 	protected final void applyHandler() {
+//		channel.pipeline()
+//		       .fireUserEventTriggered(NettyPipeline.handlerStartedEvent());
 		if (log.isDebugEnabled()) {
 			log.debug("[{}] handler is being applied: {}", formatName(), handler);
 		}
 		handler.apply((INBOUND) this, (OUTBOUND) this)
-		       .subscribe(new OutboundCloseSubscriber(this));
+		       .subscribe(this);
 	}
 
 	/**
@@ -447,13 +493,19 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	/**
 	 * Final release/close (last packet)
 	 */
-	protected final void onChannelInactive() {
-		try {
-			onInactive.onComplete(); //signal senders and other interests
-			onInboundComplete(); // signal receiver
-		}
-		finally {
-			context.terminateChannel(channel); // release / cleanup channel
+	protected final void onHandlerTerminate() {
+		if (replace(null)) {
+			try {
+				Operators.terminate(OUTBOUND_CLOSE, this);
+				onInactive.onComplete(); //signal senders and other interests
+				onInboundComplete(); // signal receiver
+
+			}
+			finally {
+				channel.pipeline()
+				       .fireUserEventTriggered(NettyPipeline.handlerTerminatedEvent());
+				context.terminateChannel(channel); // release / cleanup channel
+			}
 		}
 	}
 
@@ -463,12 +515,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param err the {@link Throwable} cause
 	 */
 	protected final void onInboundError(Throwable err) {
-		if (err == null) {
-			err = new NullPointerException("error is null");
-		}
-		if (discreteRemoteClose(err)) {
-			return;
-		}
+		discreteRemoteClose(err);
 		if (inbound.onInboundError(err)) {
 			context.fireContextError(err);
 		}
@@ -514,5 +561,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	static final Logger     log  = Loggers.getLogger(ChannelOperations.class);
 	static final BiFunction PING = (i, o) -> Flux.empty();
+
+	static final AtomicReferenceFieldUpdater<ChannelOperations, Subscription>
+			OUTBOUND_CLOSE = AtomicReferenceFieldUpdater.newUpdater(ChannelOperations.class,
+			Subscription.class,
+			"outboundSubscription");
 
 }

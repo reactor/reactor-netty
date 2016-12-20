@@ -124,6 +124,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
 		this.inboundPrefetch = 16;
+		chunkedTransfer(true);
 	}
 
 	@Override
@@ -258,9 +259,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public boolean isWebsocket() {
-		return attr(OPERATIONS_ATTRIBUTE_KEY).get()
-		                                     .getClass()
-		                                     .equals(HttpClientWSOperations.class);
+		return attr(OPERATIONS_KEY).get()
+		                           .getClass()
+		                           .equals(HttpClientWSOperations.class);
 	}
 
 	@Override
@@ -306,13 +307,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public Mono<Void> send() {
 		if (markHeadersAsSent()) {
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(new DefaultFullHttpRequest(
-					version(),
-					method(),
-					uri(),
-					EMPTY_BUFFER,
-					requestHeaders,
-					EmptyHttpHeaders.INSTANCE)));
+			HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri());
+
+			request.headers()
+			       .set(requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+			                          .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
 		}
 		else {
 			return Mono.empty();
@@ -334,7 +335,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
 							                         agg.readableBytes());
 				    }
-				    return sendHeaders().send(Mono.just(agg)).then();
+				    return sendHeaders().send(Mono.just(agg))
+				                        .then();
 			    });
 		}
 		return super.send(source);
@@ -394,7 +396,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ?
 						url : "/" + url));
 			}
-			requestHeaders().remove(HttpHeaderNames.HOST);
 
 		}
 		catch (URISyntaxException e) {
@@ -431,44 +432,28 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void onChannelActive(final ChannelHandlerContext ctx) {
-		if (ctx.pipeline()
-		       .context(NettyPipeline.HttpDecoder) == null) {
-			ctx.pipeline()
-			   .addBefore(NettyPipeline.ReactiveBridge,
-					   NettyPipeline.HttpDecoder,
-					   new HttpResponseDecoder());
-		}
-		if (ctx.pipeline()
-		       .context(NettyPipeline.HttpEncoder) == null) {
-			ctx.pipeline()
-			   .addBefore(NettyPipeline.ReactiveBridge,
-					   NettyPipeline.HttpEncoder,
-					   new HttpRequestEncoder());
-		}
-
-		HttpUtil.setTransferEncodingChunked(nettyRequest, true);
-
+	protected void onHandlerStart() {
 		applyHandler();
 	}
 
 	@Override
 	protected void onOutboundComplete() {
-		if (!isDisposed()) {
-			boolean chunked = HttpUtil.isTransferEncodingChunked(nettyRequest);
-			if (markHeadersAsSent()) {
-				if (!chunked) {
-					channel().writeAndFlush(nettyRequest);
-					return;
-				}
-				else {
-					channel().write(nettyRequest);
-				}
-			}
-			if (chunked) {
-				channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-			}
+		if (isWebsocket()) {
+			return;
 		}
+		if (markHeadersAsSent()) {
+			HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri());
+
+			request.headers()
+			       .set(requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+			                          .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+
+			channel().writeAndFlush(nettyRequest);
+		}
+		else if (HttpUtil.isTransferEncodingChunked(nettyRequest)) {
+			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+		}
+		channel().read();
 	}
 
 	@Override
@@ -497,7 +482,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
-				onChannelInactive();
+				onHandlerTerminate();
 			}
 			return;
 		}
@@ -508,7 +493,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
 			}
-			onChannelInactive();
+			onHandlerTerminate();
 			return;
 		}
 
@@ -534,9 +519,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (log.isDebugEnabled()) {
 				log.debug("Received Server Error, stop reading: {}", response.toString());
 			}
-			Exception ex = new HttpClientException(this);
+			Exception ex = new HttpClientException(uri(), response);
 			parentContext().fireContextError(ex);
-			onChannelTerminate();
+			onHandlerTerminate();
 			return false;
 		}
 
@@ -545,9 +530,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				log.debug("Received Request Error, stop reading: {}",
 						response.toString());
 			}
-			Exception ex = new HttpClientException(this);
+			Exception ex = new HttpClientException(uri(), response);
 			parentContext().fireContextError(ex);
-			onChannelTerminate();
+			onHandlerTerminate();
 			return false;
 		}
 		if (code == 301 || code == 302 && isFollowRedirect()) {
@@ -557,9 +542,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						        .entries()
 						        .toString());
 			}
-			Exception ex = new RedirectClientException(this);
+			Exception ex = new RedirectClientException(uri(), response);
 			parentContext().fireContextError(ex);
-			onChannelTerminate();
+			onHandlerTerminate();
 			return false;
 		}
 		return true;
@@ -595,12 +580,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
-			if (channel().attr(OPERATIONS_ATTRIBUTE_KEY)
+			if (channel().attr(OPERATIONS_KEY)
 			             .compareAndSet(this, ops)) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
-				                                 .then(() -> Mono.from(
-						                                 websocketHandler.apply(ops,
-								                                 ops)));
+				                                 .then(() -> Mono.from(websocketHandler.apply(
+						                                 ops,
+						                                 ops)));
 				if (websocketHandler != noopHandler()) {
 					handshake = handshake.doAfterTerminate(ops);
 				}
@@ -683,8 +668,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					parent.disableChunkedTransfer();
 				}
 
-				parent.addHandler(NettyPipeline.ChunkedWriter,
-						new ChunkedWriteHandler());
+				parent.addHandler(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
 

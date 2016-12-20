@@ -193,7 +193,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				loggingHandler,
 				secure,
 				pool,
-				(ch, c) -> ChannelOperations.bind(ch, handler, c));
+				(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
 	}
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);

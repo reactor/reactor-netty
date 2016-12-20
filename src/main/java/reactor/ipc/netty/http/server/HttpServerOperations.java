@@ -31,8 +31,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.EmptyHttpHeaders;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -40,11 +38,8 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
@@ -76,17 +71,19 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse {
 
+	@SuppressWarnings("unchecked")
 	static HttpServerOperations bindHttp(Channel channel,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-			ContextHandler<?> context) {
-		return new HttpServerOperations(channel, handler, context);
+			ContextHandler<?> context,
+			Object msg) {
+		return new HttpServerOperations(channel, handler, context, (HttpRequest) msg);
 	}
 
 	final HttpResponse nettyResponse;
 	final HttpHeaders  responseHeaders;
+	final Cookies     cookieHolder;
+	final HttpRequest nettyRequest;
 
-	Cookies                                       cookieHolder;
-	HttpRequest                                   nettyRequest;
 	Function<? super String, Map<String, String>> paramsResolver;
 
 	HttpServerOperations(Channel ch, HttpServerOperations replaced) {
@@ -95,16 +92,21 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.responseHeaders = replaced.responseHeaders;
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
+		this.nettyRequest = replaced.nettyRequest;
 	}
 
 	HttpServerOperations(Channel ch,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-			ContextHandler<?> context) {
+			ContextHandler<?> context,
+			HttpRequest nettyRequest) {
 		super(ch, handler, context);
-		this.nettyResponse =
-				new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+		this.nettyRequest = Objects.requireNonNull(nettyRequest, "nettyRequest");
+		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
+		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
 		chunkedTransfer(true);
+
+
 	}
 
 	@Override
@@ -265,14 +267,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public Mono<Void> send() {
 		if (markHeadersAsSent()) {
-			disableChunkedTransfer();
-			responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(new DefaultFullHttpResponse(
-					version(),
-					status(),
-					EMPTY_BUFFER,
-					responseHeaders,
-					EmptyHttpHeaders.INSTANCE)));
+			HttpResponse res =
+					new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
+
+			res.headers()
+			   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+			                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(nettyResponse));
 		}
 		else {
 			return Mono.empty();
@@ -285,8 +287,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return sendFile(file, 0L, Files.size(file));
 		}
 		catch (IOException e) {
-			if(log.isDebugEnabled()){
-				log.debug("Path not resolved",e);
+			if (log.isDebugEnabled()) {
+				log.debug("Path not resolved", e);
 			}
 			return then(sendNotFound());
 		}
@@ -355,96 +357,25 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void onChannelActive(ChannelHandlerContext ctx) {
-
-		if (ctx.pipeline()
-		       .context(NettyPipeline.HttpDecoder) == null) {
-			ctx.pipeline()
-			   .addBefore(NettyPipeline.ReactiveBridge,
-					   NettyPipeline.HttpDecoder,
-					   new HttpRequestDecoder());
-		}
-		if (ctx.pipeline()
-		       .context(NettyPipeline.HttpEncoder) == null) {
-			ctx.pipeline()
-			   .addBefore(NettyPipeline.ReactiveBridge,
-					   NettyPipeline.HttpEncoder,
-					   new HttpResponseEncoder());
-		}
-		if (ctx.pipeline()
-		       .context(NettyPipeline.HttpKeepAlive) == null) {
-			ctx.pipeline()
-			   .addBefore(NettyPipeline.ReactiveBridge,
-					   NettyPipeline.HttpKeepAlive,
-					   new HttpServerPersistenceHandler());
-			if (log.isDebugEnabled()) {
-				log.debug("New http connection, requesting read");
-			}
-			ctx.read();
-		}
+	protected void onHandlerStart() {
+		applyHandler();
 	}
 
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
-			if (nettyRequest != null) {
-				HttpServerOperations newhttpOps = new HttpServerOperations(ctx.channel(),
-						handler(),
-						parentContext());
-
-				onInboundComplete();
-
-				ctx.channel()
-				   .attr(OPERATIONS_ATTRIBUTE_KEY)
-				   .set(newhttpOps);
-
-				newhttpOps.onInboundNext(ctx, msg);
-
-				return;
-			}
-			nettyRequest = (HttpRequest) msg;
-			cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
-
-			if (nettyRequest.decoderResult()
-			                .isFailure()) {
-				onOutboundError(nettyRequest.decoderResult()
-				                            .cause());
-				return;
-			}
-
-			if (isWebsocket() && ctx.pipeline()
-			                        .context(NettyPipeline.HttpAggregator) == null) {
-				HttpObjectAggregator agg = new HttpObjectAggregator(65536);
-				channel().pipeline()
-				         .addBefore(NettyPipeline.ReactiveBridge,
-						         NettyPipeline.HttpAggregator,
-						         agg);
-			}
-
-			applyHandler();
-
-			if (!(msg instanceof FullHttpRequest)) {
-				return;
-			}
-		}
 		if (msg instanceof HttpContent) {
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
-				if (isTerminated()) {
-					release();
-				}
-				else {
-					onInboundComplete();
+				onInboundComplete();
+				if (isOutboundDone()) {
+					onHandlerTerminate();
 				}
 				return;
 			}
-			if (isTerminated()) {
-				if (log.isDebugEnabled()) {
-					log.debug("Continuing read since Http handler terminated");
-				}
-				ctx.read();
+			if (isOutboundDone()) {
+				onOutboundReadMore();
 			}
 		}
 		else {
@@ -454,22 +385,51 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onOutboundComplete() {
-		if (isDisposed()) {
+		if (isWebsocket()) {
 			return;
 		}
 
+		ChannelFuture f = null;
 		if (log.isDebugEnabled()) {
-			log.debug("User Handler requesting a last HTTP frame write", formatName());
+			log.debug("Last HTTP response frame");
 		}
-		if (markInboundDone()) {
-			release();
+		if (markHeadersAsSent()) {
+			if (log.isDebugEnabled()) {
+				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
+			}
+
+			HttpResponse res =
+					new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
+
+			res.headers()
+			   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+			                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+
+			f = channel().writeAndFlush(res);
+		}
+		else if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
+			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 
-		onOutboundReadMore();
+		if (f == null) {
+			if (isInboundDone()) {
+				onHandlerTerminate();
+			}
+			return;
+		}
+
+		f.addListener(s -> {
+			if (isInboundDone()) {
+				onHandlerTerminate();
+			}
+			if (!s.isSuccess() && log.isDebugEnabled()) {
+				log.error("Failed flushing last frame", s.cause());
+			}
+		});
 	}
 
-	final void onOutboundReadMore(){
-		if(isKeepAlive()) {
+	final void onOutboundReadMore() {
+		if (isKeepAlive()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
 			}
@@ -489,21 +449,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			response.headers()
 			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
 			channel().writeAndFlush(response)
-			         .addListener(r -> onChannelTerminate());
+			         .addListener(r -> onHandlerTerminate());
 			onOutboundReadMore();
 			return;
 		}
-		log.error("Error processing response. Sending last HTTP frame", err);
 
 		if (HttpUtil.isContentLengthSet(nettyResponse)) {
 			channel().writeAndFlush(EMPTY_BUFFER)
-			         .addListener(r -> onChannelTerminate());
+			         .addListener(r -> onHandlerTerminate());
 			onOutboundReadMore();
 			return;
 		}
 		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
-		         .addListener(r -> onChannelTerminate());
-		if(isKeepAlive()) {
+		         .addListener(r -> onHandlerTerminate());
+		if (isKeepAlive()) {
 			onOutboundReadMore();
 		}
 	}
@@ -511,45 +470,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected HttpMessage outboundHttpMessage() {
 		return nettyResponse;
-	}
-
-	final void release() {
-		ChannelFuture f = null;
-		if (!isWebsocket()) {
-			if (log.isDebugEnabled()) {
-				log.debug("Last HTTP response frame");
-			}
-			if (markHeadersAsSent()) {
-				if(log.isDebugEnabled()){
-					log.debug("No sendHeaders() called before complete, sending " +
-							"zero-length header");
-				}
-				HttpResponse res = new DefaultFullHttpResponse(version(), status()
-						, EMPTY_BUFFER);
-
-				res.headers().set(responseHeaders);
-				res.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
-				res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
-
-				channel().writeAndFlush(res);
-			}
-			else if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
-				f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-			}
-
-			if (isKeepAlive()) {
-				if (f != null) {
-					f.addListener(s -> {
-						onChannelTerminate();
-						if (!s.isSuccess() && log.isDebugEnabled()) {
-							log.error("Failed flushing last frame", s.cause());
-						}
-					});
-					return;
-				}
-			}
-			onChannelTerminate();
-		}
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,

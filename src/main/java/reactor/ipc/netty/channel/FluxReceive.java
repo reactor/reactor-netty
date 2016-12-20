@@ -42,8 +42,7 @@ final class FluxReceive extends Flux<Object>
 		implements Subscription, Trackable, Producer {
 
 	final Channel           channel;
-	final ContextHandler<?> parentContext;
-	final NettyContext      context;
+	final ChannelOperations<?, ?> parent;
 	final EventLoop         eventLoop;
 
 	Subscriber<? super Object> receiver;
@@ -57,8 +56,7 @@ final class FluxReceive extends Flux<Object>
 	volatile Cancellation receiverCancel;
 
 	FluxReceive(ChannelOperations<?, ?> parent) {
-		this.context = parent;
-		this.parentContext = parent.context;
+		this.parent = parent;
 		this.channel = parent.channel;
 		this.eventLoop = channel.eventLoop();
 	}
@@ -145,6 +143,9 @@ final class FluxReceive extends Flux<Object>
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
+				if(parent.isOutboundDone()){
+					parent.onHandlerTerminate();
+				}
 				if (c != null) {
 					c.dispose();
 					return true;
@@ -345,7 +346,7 @@ final class FluxReceive extends Flux<Object>
 		else {
 			a.onComplete();
 		}
-		parentContext.fireContextActive(context);
+		parent.context.fireContextActive(parent);
 	}
 
 	final void unsubscribeReceiver() {

@@ -17,7 +17,6 @@
 package reactor.ipc.netty.channel;
 
 import java.net.InetSocketAddress;
-import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -30,7 +29,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ServerOptions;
 
 /**
@@ -42,11 +40,11 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	final ServerOptions serverOptions;
 
-	ServerContextHandler(BiFunction<? super Channel, ? super ContextHandler<Channel>, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	ServerContextHandler(ChannelOperations.OnNew<Channel> channelOpFactory,
 			ServerOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler) {
-		super(channelOpSelector, options, sink, loggingHandler);
+		super(channelOpFactory, options, sink, loggingHandler);
 		this.serverOptions = options;
 	}
 
@@ -82,8 +80,10 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	public NettyContext addHandler(String name, ChannelHandler handler) {
-		channel().pipeline()
-		         .addLast(name, handler);
+		if(channel().pipeline().context(name) == null) {
+			channel().pipeline()
+			         .addLast(name, handler);
+		}
 		return this;
 	}
 
@@ -119,29 +119,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 		Boolean attr = channel.attr(CLOSE_CHANNEL).get();
 		if(attr != null && attr){
 			channel.close();
-			return;
 		}
-		if(channel.eventLoop().inEventLoop()){
-			recycleHandler(channel);
-		}
-		else{
-			channel.eventLoop()
-			       .execute(() -> recycleHandler(channel));
-		}
-	}
-
-	final void recycleHandler(Channel channel) {
-		if(!channel.isOpen()) {
-			return;
-		}
-
-		ChannelOperations<?, ?> op = channelOpSelector.apply(channel, this);
-
-		channel.attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
-		       .set(op);
-
-		op.onChannelActive(channel.pipeline()
-		                          .context(NettyPipeline.ReactiveBridge));
 	}
 
 	@Override

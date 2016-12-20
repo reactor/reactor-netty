@@ -18,16 +18,70 @@ package reactor.ipc.netty.http;
 
 import java.io.InputStream;
 
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientException;
+import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.tcp.TcpServer;
 
 /**
  * @author Stephane Maldini
- * @since 2.5
+ * @since 0.6
  */
 public class HttpClientTests {
+
+	@Test
+	public void abort() throws Exception {
+		NettyContext x = TcpServer.create("localhost", 0)
+		                          .newHandler((in, out) -> in.receive()
+		                                                     .take(1)
+		                                                     .doOnNext(d -> out.context()
+		                                                                       .addHandler(
+				                                                                       new HttpResponseEncoder()))
+		                                                     .then(() -> out.sendObject(
+				                                                     new DefaultFullHttpResponse(
+						                                                     HttpVersion.HTTP_1_1,
+						                                                     HttpResponseStatus.ACCEPTED))
+		                                                                    .then(Mono.delayMillis(
+				                                                                    2000)
+		                                                                              .then())))
+		                          .block();
+
+		PoolResources pool = PoolResources.fixed("test", 1);
+
+		int res = HttpClient.create(opts -> opts.connect("localhost",
+				x.address()
+				 .getPort())
+		                                        .poolResources(pool))
+		                    .get("/")
+		                    .then(r -> Mono.just(r.status()
+		                                          .code()))
+		                    .log()
+		                    .block();
+
+		try {
+			HttpClient.create(opts -> opts.connect("localhost",
+					x.address()
+					 .getPort())
+			                              .poolResources(pool))
+			          .get("/")
+			          .log()
+			          .block();
+		}
+		catch (AbortedException ae) {
+			return;
+		}
+
+		Assert.fail("Not aborted");
+	}
 
 	//@Test
 	public void simpleTest() throws Exception {
@@ -61,9 +115,8 @@ public class HttpClientTests {
 		                    .put("/post",
 				                    c -> c.sendMultipart(form -> form.file("test", f)
 				                                                     .attr("att1",
-						                                                         "attr2")
-				                                                     .file("test2",
-						                                                         f))
+						                                                     "attr2")
+				                                                     .file("test2", f))
 				                          .log()
 				                          .then())
 		                    .then(r -> Mono.just(r.status()
@@ -93,7 +146,7 @@ public class HttpClientTests {
 		                                          .code()))
 		                    .log()
 		                    .otherwise(HttpClientException.class,
-				                    e -> Mono.just(e.getResponseStatus()
+				                    e -> Mono.just(e.status()
 				                                    .code()))
 		                    .block();
 

@@ -17,10 +17,14 @@
 package reactor.ipc.netty.http.server;
 
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
@@ -30,6 +34,7 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.options.NettyOptions;
@@ -133,7 +138,8 @@ public final class HttpServer
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
 
-	final class TcpBridgeServer extends TcpServer {
+	final class TcpBridgeServer extends TcpServer
+			implements BiConsumer<ChannelPipeline, ContextHandler<Channel>> {
 
 		TcpBridgeServer(ServerOptions options) {
 			super(options);
@@ -146,7 +152,16 @@ public final class HttpServer
 			return ContextHandler.newServerContext(sink,
 					options,
 					loggingHandler,
-					(ch, c) -> HttpServerOperations.bindHttp(ch, handler, c));
+					(ch, c, msg) -> HttpServerOperations.bindHttp(ch, handler, c, msg))
+			                     .onPipeline(this)
+			                     .autoCreateOperations(false);
+		}
+
+		@Override
+		public void accept(ChannelPipeline p, ContextHandler<Channel> c) {
+			p.addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
+			 .addLast(NettyPipeline.HttpEncoder, new HttpResponseEncoder())
+			 .addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(c));
 		}
 
 		@Override

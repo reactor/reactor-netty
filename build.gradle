@@ -67,7 +67,6 @@ ext {
 				  "http://projectreactor.io/docs/core/release/api/",
 				  "http://netty.io/4.1/api/",
 				  "http://projectreactor.io/docs/ipc/release/api/",
-				  "http://projectreactor.io/codec/docs/api/",
 				  "http://projectreactor.io/docs/netty/release/api/",] as String[]
 }
 

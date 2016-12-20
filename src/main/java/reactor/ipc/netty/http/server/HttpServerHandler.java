@@ -22,6 +22,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -31,6 +32,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.concurrent.QueueSupplier;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
@@ -39,10 +41,12 @@ import static io.netty.handler.codec.http.HttpUtil.*;
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
-final class HttpServerPersistenceHandler extends ChannelDuplexHandler
+final class HttpServerHandler extends ChannelDuplexHandler
 		implements Runnable {
 
 	static final String MULTIPART_PREFIX = "multipart";
+
+	final ContextHandler<?> parentContext;
 
 	boolean persistentConnection = true;
 	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
@@ -55,10 +59,18 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 	boolean overflow;
 	boolean toRemove;
 
+	HttpServerHandler(ContextHandler<?> parentContext) {
+		this.parentContext = parentContext;
+	}
+
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		super.handlerAdded(ctx);
 		this.ctx = ctx;
+		if (HttpServerOperations.log.isDebugEnabled()) {
+			HttpServerOperations.log.debug("New http connection, requesting read");
+		}
+		ctx.read();
 	}
 
 	@Override
@@ -80,8 +92,10 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 			}
 			if (overflow || pendingResponses > 1) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("buffering pipelined HTTP request, pending response count: {}",
-							pendingResponses);
+					HttpServerOperations.log.debug("buffering pipelined HTTP request, " +
+									"pending response count: {}, queue: {}",
+							pendingResponses,
+							pipelined != null ? pipelined.size() : 0);
 				}
 				overflow = true;
 				doPipeline(ctx, msg);
@@ -89,13 +103,19 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 			}
 			else {
 				overflow = false;
+				parentContext.createOperations(ctx.channel(), msg);
+
+				if (!(msg instanceof FullHttpRequest)) {
+					return;
+				}
 			}
 		}
 		else if (overflow) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
 				HttpServerOperations.log.debug("buffering pipelined HTTP content, " +
-								"pending response count: {}",
-						pendingResponses);
+								"pending response count: {}, pending pipeline:{}",
+						pendingResponses,
+						pipelined != null ? pipelined.size() : 0);
 			}
 			doPipeline(ctx, msg);
 			return;
@@ -146,14 +166,13 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
 			throws Exception {
-		if (evt == NettyPipeline.handlerTerminatedEvent() && toRemove) {
-			toRemove = false;
-			pendingResponses -= 1;
+		if (evt == NettyPipeline.handlerTerminatedEvent()) {
+			if(toRemove) {
+				pendingResponses -= 1;
 
-			ctx.pipeline()
-			   .replace(NettyPipeline.HttpEncoder,
-					   NettyPipeline.HttpEncoder,
-					   new HttpResponseEncoder());
+				ctx.pipeline()
+				   .replace(NettyPipeline.HttpEncoder, NettyPipeline.HttpEncoder, new HttpResponseEncoder());
+			}
 
 			if (pipelined != null && !pipelined.isEmpty()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
@@ -164,6 +183,9 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 				}
 				ctx.executor()
 				   .execute(this);
+			}
+			else {
+				ctx.read();
 			}
 		}
 
@@ -184,6 +206,12 @@ final class HttpServerPersistenceHandler extends ChannelDuplexHandler
 					return;
 				}
 				nextRequest = true;
+				parentContext.createOperations(ctx.channel(), next);
+
+				if (!(next instanceof FullHttpRequest)) {
+					pipelined.poll();
+					continue;
+				}
 			}
 			ctx.fireChannelRead(pipelined.poll());
 		}

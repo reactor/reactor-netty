@@ -55,13 +55,12 @@ import reactor.util.concurrent.QueueSupplier;
  * @author Stephane Maldini
  */
 final class ChannelOperationsHandler extends ChannelDuplexHandler
-		implements ChannelFutureListener, NettyPipeline.SendOptions {
+		implements NettyPipeline.SendOptions {
 
-	final PublisherSender                     inner;
-	final BiConsumer<?, ? super ByteBuf>      encoder;
-	final int                                 prefetch;
-	final int                                 limit;
-	long                  pendingBytes;
+	final PublisherSender                inner;
+	final ContextHandler<?>              parentContext;
+	final BiConsumer<?, ? super ByteBuf> encoder;
+	final int                            prefetch;
 
 	/**
 	 * Cast the supplied queue (SpscLinkedArrayQueue) to use its atomic dual-insert
@@ -71,17 +70,18 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	Queue<?>                            pendingWrites;
 	ChannelHandlerContext               ctx;
 	boolean                             flushOnEach;
+	long                                pendingBytes;
 
 	volatile boolean innerActive;
 	volatile boolean removed;
 	volatile int     wip;
 
 	@SuppressWarnings("unchecked")
-	ChannelOperationsHandler() {
+	ChannelOperationsHandler(ContextHandler<?> contextHandler) {
 		this.inner = new PublisherSender(this);
 		this.prefetch = 32;
-		this.limit = prefetch - (prefetch >> 2);
 		this.encoder = NOOP_ENCODER;
+		this.parentContext = contextHandler;
 	}
 
 	@Override
@@ -89,7 +89,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		try {
 			ChannelOperations<?, ?> ops = inbound();
 			if(ops != null){
-				ops.onChannelInactive();
+				ops.onHandlerTerminate();
+			}
+			else {
+				parentContext.terminateChannel(ctx.channel());
+				parentContext.fireContextError(ContextHandler.ABORTED);
 			}
 		}
 		catch (Throwable err) {
@@ -100,14 +104,17 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	@Override
 	final public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-		if (msg == null) {
+		if (msg == null || msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
 			return;
 		}
 		try {
-			if (msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
-				return;
+			ChannelOperations<?, ?> ops = inbound();
+			if (ops != null) {
+				inbound().onInboundNext(ctx, msg);
 			}
-			inbound().onInboundNext(ctx, msg);
+			else if (log.isDebugEnabled()) {
+				log.debug("No ChannelOperation attached. Dropping: {}", msg);
+			}
 		}
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);
@@ -140,6 +147,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		if(ops != null){
 			ops.onInboundError(err);
 		}
+		else {
+			parentContext.terminateChannel(ctx.channel());
+			parentContext.fireContextError(err);
+		}
 		if(log.isDebugEnabled()){
 			log.error("Handler failure while no operation was present", err);
 		}
@@ -155,7 +166,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		this.ctx = ctx;
-		inner.request(prefetch);
+		if (ctx.channel()
+		       .isOpen()) {
+			parentContext.createOperations(ctx.channel(), null);
+			inner.request(prefetch);
+		}
 	}
 
 	@Override
@@ -164,12 +179,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			removed = true;
 
 			inner.cancel();
+			drain();
 		}
-	}
-
-	@Override
-	public void operationComplete(ChannelFuture future) throws Exception {
-		inner.request(limit);
 	}
 
 	@Override
@@ -184,6 +195,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 			((NettyPipeline.SendOptionsChangeEvent) evt).configurator()
 			                                            .accept(this);
+		}
+		else {
+			ctx.fireUserEventTriggered(evt);
 		}
 	}
 
@@ -289,12 +303,38 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 	}
 
+	void discard() {
+		for (; ; ) {
+			if (pendingWrites == null || pendingWrites.isEmpty()) {
+				return;
+			}
+
+			ChannelPromise promise;
+			Object v = pendingWrites.poll();
+
+			try {
+				promise = (ChannelPromise) v;
+			}
+			catch (Throwable e) {
+				ctx.fireExceptionCaught(e);
+				return;
+			}
+			v = pendingWrites.poll();
+			if (log.isDebugEnabled()) {
+				log.debug("Terminated ChannelOperation. Dropping: {}", v);
+			}
+			ReferenceCountUtil.release(v);
+			promise.tryFailure(ContextHandler.ABORTED);
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	void drain() {
 			if (WIP.getAndIncrement(this) == 0) {
 
 				for (; ; ) {
 					if (removed) {
+						discard();
 						return;
 					}
 
@@ -374,7 +414,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	//
 	final ChannelOperations<?, ?> inbound() {
 		return ctx.channel()
-		          .attr(ChannelOperations.OPERATIONS_ATTRIBUTE_KEY)
+		          .attr(ChannelOperations.OPERATIONS_KEY)
 		          .get();
 	}
 
@@ -510,7 +550,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			else {
 				promise.setFailure(future.cause());
 			}
-			parent.drain();
 		}
 
 		@Override

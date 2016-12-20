@@ -14,25 +14,29 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http.client;
-
-import java.util.Objects;
-
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpResponse;
+package reactor.ipc.netty.channel;
 
 /**
- * An error for signalling that an error occurred during a communication over HTTP version
+ * An exception marking prematurely or unexpectedly closed inbound
  *
+ * @author Stephane Maldini
+ * @since 0.6
  */
-final class RedirectClientException extends HttpClientException {
+public class AbortedException extends RuntimeException {
 
-	final String location;
-
-	public RedirectClientException(String uri, HttpResponse response) {
-		super(uri, response);
-		location = Objects.requireNonNull(response.headers()
-		                                          .get(HttpHeaderNames.LOCATION));
+	public AbortedException() {
+		this("Connection has been aborted by the remote peer");
 	}
 
+	public AbortedException(String message) {
+		super(message);
+	}
+
+	public AbortedException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+	public AbortedException(Throwable cause) {
+		super(cause);
+	}
 }

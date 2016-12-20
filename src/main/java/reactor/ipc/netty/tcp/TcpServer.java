@@ -165,7 +165,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		return ContextHandler.newServerContext(sink,
 				options,
 				loggingHandler(),
-				(ch, c) -> ChannelOperations.bind(ch, handler, c));
+				(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
 	}
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpServer.class);

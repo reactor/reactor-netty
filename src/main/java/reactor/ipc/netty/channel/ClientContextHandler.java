@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.channel;
 
-import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -26,8 +25,6 @@ import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 /**
  * @param <CHANNEL> the channel type
@@ -37,18 +34,16 @@ import reactor.util.Loggers;
 final class ClientContextHandler<CHANNEL extends Channel>
 		extends CloseableContextHandler<CHANNEL> {
 
-	static final Logger log = Loggers.getLogger(ClientContextHandler.class);
-
 	final ClientOptions clientOptions;
 	final boolean       secure;
 
 
-	ClientContextHandler(BiFunction<? super CHANNEL,? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	ClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			ClientOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
 			boolean secure) {
-		super(channelOpSelector, options, sink, loggingHandler);
+		super(channelOpFactory, options, sink, loggingHandler);
 		this.clientOptions = options;
 		this.secure = secure;
 	}
@@ -66,7 +61,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 		channel.close();
 		if(!fired) {
 			fired = true;
-			sink.success();
+			sink.error(ABORTED);
 		}
 	}
 

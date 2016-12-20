@@ -51,11 +51,11 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 
 	ChannelFuture f;
 
-	CloseableContextHandler(BiFunction<? super CHANNEL,? super ContextHandler<CHANNEL>, ? extends ChannelOperations<?, ?>> channelOpSelector,
+	CloseableContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			NettyOptions<?, ?> options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler) {
-		super(channelOpSelector, options, sink, loggingHandler);
+		super(channelOpFactory, options, sink, loggingHandler);
 	}
 
 	@Override

@@ -23,7 +23,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpUtil;
+import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -44,12 +47,13 @@ final class HttpServerWSOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
 
 	final WebSocketServerHandshaker handshaker;
-	final ChannelFuture             handshakerResult;
+	final ChannelPromise            handshakerResult;
 
 	volatile int closeSent;
 
 	public HttpServerWSOperations(String wsUrl,
-			String protocols, HttpServerOperations replaced) {
+			String protocols,
+			HttpServerOperations replaced) {
 		super(replaced.channel(), replaced);
 
 		Channel channel = replaced.channel();
@@ -63,16 +67,22 @@ final class HttpServerWSOperations extends HttpServerOperations
 			handshakerResult = null;
 		}
 		else {
-			HttpUtil.setTransferEncodingChunked(replaced.nettyResponse, false);
-			handshakerResult = handshaker.handshake(channel,
-					replaced.nettyRequest,
-					replaced.nettyRequest.headers(),
-					channel.newPromise())
-			                             .addListener(f -> {
-				                             ignoreChannelPersistence();
-				                             removeHandler(NettyPipeline.HttpKeepAlive);
-				                             channel.read();
-			                             });
+			removeHandler(NettyPipeline.HttpServerHandler);
+
+			handshakerResult = channel.newPromise();
+			HttpRequest request = new DefaultFullHttpRequest(replaced.version(),
+					replaced.method(),
+					replaced.uri());
+
+			request.headers()
+			       .set(replaced.nettyRequest.headers());
+
+			handshaker.handshake(channel,
+					request,
+					replaced.nettyResponse.headers()
+					                      .remove(HttpHeaderNames.TRANSFER_ENCODING),
+					handshakerResult)
+			          .addListener(f -> ignoreChannelPersistence());
 		}
 	}
 
@@ -83,12 +93,12 @@ final class HttpServerWSOperations extends HttpServerOperations
 			sendClose(new CloseWebSocketFrame(close.isFinalFragment(),
 					close.rsv(),
 					close.content()
-					     .retain()), f -> onChannelInactive());
+					     .retain()), f -> onHandlerTerminate());
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
-			                                                                           .retain()));
+			                                                                     .retain()));
 			ctx.read();
 			return;
 		}
@@ -103,7 +113,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 	public void accept(Void aVoid, Throwable throwable) {
 		if (throwable == null) {
 			if (channel().isOpen()) {
-				sendClose(null, f -> onChannelInactive());
+				sendClose(null, f -> onHandlerTerminate());
 			}
 		}
 		else {

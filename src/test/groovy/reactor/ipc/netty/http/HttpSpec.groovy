@@ -42,11 +42,7 @@ class HttpSpec extends Specification {
 	//prepare post request consumer on /test/* and capture the URL parameter "param"
 	def server = HttpServer.create(0).newRouter { r ->
 	  r.post('/test/{param}') {
-		req, res
-		  ->
-		  //log then transform then log received http request content from the request body and the resolved URL parameter "param"
-		  //the returned stream is bound to the request stream and will auto read/close accordingly
-		  res.send(Flux.empty())
+		req, res -> Mono.empty()
 	  }
 	}.block()
 

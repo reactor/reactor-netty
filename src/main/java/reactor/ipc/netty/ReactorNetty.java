@@ -21,9 +21,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Promise;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -36,7 +33,12 @@ final class ReactorNetty {
 	ReactorNetty(){
 	}
 
-	static final class TerminatedHandlerEvent {}
+	static final class TerminatedHandlerEvent {
+		@Override
+		public String toString() {
+			return "[Handler Terminated]";
+		}
+	}
 
 	/**
 	 * An appending write that delegates to its origin context and append the passed
@@ -108,4 +110,6 @@ final class ReactorNetty {
 			super.channelIdle(ctx, evt);
 		}
 	}
+
+	static final Object TERMINATED = new TerminatedHandlerEvent();
 }

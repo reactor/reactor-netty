@@ -148,7 +148,7 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 				options,
 				loggingHandler,
 				false,
-				(ch, c) -> UdpOperations.bind(ch, handler, c));
+				(ch, c, msg) -> UdpOperations.bind(ch, handler, c));
 	}
 
 

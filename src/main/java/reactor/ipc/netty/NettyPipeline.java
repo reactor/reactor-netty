@@ -32,10 +32,10 @@ import org.reactivestreams.Publisher;
  * -> ssl & trace log ? [SslLoggingHandler]
  * -> ssl ? [SslReader]
  * -> log ? [LoggingHandler]
- * -> http server & keep-alive ? [HttpKeepAlive]
  * => [BridgeSetup]
- * -> http ws ? [HttpAggregator]
  * -> http ? [HttpCodecHandler]
+ * -> http ws ? [HttpAggregator]
+ * -> http server  ? [HttpServerHandler]
  * -> onWriteIdle ? [OnChannelWriteIdle]
  * -> onReadIdle ? [OnChannelReadIdle]
  * -> http form/multipart ? [ChunkedWriter]
@@ -56,7 +56,7 @@ public interface NettyPipeline {
 	String HttpEncoder        = "httpEncoder";
 	String HttpDecoder        = "httpDecoder";
 	String HttpAggregator     = "reactorHttpAggregator";
-	String HttpKeepAlive      = "httpKeepAlive";
+	String HttpServerHandler  = "httpServerHandler";
 	String OnChannelWriteIdle = "onChannelWriteIdle";
 	String OnChannelReadIdle  = "onChannelReadIdle";
 	String ChunkedWriter      = "chunkedWriter";
@@ -186,8 +186,6 @@ public interface NettyPipeline {
 		public Publisher<?> source() {
 			return source;
 		}
-
-		static final Object TERMINATED = new ReactorNetty.TerminatedHandlerEvent();
 	}
 
 	/**
@@ -196,6 +194,6 @@ public interface NettyPipeline {
 	 * @return a marking event used when a netty connector handler terminates
 	 */
 	static Object handlerTerminatedEvent() {
-		return SendOptionsChangeEvent.TERMINATED;
+		return ReactorNetty.TERMINATED;
 	}
 }

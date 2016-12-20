@@ -18,15 +18,19 @@ package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -35,6 +39,7 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServerResponse;
@@ -276,7 +281,8 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	final static LoggingHandler loggingHandler = new LoggingHandler(HttpClient.class);
 
 	@SuppressWarnings("unchecked")
-	final class TcpBridgeClient extends TcpClient {
+	final class TcpBridgeClient extends TcpClient implements
+	                                              BiConsumer<ChannelPipeline, ContextHandler<Channel>> {
 
 		TcpBridgeClient(ClientOptions options) {
 			super(options);
@@ -296,17 +302,23 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 				boolean secure,
 				ChannelPool pool,
 				Consumer<? super Channel> onSetup) {
-			return ContextHandler.newClientContext(sink,
+			return ContextHandler.<SocketChannel>newClientContext(sink,
 					options,
 					loggingHandler,
 					secure,
 					pool,
-					(ch, c) -> {
+					(ch, c, msg) -> {
 						if(onSetup != null){
 							onSetup.accept(ch);
 						}
 						return HttpClientOperations.bindHttp(ch, handler, c);
-					});
+					}).onPipeline(this);
+		}
+
+		@Override
+		public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
+			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
+			        .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
 		}
 	}
 
