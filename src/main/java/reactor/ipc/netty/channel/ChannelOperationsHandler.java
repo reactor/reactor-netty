@@ -466,7 +466,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				produced = 0L;
 				produced(p);
 				if(!justFlushed) {
-					parent.ctx.flush();
+					if(parent.ctx.channel().isOpen()) {
+						parent.ctx.flush();
+					}
+					else{
+						promise.setFailure(ContextHandler.ABORTED);
+						return;
+					}
 				}
 			}
 
@@ -488,8 +494,12 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (p != 0L) {
 				produced = 0L;
 				produced(p);
-				if(!justFlushed) {
+				if(parent.ctx.channel().isOpen()) {
 					parent.ctx.flush();
+				}
+				else{
+					promise.setFailure(ContextHandler.ABORTED);
+					return;
 				}
 			}
 
