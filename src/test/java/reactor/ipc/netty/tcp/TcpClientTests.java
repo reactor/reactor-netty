@@ -42,6 +42,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.SocketUtils;
+import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -251,7 +252,7 @@ public class TcpClientTests {
 			assertTrue("Initial connection is made", connectionLatch.await(5, TimeUnit.SECONDS));
 			assertTrue("A reconnect attempt was made", reconnectionLatch.await(5, TimeUnit.SECONDS));
 		}
-		catch (IllegalStateException ise){
+		catch (AbortedException ise){
 			if(ise.getMessage().contains("aborted")){
 				return;
 			}
