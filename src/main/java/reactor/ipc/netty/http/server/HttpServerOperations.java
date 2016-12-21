@@ -122,7 +122,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerOperations addDecoder(ChannelHandler handler) {
-		return addDecoder(Objects.toString(handler), handler);
+		return addDecoder(handler.getClass().getSimpleName(), handler);
 	}
 
 	@Override

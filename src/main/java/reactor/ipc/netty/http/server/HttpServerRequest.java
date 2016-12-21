@@ -13,17 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package reactor.ipc.netty.http.server;
 
 import java.util.Map;
 import java.util.function.Function;
 
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import reactor.core.publisher.Flux;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.http.HttpInfos;
 
 /**
- *
  * An Http Reactive Channel with several accessor related to HTTP flow : headers, params,
  * URI, method, websocket...
  *
@@ -33,34 +35,46 @@ import reactor.ipc.netty.http.HttpInfos;
 public interface HttpServerRequest extends NettyInbound, HttpInfos {
 
 	@Override
-	default HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle){
+	default HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle) {
 		NettyInbound.super.onReadIdle(idleTimeout, onReadIdle);
 		return this;
 	}
 
 	/**
 	 * URI parameter captured via {} "/test/{var}"
+	 *
 	 * @param key param var name
+	 *
 	 * @return the param captured value
 	 */
 	String param(CharSequence key);
 
 	/**
 	 * Return the param captured key/value map
+	 *
 	 * @return the param captured key/value map
 	 */
 	Map<String, String> params();
 
 	/**
-	 *
 	 * @param headerResolver provide a params
+	 *
 	 * @return this request
 	 */
-	HttpServerRequest paramsResolver(Function<? super String, Map<String, String>>
-			headerResolver);
+	HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> headerResolver);
+
+	/**
+	 * Return a {@link Flux} of {@link HttpContent} containing received chunks
+	 *
+	 * @return a {@link Flux} of {@link HttpContent} containing received chunks
+	 */
+	default Flux<HttpContent> receiveContent() {
+		return receiveObject().ofType(HttpContent.class);
+	}
 
 	/**
 	 * Return inbound {@link HttpHeaders}
+	 *
 	 * @return inbound {@link HttpHeaders}
 	 */
 	HttpHeaders requestHeaders();

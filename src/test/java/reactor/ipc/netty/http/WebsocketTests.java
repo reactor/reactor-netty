@@ -92,10 +92,12 @@ public class WebsocketTests {
 		                                              .getPort())
 		                            .ws("/")
 		                            .flatMap(in -> in.receiveWebsocket()
+		                                             .aggregateFrames()
 		                                             .receive()
 		                                             .asString());
 
-		StepVerifier.create(ws.take(c))
+		StepVerifier.create(ws.take(c)
+		                      .log())
 		            .expectNextSequence(Flux.range(1, c)
 		                                    .map(v -> "test")
 		                                    .toIterable())

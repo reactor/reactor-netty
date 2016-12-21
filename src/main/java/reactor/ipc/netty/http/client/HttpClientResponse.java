@@ -20,7 +20,9 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 
 import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -56,7 +58,7 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 
 	@Override
 	default HttpClientResponse addDecoder(ChannelHandler handler) {
-		return addDecoder(Objects.toString(handler), handler);
+		return addDecoder(handler.getClass().getSimpleName(), handler);
 	}
 
 	@Override
@@ -69,6 +71,15 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	default HttpClientResponse onReadIdle(long idleTimeout, Runnable onReadIdle) {
 		NettyInbound.super.onReadIdle(idleTimeout, onReadIdle);
 		return this;
+	}
+
+	/**
+	 * Return a {@link Flux} of {@link HttpContent} containing received chunks
+	 *
+	 * @return a {@link Flux} of {@link HttpContent} containing received chunks
+	 */
+	default Flux<HttpContent> receiveContent(){
+		return receiveObject().ofType(HttpContent.class);
 	}
 
 	/**

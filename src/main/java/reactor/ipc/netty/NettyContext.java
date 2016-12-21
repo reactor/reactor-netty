@@ -41,7 +41,7 @@ public interface NettyContext extends Cancellation {
 	 * @return this inbound
 	 */
 	default NettyContext addHandler(ChannelHandler handler){
-		return addHandler(Objects.toString(handler), handler);
+		return addHandler(handler.getClass().getSimpleName(), handler);
 	}
 
 	/**
@@ -68,7 +68,7 @@ public interface NettyContext extends Cancellation {
 	 * @return this inbound
 	 */
 	default NettyContext addDecoder(ChannelHandler handler){
-		return addDecoder(Objects.toString(handler), handler);
+		return addDecoder(handler.getClass().getSimpleName(), handler);
 	}
 
 	/**

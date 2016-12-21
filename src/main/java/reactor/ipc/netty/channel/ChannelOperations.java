@@ -132,6 +132,23 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	public ChannelOperations<INBOUND, OUTBOUND> addHandler(String name,
+			ChannelHandler handler) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(handler, "handler");
+
+		channel.pipeline()
+		       .addBefore(NettyPipeline.ReactiveBridge, name, handler);
+
+		onClose(() -> removeHandler(name));
+
+		if (log.isDebugEnabled()) {
+			log.debug("Added handler [{}]", name, channel.pipeline());
+		}
+		return this;
+	}
+
+	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> addDecoder(String name,
 			ChannelHandler handler) {
 		Objects.requireNonNull(name, "name");
@@ -159,11 +176,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 				       .addAfter(lastCodec.getKey(),
 						       name + "$extract",
 						       ByteBufHolderHandler.INSTANCE);
+				channel.pipeline()
+				       .addAfter(name + "$extract", name, handler);
 			}
-
-			channel.pipeline()
-		           .addAfter(name+"$extract", name, handler);
-
 			onClose(() -> {
 				removeHandler(name);
 				if(handler instanceof ByteToMessageDecoder) {
@@ -171,19 +186,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 				}
 			});
 		}
-		return this;
-	}
-
-	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> addHandler(String name,
-			ChannelHandler handler) {
-		Objects.requireNonNull(name, "name");
-		Objects.requireNonNull(handler, "handler");
-
-		channel.pipeline()
-		       .addBefore(NettyPipeline.ReactiveBridge, name, handler);
-
-		onClose(() -> removeHandler(name));
+		if (log.isDebugEnabled()) {
+			log.debug("Added decoder [{}] after [{}]",
+					name,
+					lastCodec.getKey(),
+					channel.pipeline());
+		}
 		return this;
 	}
 
