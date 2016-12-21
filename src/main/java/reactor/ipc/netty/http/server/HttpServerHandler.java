@@ -57,7 +57,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 	ChannelHandlerContext ctx;
 
 	boolean overflow;
-	boolean toRemove;
+	boolean mustRecycleEncoder;
 
 	HttpServerHandler(ContextHandler<?> parentContext) {
 		this.parentContext = parentContext;
@@ -159,6 +159,10 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				}
 				promise.addListener(ChannelFutureListener.CLOSE);
 			}
+			else {
+				mustRecycleEncoder = false;
+				pendingResponses -= 1;
+			}
 		}
 		ctx.write(msg, promise);
 	}
@@ -167,7 +171,8 @@ final class HttpServerHandler extends ChannelDuplexHandler
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
 			throws Exception {
 		if (evt == NettyPipeline.handlerTerminatedEvent()) {
-			if(toRemove) {
+			if(mustRecycleEncoder) {
+				mustRecycleEncoder = false;
 				pendingResponses -= 1;
 
 				ctx.pipeline()
@@ -193,7 +198,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 	}
 
 	void trackResponse(HttpResponse response) {
-		toRemove = !isInformational(response);
+		mustRecycleEncoder = !isInformational(response);
 	}
 
 	@Override
