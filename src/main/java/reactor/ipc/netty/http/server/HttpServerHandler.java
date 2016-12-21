@@ -159,7 +159,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				}
 				promise.addListener(ChannelFutureListener.CLOSE);
 			}
-			else {
+			else if(mustRecycleEncoder) {
 				mustRecycleEncoder = false;
 				pendingResponses -= 1;
 			}
