@@ -337,15 +337,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public Flux<Long> sendForm(Consumer<Form> formCallback) {
 		return new FluxSendForm(this,
-				false,
-				new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
-				formCallback);
-	}
-
-	@Override
-	public Flux<Long> sendMultipart(Consumer<Form> formCallback) {
-		return new FluxSendForm(this,
-				true,
 				new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE),
 				formCallback);
 	}
@@ -626,17 +617,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	static final class FluxSendForm extends Flux<Long> {
 
-		final boolean              multipart;
 		final HttpClientOperations parent;
 		final Consumer<Form>       formCallback;
 		final HttpDataFactory      df;
 
 		FluxSendForm(HttpClientOperations parent,
-				boolean multipart,
 				HttpDataFactory df,
 				Consumer<Form> formCallback) {
 			this.parent = parent;
-			this.multipart = multipart;
 			this.df = df;
 			this.formCallback = formCallback;
 		}
@@ -669,7 +657,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			try {
 				HttpClientFormEncoder encoder = new HttpClientFormEncoder(df,
 						parent.nettyRequest,
-						multipart,
+						true,
 						HttpConstants.DEFAULT_CHARSET,
 						HttpPostRequestEncoder.EncoderMode.RFC1738);
 
@@ -677,7 +665,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 				encoder = encoder.applyChanges(parent.nettyRequest);
 
-				if (!multipart) {
+				if (!encoder.isMultipart) {
 					parent.disableChunkedTransfer();
 				}
 

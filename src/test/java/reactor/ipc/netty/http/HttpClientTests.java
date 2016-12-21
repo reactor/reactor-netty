@@ -113,10 +113,11 @@ public class HttpClientTests {
 		//Path f = Paths.get("/Users/smaldini/Downloads/IMG_6702.mp4");
 		int res = HttpClient.create("google.com")
 		                    .put("/post",
-				                    c -> c.sendMultipart(form -> form.file("test", f)
-				                                                     .attr("att1",
+				                    c -> c.sendForm(form -> form.multipart(true)
+				                                                .file("test", f)
+				                                                .attr("att1",
 						                                                     "attr2")
-				                                                     .file("test2", f))
+				                                                .file("test2", f))
 				                          .log()
 				                          .then())
 		                    .then(r -> Mono.just(r.status()

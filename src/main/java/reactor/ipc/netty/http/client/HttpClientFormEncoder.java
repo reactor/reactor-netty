@@ -175,6 +175,7 @@ final class HttpClientFormEncoder
 	boolean isKey = true;
 
 	Charset newCharset;
+	boolean newMultipart;
 	EncoderMode newMode;
 
 	/**
@@ -214,6 +215,7 @@ final class HttpClientFormEncoder
 		this.progressFlux = DirectProcessor.create();
 		this.cleanOnTerminate = true;
 		this.newMode = encoderMode;
+		this.newMultipart = multipart;
 
 		// Fill default values
 		bodyListDatas = new ArrayList<>();
@@ -883,6 +885,13 @@ final class HttpClientFormEncoder
 	}
 
 	@Override
+	public HttpClientRequest.Form multipart(boolean isMultipart) {
+		this.newMultipart = isMultipart;
+		this.needNewEncoder = this.isMultipart != isMultipart;
+		return this;
+	}
+
+	@Override
 	public HttpClientRequest.Form textFile(String name, File file) {
 		textFile(name, file, null);
 		return this;
@@ -946,7 +955,7 @@ final class HttpClientFormEncoder
 
 		HttpClientFormEncoder encoder = new HttpClientFormEncoder(factory,
 				request,
-				isMultipart(),
+				newMultipart,
 				newCharset,
 				newMode);
 

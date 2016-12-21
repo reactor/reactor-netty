@@ -174,9 +174,11 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	}
 
 	/**
-	 * Prepare to send an HTTP Form excluding multipart
+	 * Prepare to send an HTTP Form including Multipart encoded Form which support
+	 * chunked file upload. It will by default be encoded as Multipart but can be
+	 * adapted via {@link Form#multipart(boolean)}.
 	 *
-	 * @param formCallback called when form frames generator is created
+	 * @param formCallback called when form generator is created
 	 *
 	 * @return a {@link Flux} of latest in-flight or uploaded bytes,
 	 */
@@ -190,15 +192,6 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	NettyOutbound sendHeaders();
 
 	/**
-	 * Prepare to send an HTTP Form in multipart mode for file upload facilities
-	 *
-	 * @param formCallback called when form frames generator is created
-	 *
-	 * @return a {@link Flux} of latest in-flight or uploaded bytes,
-	 */
-	Flux<Long> sendMultipart(Consumer<Form> formCallback);
-
-	/**
 	 * Upgrade connection to Websocket and immediately send closed websocket frame
 	 * otherwise the returned {@link Mono} fail.
 	 *
@@ -207,7 +200,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	WebsocketOutbound sendWebsocket();
 
 	/**
-	 * Add an HTTP Form builder
+	 * An HTTP Form builder
 	 */
 	interface Form {
 
@@ -342,6 +335,15 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 		 * @return this builder
 		 */
 		Form files(String name, File[] files, String[] contentTypes, boolean[] textFiles);
+
+		/**
+		 * Define if this request will be encoded as Multipart
+		 *
+		 * @param multipart should this form be encoded as Multipart
+		 *
+		 * @return this builder
+		 */
+		Form multipart(boolean multipart);
 
 		/**
 		 * Add an HTTP File Upload attribute
