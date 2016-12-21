@@ -179,6 +179,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	public HttpClientRequest chunkedTransfer(boolean chunked) {
 		if (!hasSentHeaders()) {
 			HttpUtil.setTransferEncodingChunked(nettyRequest, chunked);
+			ignoreChunkedTransfer();
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -193,12 +194,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return responseState.cookieHolder.getCachedCookies();
 		}
 		return null;
-	}
-
-	@Override
-	public final HttpClientRequest disableChunkedTransfer() {
-		HttpUtil.setTransferEncodingChunked(nettyRequest, false);
-		return this;
 	}
 
 	@Override
@@ -667,7 +662,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				encoder = encoder.applyChanges(parent.nettyRequest);
 
 				if (!encoder.isMultipart) {
-					parent.disableChunkedTransfer();
+					parent.chunkedTransfer(false);
 				}
 
 				parent.addHandler(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());

@@ -67,13 +67,6 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse chunkedTransfer(boolean chunked);
 
 	/**
-	 * Remove transfer-encoding: chunked header
-	 *
-	 * @return this outbound
-	 */
-	HttpServerResponse disableChunkedTransfer();
-
-	/**
 	 * Return  true if headers and status have been sent to the client
 	 *
 	 * @return true if headers and status have been sent to the client

@@ -42,6 +42,7 @@ import reactor.ipc.netty.channel.ContextHandler;
 public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
 		extends ChannelOperations<INBOUND, OUTBOUND> implements HttpInfos {
 
+	boolean ignoreHeaderLengthRewrite;
 
 	volatile int statusAndHeadersSent = 0;
 
@@ -82,15 +83,19 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	//@Override
 	public NettyOutbound sendHeaders() {
 		if (markHeadersAsSent()) {
-			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-				outboundHttpMessage().headers()
-				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
-			}
-			else if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())) {
-				HttpUtil.setContentLength(outboundHttpMessage(), 0L);
+			if (ignoreHeaderLengthRewrite) {
+				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+					outboundHttpMessage().headers()
+					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
+				}
+				else if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())) {
+					HttpUtil.setContentLength(outboundHttpMessage(), 0L);
+				}
 			}
 			HttpMessage message;
-			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && HttpUtil.getContentLength(
+
+			if (!ignoreHeaderLengthRewrite && !HttpUtil.isTransferEncodingChunked(
+					outboundHttpMessage()) && HttpUtil.getContentLength(
 					outboundHttpMessage(),
 					0L) == 0L) {
 				message = newFullEmptyBodyMessage();
@@ -103,6 +108,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		else {
 			return this;
 		}
+	}
+
+	protected final void ignoreChunkedTransfer() {
+		ignoreHeaderLengthRewrite = true;
 	}
 
 	protected abstract HttpMessage newFullEmptyBodyMessage();

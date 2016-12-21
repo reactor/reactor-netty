@@ -154,11 +154,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return this;
 	}
 
-	@Override
 	public HttpServerResponse chunkedTransfer(boolean chunked) {
 		if (!hasSentHeaders()) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
+			ignoreChunkedTransfer();
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -172,12 +172,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return cookieHolder.getCachedCookies();
 		}
 		throw new IllegalStateException("request not parsed");
-	}
-
-	@Override
-	public HttpServerResponse disableChunkedTransfer() {
-		HttpUtil.setTransferEncodingChunked(nettyResponse, false);
-		return this;
 	}
 
 	@Override

@@ -104,7 +104,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 				  .add(HttpHeaderNames.ACCEPT, ALL);
 
 				if (parent.method == HttpMethod.GET || parent.method == HttpMethod.HEAD) {
-					ch.disableChunkedTransfer();
+					ch.chunkedTransfer(false);
 				}
 
 				if (parent.handler != null) {
