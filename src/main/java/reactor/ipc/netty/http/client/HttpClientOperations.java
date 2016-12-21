@@ -682,7 +682,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				}
 
 				ChannelFuture f = parent.channel()
-				                        .write(r);
+				                        .writeAndFlush(r);
 
 				Flux<Long> tail = encoder.progressFlux.onBackpressureLatest();
 
@@ -695,17 +695,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				if (encoder.isChunked()) {
 					tail.subscribe(s);
 					parent.channel()
-					      .write(encoder);
+					      .writeAndFlush(encoder);
 				}
 				else {
 					FutureMono.from(f)
-					          .flux()
 					          .cast(Long.class)
+					          .otherwiseIfEmpty(Mono.just(encoder.length()))
+					          .flux()
 					          .subscribe(s);
 				}
-
-				parent.channel()
-				      .flush();
 
 
 			}

@@ -278,7 +278,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if(inner != null){
 				inner.justFlushed = true;
 			}
-			return ctx.writeAndFlush(msg, promise);
+			 return ctx.writeAndFlush(msg, promise);
 		}
 		else {
 			if (msg instanceof ByteBuf) {
