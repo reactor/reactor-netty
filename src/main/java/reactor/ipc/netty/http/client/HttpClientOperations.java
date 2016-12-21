@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SocketChannel;
@@ -680,8 +681,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					HttpUtil.setContentLength(r, encoder.length());
 				}
 
-				parent.channel()
-				      .writeAndFlush(r);
+				ChannelFuture f = parent.channel()
+				                        .write(r);
 
 				Flux<Long> tail = encoder.progressFlux.onBackpressureLatest();
 
@@ -690,11 +691,17 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					           .doAfterTerminate(encoder);
 				}
 
-				tail.subscribe(s);
 
 				if (encoder.isChunked()) {
+					tail.subscribe(s);
 					parent.channel()
 					      .write(encoder);
+				}
+				else {
+					FutureMono.from(f)
+					          .flux()
+					          .cast(Long.class)
+					          .subscribe(s);
 				}
 
 				parent.channel()
