@@ -59,8 +59,6 @@ final class FluxReceive extends Flux<Object>
 		this.parent = parent;
 		this.channel = parent.channel;
 		this.eventLoop = channel.eventLoop();
-		channel.config()
-		       .setAutoRead(false);
 	}
 
 	@Override
@@ -145,6 +143,8 @@ final class FluxReceive extends Flux<Object>
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
+				channel.config()
+				       .setAutoRead(false);
 				if(parent.isOutboundDone()){
 					parent.onHandlerTerminate();
 				}
@@ -304,7 +304,7 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	final boolean onInboundComplete() {
-		if (isCancelled() || inboundDone) {
+		if (inboundDone) {
 			return false;
 		}
 		inboundDone = true;
