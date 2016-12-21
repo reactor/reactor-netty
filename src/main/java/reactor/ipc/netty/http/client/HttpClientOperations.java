@@ -657,7 +657,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			try {
 				HttpClientFormEncoder encoder = new HttpClientFormEncoder(df,
 						parent.nettyRequest,
-						true,
+						false,
 						HttpConstants.DEFAULT_CHARSET,
 						HttpPostRequestEncoder.EncoderMode.RFC1738);
 
