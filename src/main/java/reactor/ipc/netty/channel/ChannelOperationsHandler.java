@@ -467,6 +467,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				produced(p);
 				if(!justFlushed) {
 					if(parent.ctx.channel().isOpen()) {
+						justFlushed = true;
 						parent.ctx.flush();
 					}
 					else{
@@ -495,6 +496,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				produced = 0L;
 				produced(p);
 				if(parent.ctx.channel().isOpen()) {
+					justFlushed = true;
 					parent.ctx.flush();
 				}
 				else{

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package reactor.ipc.netty.http.client;
 
 import java.util.Objects;
@@ -45,7 +46,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContext {
 
 	@Override
-	default HttpClientResponse addHandler(ChannelHandler handler){
+	default HttpClientResponse addHandler(ChannelHandler handler) {
 		NettyContext.super.addHandler(handler);
 		return this;
 	}
@@ -54,7 +55,7 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	HttpClientResponse addHandler(String name, ChannelHandler handler);
 
 	@Override
-	default HttpClientResponse addDecoder(ChannelHandler handler){
+	default HttpClientResponse addDecoder(ChannelHandler handler) {
 		return addDecoder(Objects.toString(handler), handler);
 	}
 
@@ -65,7 +66,7 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	HttpClientResponse onClose(Runnable onClose);
 
 	@Override
-	default HttpClientResponse onReadIdle(long idleTimeout, Runnable onReadIdle){
+	default HttpClientResponse onReadIdle(long idleTimeout, Runnable onReadIdle) {
 		NettyInbound.super.onReadIdle(idleTimeout, onReadIdle);
 		return this;
 	}
@@ -92,7 +93,22 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	}
 
 	/**
-	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
+	 * Unidirectional conversion to a {@link WebsocketInbound}.
+	 * receive operations are
+	 * invoked on handshake
+	 * success,
+	 * otherwise the returned {@link WebsocketInbound} fail or wasn't upgraded by the
+	 * server.
+	 *
+	 * @return a {@link WebsocketInbound} completing when upgrade is confirmed
+	 */
+	WebsocketInbound receiveWebsocket();
+
+	/**
+	 * Duplex conversion to {@link WebsocketInbound}, {@link WebsocketOutbound} and a
+	 * closing {@link Publisher}. Mono and Callback are
+	 * invoked on
+	 * handshake
 	 * success,
 	 * otherwise the returned {@link Mono} fail.
 	 *
@@ -105,7 +121,10 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	}
 
 	/**
-	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
+	 * Duplex conversion to {@link WebsocketInbound}, {@link WebsocketOutbound} and a
+	 * closing {@link Publisher}. Mono and Callback are
+	 * invoked on
+	 * handshake
 	 * success,
 	 * otherwise the returned {@link Mono} fail.
 	 *

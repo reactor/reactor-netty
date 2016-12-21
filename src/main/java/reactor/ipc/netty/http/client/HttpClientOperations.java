@@ -397,6 +397,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public WebsocketInbound receiveWebsocket() {
+		return null;
+	}
+
+	@Override
 	public HttpResponseStatus status() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
@@ -576,8 +581,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
-			if (channel().attr(OPERATIONS_KEY)
-			             .compareAndSet(this, ops)) {
+			if (replace(ops)) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
 				                                 .then(() -> Mono.from(websocketHandler.apply(
 						                                 ops,
@@ -587,6 +591,19 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				}
 				return handshake;
 			}
+		}
+		else if (isWebsocket()) {
+			HttpClientWSOperations ops =
+					(HttpClientWSOperations) attr(OPERATIONS_KEY).get();
+			Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
+
+			if (websocketHandler != noopHandler()) {
+				handshake =
+						handshake.then(() -> Mono.from(websocketHandler.apply(ops, ops)))
+						         .doAfterTerminate(ops);
+			}
+
+			return handshake;
 		}
 		else {
 			log.error("Cannot enable websocket if headers have already been sent");

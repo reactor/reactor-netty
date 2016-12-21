@@ -19,6 +19,7 @@ package reactor.ipc.netty.http.client;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -36,6 +37,8 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
@@ -89,8 +92,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 	@Override
 	@SuppressWarnings("unchecked")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		Class<?> messageClass = msg.getClass();
-		if (FullHttpResponse.class.isAssignableFrom(messageClass)) {
+		if (msg instanceof FullHttpResponse) {
 			channel().pipeline()
 			         .remove(HttpObjectAggregator.class);
 			FullHttpResponse response = (FullHttpResponse) msg;
@@ -108,22 +110,23 @@ final class HttpClientWSOperations extends HttpClientOperations
 			}
 			return;
 		}
-		if (PingWebSocketFrame.class.isAssignableFrom(messageClass)) {
+		if (msg instanceof PingWebSocketFrame) {
 			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()
 			                                                                         .retain()));
 			ctx.read();
 			return;
 		}
-		if (CloseWebSocketFrame.class.isAssignableFrom(messageClass)) {
+		if (msg instanceof CloseWebSocketFrame &&
+				((CloseWebSocketFrame)msg).isFinalFragment()) {
 			if (log.isDebugEnabled()) {
 				log.debug("CloseWebSocketFrame detected. Closing Websocket");
 			}
 
 			CloseWebSocketFrame close = (CloseWebSocketFrame) msg;
-			sendClose(new CloseWebSocketFrame(close.isFinalFragment(),
+			sendClose(new CloseWebSocketFrame(true,
 					close.rsv(),
 					close.content()
-					     .retain()), ChannelFutureListener.CLOSE);
+					     .retain()));
 		}
 		else {
 			super.onInboundNext(ctx, msg);
@@ -131,10 +134,30 @@ final class HttpClientWSOperations extends HttpClientOperations
 	}
 
 	@Override
+	public WebsocketInbound receiveWebsocket() {
+		return this;
+	}
+
+	@Override
+	protected void onInboundCancel() {
+		if (log.isDebugEnabled()) {
+			log.debug("Cancelling Websocket inbound. Closing Websocket");
+		}
+		sendClose(null);
+	}
+
+	@Override
 	protected void onOutboundComplete() {
 	}
 
-	void sendClose(CloseWebSocketFrame frame, ChannelFutureListener listener) {
+	@Override
+	protected void onOutboundError(Throwable err) {
+		if (channel().isOpen()) {
+			sendClose(new CloseWebSocketFrame(1002, "Client internal error"));
+		}
+	}
+
+	void sendClose(CloseWebSocketFrame frame) {
 		if (frame != null && !frame.isFinalFragment()) {
 			channel().writeAndFlush(frame);
 			return;
@@ -142,17 +165,18 @@ final class HttpClientWSOperations extends HttpClientOperations
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 			ChannelFuture f = channel().writeAndFlush(
 					frame == null ? new CloseWebSocketFrame() : frame);
-			if (listener != null) {
-				f.addListener(listener);
-			}
+			f.addListener(ChannelFutureListener.CLOSE);
 		}
 	}
 
 	@Override
 	public void accept(Void aVoid, Throwable throwable) {
+		if (log.isDebugEnabled()) {
+			log.debug("Handler terminated. Closing Websocket");
+		}
 		if (throwable == null) {
 			if (channel().isOpen()) {
-				sendClose(null, null);
+				sendClose(null);
 			}
 		}
 		else {
