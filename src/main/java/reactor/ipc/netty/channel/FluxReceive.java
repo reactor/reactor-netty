@@ -59,6 +59,8 @@ final class FluxReceive extends Flux<Object>
 		this.parent = parent;
 		this.channel = parent.channel;
 		this.eventLoop = channel.eventLoop();
+		channel.config()
+		       .setAutoRead(false);
 	}
 
 	@Override

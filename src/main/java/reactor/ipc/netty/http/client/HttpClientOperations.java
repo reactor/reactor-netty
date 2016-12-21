@@ -480,7 +480,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 
 		super.onInboundNext(ctx, msg);
-		if (downstream() == null) {
+		if (isInboundCancelled()) {
 			ctx.read();
 		}
 		else {
