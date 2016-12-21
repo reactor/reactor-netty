@@ -187,9 +187,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			});
 		}
 		if (log.isDebugEnabled()) {
-			log.debug("Added decoder [{}] after [{}]",
+			log.debug("Added decoder [{}]{}",
 					name,
-					lastCodec.getKey(),
+					lastCodec != null ? " after ["+lastCodec.getKey()+"]": "",
 					channel.pipeline());
 		}
 		return this;
