@@ -148,7 +148,9 @@ final class FluxReceive extends Flux<Object>
 				if(parent.isOutboundDone()){
 					parent.onHandlerTerminate();
 				}
-				parent.onInboundCancel();
+				else {
+					parent.onInboundCancel();
+				}
 				if (c != null) {
 					c.dispose();
 					return true;
