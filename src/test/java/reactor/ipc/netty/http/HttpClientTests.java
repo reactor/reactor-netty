@@ -177,6 +177,23 @@ public class HttpClientTests {
 	}
 
 	@Test
+	public void disableChunkForced2() throws Exception {
+		HttpClientResponse r = HttpClient.create("google.com")
+		                                 .get("/unsupportedURI",
+				                                 c -> c.chunkedTransfer(false)
+				                                       .failOnClientError(false)
+				                                       .keepAlive(false))
+		                                 .block();
+
+		FutureMono.from(r.context()
+		                 .channel()
+		                 .closeFuture())
+		          .blockMillis(5000);
+
+		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+	}
+
+	@Test
 	public void disableChunkImplicit() throws Exception {
 		PoolResources p = PoolResources.fixed("test", 1);
 
