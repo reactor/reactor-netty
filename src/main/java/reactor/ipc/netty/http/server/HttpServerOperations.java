@@ -158,7 +158,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (!hasSentHeaders()) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
-			ignoreChunkedTransfer();
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");

@@ -179,7 +179,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	public HttpClientRequest chunkedTransfer(boolean chunked) {
 		if (!hasSentHeaders()) {
 			HttpUtil.setTransferEncodingChunked(nettyRequest, chunked);
-			ignoreChunkedTransfer();
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
