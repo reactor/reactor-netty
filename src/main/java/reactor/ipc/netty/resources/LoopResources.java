@@ -24,7 +24,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import reactor.core.Cancellation;
+import reactor.core.Disposable;
 
 /**
  * An {@link EventLoopGroup} selector with associated
@@ -34,7 +34,7 @@ import reactor.core.Cancellation;
  * @since 0.6
  */
 @FunctionalInterface
-public interface LoopResources extends Cancellation {
+public interface LoopResources extends Disposable {
 
 	/**
 	 * Default worker thread count, fallback to available processor

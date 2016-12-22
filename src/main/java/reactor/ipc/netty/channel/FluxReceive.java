@@ -24,7 +24,7 @@ import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.core.Cancellation;
+import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.Producer;
 import reactor.core.Trackable;
@@ -53,7 +53,7 @@ final class FluxReceive extends Flux<Object>
 	boolean   inboundDone;
 	Throwable inboundError;
 
-	volatile Cancellation receiverCancel;
+	volatile Disposable receiverCancel;
 
 	FluxReceive(ChannelOperations<?, ?> parent) {
 		this.parent = parent;
@@ -139,7 +139,7 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	final boolean cancelReceiver() {
-		Cancellation c = receiverCancel;
+		Disposable c = receiverCancel;
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
@@ -360,12 +360,12 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	@SuppressWarnings("rawtypes")
-	static final AtomicReferenceFieldUpdater<FluxReceive, Cancellation> CANCEL =
+	static final AtomicReferenceFieldUpdater<FluxReceive, Disposable> CANCEL =
 			AtomicReferenceFieldUpdater.newUpdater(FluxReceive.class,
-					Cancellation.class,
+					Disposable.class,
 					"receiverCancel");
 
-	static final Cancellation CANCELLED = () -> {
+	static final Disposable CANCELLED = () -> {
 	};
 
 	static final Logger log = Loggers.getLogger(FluxReceive.class);

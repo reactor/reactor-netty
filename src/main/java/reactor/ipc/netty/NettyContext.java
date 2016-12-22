@@ -20,7 +20,7 @@ import java.util.Objects;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import reactor.core.Cancellation;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
 /**
@@ -29,7 +29,7 @@ import reactor.core.publisher.Mono;
  * @author Stephane Maldini
  * @since 0.6
  */
-public interface NettyContext extends Cancellation {
+public interface NettyContext extends Disposable {
 
 	/**
 	 * Add a {@link ChannelHandler} to the pipeline, before {@link
@@ -104,13 +104,6 @@ public interface NettyContext extends Cancellation {
 	 * @return the underlying {@link Channel}
 	 */
 	Channel channel();
-
-	/**
-	 * Return true  if underlying channel is closed or inbound bridge is detached
-	 *
-	 * @return true if underlying channel is closed or inbound bridge is detached
-	 */
-	boolean isDisposed();
 
 	/**
 	 * Return an observing {@link Mono} terminating with success when shutdown

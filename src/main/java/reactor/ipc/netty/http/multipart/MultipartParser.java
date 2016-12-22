@@ -24,7 +24,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.core.Cancellation;
+import reactor.core.Disposable;
 import reactor.core.MultiProducer;
 import reactor.core.Producer;
 import reactor.core.Receiver;
@@ -41,7 +41,7 @@ import reactor.ipc.netty.ByteBufFlux;
  */
 
 final class MultipartParser
-		implements Subscriber<MultipartTokenizer.Token>, Subscription, Cancellation, Producer,
+		implements Subscriber<MultipartTokenizer.Token>, Subscription, Disposable, Producer,
 		           MultiProducer, Receiver, Trackable {
 
 	final Subscriber<? super ByteBufFlux> actual;

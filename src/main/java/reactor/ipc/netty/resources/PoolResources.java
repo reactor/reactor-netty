@@ -24,7 +24,7 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
-import reactor.core.Cancellation;
+import reactor.core.Disposable;
 
 /**
  * A {@link io.netty.channel.pool.ChannelPool} selector with associated factories.
@@ -33,7 +33,7 @@ import reactor.core.Cancellation;
  * @since 0.6
  */
 @FunctionalInterface
-public interface PoolResources extends Cancellation {
+public interface PoolResources extends Disposable {
 
 	/**
 	 * Default max connection, if -1 will never wait to acquire before opening new

@@ -58,7 +58,7 @@ final class ReactorNetty {
 				this.thenMono = Mono.from(thenPublisher);
 			}
 			else {
-				this.thenMono = parentMono.then(Mono.from(thenPublisher));
+				this.thenMono = parentMono.thenEmpty(thenPublisher);
 			}
 		}
 
