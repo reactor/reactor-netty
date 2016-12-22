@@ -46,7 +46,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	volatile int statusAndHeadersSent = 0;
 
-	protected HttpOperations(Channel ioChannel, HttpOperations<INBOUND, OUTBOUND> replaced) {
+	protected HttpOperations(Channel ioChannel,
+			HttpOperations<INBOUND, OUTBOUND> replaced) {
 		super(ioChannel, replaced);
 		this.statusAndHeadersSent = replaced.statusAndHeadersSent;
 	}
@@ -83,19 +84,16 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	//@Override
 	public NettyOutbound sendHeaders() {
 		if (markHeadersAsSent()) {
-			if (!ignoreHeaderLengthRewrite) {
-				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-					outboundHttpMessage().headers()
-					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
-				}
-				else if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())) {
-					HttpUtil.setContentLength(outboundHttpMessage(), 0L);
-				}
+			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+				outboundHttpMessage().headers()
+				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
+			}
+			else if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())) {
+				HttpUtil.setContentLength(outboundHttpMessage(), 0L);
 			}
 			HttpMessage message;
 
-			if (!ignoreHeaderLengthRewrite && !HttpUtil.isTransferEncodingChunked(
-					outboundHttpMessage()) && HttpUtil.getContentLength(
+			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && HttpUtil.getContentLength(
 					outboundHttpMessage(),
 					0L) == 0L) {
 				message = newFullEmptyBodyMessage();
@@ -141,7 +139,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	protected void onInboundCancel() {
-		if(!isInboundDone()) {
+		if (!isInboundDone()) {
 			channel().read();
 		}
 	}
@@ -151,7 +149,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		if (hasSentHeaders()) {
 			return super.sendObject(source);
 		}
-		if (!HttpUtil.isContentLengthSet(outboundHttpMessage()) && !outboundHttpMessage().headers()
+		if (!ignoreHeaderLengthRewrite && !HttpUtil.isContentLengthSet(outboundHttpMessage()) && !outboundHttpMessage().headers()
 		                                                                                 .contains(
 				                                                                                 HttpHeaderNames.TRANSFER_ENCODING)) {
 			HttpUtil.setTransferEncodingChunked(outboundHttpMessage(), true);
@@ -183,7 +181,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 * @return Outbound Netty HttpMessage
 	 */
 	protected abstract HttpMessage outboundHttpMessage();
-
 
 	final static AtomicIntegerFieldUpdater<HttpOperations> HEADERS_SENT =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
