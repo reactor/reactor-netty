@@ -93,7 +93,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			}
 			HttpMessage message;
 
-			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && HttpUtil.getContentLength(
+			if (!ignoreHeaderLengthRewrite && !HttpUtil.isTransferEncodingChunked
+					(outboundHttpMessage()) && HttpUtil
+					.getContentLength(
 					outboundHttpMessage(),
 					0L) == 0L) {
 				message = newFullEmptyBodyMessage();
