@@ -86,19 +86,13 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				outboundHttpMessage().headers()
 				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
 			}
-			HttpMessage message;
 
-			if (!HttpUtil.isTransferEncodingChunked
-					(outboundHttpMessage()) && HttpUtil
-					.getContentLength(
-					outboundHttpMessage(),
-					0L) == 0L) {
-				message = newFullEmptyBodyMessage();
+			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())
+					&& !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+				ignoreChannelPersistence();
 			}
-			else {
-				message = outboundHttpMessage();
-			}
-			return then(FutureMono.deferFuture(() -> channel().writeAndFlush(message)));
+			return then(FutureMono.deferFuture(() -> channel().writeAndFlush(
+					outboundHttpMessage())));
 		}
 		else {
 			return this;
