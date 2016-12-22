@@ -86,9 +86,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				outboundHttpMessage().headers()
 				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
 			}
-			else if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())) {
-				HttpUtil.setContentLength(outboundHttpMessage(), 0L);
-			}
 			HttpMessage message;
 
 			if (!HttpUtil.isTransferEncodingChunked

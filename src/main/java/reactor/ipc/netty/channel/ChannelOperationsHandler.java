@@ -222,48 +222,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	@Override
 	public NettyPipeline.SendOptions flushOnBoundary() {
+		flushOnEach = false;
 		return this;
 	}
 
 	@Override
 	public NettyPipeline.SendOptions flushOnEach() {
 		flushOnEach = true;
-		return this;
-	}
-
-	@Override
-	public NettyPipeline.SendOptions flushOnMemoryUsed(long maxPendingBytes) {
-		return this;
-	}
-
-	@Override
-	public NettyPipeline.SendOptions prefetch(int prefetch) {
-		return this;
-	}
-
-	@Override
-	public NettyPipeline.SendOptions prefetchMemory(long prefetchBytes) {
-		return this;
-	}
-
-	@Override
-	public NettyPipeline.SendOptions prefetchMemory(int samplingPrefetch,
-			long prefetchBytes) {
-		return this;
-	}
-
-	@Override
-	public NettyPipeline.SendOptions requestOnWriteAvailable() {
-		return this;
-	}
-
-	@Override
-	public NettyPipeline.SendOptions requestOnWriteConfirm() {
-		return this;
-	}
-
-	@Override
-	public NettyPipeline.SendOptions trackPendingBytes(boolean shouldCount) {
 		return this;
 	}
 

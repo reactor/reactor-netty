@@ -82,76 +82,7 @@ public interface NettyPipeline {
 		 */
 		SendOptions flushOnEach();
 
-		/**
-		 * Make the underlying channel flush on a memory threshold expressed in bytes.
-		 * This should enable {@link #trackPendingBytes(boolean)} to evaluate written
-		 * items size.
-		 *
-		 * @param maxPendingBytes a non strict maximum of bytes to trigger flush.
-		 *
-		 * @return this builder
-		 */
-		SendOptions flushOnMemoryUsed(long maxPendingBytes);
 
-		/**
-		 * Maximum in-flight number of chunks.
-		 *
-		 * @param prefetch maximum number of chunks
-		 *
-		 * @return this builder
-		 */
-		SendOptions prefetch(int prefetch);
-
-		/**
-		 * Non-Strict maximum in-flight sent bytes. The demand score will be evaluated
-		 * every item sent by automatically enabling {@link #trackPendingBytes(boolean)}.
-		 *
-		 * @param prefetchBytes non-strict maximum of bytes to request
-		 *
-		 * @return this builder
-		 */
-		SendOptions prefetchMemory(long prefetchBytes);
-
-		/**
-		 * Non-Strict maximum in-flight sent bytes. The long demand will evaluated every
-		 * {@code samplingPrefetch} items sent by automatically enabling {@link
-		 * #trackPendingBytes(boolean)}.
-		 *
-		 * @param samplingPrefetch number of chunks to evaluate an average size from
-		 * @param prefetchBytes non-strict maximum of bytes to request
-		 *
-		 * @return this builder
-		 */
-		SendOptions prefetchMemory(int samplingPrefetch, long prefetchBytes);
-
-		/**
-		 * Make the underlying channel request more chunks from {@link Publisher} on
-		 * write buffer availability (Default). This will be faster demand than
-		 * {@link #requestOnWriteConfirm()} but less fair to resources use.
-		 * <p>Request sequence: N (prefetch) then 1 x M.
-		 *
-		 * @return this builder
-		 */
-		SendOptions requestOnWriteAvailable();
-
-		/**
-		 * Make the underlying channel request more chunks from {@link Publisher} on
-		 * write confirm. This will be slower demand than
-		 * {@link #requestOnWriteAvailable()} but more fair to resource use.
-		 * <p>Request sequence: N (prefetch) then N*75% x M.
-		 *
-		 * @return this builder
-		 */
-		SendOptions requestOnWriteConfirm();
-
-		/**
-		 * Enable or disable written item size tracking.
-		 *
-		 * @param shouldCount true if should track written items size
-		 *
-		 * @return this builder
-		 */
-		SendOptions trackPendingBytes(boolean shouldCount);
 	}
 
 	/**
@@ -176,15 +107,6 @@ public interface NettyPipeline {
 		 */
 		public Consumer<? super SendOptions> configurator() {
 			return configurator;
-		}
-
-		/**
-		 * Return the optional source {@link Publisher} or null
-		 *
-		 * @return the optional source {@link Publisher} or null
-		 */
-		public Publisher<?> source() {
-			return source;
 		}
 	}
 
