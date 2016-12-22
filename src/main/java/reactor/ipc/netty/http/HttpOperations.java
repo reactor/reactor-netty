@@ -83,7 +83,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	//@Override
 	public NettyOutbound sendHeaders() {
 		if (markHeadersAsSent()) {
-			if (ignoreHeaderLengthRewrite) {
+			if (!ignoreHeaderLengthRewrite) {
 				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 					outboundHttpMessage().headers()
 					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
