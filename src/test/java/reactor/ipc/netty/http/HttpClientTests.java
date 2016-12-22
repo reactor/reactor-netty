@@ -32,7 +32,6 @@ import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientException;
 import reactor.ipc.netty.http.client.HttpClientResponse;
-import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
 
@@ -166,7 +165,6 @@ public class HttpClientTests {
 		                                 .get("/unsupportedURI",
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false)
-				                                       .sendHeaders()
 				                                       .sendString(Flux.just("hello")))
 		                                 .block();
 
@@ -180,10 +178,32 @@ public class HttpClientTests {
 
 	@Test
 	public void disableChunkImplicit() throws Exception {
-		HttpClientResponse r = HttpClient.create("google.com")
-		                                 .get("/unsupportedURI",
+		PoolResources p = PoolResources.fixed("test", 1);
+
+		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(p))
+		                                 .get("http://google.com/unsupportedURI",
 				                                 c -> c.failOnClientError(false)
 				                                       .sendHeaders())
+		                                 .block();
+
+		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
+		                                  .get("http://google.com/unsupportedURI",
+				                                  c -> c.failOnClientError(false)
+				                                        .sendHeaders())
+		                                  .block();
+		Assert.assertTrue(r.context()
+		                   .channel() == r2.context()
+		                                   .channel());
+
+		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+	}
+
+	@Test
+	public void disableChunkImplicitDefault() throws Exception {
+		HttpClientResponse r = HttpClient.create("google.com")
+		                                 .get("/unsupportedURI",
+				                                 c -> c.chunkedTransfer(false)
+				                                       .failOnClientError(false))
 		                                 .block();
 
 		FutureMono.from(r.context()
@@ -191,29 +211,6 @@ public class HttpClientTests {
 		                 .closeFuture())
 		          .blockMillis(5000);
 
-		Assert.assertTrue(!r.context()
-		                    .channel()
-		                    .isOpen());
-		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
-	}
-
-	@Test
-	public void disableChunkImplicitZeroLength() throws Exception {
-		PoolResources p = PoolResources.fixed("test", 1);
-
-		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(p))
-		                                 .get("http://google.com/unsupportedURI",
-				                                 c -> c.failOnClientError(false))
-		                                 .block();
-
-		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
-		                                  .get("http://google.com/unsupportedURI",
-				                                  c -> c.failOnClientError(false))
-		                                  .block();
-
-		Assert.assertTrue(r.context()
-		                   .channel() == r2.context()
-		                                   .channel());
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
 	}
 

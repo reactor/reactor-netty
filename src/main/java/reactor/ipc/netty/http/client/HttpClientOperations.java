@@ -317,11 +317,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						    outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
 						    outboundHttpMessage())) {
 					    outboundHttpMessage().headers()
-					                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
-							                         agg.readableBytes());
+					                         .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
 				    }
-				    return sendHeaders().send(Mono.just(agg))
-				                        .then();
+				    return send(Mono.just(agg)).then();
 			    });
 		}
 		return super.send(source);
