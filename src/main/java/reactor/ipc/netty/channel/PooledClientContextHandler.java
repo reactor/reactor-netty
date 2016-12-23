@@ -166,7 +166,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	@SuppressWarnings("unchecked")
 	public void dispose() {
-		if (cancelled) {
+		if (f == null || cancelled) {
 			return;
 		}
 		cancelled = true;
