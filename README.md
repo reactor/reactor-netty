@@ -4,9 +4,6 @@
 
 [![Reactor Netty](https://maven-badges.herokuapp.com/maven-central/io.projectreactor.ipc/reactor-netty/badge.svg?style=plastic)](http://mvnrepository.com/artifact/io.projectreactor.ipc/reactor-netty) [ ![Download](https://api.bintray.com/packages/spring/jars/io.projectreactor.ipc/images/download.svg) ](https://bintray.com/spring/jars/io.projectreactor.ipc/_latestVersion)
 
-## Reference
-http://projectreactor.io/netty/docs/reference/ WIP
-
 ## Javadoc
 http://projectreactor.io/docs/netty/release/api/
 
