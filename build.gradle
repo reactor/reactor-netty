@@ -146,9 +146,11 @@ configure(rootProject) { project ->
   }
 
   repositories {
-	mavenLocal()
+	if (version.endsWith('BUILD-SNAPSHOT') || project.hasProperty('platformVersion')) {
+	  mavenLocal()
+	  maven { url 'http://repo.spring.io/libs-snapshot' }
+	}
 	maven { url 'http://repo.spring.io/libs-milestone' }
-	maven { url 'http://repo.spring.io/libs-snapshot' }
 	maven { url 'http://repo.spring.io/libs-release' }
 	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 	jcenter()
