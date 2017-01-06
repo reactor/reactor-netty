@@ -257,10 +257,8 @@ public class SmokeTests {
 		                                 //.log("log", LogOperator.REQUEST)
 		                                 .subscribeWith(workProcessor);
 
-		httpServer = HttpServer.create(opts -> opts.listen(port)
-		                                           .eventLoopGroup(new NioEventLoopGroup(
-				                                           10)))
-		                       .newRouter(r -> r.get("/data", (request, response) -> {
+		httpServer = HttpServer.create(opts -> opts.listen(port))
+		                       .newHandler((request, response) -> {
 			                       response.chunkedTransfer(false);
 
 			                       return response.addHeader("Content-type", "text/plain")
@@ -294,15 +292,14 @@ public class SmokeTests {
 					                                                        new GpdistCodec(
 							                                                        response
 							                                                               .alloc())));
-		                       }))
+		                       })
 		                       .block();
 
 	}
 
 	private List<String> getClientDataPromise() throws Exception {
 		HttpClient httpClient =
-				HttpClient.create(opts -> opts.eventLoopGroup(new NioEventLoopGroup(10))
-				                              .connect("localhost",
+				HttpClient.create(opts -> opts.connect("localhost",
 						                              httpServer.address()
 						                                        .getPort()));
 
@@ -312,7 +309,7 @@ public class SmokeTests {
 		                                                   .collectList())
 		                                       .cache();
 
-		List<String> res = content.block(Duration.ofSeconds(20));
+		List<String> res = content.block();
 		return res;
 	}
 
