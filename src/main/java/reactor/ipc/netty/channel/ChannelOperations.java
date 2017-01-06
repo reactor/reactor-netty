@@ -452,9 +452,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * Mark the channel persistent by the enclosing context
 	 */
 	protected final void markOutboundPersistent(){
-		if(channel.attr(CLOSE_CHANNEL).get()) {
+		if(channel.hasAttr(CLOSE_CHANNEL)) {
 			channel.attr(CLOSE_CHANNEL)
-			       .set(false);
+			       .set(null);
 		}
 	}
 
