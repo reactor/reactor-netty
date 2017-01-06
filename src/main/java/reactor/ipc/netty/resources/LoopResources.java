@@ -148,7 +148,7 @@ public interface LoopResources extends Disposable {
 	 * @return a new {@link EventLoopGroup}
 	 */
 	default EventLoopGroup onClient(boolean useNative) {
-		return onClient(useNative);
+		return onServer(useNative);
 	}
 
 	/**
