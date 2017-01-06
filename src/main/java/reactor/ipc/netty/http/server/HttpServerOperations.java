@@ -158,6 +158,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
 		}
+		if(!chunked) {
+			markOutboundCloseable();
+		}
+		else{
+			markOutboundPersistent();
+		}
 		return this;
 	}
 

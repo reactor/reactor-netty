@@ -436,8 +436,26 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (log.isDebugEnabled()) {
 			log.debug("[{}] User Handler requesting close connection", formatName());
 		}
-		channel.attr(CLOSE_CHANNEL).set(true);
+		markOutboundCloseable();
 		onHandlerTerminate();
+	}
+
+	/**
+	 * Mark the channel closeable by the enclosing context
+	 */
+	protected final void markOutboundCloseable(){
+		channel.attr(CLOSE_CHANNEL).set(true);
+	}
+
+
+	/**
+	 * Mark the channel persistent by the enclosing context
+	 */
+	protected final void markOutboundPersistent(){
+		if(channel.attr(CLOSE_CHANNEL).get()) {
+			channel.attr(CLOSE_CHANNEL)
+			       .set(false);
+		}
 	}
 
 	/**
@@ -447,7 +465,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onOutboundError(Throwable err) {
 		discreteRemoteClose(err);
-		channel.attr(CLOSE_CHANNEL).set(true);
+		markOutboundCloseable();
 		onHandlerTerminate();
 	}
 
