@@ -520,7 +520,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			finally {
 				channel.pipeline()
 				       .fireUserEventTriggered(NettyPipeline.handlerTerminatedEvent());
-				context.terminateChannel(channel); // release / cleanup channel
 			}
 		}
 	}

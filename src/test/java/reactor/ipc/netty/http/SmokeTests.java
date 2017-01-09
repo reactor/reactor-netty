@@ -34,7 +34,6 @@ import java.util.function.Function;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.nio.NioEventLoopGroup;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -128,7 +127,7 @@ public class SmokeTests {
 		System.out.println("Starting on " + smokeTests.httpServer.address());
 		System.out.println("Should setup a loop of wget for :" + (smokeTests.count / (smokeTests.windowBatch * smokeTests.takeCount)));
 
-		final int count = 100_000_000;
+		final int count = 1_030_020;
 		Runnable srunner = new Runnable() {
 			final Sender sender = smokeTests.newSender();
 
@@ -158,6 +157,7 @@ public class SmokeTests {
 		};
 		Thread st = new Thread(srunner, "SenderThread");
 		st.start();
+		System.in.read();
 
 	}
 
@@ -272,11 +272,7 @@ public class SmokeTests {
 			                                      .send(bufferStream.doOnNext(d -> integer.getAndIncrement())
 			                                                        .take(takeCount)
 			                                                        .doOnNext(d -> integerPostTake.getAndIncrement())
-			                                                        .timeout(Duration.ofSeconds(
-					                                                        2),
-					                                                        Flux.<ByteBuf>empty().doOnComplete(
-							                                                        () -> System.out.println(
-									                                                        "timeout after 2 ")))
+			                                                        .timeout(Duration.ofSeconds(2), Flux.empty())
 			                                                        .doOnNext(d -> integerPostTimeout.getAndIncrement())
 			                                                        .concatWith(Flux.just(
 					                                                        dummy ?

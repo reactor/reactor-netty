@@ -189,16 +189,20 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		if(log.isTraceEnabled()){
 			log.trace("User event {}", evt);
 		}
+		if (evt == NettyPipeline.handlerTerminatedEvent()){
+			parentContext.terminateChannel(ctx.channel());
+			return;
+		}
 		if (evt instanceof NettyPipeline.SendOptionsChangeEvent) {
 			if (log.isDebugEnabled()) {
 				log.debug("New sending options");
 			}
 			((NettyPipeline.SendOptionsChangeEvent) evt).configurator()
 			                                            .accept(this);
+			return;
 		}
-		else {
-			ctx.fireUserEventTriggered(evt);
-		}
+
+		ctx.fireUserEventTriggered(evt);
 	}
 
 	@Override
