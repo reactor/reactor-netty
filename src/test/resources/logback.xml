@@ -25,6 +25,7 @@
     </appender>
     <appender name="file" class="ch.qos.logback.core.FileAppender">
        <file>testFile.log</file>
+        <append>false</append>
         <!-- encoders are assigned the type
              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <encoder>
@@ -37,7 +38,7 @@
     <logger name="reactor.ipc.netty" level="DEBUG" />
 
     <root level="info">
-        <appender-ref ref="file"/>
+        <appender-ref ref="stdout"/>
     </root>
 
 </configuration>
