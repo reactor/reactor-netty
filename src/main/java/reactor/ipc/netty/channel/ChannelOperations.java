@@ -454,7 +454,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final void markOutboundPersistent(){
 		if(channel.hasAttr(CLOSE_CHANNEL)) {
 			channel.attr(CLOSE_CHANNEL)
-			       .set(null);
+			       .set(false);
 		}
 	}
 

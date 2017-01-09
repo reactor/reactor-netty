@@ -116,7 +116,8 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 		     .isOpen()) {
 			return;
 		}
-		if(channel.hasAttr(CLOSE_CHANNEL)){
+		if(channel.hasAttr(CLOSE_CHANNEL) &&
+				channel.attr(CLOSE_CHANNEL).get()){
 			channel.close();
 		}
 	}
