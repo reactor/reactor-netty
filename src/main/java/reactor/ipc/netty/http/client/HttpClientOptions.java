@@ -37,6 +37,7 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.options.ClientOptions;
@@ -287,6 +288,14 @@ public final class HttpClientOptions extends ClientOptions {
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
 		super.proxy(Proxy.HTTP, connectAddress, username, password);
+		return this;
+	}
+
+	public HttpClientOptions proxy(@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
+			@Nullable String username,
+			@Nullable Function<? super String, ? extends String> password,
+			@Nullable AddressResolverGroup<?> resolver) {
+		super.proxy(Proxy.HTTP, connectAddress, username, password, resolver);
 		return this;
 	}
 

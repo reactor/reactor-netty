@@ -37,6 +37,7 @@ import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.NetUtil;
 import reactor.core.Exceptions;
@@ -395,13 +396,24 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 			@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
+		return proxy(type, connectAddress, username, password, NoopAddressResolverGroup.INSTANCE);
+	}
+
+	public ClientOptions proxy(@Nonnull Proxy type,
+			@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
+			@Nullable String username,
+			@Nullable Function<? super String, ? extends String> password,
+			@Nullable AddressResolverGroup<?> resolver) {
 		this.proxyUsername = username;
 		this.proxyPassword = password;
 		this.proxyAddress = Objects.requireNonNull(connectAddress, "addressSupplier");
 		this.proxyType = Objects.requireNonNull(type, "proxyType");
-		bootstrapTemplate.resolver(NoopAddressResolverGroup.INSTANCE);
+		if (resolver != null) {
+			bootstrapTemplate.resolver(resolver);
+		}
 		return this;
 	}
+
 
 	/**
 	 * Enable default sslContext support
