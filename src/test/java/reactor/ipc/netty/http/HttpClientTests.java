@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http;
 
 import java.io.InputStream;
+import java.time.Duration;
 
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -112,11 +113,9 @@ public class HttpClientTests {
 				               .limitRate(1))
 				.reduce(String::concat);
 
-		cancelledPage.block();
-		String res = page.block();
-		String res2 = page.block();
-
-		Assert.assertTrue(res +" \n=========\n"+res2, res.equals(res2));
+		page.block(Duration.ofSeconds(30));
+		cancelledPage.block(Duration.ofSeconds(30));
+		page.block(Duration.ofSeconds(30));
 	}
 
 	//@Test
