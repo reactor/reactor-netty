@@ -92,7 +92,10 @@ public class HttpClientTests {
 	@Test
 	public void backpressured() throws Exception {
 		Mono<HttpClientResponse> remote = HttpClient.create()
-		          .get("http://localhost:12012/docs/core/release/api/reactor/core/publisher/Mono.html",
+		          .get("http://next" +
+						          ".projectreactor" +
+						          ".io/docs/core/release/api/reactor/core" +
+						          "/publisher/Mono.html",
 				          c -> c.followRedirect()
 				                .sendHeaders());
 
