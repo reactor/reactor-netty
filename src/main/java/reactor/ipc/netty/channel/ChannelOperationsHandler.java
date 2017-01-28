@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.channel;
 
+import java.nio.charset.Charset;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.Callable;
@@ -113,6 +114,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				inbound().onInboundNext(ctx, msg);
 			}
 			else if (log.isDebugEnabled()) {
+				if(msg instanceof ByteBufHolder) {
+					msg = ((ByteBufHolder) msg).content()
+					                           .toString(Charset.defaultCharset());
+				}
 				log.debug("No ChannelOperation attached. Dropping: {}", msg);
 			}
 		}

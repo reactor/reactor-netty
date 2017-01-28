@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import org.hamcrest.Matcher;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -34,6 +35,8 @@ import reactor.ipc.netty.http.client.HttpClientException;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Stephane Maldini
@@ -86,28 +89,31 @@ public class HttpClientTests {
 		Assert.fail("Not aborted");
 	}
 
-	//@Test
-	public void simpleTest() throws Exception {
-		int res = HttpClient.create()
-		                    .get("http://next.projectreactor.io/assets/css/reactor.css",
-				                    c -> c.followRedirect()
-				                          .sendHeaders())
-		                    .then(r -> Mono.just(r.status()
-		                                          .code()))
-		                    .log()
-		                    .block();
-		res = HttpClient.create()
-		                .get("http://next.projectreactor.io/assets/css/reactor.css",
-				                c -> c.followRedirect()
-				                      .sendHeaders())
-		                .then(r -> Mono.just(r.status()
-		                                      .code()))
-		                .log()
-		                .block();
+	@Test
+	public void backpressured() throws Exception {
+		Mono<HttpClientResponse> remote = HttpClient.create()
+		          .get("http://localhost:12012/docs/core/release/api/reactor/core/publisher/Mono.html",
+				          c -> c.followRedirect()
+				                .sendHeaders());
 
-		if (res != 200) {
-			throw new IllegalStateException("test status failed with " + res);
-		}
+		Mono<String> page = remote
+				.flatMap(r -> r.receive()
+				               .asString()
+				               .limitRate(1))
+				.reduce(String::concat);
+
+		Mono<String> cancelledPage = remote
+				.flatMap(r -> r.receive()
+				               .asString()
+				               .take(2)
+				               .limitRate(1))
+				.reduce(String::concat);
+
+		cancelledPage.block();
+		String res = page.block();
+		String res2 = page.block();
+
+		Assert.assertTrue(res +" \n=========\n"+res2, res.equals(res2));
 	}
 
 	//@Test

@@ -537,15 +537,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Hold receiving side and mark as done
-	 *
-	 * @return true if successfully marked receiving
-	 */
-	protected final boolean markInboundDone() {
-		return inbound.markInboundDone();
-	}
-
-	/**
 	 * Return the available parent {@link ContextHandler} for user-facing lifecycle
 	 * handling
 	 *

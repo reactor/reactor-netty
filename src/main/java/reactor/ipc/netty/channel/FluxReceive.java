@@ -50,7 +50,7 @@ final class FluxReceive extends Flux<Object>
 	long                       receiverDemand;
 	Queue<Object>              receiverQueue;
 
-	boolean   inboundDone;
+	volatile boolean   inboundDone;
 	Throwable inboundError;
 
 	volatile Disposable receiverCancel;
@@ -145,7 +145,7 @@ final class FluxReceive extends Flux<Object>
 			if (c != CANCELLED) {
 				channel.config()
 				       .setAutoRead(false);
-				if(parent.isOutboundDone()){
+				if(inboundDone && parent.isOutboundDone()){
 					parent.onHandlerTerminate();
 				}
 				else {
@@ -258,20 +258,6 @@ final class FluxReceive extends Flux<Object>
 					new IllegalStateException(
 							"Only one connection receive subscriber allowed."));
 		}
-	}
-
-	final boolean markInboundDone() {
-		if (inboundDone) {
-			Queue<?> q = receiverQueue;
-			Subscriber<?> receiver = this.receiver;
-			if (receiver == null && (q == null || q.isEmpty())) {
-				cancel();
-				return true;
-			}
-			return false;
-		}
-		inboundDone = true;
-		return false;
 	}
 
 	final void onInboundNext(Object msg) {
