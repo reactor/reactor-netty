@@ -116,7 +116,6 @@ public class HttpClientTests {
 		page.block(Duration.ofSeconds(30));
 		cancelledPage.block(Duration.ofSeconds(30));
 		page.block(Duration.ofSeconds(30));
-		Thread.sleep(10000);
 	}
 
 	//@Test

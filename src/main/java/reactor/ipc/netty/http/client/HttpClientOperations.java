@@ -454,7 +454,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				parentContext().fireContextActive(this);
 			}
 			if (msg instanceof FullHttpResponse) {
-				super.onInboundNext(ctx, ((FullHttpResponse)msg).content());
+				super.onInboundNext(ctx, msg);
 				onHandlerTerminate();
 			}
 			return;
