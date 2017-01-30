@@ -93,10 +93,9 @@ public class HttpClientTests {
 	@Test
 	public void backpressured() throws Exception {
 		Mono<HttpClientResponse> remote = HttpClient.create()
-		          .get("http://next" +
-						          ".projectreactor" +
-						          ".io/docs/core/release/api/reactor/core" +
-						          "/publisher/Mono.html",
+		          .get("http://localhost:12012" +
+						          "/docs/core/release/api/reactor/core" +
+						          "/publisher/Flux.html",
 				          c -> c.followRedirect()
 				                .sendHeaders());
 
@@ -109,7 +108,7 @@ public class HttpClientTests {
 		Mono<String> cancelledPage = remote
 				.flatMap(r -> r.receive()
 				               .asString()
-				               .take(2)
+				               .take(5)
 				               .limitRate(1))
 				.reduce(String::concat);
 

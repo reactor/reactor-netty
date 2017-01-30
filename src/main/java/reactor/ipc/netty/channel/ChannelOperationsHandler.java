@@ -139,7 +139,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 		if (ctx.channel()
 		       .isWritable()) {
-			inner.request(1L);
+			inner.request(prefetch);
 		}
 		drain();
 	}
@@ -266,8 +266,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			else if (msg instanceof FileRegion) {
 				pendingBytes = Operators.addCap(pendingBytes, ((FileRegion) msg).count());
 			}
-			if (log.isDebugEnabled()) {
-				log.debug("Pending write size = {}", pendingBytes);
+			if (log.isTraceEnabled()) {
+				log.trace("Pending write size = {}", pendingBytes);
 			}
 			if(inner != null && inner.justFlushed){
 				inner.justFlushed = false;
