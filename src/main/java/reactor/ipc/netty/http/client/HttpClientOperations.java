@@ -101,6 +101,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	HttpClientOperations(Channel channel, HttpClientOperations replaced) {
 		super(channel, replaced);
+		this.started = replaced.started;
 		this.redirectedFrom = replaced.redirectedFrom;
 		this.isSecure = replaced.isSecure;
 		this.nettyRequest = replaced.nettyRequest;

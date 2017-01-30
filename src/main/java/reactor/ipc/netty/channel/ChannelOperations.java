@@ -512,8 +512,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final void onHandlerTerminate() {
 		if (replace(null)) {
 			if(log.isTraceEnabled()){
-				log.trace("Disposing ChannelOperation from a channel", new Exception
-						("ChannelOperation terminal stack"));
+				log.trace("Disposing ChannelOperation from a channel", new Exception("ChannelOperation terminal stack"));
 			}
 			try {
 				Operators.terminate(OUTBOUND_CLOSE, this);

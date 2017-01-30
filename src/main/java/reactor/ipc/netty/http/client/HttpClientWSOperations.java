@@ -93,6 +93,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 	@SuppressWarnings("unchecked")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
+			started = true;
 			channel().pipeline()
 			         .remove(HttpObjectAggregator.class);
 			FullHttpResponse response = (FullHttpResponse) msg;
