@@ -16,13 +16,11 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.util.Objects;
 import java.util.function.BiFunction;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;

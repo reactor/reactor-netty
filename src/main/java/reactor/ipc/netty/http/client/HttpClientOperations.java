@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
@@ -91,6 +92,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	volatile ResponseState responseState;
 	int inboundPrefetch;
+
+	boolean started;
 
 	boolean clientError = true;
 	boolean serverError = true;
@@ -433,13 +436,21 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpResponse) {
 			HttpResponse response = (HttpResponse) msg;
-			setNettyResponse(response);
 			if (response.decoderResult()
 			            .isFailure()) {
 				onOutboundError(response.decoderResult()
 				                        .cause());
 				return;
 			}
+			if (started) {
+				if(log.isDebugEnabled()){
+					log.debug("An HttpClientOperations cannot proceed more than one " +
+							"Response", response.headers().toString());
+				}
+				return;
+			}
+			started = true;
+			setNettyResponse(response);
 
 			if (log.isDebugEnabled()) {
 				log.debug("Received response (auto-read:{}) : {}",
@@ -460,6 +471,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (msg instanceof LastHttpContent) {
+			if(!started){
+				if(log.isDebugEnabled()){
+					log.debug("HttpClientOperations received an incorrect end " +
+							"delimiter" +
+							"(previously used connection?)");
+				}
+				return;
+			}
 			if (log.isDebugEnabled()) {
 				log.debug("Received last HTTP packet");
 			}
@@ -470,6 +489,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 
+		if(!started){
+			if(log.isDebugEnabled()){
+				if(msg instanceof ByteBufHolder){
+					msg = ((ByteBufHolder)msg).content();
+				}
+				log.debug("HttpClientOperations received an incorrect chunk " +
+						"(previously used connection?)", msg);
+			}
+			return;
+		}
 		super.onInboundNext(ctx, msg);
 		if (isInboundCancelled()) {
 			ctx.read();
