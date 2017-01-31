@@ -161,7 +161,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 			ChannelPool pool = options.getPool(remote);
 
 			ContextHandler<SocketChannel> contextHandler =
-					doHandler(targetHandler, sink, secure, pool, onSetup);
+					doHandler(targetHandler, sink, secure, remote, pool, onSetup);
 
 			if (pool == null) {
 				Bootstrap b = options.get();
@@ -189,12 +189,14 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	protected ContextHandler<SocketChannel> doHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 			MonoSink<NettyContext> sink,
 			boolean secure,
+			SocketAddress providedAddress,
 			ChannelPool pool,
 			Consumer<? super Channel> onSetup) {
 		return ContextHandler.newClientContext(sink,
 				options,
 				loggingHandler,
 				secure,
+				providedAddress,
 				pool,
 				(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
 	}

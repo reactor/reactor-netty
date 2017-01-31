@@ -17,6 +17,7 @@
 package reactor.ipc.netty.channel;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -43,8 +44,9 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	ServerContextHandler(ChannelOperations.OnNew<Channel> channelOpFactory,
 			ServerOptions options,
 			MonoSink<NettyContext> sink,
-			LoggingHandler loggingHandler) {
-		super(channelOpFactory, options, sink, loggingHandler);
+			LoggingHandler loggingHandler,
+			SocketAddress providedAddress) {
+		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
 		this.serverOptions = options;
 	}
 
@@ -124,6 +126,6 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	protected void doPipeline(ChannelPipeline pipeline) {
-		addSslAndLogHandlers(options, sink, loggingHandler, true, pipeline);
+		addSslAndLogHandlers(options, sink, loggingHandler, true, getSNI(), pipeline);
 	}
 }

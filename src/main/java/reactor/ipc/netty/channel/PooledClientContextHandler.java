@@ -17,6 +17,8 @@
 package reactor.ipc.netty.channel;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 
 import io.netty.channel.Channel;
@@ -33,6 +35,8 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 /**
  * @param <CHANNEL> the channel type
@@ -59,8 +63,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
+			SocketAddress providedAddress,
 			ChannelPool pool) {
-		super(channelOpFactory, options, sink, loggingHandler);
+		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
 		this.clientOptions = options;
 		this.secure = secure;
 		this.pool = pool;
@@ -239,7 +244,17 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				sink,
 				loggingHandler,
 				secure,
+				getSNI(),
 				pipeline);
 		ClientContextHandler.addProxyHandler(clientOptions, pipeline);
+	}
+
+	@Override
+	protected Tuple2<String, Integer> getSNI() {
+		if (providedAddress instanceof InetSocketAddress) {
+			InetSocketAddress ipa = (InetSocketAddress) providedAddress;
+			return Tuples.of(ipa.getHostName(), ipa.getPort());
+		}
+		return null;
 	}
 }

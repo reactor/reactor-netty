@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -300,12 +301,14 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		protected ContextHandler<SocketChannel> doHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 				MonoSink<NettyContext> sink,
 				boolean secure,
+				SocketAddress providedAddress,
 				ChannelPool pool,
 				Consumer<? super Channel> onSetup) {
 			return ContextHandler.<SocketChannel>newClientContext(sink,
 					options,
 					loggingHandler,
 					secure,
+					providedAddress,
 					pool,
 					(ch, c, msg) -> {
 						if(onSetup != null){

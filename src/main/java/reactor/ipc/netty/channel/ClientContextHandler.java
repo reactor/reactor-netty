@@ -16,6 +16,8 @@
 
 package reactor.ipc.netty.channel;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -25,6 +27,8 @@ import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 /**
  * @param <CHANNEL> the channel type
@@ -42,8 +46,9 @@ final class ClientContextHandler<CHANNEL extends Channel>
 			ClientOptions options,
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
-			boolean secure) {
-		super(channelOpFactory, options, sink, loggingHandler);
+			boolean secure,
+			SocketAddress providedAddress) {
+		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
 		this.clientOptions = options;
 		this.secure = secure;
 	}
@@ -66,8 +71,17 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
+	protected Tuple2<String, Integer> getSNI() {
+		if (providedAddress instanceof InetSocketAddress) {
+			InetSocketAddress ipa = (InetSocketAddress) providedAddress;
+			return Tuples.of(ipa.getHostName(), ipa.getPort());
+		}
+		return null;
+	}
+
+	@Override
 	protected void doPipeline(ChannelPipeline pipeline) {
-		addSslAndLogHandlers(clientOptions, sink, loggingHandler, secure, pipeline);
+		addSslAndLogHandlers(clientOptions, sink, loggingHandler, secure, getSNI(), pipeline);
 		addProxyHandler(clientOptions, pipeline);
 	}
 

@@ -136,7 +136,7 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 				return;
 			}
 			b.localAddress(adr);
-			ContextHandler<DatagramChannel> c = doHandler(targetHandler, sink);
+			ContextHandler<DatagramChannel> c = doHandler(targetHandler, sink, adr);
 			b.handler(c);
 			c.setFuture(b.bind());
 		});
@@ -151,11 +151,13 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 * @return a new {@link ContextHandler}
 	 */
 	protected ContextHandler<DatagramChannel> doHandler(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> sink) {
+			MonoSink<NettyContext> sink,
+			SocketAddress providedAddress) {
 		return ContextHandler.newClientContext(sink,
 				options,
 				loggingHandler,
 				false,
+				providedAddress,
 				(ch, c, msg) -> UdpOperations.bind(ch, handler, c));
 	}
 

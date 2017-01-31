@@ -16,6 +16,8 @@
 
 package reactor.ipc.netty.channel;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -41,6 +43,7 @@ import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.options.ServerOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.function.Tuple2;
 
 /**
  * A one time-set channel pipeline callback to emit {@link NettyContext} state for clean
@@ -69,11 +72,14 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			MonoSink<NettyContext> sink,
 			ClientOptions options,
 			LoggingHandler loggingHandler,
-			boolean secure, ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
+			boolean secure,
+			SocketAddress providedAddress,
+			ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
 		return newClientContext(sink,
 				options,
 				loggingHandler,
 				secure,
+				providedAddress,
 				null,
 				channelOpFactory);
 	}
@@ -85,6 +91,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param options
 	 * @param loggingHandler
 	 * @param secure
+	 * @param providedAddress
 	 * @param channelOpFactory
 	 * @param pool
 	 * @param <CHANNEL>
@@ -96,6 +103,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			ClientOptions options,
 			LoggingHandler loggingHandler,
 			boolean secure,
+			SocketAddress providedAddress,
 			ChannelPool pool, ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
 		if (pool != null) {
 			return new PooledClientContextHandler<>(channelOpFactory,
@@ -103,13 +111,15 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					sink,
 					loggingHandler,
 					secure,
+					providedAddress,
 					pool);
 		}
 		return new ClientContextHandler<>(channelOpFactory,
 				options,
 				sink,
 				loggingHandler,
-				secure);
+				secure,
+				providedAddress);
 	}
 
 	/**
@@ -126,12 +136,13 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			ServerOptions options,
 			LoggingHandler loggingHandler,
 			ChannelOperations.OnNew<Channel> channelOpFactory) {
-		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler);
+		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, options.getAddress());
 	}
 
 	final MonoSink<NettyContext>           sink;
 	final NettyOptions<?, ?>               options;
 	final LoggingHandler                   loggingHandler;
+	final SocketAddress                    providedAddress;
 	final ChannelOperations.OnNew<CHANNEL> channelOpFactory;
 
 	BiConsumer<ChannelPipeline, ContextHandler<Channel>> pipelineConfigurator;
@@ -143,18 +154,22 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @param options
 	 * @param sink
 	 * @param loggingHandler
+	 * @param providedAddress the {@link InetSocketAddress} targeted by the operation
+	 * associated with that handler (useable eg. for SNI), or null if unavailable.
 	 */
 	@SuppressWarnings("unchecked")
 	protected ContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			NettyOptions<?, ?> options,
 			MonoSink<NettyContext> sink,
-			LoggingHandler loggingHandler) {
+			LoggingHandler loggingHandler,
+			SocketAddress providedAddress) {
 		this.options = options;
 		this.channelOpFactory =
 				Objects.requireNonNull(channelOpFactory, "channelOpFactory");
 		this.sink = sink;
 		this.loggingHandler = loggingHandler;
 		this.autoCreateOperations = true;
+		this.providedAddress = providedAddress;
 	}
 
 	/**
@@ -287,6 +302,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		dispose();
 	}
 
+	protected Tuple2<String, Integer> getSNI() {
+		return null; //will ignore SNI
+	}
+
 	/**
 	 * Return a Publisher to signal onComplete on {@link Channel} close or release.
 	 *
@@ -311,11 +330,21 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
+			Tuple2<String, Integer> sniInfo,
 			ChannelPipeline pipeline) {
-		SslHandler sslHandler = secure ? options.getSslHandler(pipeline.channel()
-		                                                               .alloc()) : null;
+		SslHandler sslHandler = secure
+				? options.getSslHandler(pipeline.channel().alloc(), sniInfo)
+				: null;
+
 		if (sslHandler != null) {
-			if (log.isDebugEnabled()) {
+			if (log.isDebugEnabled() && sniInfo != null) {
+				log.debug("SSL enabled using engine {} and SNI {}",
+						sslHandler.engine()
+						          .getClass()
+						          .getSimpleName(),
+						sniInfo);
+			}
+			else if (log.isDebugEnabled()) {
 				log.debug("SSL enabled using engine {}",
 						sslHandler.engine()
 						          .getClass()
