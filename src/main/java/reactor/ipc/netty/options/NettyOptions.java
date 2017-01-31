@@ -36,6 +36,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import reactor.ipc.netty.resources.LoopResources;
+import reactor.util.function.Tuple2;
 
 /**
  * A common connector builder with low-level connection options including sslContext, tcp
@@ -221,11 +222,30 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	 * @return a new eventual {@link SslHandler}
 	 */
 	public final SslHandler getSslHandler(ByteBufAllocator allocator) {
+		return getSslHandler(allocator, null);
+	}
+
+	/**
+	 * Return a new eventual {@link SslHandler}, optionally with SNI activated
+	 *
+	 * @param allocator {@link ByteBufAllocator} to allocate for packet storage
+	 * @param sniInfo {@link Tuple2} with hostname and port for SNI (any null will skip SNI).
+	 *
+	 * @return a new eventual {@link SslHandler} with SNI activated
+	 */
+	public final SslHandler getSslHandler(ByteBufAllocator allocator,
+			Tuple2<String, Integer> sniInfo) {
 		if(sslContext == null){
 			return null;
 		}
 		Objects.requireNonNull(allocator, "allocator");
-		SslHandler sslHandler = sslContext.newHandler(allocator);
+		SslHandler sslHandler;
+		if (sniInfo != null && sniInfo.getT1() != null && sniInfo.getT2() != null) {
+			sslHandler = sslContext.newHandler(allocator, sniInfo.getT1(), sniInfo.getT2());
+		}
+		else {
+			sslHandler = sslContext.newHandler(allocator);
+		}
 		sslHandler.setHandshakeTimeoutMillis(sslHandshakeTimeoutMillis);
 		return sslHandler;
 	}

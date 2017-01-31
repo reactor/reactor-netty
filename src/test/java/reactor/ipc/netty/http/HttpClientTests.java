@@ -23,7 +23,6 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import org.hamcrest.Matcher;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -33,11 +32,11 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientException;
+import reactor.ipc.netty.http.client.HttpClientOptions;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
-
-import static org.hamcrest.MatcherAssert.assertThat;
+import reactor.test.StepVerifier;
 
 /**
  * @author Stephane Maldini
@@ -237,6 +236,17 @@ public class HttpClientTests {
 		          .blockMillis(5000);
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+	}
+
+	@Test
+	public void simpleTestHttps() {
+		StepVerifier.create(HttpClient.create(HttpClientOptions::sslSupport)
+		                              .get("https://developer.chrome.com")
+		                              .then(r -> Mono.just(r.status().code()))
+		)
+		            .expectNextMatches(status -> status >= 200 && status < 400)
+		            .expectComplete()
+		            .verify();
 	}
 
 }
