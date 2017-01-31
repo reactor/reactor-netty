@@ -17,6 +17,7 @@
 package reactor.ipc.netty.tcp;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -155,14 +156,16 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				null == handler ? ChannelOperations.noopHandler() : handler;
 
 		return Mono.create(sink -> {
+			SocketAddress remote = address != null ? address : options.getAddress();
 
-			ChannelPool pool = options.getPool(address);
+			ChannelPool pool = options.getPool(remote);
 
 			ContextHandler<SocketChannel> contextHandler =
 					doHandler(targetHandler, sink, secure, pool, onSetup);
 
 			if (pool == null) {
-				Bootstrap b = options.get(address);
+				Bootstrap b = options.get();
+				b.remoteAddress(remote);
 				b.handler(contextHandler);
 				contextHandler.setFuture(b.connect());
 			}

@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
@@ -331,18 +332,19 @@ public final class HttpClientOptions extends ClientOptions {
 
 	final String formatSchemeAndHost(String url, boolean ws) {
 		if (!url.startsWith(HttpClient.HTTP_SCHEME) && !url.startsWith(HttpClient.WS_SCHEME)) {
-			final String parsedUrl =
+			final String scheme =
 					(ws ? HttpClient.WS_SCHEME : HttpClient.HTTP_SCHEME) + "://";
 			if (url.startsWith("/")) {
-				InetSocketAddress remote = getRemoteAddress();
+				SocketAddress remote = getAddress();
 
-				return parsedUrl + (remote != null && !useProxy() ?
-						remote.getHostName() + ":" + remote.getPort() :
-						"localhost") + url;
+				if (remote != null && !useProxy() && remote instanceof InetSocketAddress) {
+					InetSocketAddress inet = (InetSocketAddress) remote;
+
+					return scheme + inet.getHostName() + ":" + inet.getPort() + url;
+				}
+				return scheme + "localhost" + url;
 			}
-			else {
-				return parsedUrl + url;
-			}
+			return scheme + url;
 		}
 		else {
 			return url;

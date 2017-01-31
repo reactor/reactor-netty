@@ -17,6 +17,7 @@
 package reactor.ipc.netty.options;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -49,8 +50,7 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 	}
 
 	static void defaultServerOptions(ServerBootstrap bootstrap) {
-		bootstrap.localAddress(LOCALHOST_AUTO_PORT)
-		         .option(ChannelOption.SO_REUSEADDR, true)
+		bootstrap.option(ChannelOption.SO_REUSEADDR, true)
 		         .option(ChannelOption.SO_BACKLOG, 1000)
 		         .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 		         .childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
@@ -61,6 +61,8 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 		         .childOption(ChannelOption.TCP_NODELAY, true)
 		         .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000);
 	}
+
+	SocketAddress localAddress = LOCALHOST_AUTO_PORT;
 
 	/**
 	 * Build a new {@link ServerBootstrap}.
@@ -89,6 +91,7 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 	 */
 	protected ServerOptions(ServerOptions options) {
 		super(options);
+		this.localAddress = options.localAddress;
 	}
 
 	/**
@@ -118,6 +121,11 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 		ServerBootstrap b = super.get();
 		groupAndChannel(b);
 		return b;
+	}
+
+	@Override
+	public final SocketAddress getAddress() {
+		return localAddress;
 	}
 
 	/**
@@ -166,7 +174,7 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 	 */
 	public ServerOptions listen(InetSocketAddress listenAddress) {
 		Objects.requireNonNull(listenAddress, "listenAddress");
-		bootstrapTemplate.localAddress(listenAddress);
+		this.localAddress = listenAddress;
 		return this;
 	}
 

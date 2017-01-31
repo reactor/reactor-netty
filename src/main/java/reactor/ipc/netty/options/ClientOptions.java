@@ -17,6 +17,7 @@
 package reactor.ipc.netty.options;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -81,7 +82,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	Proxy                                      proxyType;
 
 	InternetProtocolFamily                protocolFamily = null;
-	Supplier<? extends InetSocketAddress> connectAddress = null;
+	Supplier<? extends SocketAddress> connectAddress = null;
 
 	/**
 	 * Build a new {@link Bootstrap}
@@ -182,40 +183,14 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 
 	@Override
 	public Bootstrap get() {
-		return get(null);
-	}
-
-	/**
-	 * Return a new {@link Bootstrap} given an optional address or the current
-	 * {@link #connect(Supplier)} resolved.
-	 *
-	 * @param address an optional address
-	 *
-	 * @return a new {@link Bootstrap}
-	 */
-	public final Bootstrap get(InetSocketAddress address) {
 		Bootstrap b = super.get();
-		InetSocketAddress adr;
-		if (address != null) {
-			adr = address;
-		}
-		else if (connectAddress != null) {
-			adr = connectAddress.get();
-		}
-		else {
-			adr = null;
-		}
-
-		if (adr != null) {
-			if (useDatagramChannel()) {
-				b.localAddress(adr);
-			}
-			else {
-				b.remoteAddress(adr);
-			}
-		}
 		groupAndChannel(b);
 		return b;
+	}
+
+	@Override
+	public final SocketAddress getAddress() {
+		return connectAddress == null ? null : connectAddress.get();
 	}
 
 	/**
@@ -235,7 +210,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 *
 	 * @return an eventual {@link ChannelPool}
 	 */
-	public final ChannelPool getPool(InetSocketAddress address) {
+	public final ChannelPool getPool(SocketAddress address) {
 		if (poolResources == null) {
 			return null;
 		}
@@ -272,15 +247,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 						new Socks5ProxyHandler(proxyAddr);
 		}
 		throw new IllegalArgumentException("Proxy type unsupported : " + proxyType);
-	}
-
-	/**
-	 * Resolve the latest {@link #connect} address
-	 *
-	 * @return the resolved address if any
-	 */
-	public final InetSocketAddress getRemoteAddress() {
-		return null != connectAddress ? connectAddress.get() : null;
 	}
 
 	/**

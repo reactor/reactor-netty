@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.udp;
 
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -33,9 +34,9 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
+import reactor.ipc.netty.resources.LoopResources;
 
 /**
  * A UDP client connector.
@@ -128,6 +129,13 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 
 		return Mono.create(sink -> {
 			Bootstrap b = options.get();
+			SocketAddress adr = options.getAddress();
+			if(adr == null){
+				sink.error(new NullPointerException("Provided ClientOptions do not " +
+						"define any address to bind to "));
+				return;
+			}
+			b.localAddress(adr);
 			ContextHandler<DatagramChannel> c = doHandler(targetHandler, sink);
 			b.handler(c);
 			c.setFuture(b.bind());

@@ -16,6 +16,8 @@
 
 package reactor.ipc.netty.options;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -203,6 +205,13 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	public BOOSTRAP get() {
 		return bootstrapTemplate.clone();
 	}
+
+	/**
+	 * Return a new eventual {@link SocketAddress}
+	 *
+	 * @return the supplied {@link SocketAddress} or null
+	 */
+	public abstract SocketAddress getAddress();
 
 	/**
 	 * Return a new eventual {@link SslHandler}
