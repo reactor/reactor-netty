@@ -42,8 +42,8 @@ public interface PoolResources extends Disposable {
 	 */
 	int DEFAULT_POOL_MAX_CONNECTION =
 			Integer.parseInt(System.getProperty("reactor.ipc.netty.pool.maxConnections",
-			"" + Runtime.getRuntime()
-			            .availableProcessors()));
+			"" + Math.max(Runtime.getRuntime()
+			            .availableProcessors(), 8)));
 
 	/**
 	 * Default acquisition timeout before error. If -1 will never wait to
