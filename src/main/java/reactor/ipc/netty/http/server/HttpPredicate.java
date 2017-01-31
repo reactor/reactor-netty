@@ -220,8 +220,8 @@ final class HttpPredicate
 
 		private static final Pattern NAME_PATTERN     = Pattern.compile("\\{([^/]+?)\\}");
 		// JDK 6 doesn't support named capture groups
-		private static final String  NAME_REPLACEMENT = "(?<%NAME%>[^\\/.]*)";
-		//private static final String  NAME_REPLACEMENT = "([^\\/.]*)";
+		private static final String  NAME_REPLACEMENT = "(?<%NAME%>[^\\/]*)";
+		//private static final String  NAME_REPLACEMENT = "([^\\/]*)";
 
 		private final List<String>                         pathVariables =
 				new ArrayList<>();
