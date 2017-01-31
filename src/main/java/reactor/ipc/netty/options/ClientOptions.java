@@ -362,24 +362,27 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 			@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
 			@Nullable String username,
 			@Nullable Function<? super String, ? extends String> password) {
-		return proxy(type, connectAddress, username, password, NoopAddressResolverGroup.INSTANCE);
-	}
-
-	public ClientOptions proxy(@Nonnull Proxy type,
-			@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
-			@Nullable String username,
-			@Nullable Function<? super String, ? extends String> password,
-			@Nullable AddressResolverGroup<?> resolver) {
 		this.proxyUsername = username;
 		this.proxyPassword = password;
 		this.proxyAddress = Objects.requireNonNull(connectAddress, "addressSupplier");
 		this.proxyType = Objects.requireNonNull(type, "proxyType");
-		if (resolver != null) {
-			bootstrapTemplate.resolver(resolver);
+		if(bootstrapTemplate.config().resolver() == null){
+			resolver(NoopAddressResolverGroup.INSTANCE);
 		}
 		return this;
 	}
 
+	/**
+	 * Assign an {@link AddressResolverGroup}.
+	 * @param resolver the new {@link AddressResolverGroup}
+	 *
+	 * @return this {@link ClientOptions}
+	 */
+	public ClientOptions resolver(AddressResolverGroup<?> resolver) {
+		Objects.requireNonNull(resolver, "resolver");
+		bootstrapTemplate.resolver(resolver);
+		return this;
+	}
 
 	/**
 	 * Enable default sslContext support

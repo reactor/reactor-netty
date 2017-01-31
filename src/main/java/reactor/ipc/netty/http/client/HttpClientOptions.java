@@ -292,11 +292,9 @@ public final class HttpClientOptions extends ClientOptions {
 		return this;
 	}
 
-	public HttpClientOptions proxy(@Nonnull Supplier<? extends InetSocketAddress> connectAddress,
-			@Nullable String username,
-			@Nullable Function<? super String, ? extends String> password,
-			@Nullable AddressResolverGroup<?> resolver) {
-		super.proxy(Proxy.HTTP, connectAddress, username, password, resolver);
+	@Override
+	public HttpClientOptions resolver(AddressResolverGroup<?> resolver) {
+		super.resolver(resolver);
 		return this;
 	}
 
