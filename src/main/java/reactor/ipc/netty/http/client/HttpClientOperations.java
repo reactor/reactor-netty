@@ -439,7 +439,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			HttpResponse response = (HttpResponse) msg;
 			if (response.decoderResult()
 			            .isFailure()) {
-				onOutboundError(response.decoderResult()
+				onInboundError(response.decoderResult()
 				                        .cause());
 				return;
 			}
@@ -452,6 +452,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			started = true;
 			setNettyResponse(response);
+			if(!isKeepAlive()){
+				markOutboundCloseable();
+			}
 
 			if (log.isDebugEnabled()) {
 				log.debug("Received response (auto-read:{}) : {}",
