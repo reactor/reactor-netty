@@ -141,6 +141,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			doPipeline(c.pipeline());
 			c.pipeline()
 			 .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
+			if (c.isOpen()) {
+				c.pipeline()
+				 .connect(c.localAddress(), c.remoteAddress());
+			}
 			if (c.isRegistered()) {
 				c.pipeline()
 				 .fireChannelRegistered();
