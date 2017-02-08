@@ -141,7 +141,6 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 					sink.complete();
 				}
 				else {
-					fc.position(pos + fc.position());
 					sink.next(buf);
 				}
 			}
