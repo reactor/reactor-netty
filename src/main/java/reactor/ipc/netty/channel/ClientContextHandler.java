@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,9 +80,9 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void doPipeline(ChannelPipeline pipeline) {
-		addSslAndLogHandlers(clientOptions, sink, loggingHandler, secure, getSNI(), pipeline);
-		addProxyHandler(clientOptions, pipeline);
+	protected void doPipeline(Channel ch) {
+		addSslAndLogHandlers(clientOptions, sink, loggingHandler, secure, getSNI(), ch.pipeline());
+		addProxyHandler(clientOptions, ch.pipeline());
 	}
 
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline) {

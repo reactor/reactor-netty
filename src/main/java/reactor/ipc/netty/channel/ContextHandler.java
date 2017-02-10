@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -269,7 +269,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
-		doPipeline(ch.pipeline());
+		doPipeline(ch);
 		ch.pipeline()
 		  .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
 		if (log.isDebugEnabled()) {
@@ -289,7 +289,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	/**
 	 * @param pipeline
 	 */
-	protected abstract void doPipeline(ChannelPipeline pipeline);
+	protected abstract void doPipeline(Channel pipeline);
 
 	/**
 	 * Cleanly terminate a channel according to the current context handler type.
