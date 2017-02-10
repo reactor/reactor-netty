@@ -78,6 +78,20 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	NettyContext context();
 
 	/**
+	 * Immediately call the passed callback with a {@link NettyContext} to operate on the
+	 * underlying
+	 * {@link Channel} state. This allows for chaining outbound API.
+	 *
+	 * @param contextCallback context callback
+	 *
+	 * @return the {@link NettyContext}
+	 */
+	default NettyOutbound context(Consumer<NettyContext> contextCallback){
+		contextCallback.accept(context());
+		return this;
+	}
+
+	/**
 	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given
 	 * timeout.
 	 *

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,10 +165,15 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Acquired existing channel: {}", c.toString());
 			}
+			if (c.isOpen()) {
+				createOperations(c, null);
+			}
+			/*
 			c.pipeline()
 			 .replace(NettyPipeline.ReactiveBridge,
 					 NettyPipeline.ReactiveBridge,
 					 new ChannelOperationsHandler(this));
+			 */
 		}
 	}
 

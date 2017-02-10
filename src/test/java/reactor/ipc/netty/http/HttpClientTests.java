@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,12 @@ import java.io.InputStream;
 import java.time.Duration;
 
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -49,16 +51,61 @@ public class HttpClientTests {
 		NettyContext x = TcpServer.create("localhost", 0)
 		                          .newHandler((in, out) -> in.receive()
 		                                                     .take(1)
-		                                                     .doOnNext(d -> out.context()
-		                                                                       .addHandler(
-				                                                                       new HttpResponseEncoder()))
-		                                                     .then(() -> out.sendObject(
+		                                                     .then(() -> out.context(c -> c.addHandler(
+				                                                     new HttpResponseEncoder()))
+		                                                                    .sendObject(
 				                                                     new DefaultFullHttpResponse(
 						                                                     HttpVersion.HTTP_1_1,
 						                                                     HttpResponseStatus.ACCEPTED))
 		                                                                    .then(Mono.delayMillis(
 				                                                                    2000)
 		                                                                              .then())))
+		                          .block();
+
+		PoolResources pool = PoolResources.fixed("test", 1);
+
+		int res = HttpClient.create(opts -> opts.connect("localhost",
+				x.address()
+				 .getPort())
+		                                        .poolResources(pool))
+		                    .get("/")
+		                    .then(r -> Mono.just(r.status()
+		                                          .code()))
+		                    .log()
+		                    .block();
+
+		try {
+			HttpClient.create(opts -> opts.connect("localhost",
+					x.address()
+					 .getPort())
+			                              .poolResources(pool))
+			          .get("/")
+			          .log()
+			          .block();
+		}
+		catch (AbortedException ae) {
+			Assert.fail("Not aborted");
+		}
+
+	}
+
+	DefaultFullHttpResponse response() {
+		DefaultFullHttpResponse r = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+				HttpResponseStatus.ACCEPTED);
+		r.headers()
+		 .set(HttpHeaderNames.CONTENT_LENGTH, 0);
+		return r;
+	}
+
+	@Test
+	@Ignore
+	public void pipelined() throws Exception {
+		NettyContext x = TcpServer.create("localhost", 0)
+		                          .newHandler((in, out) -> out.context(c -> c.addHandler(new HttpResponseEncoder()))
+		                                                      .sendObject(Flux.just(
+				                                                      response(),
+				                                                      response()))
+		                                                      .neverComplete())
 		                          .block();
 
 		PoolResources pool = PoolResources.fixed("test", 1);

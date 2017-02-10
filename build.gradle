@@ -36,8 +36,8 @@ ext {
   gradleVersion = '2.8'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.0.4.RELEASE"
-  reactorIpcVersion = "0.6.0.RELEASE"
+  reactorCoreVersion = "3.0.5.BUILD-SNAPSHOT"
+  reactorIpcVersion = "0.6.1.BUILD-SNAPSHOT"
 
   // Languages
   groovyVersion = '2.4.1'
@@ -45,10 +45,10 @@ ext {
   // Logging
   slf4jVersion = '1.7.12'
   logbackVersion = '1.1.2'
-  testAddonVersion = '3.0.4.RELEASE'
+  testAddonVersion = '3.0.5.BUILD-SNAPSHOT'
 
   // Libraries
-  nettyVersion = '4.1.6.Final'
+  nettyVersion = '4.1.8.Final'
   jacksonDatabindVersion = '2.5.1'
   protobufVersion = '2.6.1'
   kryoVersion = '3.0.3'

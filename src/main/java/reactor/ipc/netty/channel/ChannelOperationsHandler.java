@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
-import io.netty.handler.stream.ChunkedInput;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -59,7 +58,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		implements NettyPipeline.SendOptions {
 
 	final PublisherSender                inner;
-	final ContextHandler<?>              parentContext;
 	final BiConsumer<?, ? super ByteBuf> encoder;
 	final int                            prefetch;
 
@@ -73,6 +71,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	boolean                             flushOnEach;
 	long                                pendingBytes;
 
+	ContextHandler<?>              parentContext;
+
 	volatile boolean innerActive;
 	volatile boolean removed;
 	volatile int     wip;
@@ -82,7 +82,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		this.inner = new PublisherSender(this);
 		this.prefetch = 32;
 		this.encoder = NOOP_ENCODER;
-		this.parentContext = contextHandler;
+		this.parentContext = contextHandler; // only set if parent context is closable,
+		// pool will usually fetch context via parentContext()
 	}
 
 	@Override
@@ -93,8 +94,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				ops.onHandlerTerminate();
 			}
 			else {
-				parentContext.terminateChannel(ctx.channel());
-				parentContext.fireContextError(ContextHandler.ABORTED);
+				parentContext().terminateChannel(ctx.channel());
+				parentContext().fireContextError(ContextHandler.ABORTED);
 			}
 		}
 		catch (Throwable err) {
@@ -114,20 +115,32 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				inbound().onInboundNext(ctx, msg);
 			}
 			else if (log.isDebugEnabled()) {
-				if(msg instanceof ByteBufHolder) {
-					msg = ((ByteBufHolder) msg).content()
-					                           .toString(Charset.defaultCharset());
-				}
+					if (msg instanceof ByteBufHolder) {
+						msg = ((ByteBufHolder) msg).content()
+						                           .toString(Charset.defaultCharset());
+					}
 				log.debug("No ChannelOperation attached. Dropping: {}", msg);
+				ReferenceCountUtil.release(msg);
 			}
 		}
 		catch (Throwable err) {
+			ReferenceCountUtil.release(msg);
 			Exceptions.throwIfFatal(err);
 			exceptionCaught(ctx, err);
 		}
-		finally {
-			ReferenceCountUtil.release(msg);
+	}
+
+	ContextHandler<?> parentContext(){
+		if(parentContext != null){
+			return parentContext;
 		}
+		ChannelOperations<?, ?> ops = inbound();
+
+		if(ops != null){
+			return ops.parentContext();
+		}
+		throw new IllegalStateException("Tried to call parent context when none is " +
+				"attached");
 	}
 
 	@Override
@@ -153,8 +166,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			ops.onInboundError(err);
 		}
 		else {
-			parentContext.terminateChannel(ctx.channel());
-			parentContext.fireContextError(err);
+			parentContext().terminateChannel(ctx.channel());
+			parentContext().fireContextError(err);
 		}
 		if(log.isDebugEnabled()){
 			log.error("Handler failure while no operation was present", err);
@@ -173,7 +186,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		this.ctx = ctx;
 		if (ctx.channel()
 		       .isOpen()) {
-			parentContext.createOperations(ctx.channel(), null);
+			parentContext().createOperations(ctx.channel(), null);
 			inner.request(prefetch);
 		}
 	}
@@ -195,7 +208,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			log.trace("User event {}", evt);
 		}
 		if (evt == NettyPipeline.handlerTerminatedEvent()){
-			parentContext.terminateChannel(ctx.channel());
+			parentContext().terminateChannel(ctx.channel());
 			return;
 		}
 		if (evt instanceof NettyPipeline.SendOptionsChangeEvent) {

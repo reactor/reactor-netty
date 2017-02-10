@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,9 +143,9 @@ final class FluxReceive extends Flux<Object>
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
-				channel.config()
-				       .setAutoRead(false);
 				if(inboundDone && parent.isOutboundDone()){
+					channel.config()
+					       .setAutoRead(false);
 					parent.onHandlerTerminate();
 				}
 				else {
@@ -267,7 +267,7 @@ final class FluxReceive extends Flux<Object>
 			}
 			return;
 		}
-		ReferenceCountUtil.retain(msg);
+
 		if (receiverFastpath && receiver != null) {
 			try {
 				receiver.onNext(msg);
@@ -275,7 +275,6 @@ final class FluxReceive extends Flux<Object>
 			finally {
 				ReferenceCountUtil.release(msg);
 			}
-
 		}
 		else {
 			Queue<Object> q = receiverQueue;
@@ -307,11 +306,10 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	final boolean onInboundError(Throwable err) {
-		if (isCancelled() || inboundDone) {
+		if (isCancelled() || inboundDone || inboundError != null) {
 			Operators.onErrorDropped(err);
 			return false;
 		}
-		inboundDone = true;
 		Subscriber<?> receiver = this.receiver;
 		this.inboundError = err;
 		if (receiverFastpath && receiver != null) {

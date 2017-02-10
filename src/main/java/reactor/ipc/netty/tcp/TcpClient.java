@@ -40,6 +40,7 @@ import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
+import reactor.ipc.netty.resources.PoolResources;
 
 /**
  * A TCP client connector.
@@ -158,7 +159,16 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		return Mono.create(sink -> {
 			SocketAddress remote = address != null ? address : options.getAddress();
 
-			ChannelPool pool = options.getPool(remote);
+			ChannelPool pool = null;
+
+			PoolResources poolResources = options.getPoolResources();
+			if (poolResources != null) {
+				pool = poolResources.selectOrCreate(remote, () -> {
+					Bootstrap b = options.get();
+					b.handler(doHandler(targetHandler, sink, secure, remote, null, null));
+					return b;
+				});
+			}
 
 			ContextHandler<SocketChannel> contextHandler =
 					doHandler(targetHandler, sink, secure, remote, pool, onSetup);

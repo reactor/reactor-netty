@@ -189,6 +189,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public HttpClientOperations context(Consumer<NettyContext> contextCallback) {
+		contextCallback.accept(context());
+		return this;
+	}
+
+	@Override
 	public Map<CharSequence, Set<Cookie>> cookies() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
