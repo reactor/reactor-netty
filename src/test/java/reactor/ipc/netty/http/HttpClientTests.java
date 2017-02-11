@@ -168,7 +168,7 @@ public class HttpClientTests {
 	@Ignore
 	public void proxy() throws Exception {
 		Mono<HttpClientResponse> remote = HttpClient.create(o -> o.proxy("127.0.0.1", 8888))
-		          .get("http://google.com",
+		          .get("https://projectreactor.io",
 				          c -> c.followRedirect()
 				                .sendHeaders());
 

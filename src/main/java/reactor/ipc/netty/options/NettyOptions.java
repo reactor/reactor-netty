@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.options;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
@@ -235,9 +234,8 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	 */
 	public final SslHandler getSslHandler(ByteBufAllocator allocator,
 			Tuple2<String, Integer> sniInfo) {
-		if(sslContext == null){
-			return null;
-		}
+		SslContext sslContext =
+				this.sslContext == null ? defaultSslContext() : this.sslContext;
 		Objects.requireNonNull(allocator, "allocator");
 		SslHandler sslHandler;
 		if (sniInfo != null && sniInfo.getT1() != null && sniInfo.getT2() != null) {
@@ -317,6 +315,15 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	public SO sslContext(SslContext sslContext) {
 		this.sslContext = sslContext;
 		return (SO) this;
+	}
+
+	/**
+	 * Default Ssl context if none configured or null;
+	 *
+	 * @return a default {@link SslContext}
+	 */
+	protected SslContext defaultSslContext() {
+		return null;
 	}
 
 	/**

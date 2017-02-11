@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -238,6 +238,11 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 		});
 	}
 
+	@Override
+	protected SslContext defaultSslContext() {
+		return DEFAULT_SSL_CONTEXT;
+	}
+
 	/**
 	 * Enable SSL service with a self-signed certificate and allows extra
 	 * parameterization of the self signed {@link SslContextBuilder}. The builder is
@@ -275,4 +280,20 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 	}
 
 	final static InetSocketAddress LOCALHOST_AUTO_PORT = new InetSocketAddress(0);
+
+	static final SslContext DEFAULT_SSL_CONTEXT;
+
+	static {
+		SslContext sslContext;
+		try {
+			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			sslContext =
+					SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+					                 .build();
+		}
+		catch (Exception e) {
+			sslContext = null;
+		}
+		DEFAULT_SSL_CONTEXT = sslContext;
+	}
 }
