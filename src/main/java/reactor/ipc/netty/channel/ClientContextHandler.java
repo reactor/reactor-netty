@@ -88,8 +88,10 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline) {
 		ProxyHandler proxy = clientOptions.getProxyHandler();
 		if (proxy != null) {
-			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy)
-			.addFirst(new LoggingHandler("reactor.ipc.netty.proxy"));
+			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy);
+			if(log.isTraceEnabled()){
+				pipeline.addFirst(new LoggingHandler("ProxyHandler"));
+			}
 		}
 	}
 }
