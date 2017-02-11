@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -54,7 +55,7 @@ import reactor.util.function.Tuple2;
  * @author Stephane Maldini
  */
 public abstract class ContextHandler<CHANNEL extends Channel>
-		extends ChannelInitializer<CHANNEL> implements Disposable {
+		extends ChannelInitializer<CHANNEL> implements Disposable, Consumer<Channel> {
 
 	/**
 	 * Create a new client context
@@ -269,7 +270,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
-		doPipeline(ch);
+		accept(ch);
 		ch.pipeline()
 		  .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
 		if (log.isDebugEnabled()) {
@@ -285,11 +286,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	protected void doDropped(Channel channel) {
 		//ignore
 	}
-
-	/**
-	 * @param pipeline
-	 */
-	protected abstract void doPipeline(Channel pipeline);
 
 	/**
 	 * Cleanly terminate a channel according to the current context handler type.

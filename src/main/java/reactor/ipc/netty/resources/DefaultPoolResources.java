@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
@@ -50,7 +51,8 @@ final class DefaultPoolResources implements PoolResources {
 
 	@Override
 	public ChannelPool selectOrCreate(SocketAddress remote,
-			Supplier<? extends Bootstrap> bootstrap) {
+			Supplier<? extends Bootstrap> bootstrap,
+			Consumer<? super Channel> onChannelCreate) {
 		SocketAddress address = remote;
 		for (; ; ) {
 			Pool pool = channelPools.get(remote);
@@ -69,7 +71,7 @@ final class DefaultPoolResources implements PoolResources {
 			if (log.isDebugEnabled()) {
 				log.debug("New {} client pool for {}", name, address);
 			}
-			pool = new Pool(b, provider);
+			pool = new Pool(b, provider, onChannelCreate);
 			if (channelPools.putIfAbsent(address, pool) == null) {
 				return pool;
 			}
@@ -80,13 +82,16 @@ final class DefaultPoolResources implements PoolResources {
 	final static class Pool extends AtomicBoolean
 			implements ChannelPoolHandler, ChannelPool {
 
-		final ChannelPool pool;
+		final ChannelPool               pool;
+		final Consumer<? super Channel> onChannelCreate;
 
 		int activeConnections;
 
-		Pool(Bootstrap bootstrap,
-				BiFunction<Bootstrap, ChannelPoolHandler, ChannelPool> provider) {
+		@SuppressWarnings("unchecked")
+		Pool(Bootstrap bootstrap, BiFunction<Bootstrap, ChannelPoolHandler,
+				ChannelPool> provider, Consumer<? super Channel> onChannelCreate) {
 			this.pool = provider.apply(bootstrap, this);
+			this.onChannelCreate = onChannelCreate;
 		}
 
 		@Override
@@ -143,6 +148,9 @@ final class DefaultPoolResources implements PoolResources {
 				log.debug("Created {}, now {} active connections",
 						ch.toString(),
 						activeConnections);
+			}
+			if (onChannelCreate != null) {
+				onChannelCreate.accept(ch);
 			}
 		}
 

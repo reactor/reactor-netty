@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -163,11 +163,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 			PoolResources poolResources = options.getPoolResources();
 			if (poolResources != null) {
-				pool = poolResources.selectOrCreate(remote, () -> {
-					Bootstrap b = options.get();
-					b.handler(doHandler(targetHandler, sink, secure, remote, null, null));
-					return b;
-				});
+				pool = poolResources.selectOrCreate(remote, options,
+						doHandler(null, sink, secure, remote, null, null));
 			}
 
 			ContextHandler<SocketChannel> contextHandler =
@@ -208,9 +205,11 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				secure,
 				providedAddress,
 				pool,
-				(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
+				handler == null ? EMPTY :
+						(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
 	}
 
+	static final ChannelOperations.OnNew EMPTY = (a,b,c) -> null;
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
 
 }

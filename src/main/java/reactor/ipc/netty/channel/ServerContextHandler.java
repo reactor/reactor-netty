@@ -125,7 +125,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	protected void doPipeline(Channel ch) {
+	public void accept(Channel ch) {
 		addSslAndLogHandlers(options, sink, loggingHandler, true, getSNI(), ch.pipeline());
 	}
 }

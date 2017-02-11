@@ -164,6 +164,24 @@ public class HttpClientTests {
 		page.block(Duration.ofSeconds(30));
 	}
 
+	@Test
+	@Ignore
+	public void proxy() throws Exception {
+		Mono<HttpClientResponse> remote = HttpClient.create(o -> o.proxy("127.0.0.1", 8888))
+		          .get("http://google.com",
+				          c -> c.followRedirect()
+				                .sendHeaders());
+
+		Mono<String> page = remote
+				.flatMap(r -> r.receive()
+				               .retain()
+				               .asString()
+				               .limitRate(1))
+				.reduce(String::concat);
+
+		page.block(Duration.ofSeconds(30));
+	}
+
 	//@Test
 	public void postUpload() throws Exception {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");

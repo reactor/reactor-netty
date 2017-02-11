@@ -80,7 +80,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void doPipeline(Channel ch) {
+	public void accept(Channel ch) {
 		addSslAndLogHandlers(clientOptions, sink, loggingHandler, secure, getSNI(), ch.pipeline());
 		addProxyHandler(clientOptions, ch.pipeline());
 	}
@@ -88,7 +88,8 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline) {
 		ProxyHandler proxy = clientOptions.getProxyHandler();
 		if (proxy != null) {
-			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy);
+			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy)
+			.addFirst(new LoggingHandler("reactor.ipc.netty.proxy"));
 		}
 	}
 }

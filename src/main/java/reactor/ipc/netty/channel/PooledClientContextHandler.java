@@ -22,10 +22,8 @@ import java.net.SocketAddress;
 import java.util.Objects;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.proxy.ProxyHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
@@ -139,7 +137,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
-			doPipeline(c);
+			accept(c);
 			c.pipeline()
 			 .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
 			if (c.isRegistered()) {
@@ -246,29 +244,8 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void doPipeline(Channel ch) {
-		ClientContextHandler.addSslAndLogHandlers(clientOptions,
-				sink,
-				loggingHandler,
-				secure,
-				getSNI(),
-				ch.pipeline());
-
-		ProxyHandler proxy = clientOptions.getProxyHandler();
-		if (proxy != null) {
-			try {
-				proxy.connect(ch.pipeline()
-				                .firstContext(), ch.remoteAddress(), ch.localAddress(), ch.newPromise());
-			}
-			catch (Exception e){
-				if(ch.isOpen()){
-					ch.close();
-				}
-				fireContextError(e);
-				return;
-			}
-			ch.pipeline().addFirst(NettyPipeline.ProxyHandler, proxy);
-		}
+	public void accept(Channel ch) {
+		//do not add in channelCreated pool
 	}
 
 	@Override
