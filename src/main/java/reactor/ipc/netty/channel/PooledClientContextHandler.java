@@ -163,6 +163,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				log.debug("Acquired existing channel: {}", c.toString());
 			}
 			if (c.isOpen()) {
+				handler.parentContext = this;
 				createOperations(c, null);
 			}
 			/*
