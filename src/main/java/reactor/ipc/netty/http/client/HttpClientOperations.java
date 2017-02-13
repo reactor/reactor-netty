@@ -19,6 +19,7 @@ package reactor.ipc.netty.http.client;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -338,8 +339,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public WebsocketOutbound sendWebsocket() {
+		return sendWebsocket(null);
+	}
 
-		Mono<Void> m = withWebsocketSupport(websocketUri(), null, noopHandler());
+	@Override
+	public WebsocketOutbound sendWebsocket(String subprotocol) {
+		Mono<Void> m = withWebsocketSupport(websocketUri(), subprotocol, noopHandler());
 
 		return new WebsocketOutbound() {
 			@Override

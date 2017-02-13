@@ -151,4 +151,78 @@ public class WebsocketTests {
 	}
 
 
+
+	@Test
+	public void simpleSubprotocolServerNoSubprotocol() throws Exception {
+		NettyContext httpServer = HttpServer.create(0)
+		                                    .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+				                                    Mono.just("test"))))
+		                                    .block();
+
+		try {
+			StepVerifier.create(
+					HttpClient.create(
+							httpServer.address().getPort())
+					          .get("/test",
+							          out -> out.addHeader("Authorization", auth)
+							                    .sendWebsocket("SUBPROTOCOL,OTHER"))
+					          .flatMap(in -> in.receive().asString())
+			)
+			            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
+		}
+		finally {
+			httpServer.dispose();
+		}
+	}
+
+	@Test
+	public void simpleSubprotocolServerNotSupported() throws Exception {
+		NettyContext httpServer = HttpServer.create(0)
+		                                    .newHandler((in, out) -> out.sendWebsocket(
+				                                    "protoA,protoB",
+				                                    (i, o) -> o.sendString(Mono.just("test"))))
+		                                    .block();
+
+		try {
+			StepVerifier.create(
+					HttpClient.create(
+							httpServer.address().getPort())
+					          .get("/test",
+							          out -> out.addHeader("Authorization", auth)
+							                    .sendWebsocket("SUBPROTOCOL,OTHER"))
+					          .flatMap(in -> in.receive().asString())
+			)
+			            //the SERVER returned null which means that it couldn't select a protocol
+			            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
+		}
+		finally {
+			httpServer.dispose();
+		}
+	}
+
+	@Test
+	public void simpleSubprotocolServerSupported() throws Exception {
+		NettyContext httpServer = HttpServer.create(0)
+		                                    .newHandler((in, out) -> out.sendWebsocket(
+		                                    		"SUBPROTOCOL",
+		                                    		(i, o) -> o.sendString(
+				                                    Mono.just("test"))))
+		                                    .block();
+
+		String res = HttpClient.create(httpServer.address().getPort())
+		                       .get("/test",
+				                out -> out.addHeader("Authorization", auth)
+				                          .sendWebsocket("SUBPROTOCOL,OTHER"))
+		                .flatMap(in -> in.receive().asString()).log().collectList().block().get(0);
+
+		if (!res.equals("test")) {
+			throw new IllegalStateException("test");
+		}
+
+		httpServer.dispose();
+	}
+
+
+
+
 }

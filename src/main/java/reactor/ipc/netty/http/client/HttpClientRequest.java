@@ -186,11 +186,21 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 
 	/**
 	 * Upgrade connection to Websocket and immediately send closed websocket frame
-	 * otherwise the returned {@link Mono} fail.
+	 * otherwise the returned {@link Mono} fails.
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	WebsocketOutbound sendWebsocket();
+
+	/**
+	 * Upgrade connection to Websocket with the given {@code subprotocol} (or subprotocols,
+	 * as a comma-separated list) and immediately send closed websocket frame, otherwise
+	 * the returned {@link Mono} fails.
+	 *
+	 * @param subprotocol the websocket subprotocol to use.
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	WebsocketOutbound sendWebsocket(String subprotocol);
 
 	/**
 	 * An HTTP Form builder
