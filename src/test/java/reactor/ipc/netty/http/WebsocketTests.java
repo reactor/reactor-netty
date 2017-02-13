@@ -18,7 +18,9 @@ package reactor.ipc.netty.http;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -27,8 +29,11 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
+
+import static org.hamcrest.CoreMatchers.is;
 
 /**
  * @author tjreactive
@@ -38,26 +43,22 @@ public class WebsocketTests {
 
 	static final String auth = "bearer abc";
 
+	NettyContext httpServer = null;
+
+	@After
+	public void disposeHttpServer() {
+		if (httpServer != null)
+			httpServer.dispose();
+	}
+
 	@Test
 	public void simpleTest() {
-		NettyContext httpServer = HttpServer.create(0)
-		                                    .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
-				                                    Mono.just("test"))))
-		                                    .block();
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+				                       Mono.just("test"))))
+		                       .block();
 
 		String res = HttpClient.create(httpServer.address()
-		                                         .getPort())
-		                       .get("/test",
-				                       out -> out.addHeader("Authorization", auth)
-				                                 .sendWebsocket())
-		                       .flatMap(in -> in.receive()
-		                                        .asString())
-		                       .log()
-		                       .collectList()
-		                       .block()
-		                       .get(0);
-
-		res = HttpClient.create(httpServer.address()
 		                                  .getPort())
 		                .get("/test",
 				                out -> out.addHeader("Authorization", auth)
@@ -69,24 +70,20 @@ public class WebsocketTests {
 		                .block()
 		                .get(0);
 
-		if (!res.equals("test")) {
-			throw new IllegalStateException("test");
-		}
-
-		httpServer.dispose();
+		Assert.assertThat(res, is("test"));
 	}
 
 	@Test
 	public void unidirectional() {
 		int c = 10;
-		NettyContext httpServer = HttpServer.create(0)
-		                                    .newHandler((in, out) -> out.sendWebsocket(
-		                                    		(i, o) -> o.options(opt -> opt.flushOnEach())
-				                                               .sendString(
-				                                    Flux.just("test")
-				                                        .delayMillis(100)
-				                                        .repeat())))
-		                                    .block();
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket(
+				                       (i, o) -> o.options(opt -> opt.flushOnEach())
+				                                  .sendString(
+						                                  Flux.just("test")
+						                                      .delayMillis(100)
+						                                      .repeat())))
+		                       .block();
 
 		Flux<String> ws = HttpClient.create(httpServer.address()
 		                                              .getPort())
@@ -103,8 +100,6 @@ public class WebsocketTests {
 		                                    .toIterable())
 		            .expectComplete()
 		            .verify();
-
-		httpServer.dispose();
 	}
 
 	@Test
@@ -124,13 +119,13 @@ public class WebsocketTests {
 		client.log("client")
 		      .subscribe(v -> clientLatch.countDown());
 
-		NettyContext httpServer = HttpServer.create(0)
-		                                    .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
-				                                    i.receive()
-				                                     .asString()
-				                                     .take(c)
-				                                     .subscribeWith(server))))
-		                                    .block();
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+				                       i.receive()
+				                        .asString()
+				                        .take(c)
+				                        .subscribeWith(server))))
+		                       .block();
 
 		Flux.intervalMillis(200)
 		    .map(Object::toString)
@@ -150,5 +145,164 @@ public class WebsocketTests {
 		Assert.assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
 	}
 
+	@Test
+	public void simpleSubprotocolServerNoSubprotocol() throws Exception {
+		httpServer = HttpServer.create(0)
+		                                    .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+				                                    Mono.just("test"))))
+		                                    .block();
+
+		StepVerifier.create(
+				HttpClient.create(
+						httpServer.address().getPort())
+				          .get("/test",
+						          out -> out.addHeader("Authorization", auth)
+						                    .sendWebsocket("SUBPROTOCOL,OTHER"))
+				          .flatMap(in -> in.receive().asString())
+		)
+		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
+	}
+
+	@Test
+	public void simpleSubprotocolServerNotSupported() throws Exception {
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket(
+				                       "protoA,protoB",
+				                       (i, o) -> o.sendString(Mono.just("test"))))
+		                       .block();
+
+		StepVerifier.create(
+				HttpClient.create(
+						httpServer.address().getPort())
+				          .get("/test",
+						          out -> out.addHeader("Authorization", auth)
+						                    .sendWebsocket("SUBPROTOCOL,OTHER"))
+				          .flatMap(in -> in.receive().asString())
+		)
+		            //the SERVER returned null which means that it couldn't select a protocol
+		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
+	}
+
+	@Test
+	public void simpleSubprotocolServerSupported() throws Exception {
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket(
+				                       "SUBPROTOCOL",
+				                       (i, o) -> o.sendString(
+						                       Mono.just("test"))))
+		                       .block();
+
+		String res = HttpClient.create(httpServer.address().getPort())
+		                       .get("/test",
+				                out -> out.addHeader("Authorization", auth)
+				                          .sendWebsocket("SUBPROTOCOL,OTHER"))
+		                .flatMap(in -> in.receive().asString()).log().collectList().block().get(0);
+
+		Assert.assertThat(res, is("test"));
+	}
+
+	@Test
+	public void simpleSubprotocolSelected() throws Exception {
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket(
+				                       "NOT, Common",
+				                       (i, o) -> o.sendString(
+						                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
+		                       .block();
+
+		String res = HttpClient.create(httpServer.address().getPort())
+		                       .get("/test",
+				                out -> out.addHeader("Authorization", auth)
+				                          .sendWebsocket("Common,OTHER"))
+		                       .map(HttpClientResponse::receiveWebsocket)
+		                       .flatMap(in -> in.receive().asString()
+				                       .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
+		                       .log().collectList().block().get(0);
+
+		Assert.assertThat(res, is("CLIENT:Common-SERVER:Common"));
+	}
+
+	@Test
+	public void noSubprotocolSelected() {
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+				                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
+		                       .block();
+
+		String res = HttpClient.create(httpServer.address()
+		                                         .getPort())
+		                       .get("/test",
+				                       out -> out.addHeader("Authorization", auth)
+				                                 .sendWebsocket())
+		                       .map(HttpClientResponse::receiveWebsocket)
+		                       .flatMap(in -> in.receive()
+		                                        .asString()
+		                                        .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
+		                       .log()
+		                       .collectList()
+		                       .block()
+		                       .get(0);
+
+		Assert.assertThat(res, is("CLIENT:null-SERVER:null"));
+	}
+
+	@Test
+	public void anySubprotocolSelectsFirstClientProvided() {
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket("proto2,*", (i, o) -> o.sendString(
+				                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
+		                       .block();
+
+		String res = HttpClient.create(httpServer.address()
+		                                         .getPort())
+		                       .get("/test",
+				                       out -> out.addHeader("Authorization", auth)
+				                                 .sendWebsocket("proto1, proto2"))
+		                       .map(HttpClientResponse::receiveWebsocket)
+		                       .flatMap(in -> in.receive()
+		                                        .asString()
+		                                        .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
+		                       .log()
+		                       .collectList()
+		                       .block()
+		                       .get(0);
+
+		Assert.assertThat(res, is("CLIENT:proto1-SERVER:proto1"));
+	}
+
+	@Test
+	public void sendToWebsocketSubprotocol() throws InterruptedException {
+		AtomicReference<String> serverSelectedProtocol = new AtomicReference<>();
+		AtomicReference<String> clientSelectedProtocol = new AtomicReference<>();
+		AtomicReference<String> clientSelectedProtocolWhenSimplyUpgrading = new AtomicReference<>();
+
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket(
+		                       		"not,proto1", (i, o) -> {
+					                       serverSelectedProtocol.set(i.selectedSubprotocol());
+					                       return i.receive()
+					                               .asString()
+					                               .doOnNext(System.err::println)
+					                               .then();
+				                       })
+		                       )
+		                       .block();
+
+		HttpClient.create(httpServer.address()
+		                            .getPort())
+		          .ws("/test", "proto1,proto2")
+		          .then(in -> {
+			          clientSelectedProtocolWhenSimplyUpgrading.set(in.receiveWebsocket().selectedSubprotocol());
+			          return in.receiveWebsocket((i, o) -> {
+				          clientSelectedProtocol.set(o.selectedSubprotocol());
+				          return o.sendString(Mono.just("HELLO" + o.selectedSubprotocol()));
+			          });
+		          })
+	              .block();
+
+		Assert.assertThat(serverSelectedProtocol.get(), is("proto1"));
+		Assert.assertThat(clientSelectedProtocol.get(), is("proto1"));
+		Assert.assertThat(clientSelectedProtocolWhenSimplyUpgrading.get(), is("proto1"));
+	}
 
 }

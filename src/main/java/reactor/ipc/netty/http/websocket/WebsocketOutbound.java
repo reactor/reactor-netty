@@ -27,9 +27,18 @@ import reactor.ipc.netty.NettyOutbound;
  * A websocket framed outbound
  *
  * @author Stephane Maldini
+ * @author Simon Baslé
  * @since 0.6
  */
 public interface WebsocketOutbound extends NettyOutbound {
+
+	/**
+	 * Returns the websocket subprotocol negotiated by the client and server during
+	 * the websocket handshake, or null if none was requested.
+	 *
+	 * @return the subprotocol, or null
+	 */
+	String selectedSubprotocol();
 
 	@Override
 	default NettyOutbound sendString(Publisher<? extends String> dataStream,

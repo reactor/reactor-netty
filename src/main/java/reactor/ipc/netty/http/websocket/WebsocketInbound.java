@@ -25,9 +25,18 @@ import reactor.ipc.netty.NettyInbound;
  * A websocket framed inbound
  *
  * @author Stephane Maldini
+ * @author Simon Baslé
  * @since 0.6
  */
 public interface WebsocketInbound extends NettyInbound {
+
+	/**
+	 * Returns the websocket subprotocol negotiated by the client and server during
+	 * the websocket handshake, or null if none was requested.
+	 *
+	 * @return the subprotocol, or null
+	 */
+	String selectedSubprotocol();
 
 	/**
 	 * Turn this {@link WebsocketInbound} into aggregating mode which will only produce

@@ -75,6 +75,7 @@ import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
+ * @author Simon Baslé
  */
 class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClientRequest>
 		implements HttpClientResponse, HttpClientRequest {
@@ -338,10 +339,20 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public WebsocketOutbound sendWebsocket() {
+		return sendWebsocket(null);
+	}
 
-		Mono<Void> m = withWebsocketSupport(websocketUri(), null, noopHandler());
+	@Override
+	public WebsocketOutbound sendWebsocket(String subprotocols) {
+		Mono<Void> m = withWebsocketSupport(websocketUri(), subprotocols, noopHandler());
 
 		return new WebsocketOutbound() {
+
+			@Override
+			public String selectedSubprotocol() {
+				return null;
+			}
+
 			@Override
 			public NettyContext context() {
 				return HttpClientOperations.this;

@@ -38,6 +38,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
  * accessor related to HTTP flow : headers, params, URI, method, websocket...
  *
  * @author Stephane Maldini
+ * @author Simon Baslé
  */
 public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 
@@ -185,12 +186,26 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	NettyOutbound sendHeaders();
 
 	/**
-	 * Upgrade connection to Websocket and immediately send closed websocket frame
-	 * otherwise the returned {@link Mono} fail.
+	 * Upgrade connection to Websocket.
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	WebsocketOutbound sendWebsocket();
+
+	/**
+	 * Upgrade connection to Websocket, negotiating one of the given subprotocol(s).
+	 * <p>
+	 * The negotiated subprotocol cannot be directly accessed on the returned outbound,
+	 * as the negotiation hasn't yet occurred. However, the response to this request will
+	 * usually allow access to that information (by upgrading it to a websocket outbound
+	 * via {@link HttpClientResponse#receiveWebsocket()} then calling
+	 * {@link WebsocketOutbound#selectedSubprotocol()}).
+	 *
+	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if not relevant.
+	 * Can be several protocols, separated by a comma, or null if no subprotocol is required.
+	 * @return a {@link Mono} completing when upgrade is confirmed
+	 */
+	WebsocketOutbound sendWebsocket(String subprotocols);
 
 	/**
 	 * An HTTP Form builder
