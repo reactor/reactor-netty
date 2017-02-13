@@ -42,6 +42,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}
  *
  * @author Stephane Maldini
+ * @author Simon Baslé
  */
 final class HttpServerWSOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
@@ -151,6 +152,11 @@ final class HttpServerWSOperations extends HttpServerOperations
 	@Override
 	public boolean isWebsocket() {
 		return true;
+	}
+
+	@Override
+	public String selectedSubprotocol() {
+		return handshaker.selectedSubprotocol();
 	}
 
 	static final AtomicIntegerFieldUpdater<HttpServerWSOperations> CLOSE_SENT =

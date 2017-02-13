@@ -44,6 +44,8 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServerResponse;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.tcp.TcpClient;
 
@@ -51,6 +53,7 @@ import reactor.ipc.netty.tcp.TcpClient;
  * The base class for a Netty-based Http client.
  *
  * @author Stephane Maldini
+ * @author Simon Baslé
  */
 public class HttpClient implements NettyConnector<HttpClientResponse, HttpClientRequest> {
 
@@ -271,6 +274,52 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 				url, ch -> {
 					headerBuilder.accept(ch.requestHeaders());
 					return ch.sendWebsocket();
+				});
+	}
+	/**
+	 * WebSocket to the passed URL, negotiating one of the passed subprotocols.
+	 * <p>
+	 * The negotiated subprotocol can be accessed through the {@link HttpClientResponse}
+	 * by switching to websocket (using any of the {@link HttpClientResponse#receiveWebsocket() receiveWebSocket}
+	 * methods) and using {@link WebsocketInbound#selectedSubprotocol()}.
+	 * <p>
+	 * To send data through the websocket, use {@link HttpClientResponse#receiveWebsocket(BiFunction)}
+	 * and then use the function's {@link WebsocketOutbound}.
+	 *
+	 * @param url the target remote URL
+	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if not relevant.
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
+	 * response
+	 */
+	public final Mono<HttpClientResponse> ws(String url, String subprotocols) {
+		return request(WS, url, req -> req.sendWebsocket(subprotocols));
+	}
+
+	/**
+	 * WebSocket to the passed URL, negotiating one of the passed subprotocols.
+	 * <p>
+	 * The negotiated subprotocol can be accessed through the {@link HttpClientResponse}
+	 * by switching to websocket (using any of the {@link HttpClientResponse#receiveWebsocket() receiveWebSocket}
+	 * methods) and using {@link WebsocketInbound#selectedSubprotocol()}.
+	 * <p>
+	 * To send data through the websocket, use {@link HttpClientResponse#receiveWebsocket(BiFunction)}
+	 * and then use the function's {@link WebsocketOutbound}.
+	 *
+	 * @param url the target remote URL
+	 * @param headerBuilder the  header {@link Consumer} to invoke before sending websocket
+	 * handshake
+	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if not relevant.
+	 *
+	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
+	 * response
+	 */
+	public final Mono<HttpClientResponse> ws(String url,
+			final Consumer<? super HttpHeaders> headerBuilder, String subprotocols) {
+		return request(WS,
+				url, ch -> {
+					headerBuilder.accept(ch.requestHeaders());
+					return ch.sendWebsocket(subprotocols);
 				});
 	}
 

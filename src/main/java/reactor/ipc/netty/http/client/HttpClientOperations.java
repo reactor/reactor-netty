@@ -19,7 +19,6 @@ package reactor.ipc.netty.http.client;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -76,6 +75,7 @@ import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
+ * @author Simon Baslé
  */
 class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClientRequest>
 		implements HttpClientResponse, HttpClientRequest {
@@ -343,10 +343,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public WebsocketOutbound sendWebsocket(String subprotocol) {
-		Mono<Void> m = withWebsocketSupport(websocketUri(), subprotocol, noopHandler());
+	public WebsocketOutbound sendWebsocket(String subprotocols) {
+		Mono<Void> m = withWebsocketSupport(websocketUri(), subprotocols, noopHandler());
 
 		return new WebsocketOutbound() {
+
+			@Override
+			public String selectedSubprotocol() {
+				return null;
+			}
+
 			@Override
 			public NettyContext context() {
 				return HttpClientOperations.this;

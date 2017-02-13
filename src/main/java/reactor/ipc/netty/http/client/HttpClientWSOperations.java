@@ -42,6 +42,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
  * @author Stephane Maldini
+ * @author Simon Baslé
  */
 final class HttpClientWSOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
@@ -84,6 +85,11 @@ final class HttpClientWSOperations extends HttpClientOperations
 	@Override
 	public boolean isWebsocket() {
 		return true;
+	}
+
+	@Override
+	public String selectedSubprotocol() {
+		return handshaker.actualSubprotocol();
 	}
 
 	@Override
