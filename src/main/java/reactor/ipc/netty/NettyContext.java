@@ -16,12 +16,13 @@
 package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
-import java.util.Objects;
+import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.channel.ChannelOperations;
 
 /**
  * Hold contextual information for the underlying {@link Channel}
@@ -82,10 +83,9 @@ public interface NettyContext extends Disposable {
 	 * @param handler handler instance
 	 *
 	 * @return this inbound
+	 * @see ChannelOperations#addDecoder(NettyContext, Channel, String, ChannelHandler, Consumer)
 	 */
-	default NettyContext addDecoder(String name, ChannelHandler handler){
-		return addDecoder(name, handler);
-	}
+	NettyContext addDecoder(String name, ChannelHandler handler);
 
 	/**
 	 * Return remote address if remote channel {@link NettyContext} otherwise local

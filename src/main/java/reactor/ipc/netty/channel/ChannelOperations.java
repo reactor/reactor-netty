@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -151,48 +152,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> addDecoder(String name,
 			ChannelHandler handler) {
-		Objects.requireNonNull(name, "name");
-		Objects.requireNonNull(handler, "handler");
-
-		Map.Entry<String, ChannelHandler> lastCodec = null;
-		ChannelHandler next;
-		for (Map.Entry<String, ChannelHandler> c : channel.pipeline()) {
-			next = c.getValue();
-			if (next instanceof MessageToMessageDecoder ||
-					next instanceof ByteToMessageDecoder ||
-					next instanceof CombinedChannelDuplexHandler) {
-				lastCodec = c;
-			}
-		}
-
-		if (lastCodec == null) {
-			channel.pipeline()
-			       .addBefore(NettyPipeline.ReactiveBridge, name, handler);
-			onClose(() -> removeHandler(name));
-		}
-		else {
-			if(handler instanceof ByteToMessageDecoder) {
-				channel.pipeline()
-				       .addAfter(lastCodec.getKey(),
-						       name + "$extract",
-						       ByteBufHolderHandler.INSTANCE);
-				channel.pipeline()
-				       .addAfter(name + "$extract", name, handler);
-			}
-			onClose(() -> {
-				removeHandler(name);
-				if(handler instanceof ByteToMessageDecoder) {
-					removeHandler(name + "$extract");
-				}
-			});
-		}
-		if (log.isDebugEnabled()) {
-			log.debug("Added decoder [{}]{}",
-					name,
-					lastCodec != null ? " after ["+lastCodec.getKey()+"]": "",
-					channel.pipeline());
-		}
-		return this;
+		return addDecoder(this, channel, name, handler, this::removeHandler);
 	}
 
 	@Override
@@ -597,5 +557,65 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			OUTBOUND_CLOSE = AtomicReferenceFieldUpdater.newUpdater(ChannelOperations.class,
 			Subscription.class,
 			"outboundSubscription");
+
+	/**
+	 * A common implementation for the {@link NettyContext#addDecoder(String, ChannelHandler)}
+	 * method that can be reused by other implementors.
+	 *
+	 * @param nettyContext the NettyContext actual implementation for which to add the decoder
+	 * @param channel the channel on which to add the decoder.
+	 * @param name the name of the decoder.
+	 * @param handler the decoder to add before reactor-specific handlers.
+	 * @param removeCallback a callback that can be used to safely remove a specific handler by name.
+	 * @param <T> the actual NettyContext subtype to return.
+	 * @return
+	 * @see NettyContext#addDecoder(String, ChannelHandler)
+	 */
+	public static <T extends NettyContext> T addDecoder(T nettyContext, Channel channel,
+			String name, ChannelHandler handler, Consumer<String> removeCallback) {
+
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(handler, "handler");
+
+		Map.Entry<String, ChannelHandler> lastCodec = null;
+		ChannelHandler next;
+		for (Map.Entry<String, ChannelHandler> c : channel.pipeline()) {
+			next = c.getValue();
+			if (next instanceof MessageToMessageDecoder ||
+					next instanceof ByteToMessageDecoder ||
+					next instanceof CombinedChannelDuplexHandler) {
+				lastCodec = c;
+			}
+		}
+
+		if (lastCodec == null) {
+			channel.pipeline()
+			       .addBefore(NettyPipeline.ReactiveBridge, name, handler);
+			nettyContext.onClose(() -> removeCallback.accept(name));
+		}
+		else {
+			if(handler instanceof ByteToMessageDecoder) {
+				channel.pipeline()
+				       .addAfter(lastCodec.getKey(),
+						       name + "$extract",
+						       ByteBufHolderHandler.INSTANCE);
+				channel.pipeline()
+				       .addAfter(name + "$extract", name, handler);
+			}
+			nettyContext.onClose(() -> {
+				removeCallback.accept(name);
+				if(handler instanceof ByteToMessageDecoder) {
+					removeCallback.accept(name + "$extract");
+				}
+			});
+		}
+		if (log.isDebugEnabled()) {
+			log.debug("Added decoder [{}]{}",
+					name,
+					lastCodec != null ? " after ["+lastCodec.getKey()+"]": "",
+					channel.pipeline());
+		}
+		return nettyContext;
+	}
 
 }
