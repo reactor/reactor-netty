@@ -193,7 +193,7 @@ class HttpSpec extends Specification {
 
 	then: "data was recieved"
 	//the produced reply should be there soon
-	errored.await(5000, TimeUnit.SECONDS)
+	errored.await(30, TimeUnit.SECONDS)
 	!content
 
 	when:

@@ -92,7 +92,7 @@ public class HttpServerTests {
 		         })
 		         .block(Duration.ofSeconds(30));
 
-		Assert.assertTrue(latch.await(10000, TimeUnit.SECONDS));
+		Assert.assertTrue(latch.await(45, TimeUnit.SECONDS));
 
 	}
 
