@@ -303,7 +303,7 @@ public class WebsocketTests {
 		          })
 		          .block(Duration.ofSeconds(30));
 
-		latch.await();
+		Assert.assertTrue(latch.await(30, TimeUnit.SECONDS));
 		Assert.assertThat(serverSelectedProtocol.get(), is("proto1"));
 		Assert.assertThat(clientSelectedProtocol.get(), is("proto1"));
 		Assert.assertThat(clientSelectedProtocolWhenSimplyUpgrading.get(), is("proto1"));
