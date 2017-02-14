@@ -256,7 +256,7 @@ public class TcpServerTests {
 		broadcaster
 
 				//transform 10 data in a [] of 10 elements or wait up to 1 Second before emitting whatever the list contains
-				.buffer(10, Duration.ofSeconds(1))
+				.bufferTimeout(10, Duration.ofSeconds(1))
 				.log("broadcaster")
 				.subscribe(processor);
 

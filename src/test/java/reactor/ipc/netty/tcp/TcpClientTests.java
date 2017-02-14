@@ -341,8 +341,7 @@ public class TcpClientTests {
 					                               new ArrayList<>();
 			                               for (int i = 0; i < 5; i++) {
 				                               allWrites.add(out.sendString(Flux.just("a")
-				                                                                .delayMillis(
-						                                                                750)));
+				                                                                .delayElementsMillis(750)));
 			                               }
 			                               return Flux.merge(allWrites);
 		                               })

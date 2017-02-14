@@ -81,8 +81,8 @@ public class WebsocketTests {
 		                       .newHandler((in, out) -> out.sendWebsocket(
 				                       (i, o) -> o.options(opt -> opt.flushOnEach())
 				                                  .sendString(
-						                                  Flux.just("test")
-						                                      .delayMillis(100)
+						                                  Mono.just("test")
+						                                      .delayElementMillis(100)
 						                                      .repeat())))
 		                       .block(Duration.ofSeconds(30));
 
