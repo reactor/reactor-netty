@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,7 +112,7 @@ public class UdpServerTests {
 				                                   e.printStackTrace();
 			                                   }
 		                                   })
-		                                     .block();
+		                                     .block(Duration.ofSeconds(30));
 
 		assertThat("latch was counted down", latch.await(10, TimeUnit.SECONDS));
 		server.dispose();
@@ -160,7 +160,7 @@ public class UdpServerTests {
 				                               });
 				                             return Flux.never();
 			                             })
-					         .block();
+					         .block(Duration.ofSeconds(30));
 
 			servers.add(server);
 		}

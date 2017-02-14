@@ -62,7 +62,7 @@ public class HttpClientTests {
 		                                                                    .then(Mono.delayMillis(
 				                                                                    2000)
 		                                                                              .then())))
-		                          .block();
+		                          .block(Duration.ofSeconds(30));
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -74,7 +74,7 @@ public class HttpClientTests {
 		                    .then(r -> Mono.just(r.status()
 		                                          .code()))
 		                    .log()
-		                    .block();
+		                    .block(Duration.ofSeconds(30));
 
 		try {
 			HttpClient.create(opts -> opts.connect("localhost",
@@ -83,7 +83,7 @@ public class HttpClientTests {
 			                              .poolResources(pool))
 			          .get("/")
 			          .log()
-			          .block();
+			          .block(Duration.ofSeconds(30));
 		}
 		catch (AbortedException ae) {
 			Assert.fail("Not aborted");
@@ -108,7 +108,7 @@ public class HttpClientTests {
 				                                                      response(),
 				                                                      response()))
 		                                                      .neverComplete())
-		                          .block();
+		                          .block(Duration.ofSeconds(30));
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -120,7 +120,7 @@ public class HttpClientTests {
 		                    .then(r -> Mono.just(r.status()
 		                                          .code()))
 		                    .log()
-		                    .block();
+		                    .block(Duration.ofSeconds(30));
 
 		try {
 			HttpClient.create(opts -> opts.connect("localhost",
@@ -129,7 +129,7 @@ public class HttpClientTests {
 			                              .poolResources(pool))
 			          .get("/")
 			          .log()
-			          .block();
+			          .block(Duration.ofSeconds(30));
 		}
 		catch (AbortedException ae) {
 			return;
@@ -199,7 +199,7 @@ public class HttpClientTests {
 				                          .then())
 		                    .then(r -> Mono.just(r.status()
 		                                          .code()))
-		                    .block();
+		                    .block(Duration.ofSeconds(30));
 		res = HttpClient.create("google.com")
 		                .get("/search",
 				                c -> c.followRedirect()
@@ -207,7 +207,7 @@ public class HttpClientTests {
 		                .then(r -> Mono.just(r.status()
 		                                      .code()))
 		                .log()
-		                .block();
+		                .block(Duration.ofSeconds(30));
 
 		if (res != 200) {
 			throw new IllegalStateException("test status failed with " + res);
@@ -226,7 +226,7 @@ public class HttpClientTests {
 		                    .otherwise(HttpClientException.class,
 				                    e -> Mono.just(e.status()
 				                                    .code()))
-		                    .block();
+		                    .block(Duration.ofSeconds(30));
 
 		if (res != 404) {
 			throw new IllegalStateException("test status failed with " + res);
@@ -240,7 +240,7 @@ public class HttpClientTests {
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false)
 				                                       .sendString(Flux.just("hello")))
-		                                 .block();
+		                                 .block(Duration.ofSeconds(30));
 
 		FutureMono.from(r.context()
 		                 .channel()
@@ -257,7 +257,7 @@ public class HttpClientTests {
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false)
 				                                       .keepAlive(false))
-		                                 .block();
+		                                 .block(Duration.ofSeconds(30));
 
 		FutureMono.from(r.context()
 		                 .channel()
@@ -275,13 +275,13 @@ public class HttpClientTests {
 		                                 .get("http://google.com/unsupportedURI",
 				                                 c -> c.failOnClientError(false)
 				                                       .sendHeaders())
-		                                 .block();
+		                                 .block(Duration.ofSeconds(30));
 
 		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
 		                                  .get("http://google.com/unsupportedURI",
 				                                  c -> c.failOnClientError(false)
 				                                        .sendHeaders())
-		                                  .block();
+		                                  .block(Duration.ofSeconds(30));
 		Assert.assertTrue(r.context()
 		                   .channel() == r2.context()
 		                                   .channel());
@@ -295,7 +295,7 @@ public class HttpClientTests {
 		                                 .get("/unsupportedURI",
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false))
-		                                 .block();
+		                                 .block(Duration.ofSeconds(30));
 
 		FutureMono.from(r.context()
 		                 .channel()
@@ -313,14 +313,14 @@ public class HttpClientTests {
 				                                 c -> c.header("content-length", "1")
 				                                       .failOnClientError(false)
 				                                       .sendString(Mono.just(" ")))
-		                                 .block();
+		                                 .block(Duration.ofSeconds(30));
 
 		HttpClient.create(opts -> opts.poolResources(fixed))
 		          .get("http://google.com",
 				          c -> c.header("content-length", "1")
 				                .failOnClientError(false)
 				                .sendString(Mono.just(" ")))
-		          .block();
+		          .block(Duration.ofSeconds(30));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.BAD_REQUEST);
 	}
@@ -353,7 +353,7 @@ public class HttpClientTests {
 																          .PROCESSING)))
 												.neverComplete();
 		                          })
-		                          .block();
+		                          .block(Duration.ofSeconds(30));
 
 		StepVerifier.create(HttpClient.create(x.address().getHostName(), x.address().getPort())
 		                              .get("/")

@@ -44,7 +44,7 @@ class HttpSpec extends Specification {
 	  r.post('/test/{param}') {
 		req, res -> Mono.empty()
 	  }
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	//Prepare a client using default impl (Netty) to connect on http://localhost:port/ and assign global codec to send/receive String data
 	def client = HttpClient.create { opts ->
@@ -98,7 +98,7 @@ class HttpSpec extends Specification {
 				  .log('server-reply'))
 
 	  }
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	//Prepare a client using default impl (Netty) to connect on http://localhost:port/ and assign global codec to send/receive String data
 	def client = HttpClient.create("localhost", server.address().port)
@@ -156,7 +156,7 @@ class HttpSpec extends Specification {
 	  		  .get('/test3') { req, res ->
 			  	 Flux.error(new Exception())
 			  }
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	def client = HttpClient.create("localhost", server.address().port)
 
@@ -174,7 +174,7 @@ class HttpSpec extends Specification {
 	  Mono.just(replies.status().code())
 			  .log("received-status-1")
 	} as Function)
-			.block()
+			.block(Duration.ofSeconds(30))
 
 
 
@@ -189,7 +189,7 @@ class HttpSpec extends Specification {
 			.flatMap { replies -> replies.receive().log("received-status-2")
 	}
 	.next()
-			.block()
+			.block(Duration.ofSeconds(30))
 
 	then: "data was recieved"
 	//the produced reply should be there soon
@@ -287,7 +287,7 @@ class HttpSpec extends Specification {
 	then: "data was recieved"
 	//the produced reply should be there soon
 	//content.block(Duration.ofSeconds(15))[1000 - 1] == "1000 World!"
-	content.block()[1000 - 1] == "1000 World!"
+	content.block(Duration.ofSeconds(30))[1000 - 1] == "1000 World!"
 
 	cleanup: "the client/server where stopped"
 	println "FINISHED: server[$serverRes] / client[$clientRes]"

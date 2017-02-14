@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -56,7 +57,7 @@ public class WebsocketTests {
 		httpServer = HttpServer.create(0)
 		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
 				                       Mono.just("test"))))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		String res = HttpClient.create(httpServer.address()
 		                                  .getPort())
@@ -67,7 +68,7 @@ public class WebsocketTests {
 		                                 .asString())
 		                .log()
 		                .collectList()
-		                .block()
+		                .block(Duration.ofSeconds(30))
 		                .get(0);
 
 		Assert.assertThat(res, is("test"));
@@ -83,7 +84,7 @@ public class WebsocketTests {
 						                                  Flux.just("test")
 						                                      .delayMillis(100)
 						                                      .repeat())))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		Flux<String> ws = HttpClient.create(httpServer.address()
 		                                              .getPort())
@@ -125,7 +126,7 @@ public class WebsocketTests {
 				                        .asString()
 				                        .take(c)
 				                        .subscribeWith(server))))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		Flux.intervalMillis(200)
 		    .map(Object::toString)
@@ -150,7 +151,7 @@ public class WebsocketTests {
 		httpServer = HttpServer.create(0)
 		                                    .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
 				                                    Mono.just("test"))))
-		                                    .block();
+		                                    .block(Duration.ofSeconds(30));
 
 		StepVerifier.create(
 				HttpClient.create(
@@ -169,7 +170,7 @@ public class WebsocketTests {
 		                       .newHandler((in, out) -> out.sendWebsocket(
 				                       "protoA,protoB",
 				                       (i, o) -> o.sendString(Mono.just("test"))))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		StepVerifier.create(
 				HttpClient.create(
@@ -190,13 +191,13 @@ public class WebsocketTests {
 				                       "SUBPROTOCOL",
 				                       (i, o) -> o.sendString(
 						                       Mono.just("test"))))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		String res = HttpClient.create(httpServer.address().getPort())
 		                       .get("/test",
 				                out -> out.addHeader("Authorization", auth)
 				                          .sendWebsocket("SUBPROTOCOL,OTHER"))
-		                .flatMap(in -> in.receive().asString()).log().collectList().block().get(0);
+		                .flatMap(in -> in.receive().asString()).log().collectList().block(Duration.ofSeconds(30)).get(0);
 
 		Assert.assertThat(res, is("test"));
 	}
@@ -208,7 +209,7 @@ public class WebsocketTests {
 				                       "NOT, Common",
 				                       (i, o) -> o.sendString(
 						                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		String res = HttpClient.create(httpServer.address().getPort())
 		                       .get("/test",
@@ -217,7 +218,7 @@ public class WebsocketTests {
 		                       .map(HttpClientResponse::receiveWebsocket)
 		                       .flatMap(in -> in.receive().asString()
 				                       .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
-		                       .log().collectList().block().get(0);
+		                       .log().collectList().block(Duration.ofSeconds(30)).get(0);
 
 		Assert.assertThat(res, is("CLIENT:Common-SERVER:Common"));
 	}
@@ -227,7 +228,7 @@ public class WebsocketTests {
 		httpServer = HttpServer.create(0)
 		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
 				                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		String res = HttpClient.create(httpServer.address()
 		                                         .getPort())
@@ -240,7 +241,7 @@ public class WebsocketTests {
 		                                        .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
 		                       .log()
 		                       .collectList()
-		                       .block()
+		                       .block(Duration.ofSeconds(30))
 		                       .get(0);
 
 		Assert.assertThat(res, is("CLIENT:null-SERVER:null"));
@@ -251,7 +252,7 @@ public class WebsocketTests {
 		httpServer = HttpServer.create(0)
 		                       .newHandler((in, out) -> out.sendWebsocket("proto2,*", (i, o) -> o.sendString(
 				                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		String res = HttpClient.create(httpServer.address()
 		                                         .getPort())
@@ -264,7 +265,7 @@ public class WebsocketTests {
 		                                        .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
 		                       .log()
 		                       .collectList()
-		                       .block()
+		                       .block(Duration.ofSeconds(30))
 		                       .get(0);
 
 		Assert.assertThat(res, is("CLIENT:proto1-SERVER:proto1"));
@@ -288,7 +289,7 @@ public class WebsocketTests {
 					                               .then();
 				                       })
 		                       )
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		HttpClient.create(httpServer.address()
 		                            .getPort())
@@ -300,7 +301,7 @@ public class WebsocketTests {
 				          return o.sendString(Mono.just("HELLO" + o.selectedSubprotocol()));
 			          });
 		          })
-	              .block();
+		          .block(Duration.ofSeconds(30));
 
 		latch.await();
 		Assert.assertThat(serverSelectedProtocol.get(), is("proto1"));

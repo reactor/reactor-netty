@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,7 +102,7 @@ public class ClientServerHttpTests {
 				try {
 					Mono<List<String>> clientDataPromise1 = getClientDataPromise();
 					latch1.countDown();
-					data1.addAll(clientDataPromise1.block());
+					data1.addAll(clientDataPromise1.block(Duration.ofSeconds(30)));
 				}
 				catch (Exception ie) {
 				}
@@ -128,7 +128,7 @@ public class ClientServerHttpTests {
 				try {
 					Mono<List<String>> clientDataPromise2 = getClientDataPromise();
 					latch2.countDown();
-					data2.addAll(clientDataPromise2.block());
+					data2.addAll(clientDataPromise2.block(Duration.ofSeconds(30)));
 				}
 				catch (Exception ie) {
 					ie.printStackTrace();
@@ -270,11 +270,11 @@ public class ClientServerHttpTests {
 				                                                    .map(new DummyListEncoder(
 						                                                    resp.alloc()
 				                                                    )))))
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 	}
 
 	private List<String> getClientData() throws Exception {
-		return getClientDataPromise().block();
+		return getClientDataPromise().block(Duration.ofSeconds(30));
 	}
 
 	private Mono<List<String>> getClientDataPromise() throws Exception {

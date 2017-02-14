@@ -122,7 +122,7 @@ public class TcpClientTests {
 			                               return out.sendString(Flux.just("Hello World!"))
 			                                  .neverComplete();
 		                               })
-		                               .block();
+		                               .block(Duration.ofSeconds(30));
 
 		latch.await(30, TimeUnit.SECONDS);
 
@@ -182,7 +182,7 @@ public class TcpClientTests {
 				         )
 				         .block(Duration.ofSeconds(15))
 				         .onClose()
-				         .block();
+				         .block(Duration.ofSeconds(30));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
 				latch.await(15, TimeUnit.SECONDS));
@@ -197,9 +197,9 @@ public class TcpClientTests {
 				                             .disablePool());
 
 		client.newHandler((in, out) -> Mono.empty())
-		      .block()
+		      .block(Duration.ofSeconds(30))
 		      .onClose()
-		      .block();
+		      .block(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -253,10 +253,10 @@ public class TcpClientTests {
 			});
 
 			handler.log()
-			       .block()
+			       .block(Duration.ofSeconds(30))
 			       .onClose()
 			       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
-			       .block();
+			       .block(Duration.ofSeconds(30));
 
 			assertTrue("Initial connection is made", connectionLatch.await(5, TimeUnit.SECONDS));
 			assertTrue("A reconnect attempt was made", reconnectionLatch.await(5, TimeUnit.SECONDS));
@@ -295,7 +295,7 @@ public class TcpClientTests {
 			           .then()
 			           .log();
 		})
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 		assertTrue("close was counted down", close.await(30, TimeUnit.SECONDS));
@@ -315,7 +315,7 @@ public class TcpClientTests {
 			in.onReadIdle(500, latch::countDown);
 			return Flux.never();
 		})
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 
 		assertTrue(latch.await(15, TimeUnit.SECONDS));
 		heartbeatServer.close();
@@ -346,7 +346,7 @@ public class TcpClientTests {
 			                               }
 			                               return Flux.merge(allWrites);
 		                               })
-		                               .block();
+		                               .block(Duration.ofSeconds(30));
 
 		System.out.println("Started");
 
@@ -368,7 +368,7 @@ public class TcpClientTests {
 		                                     .asString()
 		                                     .collectList())
 		                         .doOnSuccess(v -> latch.countDown())
-		                         .block());
+		                         .block(Duration.ofSeconds(30)));
 
 		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
 	}

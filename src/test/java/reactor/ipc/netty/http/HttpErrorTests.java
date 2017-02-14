@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.Assert;
@@ -42,7 +43,7 @@ public class HttpErrorTests {
 					                                return httpServerResponse.sendString(
 							                                Mono.error(new IllegalArgumentException()));
 				                                }))
-		                                .block();
+		                                .block(Duration.ofSeconds(30));
 
 		HttpClient client = HttpClient.create(opt -> opt.connect("localhost",
 				server.address()
@@ -50,16 +51,16 @@ public class HttpErrorTests {
 		                                                .disablePool());
 
 		HttpClientResponse r = client.get("/")
-		                             .block();
+		                             .block(Duration.ofSeconds(30));
 
 		List<String> result = r.receive()
 		                    .asString(StandardCharsets.UTF_8)
 		                    .collectList()
-		                    .block();
+		                    .block(Duration.ofSeconds(30));
 
 		System.out.println("END");
 
-		FutureMono.from(r.context().channel().closeFuture()).block();
+		FutureMono.from(r.context().channel().closeFuture()).block(Duration.ofSeconds(30));
 
 		Assert.assertTrue(result.isEmpty());
 		Assert.assertTrue(r.isDisposed());

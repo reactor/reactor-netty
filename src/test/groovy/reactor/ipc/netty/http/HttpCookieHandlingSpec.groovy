@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,10 @@ import reactor.ipc.netty.http.client.HttpClientResponse
 import reactor.ipc.netty.http.server.HttpServer
 import spock.lang.Specification
 
+import java.time.Duration
 import java.util.function.Function
 
-public class HttpCookieHandlingSpec extends Specification {
+class HttpCookieHandlingSpec extends Specification {
 
   def "client without cookie gets a new one from server"() {
 
@@ -35,7 +36,7 @@ public class HttpCookieHandlingSpec extends Specification {
 		resp.addCookie(new DefaultCookie("cookie1", "test_value"))
 				.send(req.receive().log("server received"))
 	  }
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	def cookieResponse = HttpClient.create("localhost", server.address().port).
 			get('/test')
@@ -51,11 +52,11 @@ public class HttpCookieHandlingSpec extends Specification {
 	then: "data with cookies was received"
 	def value = ""
 	try {
-	  def receivedCookies = cookieResponse.block()
+	  def receivedCookies = cookieResponse.block(Duration.ofSeconds(30))
 	  value = receivedCookies.get("cookie1")[0].value()
 	}
 	catch (RuntimeException ex) {
-	  println ex.getMessage();
+	  println ex.getMessage()
 	}
 	value == "test_value"
 
