@@ -63,11 +63,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	public void fireContextError(Throwable err) {
-		if ((err instanceof IOException && (err.getMessage() ==
-				null || err.getMessage()
-		                                                                  .contains("Broken pipe") || err.getMessage()
-		                                                                                                 .contains(
-				                                                                                                 "Connection reset by peer")))) {
+		if (AbortedException.isConnectionReset(err)) {
 			if (log.isDebugEnabled()) {
 				log.error("Connection closed remotely", err);
 			}

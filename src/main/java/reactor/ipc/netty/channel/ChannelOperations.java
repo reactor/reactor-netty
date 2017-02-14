@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.channel;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Map;
@@ -516,10 +515,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if filtered
 	 */
 	protected final boolean discreteRemoteClose(Throwable err) {
-		if (err instanceof IOException && (err.getMessage() == null || err.getMessage()
-		                                                                  .contains("Broken pipe") || err.getMessage()
-		                                                                     .contains(
-				                                                                     "Connection reset by peer"))) {
+		if (AbortedException.isConnectionReset(err)) {
 			if (log.isDebugEnabled()) {
 				log.debug("[{}] Connection closed remotely", formatName(), err);
 			}
@@ -591,15 +587,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final void ignoreChannelPersistence() {
 		channel.attr(CLOSE_CHANNEL)
 		       .set(true);
-	}
-
-	/**
-	 * Return the aborted connection exception signal
-	 *
-	 * @return the aborted connection exception signal
-	 */
-	static protected final RuntimeException newAbortedException(){
-		return ContextHandler.ABORTED;
 	}
 
 	/**

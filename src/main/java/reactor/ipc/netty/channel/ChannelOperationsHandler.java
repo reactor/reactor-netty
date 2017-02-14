@@ -95,7 +95,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 			else {
 				parentContext().terminateChannel(ctx.channel());
-				parentContext().fireContextError(ContextHandler.ABORTED);
+				parentContext().fireContextError(AbortedException.INSTANCE);
 			}
 		}
 		catch (Throwable err) {
@@ -305,7 +305,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				log.debug("Terminated ChannelOperation. Dropping: {}", v);
 			}
 			ReferenceCountUtil.release(v);
-			promise.tryFailure(ContextHandler.ABORTED);
+			promise.tryFailure(AbortedException.INSTANCE);
 		}
 	}
 
@@ -447,7 +447,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						parent.ctx.flush();
 					}
 					else {
-						promise.setFailure(ContextHandler.ABORTED);
+						promise.setFailure(AbortedException.INSTANCE);
 						return;
 					}
 				}
@@ -477,7 +477,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					parent.ctx.flush();
 				}
 				else {
-					promise.setFailure(ContextHandler.ABORTED);
+					promise.setFailure(AbortedException.INSTANCE);
 					return;
 				}
 			}

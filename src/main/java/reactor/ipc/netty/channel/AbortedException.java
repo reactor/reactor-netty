@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package reactor.ipc.netty.channel;
 
+import java.io.IOException;
+
 /**
  * An exception marking prematurely or unexpectedly closed inbound
  *
@@ -24,19 +26,37 @@ package reactor.ipc.netty.channel;
  */
 public class AbortedException extends RuntimeException {
 
-	public AbortedException() {
-		this("Connection has been aborted by the remote peer");
+	/**
+	 * Return the aborted connection exception signal
+	 *
+	 * @return the aborted connection exception signal
+	 */
+	public static final AbortedException instance(){
+		return INSTANCE;
+	}
+
+	AbortedException() {
+		super("Connection reset by peer");
 	}
 
 	public AbortedException(String message) {
 		super(message);
 	}
 
-	public AbortedException(String message, Throwable cause) {
-		super(message, cause);
+	public static boolean isConnectionReset(Throwable err) {
+		return err == INSTANCE || (err instanceof IOException && (err.getMessage() ==
+				null || err.getMessage()
+		                   .contains("Broken pipe") || err.getMessage()
+		                                                  .contains(
+				                                                  "Connection reset by peer")));
 	}
 
-	public AbortedException(Throwable cause) {
-		super(cause);
-	}
+	static final AbortedException INSTANCE =
+			new AbortedException() {
+				@Override
+				public synchronized Throwable fillInStackTrace() {
+					return this;
+				}
+
+			};
 }

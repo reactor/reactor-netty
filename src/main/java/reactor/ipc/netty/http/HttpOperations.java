@@ -28,9 +28,9 @@ import io.netty.handler.codec.http.HttpUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 
@@ -96,7 +96,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			}
 			return then(FutureMono.deferFuture(() -> {
 				if(!channel().isActive()){
-					throw newAbortedException();
+					throw AbortedException.instance();
 				}
 				return channel().writeAndFlush(message);
 			}));

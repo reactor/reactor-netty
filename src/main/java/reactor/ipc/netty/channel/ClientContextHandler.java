@@ -66,7 +66,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 		channel.close();
 		if(!fired) {
 			fired = true;
-			sink.error(ABORTED);
+			sink.error(AbortedException.INSTANCE);
 		}
 	}
 

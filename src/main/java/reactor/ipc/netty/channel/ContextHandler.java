@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.channel;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -252,11 +251,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			fired = true;
 			sink.error(t);
 		}
-		else if ((t instanceof IOException && (t.getMessage() ==
-				null || t.getMessage()
-		                 .contains("Broken pipe") || t.getMessage()
-		                                              .contains(
-				                                              "Connection reset by peer")))) {
+		else if (AbortedException.isConnectionReset(t)) {
 			if (log.isDebugEnabled()) {
 				log.error("Connection closed remotely", t);
 			}
@@ -322,15 +317,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @return a Publisher to signal onComplete on {@link Channel} close or release.
 	 */
 	protected abstract Publisher<Void> onCloseOrRelease(Channel channel);
-
-	static final AbortedException ABORTED =
-			new AbortedException() {
-				@Override
-				public synchronized Throwable fillInStackTrace() {
-					return this;
-				}
-
-			};
 
 	static final Logger         log      = Loggers.getLogger(ContextHandler.class);
 
@@ -447,7 +433,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			if (!active) {
 				ctx.pipeline().remove(this);
 				parent.terminateChannel(ctx.channel());
-				parent.fireContextError(ABORTED);
+				parent.fireContextError(AbortedException.INSTANCE);
 			}
 			ctx.fireChannelInactive();
 		}

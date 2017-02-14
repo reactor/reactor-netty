@@ -240,7 +240,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	protected void doDropped(Channel channel) {
 		dispose();
-		fireContextError(ABORTED);
+		fireContextError(AbortedException.INSTANCE);
 	}
 
 	@Override
