@@ -257,7 +257,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			}
 		}
 		else {
-			log.error("Ssl handshake error cannot be forwarded to user-facing Mono", t);
+			log.error("Error cannot be forwarded to user-facing Mono", t);
 		}
 	}
 

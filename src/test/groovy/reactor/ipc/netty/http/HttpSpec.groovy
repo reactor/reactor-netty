@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ package reactor.ipc.netty.http
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
-import reactor.ipc.netty.NettyOutbound
 import reactor.ipc.netty.http.client.HttpClient
 import reactor.ipc.netty.http.client.HttpClientException
 import reactor.ipc.netty.http.server.HttpServer
+import reactor.util.Loggers
 import spock.lang.Specification
 
 import java.time.Duration
@@ -112,15 +112,13 @@ class HttpSpec extends Specification {
 	  req.sendString(Flux.just("Hello")
 			  .log('client-send'))
 
-	}.flatMap {
-	  replies
-		->
+	}.then( { replies ->
 		//successful request, listen for the first returned next reply and pass it downstream
 		replies.receive()
+				.aggregate()
 				.asString()
 				.log('client-received')
-	}
-	.publishNext()
+	} as Function)
 			.doOnError {
 	  //something failed during the request or the reply processing
 	  println "Failed requesting server: $it"

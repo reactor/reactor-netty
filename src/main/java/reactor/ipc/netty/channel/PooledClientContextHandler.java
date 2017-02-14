@@ -97,9 +97,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	@SuppressWarnings("unchecked")
 	protected void terminateChannel(Channel channel) {
-		if(channel.isActive()) {
-			release((CHANNEL)channel);
-		}
+		release((CHANNEL)channel);
 	}
 
 	@Override

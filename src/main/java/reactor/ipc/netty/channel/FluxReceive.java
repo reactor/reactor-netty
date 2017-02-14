@@ -30,7 +30,6 @@ import reactor.core.Producer;
 import reactor.core.Trackable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
-import reactor.ipc.netty.NettyContext;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
@@ -130,12 +129,8 @@ final class FluxReceive extends Flux<Object>
 		if (s == null) {
 			throw Exceptions.argumentIsNullException();
 		}
-		if (eventLoop.inEventLoop()) {
-			startReceiver(s);
-		}
-		else {
-			eventLoop.execute(() -> startReceiver(s));
-		}
+
+		eventLoop.execute(() -> startReceiver(s));
 	}
 
 	final boolean cancelReceiver() {
@@ -164,9 +159,10 @@ final class FluxReceive extends Flux<Object>
 
 		final Queue<Object> q = receiverQueue;
 		final Subscriber<? super Object> a = receiver;
+		boolean d = inboundDone;
 
 		if (a == null) {
-			if (inboundDone) {
+			if (d && getPending() == 0) {
 				cancelReceiver();
 				if (q != null) {
 					Object o;
@@ -196,7 +192,7 @@ final class FluxReceive extends Flux<Object>
 				return false;
 			}
 
-			boolean d = inboundDone;
+			d = inboundDone;
 			Object v = q != null ? q.poll() : null;
 			boolean empty = v == null;
 
