@@ -182,13 +182,12 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	@SuppressWarnings("unchecked")
 	public void dispose() {
-		if (f == null || cancelled) {
+		if (f == null) {
 			return;
 		}
-		cancelled = true;
 		if (!f.isDone()) {
 			if (log.isDebugEnabled()) {
-				log.debug("Releasing pending channel acquisition: {}", f.toString());
+				log.debug("Cancel pending pooled channel acquisition: {}", f.toString());
 			}
 			f.addListener(ff -> {
 				if(ff.isSuccess()) {
@@ -235,6 +234,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	final void release(CHANNEL c) {
+		if (cancelled){
+			return;
+		}
+		cancelled = true;
 		if (log.isDebugEnabled()) {
 			log.debug("Releasing channel: {}", c.toString());
 		}
@@ -244,7 +247,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				return;
 			}
 			Boolean attr = c.attr(CLOSE_CHANNEL).get();
-			if(attr != null && attr){
+			if(attr != null && attr && c.isActive()){
 				c.close();
 			}
 			else if(f.isSuccess()){

@@ -68,22 +68,34 @@ public class TcpClientTests {
 	HeartbeatServer         heartbeatServer;
 
 	@Before
-	public void setup() {
+	public void setup() throws Exception {
 		echoServerPort = SocketUtils.findAvailableTcpPort();
 		echoServer = new EchoServer(echoServerPort);
 		threadPool.submit(echoServer);
+		if(!echoServer.await(10, TimeUnit.SECONDS)){
+			throw new IOException("fail to start test server");
+		}
 
 		abortServerPort = SocketUtils.findAvailableTcpPort();
 		abortServer = new ConnectionAbortServer(abortServerPort);
 		threadPool.submit(abortServer);
+		if(!abortServer.await(10, TimeUnit.SECONDS)){
+			throw new IOException("fail to start test server");
+		}
 
 		timeoutServerPort = SocketUtils.findAvailableTcpPort();
 		timeoutServer = new ConnectionTimeoutServer(timeoutServerPort);
 		threadPool.submit(timeoutServer);
+		if(!timeoutServer.await(10, TimeUnit.SECONDS)){
+			throw new IOException("fail to start test server");
+		}
 
 		heartbeatServerPort = SocketUtils.findAvailableTcpPort();
 		heartbeatServer = new HeartbeatServer(heartbeatServerPort);
 		threadPool.submit(heartbeatServer);
+		if(!heartbeatServer.await(10, TimeUnit.SECONDS)){
+			throw new IOException("fail to start test server");
+		}
 	}
 
 	@After
@@ -361,13 +373,16 @@ public class TcpClientTests {
 		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
 	}
 
-	private static final class EchoServer implements Runnable {
+	private static final class EchoServer
+			extends CountDownLatch
+			implements Runnable {
 
 		private final    int                 port;
 		private final    ServerSocketChannel server;
 		private volatile Thread              thread;
 
 		private EchoServer(int port) {
+			super(1);
 			this.port = port;
 			try {
 				server = ServerSocketChannel.open();
@@ -380,9 +395,10 @@ public class TcpClientTests {
 		@Override
 		public void run() {
 			try {
+				server.configureBlocking(true);
 				server.socket()
 				      .bind(new InetSocketAddress(port));
-				server.configureBlocking(true);
+				countDown();
 				thread = Thread.currentThread();
 				while (true) {
 					SocketChannel ch = server.accept();
@@ -419,12 +435,15 @@ public class TcpClientTests {
 		}
 	}
 
-	private static final class ConnectionAbortServer implements Runnable {
+	private static final class ConnectionAbortServer
+			extends CountDownLatch
+			implements Runnable {
 
 		final         int                 port;
 		private final ServerSocketChannel server;
 
 		private ConnectionAbortServer(int port) {
+			super(1);
 			this.port = port;
 			try {
 				server = ServerSocketChannel.open();
@@ -440,6 +459,7 @@ public class TcpClientTests {
 				server.configureBlocking(true);
 				server.socket()
 				      .bind(new InetSocketAddress(port));
+				countDown();
 				while (true) {
 					SocketChannel ch = server.accept();
 					System.out.println("ABORTING");
@@ -459,12 +479,15 @@ public class TcpClientTests {
 		}
 	}
 
-	private static final class ConnectionTimeoutServer implements Runnable {
+	private static final class ConnectionTimeoutServer
+			extends CountDownLatch
+			implements Runnable {
 
 		final         int                 port;
 		private final ServerSocketChannel server;
 
 		private ConnectionTimeoutServer(int port) {
+			super(1);
 			this.port = port;
 			try {
 				server = ServerSocketChannel.open();
@@ -480,6 +503,7 @@ public class TcpClientTests {
 				server.configureBlocking(true);
 				server.socket()
 				      .bind(new InetSocketAddress(port));
+				countDown();
 				while (true) {
 					SocketChannel ch = server.accept();
 					ByteBuffer buff = ByteBuffer.allocate(1);
@@ -498,12 +522,14 @@ public class TcpClientTests {
 		}
 	}
 
-	private static final class HeartbeatServer implements Runnable {
+	private static final class HeartbeatServer extends CountDownLatch
+			implements Runnable {
 
 		final         int                 port;
 		private final ServerSocketChannel server;
 
 		private HeartbeatServer(int port) {
+			super(1);
 			this.port = port;
 			try {
 				server = ServerSocketChannel.open();
@@ -519,6 +545,7 @@ public class TcpClientTests {
 				server.configureBlocking(true);
 				server.socket()
 				      .bind(new InetSocketAddress(port));
+				countDown();
 				while (true) {
 					SocketChannel ch = server.accept();
 					while (server.isOpen()) {
