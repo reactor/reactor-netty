@@ -283,10 +283,11 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	final void onInboundNext(Object msg) {
-		if (inboundDone) {
+		if (inboundDone && isCancelled()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Dropping frame {}", msg);
 			}
+			ReferenceCountUtil.release(msg);
 			return;
 		}
 
