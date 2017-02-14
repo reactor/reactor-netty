@@ -47,20 +47,23 @@ import org.reactivestreams.Publisher;
  */
 public interface NettyPipeline {
 
-	String SslHandler         = "sslHandler";
-	String SslReader          = "sslReader";
-	String SslLoggingHandler  = "sslLoggingHandler";
-	String ProxyHandler       = "proxyHandler";
-	String ReactiveBridge     = "reactiveBridge";
-	String BridgeSetup        = "bridgeSetup";
-	String HttpEncoder        = "httpEncoder";
-	String HttpDecoder        = "httpDecoder";
-	String HttpAggregator     = "reactorHttpAggregator";
-	String HttpServerHandler  = "httpServerHandler";
-	String OnChannelWriteIdle = "onChannelWriteIdle";
-	String OnChannelReadIdle  = "onChannelReadIdle";
-	String ChunkedWriter      = "chunkedWriter";
-	String LoggingHandler     = "loggingHandler";
+	String LEFT = "reactor.left.";
+	String RIGHT = "reactor.right.";
+
+	String SslHandler         = LEFT + "sslHandler";
+	String SslReader          = LEFT + "sslReader";
+	String SslLoggingHandler  = LEFT + "sslLoggingHandler";
+	String ProxyHandler       = LEFT + "proxyHandler";
+	String ReactiveBridge     = RIGHT + "reactiveBridge";
+	String BridgeSetup        = LEFT + "bridgeSetup";
+	String HttpEncoder        = LEFT + "httpEncoder";
+	String HttpDecoder        = LEFT + "httpDecoder";
+	String HttpAggregator     = LEFT + "httpAggregator";
+	String HttpServerHandler  = LEFT + "httpServerHandler";
+	String OnChannelWriteIdle = LEFT + "onChannelWriteIdle";
+	String OnChannelReadIdle  = LEFT + "onChannelReadIdle";
+	String ChunkedWriter      = LEFT + "chunkedWriter";
+	String LoggingHandler     = LEFT + "loggingHandler";
 
 	/**
 	 * A builder for sending strategy, similar prefixed methods being mutually exclusive

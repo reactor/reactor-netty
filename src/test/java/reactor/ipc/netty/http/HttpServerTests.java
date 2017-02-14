@@ -71,7 +71,7 @@ public class HttpServerTests {
 		                  .getPort())
 		         .newHandler((in, out) -> {
 			         in.context()
-			           .addHandler(new HttpClientCodec());
+			           .addEncoder(new HttpClientCodec());
 
 			         in.receiveObject()
 			           .ofType(DefaultHttpContent.class)

@@ -141,14 +141,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public final HttpClientOperations addHandler(ChannelHandler handler) {
-		super.addHandler(handler);
+	public final HttpClientOperations addEncoder(ChannelHandler handler) {
+		super.addEncoder(handler);
 		return this;
 	}
 
 	@Override
-	public final HttpClientOperations addHandler(String name, ChannelHandler handler) {
-		super.addHandler(name, handler);
+	public final HttpClientOperations addEncoder(String name, ChannelHandler handler) {
+		super.addEncoder(name, handler);
 		return this;
 	}
 
@@ -615,7 +615,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 		//prevent further header to be sent for handshaking
 		if (markHeadersAsSent()) {
-			addHandler(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+			addDecoder(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
@@ -717,7 +717,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					parent.chunkedTransfer(false);
 				}
 
-				parent.addHandler(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
+				parent.addEncoder(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
 
