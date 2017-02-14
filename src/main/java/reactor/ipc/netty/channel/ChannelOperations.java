@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,6 +101,25 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> noopHandler() {
 		return PING;
 	}
+
+	/**
+	 * Return the current {@link Channel} bound
+	 * {@link ChannelOperations} or null if none
+	 *
+	 * @param ch the current {@link Channel}
+	 *
+	 * @return the current {@link Channel} bound
+	 * {@link ChannelOperations} or null if none
+	 */
+	public static ChannelOperations<?, ?> get(Channel ch) {
+		return ch.attr(OPERATIONS_KEY)
+		          .get();
+	}
+
+	static void set(Channel ch, ChannelOperations<?, ?> ops) {
+		ch.attr(ChannelOperations.OPERATIONS_KEY).set(ops);
+	}
+
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
 			                    handler;
 	final Channel               channel;
@@ -258,8 +277,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final boolean isDisposed() {
-		return channel.attr(OPERATIONS_KEY)
-		              .get() != this;
+		return get(channel()) != this;
 	}
 
 	@Override
@@ -326,7 +344,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if inbound traffic is not expected anymore
 	 */
 	protected final boolean isInboundDone() {
-		return inbound.isTerminated() || !channel.isOpen();
+		return inbound.isTerminated() || !channel.isActive();
 	}
 
 
@@ -345,7 +363,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if inbound traffic is not expected anymore
 	 */
 	protected final boolean isOutboundDone() {
-		return outboundSubscription == Operators.cancelledSubscription() || !channel.isOpen();
+		return outboundSubscription == Operators.cancelledSubscription() || !channel.isActive();
 	}
 
 	/**
@@ -354,7 +372,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param name handler name
 	 */
 	protected final void removeHandler(String name) {
-		if (channel.isOpen() && channel.pipeline()
+		if (channel.isActive() && channel.pipeline()
 		                               .context(name) != null) {
 			channel.pipeline()
 			       .remove(name);
@@ -573,6 +591,15 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final void ignoreChannelPersistence() {
 		channel.attr(CLOSE_CHANNEL)
 		       .set(true);
+	}
+
+	/**
+	 * Return the aborted connection exception signal
+	 *
+	 * @return the aborted connection exception signal
+	 */
+	static protected final RuntimeException newAbortedException(){
+		return ContextHandler.ABORTED;
 	}
 
 	/**

@@ -160,7 +160,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Acquired existing channel: {}", c.toString());
 			}
-			if (c.isOpen()) {
+			if (c.isActive()) {
 				handler.parentContext = this;
 				createOperations(c, null);
 			}
@@ -220,7 +220,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 
 		pool.release(c).addListener(f -> {
-			if (!c.isOpen()) {
+			if (!c.isActive()) {
 				return;
 			}
 			Boolean attr = c.attr(CLOSE_CHANNEL).get();

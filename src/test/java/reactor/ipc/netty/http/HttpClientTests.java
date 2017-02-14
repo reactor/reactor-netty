@@ -305,6 +305,7 @@ public class HttpClientTests {
 
 	@Test
 	public void simpleTestHttps() {
+
 		StepVerifier.create(HttpClient.create(HttpClientOptions::sslSupport)
 		                              .get("https://developer.chrome.com")
 		                              .then(r -> Mono.just(r.status().code()))

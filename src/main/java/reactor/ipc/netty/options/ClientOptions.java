@@ -398,11 +398,6 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		}
 	}
 
-	@Override
-	protected SslContext defaultSslContext(){
-		return DEFAULT_SSL_CONTEXT;
-	}
-
 //
 
 	/**
@@ -450,18 +445,5 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		else {
 			bootstrap.channel(loops.onChannel(elg));
 		}
-	}
-
-	static final SslContext DEFAULT_SSL_CONTEXT;
-
-	static {
-		SslContext sslContext;
-		try{
-			sslContext = SslContextBuilder.forClient().build();
-		}
-		catch (Exception e){
-			sslContext = null;
-		}
-		DEFAULT_SSL_CONTEXT = sslContext;
 	}
 }

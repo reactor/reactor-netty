@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,7 +115,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 	@Override
 	public void accept(Void aVoid, Throwable throwable) {
 		if (throwable == null) {
-			if (channel().isOpen()) {
+			if (channel().isActive()) {
 				sendClose(null, f -> onHandlerTerminate());
 			}
 		}
@@ -126,7 +126,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 
 	@Override
 	protected void onOutboundError(Throwable err) {
-		if (channel().isOpen()) {
+		if (channel().isActive()) {
 			sendClose(new CloseWebSocketFrame(1002, "Server internal error"), f ->
 					onHandlerTerminate());
 		}

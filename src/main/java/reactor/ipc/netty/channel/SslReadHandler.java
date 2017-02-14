@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,17 @@ package reactor.ipc.netty.channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import reactor.core.publisher.MonoSink;
 
 /**
  * @author Stephane Maldini
  */
 final class SslReadHandler extends ChannelInboundHandlerAdapter {
 
-	final MonoSink<?> sink;
+	final ContextHandler<?> sink;
 
 	boolean handshakeDone;
 
-	SslReadHandler(MonoSink<?> sink) {
+	SslReadHandler(ContextHandler<?> sink) {
 		this.sink = sink;
 	}
 
@@ -61,7 +60,7 @@ final class SslReadHandler extends ChannelInboundHandlerAdapter {
 				ctx.fireChannelActive();
 			}
 			else {
-				sink.error(handshake.cause());
+				sink.fireContextError(handshake.cause());
 			}
 		}
 		super.userEventTriggered(ctx, evt);

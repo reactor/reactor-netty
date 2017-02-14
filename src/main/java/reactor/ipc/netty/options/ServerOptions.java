@@ -237,12 +237,7 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 		return sslSelfSigned(c -> {
 		});
 	}
-
-	@Override
-	protected SslContext defaultSslContext() {
-		return DEFAULT_SSL_CONTEXT;
-	}
-
+	
 	/**
 	 * Enable SSL service with a self-signed certificate and allows extra
 	 * parameterization of the self signed {@link SslContextBuilder}. The builder is
@@ -280,20 +275,4 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 	}
 
 	final static InetSocketAddress LOCALHOST_AUTO_PORT = new InetSocketAddress(0);
-
-	static final SslContext DEFAULT_SSL_CONTEXT;
-
-	static {
-		SslContext sslContext;
-		try {
-			SelfSignedCertificate ssc = new SelfSignedCertificate();
-			sslContext =
-					SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-					                 .build();
-		}
-		catch (Exception e) {
-			sslContext = null;
-		}
-		DEFAULT_SSL_CONTEXT = sslContext;
-	}
 }

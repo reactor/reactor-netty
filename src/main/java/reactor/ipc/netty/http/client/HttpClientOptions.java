@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -328,6 +328,11 @@ public final class HttpClientOptions extends ClientOptions {
 		return this;
 	}
 
+	@Override
+	protected SslContext defaultSslContext(){
+		return DEFAULT_SSL_CONTEXT;
+	}
+
 	final String formatSchemeAndHost(String url, boolean ws) {
 		if (!url.startsWith(HttpClient.HTTP_SCHEME) && !url.startsWith(HttpClient.WS_SCHEME)) {
 			final String scheme =
@@ -355,5 +360,18 @@ public final class HttpClientOptions extends ClientOptions {
 		                                      .equals(HttpClient.HTTPS_SCHEME) || uri.getScheme()
 		                                                                             .toLowerCase()
 		                                                                             .equals(HttpClient.WSS_SCHEME));
+	}
+
+	static final SslContext DEFAULT_SSL_CONTEXT;
+
+	static {
+		SslContext sslContext;
+		try{
+			sslContext = SslContextBuilder.forClient().build();
+		}
+		catch (Exception e){
+			sslContext = null;
+		}
+		DEFAULT_SSL_CONTEXT = sslContext;
 	}
 }

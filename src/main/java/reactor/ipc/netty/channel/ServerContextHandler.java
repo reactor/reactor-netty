@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.channel;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
@@ -61,8 +62,19 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	public void fireContextError(Throwable t) {
-		//Ignore, child channels cannot trigger context error
+	public void fireContextError(Throwable err) {
+		if ((err instanceof IOException && (err.getMessage() ==
+				null || err.getMessage()
+		                                                                  .contains("Broken pipe") || err.getMessage()
+		                                                                                                 .contains(
+				                                                                                                 "Connection reset by peer")))) {
+			if (log.isDebugEnabled()) {
+				log.error("Connection closed remotely", err);
+			}
+		}
+		else if (log.isErrorEnabled()) {
+			log.error("Handler failure while no child channelOperation was present", err);
+		}
 	}
 
 	@Override
@@ -103,7 +115,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	@Override
 	public boolean isDisposed() {
 		return !f.channel()
-		         .isOpen();
+		         .isActive();
 	}
 
 	@Override
@@ -115,7 +127,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	@Override
 	public void terminateChannel(Channel channel) {
 		if (!f.channel()
-		     .isOpen()) {
+		     .isActive()) {
 			return;
 		}
 		if(channel.hasAttr(CLOSE_CHANNEL) &&
@@ -126,6 +138,6 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	public void accept(Channel ch) {
-		addSslAndLogHandlers(options, sink, loggingHandler, true, getSNI(), ch.pipeline());
+		addSslAndLogHandlers(options, this, loggingHandler, true, getSNI(), ch.pipeline());
 	}
 }

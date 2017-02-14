@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.channel;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -221,8 +222,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		if (autoCreateOperations || msg != null) {
 			ChannelOperations<?, ?> op =
 					channelOpFactory.create((CHANNEL) channel, this, msg);
-			channel.attr(ChannelOperations.OPERATIONS_KEY)
-			       .set(op);
+			ChannelOperations.set(channel, op);
 
 			channel.eventLoop().execute(op::onHandlerStart);
 			return op;
@@ -251,6 +251,18 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		if (!fired) {
 			fired = true;
 			sink.error(t);
+		}
+		else if ((t instanceof IOException && (t.getMessage() ==
+				null || t.getMessage()
+		                 .contains("Broken pipe") || t.getMessage()
+		                                              .contains(
+				                                              "Connection reset by peer")))) {
+			if (log.isDebugEnabled()) {
+				log.error("Connection closed remotely", t);
+			}
+		}
+		else {
+			log.error("Ssl handshake error cannot be forwarded to user-facing Mono", t);
 		}
 	}
 
@@ -323,7 +335,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	static final Logger         log      = Loggers.getLogger(ContextHandler.class);
 
 	static void addSslAndLogHandlers(NettyOptions<?, ?> options,
-			MonoSink<NettyContext> sink,
+			ContextHandler<?> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			Tuple2<String, Integer> sniInfo,

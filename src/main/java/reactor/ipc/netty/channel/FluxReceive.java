@@ -168,6 +168,10 @@ final class FluxReceive extends Flux<Object>
 		if (a == null) {
 			if (inboundDone) {
 				cancelReceiver();
+				Throwable ex = inboundError;
+				if(ex != null){
+					parent.context.fireContextError(ex);
+				}
 			}
 			return false;
 		}
@@ -330,12 +334,12 @@ final class FluxReceive extends Flux<Object>
 		}
 		Throwable ex = inboundError;
 		if (ex != null) {
+			parent.context.fireContextError(ex);
 			a.onError(ex);
 		}
 		else {
 			a.onComplete();
 		}
-		parent.context.fireContextActive(parent);
 	}
 
 	final void unsubscribeReceiver() {

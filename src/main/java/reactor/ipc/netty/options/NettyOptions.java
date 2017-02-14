@@ -236,6 +236,11 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 			Tuple2<String, Integer> sniInfo) {
 		SslContext sslContext =
 				this.sslContext == null ? defaultSslContext() : this.sslContext;
+
+		if (sslContext == null) {
+			return null;
+		}
+
 		Objects.requireNonNull(allocator, "allocator");
 		SslHandler sslHandler;
 		if (sniInfo != null && sniInfo.getT1() != null && sniInfo.getT2() != null) {
