@@ -95,6 +95,14 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	protected void terminateChannel(Channel channel) {
+		if(channel.isActive()) {
+			release((CHANNEL)channel);
+		}
+	}
+
+	@Override
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
 		sink.setCancellation(this);
 		if (future.isCancelled() || cancelled) {
@@ -194,24 +202,30 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 		try {
 			CHANNEL c = f.get();
-			ChannelOperations<?, ?> ops = ChannelOperations.get(c);
-			//defer to operation dispose if present
-			if (ops != null){
-				ops.dispose();
-				return;
-			}
-
-			if (!c.isActive()) {
-				release(c);
-				return;
-			}
 
 			if (!c.eventLoop()
 			      .inEventLoop()) {
-				c.eventLoop()
-				 .execute(() -> release(c));
+				c.eventLoop().execute(() -> {
+					ChannelOperations<?, ?> ops = ChannelOperations.get(c);
+					//defer to operation dispose if present
+					if (ops != null) {
+						ops.dispose();
+						return;
+					}
+
+					release(c);
+
+				});
+
 			}
 			else {
+				ChannelOperations<?, ?> ops = ChannelOperations.get(c);
+				//defer to operation dispose if present
+				if (ops != null) {
+					ops.dispose();
+					return;
+				}
+
 				release(c);
 			}
 

@@ -18,6 +18,7 @@ package reactor.ipc.netty.http;
 
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -27,6 +28,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
@@ -313,6 +315,31 @@ public class HttpClientTests {
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
 		            .verify();
+	}
+
+	@Test
+	public void prematureCancel() throws Exception {
+		DirectProcessor<Void> signal = DirectProcessor.create();
+		NettyContext x = TcpServer.create("localhost", 0)
+		                          .newHandler((in, out) -> {
+										signal.onComplete();
+										return out.context(c -> c.addHandler(
+												new HttpResponseEncoder()))
+										          .sendObject(Mono.delayMillis(2000)
+												          .map(t ->
+												          new DefaultFullHttpResponse(
+														          HttpVersion.HTTP_1_1,
+														          HttpResponseStatus
+																          .PROCESSING)))
+												.neverComplete();
+		                          })
+		                          .block();
+
+		StepVerifier.create(HttpClient.create(x.address().getHostName(), x.address().getPort())
+		                              .get("/")
+		                              .timeout(signal)
+		)
+		            .verifyError(TimeoutException.class);
 	}
 
 }

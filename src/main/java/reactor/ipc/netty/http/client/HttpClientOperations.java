@@ -456,10 +456,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				return;
 			}
 			started = true;
-			setNettyResponse(response);
+
 			if (!isKeepAlive()) {
 				markOutboundCloseable();
 			}
+			if(isInboundCancelled()){
+				channel().read();
+				return;
+			}
+
+			setNettyResponse(response);
 
 			if (log.isDebugEnabled()) {
 				log.debug("Received response (auto-read:{}) : {}",
