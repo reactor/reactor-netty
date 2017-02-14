@@ -174,6 +174,9 @@ final class FluxReceive extends Flux<Object>
 				if(ex != null){
 					parent.context.fireContextError(ex);
 				}
+				else {
+					parent.context.fireContextActive(parent);
+				}
 			}
 			return false;
 		}

@@ -306,6 +306,26 @@ public class HttpClientTests {
 	}
 
 	@Test
+	public void contentHeader() throws Exception {
+		PoolResources fixed = PoolResources.fixed("test", 1);
+		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(fixed))
+		                                 .get("http://google.com",
+				                                 c -> c.header("content-length", "1")
+				                                       .failOnClientError(false)
+				                                       .sendString(Mono.just(" ")))
+		                                 .block();
+
+		HttpClient.create(opts -> opts.poolResources(fixed))
+		          .get("http://google.com",
+				          c -> c.header("content-length", "1")
+				                .failOnClientError(false)
+				                .sendString(Mono.just(" ")))
+		          .block();
+
+		Assert.assertTrue(r.status() == HttpResponseStatus.BAD_REQUEST);
+	}
+
+	@Test
 	public void simpleTestHttps() {
 
 		StepVerifier.create(HttpClient.create()

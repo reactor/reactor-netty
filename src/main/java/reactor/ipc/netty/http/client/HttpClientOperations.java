@@ -429,9 +429,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (markHeadersAsSent()) {
+			if (log.isDebugEnabled()) {
+				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
+			}
 			channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
-		else if (HttpUtil.isTransferEncodingChunked(nettyRequest)) {
+		else  {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		channel().read();
