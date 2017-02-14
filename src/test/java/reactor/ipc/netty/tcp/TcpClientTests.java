@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,8 +148,6 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<String>();
 
-		NettyContext client =
-
 				TcpClient.create(opts -> opts.connect("localhost", echoServerPort)
 				                             .afterChannelInit(c -> c.pipeline()
 				                                                     .addBefore(
@@ -157,26 +155,25 @@ public class TcpClientTests {
 						                                                     "codec",
 						                                                     new LineBasedFrameDecoder(
 								                                                     8 * 1024))))
-				         .newHandler((in, out) -> {
-					         in.receive()
-					           .asString()
-					           .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
-					           .log("received")
-					           .subscribe(s -> {
-						           strings.add(s);
-						           latch.countDown();
-					           });
-
-					         return out.sendString(Flux.range(1, messages)
+				         .newHandler((in, out) ->
+					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
-					            .neverComplete();
-				         })
-				         .block(Duration.ofSeconds(5));
+					            .then( in.receive()
+					                     .asString()
+					                     .take(100)
+					                     .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					                     .doOnNext(s -> {
+						                     strings.add(s);
+						                     latch.countDown();
+					                     }).then())
+				         )
+				         .block(Duration.ofSeconds(15))
+				         .onClose()
+				         .block();
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
-				latch.await(5, TimeUnit.SECONDS));
-		client.dispose();
+				latch.await(15, TimeUnit.SECONDS));
 
 		assertEquals(messages, strings.size());
 	}
@@ -308,10 +305,8 @@ public class TcpClientTests {
 		})
 		                       .block();
 
-		Thread.sleep(700);
+		assertTrue(latch.await(15, TimeUnit.SECONDS));
 		heartbeatServer.close();
-
-		assertTrue(latch.await(500, TimeUnit.SECONDS));
 
 		long duration = System.currentTimeMillis() - start;
 
