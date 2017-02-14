@@ -95,13 +95,11 @@ final class HttpServerWSOperations extends HttpServerOperations
 			CloseWebSocketFrame close = (CloseWebSocketFrame) frame;
 			sendClose(new CloseWebSocketFrame(true,
 					close.rsv(),
-					close.content()
-					     .retain()), f -> onHandlerTerminate());
+					close.content()), f -> onHandlerTerminate());
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {
-			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()
-			                                                                     .retain()));
+			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()));
 			ctx.read();
 			return;
 		}
@@ -145,7 +143,6 @@ final class HttpServerWSOperations extends HttpServerOperations
 			}
 			return;
 		}
-		ReferenceCountUtil.retain(frame);
 	}
 
 	@Override

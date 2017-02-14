@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ public final class ByteBufMono extends MonoSource<ByteBuf, ByteBuf> {
 		static final AtomicIntegerFieldUpdater<ReleasingInputStream> CLOSE =
 		AtomicIntegerFieldUpdater.newUpdater(ReleasingInputStream.class, "closed");
 
-		public ReleasingInputStream(ByteBuf bb) {
+		ReleasingInputStream(ByteBuf bb) {
 			super(bb.retain());
 			this.bb = bb;
 		}

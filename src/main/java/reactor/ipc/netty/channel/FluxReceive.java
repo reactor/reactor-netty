@@ -168,6 +168,12 @@ final class FluxReceive extends Flux<Object>
 		if (a == null) {
 			if (inboundDone) {
 				cancelReceiver();
+				if (q != null) {
+					Object o;
+					while ((o = q.poll()) != null) {
+						ReferenceCountUtil.release(o);
+					}
+				}
 				Throwable ex = inboundError;
 				if(ex != null){
 					parent.context.fireContextError(ex);
@@ -181,6 +187,12 @@ final class FluxReceive extends Flux<Object>
 
 		while (e != r) {
 			if (isCancelled()) {
+				if (q != null) {
+					Object o;
+					while ((o = q.poll()) != null) {
+						ReferenceCountUtil.release(o);
+					}
+				}
 				return false;
 			}
 
@@ -208,6 +220,12 @@ final class FluxReceive extends Flux<Object>
 		}
 
 		if (isCancelled()) {
+			if (q != null) {
+				Object o;
+				while ((o = q.poll()) != null) {
+					ReferenceCountUtil.release(o);
+				}
+			}
 			return false;
 		}
 

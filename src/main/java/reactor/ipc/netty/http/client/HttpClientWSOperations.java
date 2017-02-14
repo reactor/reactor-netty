@@ -112,8 +112,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			return;
 		}
 		if (msg instanceof PingWebSocketFrame) {
-			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()
-			                                                                         .retain()));
+			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
 			ctx.read();
 			return;
 		}
@@ -126,8 +125,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			CloseWebSocketFrame close = (CloseWebSocketFrame) msg;
 			sendClose(new CloseWebSocketFrame(true,
 					close.rsv(),
-					close.content()
-					     .retain()));
+					close.content()));
 		}
 		else {
 			super.onInboundNext(ctx, msg);
