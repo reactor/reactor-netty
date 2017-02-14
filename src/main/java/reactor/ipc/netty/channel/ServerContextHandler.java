@@ -98,6 +98,37 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
+	public ServerContextHandler addDecoder(String name, ChannelHandler handler) {
+		return ChannelOperations.addDecoder(this, channel(), name, handler, this::removeHandler);
+	}
+
+	/**
+	 * Safely remove handler from pipeline
+	 *
+	 * @param name handler name
+	 */
+	protected final void removeHandler(String name) {
+		Channel channel = channel();
+		if (channel.isOpen() && channel.pipeline()
+		                               .context(name) != null) {
+			channel.pipeline()
+			       .remove(name);
+			if (log.isDebugEnabled()) {
+				log.debug("[ServerContextHandler] Removed handler: {}, pipeline: {}",
+						name,
+						channel.pipeline());
+			}
+		}
+		else if (log.isDebugEnabled()) {
+			log.debug("[ServerContextHandler] Non Removed handler: {}, context: {}, pipeline: {}",
+					name,
+					channel.pipeline()
+					       .context(name),
+					channel.pipeline());
+		}
+	}
+
+	@Override
 	public NettyContext onClose(Runnable onClose) {
 		onClose().subscribe(null, e -> onClose.run(), onClose);
 		return this;
