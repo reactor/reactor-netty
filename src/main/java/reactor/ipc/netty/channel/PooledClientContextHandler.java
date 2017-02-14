@@ -191,8 +191,16 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			});
 			return;
 		}
+
 		try {
 			CHANNEL c = f.get();
+			ChannelOperations<?, ?> ops = ChannelOperations.get(c);
+			//defer to operation dispose if present
+			if (ops != null){
+				ops.dispose();
+				return;
+			}
+
 			if (!c.isActive()) {
 				release(c);
 				return;
