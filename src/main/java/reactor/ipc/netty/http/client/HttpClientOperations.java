@@ -633,15 +633,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		else if (isWebsocket()) {
 			HttpClientWSOperations ops =
 					(HttpClientWSOperations) get(channel());
-			Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
+			if(ops != null) {
+				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
 
-			if (websocketHandler != noopHandler()) {
-				handshake =
-						handshake.then(() -> Mono.from(websocketHandler.apply(ops, ops)))
-						         .doAfterTerminate(ops);
+				if (websocketHandler != noopHandler()) {
+					handshake =
+							handshake.then(() -> Mono.from(websocketHandler.apply(ops, ops)))
+							         .doAfterTerminate(ops);
+				}
+				return handshake;
 			}
-
-			return handshake;
 		}
 		else {
 			log.error("Cannot enable websocket if headers have already been sent");

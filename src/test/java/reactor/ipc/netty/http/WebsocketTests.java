@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -275,11 +275,13 @@ public class WebsocketTests {
 		AtomicReference<String> serverSelectedProtocol = new AtomicReference<>();
 		AtomicReference<String> clientSelectedProtocol = new AtomicReference<>();
 		AtomicReference<String> clientSelectedProtocolWhenSimplyUpgrading = new AtomicReference<>();
+		CountDownLatch latch = new CountDownLatch(1);
 
 		httpServer = HttpServer.create(0)
 		                       .newHandler((in, out) -> out.sendWebsocket(
 		                       		"not,proto1", (i, o) -> {
 					                       serverSelectedProtocol.set(i.selectedSubprotocol());
+					                       latch.countDown();
 					                       return i.receive()
 					                               .asString()
 					                               .doOnNext(System.err::println)
@@ -300,6 +302,7 @@ public class WebsocketTests {
 		          })
 	              .block();
 
+		latch.await();
 		Assert.assertThat(serverSelectedProtocol.get(), is("proto1"));
 		Assert.assertThat(clientSelectedProtocol.get(), is("proto1"));
 		Assert.assertThat(clientSelectedProtocolWhenSimplyUpgrading.get(), is("proto1"));
