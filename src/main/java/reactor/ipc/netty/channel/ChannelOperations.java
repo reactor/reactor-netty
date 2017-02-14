@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.channel;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Map;
@@ -101,6 +100,25 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> noopHandler() {
 		return PING;
 	}
+
+	/**
+	 * Return the current {@link Channel} bound
+	 * {@link ChannelOperations} or null if none
+	 *
+	 * @param ch the current {@link Channel}
+	 *
+	 * @return the current {@link Channel} bound
+	 * {@link ChannelOperations} or null if none
+	 */
+	public static ChannelOperations<?, ?> get(Channel ch) {
+		return ch.attr(OPERATIONS_KEY)
+		          .get();
+	}
+
+	static void set(Channel ch, ChannelOperations<?, ?> ops) {
+		ch.attr(ChannelOperations.OPERATIONS_KEY).set(ops);
+	}
+
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
 			                    handler;
 	final Channel               channel;
@@ -200,8 +218,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	public ChannelOperations<INBOUND, OUTBOUND> context(Consumer<NettyContext> contextCallback) {
+		contextCallback.accept(context());
+		return this;
+	}
+
+	@Override
 	public void dispose() {
-		onHandlerTerminate();
+		inbound.cancel();
 	}
 
 	@Override
@@ -211,8 +235,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final boolean isDisposed() {
-		return channel.attr(OPERATIONS_KEY)
-		              .get() != this;
+		return get(channel()) != this;
 	}
 
 	@Override
@@ -279,7 +302,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if inbound traffic is not expected anymore
 	 */
 	protected final boolean isInboundDone() {
-		return inbound.isTerminated() || !channel.isOpen();
+		return inbound.isTerminated() || !channel.isActive();
 	}
 
 
@@ -298,7 +321,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if inbound traffic is not expected anymore
 	 */
 	protected final boolean isOutboundDone() {
-		return outboundSubscription == Operators.cancelledSubscription() || !channel.isOpen();
+		return outboundSubscription == Operators.cancelledSubscription() || !channel.isActive();
 	}
 
 	/**
@@ -307,7 +330,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param name handler name
 	 */
 	protected final void removeHandler(String name) {
-		if (channel.isOpen() && channel.pipeline()
+		if (channel.isActive() && channel.pipeline()
 		                               .context(name) != null) {
 			channel.pipeline()
 			       .remove(name);
@@ -451,10 +474,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if filtered
 	 */
 	protected final boolean discreteRemoteClose(Throwable err) {
-		if (err instanceof IOException && (err.getMessage() == null || err.getMessage()
-		                                                                  .contains("Broken pipe") || err.getMessage()
-		                                                                     .contains(
-				                                                                     "Connection reset by peer"))) {
+		if (AbortedException.isConnectionReset(err)) {
 			if (log.isDebugEnabled()) {
 				log.debug("[{}] Connection closed remotely", formatName(), err);
 			}

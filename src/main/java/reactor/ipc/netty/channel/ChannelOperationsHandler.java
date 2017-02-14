@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
-import io.netty.handler.stream.ChunkedInput;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -59,7 +58,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		implements NettyPipeline.SendOptions {
 
 	final PublisherSender                inner;
-	final ContextHandler<?>              parentContext;
 	final BiConsumer<?, ? super ByteBuf> encoder;
 	final int                            prefetch;
 
@@ -73,6 +71,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	boolean                             flushOnEach;
 	long                                pendingBytes;
 
+	ContextHandler<?> parentContext;
+
 	volatile boolean innerActive;
 	volatile boolean removed;
 	volatile int     wip;
@@ -82,19 +82,20 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		this.inner = new PublisherSender(this);
 		this.prefetch = 32;
 		this.encoder = NOOP_ENCODER;
-		this.parentContext = contextHandler;
+		this.parentContext = contextHandler; // only set if parent context is closable,
+		// pool will usually fetch context via parentContext()
 	}
 
 	@Override
 	final public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		try {
-			ChannelOperations<?, ?> ops = inbound();
-			if(ops != null){
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			if (ops != null) {
 				ops.onHandlerTerminate();
 			}
 			else {
-				parentContext.terminateChannel(ctx.channel());
-				parentContext.fireContextError(ContextHandler.ABORTED);
+				parentContext().terminateChannel(ctx.channel());
+				parentContext().fireContextError(AbortedException.INSTANCE);
 			}
 		}
 		catch (Throwable err) {
@@ -104,30 +105,42 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	@Override
-	final public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+	final public void channelRead(ChannelHandlerContext ctx, Object msg)
+			throws Exception {
 		if (msg == null || msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
 			return;
 		}
 		try {
-			ChannelOperations<?, ?> ops = inbound();
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops != null) {
-				inbound().onInboundNext(ctx, msg);
+				ChannelOperations.get(ctx.channel()).onInboundNext(ctx, msg);
 			}
 			else if (log.isDebugEnabled()) {
-				if(msg instanceof ByteBufHolder) {
+				if (msg instanceof ByteBufHolder) {
 					msg = ((ByteBufHolder) msg).content()
 					                           .toString(Charset.defaultCharset());
 				}
 				log.debug("No ChannelOperation attached. Dropping: {}", msg);
+				ReferenceCountUtil.release(msg);
 			}
 		}
 		catch (Throwable err) {
+			ReferenceCountUtil.release(msg);
 			Exceptions.throwIfFatal(err);
 			exceptionCaught(ctx, err);
 		}
-		finally {
-			ReferenceCountUtil.release(msg);
+	}
+
+	ContextHandler<?> parentContext() {
+		if (parentContext != null) {
+			return parentContext;
 		}
+		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+
+		if (ops != null) {
+			return ops.parentContext();
+		}
+		throw new IllegalStateException("Tried to call parent context when none is " + "attached");
 	}
 
 	@Override
@@ -148,16 +161,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	final public void exceptionCaught(ChannelHandlerContext ctx, Throwable err)
 			throws Exception {
 		Exceptions.throwIfFatal(err);
-		ChannelOperations<?, ?> ops = inbound();
-		if(ops != null){
+		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+		if (ops != null) {
 			ops.onInboundError(err);
 		}
 		else {
-			parentContext.terminateChannel(ctx.channel());
-			parentContext.fireContextError(err);
-		}
-		if(log.isDebugEnabled()){
-			log.error("Handler failure while no operation was present", err);
+			parentContext().terminateChannel(ctx.channel());
+			parentContext().fireContextError(err);
 		}
 	}
 
@@ -166,14 +176,12 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		drain();
 	}
 
-
-
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		this.ctx = ctx;
 		if (ctx.channel()
-		       .isOpen()) {
-			parentContext.createOperations(ctx.channel(), null);
+		       .isActive()) {
+			parentContext().createOperations(ctx.channel(), null);
 			inner.request(prefetch);
 		}
 	}
@@ -191,11 +199,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	final public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
 			throws Exception {
-		if(log.isTraceEnabled()){
+		if (log.isTraceEnabled()) {
 			log.trace("User event {}", evt);
 		}
-		if (evt == NettyPipeline.handlerTerminatedEvent()){
-			parentContext.terminateChannel(ctx.channel());
+		if (evt == NettyPipeline.handlerTerminatedEvent()) {
+			parentContext().terminateChannel(ctx.channel());
 			return;
 		}
 		if (evt instanceof NettyPipeline.SendOptionsChangeEvent) {
@@ -248,10 +256,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				    .isWritable() //force flush if write buffer full
 				) {
 			pendingBytes = 0L;
-			if(inner != null){
+			if (inner != null) {
 				inner.justFlushed = true;
 			}
-			 return ctx.writeAndFlush(msg, promise);
+			return ctx.writeAndFlush(msg, promise);
 		}
 		else {
 			if (msg instanceof ByteBuf) {
@@ -269,7 +277,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (log.isTraceEnabled()) {
 				log.trace("Pending write size = {}", pendingBytes);
 			}
-			if(inner != null && inner.justFlushed){
+			if (inner != null && inner.justFlushed) {
 				inner.justFlushed = false;
 			}
 			return ctx.write(msg, promise);
@@ -297,98 +305,92 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				log.debug("Terminated ChannelOperation. Dropping: {}", v);
 			}
 			ReferenceCountUtil.release(v);
-			promise.tryFailure(ContextHandler.ABORTED);
+			promise.tryFailure(AbortedException.INSTANCE);
 		}
 	}
 
 	@SuppressWarnings("unchecked")
 	void drain() {
-			if (WIP.getAndIncrement(this) == 0) {
+		if (WIP.getAndIncrement(this) == 0) {
 
-				for (; ; ) {
-					if (removed) {
-						discard();
-						return;
+			for (; ; ) {
+				if (removed) {
+					discard();
+					return;
+				}
+
+				if (pendingWrites == null || innerActive || !ctx.channel()
+				                                                .isWritable()) {
+					if (WIP.decrementAndGet(this) == 0) {
+						break;
 					}
+					continue;
+				}
 
-					if (pendingWrites == null || innerActive || !ctx.channel()
-					                                                .isWritable()) {
-						if (WIP.decrementAndGet(this) == 0) {
-							break;
+				ChannelPromise promise;
+				Object v = pendingWrites.poll();
+
+				try {
+					promise = (ChannelPromise) v;
+				}
+				catch (Throwable e) {
+					ctx.fireExceptionCaught(e);
+					return;
+				}
+
+				boolean empty = promise == null;
+
+				if (empty) {
+					if (WIP.decrementAndGet(this) == 0) {
+						break;
+					}
+					continue;
+				}
+
+				v = pendingWrites.poll();
+
+				if (v instanceof Publisher) {
+					Publisher<?> p = (Publisher<?>) v;
+
+					if (p instanceof Callable) {
+						@SuppressWarnings("unchecked") Callable<?> supplier =
+								(Callable<?>) p;
+
+						Object vr;
+
+						try {
+							vr = supplier.call();
 						}
-						continue;
-					}
-
-					ChannelPromise promise;
-					Object v = pendingWrites.poll();
-
-					try {
-						promise = (ChannelPromise) v;
-					}
-					catch (Throwable e) {
-						ctx.fireExceptionCaught(e);
-						return;
-					}
-
-					boolean empty = promise == null;
-
-					if (empty) {
-						if (WIP.decrementAndGet(this) == 0) {
-							break;
+						catch (Throwable e) {
+							promise.setFailure(e);
+							continue;
 						}
-						continue;
-					}
 
-					v = pendingWrites.poll();
+						if (vr == null) {
+							promise.setSuccess();
+							continue;
+						}
 
-					if (v instanceof Publisher) {
-						Publisher<?> p = (Publisher<?>) v;
-
-						if (p instanceof Callable) {
-							@SuppressWarnings("unchecked") Callable<?> supplier = (Callable<?>) p;
-
-							Object vr;
-
-							try {
-								vr = supplier.call();
-							}
-							catch (Throwable e) {
-								promise.setFailure(e);
-								continue;
-							}
-
-							if (vr == null) {
-								promise.setSuccess();
-								continue;
-							}
-
-							if (inner.unbounded) {
-								doWrite(vr, promise, null);
-							}
-							else {
-								innerActive = true;
-								inner.promise = promise;
-								inner.onSubscribe(Operators.scalarSubscription(inner, vr));
-							}
+						if (inner.unbounded) {
+							doWrite(vr, promise, null);
 						}
 						else {
 							innerActive = true;
 							inner.promise = promise;
-							p.subscribe(inner);
+							inner.onSubscribe(Operators.scalarSubscription(inner, vr));
 						}
 					}
 					else {
-						doWrite(v, promise, null);
+						innerActive = true;
+						inner.promise = promise;
+						p.subscribe(inner);
 					}
+				}
+				else {
+					doWrite(v, promise, null);
 				}
 			}
 		}
-
-	//
-	final ChannelOperations<?, ?> inbound() {
-		return ctx.channel()
-		          .attr(ChannelOperations.OPERATIONS_KEY)
-		          .get();
 	}
 
 	static final class PublisherSender
@@ -438,13 +440,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (p != 0L) {
 				produced = 0L;
 				produced(p);
-				if(!justFlushed) {
-					if(parent.ctx.channel().isOpen()) {
+				if (!justFlushed) {
+					if (parent.ctx.channel()
+					              .isActive()) {
 						justFlushed = true;
 						parent.ctx.flush();
 					}
-					else{
-						promise.setFailure(ContextHandler.ABORTED);
+					else {
+						promise.setFailure(AbortedException.INSTANCE);
 						return;
 					}
 				}
@@ -468,12 +471,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (p != 0L) {
 				produced = 0L;
 				produced(p);
-				if(parent.ctx.channel().isOpen()) {
+				if (parent.ctx.channel()
+				              .isActive()) {
 					justFlushed = true;
 					parent.ctx.flush();
 				}
-				else{
-					promise.setFailure(ContextHandler.ABORTED);
+				else {
+					promise.setFailure(AbortedException.INSTANCE);
 					return;
 				}
 			}

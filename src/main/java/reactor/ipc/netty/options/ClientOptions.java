@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -194,29 +194,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * Select a channel pool from the given address.
+	 * Get the configured Pool Resources if any
 	 *
-	 * @return an eventual {@link ChannelPool}
+	 * @return an eventual {@link PoolResources}
 	 */
-	public final ChannelPool getPool() {
-		return getPool(null);
-	}
-
-
-	/**
-	 * Select a channel pool from the given address.
-	 *
-	 * @param address the optional address to use
-	 *
-	 * @return an eventual {@link ChannelPool}
-	 */
-	public final ChannelPool getPool(SocketAddress address) {
-		if (poolResources == null) {
-			return null;
-		}
-		address = address == null && connectAddress != null ? connectAddress.get() :
-				address;
-		return poolResources.selectOrCreate(address, this);
+	public final PoolResources getPoolResources() {
+		return poolResources;
 	}
 
 	/**
@@ -463,6 +446,4 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 			bootstrap.channel(loops.onChannel(elg));
 		}
 	}
-
-
 }

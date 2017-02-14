@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package reactor.ipc.netty.tcp;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
@@ -101,8 +102,9 @@ public class TcpResources implements PoolResources, LoopResources {
 
 	@Override
 	public ChannelPool selectOrCreate(SocketAddress address,
-			Supplier<? extends Bootstrap> bootstrap) {
-		return defaultPools.selectOrCreate(address, bootstrap);
+			Supplier<? extends Bootstrap> bootstrap,
+			Consumer<? super Channel> onChannelCreate) {
+		return defaultPools.selectOrCreate(address, bootstrap, onChannelCreate);
 	}
 
 	@Override

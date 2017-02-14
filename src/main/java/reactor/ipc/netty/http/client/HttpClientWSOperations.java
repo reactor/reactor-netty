@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,7 +111,8 @@ final class HttpClientWSOperations extends HttpClientOperations
 					}
 				}
 				catch (WebSocketHandshakeException wshe) {
-					onInboundError(wshe);
+					sendClose(null);
+					throw wshe;
 				}
 
 				parentContext().fireContextActive(this);
@@ -120,8 +121,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			return;
 		}
 		if (msg instanceof PingWebSocketFrame) {
-			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()
-			                                                                         .retain()));
+			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
 			ctx.read();
 			return;
 		}
@@ -134,8 +134,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			CloseWebSocketFrame close = (CloseWebSocketFrame) msg;
 			sendClose(new CloseWebSocketFrame(true,
 					close.rsv(),
-					close.content()
-					     .retain()));
+					close.content()));
 		}
 		else {
 			super.onInboundNext(ctx, msg);
@@ -161,7 +160,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 	@Override
 	protected void onOutboundError(Throwable err) {
-		if (channel().isOpen()) {
+		if (channel().isActive()) {
 			sendClose(new CloseWebSocketFrame(1002, "Client internal error"));
 		}
 	}
@@ -184,7 +183,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			log.debug("Handler terminated. Closing Websocket");
 		}
 		if (throwable == null) {
-			if (channel().isOpen()) {
+			if (channel().isActive()) {
 				sendClose(null);
 			}
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.time.Duration;
 import java.util.function.BiFunction;
 
 import org.apache.http.HttpException;
@@ -56,7 +57,7 @@ public class PostAndGetTests {
 			                       routes.get("/get/{name}", getHandler())
 			                             .post("/post", postHandler());
 		                       })
-		                       .block();
+		                       .block(Duration.ofSeconds(30));
 	}
 
 	BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> getHandler() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ public class HttpServerTests {
 				                                                                          Duration.ofSeconds(
 						                                                                          4 - d))
 		                                                                                         .map(x -> d + "\n"))))
-		                           .block();
+		                           .block(Duration.ofSeconds(30));
 
 		DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
 				HttpMethod.GET,
@@ -90,9 +90,9 @@ public class HttpServerTests {
 					         request.retain()))
 			                   .neverComplete();
 		         })
-		         .block();
+		         .block(Duration.ofSeconds(30));
 
-		Assert.assertTrue(latch.await(10000, TimeUnit.SECONDS));
+		Assert.assertTrue(latch.await(45, TimeUnit.SECONDS));
 
 	}
 
@@ -104,12 +104,12 @@ public class HttpServerTests {
 
 		NettyContext c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
-		                           .block();
+		                           .block(Duration.ofSeconds(30));
 
 		Flux<String> client = HttpClient.create(c.address()
 		                                         .getPort())
 		                                .get("/")
-		                                .block()
+		                                .block(Duration.ofSeconds(30))
 		                                .addDecoder(new LineBasedFrameDecoder(10))
 		                                .receive()
 		                                .asString();
@@ -126,45 +126,45 @@ public class HttpServerTests {
 		                           .newRouter(routes -> routes.directory("/test",
 				                           Paths.get(getClass().getResource("/public")
 				                                               .getFile())))
-		                           .block();
+		                           .block(Duration.ofSeconds(30));
 
 		HttpResources.set(PoolResources.fixed("http", 1));
 
 		HttpClientResponse response0 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/index.html")
-		                                         .block();
+		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response1 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test.css")
-		                                         .block();
+		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response2 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test1.css")
-		                                         .block();
+		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response3 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test2.css")
-		                                         .block();
+		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response4 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test3.css")
-		                                         .block();
+		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response5 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test4.css")
-		                                         .block();
+		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response6 = HttpClient.create(opts -> opts.connect(c.address()
 		                                                                       .getPort())
 		                                                             .disablePool())
 		                                         .get("/test/test5.css")
-		                                         .block();
+		                                         .block(Duration.ofSeconds(30));
 
 		Assert.assertEquals(response0.channel(), response1.channel());
 		Assert.assertEquals(response0.channel(), response2.channel());

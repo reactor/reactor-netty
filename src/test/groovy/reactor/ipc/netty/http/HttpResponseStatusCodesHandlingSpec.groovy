@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import reactor.ipc.netty.http.client.HttpClient
 import reactor.ipc.netty.http.server.HttpServer
 import spock.lang.Specification
 
+import java.time.Duration
+
 /**
  * @author Anatoly Kadyshev
  */
@@ -31,7 +33,7 @@ class HttpResponseStatusCodesHandlingSpec extends Specification {
 	  r.post('/test') {
 		req, res -> res.send(req.receive().log('server-received'))
 	  }
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	def client = HttpClient.create("localhost", server.address().port)
 
@@ -64,7 +66,7 @@ class HttpResponseStatusCodesHandlingSpec extends Specification {
 	def exceptionMessage = ""
 
 	try {
-	  content.block()
+	  content.block(Duration.ofSeconds(30))
 	}
 	catch (RuntimeException ex) {
 	  exceptionMessage = ex.getMessage()

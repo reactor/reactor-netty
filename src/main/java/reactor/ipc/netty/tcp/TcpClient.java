@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
+import reactor.ipc.netty.resources.PoolResources;
 
 /**
  * A TCP client connector.
@@ -158,7 +159,13 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		return Mono.create(sink -> {
 			SocketAddress remote = address != null ? address : options.getAddress();
 
-			ChannelPool pool = options.getPool(remote);
+			ChannelPool pool = null;
+
+			PoolResources poolResources = options.getPoolResources();
+			if (poolResources != null) {
+				pool = poolResources.selectOrCreate(remote, options,
+						doHandler(null, sink, secure, remote, null, null));
+			}
 
 			ContextHandler<SocketChannel> contextHandler =
 					doHandler(targetHandler, sink, secure, remote, pool, onSetup);
@@ -198,9 +205,11 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				secure,
 				providedAddress,
 				pool,
-				(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
+				handler == null ? EMPTY :
+						(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
 	}
 
+	static final ChannelOperations.OnNew EMPTY = (a,b,c) -> null;
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
 
 }

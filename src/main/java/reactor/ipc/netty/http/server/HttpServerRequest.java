@@ -17,12 +17,15 @@
 package reactor.ipc.netty.http.server;
 
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import reactor.core.publisher.Flux;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpInfos;
 
 /**
@@ -37,6 +40,12 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	@Override
 	default HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle) {
 		NettyInbound.super.onReadIdle(idleTimeout, onReadIdle);
+		return this;
+	}
+
+	@Override
+	default HttpServerRequest context(Consumer<NettyContext> contextCallback) {
+		NettyInbound.super.context(contextCallback);
 		return this;
 	}
 

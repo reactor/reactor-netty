@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -190,6 +190,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public HttpClientOperations context(Consumer<NettyContext> contextCallback) {
+		contextCallback.accept(context());
+		return this;
+	}
+
+	@Override
 	public Map<CharSequence, Set<Cookie>> cookies() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
@@ -252,9 +258,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public boolean isWebsocket() {
-		return attr(OPERATIONS_KEY).get()
-		                           .getClass()
-		                           .equals(HttpClientWSOperations.class);
+		return get(channel()).getClass()
+		                     .equals(HttpClientWSOperations.class);
 	}
 
 	@Override
@@ -297,8 +302,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 	}
 
-
-
 	@Override
 	public Mono<Void> send() {
 		if (markHeadersAsSent()) {
@@ -322,7 +325,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						    outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
 						    outboundHttpMessage())) {
 					    outboundHttpMessage().headers()
-					                         .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
+					                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
+							                         agg.readableBytes());
 				    }
 				    return send(Mono.just(agg)).then();
 			    });
@@ -436,9 +440,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (markHeadersAsSent()) {
+			if (log.isDebugEnabled()) {
+				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
+			}
 			channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
-		else if (HttpUtil.isTransferEncodingChunked(nettyRequest)) {
+		else  {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		channel().read();
@@ -451,21 +458,28 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (response.decoderResult()
 			            .isFailure()) {
 				onInboundError(response.decoderResult()
-				                        .cause());
+				                       .cause());
 				return;
 			}
 			if (started) {
-				if(log.isDebugEnabled()){
-					log.debug("An HttpClientOperations cannot proceed more than one " +
-							"Response", response.headers().toString());
+				if (log.isDebugEnabled()) {
+					log.debug("An HttpClientOperations cannot proceed more than one " + "Response",
+							response.headers()
+							        .toString());
 				}
 				return;
 			}
 			started = true;
-			setNettyResponse(response);
-			if(!isKeepAlive()){
+
+			if (!isKeepAlive()) {
 				markOutboundCloseable();
 			}
+			if(isInboundCancelled()){
+				channel().read();
+				return;
+			}
+
+			setNettyResponse(response);
 
 			if (log.isDebugEnabled()) {
 				log.debug("Received response (auto-read:{}) : {}",
@@ -486,11 +500,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (msg instanceof LastHttpContent) {
-			if(!started){
-				if(log.isDebugEnabled()){
-					log.debug("HttpClientOperations received an incorrect end " +
-							"delimiter" +
-							"(previously used connection?)");
+			if (!started) {
+				if (log.isDebugEnabled()) {
+					log.debug("HttpClientOperations received an incorrect end " + "delimiter" + "(previously used connection?)");
 				}
 				return;
 			}
@@ -504,13 +516,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 
-		if(!started){
-			if(log.isDebugEnabled()){
-				if(msg instanceof ByteBufHolder){
-					msg = ((ByteBufHolder)msg).content();
+		if (!started) {
+			if (log.isDebugEnabled()) {
+				if (msg instanceof ByteBufHolder) {
+					msg = ((ByteBufHolder) msg).content();
 				}
-				log.debug("HttpClientOperations received an incorrect chunk " +
-						"(previously used connection?)", msg);
+				log.debug("HttpClientOperations received an incorrect chunk " + "(previously used connection?)",
+						msg);
 			}
 			return;
 		}
@@ -620,16 +632,17 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 		else if (isWebsocket()) {
 			HttpClientWSOperations ops =
-					(HttpClientWSOperations) attr(OPERATIONS_KEY).get();
-			Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
+					(HttpClientWSOperations) get(channel());
+			if(ops != null) {
+				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
 
-			if (websocketHandler != noopHandler()) {
-				handshake =
-						handshake.then(() -> Mono.from(websocketHandler.apply(ops, ops)))
-						         .doAfterTerminate(ops);
+				if (websocketHandler != noopHandler()) {
+					handshake =
+							handshake.then(() -> Mono.from(websocketHandler.apply(ops, ops)))
+							         .doAfterTerminate(ops);
+				}
+				return handshake;
 			}
-
-			return handshake;
 		}
 		else {
 			log.error("Cannot enable websocket if headers have already been sent");
@@ -724,7 +737,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					tail = tail.doOnCancel(encoder)
 					           .doAfterTerminate(encoder);
 				}
-
 
 				if (encoder.isChunked()) {
 					tail.subscribe(s);

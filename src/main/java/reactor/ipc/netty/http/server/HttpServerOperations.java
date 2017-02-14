@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty.channel.Channel;
@@ -51,7 +52,9 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -106,6 +109,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		chunkedTransfer(true);
 
 
+	}
+
+	@Override
+	public HttpServerOperations context(Consumer<NettyContext> contextCallback) {
+		contextCallback.accept(context());
+		return this;
 	}
 
 	@Override
@@ -389,7 +398,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 
-		ChannelFuture f = null;
+		final ChannelFuture f;
 		if (log.isDebugEnabled()) {
 			log.debug("Last HTTP response frame");
 		}
@@ -400,15 +409,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			f = channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
-		else if (HttpUtil.isTransferEncodingChunked(nettyResponse)) {
+		else {
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-		}
-
-		if (f == null) {
-			if (isInboundDone()) {
-				onHandlerTerminate();
-			}
-			return;
 		}
 
 		f.addListener(s -> {

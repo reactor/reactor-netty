@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ public class TcpServerTests {
 			return out.sendString(Mono.just("Hi"))
 			          .neverComplete();
 		})
-		                                     .block();
+		                                     .block(Duration.ofSeconds(30));
 
 		final TcpClient client = TcpClient.create(opts -> opts.connect("localhost",
 				connectedServer.address()
@@ -155,7 +155,7 @@ public class TcpServerTests {
 			          .neverComplete();
 //			return Mono.empty();
 		})
-		                                     .block();
+		                                     .block(Duration.ofSeconds(30));
 
 		assertTrue("Latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
@@ -169,7 +169,7 @@ public class TcpServerTests {
 				.create(opts -> opts.listen("0.0.0.0", 0))
 				.newRouter(r -> r.get("/data", (request, response) -> {
 					return response.send(Mono.empty());
-				})).block();
+				})).block(Duration.ofSeconds(30));
 		httpServer.dispose();
 	}
 
@@ -188,12 +188,12 @@ public class TcpServerTests {
 
 			                             return Flux.never();
 		                             })
-		                               .block();
+		                               .block(Duration.ofSeconds(30));
 
 		NettyContext client = TcpClient.create(port)
 		                               .newHandler((in, out) -> out.sendString(Flux.just(
 				                             "Hello World!")))
-		                               .block();
+		                               .block(Duration.ofSeconds(30));
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
@@ -229,13 +229,13 @@ public class TcpServerTests {
 		                                                 .listen(port));
 
 		NettyContext connected = server.newHandler(serverHandler)
-		                               .block();
+		                               .block(Duration.ofSeconds(30));
 
 		client.newHandler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
 		                                            .map(b -> out.alloc()
 		                                                        .buffer()
 		                                                        .writeBytes(b.getBytes()))))
-		      .block();
+		      .block(Duration.ofSeconds(30));
 
 		assertTrue("Latch was counted down", latch.await(10, TimeUnit.SECONDS));
 
@@ -256,7 +256,7 @@ public class TcpServerTests {
 		broadcaster
 
 				//transform 10 data in a [] of 10 elements or wait up to 1 Second before emitting whatever the list contains
-				.buffer(10, Duration.ofSeconds(1))
+				.bufferTimeout(10, Duration.ofSeconds(1))
 				.log("broadcaster")
 				.subscribe(processor);
 
@@ -276,7 +276,7 @@ public class TcpServerTests {
 			                                                        .concatWith(Flux.just(
 					                                                        "end\n")));
 		                         }))
-		                           .block();
+		                           .block(Duration.ofSeconds(30));
 
 		for (int i = 0; i < 50; i++) {
 			Thread.sleep(500);
@@ -301,7 +301,7 @@ public class TcpServerTests {
 			                               });
 			                             return Flux.never();
 		                             })
-		                               .block();
+		                               .block(Duration.ofSeconds(30));
 
 		System.out.println("PORT +" + server.address()
 		                                    .getPort());
@@ -310,7 +310,7 @@ public class TcpServerTests {
 		                                             .getPort())
 		                               .newHandler((in, out) -> out.sendString(Flux.just(
 				                             "test")))
-		                               .block();
+		                               .block(Duration.ofSeconds(30));
 
 		client.dispose();
 		server.dispose();
@@ -328,9 +328,9 @@ public class TcpServerTests {
 				                       .get("foaas.herokuapp.com/life/" + in.param(
 						                       "search"))
 				                       .flatMap(repliesOut -> out.send(repliesOut.receive()))))
-		      .block()
+		      .block(Duration.ofSeconds(30))
 		      .onClose()
-		      .block();
+		      .block(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -344,9 +344,9 @@ public class TcpServerTests {
 						                                               .sendString(Mono.just("ping")))
 				                       .flatMap(repliesOut -> out.sendGroups(repliesOut.receive()
 				                                                                       .window(100)))))
-		      .block()
+		      .block(Duration.ofSeconds(30))
 		      .onClose()
-		      .block();
+		      .block(Duration.ofSeconds(30));
 	}
 
 	public static class Pojo {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import reactor.core.Producer;
 import reactor.core.Trackable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
-import reactor.ipc.netty.NettyContext;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
@@ -130,12 +129,8 @@ final class FluxReceive extends Flux<Object>
 		if (s == null) {
 			throw Exceptions.argumentIsNullException();
 		}
-		if (eventLoop.inEventLoop()) {
-			startReceiver(s);
-		}
-		else {
-			eventLoop.execute(() -> startReceiver(s));
-		}
+
+		eventLoop.execute(() -> startReceiver(s));
 	}
 
 	final boolean cancelReceiver() {
@@ -143,9 +138,9 @@ final class FluxReceive extends Flux<Object>
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
-				channel.config()
-				       .setAutoRead(false);
 				if(inboundDone && parent.isOutboundDone()){
+					channel.config()
+					       .setAutoRead(false);
 					parent.onHandlerTerminate();
 				}
 				else {
@@ -164,10 +159,24 @@ final class FluxReceive extends Flux<Object>
 
 		final Queue<Object> q = receiverQueue;
 		final Subscriber<? super Object> a = receiver;
+		boolean d = inboundDone;
 
 		if (a == null) {
-			if (inboundDone) {
+			if (d && getPending() == 0) {
 				cancelReceiver();
+				if (q != null) {
+					Object o;
+					while ((o = q.poll()) != null) {
+						ReferenceCountUtil.release(o);
+					}
+				}
+				Throwable ex = inboundError;
+				if(ex != null){
+					parent.context.fireContextError(ex);
+				}
+				else {
+					parent.context.fireContextActive(parent);
+				}
 			}
 			return false;
 		}
@@ -177,10 +186,16 @@ final class FluxReceive extends Flux<Object>
 
 		while (e != r) {
 			if (isCancelled()) {
+				if (q != null) {
+					Object o;
+					while ((o = q.poll()) != null) {
+						ReferenceCountUtil.release(o);
+					}
+				}
 				return false;
 			}
 
-			boolean d = inboundDone;
+			d = inboundDone;
 			Object v = q != null ? q.poll() : null;
 			boolean empty = v == null;
 
@@ -204,6 +219,12 @@ final class FluxReceive extends Flux<Object>
 		}
 
 		if (isCancelled()) {
+			if (q != null) {
+				Object o;
+				while ((o = q.poll()) != null) {
+					ReferenceCountUtil.release(o);
+				}
+			}
 			return false;
 		}
 
@@ -261,13 +282,14 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	final void onInboundNext(Object msg) {
-		if (inboundDone) {
+		if (inboundDone && isCancelled()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Dropping frame {}", msg);
 			}
+			ReferenceCountUtil.release(msg);
 			return;
 		}
-		ReferenceCountUtil.retain(msg);
+
 		if (receiverFastpath && receiver != null) {
 			try {
 				receiver.onNext(msg);
@@ -275,7 +297,6 @@ final class FluxReceive extends Flux<Object>
 			finally {
 				ReferenceCountUtil.release(msg);
 			}
-
 		}
 		else {
 			Queue<Object> q = receiverQueue;
@@ -307,11 +328,10 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	final boolean onInboundError(Throwable err) {
-		if (isCancelled() || inboundDone) {
+		if (isCancelled() || inboundDone || inboundError != null) {
 			Operators.onErrorDropped(err);
 			return false;
 		}
-		inboundDone = true;
 		Subscriber<?> receiver = this.receiver;
 		this.inboundError = err;
 		if (receiverFastpath && receiver != null) {
@@ -332,12 +352,12 @@ final class FluxReceive extends Flux<Object>
 		}
 		Throwable ex = inboundError;
 		if (ex != null) {
+			parent.context.fireContextError(ex);
 			a.onError(ex);
 		}
 		else {
 			a.onComplete();
 		}
-		parent.context.fireContextActive(parent);
 	}
 
 	final void unsubscribeReceiver() {

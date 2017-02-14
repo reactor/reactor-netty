@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import java.net.SocketAddress;
 import java.util.Objects;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
@@ -96,6 +95,12 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	protected void terminateChannel(Channel channel) {
+		release((CHANNEL)channel);
+	}
+
+	@Override
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
 		sink.setCancellation(this);
 		if (future.isCancelled() || cancelled) {
@@ -138,13 +143,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Connected new channel: {}", c.toString());
 			}
-			doPipeline(c.pipeline());
+			accept(c);
 			c.pipeline()
 			 .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
-			if (c.isOpen()) {
-				c.pipeline()
-				 .connect(c.localAddress(), c.remoteAddress());
-			}
 			if (c.isRegistered()) {
 				c.pipeline()
 				 .fireChannelRegistered();
@@ -165,23 +166,28 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Acquired existing channel: {}", c.toString());
 			}
+			if (c.isActive()) {
+				handler.parentContext = this;
+				createOperations(c, null);
+			}
+			/*
 			c.pipeline()
 			 .replace(NettyPipeline.ReactiveBridge,
 					 NettyPipeline.ReactiveBridge,
 					 new ChannelOperationsHandler(this));
+			 */
 		}
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public void dispose() {
-		if (f == null || cancelled) {
+		if (f == null) {
 			return;
 		}
-		cancelled = true;
 		if (!f.isDone()) {
 			if (log.isDebugEnabled()) {
-				log.debug("Releasing pending channel acquisition: {}", f.toString());
+				log.debug("Cancel pending pooled channel acquisition: {}", f.toString());
 			}
 			f.addListener(ff -> {
 				if(ff.isSuccess()) {
@@ -190,19 +196,33 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			});
 			return;
 		}
+
 		try {
 			CHANNEL c = f.get();
-			if (!c.isActive()) {
-				release(c);
-				return;
-			}
 
 			if (!c.eventLoop()
 			      .inEventLoop()) {
-				c.eventLoop()
-				 .execute(() -> release(c));
+				c.eventLoop().execute(() -> {
+					ChannelOperations<?, ?> ops = ChannelOperations.get(c);
+					//defer to operation dispose if present
+					if (ops != null) {
+						ops.dispose();
+						return;
+					}
+
+					release(c);
+
+				});
+
 			}
 			else {
+				ChannelOperations<?, ?> ops = ChannelOperations.get(c);
+				//defer to operation dispose if present
+				if (ops != null) {
+					ops.dispose();
+					return;
+				}
+
 				release(c);
 			}
 
@@ -214,16 +234,20 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	final void release(CHANNEL c) {
+		if (cancelled){
+			return;
+		}
+		cancelled = true;
 		if (log.isDebugEnabled()) {
 			log.debug("Releasing channel: {}", c.toString());
 		}
 
 		pool.release(c).addListener(f -> {
-			if (!c.isOpen()) {
+			if (!c.isActive()) {
 				return;
 			}
 			Boolean attr = c.attr(CLOSE_CHANNEL).get();
-			if(attr != null && attr){
+			if(attr != null && attr && c.isActive()){
 				c.close();
 			}
 			else if(f.isSuccess()){
@@ -239,18 +263,12 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	protected void doDropped(Channel channel) {
 		dispose();
-		fireContextError(ABORTED);
+		fireContextError(AbortedException.INSTANCE);
 	}
 
 	@Override
-	protected void doPipeline(ChannelPipeline pipeline) {
-		ClientContextHandler.addSslAndLogHandlers(clientOptions,
-				sink,
-				loggingHandler,
-				secure,
-				getSNI(),
-				pipeline);
-		ClientContextHandler.addProxyHandler(clientOptions, pipeline);
+	public void accept(Channel ch) {
+		//do not add in channelCreated pool
 	}
 
 	@Override

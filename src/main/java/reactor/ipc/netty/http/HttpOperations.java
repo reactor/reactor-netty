@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ import io.netty.handler.codec.http.HttpUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 
@@ -94,7 +94,12 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			else {
 				message = outboundHttpMessage();
 			}
-			return then(FutureMono.deferFuture(() -> channel().writeAndFlush(message)));
+			return then(FutureMono.deferFuture(() -> {
+				if(!channel().isActive()){
+					throw AbortedException.instance();
+				}
+				return channel().writeAndFlush(message);
+			}));
 		}
 		else {
 			return this;

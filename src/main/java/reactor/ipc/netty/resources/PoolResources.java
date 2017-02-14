@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,11 @@
 package reactor.ipc.netty.resources;
 
 import java.net.SocketAddress;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
@@ -147,10 +149,12 @@ public interface PoolResources extends Disposable {
 	 * new {@link ChannelPool}
 	 * @param bootstrap the {@link Bootstrap} supplier if a {@link ChannelPool} must be
 	 * created
+	 * @param onChannelCreate callback only when new connection is made
 	 * @return an existing or new {@link ChannelPool}
 	 */
 	ChannelPool selectOrCreate(SocketAddress address,
-			Supplier<? extends Bootstrap> bootstrap);
+			Supplier<? extends Bootstrap> bootstrap,
+			Consumer<? super Channel> onChannelCreate);
 
 	@Override
 	default void dispose() {

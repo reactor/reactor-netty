@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -54,7 +55,7 @@ import reactor.util.function.Tuple2;
  * @author Stephane Maldini
  */
 public abstract class ContextHandler<CHANNEL extends Channel>
-		extends ChannelInitializer<CHANNEL> implements Disposable {
+		extends ChannelInitializer<CHANNEL> implements Disposable, Consumer<Channel> {
 
 	/**
 	 * Create a new client context
@@ -220,8 +221,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		if (autoCreateOperations || msg != null) {
 			ChannelOperations<?, ?> op =
 					channelOpFactory.create((CHANNEL) channel, this, msg);
-			channel.attr(ChannelOperations.OPERATIONS_KEY)
-			       .set(op);
+			ChannelOperations.set(channel, op);
 
 			channel.eventLoop().execute(op::onHandlerStart);
 			return op;
@@ -251,6 +251,14 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			fired = true;
 			sink.error(t);
 		}
+		else if (AbortedException.isConnectionReset(t)) {
+			if (log.isDebugEnabled()) {
+				log.error("Connection closed remotely", t);
+			}
+		}
+		else {
+			log.error("Error cannot be forwarded to user-facing Mono", t);
+		}
 	}
 
 	/**
@@ -269,7 +277,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
-		doPipeline(ch.pipeline());
+		accept(ch);
 		ch.pipeline()
 		  .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
 		if (log.isDebugEnabled()) {
@@ -285,11 +293,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	protected void doDropped(Channel channel) {
 		//ignore
 	}
-
-	/**
-	 * @param pipeline
-	 */
-	protected abstract void doPipeline(ChannelPipeline pipeline);
 
 	/**
 	 * Cleanly terminate a channel according to the current context handler type.
@@ -315,19 +318,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 */
 	protected abstract Publisher<Void> onCloseOrRelease(Channel channel);
 
-	static final AbortedException ABORTED =
-			new AbortedException() {
-				@Override
-				public synchronized Throwable fillInStackTrace() {
-					return this;
-				}
-
-			};
-
 	static final Logger         log      = Loggers.getLogger(ContextHandler.class);
 
 	static void addSslAndLogHandlers(NettyOptions<?, ?> options,
-			MonoSink<NettyContext> sink,
+			ContextHandler<?> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			Tuple2<String, Integer> sniInfo,
@@ -439,7 +433,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			if (!active) {
 				ctx.pipeline().remove(this);
 				parent.terminateChannel(ctx.channel());
-				parent.fireContextError(ABORTED);
+				parent.fireContextError(AbortedException.INSTANCE);
 			}
 			ctx.fireChannelInactive();
 		}

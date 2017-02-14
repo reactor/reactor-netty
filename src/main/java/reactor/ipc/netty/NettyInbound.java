@@ -17,6 +17,7 @@
 package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
+import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -52,6 +53,20 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 * @return the {@link NettyContext}
 	 */
 	NettyContext context();
+
+	/**
+	 * Immediately call the passed callback with a {@link NettyContext} to operate on the
+	 * underlying
+	 * {@link Channel} state. This allows for chaining inbound API.
+	 *
+	 * @param contextCallback context callback
+	 *
+	 * @return the {@link NettyContext}
+	 */
+	default NettyInbound context(Consumer<NettyContext> contextCallback){
+		contextCallback.accept(context());
+		return this;
+	}
 
 	/**
 	 * Assign a {@link Runnable} to be invoked when reads have become idle for the given

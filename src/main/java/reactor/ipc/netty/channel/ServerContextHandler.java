@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.channel;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
@@ -61,8 +62,15 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	public void fireContextError(Throwable t) {
-		//Ignore, child channels cannot trigger context error
+	public void fireContextError(Throwable err) {
+		if (AbortedException.isConnectionReset(err)) {
+			if (log.isDebugEnabled()) {
+				log.error("Connection closed remotely", err);
+			}
+		}
+		else if (log.isErrorEnabled()) {
+			log.error("Handler failure while no child channelOperation was present", err);
+		}
 	}
 
 	@Override
@@ -134,7 +142,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	@Override
 	public boolean isDisposed() {
 		return !f.channel()
-		         .isOpen();
+		         .isActive();
 	}
 
 	@Override
@@ -146,7 +154,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	@Override
 	public void terminateChannel(Channel channel) {
 		if (!f.channel()
-		     .isOpen()) {
+		     .isActive()) {
 			return;
 		}
 		if(channel.hasAttr(CLOSE_CHANNEL) &&
@@ -156,7 +164,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	protected void doPipeline(ChannelPipeline pipeline) {
-		addSslAndLogHandlers(options, sink, loggingHandler, true, getSNI(), pipeline);
+	public void accept(Channel ch) {
+		addSslAndLogHandlers(options, this, loggingHandler, true, getSNI(), ch.pipeline());
 	}
 }

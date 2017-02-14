@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1625,15 +1625,6 @@ final class HttpClientFormEncoder
 			}
 			ByteBuf buf = Unpooled.copiedBuffer(value, charset);
 			this.value.add(buf);
-			size += buf.readableBytes();
-		}
-
-		void addValue(String value, int rank) {
-			if (value == null) {
-				throw new NullPointerException("value");
-			}
-			ByteBuf buf = Unpooled.copiedBuffer(value, charset);
-			this.value.add(rank, buf);
 			size += buf.readableBytes();
 		}
 

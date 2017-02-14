@@ -36,7 +36,7 @@
 	<logger name="reactor" level="DEBUG"/>
     <!--<logger name="reactor" level="INFO"/>-->
     <logger name="reactor.ipc.netty" level="DEBUG" />
-    <logger name="reactor.ipc.netty.http.client.HttpClient" level="OFF" />
+    <logger name="reactor.ipc.netty.http.client.HttpClient" level="DEBUG" />
 
     <root level="info">
         <appender-ref ref="stdout"/>

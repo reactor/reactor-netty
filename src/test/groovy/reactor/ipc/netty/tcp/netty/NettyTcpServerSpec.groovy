@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import spock.lang.Specification
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import java.nio.charset.Charset
+import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -63,7 +64,7 @@ class NettyTcpServerSpec extends Specification {
 		new Pojo(name: "Jane Doe")
 	  }
 	  .map(jsonEncoder))
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	def client = new SimpleClient(server.address().port, dataLatch,
 			"{\"name\":\"John Doe\"}")
@@ -91,7 +92,7 @@ class NettyTcpServerSpec extends Specification {
 			  .concatMap { d -> Flux.fromArray(d) }
 			  .window(5)
 			  .concatMap { w -> o.send(w.collectList().map(jsonEncoder)) }
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	def client = TcpClient.create(server.address().port)
 	client.newHandler { i, o ->
@@ -110,10 +111,10 @@ class NettyTcpServerSpec extends Specification {
 			  .collectList()
 			  .map(jsonEncoder))
 	    .neverComplete()
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	then: "the client/server were started"
-	latch.await()
+	latch.await(30, TimeUnit.SECONDS)
 
 
 	cleanup: "the client/server where stopped"
@@ -143,7 +144,7 @@ class NettyTcpServerSpec extends Specification {
 				}
 	  		  .doOnComplete { println 'wow ' + it }
 			  .log('flatmap-retry'))
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	def client = TcpClient.create("localhost", server.address().port)
 	client.newHandler { i, o ->
@@ -160,7 +161,7 @@ class NettyTcpServerSpec extends Specification {
 			  .collectList().map(jsonEncoder))
 			  .neverComplete()
 
-	}.block()
+	}.block(Duration.ofSeconds(30))
 
 	then: "the client/server were started"
 	latch.await(10, TimeUnit.SECONDS)

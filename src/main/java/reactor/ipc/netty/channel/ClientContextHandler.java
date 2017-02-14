@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 		channel.close();
 		if(!fired) {
 			fired = true;
-			sink.error(ABORTED);
+			sink.error(AbortedException.INSTANCE);
 		}
 	}
 
@@ -80,15 +80,18 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void doPipeline(ChannelPipeline pipeline) {
-		addSslAndLogHandlers(clientOptions, sink, loggingHandler, secure, getSNI(), pipeline);
-		addProxyHandler(clientOptions, pipeline);
+	public void accept(Channel ch) {
+		addSslAndLogHandlers(clientOptions, this, loggingHandler, secure, getSNI(), ch.pipeline());
+		addProxyHandler(clientOptions, ch.pipeline());
 	}
 
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline) {
 		ProxyHandler proxy = clientOptions.getProxyHandler();
 		if (proxy != null) {
 			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy);
+			if(log.isDebugEnabled()){
+				pipeline.addFirst(new LoggingHandler("reactor.ipc.netty.proxy"));
+			}
 		}
 	}
 }
