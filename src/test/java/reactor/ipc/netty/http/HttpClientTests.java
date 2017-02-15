@@ -150,7 +150,6 @@ public class HttpClientTests {
 
 		Mono<String> page = remote
 				.flatMap(r -> r.receive()
-				               .retain()
 				               .asString()
 				               .limitRate(1))
 				.reduce(String::concat);

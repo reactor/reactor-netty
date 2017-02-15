@@ -17,8 +17,11 @@
 package reactor.ipc.netty.channel;
 
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
@@ -53,6 +56,10 @@ final class FluxReceive extends Flux<Object>
 	Throwable inboundError;
 
 	volatile Disposable receiverCancel;
+	volatile int wip;
+
+	final static AtomicIntegerFieldUpdater<FluxReceive> WIP = AtomicIntegerFieldUpdater.newUpdater
+			(FluxReceive.class, "wip");
 
 	FluxReceive(ChannelOperations<?, ?> parent) {
 		this.parent = parent;
@@ -62,15 +69,8 @@ final class FluxReceive extends Flux<Object>
 
 	@Override
 	public void cancel() {
-		if (cancelReceiver()) {
-			Queue<Object> q = receiverQueue;
-			if (q != null) {
-				Object o;
-				while ((o = q.poll()) != null) {
-					ReferenceCountUtil.release(o);
-				}
-			}
-		}
+		cancelReceiver();
+		drainReceiver();
 	}
 
 	@Override
@@ -155,102 +155,118 @@ final class FluxReceive extends Flux<Object>
 		return false;
 	}
 
-	final boolean drainReceiver() {
-
-		final Queue<Object> q = receiverQueue;
-		final Subscriber<? super Object> a = receiver;
-		boolean d = inboundDone;
-
-		if (a == null) {
-			if (d && getPending() == 0) {
-				cancelReceiver();
-				if (q != null) {
-					Object o;
-					while ((o = q.poll()) != null) {
-						ReferenceCountUtil.release(o);
-					}
+	final void cleanQueue(Queue<Object> q){
+		if (q != null) {
+			Object o;
+			while ((o = q.poll()) != null) {
+				if (log.isDebugEnabled()) {
+					log.debug("Dropping frame {}, {} in buffer", o, getPending());
 				}
-				Throwable ex = inboundError;
-				if(ex != null){
-					parent.context.fireContextError(ex);
-				}
-				else {
-					parent.context.fireContextActive(parent);
-				}
+				ReferenceCountUtil.release(o);
 			}
+		}
+	}
+
+	final boolean drainReceiver() {
+		if(WIP.getAndIncrement(this) != 0){
 			return false;
 		}
+		int missed = 1;
+		for(;;) {
+			final Queue<Object> q = receiverQueue;
+			final Subscriber<? super Object> a = receiver;
+			boolean d = inboundDone;
 
-		long r = receiverDemand;
-		long e = 0L;
-
-		while (e != r) {
-			if (isCancelled()) {
-				if (q != null) {
-					Object o;
-					while ((o = q.poll()) != null) {
-						ReferenceCountUtil.release(o);
+			if (a == null) {
+				if (d && getPending() == 0) {
+					cancelReceiver();
+					Throwable ex = inboundError;
+					if (ex != null) {
+						parent.context.fireContextError(ex);
 					}
+					else {
+						parent.context.fireContextActive(parent);
+					}
+					return false;
 				}
+				missed = WIP.addAndGet(this, -missed);
+				if(missed == 0){
+					break;
+				}
+				continue;
+			}
+
+			long r = receiverDemand;
+			long e = 0L;
+
+			while (e != r) {
+				if (isCancelled()) {
+					cleanQueue(q);
+					return false;
+				}
+
+				d = inboundDone;
+				Object v = q != null ? q.poll() : null;
+				boolean empty = v == null;
+
+				if (d && empty) {
+					terminateReceiver(q, a);
+					return false;
+				}
+
+				if (empty) {
+					break;
+				}
+
+				try {
+					a.onNext(v);
+				}
+				finally {
+					ReferenceCountUtil.release(v);
+				}
+
+				e++;
+			}
+
+			if (isCancelled()) {
+				cleanQueue(q);
 				return false;
 			}
 
-			d = inboundDone;
-			Object v = q != null ? q.poll() : null;
-			boolean empty = v == null;
-
-			if (d && empty) {
+			if (inboundDone && (q == null || q.isEmpty())) {
 				terminateReceiver(q, a);
 				return false;
 			}
 
-			if (empty) {
+			if (r == Long.MAX_VALUE) {
+				channel.config()
+				       .setAutoRead(true);
+				channel.read();
+				missed = WIP.addAndGet(this, -missed);
+				if(missed == 0){
+					break;
+				}
+				return true;
+			}
+
+			if ((receiverDemand -= e) > 0L || e > 0L) {
+				channel.read();
+			}
+
+			missed = WIP.addAndGet(this, -missed);
+			if(missed == 0){
 				break;
 			}
-
-			try {
-				a.onNext(v);
-			}
-			finally {
-				ReferenceCountUtil.release(v);
-			}
-
-			e++;
 		}
-
-		if (isCancelled()) {
-			if (q != null) {
-				Object o;
-				while ((o = q.poll()) != null) {
-					ReferenceCountUtil.release(o);
-				}
-			}
-			return false;
-		}
-
-		if (inboundDone && (q == null || q.isEmpty())) {
-			terminateReceiver(q, a);
-			return false;
-		}
-
-		if (r == Long.MAX_VALUE) {
-			channel.config()
-			       .setAutoRead(true);
-			channel.read();
-			return true;
-		}
-
-		if ((receiverDemand -= e) > 0L || e > 0L) {
-			channel.read();
-		}
-
 		return false;
 	}
 
 	final void startReceiver(Subscriber<? super Object> s) {
 		if (receiver == null) {
 			if (log.isDebugEnabled()) {
-				log.debug("Subscribing inbound receiver [pending: " + "" + getPending() + ", inboundDone: {}]",
+				log.debug("{} Subscribing inbound receiver [pending: {}, cancelled:{}, " +
+								"inboundDone: {}]", channel.toString(), getPending(),
+						isCancelled(),
 						inboundDone);
 			}
 			if (inboundDone && getPending() == 0) {
@@ -282,9 +298,9 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	final void onInboundNext(Object msg) {
-		if (inboundDone && isCancelled()) {
+		if (inboundDone || isCancelled()) {
 			if (log.isDebugEnabled()) {
-				log.debug("Dropping frame {}", msg);
+				log.debug("Dropping frame {}, {} in buffer", msg, getPending());
 			}
 			ReferenceCountUtil.release(msg);
 			return;
@@ -292,6 +308,16 @@ final class FluxReceive extends Flux<Object>
 
 		if (receiverFastpath && receiver != null) {
 			try {
+				if (log.isDebugEnabled()){
+					if(msg instanceof ByteBuf) {
+						((ByteBuf) msg).touch("Unbounded receiver, bypass inbound " +
+								"buffer queue");
+					}
+					else if (msg instanceof ByteBufHolder){
+						((ByteBufHolder) msg).touch("Unbounded receiver, bypass inbound " +
+								"buffer queue");
+					}
+				}
 				receiver.onNext(msg);
 			}
 			finally {
@@ -304,6 +330,15 @@ final class FluxReceive extends Flux<Object>
 				q = QueueSupplier.unbounded()
 				                 .get();
 				receiverQueue = q;
+			}
+			if (log.isDebugEnabled()){
+				if(msg instanceof ByteBuf) {
+					((ByteBuf) msg).touch("Buffered ByteBuf in Inbound Flux Queue");
+				}
+				else if (msg instanceof ByteBufHolder){
+					((ByteBufHolder) msg).touch("Buffered ByteBufHolder in Inbound Flux" +
+							" Queue");
+				}
 			}
 			q.offer(msg);
 			if (drainReceiver()) {

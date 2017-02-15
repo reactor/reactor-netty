@@ -55,6 +55,7 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
@@ -475,6 +476,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				markOutboundCloseable();
 			}
 			if(isInboundCancelled()){
+				ReferenceCountUtil.release(msg);
 				channel().read();
 				return;
 			}

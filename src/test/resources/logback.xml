@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+  ~ Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -33,10 +33,10 @@
         </encoder>
     </appender>
 
-	<logger name="reactor" level="DEBUG"/>
+	<!--<logger name="reactor" level="DEBUG"/>-->
     <!--<logger name="reactor" level="INFO"/>-->
     <logger name="reactor.ipc.netty" level="DEBUG" />
-    <logger name="reactor.ipc.netty.http.client.HttpClient" level="DEBUG" />
+    <logger name="reactor.ipc.netty.http.client.HttpClient" level="OFF" />
 
     <root level="info">
         <appender-ref ref="stdout"/>

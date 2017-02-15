@@ -115,12 +115,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (ops != null) {
 				ChannelOperations.get(ctx.channel()).onInboundNext(ctx, msg);
 			}
-			else if (log.isDebugEnabled()) {
-				if (msg instanceof ByteBufHolder) {
-					msg = ((ByteBufHolder) msg).content()
-					                           .toString(Charset.defaultCharset());
+			else {
+				if (log.isDebugEnabled()) {
+					if (msg instanceof ByteBufHolder) {
+						msg = ((ByteBufHolder) msg).content()
+						                           .toString(Charset.defaultCharset());
+					}
+					log.debug("No ChannelOperation attached. Dropping: {}", msg);
 				}
-				log.debug("No ChannelOperation attached. Dropping: {}", msg);
 				ReferenceCountUtil.release(msg);
 			}
 		}
