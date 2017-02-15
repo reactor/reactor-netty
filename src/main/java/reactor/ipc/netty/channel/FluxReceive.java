@@ -130,7 +130,12 @@ final class FluxReceive extends Flux<Object>
 			throw Exceptions.argumentIsNullException();
 		}
 
-		eventLoop.execute(() -> startReceiver(s));
+		if (eventLoop.inEventLoop()){
+			startReceiver(s);
+		}
+		else {
+			eventLoop.execute(() -> startReceiver(s));
+		}
 	}
 
 	final boolean cancelReceiver() {
