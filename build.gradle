@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ ext {
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
   reactorCoreVersion = "3.0.5.RELEASE"
-  reactorIpcVersion = "0.6.1.BUILD-SNAPSHOT"
+  reactorIpcVersion = "0.6.1.RELEASE"
 
   // Languages
   groovyVersion = '2.4.1'
@@ -45,7 +45,7 @@ ext {
   // Logging
   slf4jVersion = '1.7.12'
   logbackVersion = '1.1.2'
-  testAddonVersion = '3.0.5.BUILD-SNAPSHOT'
+  testAddonVersion = '3.0.5.RELEASE'
 
   // Libraries
   nettyVersion = '4.1.8.Final'
@@ -71,19 +71,27 @@ ext {
 }
 
 apply from: "$gradleScriptDir/setup.gradle"
-apply from: "$gradleScriptDir/doc.gradle"
 
 configure(rootProject) { project ->
   group = 'io.projectreactor.ipc'
 
   apply plugin: 'propdeps'
   apply plugin: 'java'
+  apply plugin: 'jacoco'
   apply plugin: 'groovy'
   apply from: "${gradleScriptDir}/ide.gradle"
-
-
   apply plugin: 'osgi'
-  apply plugin: 'groovy'
+
+  jacoco {
+	toolVersion = '0.7.7.201606060606'
+  }
+
+  jacocoTestReport {
+	reports {
+	  xml.enabled = true
+	  html.enabled = true
+	}
+  }
 
   ext.bundleImportPackages = ['com.fasterxml.jackson.core;resolution:=optional',
 							  'com.fasterxml.jackson.databind;resolution:=optional',
@@ -143,6 +151,15 @@ configure(rootProject) { project ->
 	include '**/*Tests.*'
 	include '**/*Spec.*'
 	exclude '**/*Abstract*.*'
+  }
+
+  test {
+	testLogging {
+	  events  "passed", "failed"
+	  showExceptions true
+	  exceptionFormat "full"
+	  maxGranularity 3
+	}
   }
 
   repositories {
@@ -210,7 +227,10 @@ configure(rootProject) { project ->
 	  instruction 'Import-Package', bundleImportPackages.join(',')
 	}
   }
+
+  check.dependsOn jacocoTestReport
 }
+
 
 configurations.all {
   // check for updates every build

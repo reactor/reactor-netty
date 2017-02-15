@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,13 @@ configure(rootProject) {
 	  file("$outputDir/pdf/index.pdf").
 			  renameTo("$outputDir/pdf/netty-reference-guide-${version}.pdf")
 	}
+  }
+
+  task docsZip(type: Zip, dependsOn: asciidoctor) {
+	baseName = 'reactor-netty-docs'
+	from("$buildDir/asciidoc/pdf/reactor-netty-reference-guide-${version}.pdf") { into ("docs/") }
+	from("$buildDir/asciidoc/html5/index.html") { into("docs/") }
+	from("$buildDir/asciidoc/html5/images") { into("images/") }
   }
 }
 

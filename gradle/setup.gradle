@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@ task wrapper(type: Wrapper, description: "Create a Gradle self-download wrapper"
 }
 
 configure(rootProject) { subproject ->
-	if(subproject.name == 'docs') return
-
+    apply from: "$gradleScriptDir/doc.gradle"
 	apply plugin: 'propdeps-maven'
 	apply plugin: 'maven'
 
@@ -50,10 +49,11 @@ configure(rootProject) { subproject ->
 	artifacts {
 		archives sourcesJar
 		archives javadocJar
+	  	archives docsZip
 	}
 }
 
-def customizePom(def pom, def gradleProject) {
+def customizePom(pom, gradleProject) {
 	pom.whenConfigured { generatedPom ->
 		// eliminate test-scoped dependencies (no need in maven central poms)
 		generatedPom.dependencies.removeAll { dep ->
@@ -69,7 +69,7 @@ def customizePom(def pom, def gradleProject) {
 		generatedPom.project {
 			name = gradleProject.description
 			description = gradleProject.description
-			url = 'https://github.com/reactor/reactor'
+			url = 'https://github.com/reactor/reactor-netty'
 			organization {
 				name = 'reactor'
 				url = 'http://github.com/reactor'
@@ -82,9 +82,9 @@ def customizePom(def pom, def gradleProject) {
 				}
 			}
 			scm {
-				url = 'https://github.com/reactor/reactor-ipc'
-				connection = 'scm:git:git://github.com/reactor/reactor-ipc'
-				developerConnection = 'scm:git:git://github.com/reactor/reactor-ipc'
+				url = 'https://github.com/reactor/reactor-netty'
+				connection = 'scm:git:git://github.com/reactor/reactor-netty'
+				developerConnection = 'scm:git:git://github.com/reactor/reactor-netty'
 			}
 			developers {
 				developer {
@@ -93,13 +93,14 @@ def customizePom(def pom, def gradleProject) {
 					email = 'smaldini@pivotal.io'
 				}
 				developer {
-					id = 'kadyana'
-					name = 'Anatoly Kadyshev'
+				  id = 'simonbasle'
+				  name = 'Simon Baslé'
+				  email = 'sbasle@pivotal.io'
 				}
 			}
 			issueManagement {
 				system = "GitHub Issues"
-				url = "https://github.com/reactor/reactor/issues"
+				url = "https://github.com/reactor/reactor-netty/issues"
 			}
 		}
 	}
