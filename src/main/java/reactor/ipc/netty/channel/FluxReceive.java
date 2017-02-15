@@ -363,14 +363,20 @@ final class FluxReceive extends Flux<Object>
 	}
 
 	final boolean onInboundError(Throwable err) {
-		if (isCancelled() || inboundDone || inboundError != null) {
+		if (isCancelled() || inboundDone) {
 			Operators.onErrorDropped(err);
 			return false;
 		}
 		Subscriber<?> receiver = this.receiver;
 		this.inboundError = err;
+		this.inboundDone = true;
+
+		if(channel.isActive()){
+			channel.close();
+		}
 		if (receiverFastpath && receiver != null) {
 			cancelReceiver();
+			parent.context.fireContextError(err);
 			receiver.onError(err);
 			return true;
 		}

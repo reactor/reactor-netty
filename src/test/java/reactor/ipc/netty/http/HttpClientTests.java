@@ -76,18 +76,21 @@ public class HttpClientTests {
 		                    .log()
 		                    .block(Duration.ofSeconds(30));
 
-		try {
-			HttpClient.create(opts -> opts.connect("localhost",
+		HttpClient.create(opts -> opts.connect("localhost",
 					x.address()
 					 .getPort())
-			                              .poolResources(pool))
-			          .get("/")
-			          .log()
-			          .block(Duration.ofSeconds(30));
-		}
-		catch (AbortedException ae) {
-			Assert.fail("Not aborted");
-		}
+		                              .poolResources(pool))
+		          .get("/")
+		          .log()
+		          .block(Duration.ofSeconds(30));
+
+		HttpClient.create(opts -> opts.connect("localhost",
+				x.address()
+				 .getPort())
+		                              .poolResources(pool))
+		          .get("/")
+		          .log()
+		          .block(Duration.ofSeconds(30));
 
 	}
 

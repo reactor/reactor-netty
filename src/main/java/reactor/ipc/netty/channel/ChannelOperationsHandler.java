@@ -121,7 +121,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						msg = ((ByteBufHolder) msg).content()
 						                           .toString(Charset.defaultCharset());
 					}
-					log.debug("No ChannelOperation attached. Dropping: {}", msg);
+					log.debug("{} No ChannelOperation attached. Dropping: {}", ctx
+							.channel().toString(), msg);
 				}
 				ReferenceCountUtil.release(msg);
 			}

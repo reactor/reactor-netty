@@ -464,7 +464,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final boolean discreteRemoteClose(Throwable err) {
 		if (AbortedException.isConnectionReset(err)) {
 			if (log.isDebugEnabled()) {
-				log.debug("[{}] Connection closed remotely", formatName(), err);
+				log.debug("{} [{}] Connection closed remotely", channel.toString(),
+						formatName(),
+						err);
 			}
 			return true;
 		}

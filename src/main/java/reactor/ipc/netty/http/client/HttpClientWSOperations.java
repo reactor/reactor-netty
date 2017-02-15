@@ -111,8 +111,8 @@ final class HttpClientWSOperations extends HttpClientOperations
 					}
 				}
 				catch (WebSocketHandshakeException wshe) {
-					sendClose(null);
-					throw wshe;
+					onInboundError(wshe);
+					return;
 				}
 
 				parentContext().fireContextActive(this);

@@ -163,19 +163,16 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			}
 		}
 		else {
-			if (log.isDebugEnabled()) {
-				log.debug("Acquired existing channel: {}", c.toString());
-			}
 			if (c.isActive()) {
+				if (log.isDebugEnabled()) {
+					log.debug("Acquired existing channel: {}", c.toString());
+				}
 				handler.parentContext = this;
 				createOperations(c, null);
 			}
-			/*
-			c.pipeline()
-			 .replace(NettyPipeline.ReactiveBridge,
-					 NettyPipeline.ReactiveBridge,
-					 new ChannelOperationsHandler(this));
-			 */
+			else {
+				fireContextError(AbortedException.instance());
+			}
 		}
 	}
 
