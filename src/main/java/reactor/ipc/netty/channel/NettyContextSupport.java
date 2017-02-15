@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package reactor.ipc.netty.channel;
 
 import java.util.Objects;
@@ -8,7 +23,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.ByteToMessageCodec;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.util.AttributeKey;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
@@ -19,7 +33,7 @@ import reactor.util.Loggers;
  *
  * @author Simon Baslé
  */
-public class NettyContextSupport {
+class NettyContextSupport {
 
 	static final Logger log = Loggers.getLogger(NettyContextSupport.class);
 
@@ -28,14 +42,14 @@ public class NettyContextSupport {
 	 * or {@link #addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Consumer, Consumer)}
 	 * if no onClose hook is required.
 	 */
-	public static final Consumer<Runnable> NO_ONCLOSE = r -> {};
+	static final Consumer<Runnable> NO_ONCLOSE = r -> {};
 
 	/**
 	 * A no-op hook that can be used with {@link #addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Consumer, Consumer)}
 	 * or {@link #addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Consumer, Consumer)}
 	 * if no onClose hook is required or no handler removal is necessary.
 	 */
-	public static final Consumer<String>   NO_HANDLER_REMOVE = name -> {};
+	static final Consumer<String>   NO_HANDLER_REMOVE = name -> {};
 
 	/**
 	 * A common implementation for the {@link NettyContext#addDecoder(String, ChannelHandler)}
@@ -56,7 +70,7 @@ public class NettyContextSupport {
 	 * @return
 	 * @see NettyContext#addDecoder(String, ChannelHandler).
 	 */
-	public static void addDecoderBeforeReactorEndHandlers(Channel channel, String name, ChannelHandler handler,
+	static void addDecoderBeforeReactorEndHandlers(Channel channel, String name, ChannelHandler handler,
 			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
@@ -129,7 +143,7 @@ public class NettyContextSupport {
 	 * handler by name, to be called from the {@code onCloseHook}.
 	 * @see NettyContext#addEncoder(String, ChannelHandler)
 	 */
-	public static void addEncoderAfterReactorCodecs(Channel channel, String name, ChannelHandler handler,
+	static void addEncoderAfterReactorCodecs(Channel channel, String name, ChannelHandler handler,
 			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
@@ -190,7 +204,7 @@ public class NettyContextSupport {
 	 * automatically be registered for removal through a {@link NettyContext#onClose(Runnable)}
 	 * (or similar on close hook). This depends on the {@link ContextHandler#CLOSE_CHANNEL} attribute.
 	 */
-	public static final boolean shouldCleanupOnClose(Channel channel) {
+	static final boolean shouldCleanupOnClose(Channel channel) {
 		boolean registerForClose = true;
 		if (channel.attr(ContextHandler.CLOSE_CHANNEL).get() == Boolean.TRUE) {
 			registerForClose = false;

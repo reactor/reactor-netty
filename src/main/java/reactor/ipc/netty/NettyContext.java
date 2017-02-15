@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,6 @@ public interface NettyContext extends Disposable {
 	 * @param handler handler instance
 	 *
 	 * @return this NettyContext
-	 * @see ChannelOperations#addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Consumer, Consumer)
 	 */
 	default NettyContext addEncoder(ChannelHandler handler){
 		return addEncoder(handler.getClass().getSimpleName(), handler);
@@ -59,7 +58,6 @@ public interface NettyContext extends Disposable {
 	 * @param handler handler instance
 	 *
 	 * @return this NettyContext
-	 * @see ChannelOperations#addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Consumer, Consumer)
 	 */
 	NettyContext addEncoder(String name, ChannelHandler handler);
 
@@ -73,7 +71,6 @@ public interface NettyContext extends Disposable {
 	 * @param handler handler instance
 	 *
 	 * @return this NettyContext
-	 * @see ChannelOperations#addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Consumer, Consumer)
 
 	 */
 	default NettyContext addDecoder(ChannelHandler handler){
@@ -91,7 +88,6 @@ public interface NettyContext extends Disposable {
 	 * @param handler handler instance
 	 *
 	 * @return this NettyContext
-	 * @see ChannelOperations#addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Consumer, Consumer)
 	 */
 	NettyContext addDecoder(String name, ChannelHandler handler);
 
