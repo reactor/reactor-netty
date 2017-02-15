@@ -27,15 +27,9 @@ import java.io.IOException;
 public class AbortedException extends RuntimeException {
 
 	/**
-	 * Return the aborted connection exception signal
-	 *
-	 * @return the aborted connection exception signal
+	 * Simple connection abort exception
 	 */
-	public static final AbortedException instance(){
-		return INSTANCE;
-	}
-
-	AbortedException() {
+	public AbortedException() {
 		super("Connection reset by peer");
 	}
 
@@ -43,20 +37,19 @@ public class AbortedException extends RuntimeException {
 		super(message);
 	}
 
+	/**
+	 * Return true if connection has been simply aborted on a tcp level by verifying if
+	 * the given inbound error.
+	 *
+	 * @param err an inbound exception
+	 *
+	 * @return true if connection has been simply aborted on a tcp level
+	 */
 	public static boolean isConnectionReset(Throwable err) {
-		return err == INSTANCE || (err instanceof IOException && (err.getMessage() ==
-				null || err.getMessage()
-		                   .contains("Broken pipe") || err.getMessage()
-		                                                  .contains(
-				                                                  "Connection reset by peer")));
+		return err.getClass()
+		          .equals(AbortedException.class) || (err instanceof IOException && (err.getMessage() == null || err.getMessage()
+		                                                                                                            .contains("Broken pipe") || err.getMessage()
+		                                                                                                                                           .contains(
+				                                                                                                                                           "Connection reset by peer")));
 	}
-
-	static final AbortedException INSTANCE =
-			new AbortedException() {
-				@Override
-				public synchronized Throwable fillInStackTrace() {
-					return this;
-				}
-
-			};
 }

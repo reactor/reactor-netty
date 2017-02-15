@@ -171,7 +171,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				createOperations(c, null);
 			}
 			else {
-				fireContextError(AbortedException.instance());
+				fireContextError(new AbortedException());
 			}
 		}
 	}
@@ -260,7 +260,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	protected void doDropped(Channel channel) {
 		dispose();
-		fireContextError(AbortedException.INSTANCE);
+		fireContextError(new AbortedException("Channel has been dropped"));
 	}
 
 	@Override

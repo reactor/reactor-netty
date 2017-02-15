@@ -305,7 +305,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 			v = pendingWrites.poll();
 			if (log.isDebugEnabled()) {
-				log.debug("Terminated ChannelOperation. Dropping: {}", v);
+				log.debug("{} Terminated ChannelOperation. Dropping Pending Write: {}",
+						ctx.channel().toString(), v);
 			}
 			ReferenceCountUtil.release(v);
 			promise.tryFailure(AbortedException.INSTANCE);

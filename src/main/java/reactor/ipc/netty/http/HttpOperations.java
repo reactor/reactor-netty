@@ -96,7 +96,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			}
 			return then(FutureMono.deferFuture(() -> {
 				if(!channel().isActive()){
-					throw AbortedException.instance();
+					throw new AbortedException();
 				}
 				return channel().writeAndFlush(message);
 			}));
