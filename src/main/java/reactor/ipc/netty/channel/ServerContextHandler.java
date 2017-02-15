@@ -33,6 +33,9 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.options.ServerOptions;
 
+import static reactor.ipc.netty.channel.NettyContextSupport.NO_HANDLER_REMOVE;
+import static reactor.ipc.netty.channel.NettyContextSupport.NO_ONCLOSE;
+
 /**
  *
  * @author Stephane Maldini
@@ -89,43 +92,17 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	public NettyContext addHandler(String name, ChannelHandler handler) {
-		if(channel().pipeline().context(name) == null) {
-			channel().pipeline()
-			         .addLast(name, handler);
-		}
+	public ServerContextHandler addEncoder(String name, ChannelHandler handler) {
+		//TODO should ServerContextHandler remove the handlers on close?
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE);
 		return this;
 	}
 
 	@Override
 	public ServerContextHandler addDecoder(String name, ChannelHandler handler) {
-		return ChannelOperations.addDecoder(this, channel(), name, handler, this::removeHandler);
-	}
-
-	/**
-	 * Safely remove handler from pipeline
-	 *
-	 * @param name handler name
-	 */
-	protected final void removeHandler(String name) {
-		Channel channel = channel();
-		if (channel.isOpen() && channel.pipeline()
-		                               .context(name) != null) {
-			channel.pipeline()
-			       .remove(name);
-			if (log.isDebugEnabled()) {
-				log.debug("[ServerContextHandler] Removed handler: {}, pipeline: {}",
-						name,
-						channel.pipeline());
-			}
-		}
-		else if (log.isDebugEnabled()) {
-			log.debug("[ServerContextHandler] Non Removed handler: {}, context: {}, pipeline: {}",
-					name,
-					channel.pipeline()
-					       .context(name),
-					channel.pipeline());
-		}
+		//TODO should ServerContextHandler remove the handlers on close?
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE);
+		return this;
 	}
 
 	@Override

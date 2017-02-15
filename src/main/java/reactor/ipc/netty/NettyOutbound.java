@@ -101,7 +101,7 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	 * @return {@literal this}
 	 */
 	default NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
-		context().addHandler(NettyPipeline.OnChannelWriteIdle,
+		context().addEncoder(NettyPipeline.OnChannelWriteIdle,
 				new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle));
 		return this;
 	}

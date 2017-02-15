@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,57 +33,61 @@ import reactor.ipc.netty.channel.ChannelOperations;
 public interface NettyContext extends Disposable {
 
 	/**
-	 * Add a {@link ChannelHandler} to the pipeline, before {@link
-	 * NettyPipeline#ReactiveBridge}. The handler will be safely removed when the
-	 * made inactive (pool release).
+	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just after the reactor-added codecs. The handler will be safely removed
+	 * when the channel is made inactive (pool release).
+	 * <p>
+	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 *
 	 * @param handler handler instance
 	 *
-	 * @return this inbound
+	 * @return this NettyContext
 	 */
-	default NettyContext addHandler(ChannelHandler handler){
-		return addHandler(handler.getClass().getSimpleName(), handler);
+	default NettyContext addEncoder(ChannelHandler handler){
+		return addEncoder(handler.getClass().getSimpleName(), handler);
 	}
 
 	/**
-	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline},
-	 * before {@link NettyPipeline#ReactiveBridge}. The handler will be safely removed
-	 * when the made inactive (pool release).
+	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just after the reactor-added codecs. The handler will be safely removed
+	 * when the channel is made inactive (pool release).
+	 * <p>
+	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
 	 *
-	 * @return this inbound
+	 * @return this NettyContext
 	 */
-	NettyContext addHandler(String name, ChannelHandler handler);
+	NettyContext addEncoder(String name, ChannelHandler handler);
 
 	/**
-	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline},
-	 * before reactor configured decoder if any. The handler will be safely removed
-	 * when the made inactive (pool release).
-	 * <p> The handler in such position can usually decode raw frames before reactor
-	 * place its codec like HTTP.
+	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
+	 * The handler will be safely removed when the channel is made inactive (pool release).
+	 * <p>
+	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 *
 	 * @param handler handler instance
 	 *
-	 * @return this inbound
+	 * @return this NettyContext
+
 	 */
 	default NettyContext addDecoder(ChannelHandler handler){
 		return addDecoder(handler.getClass().getSimpleName(), handler);
 	}
 
 	/**
-	 * Add a {@link ChannelHandler} to the {@link io.netty.channel.ChannelPipeline},
-	 * before reactor configured decoder if any. The handler will be safely removed
-	 * when the made inactive (pool release).
-	 * <p> The handler in such position can usually decode raw frames before reactor
-	 * place its codec like HTTP.
+	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
+	 * The handler will be safely removed when the channel is made inactive (pool release).
+	 * <p>
+	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
 	 *
-	 * @return this inbound
-	 * @see ChannelOperations#addDecoder(NettyContext, Channel, String, ChannelHandler, Consumer)
+	 * @return this NettyContext
 	 */
 	NettyContext addDecoder(String name, ChannelHandler handler);
 

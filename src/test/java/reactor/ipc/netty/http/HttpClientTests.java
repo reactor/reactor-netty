@@ -36,7 +36,6 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientException;
-import reactor.ipc.netty.http.client.HttpClientOptions;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -53,7 +52,8 @@ public class HttpClientTests {
 		NettyContext x = TcpServer.create("localhost", 0)
 		                          .newHandler((in, out) -> in.receive()
 		                                                     .take(1)
-		                                                     .then(() -> out.context(c -> c.addHandler(
+		                                                     .then(() -> out.context(c
+				                                                     -> c.addEncoder(
 				                                                     new HttpResponseEncoder()))
 		                                                                    .sendObject(
 				                                                     new DefaultFullHttpResponse(
@@ -103,7 +103,8 @@ public class HttpClientTests {
 	@Ignore
 	public void pipelined() throws Exception {
 		NettyContext x = TcpServer.create("localhost", 0)
-		                          .newHandler((in, out) -> out.context(c -> c.addHandler(new HttpResponseEncoder()))
+		                          .newHandler((in, out) -> out.context(c -> c.addEncoder(new
+				                          HttpResponseEncoder()))
 		                                                      .sendObject(Flux.just(
 				                                                      response(),
 				                                                      response()))
@@ -343,7 +344,7 @@ public class HttpClientTests {
 		NettyContext x = TcpServer.create("localhost", 0)
 		                          .newHandler((in, out) -> {
 										signal.onComplete();
-										return out.context(c -> c.addHandler(
+										return out.context(c -> c.addEncoder(
 												new HttpResponseEncoder()))
 										          .sendObject(Mono.delayMillis(2000)
 												          .map(t ->
