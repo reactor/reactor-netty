@@ -50,7 +50,8 @@ public final class HttpServer
 		implements NettyConnector<HttpServerRequest, HttpServerResponse> {
 
 	/**
-	 * Build a simple Netty HTTP server listening on 127.0.0.1 and 12012
+	 * Build a simple Netty HTTP server listening on loopback (0.0.0.0) and
+	 * {@link NettyOptions#DEFAULT_PORT port 12012}.
 	 *
 	 * @return a simple HTTP Server
 	 */
@@ -59,9 +60,10 @@ public final class HttpServer
 	}
 
 	/**
-	 * Build a simple Netty HTTP server listening othe passed bind address and port
+	 * Build a simple Netty HTTP server listening over bind address and port passed
+	 * through the {@link HttpServerOptions}.
 	 *
-	 * @param options
+	 * @param options the options for the server, including bind address and port.
 	 *
 	 * @return a simple HTTP server
 	 */
@@ -74,9 +76,10 @@ public final class HttpServer
 	}
 
 	/**
-	 * Build a simple Netty HTTP server listening on 127.0.0.1 and the passed port
+	 * Build a simple Netty HTTP server listening on loopback (0.0.0.0) and the provided
+	 * port.
 	 *
-	 * @param port the port to listen to
+	 * @param port the port to listen to, or 0 to dynamically attribute one.
 	 *
 	 * @return a simple HTTP server
 	 */
@@ -85,7 +88,8 @@ public final class HttpServer
 	}
 
 	/**
-	 * Build a simple Netty HTTP server listening on 127.0.0.1 and 12012
+	 * Build a simple Netty HTTP server listening on the provided bind address and
+	 * {@link NettyOptions#DEFAULT_PORT port 12012}.
 	 *
 	 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
 	 *
@@ -96,10 +100,10 @@ public final class HttpServer
 	}
 
 	/**
-	 * Build a simple Netty HTTP server listening othe passed bind address and port
+	 * Build a simple Netty HTTP server listening on the provided bind address and port.
 	 *
 	 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
-	 * @param port the port to listen to
+	 * @param port the port to listen to, or 0 to dynamically attribute one.
 	 *
 	 * @return a simple HTTP server
 	 */

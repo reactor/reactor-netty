@@ -51,7 +51,8 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 		implements Supplier<BOOSTRAP> {
 
 	/**
-	 *
+	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
+	 * the {@code PORT} <b>environment variable</b>.
 	 */
 	public static final int     DEFAULT_PORT         =
 			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
