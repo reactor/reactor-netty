@@ -71,7 +71,7 @@ public final class HttpClientOptions extends ClientOptions {
 
 	@Override
 	public HttpClientOptions afterChannelInit(Consumer<? super Channel> afterChannelInit) {
-		afterChannelInit(afterChannelInit);
+		super.afterChannelInit(afterChannelInit);
 		return this;
 	}
 
@@ -144,7 +144,7 @@ public final class HttpClientOptions extends ClientOptions {
 
 	@Override
 	public HttpClientOptions onChannelInit(Predicate<? super Channel> onChannelInit) {
-		onChannelInit(onChannelInit);
+		super.onChannelInit(onChannelInit);
 		return this;
 	}
 
