@@ -66,7 +66,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 		channel.close();
 		if(!fired) {
 			fired = true;
-			sink.error(AbortedException.INSTANCE);
+			sink.error(new AbortedException("Channel has been dropped"));
 		}
 	}
 

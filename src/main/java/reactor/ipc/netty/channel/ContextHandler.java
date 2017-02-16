@@ -433,7 +433,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			if (!active) {
 				ctx.pipeline().remove(this);
 				parent.terminateChannel(ctx.channel());
-				parent.fireContextError(AbortedException.INSTANCE);
+				parent.fireContextError(new AbortedException());
 			}
 			ctx.fireChannelInactive();
 		}

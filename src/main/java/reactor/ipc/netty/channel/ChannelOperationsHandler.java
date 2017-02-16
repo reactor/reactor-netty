@@ -95,7 +95,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 			else {
 				parentContext().terminateChannel(ctx.channel());
-				parentContext().fireContextError(AbortedException.INSTANCE);
+				parentContext().fireContextError(new AbortedException());
 			}
 		}
 		catch (Throwable err) {
@@ -309,7 +309,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						ctx.channel().toString(), v);
 			}
 			ReferenceCountUtil.release(v);
-			promise.tryFailure(AbortedException.INSTANCE);
+			promise.tryFailure(new AbortedException("Connection has been closed"));
 		}
 	}
 
@@ -451,7 +451,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						parent.ctx.flush();
 					}
 					else {
-						promise.setFailure(AbortedException.INSTANCE);
+						promise.setFailure(new AbortedException("Connection has been closed"));
 						return;
 					}
 				}
@@ -481,7 +481,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					parent.ctx.flush();
 				}
 				else {
-					promise.setFailure(AbortedException.INSTANCE);
+					promise.setFailure(new AbortedException("Connection has been closed"));
 					return;
 				}
 			}

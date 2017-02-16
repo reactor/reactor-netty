@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -257,6 +258,14 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 		 * @return this builder
 		 */
 		Form encoding(HttpPostRequestEncoder.EncoderMode mode);
+
+		/**
+		 * Set Upload factories (allows memory threshold configuration)
+		 *
+		 * @param factory the new {@link HttpDataFactory} to use
+		 * @return this builder
+		 */
+		Form factory(HttpDataFactory factory);
 
 		/**
 		 * Add an HTTP File Upload attribute
