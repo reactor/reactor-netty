@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeoutException;
 
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -363,6 +364,40 @@ public class HttpClientTests {
 		                              .timeout(signal)
 		)
 		            .verifyError(TimeoutException.class);
+	}
+
+	@Test
+	public void gzip() {
+		//verify gzip is negotiated (when no decoder)
+		StepVerifier.create(
+				HttpClient.create()
+				          .get("http://www.httpwatch.com", req -> req
+						          .addHeader("Accept-Encoding", "gzip")
+						          .addHeader("Accept-Encoding", "deflate")
+				          )
+				          .then(r -> r.receive().asString().elementAt(0).map(s -> s.substring(0, 100))
+				                      .and(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
+		)
+		            .expectNextMatches(tuple -> !tuple.getT1().contains("<html>") && !tuple.getT1().contains("<head>")
+				            && "gzip".equals(tuple.getT2()))
+		            .expectComplete()
+		            .verify();
+
+		//verify decoder does its job and removes the header
+		StepVerifier.create(
+				HttpClient.create()
+				          .get("http://www.httpwatch.com", req -> {
+					          req.context().addEncoder("gzipDecompressor", new HttpContentDecompressor());
+					          return req.addHeader("Accept-Encoding", "gzip")
+					                    .addHeader("Accept-Encoding", "deflate");
+				          })
+				          .then(r -> r.receive().asString().elementAt(0).map(s -> s.substring(0, 100))
+				                      .and(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
+		)
+		            .expectNextMatches(tuple -> tuple.getT1().contains("<html>") && tuple.getT1().contains("<head>")
+				            && "".equals(tuple.getT2()))
+		            .expectComplete()
+		            .verify();
 	}
 
 }
