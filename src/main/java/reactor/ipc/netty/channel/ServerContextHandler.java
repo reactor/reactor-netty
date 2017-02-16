@@ -94,14 +94,28 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	@Override
 	public ServerContextHandler addEncoder(String name, ChannelHandler handler) {
 		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE);
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE, true);
+		return this;
+	}
+
+	@Override
+	public ServerContextHandler setEncoder(String name, ChannelHandler handler) {
+		//TODO should ServerContextHandler remove the handlers on close?
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE, false);
 		return this;
 	}
 
 	@Override
 	public ServerContextHandler addDecoder(String name, ChannelHandler handler) {
 		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE);
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE, true);
+		return this;
+	}
+
+	@Override
+	public ServerContextHandler setDecoder(String name, ChannelHandler handler) {
+		//TODO should ServerContextHandler remove the handlers on close?
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE, false);
 		return this;
 	}
 

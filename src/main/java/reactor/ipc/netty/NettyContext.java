@@ -16,13 +16,11 @@
 package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
-import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.channel.ChannelOperations;
 
 /**
  * Hold contextual information for the underlying {@link Channel}
@@ -34,10 +32,13 @@ public interface NettyContext extends Disposable {
 
 	/**
 	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
-	 * that is just after the reactor-added codecs. The handler will be safely removed
-	 * when the channel is made inactive (pool release).
+	 * that is just after the reactor-added codecs. If a handler with a similar name already
+	 * exists, this operation is skipped.
 	 * <p>
-	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}.
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
 	 *
 	 * @param handler handler instance
 	 *
@@ -49,10 +50,13 @@ public interface NettyContext extends Disposable {
 
 	/**
 	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
-	 * that is just after the reactor-added codecs. The handler will be safely removed
-	 * when the channel is made inactive (pool release).
+	 * that is just after the reactor-added codecs. If a handler with a similar name already
+	 * exists, this operation is skipped.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
@@ -62,11 +66,31 @@ public interface NettyContext extends Disposable {
 	NettyContext addEncoder(String name, ChannelHandler handler);
 
 	/**
-	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
-	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
-	 * The handler will be safely removed when the channel is made inactive (pool release).
+	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just after the reactor-added codecs. If a handler with a similar name already
+	 * exists, this operation replaces it.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
+	 *
+	 * @param name handler name
+	 * @param handler handler instance
+	 *
+	 * @return this NettyContext
+	 */
+	NettyContext setEncoder(String name, ChannelHandler handler);
+
+	/**
+	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
+	 * If a handler with a similar name already exists, this operation is skipped.
+	 * <p>
+	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
 	 *
 	 * @param handler handler instance
 	 *
@@ -80,9 +104,12 @@ public interface NettyContext extends Disposable {
 	/**
 	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
-	 * The handler will be safely removed when the channel is made inactive (pool release).
+	 * If a handler with a similar name already exists, this operation is skipped.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
@@ -90,6 +117,23 @@ public interface NettyContext extends Disposable {
 	 * @return this NettyContext
 	 */
 	NettyContext addDecoder(String name, ChannelHandler handler);
+
+	/**
+	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
+	 * If a handler with a similar name already exists, this operation replaces it.
+	 * <p>
+	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
+	 *
+	 * @param name handler name
+	 * @param handler handler instance
+	 *
+	 * @return this NettyContext
+	 */
+	NettyContext setDecoder(String name, ChannelHandler handler);
 
 	/**
 	 * Return remote address if remote channel {@link NettyContext} otherwise local

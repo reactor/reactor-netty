@@ -38,15 +38,15 @@ class NettyContextSupport {
 	static final Logger log = Loggers.getLogger(NettyContextSupport.class);
 
 	/**
-	 * A no-op hook that can be used with {@link #addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Consumer, Consumer)}
-	 * or {@link #addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Consumer, Consumer)}
+	 * A no-op hook that can be used with {@link #addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Consumer, Consumer, boolean)}
+	 * or {@link #addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Consumer, Consumer, boolean)}
 	 * if no onClose hook is required.
 	 */
 	static final Consumer<Runnable> NO_ONCLOSE = r -> {};
 
 	/**
-	 * A no-op hook that can be used with {@link #addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Consumer, Consumer)}
-	 * or {@link #addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Consumer, Consumer)}
+	 * A no-op hook that can be used with {@link #addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Consumer, Consumer, boolean)}
+	 * or {@link #addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Consumer, Consumer, boolean)}
 	 * if no onClose hook is required or no handler removal is necessary.
 	 */
 	static final Consumer<String>   NO_HANDLER_REMOVE = name -> {};
@@ -59,8 +59,8 @@ class NettyContextSupport {
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#RIGHT}
 	 * prefix, and add the handler just before the first of these.
 	 * <p>
-	 * It will also add a ByteBuf extractor for relevant encoders, unless the handler
-	 * already existed (in which case the extractor should already have been added).
+	 * It will also add a ByteBuf extractor for relevant encoders (and add/remove it as
+	 * relevant if the handler is replaced rather than added/skipped).
 	 *
 	 * @param channel the channel on which to add the decoder.
 	 * @param name the name of the decoder.
@@ -70,17 +70,21 @@ class NettyContextSupport {
 	 * {@link #shouldCleanupOnClose(Channel)} returns false.
 	 * @param removeCallback a callback that can be used to safely remove a specific
 	 * handler by name, to be called from the {@code onCloseHook}.
+	 * @param skipIfExist true to skip adding the handler if it exists (default) or false
+	 * to replace the existing handler.
 	 * @return
 	 * @see NettyContext#addDecoder(String, ChannelHandler).
 	 */
 	static void addDecoderBeforeReactorEndHandlers(Channel channel, String name, ChannelHandler handler,
-			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback) {
+			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback, boolean skipIfExist) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
 
+		String extractorName = name + "$extract";
 		boolean exists = channel.pipeline().get(name) != null;
+		boolean extractorExists = channel.pipeline().get(extractorName) != null;
 
-		if (exists) {
+		if (skipIfExist && exists) {
 			if (log.isDebugEnabled()) {
 				log.debug("Handler [{}] already exists in the pipeline, decoder has been skipped", name);
 			}
@@ -90,7 +94,29 @@ class NettyContextSupport {
 		boolean addExtractor = handler instanceof ByteToMessageDecoder
 				|| handler instanceof ByteToMessageCodec
 				|| handler instanceof CombinedChannelDuplexHandler;
-		String extractorName = name + "$extract";
+
+		if (exists) {
+			channel.pipeline().replace(name, name, handler);
+			if (log.isDebugEnabled()) {
+				log.debug("Handler [{}] was already present in the pipeline and has been replaced by the decoder, at the same position", name);
+			}
+
+			if (!addExtractor && extractorExists) {
+				channel.pipeline().remove(extractorName);
+				if (log.isDebugEnabled()) {
+					log.debug("Unneeded extractor of replaced decoder removed");
+				}
+			}
+			else if (addExtractor && !extractorExists) {
+				//place the extractor just before the decoder and register for cleanup
+				channel.pipeline().addBefore(name, extractorName, ByteBufHolderHandler.INSTANCE);
+				registerForClose(shouldCleanupOnClose(channel), true, name, extractorName, onCloseHook, removeCallback);
+				if (log.isDebugEnabled()) {
+					log.debug("Missing extractor added for replacing decoder");
+				}
+			}
+			return;
+		}
 
 		//we need to find the correct position
 		String before = null;
@@ -101,14 +127,14 @@ class NettyContextSupport {
 			}
 		}
 
-			if (before == null) {
+		if (before == null) {
 			if (addExtractor) channel.pipeline().addLast(extractorName, ByteBufHolderHandler.INSTANCE);
-				channel.pipeline().addLast(name, handler);
-			}
-			else {
+			channel.pipeline().addLast(name, handler);
+		}
+		else {
 			if (addExtractor) channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, extractorName, ByteBufHolderHandler.INSTANCE);
-				channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, name, handler);
-			}
+			channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, name, handler);
+		}
 
 		registerForClose(shouldCleanupOnClose(channel), addExtractor, name, extractorName, onCloseHook, removeCallback);
 
@@ -127,8 +153,8 @@ class NettyContextSupport {
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#LEFT}
 	 * prefix, and add the handler just after the last of these.
 	 * <p>
-	 * It will also add a ByteBuf extractor for relevant encoders, unless the handler
-	 * already existed (in which case the extractor should already have been added).
+	 * It will also add a ByteBuf extractor for relevant encoders (and add/remove it as
+	 * relevant if the handler is replaced rather than added/skipped).
 	 *
 	 * @param channel the channel on which to add the encoder.
 	 * @param name the name of the encoder.
@@ -138,16 +164,20 @@ class NettyContextSupport {
 	 * {@link #shouldCleanupOnClose(Channel)} returns false.
 	 * @param removeCallback a callback that can be used to safely remove a specific
 	 * handler by name, to be called from the {@code onCloseHook}.
+	 * @param skipIfExist true to skip adding the handler if it exists (default) or false
+	 * to replace the existing handler.
 	 * @see NettyContext#addEncoder(String, ChannelHandler)
 	 */
 	static void addEncoderAfterReactorCodecs(Channel channel, String name, ChannelHandler handler,
-			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback) {
+			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback, boolean skipIfExist) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
 
+		String extractorName = name + "$extract";
 		boolean exists = channel.pipeline().get(name) != null;
+		boolean extractorExists = channel.pipeline().get(extractorName) != null;
 
-		if (exists) {
+		if (skipIfExist && exists) {
 			if (log.isDebugEnabled()) {
 				log.debug("Handler [{}] already exists in the pipeline, encoder has been skipped", name);
 			}
@@ -157,7 +187,29 @@ class NettyContextSupport {
 		boolean addExtractor = handler instanceof ByteToMessageDecoder
 				|| handler instanceof ByteToMessageCodec
 				|| handler instanceof CombinedChannelDuplexHandler;
-		String extractorName = name + "$extract";
+
+		if (exists) {
+			channel.pipeline().replace(name, name, handler);
+			if (log.isDebugEnabled()) {
+				log.debug("Handler [{}] was already present in the pipeline and has been replaced by the encoder, at the same position", name);
+			}
+
+			if (!addExtractor && extractorExists) {
+				channel.pipeline().remove(extractorName);
+				if (log.isDebugEnabled()) {
+					log.debug("Unneeded extractor of replaced encoder removed");
+				}
+			}
+			else if (addExtractor && !extractorExists) {
+				//place the extractor just before the decoder and register for cleanup
+				channel.pipeline().addBefore(name, extractorName, ByteBufHolderHandler.INSTANCE);
+				registerForClose(shouldCleanupOnClose(channel), true, name, extractorName, onCloseHook, removeCallback);
+				if (log.isDebugEnabled()) {
+					log.debug("Missing extractor added for replacing encoder");
+				}
+			}
+			return;
+		}
 
 		//we need to find the correct position
 		String after = null;
@@ -167,16 +219,16 @@ class NettyContextSupport {
 			}
 		}
 
-			if (after == null) {
-				channel.pipeline().addFirst(name, handler);
+		if (after == null) {
+			channel.pipeline().addFirst(name, handler);
 				//place the extractor just before the encoder
 			if (addExtractor) channel.pipeline().addFirst(extractorName, ByteBufHolderHandler.INSTANCE);
-			}
-			else {
-				channel.pipeline().addAfter(after, name, handler);
+		}
+		else {
+			channel.pipeline().addAfter(after, name, handler);
 				//place the extractor just before the encoder
 			if (addExtractor) channel.pipeline().addAfter(after, extractorName, ByteBufHolderHandler.INSTANCE);
-			}
+		}
 
 		registerForClose(shouldCleanupOnClose(channel), addExtractor, name, extractorName, onCloseHook, removeCallback);
 
@@ -193,15 +245,15 @@ class NettyContextSupport {
 		if (!shouldCleanupOnClose) return;
 
 		if (addExtractor) {
-				onCloseHook.accept(() -> {
-					removeCallback.accept(name);
-					removeCallback.accept(extractorName);
-				});
-			}
-		else {
-				onCloseHook.accept(() -> removeCallback.accept(name));
-			}
+			onCloseHook.accept(() -> {
+				removeCallback.accept(name);
+				removeCallback.accept(extractorName);
+			});
 		}
+		else {
+			onCloseHook.accept(() -> removeCallback.accept(name));
+		}
+	}
 
 	/**
 	 * Determines if user-provided handlers registered on the given channel should

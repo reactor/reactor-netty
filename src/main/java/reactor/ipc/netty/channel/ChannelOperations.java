@@ -160,13 +160,26 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> addDecoder(String name,
 			ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, this::onClose, this::removeHandler);
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, this::onClose, this::removeHandler, true);
+		return this;
+	}
+
+	@Override
+	public ChannelOperations<INBOUND, OUTBOUND> setDecoder(String name,
+			ChannelHandler handler) {
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, this::onClose, this::removeHandler, false);
 		return this;
 	}
 
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> addEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, this::onClose, this::removeHandler);
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, this::onClose, this::removeHandler, true);
+		return this;
+	}
+
+	@Override
+	public ChannelOperations<INBOUND, OUTBOUND> setEncoder(String name, ChannelHandler handler) {
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, this::onClose, this::removeHandler, false);
 		return this;
 	}
 
