@@ -252,7 +252,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		Subscription s =
 				OUTBOUND_CLOSE.getAndSet(this, Operators.cancelledSubscription());
 		if (s == Operators.cancelledSubscription() || isDisposed()) {
-			Operators.onErrorDropped(t);
+			if(log.isDebugEnabled()){
+				log.error("An outbound error could not be processed", t);
+			}
 			return;
 		}
 		onOutboundError(t);

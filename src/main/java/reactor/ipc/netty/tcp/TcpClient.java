@@ -209,7 +209,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 						(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
 	}
 
-	static final ChannelOperations.OnNew EMPTY = (a,b,c) -> null;
+	protected static final ChannelOperations.OnNew EMPTY = (a,b,c) -> null;
+
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
 
 }

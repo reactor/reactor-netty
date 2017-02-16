@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -359,12 +359,12 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 					secure,
 					providedAddress,
 					pool,
-					(ch, c, msg) -> {
+					handler != null ? (ch, c, msg) -> {
 						if(onSetup != null){
 							onSetup.accept(ch);
 						}
 						return HttpClientOperations.bindHttp(ch, handler, c);
-					}).onPipeline(this);
+					} : EMPTY).onPipeline(this);
 		}
 
 		@Override

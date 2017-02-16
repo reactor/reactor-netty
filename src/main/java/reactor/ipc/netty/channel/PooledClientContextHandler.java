@@ -20,17 +20,18 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.SucceededFuture;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -53,9 +54,14 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	final ChannelPool           pool;
 	final DirectProcessor<Void> onReleaseEmitter;
 
-	volatile boolean cancelled;
+	volatile Future<CHANNEL> future;
 
-	Future<CHANNEL> f;
+	static final AtomicReferenceFieldUpdater<PooledClientContextHandler, Future> FUTURE =
+			AtomicReferenceFieldUpdater.newUpdater(PooledClientContextHandler.class,
+					Future.class,
+					"future");
+
+	static final Future DISPOSED = new SucceededFuture<>(null, null);
 
 	PooledClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			ClientOptions options,
@@ -83,28 +89,52 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@SuppressWarnings("unchecked")
 	public void setFuture(Future<?> future) {
 		Objects.requireNonNull(future, "future");
-		if (this.f != null) {
-			future.cancel(true);
-			return;
+
+		for (; ; ) {
+			Future<CHANNEL> f = this.future;
+
+			if (f == DISPOSED) {
+				cancelFuture(future);
+				return;
+			}
+
+			if (FUTURE.compareAndSet(this, f, future)) {
+				cancelFuture(f);
+				break;
+			}
 		}
 		if (log.isDebugEnabled()) {
 			log.debug("Acquiring existing channel from pool: {}", pool.toString());
 		}
-		this.f = (Future<CHANNEL>) future;
-		f.addListener(this);
+		if (future.isDone()) {
+			try {
+				operationComplete((Future<CHANNEL>) future);
+			}
+			catch (Exception e) {
+				fireContextError(e);
+			}
+			return;
+		}
+		((Future<CHANNEL>) future).addListener(this);
+	}
+
+	void cancelFuture(Future<?> future) {
+		if (future != null) {
+			future.cancel(true);
+		}
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	protected void terminateChannel(Channel channel) {
-		release((CHANNEL)channel);
+		release((CHANNEL) channel);
 	}
 
 	@Override
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
 		sink.setCancellation(this);
-		if (future.isCancelled() || cancelled) {
-			if(log.isDebugEnabled()) {
+		if (future.isCancelled() || future == DISPOSED) {
+			if (log.isDebugEnabled()) {
 				log.debug("Cancelled {}", future.toString());
 			}
 			return;
@@ -137,49 +167,31 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	@SuppressWarnings("unchecked")
 	final void connectOrAcquire(CHANNEL c) {
-		ChannelOperationsHandler handler = (ChannelOperationsHandler) c.pipeline()
-		                                                               .get(NettyPipeline.ReactiveBridge);
-		if (handler == null) {
-			if (log.isDebugEnabled()) {
-				log.debug("Connected new channel: {}", c.toString());
-			}
-			accept(c);
-			c.pipeline()
-			 .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
-			if (c.isRegistered()) {
-				c.pipeline()
-				 .fireChannelRegistered();
-			}
-			if (c.isActive()) {
-				c.pipeline()
-				 .fireChannelActive();
+		ChannelOperationsHandler op = c.pipeline()
+		                               .get(ChannelOperationsHandler.class);
+		if (!c.isActive()) {
+			if (op == null) {
+				//just connected not acquired
 				return;
 			}
-			c.pipeline()
-			 .fireChannelInactive();
-			if (!c.isRegistered()) {
-				c.pipeline()
-				 .fireChannelUnregistered();
+			if (log.isDebugEnabled()) {
+				log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}",
+						c.toString());
 			}
+			setFuture(pool.acquire());
 		}
-		else {
-			if (c.isActive()) {
-				if (log.isDebugEnabled()) {
-					log.debug("Acquired existing channel: {}", c.toString());
-				}
-				handler.parentContext = this;
-				createOperations(c, null);
-			}
-			else {
-				fireContextError(new AbortedException());
-			}
+		if (log.isDebugEnabled()) {
+			log.debug("Acquired existing channel: " + c.toString());
 		}
+		op.lastContext = this;
+		createOperations(c, null);
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public void dispose() {
-		if (f == null) {
+		Future<CHANNEL> f = FUTURE.getAndSet(this, DISPOSED);
+		if (f == null || f == DISPOSED) {
 			return;
 		}
 		if (!f.isDone()) {
@@ -187,7 +199,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				log.debug("Cancel pending pooled channel acquisition: {}", f.toString());
 			}
 			f.addListener(ff -> {
-				if(ff.isSuccess()) {
+				if (ff.isSuccess()) {
 					release((CHANNEL) ff.get());
 				}
 			});
@@ -199,17 +211,18 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 			if (!c.eventLoop()
 			      .inEventLoop()) {
-				c.eventLoop().execute(() -> {
-					ChannelOperations<?, ?> ops = ChannelOperations.get(c);
-					//defer to operation dispose if present
-					if (ops != null) {
-						ops.dispose();
-						return;
-					}
+				c.eventLoop()
+				 .execute(() -> {
+					 ChannelOperations<?, ?> ops = ChannelOperations.get(c);
+					 //defer to operation dispose if present
+					 if (ops != null) {
+						 ops.dispose();
+						 return;
+					 }
 
-					release(c);
+					 release(c);
 
-				});
+				 });
 
 			}
 			else {
@@ -231,29 +244,27 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	final void release(CHANNEL c) {
-		if (cancelled){
-			return;
-		}
-		cancelled = true;
 		if (log.isDebugEnabled()) {
 			log.debug("Releasing channel: {}", c.toString());
 		}
 
-		pool.release(c).addListener(f -> {
-			if (!c.isActive()) {
-				return;
-			}
-			Boolean attr = c.attr(CLOSE_CHANNEL).get();
-			if(attr != null && attr && c.isActive()){
-				c.close();
-			}
-			else if(f.isSuccess()){
-				onReleaseEmitter.onComplete();
-			}
-			else{
-				onReleaseEmitter.onError(f.cause());
-			}
-		});
+		pool.release(c)
+		    .addListener(f -> {
+			    if (!c.isActive()) {
+				    return;
+			    }
+			    Boolean attr = c.attr(CLOSE_CHANNEL)
+			                    .get();
+			    if (attr != null && attr && c.isActive()) {
+				    c.close();
+			    }
+			    else if (f.isSuccess()) {
+				    onReleaseEmitter.onComplete();
+			    }
+			    else {
+				    onReleaseEmitter.onError(f.cause());
+			    }
+		    });
 
 	}
 
@@ -264,7 +275,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public void accept(Channel ch) {
+	protected void doPipeline(Channel ch) {
 		//do not add in channelCreated pool
 	}
 

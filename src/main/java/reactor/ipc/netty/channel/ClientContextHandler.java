@@ -80,7 +80,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public void accept(Channel ch) {
+	protected void doPipeline(Channel ch) {
 		addSslAndLogHandlers(clientOptions, this, loggingHandler, secure, getSNI(), ch.pipeline());
 		addProxyHandler(clientOptions, ch.pipeline());
 	}

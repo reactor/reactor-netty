@@ -26,16 +26,27 @@ import java.io.IOException;
  */
 public class AbortedException extends RuntimeException {
 
+	final boolean nostack;
+
 	/**
-	 * Simple connection abort exception
+	 * Simple connection abort exception without stack
 	 */
 	public AbortedException() {
 		super("Connection reset by peer");
+		nostack = true;
 	}
 
 	public AbortedException(String message) {
 		super(message);
+		nostack = false;
 	}
+
+	@Override
+	public synchronized Throwable fillInStackTrace() {
+		return nostack ? this : super.fillInStackTrace();
+	}
+
+
 
 	/**
 	 * Return true if connection has been simply aborted on a tcp level by verifying if

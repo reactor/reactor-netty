@@ -60,6 +60,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	final PublisherSender                inner;
 	final BiConsumer<?, ? super ByteBuf> encoder;
 	final int                            prefetch;
+	final ContextHandler<?> parentContext;
 
 	/**
 	 * Cast the supplied queue (SpscLinkedArrayQueue) to use its atomic dual-insert
@@ -69,9 +70,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	Queue<?>                            pendingWrites;
 	ChannelHandlerContext               ctx;
 	boolean                             flushOnEach;
-	long                                pendingBytes;
 
-	ContextHandler<?> parentContext;
+	long                                pendingBytes;
+	ContextHandler<?> lastContext;
 
 	volatile boolean innerActive;
 	volatile boolean removed;
@@ -82,8 +83,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		this.inner = new PublisherSender(this);
 		this.prefetch = 32;
 		this.encoder = NOOP_ENCODER;
+		this.lastContext = contextHandler;
 		this.parentContext = contextHandler; // only set if parent context is closable,
-		// pool will usually fetch context via parentContext()
+		// pool will usually fetch context via lastContext()
+	}
+
+	@Override
+	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		parentContext.createOperations(ctx.channel(), null);
 	}
 
 	@Override
@@ -94,8 +101,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				ops.onHandlerTerminate();
 			}
 			else {
-				parentContext().terminateChannel(ctx.channel());
-				parentContext().fireContextError(new AbortedException());
+				lastContext().terminateChannel(ctx.channel());
+				lastContext().fireContextError(new AbortedException());
 			}
 		}
 		catch (Throwable err) {
@@ -134,9 +141,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 	}
 
-	ContextHandler<?> parentContext() {
-		if (parentContext != null) {
-			return parentContext;
+	ContextHandler<?> lastContext() {
+		if (lastContext != null) {
+			return lastContext;
 		}
 		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 
@@ -169,8 +176,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			ops.onInboundError(err);
 		}
 		else {
-			parentContext().terminateChannel(ctx.channel());
-			parentContext().fireContextError(err);
+			lastContext().terminateChannel(ctx.channel());
+			lastContext().fireContextError(err);
 		}
 	}
 
@@ -182,11 +189,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		this.ctx = ctx;
-		if (ctx.channel()
-		       .isActive()) {
-			parentContext().createOperations(ctx.channel(), null);
-			inner.request(prefetch);
-		}
+		inner.request(prefetch);
 	}
 
 	@Override
@@ -206,7 +209,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			log.trace("User event {}", evt);
 		}
 		if (evt == NettyPipeline.handlerTerminatedEvent()) {
-			parentContext().terminateChannel(ctx.channel());
+			lastContext().terminateChannel(ctx.channel());
 			return;
 		}
 		if (evt instanceof NettyPipeline.SendOptionsChangeEvent) {
