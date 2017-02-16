@@ -70,7 +70,7 @@ public interface LoopResources extends Disposable {
 	 *
 	 * @param prefix the event loop thread name prefix
 	 * @param workerCount number of worker threads
-	 * @param daemon shoult the thread be released on jvm shutdown
+	 * @param daemon should the thread be released on jvm shutdown
 	 *
 	 * @return a new {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
@@ -89,7 +89,7 @@ public interface LoopResources extends Disposable {
 	 * @param prefix the event loop thread name prefix
 	 * @param selectCount number of selector threads
 	 * @param workerCount number of worker threads
-	 * @param daemon shoult the thread be released on jvm shutdown
+	 * @param daemon should the thread be released on jvm shutdown
 	 *
 	 * @return a new {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
@@ -124,7 +124,6 @@ public interface LoopResources extends Disposable {
 		return new DefaultLoopResources(prefix, DEFAULT_IO_SELECT_COUNT,
 				DEFAULT_IO_WORKER_COUNT,
 				true);
-
 	}
 
 	/**

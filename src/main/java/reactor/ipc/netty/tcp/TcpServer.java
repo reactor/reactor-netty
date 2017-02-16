@@ -36,6 +36,7 @@ import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
+import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.options.ServerOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -48,9 +49,11 @@ import reactor.util.Loggers;
 public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 
 	/**
-	 * Bind a new TCP server to "loopback" on port {@literal 12012}.
-	 * Handlers will run on the same thread they have beem receiving IO events.
-	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 * Bind a new TCP server to "localhost" on a randomly assigned port.
+	 * <p> The assigned port can be found once a handler has been bound, using
+	 * {@link NettyContext#address()} and its {@code getPort()} method.
+	 * <p> Handlers will run on the same thread they have been receiving IO events.
+	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -59,9 +62,11 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	}
 
 	/**
-	 * Bind a new TCP server to the given bind address and port.
-	 * Handlers will run on the same thread they have beem receiving IO events.
-	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 * Bind a new TCP server to the bind address and port provided through the options.
+	 * Use {@literal 0} to let the system assign a random port, or
+	 * {@link NettyOptions#DEFAULT_PORT} once to use a global default port.
+	 * <p> Handlers will run on the same thread they have been receiving IO events.
+	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param options {@link ServerOptions} configuration input
 	 *
@@ -76,9 +81,11 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	}
 
 	/**
-	 * Bind a new TCP server to "loopback" on the given port.
-	 * Handlers will run on the same thread they have beem receiving IO events.
-	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 * Bind a new TCP server to "localhost" on the given port. Use {@literal 0} to let
+	 * the system assign a random port, or {@link NettyOptions#DEFAULT_PORT} once to use
+	 * a global default port.
+	 * <p> Handlers will run on the same thread they have been receiving IO events.
+	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param port the port to listen on loopback
 	 *
@@ -89,12 +96,14 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	}
 
 	/**
-	 * Bind a new TCP server to the given bind address on port {@literal 12012}.
-	 * Handlers will run on the same thread they have beem receiving IO events.
-	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 * Bind a new TCP server to the given bind address on a randomly assigned port.
+	 * <p> The assigned port can be found once a handler has been bound, using
+	 * {@link NettyContext#address()} and its {@code getPort()} method.
+	 * <p> Handlers will run on the same thread they have been receiving IO events.
+	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
-	 * default port 12012
+	 * default port
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -103,13 +112,15 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	}
 
 	/**
-	 * Bind a new TCP server to the given bind address and port.
-	 * Handlers will run on the same thread they have beem receiving IO events.
-	 * <p> The type of emitted data or received data is {@link ByteBuf}
+	 * Bind a new TCP server to the given bind address and port. Use {@literal 0} to let
+	 * the system assign a random port, or {@link NettyOptions#DEFAULT_PORT} once to use
+	 * a global default port.
+	 * <p> Handlers will run on the same thread they have been receiving IO events.
+	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param port the port to listen on the passed bind address
 	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
 	 * passed port
+	 * @param port the port to listen on the passed bind address
 	 *
 	 * @return a new {@link TcpServer}
 	 */

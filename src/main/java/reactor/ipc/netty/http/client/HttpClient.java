@@ -30,6 +30,7 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.logging.LoggingHandler;
@@ -65,7 +66,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	}
 
 	/**
-	 * @return a simple HTTP client
+	 * @return a simple HTTP client using provided {@link HttpClientOptions options}
 	 */
 	public static HttpClient create(Consumer<? super HttpClientOptions> options) {
 		Objects.requireNonNull(options, "options");
@@ -77,21 +78,21 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	}
 
 	/**
-	 * @return a simple HTTP client
+	 * @return a simple HTTP client bound on the provided address and port 80
 	 */
 	public static HttpClient create(String address) {
 		return create(address, 80);
 	}
 
 	/**
-	 * @return a simple HTTP client
+	 * @return a simple HTTP client bound on the provided address and port
 	 */
 	public static HttpClient create(String address, int port) {
 		return create(opts -> opts.connect(address, port));
 	}
 
 	/**
-	 * @return a simple HTTP client
+	 * @return a simple HTTP client bound on localhost and the provided port
 	 */
 	public static HttpClient create(int port) {
 		return create("localhost", port);
@@ -106,8 +107,8 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	}
 
 	/**
-	 * HTTP DELETE the passed URL. When connection has been made, the passed handler is
-	 * invoked and can be used to build precisely the request and write data to it.
+	 * HTTP DELETE the passed URL. When connection has been established, the passed handler is
+	 * invoked and can be used to tune the request and write data to it.
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
@@ -121,8 +122,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	}
 
 	/**
-	 * HTTP DELETE the passed URL. When connection has been made, the passed handler is
-	 * invoked and can be used to build precisely the request and write data to it.
+	 * HTTP DELETE the passed URL.
 	 *
 	 * @param url the target remote URL
 	 *
@@ -135,7 +135,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 	/**
 	 * HTTP GET the passed URL. When connection has been made, the passed handler is
-	 * invoked and can be used to build precisely the request and write data to it.
+	 * invoked and can be used to tune the request and write data to it.
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
@@ -168,7 +168,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 	/**
 	 * HTTP PATCH the passed URL. When connection has been made, the passed handler is
-	 * invoked and can be used to build precisely the request and write data to it.
+	 * invoked and can be used to tune the request and write data to it.
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
@@ -195,7 +195,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 	/**
 	 * HTTP POST the passed URL. When connection has been made, the passed handler is
-	 * invoked and can be used to build precisely the request and write data to it.
+	 * invoked and can be used to tune the request and write data to it.
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
@@ -210,7 +210,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 	/**
 	 * HTTP PUT the passed URL. When connection has been made, the passed handler is
-	 * invoked and can be used to build precisely the request and write data to it.
+	 * invoked and can be used to tune the request and write data to it.
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
@@ -220,12 +220,13 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 */
 	public final Mono<HttpClientResponse> put(String url,
 			Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
+		HttpRequest r;
 		return request(HttpMethod.PUT, url, handler);
 	}
 
 	/**
 	 * Use the passed HTTP method to send to the given URL. When connection has been made,
-	 * the passed handler is invoked and can be used to build precisely the request and
+	 * the passed handler is invoked and can be used to tune the request and
 	 * write data to it.
 	 *
 	 * @param method the HTTP method to send

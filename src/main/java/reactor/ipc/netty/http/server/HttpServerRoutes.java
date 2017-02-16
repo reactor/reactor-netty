@@ -52,30 +52,27 @@ public interface HttpServerRoutes extends
 	/**
 	 * Listen for HTTP DELETE on the passed path to be used as a routing condition.
 	 * Incoming connections will query the internal registry to invoke the matching
-	 * handlers. <p> Additional regex matching is available when reactor-bus is on the
-	 * classpath. e.g. "/test/{param}". Params are resolved using {@link
-	 * HttpServerRequest#param(CharSequence)}
+	 * handlers. <p> Additional regex matching is available, e.g. "/test/{param}".
+	 * Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this path, pattern
-	 * matching and capture are supported
+	 * @param path The DELETE path used by clients.
 	 * @param handler an handler to invoke for the given condition
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-
 	default HttpServerRoutes delete(String path,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		return route(HttpPredicate.delete(path), handler);
 	}
 
 	/**
-	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
-	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available e.g.
-	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * Listen for HTTP GET on the passed path to be used as a routing condition. The
+	 * content of the provided  {@link Path directory} will be served.
+	 * <p>
+	 * Additional regex matching is available, e.g. "/test/{param}". Params are resolved
+	 * using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param uri The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
+	 * @param uri The GET path used by clients
 	 * @param directory the root prefix to serve from in file system, e.g.
 	 * "/Users/me/resources"
 	 *
@@ -86,13 +83,13 @@ public interface HttpServerRoutes extends
 	}
 
 	/**
-	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
-	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available e.g.
-	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * Listen for HTTP GET on the passed path to be used as a routing condition.The
+	 * content of the provided {@link Path directory} will be served.
+	 * <p>
+	 * Additional regex matching is available, e.g. "/test/{param}". Params are resolved
+	 * using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param uri The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
+	 * @param uri The GET path used by clients
 	 * @param directory the root prefix to serve from in file system, e.g.
 	 * "/Users/me/resources"
 	 * @param interceptor a pre response processor
@@ -103,10 +100,11 @@ public interface HttpServerRoutes extends
 			Function<HttpServerResponse, HttpServerResponse> interceptor);
 
 	/**
-	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
-	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available e.g.
-	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * Listen for HTTP GET on the passed path to be used as a routing condition. The
+	 * provided {@link java.io.File} will be served.
+	 * <p>
+	 * Additional regex matching is available, e.g. "/test/{param}". Params are resolved
+	 * using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param uri The GET path used by clients
 	 * @param path the resource Path to serve
@@ -118,10 +116,11 @@ public interface HttpServerRoutes extends
 	}
 
 	/**
-	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
-	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available e.g.
-	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * Listen for HTTP GET on the passed path to be used as a routing condition. The file
+	 * at provided path will be served.
+	 * <p>
+	 * Additional regex matching is available, e.g. "/test/{param}". Params are resolved
+	 * using {@link HttpServerRequest#param(CharSequence)}
 	 *
 	 * @param uri The GET path used by clients
 	 * @param path the resource path to serve
@@ -133,13 +132,14 @@ public interface HttpServerRoutes extends
 	}
 
 	/**
-	 * Listen for HTTP GET on the passed path to be used as a routing condition. Incoming
-	 * connections will query the internal registry to invoke the matching handlers. <p>
+	 * Listen for HTTP GET on the passed path to be used as a routing condition. The
+	 * file on the provided {@link Path} is served.
+	 * <p>
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param uri The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
+	 * @param uri The {@link HttpPredicate} to use to trigger the route, pattern matching
+	 * and capture are supported
 	 * @param path the Path to the file to serve
 	 * @param interceptor a channel pre-intercepting handler e.g. for content type header
 	 *
@@ -166,8 +166,7 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
+	 * @param path The GET path used by clients
 	 * @param handler an handler to invoke for the given condition
 	 *
 	 * @return this {@link HttpServerRoutes}
@@ -194,8 +193,7 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
+	 * @param path The POST path used by clients
 	 * @param handler an handler to invoke for the given condition
 	 *
 	 * @return this {@link HttpServerRoutes}
@@ -211,8 +209,7 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
+	 * @param path The PUT path used by clients
 	 * @param handler an handler to invoke for the given condition
 	 *
 	 * @return this {@link HttpServerRoutes}
@@ -239,8 +236,7 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
+	 * @param path The websocket path used by clients
 	 * @param handler an handler to invoke for the given condition
 	 *
 	 * @return this {@link HttpServerRoutes}
@@ -257,8 +253,7 @@ public interface HttpServerRoutes extends
 	 * Additional regex matching is available e.g.
 	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
 	 *
-	 * @param path The {@link HttpPredicate} to resolve against this
-	 * path, pattern matching and capture are supported
+	 * @param path The websocket path used by clients
 	 * @param handler an handler to invoke for the given condition
 	 * @param protocols sub-protocol to use in WS handshake signature
 	 *

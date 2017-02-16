@@ -112,7 +112,7 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	}
 
 	/**
-	 * /** Send bytes to the peer, listen for any error on write and close on terminal
+	 * Send bytes to the peer, listen for any error on write and close on terminal
 	 * signal (complete|error). If more than one publisher is attached (multiple calls to
 	 * send()) completion occurs after all publishers complete.
 	 *

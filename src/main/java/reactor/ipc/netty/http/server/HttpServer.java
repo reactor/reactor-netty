@@ -50,8 +50,8 @@ public final class HttpServer
 		implements NettyConnector<HttpServerRequest, HttpServerResponse> {
 
 	/**
-	 * Build a simple Netty HTTP server listening on loopback (0.0.0.0) and
-	 * {@link NettyOptions#DEFAULT_PORT port 12012}.
+	 * Build a simple Netty HTTP server listening on localhost (127.0.0.1) and
+	 * port {@literal 80}.
 	 *
 	 * @return a simple HTTP Server
 	 */
@@ -62,6 +62,7 @@ public final class HttpServer
 	/**
 	 * Build a simple Netty HTTP server listening over bind address and port passed
 	 * through the {@link HttpServerOptions}.
+	 * Use {@literal 0} to let the system assign a random port.
 	 *
 	 * @param options the options for the server, including bind address and port.
 	 *
@@ -76,27 +77,28 @@ public final class HttpServer
 	}
 
 	/**
-	 * Build a simple Netty HTTP server listening on loopback (0.0.0.0) and the provided
-	 * port.
+	 * Build a simple Netty HTTP server listening on localhost (127.0.0.1) and the provided
+	 * port
+	 * Use {@literal 0} to let the system assign a random port.
 	 *
 	 * @param port the port to listen to, or 0 to dynamically attribute one.
 	 *
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(int port) {
-		return create("0.0.0.0", port);
+		return create(NetUtil.LOCALHOST.getHostAddress(), port);
 	}
 
 	/**
 	 * Build a simple Netty HTTP server listening on the provided bind address and
-	 * {@link NettyOptions#DEFAULT_PORT port 12012}.
+	 * port {@literal 80}.
 	 *
 	 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
 	 *
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(String bindAddress) {
-		return create(bindAddress, NettyOptions.DEFAULT_PORT);
+		return create(bindAddress, 80);
 	}
 
 	/**
@@ -128,8 +130,9 @@ public final class HttpServer
 	}
 
 	/**
+	 * Define routes for the server through the provided {@link HttpServerRoutes} builder.
 	 *
-	 * @param routesBuilder a mutable route builder
+	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
 	 * @return a new {@link Mono} starting the router on subscribe
 	 */
 	public Mono<? extends NettyContext> newRouter(Consumer<? super HttpServerRoutes>

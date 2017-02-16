@@ -75,8 +75,8 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
-	 * {@link ByteBuf }chunks with
-	 * a given maximum size into the returned {@link ByteBufFlux}
+	 * {@link ByteBuf} chunks with a default maximum size of 500K into
+	 * the returned {@link ByteBufFlux}
 	 *
 	 * @param path the path to the resource to stream
 	 *
@@ -88,8 +88,7 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
-	 * {@link ByteBuf }chunks with
-	 * a given maximum size into the returned {@link ByteBufFlux}
+	 * {@link ByteBuf} chunks with a given maximum size into the returned {@link ByteBufFlux}
 	 *
 	 * @param path the path to the resource to stream
 	 * @param maxChunkSize the maximum per-item ByteBuf size
@@ -102,8 +101,8 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
-	 * {@link ByteBuf }chunks with
-	 * a given maximum size into the returned {@link ByteBufFlux}
+	 * {@link ByteBuf} chunks with a default maximum size of 500K into the returned
+	 * {@link ByteBufFlux}, using the provided {@link ByteBufAllocator}.
 	 *
 	 * @param path the path to the resource to stream
 	 * @param allocator the channel {@link ByteBufAllocator}
@@ -116,8 +115,8 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
-	 * {@link ByteBuf }chunks with
-	 * a given maximum size into the returned {@link ByteBufFlux}
+	 * {@link ByteBuf} chunks with a given maximum size into the returned
+	 * {@link ByteBufFlux}, using the provided {@link ByteBufAllocator}.
 	 *
 	 * @param path the path to the resource to stream
 	 * @param maxChunkSize the maximum per-item ByteBuf size
@@ -152,7 +151,7 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * a {@link ByteBuffer} inbound {@link Flux}
+	 * Convert to a {@link ByteBuffer} inbound {@link Flux}
 	 *
 	 * @return a {@link ByteBuffer} inbound {@link Flux}
 	 */
@@ -161,7 +160,7 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * a {@literal byte[]} inbound {@link Flux}
+	 * Convert to a {@literal byte[]} inbound {@link Flux}
 	 *
 	 * @return a {@literal byte[]} inbound {@link Flux}
 	 */
@@ -172,8 +171,9 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 			return bytes;
 		});
 	}
+
 	/**
-	 * a {@link InputStream} inbound {@link Flux}
+	 * Convert to a {@link InputStream} inbound {@link Flux}
 	 *
 	 * @return a {@link InputStream} inbound {@link Flux}
 	 */
@@ -182,7 +182,7 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * a {@link String} inbound {@link Flux}
+	 * Convert to a {@link String} inbound {@link Flux} using the default {@link Charset}.
 	 *
 	 * @return a {@link String} inbound {@link Flux}
 	 */
@@ -191,7 +191,7 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * a {@link String} inbound {@link Flux}
+	 * Convert to a {@link String} inbound {@link Flux} using the provided {@link Charset}.
 	 *
 	 * @param charset the decoding charset
 	 *
@@ -202,10 +202,9 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Disable auto memory release on each signal published in order to prevent premature
-	 * recycling when buffers are accumulated downsteams (async).
+	 * Aggregate subsequent byte buffers into a single buffer.
 	 *
-	 * @return {@link ByteBufMono} of retained {@link ByteBuf}
+	 * @return {@link ByteBufMono} of aggregated {@link ByteBuf}
 	 */
 	public ByteBufMono aggregate() {
 		return Mono.using(alloc::compositeBuffer,
@@ -216,8 +215,8 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Disable auto memory release on each signal published in order to prevent premature
-	 * recycling when buffers are accumulated downsteams (async).
+	 * Allow multiple consumers downstream of the flux while also disabling auto memory
+	 * release on each buffer published (retaining in order to prevent premature recycling).
 	 *
 	 * @return {@link ByteBufMono} of retained {@link ByteBuf}
 	 */
@@ -226,8 +225,8 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * Disable auto memory release on each signal published in order to prevent premature
-	 * recycling when buffers are accumulated downsteams (async).
+	 * Disable auto memory release on each buffer published, retaining in order to prevent
+	 * premature recycling when buffers are accumulated downstream (async).
 	 *
 	 * @return {@link ByteBufFlux} of retained {@link ByteBuf}
 	 */
@@ -248,7 +247,7 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * A channel object to bytebuf transformer
+	 * A channel object to {@link ByteBuf} transformer
 	 */
 	final static Function<Object, ByteBuf> bytebufExtractor = o -> {
 		if (o instanceof ByteBuf) {

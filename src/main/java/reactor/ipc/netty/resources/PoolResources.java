@@ -39,7 +39,7 @@ public interface PoolResources extends Disposable {
 
 	/**
 	 * Default max connection, if -1 will never wait to acquire before opening new
-	 * connection in an unboundd fashion. Fallback to
+	 * connection in an unbounded fashion. Fallback to
 	 * available number of processors.
 	 */
 	int DEFAULT_POOL_MAX_CONNECTION =
@@ -50,7 +50,7 @@ public interface PoolResources extends Disposable {
 	/**
 	 * Default acquisition timeout before error. If -1 will never wait to
 	 * acquire before opening new
-	 * connection in an unboundd fashion. Fallback to
+	 * connection in an unbounded fashion. Fallback to
 	 * available number of processors.
 	 */
 	long DEFAULT_POOL_ACQUIRE_TIMEOUT = Long.parseLong(System.getProperty(
@@ -104,7 +104,6 @@ public interface PoolResources extends Disposable {
 	 */
 	static PoolResources fixed(String name, int maxConnections) {
 		return fixed(name, maxConnections, DEFAULT_POOL_ACQUIRE_TIMEOUT);
-
 	}
 
 	/**
@@ -136,13 +135,11 @@ public interface PoolResources extends Disposable {
 						maxConnections,
 						Integer.MAX_VALUE
 						));
-
 	}
 
 	/**
 	 * Return an existing or new {@link ChannelPool}. The implementation will take care
-	 * of
-	 * pulling {@link Bootstrap} lazily when a {@link ChannelPool} creation is actually
+	 * of pulling {@link Bootstrap} lazily when a {@link ChannelPool} creation is actually
 	 * needed.
 	 *
 	 * @param address the remote address to resolve for existing or
