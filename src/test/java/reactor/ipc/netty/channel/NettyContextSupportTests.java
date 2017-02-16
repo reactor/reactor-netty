@@ -15,6 +15,7 @@ import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
 import org.junit.Test;
 import reactor.ipc.netty.NettyPipeline;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -332,6 +333,30 @@ public class NettyContextSupportTests {
 				NettyContextSupport.NO_HANDLER_REMOVE);
 
 		assertThat(closeCount.intValue(), is(0));
+	}
+
+	@Test
+	public void addDecoderSkipsIfExist() {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		channel.pipeline().addFirst("foo", new Utf8FrameValidator());
+
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, "foo", new LineBasedFrameDecoder(10),
+				NO_ONCLOSE, NO_HANDLER_REMOVE);
+
+		assertEquals(channel.pipeline().names(), Arrays.asList("foo", "DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().get("foo"), is(instanceOf(Utf8FrameValidator.class)));
+	}
+
+	@Test
+	public void addEncoderSkipsIfExist() {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		channel.pipeline().addFirst("foo", new Utf8FrameValidator());
+
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel, "foo", new LineBasedFrameDecoder(10),
+				NO_ONCLOSE, NO_HANDLER_REMOVE);
+
+		assertEquals(channel.pipeline().names(), Arrays.asList("foo", "DefaultChannelPipeline$TailContext#0"));
+		assertThat(channel.pipeline().get("foo"), is(instanceOf(Utf8FrameValidator.class)));
 	}
 
 }

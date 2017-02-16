@@ -58,6 +58,9 @@ class NettyContextSupport {
 	 * This implementation will look for reactor added handlers on the right hand side of
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#RIGHT}
 	 * prefix, and add the handler just before the first of these.
+	 * <p>
+	 * It will also add a ByteBuf extractor for relevant encoders, unless the handler
+	 * already existed (in which case the extractor should already have been added).
 	 *
 	 * @param channel the channel on which to add the decoder.
 	 * @param name the name of the decoder.
@@ -75,8 +78,21 @@ class NettyContextSupport {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
 
-		boolean registerForClose = shouldCleanupOnClose(channel);
+		boolean exists = channel.pipeline().get(name) != null;
 
+		if (exists) {
+			if (log.isDebugEnabled()) {
+				log.debug("Handler [{}] already exists in the pipeline, decoder has been skipped", name);
+			}
+			return;
+		}
+
+		boolean addExtractor = handler instanceof ByteToMessageDecoder
+				|| handler instanceof ByteToMessageCodec
+				|| handler instanceof CombinedChannelDuplexHandler;
+		String extractorName = name + "$extract";
+
+		//we need to find the correct position
 		String before = null;
 		for (String s : channel.pipeline().names()) {
 			if (s.startsWith(NettyPipeline.RIGHT)) {
@@ -85,42 +101,20 @@ class NettyContextSupport {
 			}
 		}
 
-		if (handler instanceof ByteToMessageDecoder
-				|| handler instanceof ByteToMessageCodec
-				|| handler instanceof CombinedChannelDuplexHandler) {
-			String extractorName = name + "$extract";
 			if (before == null) {
-				channel.pipeline().addLast(extractorName, ByteBufHolderHandler.INSTANCE);
+			if (addExtractor) channel.pipeline().addLast(extractorName, ByteBufHolderHandler.INSTANCE);
 				channel.pipeline().addLast(name, handler);
 			}
 			else {
-				channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, extractorName, ByteBufHolderHandler.INSTANCE);
+			if (addExtractor) channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, extractorName, ByteBufHolderHandler.INSTANCE);
 				channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, name, handler);
 			}
 
-			if (registerForClose) {
-				onCloseHook.accept(() -> {
-					removeCallback.accept(name);
-					removeCallback.accept(extractorName);
-				});
-			}
-		}
-		else {
-			if (before == null) {
-				channel.pipeline().addLast(name, handler);
-			}
-			else {
-				channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, name, handler);
-			}
-
-			if (registerForClose) {
-				onCloseHook.accept(() -> removeCallback.accept(name));
-			}
-		}
+		registerForClose(shouldCleanupOnClose(channel), addExtractor, name, extractorName, onCloseHook, removeCallback);
 
 		if (log.isDebugEnabled()) {
-			log.debug("Added decoder [{}] at the end of the user pipeline, full pipeline: {}",
-					name,
+			log.debug("Added decoder [{}]{} at the end of the user pipeline, full pipeline: {}",
+					name, addExtractor ? " and extractor" : "",
 					channel.pipeline().names());
 		}
 	}
@@ -132,6 +126,9 @@ class NettyContextSupport {
 	 * This implementation will look for reactor added handlers on the left hand side of
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#LEFT}
 	 * prefix, and add the handler just after the last of these.
+	 * <p>
+	 * It will also add a ByteBuf extractor for relevant encoders, unless the handler
+	 * already existed (in which case the extractor should already have been added).
 	 *
 	 * @param channel the channel on which to add the encoder.
 	 * @param name the name of the encoder.
@@ -148,8 +145,21 @@ class NettyContextSupport {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
 
-		boolean registerForClose = shouldCleanupOnClose(channel);
+		boolean exists = channel.pipeline().get(name) != null;
 
+		if (exists) {
+			if (log.isDebugEnabled()) {
+				log.debug("Handler [{}] already exists in the pipeline, encoder has been skipped", name);
+			}
+			return;
+		}
+
+		boolean addExtractor = handler instanceof ByteToMessageDecoder
+				|| handler instanceof ByteToMessageCodec
+				|| handler instanceof CombinedChannelDuplexHandler;
+		String extractorName = name + "$extract";
+
+		//we need to find the correct position
 		String after = null;
 		for (String s : channel.pipeline().names()) {
 			if (s.startsWith(NettyPipeline.LEFT)) {
@@ -157,47 +167,41 @@ class NettyContextSupport {
 			}
 		}
 
-		if (handler instanceof ByteToMessageDecoder
-				|| handler instanceof ByteToMessageCodec
-				|| handler instanceof CombinedChannelDuplexHandler) {
-			String extractorName = name + "$extract";
 			if (after == null) {
 				channel.pipeline().addFirst(name, handler);
 				//place the extractor just before the encoder
-				channel.pipeline().addFirst(extractorName, ByteBufHolderHandler.INSTANCE);
+			if (addExtractor) channel.pipeline().addFirst(extractorName, ByteBufHolderHandler.INSTANCE);
 			}
 			else {
 				channel.pipeline().addAfter(after, name, handler);
 				//place the extractor just before the encoder
-				channel.pipeline().addAfter(after, extractorName, ByteBufHolderHandler.INSTANCE);
+			if (addExtractor) channel.pipeline().addAfter(after, extractorName, ByteBufHolderHandler.INSTANCE);
 			}
 
-			if (registerForClose) {
+		registerForClose(shouldCleanupOnClose(channel), addExtractor, name, extractorName, onCloseHook, removeCallback);
+
+		if (log.isDebugEnabled()) {
+			log.debug("Added encoder [{}]{} at the beginning of the user pipeline, full pipeline: {}",
+					name, addExtractor ? " and extractor" : "",
+					channel.pipeline().names());
+		}
+	}
+
+	static void registerForClose(boolean shouldCleanupOnClose, boolean addExtractor,
+			String name, String extractorName,
+			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback) {
+		if (!shouldCleanupOnClose) return;
+
+		if (addExtractor) {
 				onCloseHook.accept(() -> {
 					removeCallback.accept(name);
 					removeCallback.accept(extractorName);
 				});
 			}
-		}
 		else {
-			if (after == null) {
-				channel.pipeline().addFirst(name, handler);
-			}
-			else {
-				channel.pipeline().addAfter(after, name, handler);
-			}
-
-			if (registerForClose) {
 				onCloseHook.accept(() -> removeCallback.accept(name));
 			}
 		}
-
-		if (log.isDebugEnabled()) {
-			log.debug("Added encoder [{}] at the beginning of the user pipeline, full pipeline: {}",
-					name,
-					channel.pipeline().names());
-		}
-	}
 
 	/**
 	 * Determines if user-provided handlers registered on the given channel should
