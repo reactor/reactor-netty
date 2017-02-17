@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.pool.ChannelHealthChecker;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
@@ -45,7 +45,7 @@ public interface PoolResources extends Disposable {
 	int DEFAULT_POOL_MAX_CONNECTION =
 			Integer.parseInt(System.getProperty("reactor.ipc.netty.pool.maxConnections",
 			"" + Math.max(Runtime.getRuntime()
-			            .availableProcessors(), 8)));
+			            .availableProcessors(), 8) * 2));
 
 	/**
 	 * Default acquisition timeout before error. If -1 will never wait to
@@ -128,9 +128,9 @@ public interface PoolResources extends Disposable {
 			throw new IllegalArgumentException("Acquire Timeout value must " + "be " + "positive");
 		}
 		return new DefaultPoolResources(name,
-				(bootstrap, handler) -> new FixedChannelPool(bootstrap,
+				(bootstrap, handler, checker) -> new FixedChannelPool(bootstrap,
 						handler,
-						ChannelHealthChecker.ACTIVE,
+						checker,
 						FixedChannelPool.AcquireTimeoutAction.FAIL,
 						acquireTimeout,
 						maxConnections,
@@ -154,7 +154,8 @@ public interface PoolResources extends Disposable {
 	 */
 	ChannelPool selectOrCreate(SocketAddress address,
 			Supplier<? extends Bootstrap> bootstrap,
-			Consumer<? super Channel> onChannelCreate);
+			Consumer<? super Channel> onChannelCreate,
+			EventLoopGroup group);
 
 	@Override
 	default void dispose() {

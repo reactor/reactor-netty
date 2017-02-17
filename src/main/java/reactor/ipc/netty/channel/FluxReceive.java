@@ -65,6 +65,14 @@ final class FluxReceive extends Flux<Object>
 		this.parent = parent;
 		this.channel = parent.channel;
 		this.eventLoop = channel.eventLoop();
+		CANCEL.lazySet(this, () -> {
+			if (eventLoop.inEventLoop()) {
+				unsubscribeReceiver();
+			}
+			else {
+				eventLoop.execute(this::unsubscribeReceiver);
+			}
+		});
 	}
 
 	@Override
@@ -143,18 +151,8 @@ final class FluxReceive extends Flux<Object>
 		if (c != CANCELLED) {
 			c = CANCEL.getAndSet(this, CANCELLED);
 			if (c != CANCELLED) {
-				if(inboundDone && parent.isOutboundDone()){
-					channel.config()
-					       .setAutoRead(false);
-					parent.onHandlerTerminate();
-				}
-				else {
-					parent.onInboundCancel();
-				}
-				if (c != null) {
-					c.dispose();
-					return true;
-				}
+				c.dispose();
+				return true;
 			}
 		}
 		return false;
@@ -285,14 +283,7 @@ final class FluxReceive extends Flux<Object>
 			}
 
 			receiver = s;
-			CANCEL.lazySet(this, () -> {
-				if (eventLoop.inEventLoop()) {
-					unsubscribeReceiver();
-				}
-				else {
-					eventLoop.execute(this::unsubscribeReceiver);
-				}
-			});
+
 			s.onSubscribe(this);
 		}
 		else {
@@ -409,6 +400,7 @@ final class FluxReceive extends Flux<Object>
 	final void unsubscribeReceiver() {
 		receiverDemand = 0L;
 		receiver = null;
+		parent.onInboundCancel();
 	}
 
 	@SuppressWarnings("rawtypes")

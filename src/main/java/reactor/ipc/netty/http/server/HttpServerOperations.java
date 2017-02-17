@@ -434,8 +434,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void onOutboundError(Throwable err) {
-		discreteRemoteClose(err);
 
+		if (!channel().isActive()) {
+			super.onOutboundError(err);
+			return;
+		}
+
+		discreteRemoteClose(err);
 		if (markHeadersAsSent()) {
 			log.error("Error starting response. Replying error status", err);
 

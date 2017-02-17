@@ -113,8 +113,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		          .get();
 	}
 
-	static void set(Channel ch, ChannelOperations<?, ?> ops) {
-		ch.attr(ChannelOperations.OPERATIONS_KEY).set(ops);
+	static ChannelOperations<?, ?> getAndSet(Channel ch, ChannelOperations<?, ?> ops) {
+		return ch.attr(ChannelOperations.OPERATIONS_KEY).getAndSet(ops);
 	}
 
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
@@ -302,7 +302,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if inbound traffic is not expected anymore
 	 */
 	protected final boolean isInboundCancelled() {
-		return inbound.isCancelled();
+		return inbound.isCancelled() || !channel.isActive();
 	}
 
 	/**
@@ -407,7 +407,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onOutboundComplete() {
 		if (log.isDebugEnabled()) {
-			log.debug("[{}] User Handler requesting close connection", formatName());
+			log.debug("[{}] {} User Handler requesting close connection", formatName(), channel());
 		}
 		markOutboundCloseable();
 		onHandlerTerminate();
@@ -450,7 +450,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 //		channel.pipeline()
 //		       .fireUserEventTriggered(NettyPipeline.handlerStartedEvent());
 		if (log.isDebugEnabled()) {
-			log.debug("[{}] handler is being applied: {}", formatName(), handler);
+			log.debug("[{}] {} handler is being applied: {}", formatName(), channel
+					(), handler);
 		}
 		handler.apply((INBOUND) this, (OUTBOUND) this)
 		       .subscribe(this);
@@ -484,7 +485,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final void onHandlerTerminate() {
 		if (replace(null)) {
 			if(log.isTraceEnabled()){
-				log.trace("Disposing ChannelOperation from a channel", new Exception("ChannelOperation terminal stack"));
+				log.trace("{} Disposing ChannelOperation from a channel", channel(), new Exception
+						("ChannelOperation terminal stack"));
 			}
 			try {
 				Operators.terminate(OUTBOUND_CLOSE, this);

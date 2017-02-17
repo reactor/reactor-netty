@@ -426,13 +426,21 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		return proxyType != null;
 	}
 
+	@SuppressWarnings("unchecked")
 	final void groupAndChannel(Bootstrap bootstrap) {
 		LoopResources loops = Objects.requireNonNull(this.loopResources, "loopResources");
 
 		boolean useNative =
 				protocolFamily == null && preferNative && !(sslContext instanceof JdkSslContext);
 		EventLoopGroup elg = loops.onClient(useNative);
-		bootstrap.group(elg);
+
+		if (poolResources != null && elg instanceof Supplier) {
+			//don't colocate
+			bootstrap.group(((Supplier<EventLoopGroup>) elg).get());
+		}
+		else {
+			bootstrap.group(elg);
+		}
 
 		if (useDatagramChannel()) {
 			if (useNative) {

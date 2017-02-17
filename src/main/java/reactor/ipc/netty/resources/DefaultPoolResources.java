@@ -19,12 +19,14 @@ package reactor.ipc.netty.resources;
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiFunction;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.util.concurrent.Future;
@@ -38,12 +40,18 @@ import reactor.util.Loggers;
  */
 final class DefaultPoolResources implements PoolResources {
 
-	final ConcurrentMap<SocketAddress, Pool>                     channelPools;
-	final String                                                 name;
-	final BiFunction<Bootstrap, ChannelPoolHandler, ChannelPool> provider;
+	interface PoolFactory {
 
-	DefaultPoolResources(String name,
-			BiFunction<Bootstrap, ChannelPoolHandler, ChannelPool> provider) {
+		ChannelPool newPool(Bootstrap b,
+				ChannelPoolHandler handler,
+				ChannelHealthChecker checker);
+	}
+
+	final ConcurrentMap<SocketAddress, Pool> channelPools;
+	final String                             name;
+	final PoolFactory                        provider;
+
+	DefaultPoolResources(String name, PoolFactory provider) {
 		this.name = name;
 		this.provider = provider;
 		this.channelPools = PlatformDependent.newConcurrentHashMap();
@@ -52,14 +60,14 @@ final class DefaultPoolResources implements PoolResources {
 	@Override
 	public ChannelPool selectOrCreate(SocketAddress remote,
 			Supplier<? extends Bootstrap> bootstrap,
-			Consumer<? super Channel> onChannelCreate) {
+			Consumer<? super Channel> onChannelCreate,
+			EventLoopGroup group) {
 		SocketAddress address = remote;
 		for (; ; ) {
 			Pool pool = channelPools.get(remote);
 			if (pool != null) {
 				return pool;
 			}
-			//pool = new SimpleChannelPool(bootstrap);
 			Bootstrap b = bootstrap.get();
 			if (remote != null) {
 				b = b.remoteAddress(remote);
@@ -71,7 +79,7 @@ final class DefaultPoolResources implements PoolResources {
 			if (log.isDebugEnabled()) {
 				log.debug("New {} client pool for {}", name, address);
 			}
-			pool = new Pool(b, provider, onChannelCreate);
+			pool = new Pool(b, provider, onChannelCreate, group);
 			if (channelPools.putIfAbsent(address, pool) == null) {
 				return pool;
 			}
@@ -80,18 +88,34 @@ final class DefaultPoolResources implements PoolResources {
 	}
 
 	final static class Pool extends AtomicBoolean
-			implements ChannelPoolHandler, ChannelPool {
+			implements ChannelPoolHandler, ChannelPool, ChannelHealthChecker {
 
 		final ChannelPool               pool;
 		final Consumer<? super Channel> onChannelCreate;
+		final EventLoopGroup            defaultGroup;
 
-		int activeConnections;
+		final AtomicInteger activeConnections = new AtomicInteger();
+
+		final Future<Boolean> HEALTHY;
+		final Future<Boolean> UNHEALTHY;
 
 		@SuppressWarnings("unchecked")
-		Pool(Bootstrap bootstrap, BiFunction<Bootstrap, ChannelPoolHandler,
-				ChannelPool> provider, Consumer<? super Channel> onChannelCreate) {
-			this.pool = provider.apply(bootstrap, this);
+		Pool(Bootstrap bootstrap,
+				PoolFactory provider,
+				Consumer<? super Channel> onChannelCreate,
+				EventLoopGroup group) {
+			this.pool = provider.newPool(bootstrap, this, this);
 			this.onChannelCreate = onChannelCreate;
+			this.defaultGroup = group;
+			HEALTHY = group.next()
+			               .newSucceededFuture(true);
+			UNHEALTHY = group.next()
+			                 .newSucceededFuture(false);
+		}
+
+		@Override
+		public Future<Boolean> isHealthy(Channel channel) {
+			return channel.isActive() ? HEALTHY : UNHEALTHY;
 		}
 
 		@Override
@@ -123,7 +147,7 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public void channelReleased(Channel ch) throws Exception {
-			activeConnections--;
+			activeConnections.decrementAndGet();
 			if (log.isDebugEnabled()) {
 				log.debug("Released {}, now {} active connections",
 						ch.toString(),
@@ -133,7 +157,7 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public void channelAcquired(Channel ch) throws Exception {
-			activeConnections++;
+			activeConnections.incrementAndGet();
 			if (log.isDebugEnabled()) {
 				log.debug("Acquired {}, now {} active connections",
 						ch.toString(),
@@ -143,7 +167,7 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public void channelCreated(Channel ch) throws Exception {
-			activeConnections++;
+			activeConnections.incrementAndGet();
 			if (log.isDebugEnabled()) {
 				log.debug("Created {}, now {} active connections",
 						ch.toString(),

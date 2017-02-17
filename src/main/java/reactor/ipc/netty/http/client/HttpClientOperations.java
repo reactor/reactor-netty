@@ -438,6 +438,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (isWebsocket()) {
 			return;
 		}
+		if (isInboundCancelled()) {
+			return;
+		}
 		if (markHeadersAsSent()) {
 			if (log.isDebugEnabled()) {
 				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
@@ -462,7 +465,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			if (started) {
 				if (log.isDebugEnabled()) {
-					log.debug("An HttpClientOperations cannot proceed more than one " + "Response",
+					log.debug("{} An HttpClientOperations cannot proceed more than one "
+									+ "Response", channel(),
 							response.headers()
 							        .toString());
 				}
@@ -482,7 +486,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			setNettyResponse(response);
 
 			if (log.isDebugEnabled()) {
-				log.debug("Received response (auto-read:{}) : {}",
+				log.debug("{} Received response (auto-read:{}) : {}",
+						channel(),
 						channel().config()
 						         .isAutoRead(),
 						responseHeaders().entries()
@@ -502,12 +507,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (msg instanceof LastHttpContent) {
 			if (!started) {
 				if (log.isDebugEnabled()) {
-					log.debug("HttpClientOperations received an incorrect end " + "delimiter" + "(previously used connection?)");
+					log.debug("{} HttpClientOperations received an incorrect end " +
+							"delimiter" + "(previously used connection?)", channel());
 				}
 				return;
 			}
 			if (log.isDebugEnabled()) {
-				log.debug("Received last HTTP packet");
+				log.debug("{} Received last HTTP packet", channel());
 			}
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
@@ -521,8 +527,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				if (msg instanceof ByteBufHolder) {
 					msg = ((ByteBufHolder) msg).content();
 				}
-				log.debug("HttpClientOperations received an incorrect chunk " + "(previously used connection?)",
-						msg);
+				log.debug("{} HttpClientOperations received an incorrect chunk " + "" +
+								"(previously used connection?)",
+						channel(), msg);
 			}
 			return;
 		}
@@ -546,7 +553,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		                   .code();
 		if (code >= 500 && serverError) {
 			if (log.isDebugEnabled()) {
-				log.debug("Received Server Error, stop reading: {}", response.toString());
+				log.debug("{} Received Server Error, stop reading: {}", channel(),
+						response
+						.toString());
 			}
 			Exception ex = new HttpClientException(uri(), response);
 			parentContext().fireContextError(ex);
@@ -556,7 +565,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 		if (code >= 400 && clientError) {
 			if (log.isDebugEnabled()) {
-				log.debug("Received Request Error, stop reading: {}",
+				log.debug("{} Received Request Error, stop reading: {}", channel(),
 						response.toString());
 			}
 			Exception ex = new HttpClientException(uri(), response);
@@ -566,7 +575,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 		if (code == 301 || code == 302 && isFollowRedirect()) {
 			if (log.isDebugEnabled()) {
-				log.debug("Received Redirect location: {}",
+				log.debug("{} Received Redirect location: {}",
+						channel(),
 						response.headers()
 						        .entries()
 						        .toString());

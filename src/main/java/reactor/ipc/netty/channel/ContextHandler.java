@@ -221,7 +221,15 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					channelOpFactory.create((CHANNEL) channel, this, msg);
 
 			if (op != null) {
-				ChannelOperations.set(channel, op);
+				ChannelOperations old = ChannelOperations.getAndSet(channel, op);
+				channel.pipeline()
+				       .get(ChannelOperationsHandler.class)
+				       .lastContext = this;
+
+				if( old != null ){
+					log.error(channel.toString() +" Mixing pooled connection " +
+							"operations between "+ op + " - and a previous one "+ old);
+				}
 
 				channel.eventLoop()
 				       .execute(op::onHandlerStart);

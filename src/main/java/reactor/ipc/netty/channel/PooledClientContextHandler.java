@@ -90,38 +90,28 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	public void setFuture(Future<?> future) {
 		Objects.requireNonNull(future, "future");
 
+		Future<CHANNEL> f;
 		for (; ; ) {
-			Future<CHANNEL> f = this.future;
+			f = this.future;
 
 			if (f == DISPOSED) {
-				cancelFuture(future);
+				if (log.isDebugEnabled()) {
+					log.debug("Cancelled existing channel from pool: {}", pool.toString());
+				}
+				sink.success();
 				return;
 			}
 
 			if (FUTURE.compareAndSet(this, f, future)) {
-				cancelFuture(f);
 				break;
 			}
 		}
 		if (log.isDebugEnabled()) {
-			log.debug("Acquiring existing channel from pool: {}", pool.toString());
+			log.debug("Acquiring existing channel from pool: {} {}", future, pool
+					.toString());
 		}
-		if (future.isDone()) {
-			try {
-				operationComplete((Future<CHANNEL>) future);
-			}
-			catch (Exception e) {
-				fireContextError(e);
-			}
-			return;
-		}
+		sink.setCancellation(this);
 		((Future<CHANNEL>) future).addListener(this);
-	}
-
-	void cancelFuture(Future<?> future) {
-		if (future != null) {
-			future.cancel(true);
-		}
 	}
 
 	@Override
@@ -132,22 +122,36 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	@Override
 	public void operationComplete(Future<CHANNEL> future) throws Exception {
-		sink.setCancellation(this);
-		if (future.isCancelled() || future == DISPOSED) {
+		if (future.isCancelled()) {
 			if (log.isDebugEnabled()) {
 				log.debug("Cancelled {}", future.toString());
 			}
 			return;
 		}
+
+		if (DISPOSED == this.future) {
+			if (log.isDebugEnabled()) {
+				log.debug("Dropping acquisition {} because of {}",
+						future, "asynchronous user cancellation");
+			}
+			if (future.isSuccess()) {
+				disposeOperationThenRelease(future.get());
+			}
+			sink.success();
+			return;
+		}
+
 		if (!future.isSuccess()) {
 			if (future.cause() != null) {
-				sink.error(future.cause());
+				fireContextError(future.cause());
 			}
 			else {
-				sink.error(new IOException("error while connecting to " + future.toString()));
+				fireContextError(new AbortedException("error while acquiring connection"));
 			}
 			return;
 		}
+
+
 		CHANNEL c = future.get();
 
 		if (c.eventLoop()
@@ -167,23 +171,35 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	@SuppressWarnings("unchecked")
 	final void connectOrAcquire(CHANNEL c) {
+		if (DISPOSED == this.future) {
+			if (log.isDebugEnabled()) {
+				log.debug("Dropping acquisition {} because of {}",
+						"asynchronous user cancellation");
+			}
+			disposeOperationThenRelease(c);
+			sink.success();
+			return;
+		}
+
 		ChannelOperationsHandler op = c.pipeline()
 		                               .get(ChannelOperationsHandler.class);
-		if (!c.isActive()) {
-			if (op == null) {
-				//just connected not acquired
-				return;
-			}
+
+		if (op == null) {
 			if (log.isDebugEnabled()) {
-				log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}",
-						c.toString());
+				log.debug("Created new pooled channel: " + c.toString());
 			}
+			c.closeFuture().addListener(ff -> release(c));
+			return;
+		}
+		if (!c.isActive()) {
+			log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}", c.toString());
+			release(c);
 			setFuture(pool.acquire());
+			return;
 		}
 		if (log.isDebugEnabled()) {
-			log.debug("Acquired existing channel: " + c.toString());
+			log.debug("Acquired active channel: " + c.toString());
 		}
-		op.lastContext = this;
 		createOperations(c, null);
 	}
 
@@ -195,14 +211,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			return;
 		}
 		if (!f.isDone()) {
-			if (log.isDebugEnabled()) {
-				log.debug("Cancel pending pooled channel acquisition: {}", f.toString());
-			}
-			f.addListener(ff -> {
-				if (ff.isSuccess()) {
-					release((CHANNEL) ff.get());
-				}
-			});
 			return;
 		}
 
@@ -212,28 +220,11 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (!c.eventLoop()
 			      .inEventLoop()) {
 				c.eventLoop()
-				 .execute(() -> {
-					 ChannelOperations<?, ?> ops = ChannelOperations.get(c);
-					 //defer to operation dispose if present
-					 if (ops != null) {
-						 ops.dispose();
-						 return;
-					 }
-
-					 release(c);
-
-				 });
+				 .execute(() -> disposeOperationThenRelease(c));
 
 			}
 			else {
-				ChannelOperations<?, ?> ops = ChannelOperations.get(c);
-				//defer to operation dispose if present
-				if (ops != null) {
-					ops.dispose();
-					return;
-				}
-
-				release(c);
+				disposeOperationThenRelease(c);
 			}
 
 		}
@@ -241,6 +232,17 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			log.error("Failed releasing channel", e);
 			onReleaseEmitter.onError(e);
 		}
+	}
+
+	final void disposeOperationThenRelease(CHANNEL c){
+		ChannelOperations<?, ?> ops = ChannelOperations.get(c);
+		//defer to operation dispose if present
+		if (ops != null) {
+			ops.dispose();
+			return;
+		}
+
+		release(c);
 	}
 
 	final void release(CHANNEL c) {
