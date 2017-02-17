@@ -225,6 +225,9 @@ configure(rootProject) { project ->
   jar {
 	manifest {
 	  instruction 'Import-Package', bundleImportPackages.join(',')
+	  attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
+			  "Implementation-Title": project.name,
+			  "Implementation-Version": project.version)
 	}
   }
 
