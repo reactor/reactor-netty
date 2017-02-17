@@ -33,6 +33,12 @@ plugins {
 description = 'Reactive Streams Netty driver'
 
 ext {
+  if (project.hasProperty('versionBranch') && !versionBranch.trim().isEmpty() && version.toString().endsWith(".BUILD-SNAPSHOT")) {
+	realVersion = version.toString().replace("BUILD-SNAPSHOT", versionBranch + ".BUILD-SNAPSHOT")
+	project.version = realVersion
+	println "Building special snapshot ${project.version}"
+  }
+
   gradleVersion = '2.8'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
