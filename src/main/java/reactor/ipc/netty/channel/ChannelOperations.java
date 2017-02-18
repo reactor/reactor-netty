@@ -28,8 +28,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.ByteToMessageCodec;
-import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -113,8 +112,18 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		          .get();
 	}
 
-	static ChannelOperations<?, ?> getAndSet(Channel ch, ChannelOperations<?, ?> ops) {
-		return ch.attr(ChannelOperations.OPERATIONS_KEY).getAndSet(ops);
+	static ChannelOperations<?, ?> tryGetAndSet(Channel ch, ChannelOperations<?, ?> ops) {
+		Attribute<ChannelOperations> attr = ch.attr(ChannelOperations.OPERATIONS_KEY);
+		for (; ; ) {
+			ChannelOperations<?, ?> op = attr.get();
+			if (op != null) {
+				return op;
+			}
+
+			if (attr.compareAndSet(null, ops)) {
+				return null;
+			}
+		}
 	}
 
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>

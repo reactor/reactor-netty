@@ -200,7 +200,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		if (log.isDebugEnabled()) {
 			log.debug("Acquired active channel: " + c.toString());
 		}
-		createOperations(c, null);
+		if(createOperations(c, null) == null){
+			setFuture(pool.acquire());
+		}
 	}
 
 	@Override
