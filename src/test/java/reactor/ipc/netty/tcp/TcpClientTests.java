@@ -242,7 +242,8 @@ public class TcpClientTests {
 
 		try {
 			TcpClient tcpClient =
-					TcpClient.create(opts -> opts.connect("localhost", abortServerPort));
+					TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
+							.disablePool());
 
 			Mono<? extends NettyContext> handler = tcpClient.newHandler((in, out) -> {
 				System.out.println("Start");
