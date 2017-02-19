@@ -28,8 +28,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.ByteToMessageCodec;
-import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -113,8 +112,18 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		          .get();
 	}
 
-	static void set(Channel ch, ChannelOperations<?, ?> ops) {
-		ch.attr(ChannelOperations.OPERATIONS_KEY).set(ops);
+	static ChannelOperations<?, ?> tryGetAndSet(Channel ch, ChannelOperations<?, ?> ops) {
+		Attribute<ChannelOperations> attr = ch.attr(ChannelOperations.OPERATIONS_KEY);
+		for (; ; ) {
+			ChannelOperations<?, ?> op = attr.get();
+			if (op != null) {
+				return op;
+			}
+
+			if (attr.compareAndSet(null, ops)) {
+				return null;
+			}
+		}
 	}
 
 	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
@@ -252,7 +261,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		Subscription s =
 				OUTBOUND_CLOSE.getAndSet(this, Operators.cancelledSubscription());
 		if (s == Operators.cancelledSubscription() || isDisposed()) {
-			Operators.onErrorDropped(t);
+			if(log.isDebugEnabled()){
+				log.error("An outbound error could not be processed", t);
+			}
 			return;
 		}
 		onOutboundError(t);
@@ -300,7 +311,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if inbound traffic is not expected anymore
 	 */
 	protected final boolean isInboundCancelled() {
-		return inbound.isCancelled();
+		return inbound.isCancelled() || !channel.isActive();
 	}
 
 	/**
@@ -405,7 +416,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onOutboundComplete() {
 		if (log.isDebugEnabled()) {
-			log.debug("[{}] User Handler requesting close connection", formatName());
+			log.debug("[{}] {} User Handler requesting close connection", formatName(), channel());
 		}
 		markOutboundCloseable();
 		onHandlerTerminate();
@@ -448,7 +459,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 //		channel.pipeline()
 //		       .fireUserEventTriggered(NettyPipeline.handlerStartedEvent());
 		if (log.isDebugEnabled()) {
-			log.debug("[{}] handler is being applied: {}", formatName(), handler);
+			log.debug("[{}] {} handler is being applied: {}", formatName(), channel
+					(), handler);
 		}
 		handler.apply((INBOUND) this, (OUTBOUND) this)
 		       .subscribe(this);
@@ -482,7 +494,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final void onHandlerTerminate() {
 		if (replace(null)) {
 			if(log.isTraceEnabled()){
-				log.trace("Disposing ChannelOperation from a channel", new Exception("ChannelOperation terminal stack"));
+				log.trace("{} Disposing ChannelOperation from a channel", channel(), new Exception
+						("ChannelOperation terminal stack"));
 			}
 			try {
 				Operators.terminate(OUTBOUND_CLOSE, this);

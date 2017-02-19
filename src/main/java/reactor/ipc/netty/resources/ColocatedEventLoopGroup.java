@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -37,12 +38,12 @@ import io.netty.util.concurrent.ScheduledFuture;
 /**
  * Reuse local event loop if already working inside one.
  */
-final class ColocatedEventLoopGroup implements EventLoopGroup {
+final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoopGroup> {
 
 	final EventLoopGroup eventLoopGroup;
 	final FastThreadLocal<EventLoop> localLoop = new FastThreadLocal<>();
 
-	public ColocatedEventLoopGroup(EventLoopGroup eventLoopGroup) {
+	ColocatedEventLoopGroup(EventLoopGroup eventLoopGroup) {
 		this.eventLoopGroup = eventLoopGroup;
 		for (EventExecutor ex : eventLoopGroup) {
 			if (ex instanceof EventLoop) {
@@ -218,7 +219,10 @@ final class ColocatedEventLoopGroup implements EventLoopGroup {
 		next().execute(command);
 	}
 
-	public EventLoopGroup getEventLoopGroup() {
+	@Override
+	public EventLoopGroup get() {
 		return eventLoopGroup;
 	}
+
+
 }

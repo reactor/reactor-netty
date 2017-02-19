@@ -24,8 +24,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
@@ -221,9 +219,23 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		if (autoCreateOperations || msg != null) {
 			ChannelOperations<?, ?> op =
 					channelOpFactory.create((CHANNEL) channel, this, msg);
-			ChannelOperations.set(channel, op);
 
-			channel.eventLoop().execute(op::onHandlerStart);
+			if (op != null) {
+				ChannelOperations old = ChannelOperations.tryGetAndSet(channel, op);
+
+				if (old != null) {
+					if (log.isDebugEnabled()) {
+						log.debug(channel.toString() + "Mixed pooled connection " + "operations between " + op + " - and a previous one " + old);
+					}
+					return null;
+				}
+
+				channel.pipeline()
+				       .get(ChannelOperationsHandler.class).lastContext = this;
+
+				channel.eventLoop()
+				       .execute(op::onHandlerStart);
+			}
 			return op;
 		}
 
@@ -278,12 +290,56 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
 		accept(ch);
-		ch.pipeline()
-		  .addLast(NettyPipeline.BridgeSetup, new BridgeSetupHandler(this));
+	}
+
+	/**
+	 * Initialize pipeline
+	 *
+	 * @param ch channel to initialize
+	 */
+	protected abstract void doPipeline(Channel ch);
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void accept(Channel channel) {
+		doPipeline(channel);
+		if (options.onChannelInit() != null) {
+			if (options.onChannelInit()
+			           .test(channel)) {
+				if (log.isDebugEnabled()) {
+					log.debug("DROPPED by onChannelInit predicate {}", channel);
+				}
+				doDropped(channel);
+				return;
+			}
+		}
+
+		try {
+			if (pipelineConfigurator != null) {
+				pipelineConfigurator.accept(channel.pipeline(),
+						(ContextHandler<Channel>) this);
+			}
+			channel.pipeline()
+			       .addLast(NettyPipeline.ReactiveBridge,
+					       new ChannelOperationsHandler(this));
+		}
+		catch (Exception t) {
+			if (log.isErrorEnabled()) {
+				log.error("Error while binding a channelOperation with: " + channel
+								.toString() + " on " + channel.pipeline(),
+						t);
+			}
+		}
+		finally {
+			if (null != options.afterChannelInit()) {
+				options.afterChannelInit()
+				       .accept(channel);
+			}
+		}
 		if (log.isDebugEnabled()) {
 			log.debug("After pipeline {}",
-					ch.pipeline()
-					  .toString());
+					channel.pipeline()
+					       .toString());
 		}
 	}
 
@@ -370,88 +426,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		}
 		else if (log.isDebugEnabled()) {
 			pipeline.addFirst(NettyPipeline.LoggingHandler, loggingHandler);
-		}
-	}
-
-	static final class BridgeSetupHandler extends ChannelInboundHandlerAdapter {
-
-		final ContextHandler<Channel> parent;
-
-		boolean active;
-
-		@SuppressWarnings("unchecked")
-		BridgeSetupHandler(ContextHandler<?> parent) {
-			this.parent = (ContextHandler<Channel>) parent;
-		}
-
-		@Override
-		@SuppressWarnings("unchecked")
-		public void channelActive(ChannelHandlerContext ctx) throws Exception {
-			if (!active) {
-				active = true;
-
-				if (parent.options.onChannelInit() != null) {
-					if (parent.options.onChannelInit()
-					                  .test(ctx.channel())) {
-						if (log.isDebugEnabled()) {
-							log.debug("DROPPED by onChannelInit predicate {}",
-									ctx.channel());
-						}
-						parent.doDropped(ctx.channel());
-						return;
-					}
-				}
-
-				try {
-					if (parent.pipelineConfigurator != null) {
-						parent.pipelineConfigurator.accept(ctx.pipeline(), parent);
-					}
-					ctx.pipeline()
-					   .addLast(NettyPipeline.ReactiveBridge,
-							   new ChannelOperationsHandler(parent));
-				}
-				catch (Exception t) {
-					if (log.isErrorEnabled()) {
-						log.error("Error while binding a channelOperation with: " + ctx.channel()
-						                                                               .toString() + " on " + ctx.pipeline(),
-								t);
-					}
-				}
-				finally {
-					if (null != parent.options.afterChannelInit()) {
-						parent.options.afterChannelInit()
-						              .accept(ctx.channel());
-					}
-				}
-				ctx.pipeline().remove(this);
-			}
-			ctx.fireChannelActive();
-		}
-
-		@Override
-		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-			if (!active) {
-				ctx.pipeline().remove(this);
-				parent.terminateChannel(ctx.channel());
-				parent.fireContextError(new AbortedException());
-			}
-			ctx.fireChannelInactive();
-		}
-
-		@Override
-		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-				throws Exception {
-			if (!active) {
-				if (log.isErrorEnabled()) {
-					log.error("Error while binding a channelOperation with: " + ctx.channel()
-					                                                               .toString(),
-							cause);
-				}
-				ctx.pipeline().remove(this);
-				parent.terminateChannel(ctx.channel());
-				parent.fireContextError(cause);
-			}
-			ctx.fireExceptionCaught(cause);
 		}
 	}
 

@@ -90,8 +90,18 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 			log.debug("Connecting new channel: {}", future.toString());
 		}
 		this.f = (ChannelFuture) future;
-		f.addListener(this);
 		sink.setCancellation(this);
+
+		if(future.isDone()){
+			try {
+				operationComplete((ChannelFuture) future);
+			}
+			catch (Exception e){
+				fireContextError(e);
+			}
+			return;
+		}
+		f.addListener(this);
 	}
 
 	@Override

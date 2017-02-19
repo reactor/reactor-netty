@@ -35,6 +35,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import reactor.ipc.netty.resources.LoopResources;
+import reactor.ipc.netty.resources.PoolResources;
 import reactor.util.function.Tuple2;
 
 /**
@@ -215,14 +216,12 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	public abstract SocketAddress getAddress();
 
 	/**
-	 * Return a new eventual {@link SslHandler}
+	 * Get the configured Loop Resources if any
 	 *
-	 * @param allocator {@link ByteBufAllocator} to allocate for packet storage
-	 *
-	 * @return a new eventual {@link SslHandler}
+	 * @return an eventual {@link LoopResources}
 	 */
-	public final SslHandler getSslHandler(ByteBufAllocator allocator) {
-		return getSslHandler(allocator, null);
+	public final LoopResources getLoopResources() {
+		return loopResources;
 	}
 
 	/**
@@ -308,6 +307,14 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	public SO preferNative(boolean preferNative) {
 		this.preferNative = preferNative;
 		return (SO) this;
+	}
+
+	/**
+	 * Is this option preferring native loops (epoll)
+	 * @return true if this option is preferring native loops (epoll)
+	 */
+	public final boolean preferNative(){
+		return preferNative;
 	}
 
 	/**

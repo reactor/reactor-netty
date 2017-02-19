@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import org.reactivestreams.Publisher;
  * -> ssl & trace log ? [SslLoggingHandler]
  * -> ssl ? [SslReader]
  * -> log ? [LoggingHandler]
- * => [BridgeSetup]
  * -> http ? [HttpCodecHandler]
  * -> http ws ? [HttpAggregator]
  * -> http server  ? [HttpServerHandler]
@@ -55,7 +54,6 @@ public interface NettyPipeline {
 	String SslLoggingHandler  = LEFT + "sslLoggingHandler";
 	String ProxyHandler       = LEFT + "proxyHandler";
 	String ReactiveBridge     = RIGHT + "reactiveBridge";
-	String BridgeSetup        = LEFT + "bridgeSetup";
 	String HttpEncoder        = LEFT + "httpEncoder";
 	String HttpDecoder        = LEFT + "httpDecoder";
 	String HttpAggregator     = LEFT + "httpAggregator";

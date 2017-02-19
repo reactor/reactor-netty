@@ -164,7 +164,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 			PoolResources poolResources = options.getPoolResources();
 			if (poolResources != null) {
 				pool = poolResources.selectOrCreate(remote, options,
-						doHandler(null, sink, secure, remote, null, null));
+						doHandler(null, sink, secure, remote, null, null),
+						options.getLoopResources().onClient(options.preferNative()));
 			}
 
 			ContextHandler<SocketChannel> contextHandler =
@@ -209,7 +210,8 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 						(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
 	}
 
-	static final ChannelOperations.OnNew EMPTY = (a,b,c) -> null;
+	protected static final ChannelOperations.OnNew EMPTY = (a,b,c) -> null;
+
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
 
 }

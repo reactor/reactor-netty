@@ -60,6 +60,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	final PublisherSender                inner;
 	final BiConsumer<?, ? super ByteBuf> encoder;
 	final int                            prefetch;
+	final ContextHandler<?>              originContext;
 
 	/**
 	 * Cast the supplied queue (SpscLinkedArrayQueue) to use its atomic dual-insert
@@ -69,9 +70,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	Queue<?>                            pendingWrites;
 	ChannelHandlerContext               ctx;
 	boolean                             flushOnEach;
-	long                                pendingBytes;
 
-	ContextHandler<?> parentContext;
+	long                                pendingBytes;
+	ContextHandler<?> lastContext;
 
 	volatile boolean innerActive;
 	volatile boolean removed;
@@ -82,8 +83,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		this.inner = new PublisherSender(this);
 		this.prefetch = 32;
 		this.encoder = NOOP_ENCODER;
-		this.parentContext = contextHandler; // only set if parent context is closable,
-		// pool will usually fetch context via parentContext()
+		this.lastContext = null;
+		this.originContext = contextHandler; // only set if parent context is closable,
+		// pool will usually fetch context via lastContext()
+	}
+
+	@Override
+	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		originContext.createOperations(ctx.channel(), null);
 	}
 
 	@Override
@@ -94,8 +101,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				ops.onHandlerTerminate();
 			}
 			else {
-				parentContext().terminateChannel(ctx.channel());
-				parentContext().fireContextError(new AbortedException());
+				if (lastContext != null) {
+					lastContext.terminateChannel(ctx.channel());
+					lastContext.fireContextError(new AbortedException());
+				}
 			}
 		}
 		catch (Throwable err) {
@@ -134,22 +143,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 	}
 
-	ContextHandler<?> parentContext() {
-		if (parentContext != null) {
-			return parentContext;
-		}
-		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
-
-		if (ops != null) {
-			return ops.parentContext();
-		}
-		throw new IllegalStateException("Tried to call parent context when none is " + "attached");
-	}
-
 	@Override
 	public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
 		if (log.isDebugEnabled()) {
-			log.debug("Write state change {}",
+			log.debug("{} Write state change {}",
+					ctx.channel(),
 					ctx.channel()
 					   .isWritable());
 		}
@@ -169,8 +167,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			ops.onInboundError(err);
 		}
 		else {
-			parentContext().terminateChannel(ctx.channel());
-			parentContext().fireContextError(err);
+			if (lastContext != null) {
+				lastContext.terminateChannel(ctx.channel());
+				lastContext.fireContextError(err);
+			}
 		}
 	}
 
@@ -182,11 +182,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		this.ctx = ctx;
-		if (ctx.channel()
-		       .isActive()) {
-			parentContext().createOperations(ctx.channel(), null);
-			inner.request(prefetch);
-		}
+		inner.request(prefetch);
 	}
 
 	@Override
@@ -203,15 +199,26 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	final public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
 			throws Exception {
 		if (log.isTraceEnabled()) {
-			log.trace("User event {}", evt);
+			log.trace("{} End of the pipeline, User event {}", ctx.channel(), evt);
 		}
 		if (evt == NettyPipeline.handlerTerminatedEvent()) {
-			parentContext().terminateChannel(ctx.channel());
+			ContextHandler<?> c = lastContext;
+			if (c == null){
+				if (log.isDebugEnabled()){
+					log.debug("{} No context to dispose", ctx.channel());
+				}
+				return;
+			}
+			if (log.isDebugEnabled()){
+				log.debug("{} Disposing context {}", ctx.channel(), c);
+			}
+			lastContext = null;
+			c.terminateChannel(ctx.channel());
 			return;
 		}
 		if (evt instanceof NettyPipeline.SendOptionsChangeEvent) {
 			if (log.isDebugEnabled()) {
-				log.debug("New sending options");
+				log.debug("{} New sending options", ctx.channel());
 			}
 			((NettyPipeline.SendOptionsChangeEvent) evt).configurator()
 			                                            .accept(this);
@@ -226,7 +233,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
 			throws Exception {
 		if (log.isDebugEnabled()) {
-			log.debug("Writing object {}", msg);
+			log.debug("{} Writing object {}", ctx.channel(), msg);
 		}
 
 		if (pendingWrites == null) {
@@ -278,7 +285,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				pendingBytes = Operators.addCap(pendingBytes, ((FileRegion) msg).count());
 			}
 			if (log.isTraceEnabled()) {
-				log.trace("Pending write size = {}", pendingBytes);
+				log.trace("{} Pending write size = {}", ctx.channel(), pendingBytes);
 			}
 			if (inner != null && inner.justFlushed) {
 				inner.justFlushed = false;

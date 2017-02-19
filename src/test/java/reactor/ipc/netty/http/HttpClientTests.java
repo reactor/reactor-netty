@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http;
 
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.concurrent.TimeoutException;
 
@@ -38,6 +39,7 @@ import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientException;
 import reactor.ipc.netty.http.client.HttpClientResponse;
+import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -145,12 +147,16 @@ public class HttpClientTests {
 
 	@Test
 	public void backpressured() throws Exception {
-		Mono<HttpClientResponse> remote = HttpClient.create()
-		          .get("http://next.projectreactor.io" +
-						          "/docs/core/release/api/reactor/core" +
-						          "/publisher/Mono.html",
-				          c -> c.followRedirect()
-				                .sendHeaders());
+
+		NettyContext c = HttpServer.create(0)
+		                           .newRouter(routes -> routes.directory("/test",
+				                           Paths.get(getClass().getResource("/public")
+				                                               .getFile())))
+		                           .block(Duration.ofSeconds(30));
+
+		Mono<HttpClientResponse> remote = HttpClient.create(opts -> opts.connect(c
+				.address().getPort()))
+		                                            .get("/test/test.css");
 
 		Mono<String> page = remote
 				.flatMap(r -> r.receive()
@@ -168,6 +174,7 @@ public class HttpClientTests {
 		page.block(Duration.ofSeconds(30));
 		cancelledPage.block(Duration.ofSeconds(30));
 		page.block(Duration.ofSeconds(30));
+		c.dispose();
 	}
 
 	@Test
@@ -339,6 +346,14 @@ public class HttpClientTests {
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
 		            .verify();
+
+		StepVerifier.create(HttpClient.create()
+		                              .get("https://developer.chrome.com")
+		                              .then(r -> Mono.just(r.status().code()))
+		)
+		            .expectNextMatches(status -> status >= 200 && status < 400)
+		            .expectComplete()
+		            .verify();
 	}
 
 	@Test
@@ -364,6 +379,7 @@ public class HttpClientTests {
 		                              .timeout(signal)
 		)
 		            .verifyError(TimeoutException.class);
+//		Thread.sleep(1000000);
 	}
 
 	@Test

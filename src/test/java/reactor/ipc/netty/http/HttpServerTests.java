@@ -117,7 +117,7 @@ public class HttpServerTests {
 		StepVerifier.create(client)
 		            .expectNextSequence(test.toIterable())
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
