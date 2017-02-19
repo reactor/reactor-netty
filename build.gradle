@@ -76,17 +76,17 @@ ext {
 				  "http://projectreactor.io/docs/netty/release/api/",] as String[]
 }
 
-apply from: "$gradleScriptDir/setup.gradle"
 
 configure(rootProject) { project ->
   group = 'io.projectreactor.ipc'
 
-  apply plugin: 'propdeps'
   apply plugin: 'java'
   apply plugin: 'jacoco'
+  apply from: "$gradleScriptDir/setup.gradle"
+  apply plugin: 'propdeps'
+  apply plugin: 'osgi'
   apply plugin: 'groovy'
   apply from: "${gradleScriptDir}/ide.gradle"
-  apply plugin: 'osgi'
 
   jacoco {
 	toolVersion = '0.7.7.201606060606'
