@@ -39,7 +39,7 @@ ext {
 	println "Building special snapshot ${project.version}"
   }
 
-  gradleVersion = '2.8'
+  gradleVersion = '3.3'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
   reactorCoreVersion = "3.0.5.RELEASE"
