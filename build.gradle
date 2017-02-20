@@ -1,3 +1,5 @@
+import org.gradle.api.internal.plugins.osgi.OsgiHelper
+
 /*
  * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
@@ -33,10 +35,14 @@ plugins {
 description = 'Reactive Streams Netty driver'
 
 ext {
-  if (project.hasProperty('versionBranch') && !versionBranch.trim().isEmpty() && version.toString().endsWith(".BUILD-SNAPSHOT")) {
-	realVersion = version.toString().replace("BUILD-SNAPSHOT", versionBranch + ".BUILD-SNAPSHOT")
-	project.version = realVersion
-	println "Building special snapshot ${project.version}"
+  if (project.hasProperty('versionBranch') && version.toString().endsWith(".BUILD-SNAPSHOT")) {
+	versionBranch = versionBranch.replaceAll("\"", "").trim()
+	if (!versionBranch.isEmpty()) {
+	  realVersion = version.toString().replace("BUILD-SNAPSHOT", versionBranch + ".BUILD-SNAPSHOT")
+	  project.version = realVersion
+	  println "Building special snapshot ${project.version}"
+	  println "OSGI version would be: ${new OsgiHelper().getVersion(project.version.toString())}"
+	}
   }
 
   gradleVersion = '3.3'
