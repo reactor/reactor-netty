@@ -16,13 +16,11 @@
 
 package reactor.ipc.netty.channel;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -33,8 +31,7 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.options.ServerOptions;
 
-import static reactor.ipc.netty.channel.NettyContextSupport.NO_HANDLER_REMOVE;
-import static reactor.ipc.netty.channel.NettyContextSupport.NO_ONCLOSE;
+import static reactor.ipc.netty.channel.NettyContextSupport.*;
 
 /**
  *
@@ -94,28 +91,28 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	@Override
 	public ServerContextHandler addEncoder(String name, ChannelHandler handler) {
 		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE, true);
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, ADD_EXTRACTOR, NO_ONCLOSE, NO_HANDLER_REMOVE, true);
 		return this;
 	}
 
 	@Override
 	public ServerContextHandler setEncoder(String name, ChannelHandler handler) {
 		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE, false);
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, ADD_EXTRACTOR, NO_ONCLOSE, NO_HANDLER_REMOVE, false);
 		return this;
 	}
 
 	@Override
 	public ServerContextHandler addDecoder(String name, ChannelHandler handler) {
 		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE, true);
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, ADD_EXTRACTOR, NO_ONCLOSE, NO_HANDLER_REMOVE, true);
 		return this;
 	}
 
 	@Override
 	public ServerContextHandler setDecoder(String name, ChannelHandler handler) {
 		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, NO_ONCLOSE, NO_HANDLER_REMOVE, false);
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, ADD_EXTRACTOR, NO_ONCLOSE, NO_HANDLER_REMOVE, false);
 		return this;
 	}
 

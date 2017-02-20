@@ -67,12 +67,15 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
+import reactor.ipc.netty.channel.NettyContextSupport;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+
+import static reactor.ipc.netty.channel.NettyContextSupport.HTTP_EXTRACTOR;
 
 /**
  * @author Stephane Maldini
@@ -142,18 +145,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public final HttpClientOperations addEncoder(ChannelHandler handler) {
-		super.addEncoder(handler);
-		return this;
-	}
-
-	@Override
-	public final HttpClientOperations addEncoder(String name, ChannelHandler handler) {
-		super.addEncoder(name, handler);
-		return this;
-	}
-
-	@Override
 	public HttpClientOperations addDecoder(ChannelHandler handler) {
 		super.addDecoder(handler);
 		return this;
@@ -161,7 +152,31 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public HttpClientOperations addDecoder(String name, ChannelHandler handler) {
-		super.addDecoder(name, handler);
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, HTTP_EXTRACTOR, this::onClose, this::removeHandler, true);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations setDecoder(String name, ChannelHandler handler) {
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, HTTP_EXTRACTOR, this::onClose, this::removeHandler, false);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations addEncoder(ChannelHandler handler) {
+		super.addEncoder(handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations addEncoder(String name, ChannelHandler handler) {
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, HTTP_EXTRACTOR, this::onClose, this::removeHandler, true);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations setEncoder(String name, ChannelHandler handler) {
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, HTTP_EXTRACTOR, this::onClose, this::removeHandler, false);
 		return this;
 	}
 

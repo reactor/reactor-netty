@@ -33,7 +33,9 @@ public interface NettyContext extends Disposable {
 	/**
 	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just after the reactor-added codecs. If a handler with a similar name already
-	 * exists, this operation is skipped.
+	 * exists, this operation is skipped. Some handlers that are identified as taking a
+	 * {@link io.netty.buffer.ByteBuf} as input will additionally have an extractor handler
+	 * added before them.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}.
 	 * <p>
@@ -51,7 +53,9 @@ public interface NettyContext extends Disposable {
 	/**
 	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just after the reactor-added codecs. If a handler with a similar name already
-	 * exists, this operation is skipped.
+	 * exists, this operation is skipped. Some handlers that are identified as taking a
+	 * {@link io.netty.buffer.ByteBuf} as input will additionally have an extractor handler
+	 * added before them.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 * <p>
@@ -68,7 +72,9 @@ public interface NettyContext extends Disposable {
 	/**
 	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just after the reactor-added codecs. If a handler with a similar name already
-	 * exists, this operation replaces it.
+	 * exists, this operation replaces it. Some handlers that are identified as taking a
+	 * {@link io.netty.buffer.ByteBuf} as input will additionally have an extractor handler
+	 * added before them.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 * <p>
@@ -86,6 +92,8 @@ public interface NettyContext extends Disposable {
 	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
 	 * If a handler with a similar name already exists, this operation is skipped.
+	 * Some handlers that are identified as taking a {@link io.netty.buffer.ByteBuf} as
+	 * input will additionally have an extractor handler added before them.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 * <p>
@@ -105,6 +113,8 @@ public interface NettyContext extends Disposable {
 	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
 	 * If a handler with a similar name already exists, this operation is skipped.
+	 * Some handlers that are identified as taking a {@link io.netty.buffer.ByteBuf} as
+	 * input will additionally have an extractor handler added before them.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 * <p>
@@ -122,6 +132,8 @@ public interface NettyContext extends Disposable {
 	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
 	 * If a handler with a similar name already exists, this operation replaces it.
+	 * Some handlers that are identified as taking a {@link io.netty.buffer.ByteBuf} as
+	 * input will additionally have an extractor handler added before them.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
 	 * <p>

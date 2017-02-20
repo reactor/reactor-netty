@@ -54,7 +54,6 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -130,12 +129,37 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerOperations addDecoder(ChannelHandler handler) {
-		return addDecoder(handler.getClass().getSimpleName(), handler);
+		super.addDecoder(handler);
+		return this;
 	}
 
 	@Override
 	public HttpServerOperations addDecoder(String name, ChannelHandler handler) {
 		super.addDecoder(name, handler);
+		return this;
+	}
+
+	@Override
+	public HttpServerOperations setDecoder(String name, ChannelHandler handler) {
+		super.setDecoder(name, handler);
+		return this;
+	}
+
+	@Override
+	public HttpServerOperations addEncoder(ChannelHandler handler) {
+		super.addEncoder(handler);
+		return this;
+	}
+
+	@Override
+	public HttpServerOperations addEncoder(String name, ChannelHandler handler) {
+		super.addEncoder(name, handler);
+		return this;
+	}
+
+	@Override
+	public HttpServerOperations setEncoder(String name, ChannelHandler handler) {
+		super.setEncoder(name, handler);
 		return this;
 	}
 

@@ -17,7 +17,6 @@
 package reactor.ipc.netty.http.client;
 
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpContent;
@@ -29,7 +28,6 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
-import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpInfos;
 import reactor.ipc.netty.http.multipart.MultipartInbound;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -57,12 +55,18 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	HttpClientResponse addEncoder(String name, ChannelHandler handler);
 
 	@Override
+	HttpClientResponse setEncoder(String name, ChannelHandler handler);
+
+	@Override
 	default HttpClientResponse addDecoder(ChannelHandler handler) {
 		return addDecoder(handler.getClass().getSimpleName(), handler);
 	}
 
 	@Override
 	HttpClientResponse addDecoder(String name, ChannelHandler handler);
+
+	@Override
+	HttpClientResponse setDecoder(String name, ChannelHandler handler);
 
 	@Override
 	HttpClientResponse onClose(Runnable onClose);

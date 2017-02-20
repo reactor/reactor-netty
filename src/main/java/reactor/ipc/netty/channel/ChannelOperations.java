@@ -49,6 +49,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static reactor.ipc.netty.channel.ContextHandler.CLOSE_CHANNEL;
+import static reactor.ipc.netty.channel.NettyContextSupport.ADD_EXTRACTOR;
 
 /**
  * A bridge between an immutable {@link Channel} and {@link NettyInbound} /
@@ -160,26 +161,26 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> addDecoder(String name,
 			ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, this::onClose, this::removeHandler, true);
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, ADD_EXTRACTOR, this::onClose, this::removeHandler, true);
 		return this;
 	}
 
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> setDecoder(String name,
 			ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, this::onClose, this::removeHandler, false);
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, ADD_EXTRACTOR, this::onClose, this::removeHandler, false);
 		return this;
 	}
 
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> addEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, this::onClose, this::removeHandler, true);
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, ADD_EXTRACTOR, this::onClose, this::removeHandler, true);
 		return this;
 	}
 
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> setEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, this::onClose, this::removeHandler, false);
+		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, ADD_EXTRACTOR, this::onClose, this::removeHandler, false);
 		return this;
 	}
 
