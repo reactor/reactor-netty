@@ -16,11 +16,9 @@
 package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
-import java.util.function.BiConsumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -72,7 +70,9 @@ public interface NettyContext extends Disposable {
 	
 	/**
 	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
-	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with {@link #addHandlerLast}
+	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with
+	 * {@link #addHandlerLast}. Implementation may add more auto handling in particular
+	 * HTTP based context will prepend an HttpContent body extractor.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
 	 * <p>
@@ -114,8 +114,9 @@ public interface NettyContext extends Disposable {
 	}
 
 	/**
-	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
-	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with {@link #addHandlerLast}
+	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
+	 * If a handler with a similar name already exists, this operation is skipped.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
 	 * <p>
@@ -267,7 +268,11 @@ public interface NettyContext extends Disposable {
 
 	/**
 	 * Replace a named handler if present and return this context.
-	 * If handler wasn't present, an {@link RuntimeException} will be thrown
+	 * If handler wasn't present, an {@link RuntimeException} will be thrown.
+	 * <p>
+	 *     Note: if the new handler is of different type, dependent handling like
+	 *     the "extractor" introduced via HTTP-based {@link #addHandler} might not
+	 *     expect/support the new messages type.
 	 *
 	 * @param name handler name
 	 *

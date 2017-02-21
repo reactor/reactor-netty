@@ -50,9 +50,6 @@ final class ReactorNetty {
 	 * This implementation will look for reactor added handlers on the right hand side of
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#RIGHT}
 	 * prefix, and add the handler just before the first of these.
-	 * <p>
-	 * It will also add a ByteBuf extractor for relevant encoders (and add/remove it as
-	 * relevant if the handler is replaced rather than added/skipped).
 	 *
 	 * @param context the {@link NettyContext} on which to add the decoder.
 	 * @param name the name of the decoder.
@@ -106,9 +103,6 @@ final class ReactorNetty {
 	 * This implementation will look for reactor added handlers on the left hand side of
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#LEFT}
 	 * prefix, and add the handler just after the last of these.
-	 * <p>
-	 * It will also add a ByteBuf extractor for relevant encoders (and add/remove it as
-	 * relevant if the handler is replaced rather than added/skipped).
 	 *
 	 * @param context the {@link NettyContext} on which to add the decoder.
 	 * @param name the name of the encoder.
