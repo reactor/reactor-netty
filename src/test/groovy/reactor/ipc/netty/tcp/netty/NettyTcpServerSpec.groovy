@@ -84,7 +84,7 @@ class NettyTcpServerSpec extends Specification {
 	when: "the client/server are prepared"
 	def latch = new CountDownLatch(10)
 	def server = TcpServer.create().newHandler { i, o ->
-	  i.context().addDecoder(new JsonObjectDecoder())
+	  i.context().addHandlerLast(new JsonObjectDecoder())
 	  i.receive()
 			  .asString()
 			  .log('serve')
@@ -96,7 +96,7 @@ class NettyTcpServerSpec extends Specification {
 
 	def client = TcpClient.create(server.address().port)
 	client.newHandler { i, o ->
-	  i.context().addDecoder(new JsonObjectDecoder())
+	  i.context().addHandlerLast(new JsonObjectDecoder())
 
 	  i.receive()
 			  .asString()

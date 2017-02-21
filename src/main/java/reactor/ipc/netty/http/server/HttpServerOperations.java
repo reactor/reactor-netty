@@ -28,7 +28,6 @@ import java.util.function.Function;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -54,7 +53,6 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -129,17 +127,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerOperations addDecoder(ChannelHandler handler) {
-		return addDecoder(handler.getClass().getSimpleName(), handler);
-	}
-
-	@Override
-	public HttpServerOperations addDecoder(String name, ChannelHandler handler) {
-		super.addDecoder(name, handler);
-		return this;
-	}
-
-	@Override
 	public HttpServerResponse addCookie(Cookie cookie) {
 		if (!hasSentHeaders()) {
 			this.responseHeaders.add(HttpHeaderNames.SET_COOKIE,
@@ -167,12 +154,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
 		}
-		if(!chunked) {
-			markOutboundCloseable();
-		}
-		else{
-			markOutboundPersistent();
-		}
+
+		markPersistent(chunked);
 		return this;
 	}
 

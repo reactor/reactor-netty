@@ -428,7 +428,4 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			pipeline.addFirst(NettyPipeline.LoggingHandler, loggingHandler);
 		}
 	}
-
-	static final AttributeKey<Boolean> CLOSE_CHANNEL =
-			AttributeKey.newInstance("CLOSE_CHANNEL");
 }

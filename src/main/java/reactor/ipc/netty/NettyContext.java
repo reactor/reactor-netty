@@ -16,13 +16,14 @@
 package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
-import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.channel.ChannelOperations;
 
 /**
  * Hold contextual information for the underlying {@link Channel}
@@ -30,66 +31,145 @@ import reactor.ipc.netty.channel.ChannelOperations;
  * @author Stephane Maldini
  * @since 0.6
  */
+@FunctionalInterface
 public interface NettyContext extends Disposable {
 
 	/**
-	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
-	 * that is just after the reactor-added codecs. The handler will be safely removed
-	 * when the channel is made inactive (pool release).
+	 * Return false if it will force a close on terminal protocol events thus defeating
+	 * any pooling strategy
+	 * Return true (default) if it will release on terminal protocol events thus
+	 * keeping alive the channel if possible.
+	 *
+	 * @return whether or not the underlying {@link Channel} will be closed on terminal
+	 * handler event
+	 */
+	static boolean isPersistent(Channel channel) {
+		return !channel.hasAttr(ReactorNetty.PERSISTENT_CHANNEL) ||
+				channel.attr(ReactorNetty.PERSISTENT_CHANNEL).get();
+	}
+
+	/**
+	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
+	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with
+	 * {@link #addHandlerLast}. Implementation may add more auto handling in particular
+	 * HTTP based context will prepend an HttpContent body extractor.
 	 * <p>
-	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
 	 *
 	 * @param handler handler instance
 	 *
 	 * @return this NettyContext
-	 */
-	default NettyContext addEncoder(ChannelHandler handler){
-		return addEncoder(handler.getClass().getSimpleName(), handler);
-	}
 
+	 */
+	default NettyContext addHandler(ChannelHandler handler){
+		return addHandler(handler.getClass().getSimpleName(), handler);
+	}
+	
 	/**
-	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
-	 * that is just after the reactor-added codecs. The handler will be safely removed
-	 * when the channel is made inactive (pool release).
+	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
+	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with
+	 * {@link #addHandlerLast}. Implementation may add more auto handling in particular
+	 * HTTP based context will prepend an HttpContent body extractor.
 	 * <p>
-	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
 	 *
 	 * @return this NettyContext
 	 */
-	NettyContext addEncoder(String name, ChannelHandler handler);
+	default NettyContext addHandler(String name, ChannelHandler handler){
+		if(handler instanceof ChannelOutboundHandler){
+			addHandlerFirst(name, handler);
+		}
+		else {
+			addHandlerLast(name, handler);
+		}
+		return this;
+	}
 
 	/**
 	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
-	 * The handler will be safely removed when the channel is made inactive (pool release).
+	 * If a handler with a similar name already exists, this operation is skipped.
 	 * <p>
-	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
 	 *
 	 * @param handler handler instance
 	 *
 	 * @return this NettyContext
 
 	 */
-	default NettyContext addDecoder(ChannelHandler handler){
-		return addDecoder(handler.getClass().getSimpleName(), handler);
+	default NettyContext addHandlerLast(ChannelHandler handler){
+		return addHandlerLast(handler.getClass().getSimpleName(), handler);
 	}
 
 	/**
 	 * Add a {@link ChannelHandler} to the end of the "user" {@link io.netty.channel.ChannelPipeline},
 	 * that is just before the reactor-added handlers (like {@link NettyPipeline#ReactiveBridge}.
-	 * The handler will be safely removed when the channel is made inactive (pool release).
+	 * If a handler with a similar name already exists, this operation is skipped.
 	 * <p>
-	 * {@code [ [reactor codecs], [<- user ENCODERS added here, user DECODERS added here ->], [reactor handlers] ]}
+	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
 	 *
 	 * @return this NettyContext
 	 */
-	NettyContext addDecoder(String name, ChannelHandler handler);
+	default NettyContext addHandlerLast(String name, ChannelHandler handler){
+		ReactorNetty.addHandlerBeforeReactorEndHandlers(this, name, handler);
+		return this;
+	}
+
+	/**
+	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just after the reactor-added codecs. If a handler with a similar name already
+	 * exists, this operation is skipped. 
+	 * <p>
+	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}.
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
+	 *
+	 * @param handler handler instance
+	 *
+	 * @return this NettyContext
+	 */
+	default NettyContext addHandlerFirst(ChannelHandler handler){
+		return addHandlerFirst(handler.getClass().getSimpleName(), handler);
+	}
+
+	/**
+	 * Add a {@link ChannelHandler} to the beginning of the "user" {@link io.netty.channel.ChannelPipeline},
+	 * that is just after the reactor-added codecs. If a handler with a similar name already
+	 * exists, this operation is skipped. 
+	 * <p>
+	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
+	 * <p>
+	 * If effectively added, the handler will be safely removed when the channel is made
+	 * inactive (pool release).
+	 *
+	 * @param name handler name
+	 * @param handler handler instance
+	 *
+	 * @return this NettyContext
+	 */
+	default NettyContext addHandlerFirst(String name, ChannelHandler handler){
+		ReactorNetty.addHandlerAfterReactorCodecs(this, name, handler);
+		return this;
+	}
 
 	/**
 	 * Return remote address if remote channel {@link NettyContext} otherwise local
@@ -97,7 +177,16 @@ public interface NettyContext extends Disposable {
 	 *
 	 * @return remote or local {@link InetSocketAddress}
 	 */
-	InetSocketAddress address();
+	default InetSocketAddress address(){
+		Channel c = channel();
+		if (c instanceof SocketChannel) {
+			return ((SocketChannel) c).remoteAddress();
+		}
+		if (c instanceof ServerSocketChannel) {
+			return ((ServerSocketChannel) c).localAddress();
+		}
+		throw new IllegalStateException("Does not have an InetSocketAddress");
+	}
 
 	/**
 	 * Return the underlying {@link Channel}. Direct interaction might be considered
@@ -109,6 +198,39 @@ public interface NettyContext extends Disposable {
 	 */
 	Channel channel();
 
+	@Override
+	default void dispose() {
+		channel().close();
+	}
+
+	@Override
+	default boolean isDisposed() {
+		return !channel().isActive();
+	}
+
+	/**
+	 * Mark the underlying channel as persistent or not.
+	 * If false, it will force a close on terminal protocol events thus defeating
+	 * any pooling strategy
+	 * if true (default), it will release on terminal protocol events thus
+	 * keeping alive the channel if possible.
+	 *
+	 * @param persist the boolean flag to mark the {@link Channel} as fully disposable
+	 * or reusable when a user handler has terminated
+	 *
+	 * @return this NettyContext
+	 */
+	default NettyContext markPersistent(boolean persist){
+		if(persist && !channel().hasAttr(ReactorNetty.PERSISTENT_CHANNEL)) {
+			return this;
+		}
+		else {
+			channel().attr(ReactorNetty.PERSISTENT_CHANNEL)
+			         .set(persist);
+		}
+		return this;
+	}
+
 	/**
 	 * Return an observing {@link Mono} terminating with success when shutdown
 	 * successfully
@@ -116,7 +238,9 @@ public interface NettyContext extends Disposable {
 	 *
 	 * @return a {@link Mono} terminating with success if shutdown successfully or error
 	 */
-	Mono<Void> onClose();
+	default Mono<Void> onClose(){
+		return FutureMono.from(channel().closeFuture());
+	}
 
 	/**
 	 * Assign a {@link Runnable} to be invoked when the channel is closed.
@@ -125,5 +249,37 @@ public interface NettyContext extends Disposable {
 	 *
 	 * @return {@literal this}
 	 */
-	NettyContext onClose(Runnable onClose);
+	default NettyContext onClose(Runnable onClose){
+		onClose().subscribe(null, e -> onClose.run(), onClose);
+		return this;
+	}
+
+	/**
+	 * Remove a named handler if present and return this context
+	 *
+	 * @param name handler name
+	 *
+	 * @return this NettyContext
+	 */
+	default NettyContext removeHandler(String name) {
+		ReactorNetty.removeHandler(channel(), name);
+		return this;
+	}
+
+	/**
+	 * Replace a named handler if present and return this context.
+	 * If handler wasn't present, an {@link RuntimeException} will be thrown.
+	 * <p>
+	 *     Note: if the new handler is of different type, dependent handling like
+	 *     the "extractor" introduced via HTTP-based {@link #addHandler} might not
+	 *     expect/support the new messages type.
+	 *
+	 * @param name handler name
+	 *
+	 * @return this NettyContext
+	 */
+	default NettyContext replaceHandler(String name, ChannelHandler handler) {
+		ReactorNetty.replaceHandler(channel(), name, handler);
+		return this;
+	}
 }

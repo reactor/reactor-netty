@@ -83,7 +83,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 					replaced.nettyResponse.headers()
 					                      .remove(HttpHeaderNames.TRANSFER_ENCODING),
 					handshakerResult)
-			          .addListener(f -> ignoreChannelPersistence());
+			          .addListener(f -> markPersistent(false));
 		}
 	}
 

@@ -24,7 +24,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -47,8 +46,6 @@ import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import static reactor.ipc.netty.channel.ContextHandler.CLOSE_CHANNEL;
 
 /**
  * A bridge between an immutable {@link Channel} and {@link NettyInbound} /
@@ -155,19 +152,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.onInactive = processor;
 		context.onCloseOrRelease(channel)
 		       .subscribe(onInactive);
-	}
-
-	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> addDecoder(String name,
-			ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, this::onClose, this::removeHandler);
-		return this;
-	}
-
-	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> addEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, this::onClose, this::removeHandler);
-		return this;
 	}
 
 	@Override
@@ -324,33 +308,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Safely remove handler from pipeline
-	 *
-	 * @param name handler name
-	 */
-	protected final void removeHandler(String name) {
-		if (channel.isActive() && channel.pipeline()
-		                               .context(name) != null) {
-			channel.pipeline()
-			       .remove(name);
-			if (log.isDebugEnabled()) {
-				log.debug("[{}] Removed handler: {}, pipeline: {}",
-						formatName(),
-						name,
-						channel.pipeline());
-			}
-		}
-		else if (log.isDebugEnabled()) {
-			log.debug("[{}] Non Removed handler: {}, context: {}, pipeline: {}",
-					formatName(),
-					name,
-					channel.pipeline()
-					       .context(name),
-					channel.pipeline());
-		}
-	}
-
-	/**
 	 * Connector handler provided by user
 	 *
 	 * @return Connector handler provided by user
@@ -418,26 +375,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (log.isDebugEnabled()) {
 			log.debug("[{}] {} User Handler requesting close connection", formatName(), channel());
 		}
-		markOutboundCloseable();
+		markPersistent(false);
 		onHandlerTerminate();
-	}
-
-	/**
-	 * Mark the channel closeable by the enclosing context
-	 */
-	protected final void markOutboundCloseable(){
-		channel.attr(CLOSE_CHANNEL).set(true);
-	}
-
-
-	/**
-	 * Mark the channel persistent by the enclosing context
-	 */
-	protected final void markOutboundPersistent(){
-		if(channel.hasAttr(CLOSE_CHANNEL)) {
-			channel.attr(CLOSE_CHANNEL)
-			       .set(false);
-		}
 	}
 
 	/**
@@ -447,7 +386,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onOutboundError(Throwable err) {
 		discreteRemoteClose(err);
-		markOutboundCloseable();
+		markPersistent(false);
 		onHandlerTerminate();
 	}
 
@@ -541,14 +480,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final String formatName() {
 		return getClass().getSimpleName()
 		                 .replace("Operations", "");
-	}
-
-	/**
-	 * Ignore keep-alive or connection-pooling
-	 */
-	protected final void ignoreChannelPersistence() {
-		channel.attr(CLOSE_CHANNEL)
-		       .set(true);
 	}
 
 	/**

@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -142,26 +143,50 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public final HttpClientOperations addEncoder(ChannelHandler handler) {
-		super.addEncoder(handler);
+	public HttpClientOperations addHandlerLast(ChannelHandler handler) {
+		super.addHandlerLast(handler);
 		return this;
 	}
 
 	@Override
-	public final HttpClientOperations addEncoder(String name, ChannelHandler handler) {
-		super.addEncoder(name, handler);
+	public HttpClientOperations addHandlerLast(String name, ChannelHandler handler) {
+		super.addHandlerLast(name, handler);
 		return this;
 	}
 
 	@Override
-	public HttpClientOperations addDecoder(ChannelHandler handler) {
-		super.addDecoder(handler);
+	public HttpClientOperations addHandlerFirst(ChannelHandler handler) {
+		super.addHandlerFirst(handler);
 		return this;
 	}
 
 	@Override
-	public HttpClientOperations addDecoder(String name, ChannelHandler handler) {
-		super.addDecoder(name, handler);
+	public HttpClientOperations addHandlerFirst(String name, ChannelHandler handler) {
+		super.addHandlerFirst(name, handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations addHandler(ChannelHandler handler) {
+		super.addHandler(handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations addHandler(String name, ChannelHandler handler) {
+		super.addHandler(name, handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations replaceHandler(String name, ChannelHandler handler) {
+		super.replaceHandler(name, handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientResponse removeHandler(String name) {
+		super.removeHandler(name);
 		return this;
 	}
 
@@ -475,7 +500,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			started = true;
 
 			if (!isKeepAlive()) {
-				markOutboundCloseable();
+				markPersistent(false);
 			}
 			if(isInboundCancelled()){
 				ReferenceCountUtil.release(msg);
@@ -625,7 +650,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 		//prevent further header to be sent for handshaking
 		if (markHeadersAsSent()) {
-			addDecoder(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
@@ -729,7 +754,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					parent.chunkedTransfer(false);
 				}
 
-				parent.addEncoder(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
+				parent.addHandlerFirst(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
 

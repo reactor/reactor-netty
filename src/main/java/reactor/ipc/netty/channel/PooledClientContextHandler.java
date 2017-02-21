@@ -257,9 +257,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			    if (!c.isActive()) {
 				    return;
 			    }
-			    Boolean attr = c.attr(CLOSE_CHANNEL)
-			                    .get();
-			    if (attr != null && attr && c.isActive()) {
+			    if (!NettyContext.isPersistent(c) && c.isActive()) {
 				    c.close();
 			    }
 			    else if (f.isSuccess()) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package reactor.ipc.netty.http.client;
 
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpContent;
@@ -29,7 +28,6 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
-import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpInfos;
 import reactor.ipc.netty.http.multipart.MultipartInbound;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -48,21 +46,35 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContext {
 
 	@Override
-	default HttpClientResponse addEncoder(ChannelHandler handler) {
-		NettyContext.super.addEncoder(handler);
+	default HttpClientResponse addHandlerFirst(ChannelHandler handler) {
+		NettyContext.super.addHandlerFirst(handler);
 		return this;
 	}
 
 	@Override
-	HttpClientResponse addEncoder(String name, ChannelHandler handler);
+	HttpClientResponse addHandlerFirst(String name, ChannelHandler handler);
 
 	@Override
-	default HttpClientResponse addDecoder(ChannelHandler handler) {
-		return addDecoder(handler.getClass().getSimpleName(), handler);
+	default HttpClientResponse addHandlerLast(ChannelHandler handler) {
+		return addHandlerLast(handler.getClass().getSimpleName(), handler);
 	}
 
 	@Override
-	HttpClientResponse addDecoder(String name, ChannelHandler handler);
+	HttpClientResponse addHandlerLast(String name, ChannelHandler handler);
+
+	@Override
+	default HttpClientResponse addHandler(ChannelHandler handler) {
+		return addHandler(handler.getClass().getSimpleName(), handler);
+	}
+
+	@Override
+	HttpClientResponse addHandler(String name, ChannelHandler handler);
+
+	@Override
+	HttpClientResponse removeHandler(String name);
+
+	@Override
+	HttpClientResponse replaceHandler(String name, ChannelHandler handler);
 
 	@Override
 	HttpClientResponse onClose(Runnable onClose);

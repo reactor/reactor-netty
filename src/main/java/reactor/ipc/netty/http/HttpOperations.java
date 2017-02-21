@@ -21,15 +21,26 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.handler.codec.ByteToMessageCodec;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.LastHttpContent;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
+import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
@@ -87,7 +98,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					message = newFullEmptyBodyMessage();
 				}
 				else {
-					ignoreChannelPersistence();
+					markPersistent(false);
 					message = outboundHttpMessage();
 				}
 			}
@@ -116,7 +127,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())
 					&& !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-					ignoreChannelPersistence();
+				markPersistent(false);
 			}
 
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(outboundHttpMessage()));
@@ -167,6 +178,39 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return method().name() + ":" + uri();
 	}
 
+	@Override
+	public HttpOperations<INBOUND, OUTBOUND> addHandler(String name, ChannelHandler handler) {
+		super.addHandler(name, handler);
+
+		if(channel().pipeline().context(handler) == null){
+			return this;
+		}
+
+		autoAddHttpExtractor(this, name, handler);
+		return this;
+	}
+
+	static void autoAddHttpExtractor(NettyContext c, String name, ChannelHandler
+			handler){
+
+		if (handler instanceof ByteToMessageDecoder
+				|| handler instanceof ByteToMessageCodec
+				|| handler instanceof CombinedChannelDuplexHandler) {
+			String extractorName = name+"$extractor";
+
+			if(c.channel().pipeline().context(extractorName) != null){
+				return;
+			}
+
+			c.channel().pipeline().addBefore(name, extractorName, HTTP_EXTRACTOR);
+
+			if(NettyContext.isPersistent(c.channel())){
+				c.onClose(() -> c.removeHandler(extractorName));
+			}
+
+		}
+	}
+
 	/**
 	 * Mark the headers sent
 	 *
@@ -187,4 +231,24 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");
 
+	final static ChannelInboundHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
+			(ctx, msg) -> {
+				if (msg instanceof ByteBufHolder) {
+					ByteBuf bb = ((ByteBufHolder) msg).content();
+					if(msg instanceof FullHttpMessage){
+						// TODO convert into 2 messages if FullHttpMessage
+						ctx.fireChannelRead(msg);
+					}
+					else {
+						ctx.fireChannelRead(bb);
+						if (msg instanceof LastHttpContent) {
+							ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
+						}
+					}
+				}
+				else {
+					ctx.fireChannelRead(msg);
+				}
+			}
+	);
 }
