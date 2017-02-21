@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,9 +55,6 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	HttpClientResponse addEncoder(String name, ChannelHandler handler);
 
 	@Override
-	HttpClientResponse setEncoder(String name, ChannelHandler handler);
-
-	@Override
 	default HttpClientResponse addDecoder(ChannelHandler handler) {
 		return addDecoder(handler.getClass().getSimpleName(), handler);
 	}
@@ -66,7 +63,7 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	HttpClientResponse addDecoder(String name, ChannelHandler handler);
 
 	@Override
-	HttpClientResponse setDecoder(String name, ChannelHandler handler);
+	HttpClientResponse removeHandler(String name);
 
 	@Override
 	HttpClientResponse onClose(Runnable onClose);

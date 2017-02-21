@@ -41,22 +41,6 @@ public class NettyContextSupport {
 	static final Logger log = Loggers.getLogger(NettyContextSupport.class);
 
 	/**
-	 * A no-op hook that can be used with
-	 * {@link #addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Function, Consumer, Consumer, boolean)}
-	 * or {@link #addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Function, Consumer, Consumer, boolean)}
-	 * if no onClose hook is required.
-	 */
-	public static final Consumer<Runnable>        NO_ONCLOSE = r -> {};
-
-	/**
-	 * A no-op hook that can be used with
-	 * {@link #addDecoderBeforeReactorEndHandlers(Channel, String, ChannelHandler, Function, Consumer, Consumer, boolean)}
-	 * or {@link #addEncoderAfterReactorCodecs(Channel, String, ChannelHandler, Function, Consumer, Consumer, boolean)}
-	 * if no onClose hook is required or no handler removal is necessary.
-	 */
-	public static final Consumer<String>          NO_HANDLER_REMOVE = name -> {};
-
-	/**
 	 * A function used to add an extra handler for encoders/decoders that take ByteBuf as input.
 	 * The handler will extract the content of messages in the pipeline provided they
 	 * implement {@link ByteBufHolder}. Warning: depending on the whole pipeline, this can
@@ -79,10 +63,27 @@ public class NettyContextSupport {
 			|| handler instanceof ByteToMessageCodec
 			|| handler instanceof CombinedChannelDuplexHandler) ? new ByteBufHolderHandler(ByteBufHolderHandler.HTTP_LAST_REPLAY) : null;
 
-	/**
-	 * A function used to always avoid the extra handler for encoders/decoders.
-	 */
-	public static final Function<ChannelHandler, ChannelHandler> NO_EXTRACTOR = handler -> null;
+	public static void removeHandler(Channel channel, String name){
+		if (channel.isActive() && channel.pipeline()
+		                                 .context(name) != null) {
+			channel.pipeline()
+			       .remove(name);
+			if (log.isDebugEnabled()) {
+				log.debug("{} Removed handler: {}, pipeline: {}",
+						channel,
+						name,
+						channel.pipeline());
+			}
+		}
+		else if (log.isDebugEnabled()) {
+			log.debug(" Non Removed handler: {}, context: {}, pipeline: {}",
+					channel,
+					name,
+					channel.pipeline()
+					       .context(name),
+					channel.pipeline());
+		}
+	}
 
 	/**
 	 * A common implementation for the {@link NettyContext#addDecoder(String, ChannelHandler)}
@@ -95,31 +96,23 @@ public class NettyContextSupport {
 	 * It will also add a ByteBuf extractor for relevant encoders (and add/remove it as
 	 * relevant if the handler is replaced rather than added/skipped).
 	 *
-	 * @param channel the channel on which to add the decoder.
+	 * @param context the {@link NettyContext} on which to add the decoder.
 	 * @param name the name of the decoder.
 	 * @param handler the decoder to add before the final reactor-specific handlers.
 	 * @param addExtractor a function to decide whether or not to also add an extractor handler (see {@link #ADD_EXTRACTOR}).
-	 * @param onCloseHook the {@link NettyContext#onClose(Runnable)} method, or similar
-	 * hook, to be used to register {@code removeCallback} for cleanup. Ignored if
-	 * {@link #shouldCleanupOnClose(Channel)} returns false.
-	 * @param removeCallback a callback that can be used to safely remove a specific
-	 * handler by name, to be called from the {@code onCloseHook}.
-	 * @param skipIfExist true to skip adding the handler if it exists (default) or false
-	 * to replace the existing handler.
-	 * @return
 	 * @see NettyContext#addDecoder(String, ChannelHandler).
 	 */
-	public static final void addDecoderBeforeReactorEndHandlers(Channel channel, String name, ChannelHandler handler,
-			Function<ChannelHandler, ChannelHandler> addExtractor,
-			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback, boolean skipIfExist) {
+	public static final void addDecoderBeforeReactorEndHandlers(NettyContext context, String
+			name,	ChannelHandler handler,
+			Function<ChannelHandler, ChannelHandler> addExtractor) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
 
 		String extractorName = name + "$extract";
+		Channel channel = context.channel();
 		boolean exists = channel.pipeline().get(name) != null;
-		boolean extractorExists = channel.pipeline().get(extractorName) != null;
 
-		if (skipIfExist && exists) {
+		if (exists) {
 			if (log.isDebugEnabled()) {
 				log.debug("Handler [{}] already exists in the pipeline, decoder has been skipped", name);
 			}
@@ -128,29 +121,6 @@ public class NettyContextSupport {
 
 		ChannelHandler extractor = addExtractor.apply(handler);
 		boolean shouldAddExtractor = extractor != null;
-
-		if (exists) {
-			channel.pipeline().replace(name, name, handler);
-			if (log.isDebugEnabled()) {
-				log.debug("Handler [{}] was already present in the pipeline and has been replaced by the decoder, at the same position", name);
-			}
-
-			if (!shouldAddExtractor && extractorExists) {
-				channel.pipeline().remove(extractorName);
-				if (log.isDebugEnabled()) {
-					log.debug("Unneeded extractor of replaced decoder removed");
-				}
-			}
-			else if (shouldAddExtractor && !extractorExists) {
-				//place the extractor just before the decoder and register for cleanup
-				channel.pipeline().addBefore(name, extractorName, extractor);
-				registerForClose(shouldCleanupOnClose(channel), true, name, extractorName, onCloseHook, removeCallback);
-				if (log.isDebugEnabled()) {
-					log.debug("Missing extractor added for replacing decoder");
-				}
-			}
-			return;
-		}
 
 		//we need to find the correct position
 		String before = null;
@@ -170,7 +140,8 @@ public class NettyContextSupport {
 			channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, name, handler);
 		}
 
-		registerForClose(shouldCleanupOnClose(channel), shouldAddExtractor, name, extractorName, onCloseHook, removeCallback);
+		registerForClose(shouldCleanupOnClose(channel), shouldAddExtractor, name,
+				extractorName, context);
 
 		if (log.isDebugEnabled()) {
 			log.debug("Added decoder [{}]{} at the end of the user pipeline, full pipeline: {}",
@@ -190,30 +161,24 @@ public class NettyContextSupport {
 	 * It will also add a ByteBuf extractor for relevant encoders (and add/remove it as
 	 * relevant if the handler is replaced rather than added/skipped).
 	 *
-	 * @param channel the channel on which to add the encoder.
+	 * @param context the {@link NettyContext} on which to add the decoder.
 	 * @param name the name of the encoder.
 	 * @param handler the encoder to add after the initial reactor-specific handlers.
 	 * @param addExtractor a function to decide whether or not to also add an extractor handler (see {@link #ADD_EXTRACTOR}).
-	 * @param onCloseHook the {@link NettyContext#onClose(Runnable)} method, or similar
-	 * hook, to be used to register {@code removeCallback} for cleanup. Ignored if
-	 * {@link #shouldCleanupOnClose(Channel)} returns false.
-	 * @param removeCallback a callback that can be used to safely remove a specific
-	 * handler by name, to be called from the {@code onCloseHook}.
-	 * @param skipIfExist true to skip adding the handler if it exists (default) or false
-	 * to replace the existing handler.
 	 * @see NettyContext#addEncoder(String, ChannelHandler)
 	 */
-	public static final void addEncoderAfterReactorCodecs(Channel channel, String name, ChannelHandler handler,
-			Function<ChannelHandler, ChannelHandler> addExtractor,
-			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback, boolean skipIfExist) {
+	public static final void addEncoderAfterReactorCodecs(NettyContext context, String
+			name,
+			ChannelHandler handler,
+			Function<ChannelHandler, ChannelHandler> addExtractor) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
 
 		String extractorName = name + "$extract";
+		Channel channel = context.channel();
 		boolean exists = channel.pipeline().get(name) != null;
-		boolean extractorExists = channel.pipeline().get(extractorName) != null;
 
-		if (skipIfExist && exists) {
+		if (exists) {
 			if (log.isDebugEnabled()) {
 				log.debug("Handler [{}] already exists in the pipeline, encoder has been skipped", name);
 			}
@@ -222,29 +187,6 @@ public class NettyContextSupport {
 
 		ChannelHandler extractor = addExtractor.apply(handler);
 		boolean shouldAddExtractor = extractor != null;
-
-		if (exists) {
-			channel.pipeline().replace(name, name, handler);
-			if (log.isDebugEnabled()) {
-				log.debug("Handler [{}] was already present in the pipeline and has been replaced by the encoder, at the same position", name);
-			}
-
-			if (!shouldAddExtractor && extractorExists) {
-				channel.pipeline().remove(extractorName);
-				if (log.isDebugEnabled()) {
-					log.debug("Unneeded extractor of replaced encoder removed");
-				}
-			}
-			else if (shouldAddExtractor && !extractorExists) {
-				//place the extractor just before the decoder and register for cleanup
-				channel.pipeline().addBefore(name, extractorName, extractor);
-				registerForClose(shouldCleanupOnClose(channel), true, name, extractorName, onCloseHook, removeCallback);
-				if (log.isDebugEnabled()) {
-					log.debug("Missing extractor added for replacing encoder");
-				}
-			}
-			return;
-		}
 
 		//we need to find the correct position
 		String after = null;
@@ -265,7 +207,7 @@ public class NettyContextSupport {
 			if (shouldAddExtractor) channel.pipeline().addAfter(after, extractorName, extractor);
 		}
 
-		registerForClose(shouldCleanupOnClose(channel), shouldAddExtractor, name, extractorName, onCloseHook, removeCallback);
+		registerForClose(shouldCleanupOnClose(channel), shouldAddExtractor, name, extractorName, context);
 
 		if (log.isDebugEnabled()) {
 			log.debug("Added encoder [{}]{} at the beginning of the user pipeline, full pipeline: {}",
@@ -276,17 +218,17 @@ public class NettyContextSupport {
 
 	static void registerForClose(boolean shouldCleanupOnClose, boolean addExtractor,
 			String name, String extractorName,
-			Consumer<Runnable> onCloseHook, Consumer<String> removeCallback) {
+			NettyContext context) {
 		if (!shouldCleanupOnClose) return;
 
 		if (addExtractor) {
-			onCloseHook.accept(() -> {
-				removeCallback.accept(name);
-				removeCallback.accept(extractorName);
+			context.onClose(() -> {
+				context.removeHandler(name);
+				context.removeHandler(extractorName);
 			});
 		}
 		else {
-			onCloseHook.accept(() -> removeCallback.accept(name));
+			context.onClose(() -> context.removeHandler(name));
 		}
 	}
 

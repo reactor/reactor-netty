@@ -159,32 +159,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> addDecoder(String name,
-			ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, ADD_EXTRACTOR, this::onClose, this::removeHandler, true);
-		return this;
-	}
-
-	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> setDecoder(String name,
-			ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel, name, handler, ADD_EXTRACTOR, this::onClose, this::removeHandler, false);
-		return this;
-	}
-
-	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> addEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, ADD_EXTRACTOR, this::onClose, this::removeHandler, true);
-		return this;
-	}
-
-	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> setEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel, name, handler, ADD_EXTRACTOR, this::onClose, this::removeHandler, false);
-		return this;
-	}
-
-	@Override
 	public InetSocketAddress address() {
 		Channel c = channel();
 		if (c instanceof SocketChannel) {
@@ -335,33 +309,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected final boolean isOutboundDone() {
 		return outboundSubscription == Operators.cancelledSubscription() || !channel.isActive();
-	}
-
-	/**
-	 * Safely remove handler from pipeline
-	 *
-	 * @param name handler name
-	 */
-	protected final void removeHandler(String name) {
-		if (channel.isActive() && channel.pipeline()
-		                               .context(name) != null) {
-			channel.pipeline()
-			       .remove(name);
-			if (log.isDebugEnabled()) {
-				log.debug("[{}] Removed handler: {}, pipeline: {}",
-						formatName(),
-						name,
-						channel.pipeline());
-			}
-		}
-		else if (log.isDebugEnabled()) {
-			log.debug("[{}] Non Removed handler: {}, context: {}, pipeline: {}",
-					formatName(),
-					name,
-					channel.pipeline()
-					       .context(name),
-					channel.pipeline());
-		}
 	}
 
 	/**

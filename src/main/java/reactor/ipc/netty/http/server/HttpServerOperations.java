@@ -28,7 +28,6 @@ import java.util.function.Function;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -125,42 +124,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
 		                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
 		return res;
-	}
-
-	@Override
-	public HttpServerOperations addDecoder(ChannelHandler handler) {
-		super.addDecoder(handler);
-		return this;
-	}
-
-	@Override
-	public HttpServerOperations addDecoder(String name, ChannelHandler handler) {
-		super.addDecoder(name, handler);
-		return this;
-	}
-
-	@Override
-	public HttpServerOperations setDecoder(String name, ChannelHandler handler) {
-		super.setDecoder(name, handler);
-		return this;
-	}
-
-	@Override
-	public HttpServerOperations addEncoder(ChannelHandler handler) {
-		super.addEncoder(handler);
-		return this;
-	}
-
-	@Override
-	public HttpServerOperations addEncoder(String name, ChannelHandler handler) {
-		super.addEncoder(name, handler);
-		return this;
-	}
-
-	@Override
-	public HttpServerOperations setEncoder(String name, ChannelHandler handler) {
-		super.setEncoder(name, handler);
-		return this;
 	}
 
 	@Override

@@ -152,13 +152,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public HttpClientOperations addDecoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, HTTP_EXTRACTOR, this::onClose, this::removeHandler, true);
-		return this;
-	}
-
-	@Override
-	public HttpClientOperations setDecoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, HTTP_EXTRACTOR, this::onClose, this::removeHandler, false);
+		NettyContextSupport.addDecoderBeforeReactorEndHandlers(this, name, handler, HTTP_EXTRACTOR);
 		return this;
 	}
 
@@ -170,13 +164,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public HttpClientOperations addEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, HTTP_EXTRACTOR, this::onClose, this::removeHandler, true);
+		NettyContextSupport.addEncoderAfterReactorCodecs(this, name, handler, HTTP_EXTRACTOR);
 		return this;
 	}
 
 	@Override
-	public HttpClientOperations setEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, HTTP_EXTRACTOR, this::onClose, this::removeHandler, false);
+	public HttpClientResponse removeHandler(String name) {
+		super.removeHandler(name);
 		return this;
 	}
 

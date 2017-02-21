@@ -20,7 +20,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -30,8 +29,6 @@ import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.options.ServerOptions;
-
-import static reactor.ipc.netty.channel.NettyContextSupport.*;
 
 /**
  *
@@ -89,34 +86,6 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	public ServerContextHandler addEncoder(String name, ChannelHandler handler) {
-		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, ADD_EXTRACTOR, NO_ONCLOSE, NO_HANDLER_REMOVE, true);
-		return this;
-	}
-
-	@Override
-	public ServerContextHandler setEncoder(String name, ChannelHandler handler) {
-		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addEncoderAfterReactorCodecs(channel(), name, handler, ADD_EXTRACTOR, NO_ONCLOSE, NO_HANDLER_REMOVE, false);
-		return this;
-	}
-
-	@Override
-	public ServerContextHandler addDecoder(String name, ChannelHandler handler) {
-		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, ADD_EXTRACTOR, NO_ONCLOSE, NO_HANDLER_REMOVE, true);
-		return this;
-	}
-
-	@Override
-	public ServerContextHandler setDecoder(String name, ChannelHandler handler) {
-		//TODO should ServerContextHandler remove the handlers on close?
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(channel(), name, handler, ADD_EXTRACTOR, NO_ONCLOSE, NO_HANDLER_REMOVE, false);
-		return this;
-	}
-
-	@Override
 	public NettyContext onClose(Runnable onClose) {
 		onClose().subscribe(null, e -> onClose.run(), onClose);
 		return this;
@@ -131,12 +100,6 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	public boolean isDisposed() {
 		return !f.channel()
 		         .isActive();
-	}
-
-	@Override
-	public Mono<Void> onClose() {
-		return FutureMono.from(f.channel()
-		                        .closeFuture());
 	}
 
 	@Override
