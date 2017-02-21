@@ -93,7 +93,7 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 
 	/**
 	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given
-	 * timeout.
+	 * timeout. This replaces any previously set idle callback.
 	 *
 	 * @param idleTimeout the idle timeout
 	 * @param onWriteIdle the idle timeout handler
@@ -101,6 +101,7 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	 * @return {@literal this}
 	 */
 	default NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
+		context().removeHandler(NettyPipeline.OnChannelWriteIdle);
 		context().addHandlerFirst(NettyPipeline.OnChannelWriteIdle,
 				new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle));
 		return this;

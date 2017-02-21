@@ -70,7 +70,7 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 
 	/**
 	 * Assign a {@link Runnable} to be invoked when reads have become idle for the given
-	 * timeout.
+	 * timeout. This replaces any previously set idle callback.
 	 *
 	 * @param idleTimeout the idle timeout
 	 * @param onReadIdle the idle timeout handler
@@ -78,6 +78,7 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 * @return {@literal this}
 	 */
 	default NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
+		context().removeHandler(NettyPipeline.OnChannelReadIdle);
 		context().addHandlerFirst(NettyPipeline.OnChannelReadIdle,
 				new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle));
 		return this;
