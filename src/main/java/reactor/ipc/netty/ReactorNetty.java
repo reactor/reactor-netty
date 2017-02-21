@@ -188,16 +188,16 @@ final class ReactorNetty {
 		if (channel.isActive() && channel.pipeline()
 		                                 .context(name) != null) {
 			channel.pipeline()
-			       .remove(name);
+			       .replace(name, name, handler);
 			if (log.isDebugEnabled()) {
-				log.debug("{} Removed handler: {}, pipeline: {}",
+				log.debug("{} Replaced handler: {}, pipeline: {}",
 						channel,
 						name,
 						channel.pipeline());
 			}
 		}
 		else if (log.isDebugEnabled()) {
-			log.debug(" Non Removed handler: {}, context: {}, pipeline: {}",
+			log.debug(" Non Replaced handler: {}, context: {}, pipeline: {}",
 					channel,
 					name,
 					channel.pipeline()
