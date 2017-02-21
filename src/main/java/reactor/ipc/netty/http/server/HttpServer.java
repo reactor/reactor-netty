@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ public final class HttpServer
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(int port) {
-		return create(NetUtil.LOCALHOST.getHostAddress(), port);
+		return create("0.0.0.0", port);
 	}
 
 	/**
