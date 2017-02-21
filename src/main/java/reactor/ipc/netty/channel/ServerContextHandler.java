@@ -108,8 +108,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 		     .isActive()) {
 			return;
 		}
-		if(channel.hasAttr(CLOSE_CHANNEL) &&
-				channel.attr(CLOSE_CHANNEL).get()){
+		if(!NettyContext.isPersistent(channel)){
 			channel.close();
 		}
 	}

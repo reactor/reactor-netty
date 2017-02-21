@@ -17,8 +17,11 @@
 package reactor.ipc.netty;
 
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import org.reactivestreams.Publisher;
 
 /**
@@ -109,6 +112,19 @@ public interface NettyPipeline {
 		public Consumer<? super SendOptions> configurator() {
 			return configurator;
 		}
+	}
+
+	/**
+	 * Create a new {@link ChannelInboundHandler} that will invoke
+	 * {@link BiConsumer#accept} on
+	 * {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}.
+	 *
+	 * @param handler the channel-read callback
+	 *
+	 * @return a marking event used when a netty connector handler terminates
+	 */
+	static ChannelInboundHandler inboundHandler(BiConsumer<? super ChannelHandlerContext, Object> handler) {
+		return new ReactorNetty.ExtractorHandler(handler);
 	}
 
 	/**

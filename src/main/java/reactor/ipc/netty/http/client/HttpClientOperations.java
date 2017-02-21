@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -67,15 +68,12 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.ipc.netty.channel.NettyContextSupport;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import static reactor.ipc.netty.channel.NettyContextSupport.HTTP_EXTRACTOR;
 
 /**
  * @author Stephane Maldini
@@ -145,26 +143,44 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public HttpClientOperations addDecoder(ChannelHandler handler) {
-		super.addDecoder(handler);
+	public HttpClientOperations addHandlerLast(ChannelHandler handler) {
+		super.addHandlerLast(handler);
 		return this;
 	}
 
 	@Override
-	public HttpClientOperations addDecoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addDecoderBeforeReactorEndHandlers(this, name, handler, HTTP_EXTRACTOR);
+	public HttpClientOperations addHandlerLast(String name, ChannelHandler handler) {
+		super.addHandlerLast(name, handler);
 		return this;
 	}
 
 	@Override
-	public HttpClientOperations addEncoder(ChannelHandler handler) {
-		super.addEncoder(handler);
+	public HttpClientOperations addHandlerFirst(ChannelHandler handler) {
+		super.addHandlerFirst(handler);
 		return this;
 	}
 
 	@Override
-	public HttpClientOperations addEncoder(String name, ChannelHandler handler) {
-		NettyContextSupport.addEncoderAfterReactorCodecs(this, name, handler, HTTP_EXTRACTOR);
+	public HttpClientOperations addHandlerFirst(String name, ChannelHandler handler) {
+		super.addHandlerFirst(name, handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations addHandler(ChannelHandler handler) {
+		super.addHandler(handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations addHandler(String name, ChannelHandler handler) {
+		super.addHandler(name, handler);
+		return this;
+	}
+
+	@Override
+	public HttpClientOperations replaceHandler(String name, ChannelHandler handler) {
+		super.replaceHandler(name, handler);
 		return this;
 	}
 
@@ -484,7 +500,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			started = true;
 
 			if (!isKeepAlive()) {
-				markOutboundCloseable();
+				markPersistent(false);
 			}
 			if(isInboundCancelled()){
 				ReferenceCountUtil.release(msg);
@@ -634,7 +650,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 		//prevent further header to be sent for handshaking
 		if (markHeadersAsSent()) {
-			addDecoder(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+			addHandlerLast(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
@@ -738,7 +754,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					parent.chunkedTransfer(false);
 				}
 
-				parent.addEncoder(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
+				parent.addHandlerFirst(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
 

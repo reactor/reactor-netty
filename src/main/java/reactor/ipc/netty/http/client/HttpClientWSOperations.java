@@ -77,7 +77,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 		}
 		handshaker.handshake(channel)
 		          .addListener(f -> {
-			          ignoreChannelPersistence();
+			          markPersistent(false);
 			          channel.read();
 		          });
 	}

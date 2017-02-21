@@ -71,7 +71,7 @@ public class HttpServerTests {
 		                  .getPort())
 		         .newHandler((in, out) -> {
 			         in.context()
-			           .addEncoder(new HttpClientCodec());
+			           .addHandlerFirst(new HttpClientCodec());
 
 			         in.receiveObject()
 			           .ofType(DefaultHttpContent.class)
@@ -110,7 +110,7 @@ public class HttpServerTests {
 		                                         .getPort())
 		                                .get("/")
 		                                .block(Duration.ofSeconds(30))
-		                                .addDecoder(new LineBasedFrameDecoder(10))
+		                                .addHandlerLast(new LineBasedFrameDecoder(10))
 		                                .receive()
 		                                .asString();
 

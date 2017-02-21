@@ -15,13 +15,9 @@
  */
 package reactor.ipc.netty.http.client;
 
-import java.nio.charset.Charset;
-
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -32,7 +28,6 @@ import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -84,7 +79,7 @@ public class HttpClientOperationsTest {
 		HttpClientOperations ops = new HttpClientOperations(channel,
 				(response, request) -> null, handler);
 
-		ops.addDecoder(new JsonObjectDecoder());
+		ops.addHandlerLast(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
 		assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extract"));
@@ -100,7 +95,7 @@ public class HttpClientOperationsTest {
 		HttpClientOperations ops = new HttpClientOperations(channel,
 				(response, request) -> null, handler);
 
-		ops.addDecoder("json", new JsonObjectDecoder());
+		ops.addHandlerLast("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
 		assertThat(channel.pipeline().names().iterator().next(), is("json$extract"));
@@ -116,7 +111,7 @@ public class HttpClientOperationsTest {
 		HttpClientOperations ops = new HttpClientOperations(channel,
 				(response, request) -> null, handler);
 
-		ops.addEncoder(new JsonObjectDecoder());
+		ops.addHandlerFirst(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
 		assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extract"));
@@ -132,7 +127,7 @@ public class HttpClientOperationsTest {
 		HttpClientOperations ops = new HttpClientOperations(channel,
 				(response, request) -> null, handler);
 
-		ops.addEncoder("json", new JsonObjectDecoder());
+		ops.addHandlerFirst("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
 		assertThat(channel.pipeline().names().iterator().next(), is("json$extract"));

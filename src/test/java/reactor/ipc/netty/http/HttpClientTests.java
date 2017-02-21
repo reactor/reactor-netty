@@ -56,7 +56,7 @@ public class HttpClientTests {
 		                          .newHandler((in, out) -> in.receive()
 		                                                     .take(1)
 		                                                     .then(() -> out.context(c
-				                                                     -> c.addEncoder(
+				                                                     -> c.addHandlerFirst(
 				                                                     new HttpResponseEncoder()))
 		                                                                    .sendObject(
 				                                                     new DefaultFullHttpResponse(
@@ -109,7 +109,7 @@ public class HttpClientTests {
 	@Ignore
 	public void pipelined() throws Exception {
 		NettyContext x = TcpServer.create("localhost", 0)
-		                          .newHandler((in, out) -> out.context(c -> c.addEncoder(new
+		                          .newHandler((in, out) -> out.context(c -> c.addHandlerFirst(new
 				                          HttpResponseEncoder()))
 		                                                      .sendObject(Flux.just(
 				                                                      response(),
@@ -362,7 +362,7 @@ public class HttpClientTests {
 		NettyContext x = TcpServer.create("localhost", 0)
 		                          .newHandler((in, out) -> {
 										signal.onComplete();
-										return out.context(c -> c.addEncoder(
+										return out.context(c -> c.addHandlerFirst(
 												new HttpResponseEncoder()))
 										          .sendObject(Mono.delayMillis(2000)
 												          .map(t ->
@@ -403,7 +403,7 @@ public class HttpClientTests {
 		StepVerifier.create(
 				HttpClient.create()
 				          .get("http://www.httpwatch.com", req -> {
-					          req.context().addEncoder("gzipDecompressor", new HttpContentDecompressor());
+					          req.context().addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
 					          return req.addHeader("Accept-Encoding", "gzip")
 					                    .addHeader("Accept-Encoding", "deflate");
 				          })
