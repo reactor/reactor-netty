@@ -245,7 +245,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	@Override
 	public HttpClientRequest.Form multipart(boolean isMultipart) {
-		this.needNewEncoder = this.newMultipart != isMultipart;
+		this.needNewEncoder = isChunked() != isMultipart;
 		this.newMultipart = isMultipart;
 		return this;
 	}
