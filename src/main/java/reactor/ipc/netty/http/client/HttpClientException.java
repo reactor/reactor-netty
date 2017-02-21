@@ -22,7 +22,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import reactor.ipc.netty.channel.AbortedException;
 
 /**
- * An error for signalling that an error occurred during a communication over HTTP version
+ * An exception signalling that an error occurred during a communication over HTTP version
  *
  * @author Stephane Maldini
  */

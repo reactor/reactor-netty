@@ -46,8 +46,7 @@ import reactor.ipc.netty.resources.PoolResources;
 
 /**
  * An http client connector builder with low-level connection options including
- * connection pooling and
- * proxy.
+ * connection pooling and proxy.
  *
  * @author Stephane Maldini
  */
@@ -128,9 +127,13 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * Return a new eventual {@link InetSocketAddress}
+	 * Return a new {@link InetSocketAddress} from the URI.
+	 * <p>
+	 * If the port is undefined (-1), a default port is used (80 or 443 depending on
+	 * whether the URI is secure or not). If {@link #useProxy() a proxy} is used, the
+	 * returned address is provided unresolved.
 	 *
-	 * @param uri {@link URI} to extract host and port informations from
+	 * @param uri {@link URI} to extract host and port information from
 	 *
 	 * @return a new eventual {@link InetSocketAddress}
 	 */
@@ -173,10 +176,10 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * The host and port to which this client should connect.
+	 * Let this client connect through an HTTP proxy by providing a host and port.
 	 *
-	 * @param host The host to connect to.
-	 * @param port The port to connect to.
+	 * @param host The proxy host to connect to.
+	 * @param port The proxy port to connect to.
 	 *
 	 * @return {@literal this}
 	 */
@@ -185,10 +188,13 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * The host and port to which this client should connect.
+	 * Let this client connect through an HTTP proxy by providing a host, port and
+	 * credentials.
 	 *
-	 * @param host The host to connect to.
-	 * @param port The port to connect to.
+	 * @param host The proxy host to connect to.
+	 * @param port The proxy port to connect to.
+	 * @param username The proxy username to use.
+	 * @param password A password-providing function for the proxy.
 	 *
 	 * @return {@literal this}
 	 */
@@ -241,9 +247,9 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * The address to which this client should connect.
+	 *Let this client connect through an HTTP proxy by providing an address.
 	 *
-	 * @param connectAddress The address to connect to.
+	 * @param connectAddress The proxy address to connect to.
 	 *
 	 * @return {@literal this}
 	 */
@@ -253,9 +259,11 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * The address to which this client should connect.
+	 * Let this client connect through an HTTP proxy by providing an address and credentials.
 	 *
 	 * @param connectAddress The address to connect to.
+	 * @param username The proxy username to use.
+	 * @param password A password-providing function for the proxy.
 	 *
 	 * @return {@literal this}
 	 */
@@ -267,8 +275,9 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * The address to which this client should connect.
+	 * Let this client connect through a proxy by providing a proxy type and address.
 	 *
+	 * @param type the proxy {@link reactor.ipc.netty.options.ClientOptions.Proxy type}.
 	 * @param connectAddress The address to connect to.
 	 *
 	 * @return {@literal this}
@@ -279,9 +288,12 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * The address to which this client should connect.
+	 * Let this client connect through an HTTP proxy by providing an address supplier
+	 * and credentials.
 	 *
-	 * @param connectAddress The address to connect to.
+	 * @param connectAddress A supplier of the address to connect to.
+	 * @param username The proxy username to use.
+	 * @param password A password-providing function for the proxy.
 	 *
 	 * @return {@literal this}
 	 */

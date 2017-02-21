@@ -79,7 +79,7 @@ public final class ByteBufMono extends MonoSource<ByteBuf, ByteBuf> {
 
 	/**
 	 * Disable auto memory release on each signal published in order to prevent premature
-	 * recycling when buffers are accumulated downsteams (async).
+	 * recycling when buffers are accumulated downstream (async).
 	 *
 	 * @return {@link ByteBufMono} of retained {@link ByteBuf}
 	 */
@@ -88,7 +88,7 @@ public final class ByteBufMono extends MonoSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
-	 * a {@link InputStream} inbound {@link Mono}
+	 * Convert to an {@link InputStream} inbound {@link Mono}
 	 *
 	 * @return a {@link InputStream} inbound {@link Mono}
 	 */

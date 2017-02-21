@@ -83,6 +83,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	//@Override
+	//TODO document this
 	public NettyOutbound sendHeaders() {
 		if (markHeadersAsSent()) {
 			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {

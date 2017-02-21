@@ -85,7 +85,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	Supplier<? extends SocketAddress> connectAddress = null;
 
 	/**
-	 * Build a new {@link Bootstrap}
+	 * Build a new {@link ClientOptions} out of a new {@link Bootstrap}
 	 */
 	protected ClientOptions() {
 		this(new Bootstrap());
@@ -157,7 +157,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	/**
 	 * The address to which this client should connect.
 	 *
-	 * @param connectAddress The address to connect to.
+	 * @param connectAddress A supplier of the address to connect to.
 	 *
 	 * @return {@literal this}
 	 */
@@ -262,10 +262,13 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * The host and port to which this client should connect.
+	 * Let this client connect through a proxy by providing a host, port and credentials.
 	 *
-	 * @param host The host to connect to.
-	 * @param port The port to connect to.
+	 * @param type The proxy type.
+	 * @param host The proxy host to connect to.
+	 * @param port The proxy port to connect to.
+	 * @param username The proxy username.
+	 * @param password A function to supply the proxy's password from the username.
 	 *
 	 * @return {@literal this}
 	 */
@@ -281,8 +284,9 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * The host and port to which this client should connect.
+	 * Let this client connect through a proxy by providing a host and port.
 	 *
+	 * @param type The proxy type.
 	 * @param host The host to connect to.
 	 * @param port The port to connect to.
 	 *
@@ -293,8 +297,9 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * The address to which this client should connect.
+	 * Let this client connect through a proxy by providing an address.
 	 *
+	 * @param type The proxy type.
 	 * @param connectAddress The address to connect to.
 	 *
 	 * @return {@literal this}
@@ -304,9 +309,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * The address to which this client should connect.
+	 * Let this client connect through a proxy by providing an address and credentials.
 	 *
+	 * @param type The proxy type.
 	 * @param connectAddress The address to connect to.
+	 * @param username The proxy username.
+	 * @param password A function to supply the proxy's password from the username.
 	 *
 	 * @return {@literal this}
 	 */
@@ -323,9 +331,10 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * The address to which this client should connect.
+	 * Let this client connect through a proxy by providing an address supplier.
 	 *
-	 * @param connectAddress The address to connect to.
+	 * @param type The proxy type.
+	 * @param connectAddress The supplier for the address to connect to.
 	 *
 	 * @return {@literal this}
 	 */
@@ -335,9 +344,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * The address to which this client should connect.
+	 * Let this client connect through a proxy by providing an address supplier.
 	 *
-	 * @param connectAddress The address to connect to.
+	 * @param type The proxy type.
+	 * @param connectAddress The supplier for the address to connect to.
+	 * @param username The proxy username.
+	 * @param password A function to supply the proxy's password from the username.
 	 *
 	 * @return {@literal this}
 	 */

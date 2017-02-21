@@ -45,14 +45,14 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 
 	/**
-	 * add an outbound cookie
+	 * Add an outbound cookie
 	 *
 	 * @return this outbound
 	 */
 	HttpClientRequest addCookie(Cookie cookie);
 
 	/**
-	 * Add an outbound http header
+	 * Add an outbound http header, appending the value if the header is already set.
 	 *
 	 * @param name header name
 	 * @param value header value
@@ -90,15 +90,17 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest followRedirect();
 
 	/**
-	 * Enable http status 302 auto-redirect support
+	 * Toggle the request to fail in case of a client-side error.
 	 *
+	 * @param shouldFail true if the request should fail in case of client errors.
 	 * @return {@literal this}
 	 */
 	HttpClientRequest failOnClientError(boolean shouldFail);
 
 	/**
-	 * Enable http status 302 auto-redirect support
+	 * Toggle the request to fail in case of a server-side error.
 	 *
+	 * @param shouldFail true if the request should fail in case of server errors.
 	 * @return {@literal this}
 	 */
 	HttpClientRequest failOnServerError(boolean shouldFail);
@@ -111,7 +113,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	boolean hasSentHeaders();
 
 	/**
-	 * Set an outbound header
+	 * Set an outbound header, replacing any pre-existing value.
 	 *
 	 * @param name headers key
 	 * @param value header value
@@ -122,7 +124,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 
 	/**
 	 * Set outbound headers from the passed headers. It will however ignore {@code
-	 * HOST} header key.
+	 * HOST} header key. Any pre-existing value for the passed headers will be replaced.
 	 *
 	 * @param headers a netty headers map
 	 *
@@ -187,16 +189,16 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	Flux<Long> sendForm(Consumer<Form> formCallback);
 
 	/**
-	 * Return a {@link Mono} successful on committed response
+	 * Send the headers.
 	 *
-	 * @return a {@link Mono} successful on committed response
+	 * @return a {@link NettyOutbound} completing when headers have been sent.
 	 */
 	NettyOutbound sendHeaders();
 
 	/**
 	 * Upgrade connection to Websocket.
 	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
+	 * @return a {@link WebsocketOutbound} completing when upgrade is confirmed
 	 */
 	WebsocketOutbound sendWebsocket();
 
@@ -211,7 +213,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 *
 	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if not relevant.
 	 * Can be several protocols, separated by a comma, or null if no subprotocol is required.
-	 * @return a {@link Mono} completing when upgrade is confirmed
+	 * @return a {@link WebsocketOutbound} completing when upgrade is confirmed
 	 */
 	WebsocketOutbound sendWebsocket(String subprotocols);
 
@@ -253,8 +255,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 		/**
 		 * Set Form encoding
 		 *
-		 * @param mode the encoding mode for this form
-		 * encoding
+		 * @param mode the encoding mode for this form encoding
 		 * @return this builder
 		 */
 		Form encoding(HttpPostRequestEncoder.EncoderMode mode);
@@ -281,7 +282,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 		 * Add an HTTP File Upload attribute
 		 *
 		 * @param name File name
-		 * @param stream InputStream reference
+		 * @param stream File content as InputStream
 		 *
 		 * @return this builder
 		 */
@@ -316,7 +317,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 		 * Add an HTTP File Upload attribute
 		 *
 		 * @param name File name
-		 * @param stream File reference
+		 * @param stream File content as InputStream
 		 * @param contentType File mime-type
 		 *
 		 * @return this builder
@@ -330,7 +331,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 		 *
 		 * @param name File name
 		 * @param filename File name to override origin name
-		 * @param stream File reference
+		 * @param stream File content as InputStream
 		 * @param contentType File mime-type
 		 *
 		 * @return this builder
@@ -370,42 +371,42 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 		Form multipart(boolean multipart);
 
 		/**
-		 * Add an HTTP File Upload attribute
+		 * Add an HTTP File Upload attribute for a text file.
 		 *
-		 * @param name File name
-		 * @param file File reference
+		 * @param name Text file name
+		 * @param file Text File reference
 		 *
 		 * @return this builder
 		 */
 		Form textFile(String name, File file);
 
 		/**
-		 * Add an HTTP File Upload attribute
+		 * Add an HTTP File Upload attribute for a text file.
 		 *
-		 * @param name File name
-		 * @param stream InputStream reference
+		 * @param name Text file name
+		 * @param stream Text file content as InputStream
 		 *
 		 * @return this builder
 		 */
 		Form textFile(String name, InputStream stream);
 
 		/**
-		 * Add an HTTP File Upload attribute
+		 * Add an HTTP File Upload attribute for a text file.
 		 *
-		 * @param name File name
-		 * @param file File reference
-		 * @param contentType File mime-type
+		 * @param name Text file name
+		 * @param file Text File reference
+		 * @param contentType Text file mime-type
 		 *
 		 * @return this builder
 		 */
 		Form textFile(String name, File file, String contentType);
 
 		/**
-		 * Add an HTTP File Upload attribute
+		 * Add an HTTP File Upload attribute for a text file.
 		 *
-		 * @param name File name
-		 * @param inputStream File reference
-		 * @param contentType File mime-type
+		 * @param name Text file name
+		 * @param inputStream Text file content as InputStream
+		 * @param contentType Text file mime-type
 		 *
 		 * @return this builder
 		 */

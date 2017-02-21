@@ -117,11 +117,8 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 
 	/**
 	 * Unidirectional conversion to a {@link WebsocketInbound}.
-	 * receive operations are
-	 * invoked on handshake
-	 * success,
-	 * otherwise the returned {@link WebsocketInbound} fail or wasn't upgraded by the
-	 * server.
+	 * receive operations are invoked on handshake success, otherwise connection wasn't
+	 * upgraded by the server and the returned {@link WebsocketInbound} fails.
 	 *
 	 * @return a {@link WebsocketInbound} completing when upgrade is confirmed
 	 */
@@ -129,11 +126,8 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 
 	/**
 	 * Duplex conversion to {@link WebsocketInbound}, {@link WebsocketOutbound} and a
-	 * closing {@link Publisher}. Mono and Callback are
-	 * invoked on
-	 * handshake
-	 * success,
-	 * otherwise the returned {@link Mono} fail.
+	 * closing {@link Publisher}. Mono and Callback are invoked on handshake success,
+	 * otherwise the returned {@link Mono} fails.
 	 *
 	 * @param websocketHandler the in/out handler for ws transport
 	 *
@@ -145,11 +139,8 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 
 	/**
 	 * Duplex conversion to {@link WebsocketInbound}, {@link WebsocketOutbound} and a
-	 * closing {@link Publisher}. Mono and Callback are
-	 * invoked on
-	 * handshake
-	 * success,
-	 * otherwise the returned {@link Mono} fail.
+	 * closing {@link Publisher}. Mono and Callback are invoked on handshake success,
+	 * otherwise the returned {@link Mono} fails.
 	 *
 	 * @param protocols optional sub-protocol
 	 * @param websocketHandler the in/out handler for ws transport

@@ -46,8 +46,8 @@ import reactor.ipc.netty.resources.LoopResources;
 final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> {
 
 	/**
-	 * Bind a new UDP client to the "loopback" address.
-	 * Handlers will run on the same thread they have beem receiving IO events.
+	 * Bind a new UDP client to the "localhost" address and {@link NettyOptions#DEFAULT_PORT port 12012}.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @return a new {@link UdpClient}
@@ -57,12 +57,11 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	}
 
 	/**
-	 * Bind a new UDP client to the given bind address.
-	 * Handlers will run on the same thread they have beem receiving IO events.
+	 * Bind a new UDP client to the given bind address and {@link NettyOptions#DEFAULT_PORT port 12012}.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the client on the
-	 * passed port
+	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the client on default port
 	 *
 	 * @return a new {@link UdpClient}
 	 */
@@ -71,11 +70,11 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	}
 
 	/**
-	 * Bind a new UDP client to the "loopback" address and specified port.
-	 * Handlers will run on the same thread they have beem receiving IO events.
+	 * Bind a new UDP client to the "localhost" address and specified port.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param port the port to listen on the passed bind address
+	 * @param port the port to listen on the localhost bind address
 	 *
 	 * @return a new {@link UdpClient}
 	 */
@@ -85,12 +84,12 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 
 	/**
 	 * Bind a new UDP client to the given bind address and port.
-	 * Handlers will run on the same thread they have beem receiving IO events.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param port the port to listen on the passed bind address
 	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the client on the
 	 * passed port
+	 * @param port the port to listen on the passed bind address
 	 *
 	 * @return a new {@link UdpClient}
 	 */
@@ -99,8 +98,8 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	}
 
 	/**
-	 * Bind a new UDP client to the given bind address and port.
-	 * Handlers will run on the same thread they have beem receiving IO events.
+	 * Bind a new UDP client to the bind address and port provided through the options.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param options the configurator

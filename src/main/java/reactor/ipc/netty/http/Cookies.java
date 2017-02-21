@@ -78,6 +78,10 @@ public final class Cookies {
 		cachedCookies = Collections.emptyMap();
 	}
 
+	/**
+	 * Wait for the cookies to become available, cache them and subsequently return the
+	 * cached map of cookies.
+	 */
 	public Map<CharSequence, Set<Cookie>> getCachedCookies() {
 		if (!STATE.compareAndSet(this, NOT_READ, READING)) {
 			for (; ; ) {

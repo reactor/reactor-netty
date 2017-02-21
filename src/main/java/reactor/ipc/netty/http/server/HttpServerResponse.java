@@ -42,14 +42,14 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 
 	/**
-	 * add an outbound cookie
+	 * Add an outbound cookie
 	 *
 	 * @return this outbound
 	 */
 	HttpServerResponse addCookie(Cookie cookie);
 
 	/**
-	 * Add an outbound http header
+	 * Add an outbound http header, appending the value if the header already exist.
 	 *
 	 * @param name header name
 	 * @param value header value
@@ -81,7 +81,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	boolean hasSentHeaders();
 
 	/**
-	 * Set an outbound header
+	 * Set an outbound header, replacing any pre-existing value.
 	 *
 	 * @param name headers key
 	 * @param value header value
@@ -91,7 +91,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse header(CharSequence name, CharSequence value);
 
 	/**
-	 * Set outbound headers
+	 * Set outbound headers, replacing any pre-existing value for these headers.
 	 *
 	 * @param headers netty headers map
 	 *
@@ -100,7 +100,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse headers(HttpHeaders headers);
 
 	/**
-	 * set the request keepAlive if true otherwise remove the existing connection keep alive header
+	 * Set the request keepAlive if true otherwise remove the existing connection keep alive header
 	 *
 	 * @return this outbound
 	 */
@@ -125,7 +125,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpHeaders responseHeaders();
 
 	/**
-	 * Send headers and empty content thus delimiting a full empty body http request
+	 * Send headers and empty content thus delimiting a full empty body http response.
 	 *
 	 * @return a {@link Mono} successful on committed response
 	 * @see #send(Publisher)
@@ -135,9 +135,9 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	}
 
 	/**
-	 * Return a {@link Mono} successful on committed response
+	 * Return a {@link NettyOutbound} successful on committed response
 	 *
-	 * @return a {@link Mono} successful on committed response
+	 * @return a {@link NettyOutbound} successful on committed response
 	 */
 	NettyOutbound sendHeaders();
 
@@ -160,8 +160,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 
 	/**
 	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
-	 * success,
-	 * otherwise the returned {@link Mono} fail.
+	 * success, otherwise the returned {@link Mono} fails.
 	 *
 	 * @param websocketHandler the in/out handler for ws transport
 	 * @return a {@link Mono} completing when upgrade is confirmed
@@ -171,9 +170,8 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	}
 
 	/**
-	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
-	 * success,
-	 * otherwise the returned {@link Mono} fail.
+	 * Upgrade connection to Websocket with optional subprotocol(s). Mono and Callback
+	 * are invoked on handshake success, otherwise the returned {@link Mono} fails.
 	 *
 	 * @param protocols optional sub-protocol
 	 * @param websocketHandler the in/out handler for ws transport

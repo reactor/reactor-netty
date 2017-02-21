@@ -50,8 +50,7 @@ import reactor.ipc.netty.resources.PoolResources;
 public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 	/**
-	 * Bind a new TCP client to the localhost on port 12012. The default client
-	 * implementation is scanned from the classpath on Class init.
+	 * Bind a new TCP client to the localhost on {@link NettyOptions#DEFAULT_PORT port 12012}.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @return a new {@link TcpClient}
@@ -61,7 +60,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	}
 
 	/**
-	 * Bind a new TCP client to the specified connect address and port 12012.
+	 * Bind a new TCP client to the specified connect address and {@link NettyOptions#DEFAULT_PORT port 12012}.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param bindAddress the address to connect to on port 12012
@@ -73,10 +72,10 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	}
 
 	/**
-	 * Bind a new TCP client to "loopback" on the the specified port. The default client
+	 * Bind a new TCP client to "localhost" on the the specified port.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param port the port to connect to on "loopback"
+	 * @param port the port to connect to on "localhost"
 	 * <p>
 	 * a new {@link TcpClient}
 	 */
