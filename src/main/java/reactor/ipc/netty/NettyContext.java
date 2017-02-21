@@ -52,7 +52,9 @@ public interface NettyContext extends Disposable {
 
 	/**
 	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
-	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with {@link #addHandlerLast}
+	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with
+	 * {@link #addHandlerLast}. Implementation may add more auto handling in particular
+	 * HTTP based context will prepend an HttpContent body extractor.
 	 * <p>
 	 * {@code [ [reactor codecs], [<- user FIRST HANDLERS added here, user LAST HANDLERS added here ->], [reactor handlers] ]}
 	 * <p>

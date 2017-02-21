@@ -110,7 +110,7 @@ public class HttpServerTests {
 		                                         .getPort())
 		                                .get("/")
 		                                .block(Duration.ofSeconds(30))
-		                                .addHandlerLast(new LineBasedFrameDecoder(10))
+		                                .addHandler(new LineBasedFrameDecoder(10))
 		                                .receive()
 		                                .asString();
 

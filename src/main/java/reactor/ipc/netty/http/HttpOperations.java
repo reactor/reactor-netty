@@ -179,21 +179,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
-	public HttpOperations<INBOUND, OUTBOUND> addHandlerLast(String name, ChannelHandler handler) {
-		super.addHandlerLast(name, handler);
-
-		if(channel().pipeline().context(handler) == null){
-			return this;
-		}
-
-		autoAddHttpExtractor(this, name, handler);
-		return this;
-	}
-
-	@Override
-	public HttpOperations<INBOUND, OUTBOUND> addHandlerFirst(String name, ChannelHandler
-			handler) {
-		super.addHandlerLast(name, handler);
+	public HttpOperations<INBOUND, OUTBOUND> addHandler(String name, ChannelHandler handler) {
+		super.addHandler(name, handler);
 
 		if(channel().pipeline().context(handler) == null){
 			return this;

@@ -650,7 +650,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 		//prevent further header to be sent for handshaking
 		if (markHeadersAsSent()) {
-			addHandlerLast(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
