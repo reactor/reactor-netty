@@ -39,6 +39,7 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.NetUtil;
 import reactor.core.Exceptions;
@@ -361,7 +362,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		this.proxyPassword = password;
 		this.proxyAddress = Objects.requireNonNull(connectAddress, "addressSupplier");
 		this.proxyType = Objects.requireNonNull(type, "proxyType");
-		if(bootstrapTemplate.config().resolver() == null){
+		if(bootstrapTemplate.config().resolver() == DefaultAddressResolverGroup.INSTANCE){
 			resolver(NoopAddressResolverGroup.INSTANCE);
 		}
 		return this;
