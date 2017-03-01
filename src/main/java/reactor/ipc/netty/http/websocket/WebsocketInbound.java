@@ -47,7 +47,7 @@ public interface WebsocketInbound extends NettyInbound {
 	 * @return this inbound
 	 */
 	default WebsocketInbound aggregateFrames() {
-		return aggregateFrames(2 ^ 16);
+		return aggregateFrames(65_536);
 	}
 
 	/**
