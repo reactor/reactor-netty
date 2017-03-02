@@ -32,8 +32,6 @@ import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.core.Loopback;
-import reactor.core.Producer;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -56,8 +54,7 @@ import reactor.util.Loggers;
  * @since 0.6
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
-		implements NettyInbound, NettyOutbound, Producer, Loopback, NettyContext,
-		           Subscriber<Void> {
+		implements NettyInbound, NettyOutbound, NettyContext, Subscriber<Void> {
 
 	/**
 	 * Create a new {@link ChannelOperations} attached to the {@link Channel} attribute
@@ -172,28 +169,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final Object connectedInput() {
-		return inbound;
-	}
-
-	@Override
-	public final Object connectedOutput() {
-		io.netty.channel.Channel parent = channel.parent();
-		SocketAddress remote = channel.remoteAddress();
-		SocketAddress local = channel.localAddress();
-		String src = local != null ? local.toString() : "";
-		String dst = remote != null ? remote.toString() : "";
-		if (parent == null) {
-			String _src = src;
-			src = dst;
-			dst = _src;
-		}
-
-		return src.replaceFirst("localhost", "") + ":" + dst.replaceFirst("localhost",
-				"");
-	}
-
-	@Override
 	public final NettyContext context() {
 		return this;
 	}
@@ -207,11 +182,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public void dispose() {
 		inbound.cancel();
-	}
-
-	@Override
-	public final Object downstream() {
-		return inbound;
 	}
 
 	@Override
@@ -285,7 +255,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if inbound traffic is not expected anymore
 	 */
 	protected final boolean isInboundDone() {
-		return inbound.isTerminated() || !channel.isActive();
+		return inbound.inboundDone || !channel.isActive();
 	}
 
 

@@ -29,8 +29,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.Disposable;
 import reactor.core.Exceptions;
-import reactor.core.Producer;
-import reactor.core.Trackable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
 import reactor.util.Logger;
@@ -40,8 +38,7 @@ import reactor.util.concurrent.QueueSupplier;
 /**
  * @author Stephane Maldini
  */
-final class FluxReceive extends Flux<Object>
-		implements Subscription, Trackable, Producer {
+final class FluxReceive extends Flux<Object> implements Subscription, Disposable {
 
 	final Channel           channel;
 	final ChannelOperations<?, ?> parent;
@@ -81,34 +78,22 @@ final class FluxReceive extends Flux<Object>
 		drainReceiver();
 	}
 
-	@Override
-	final public Object downstream() {
-		return receiver;
-	}
-
-	@Override
-	final public Throwable getError() {
-		return inboundError;
-	}
-
-	@Override
-	public long getPending() {
+	final long getPending() {
 		return receiverQueue != null ? receiverQueue.size() : 0;
 	}
 
-	@Override
-	final public boolean isStarted() {
-		return channel.isActive();
-	}
-
-	@Override
-	final public boolean isTerminated() {
-		return inboundDone;
-	}
-
-	@Override
-	public boolean isCancelled() {
+	final boolean isCancelled() {
 		return receiverCancel == CANCELLED;
+	}
+
+	@Override
+	public void dispose() {
+		cancel();
+	}
+
+	@Override
+	public boolean isDisposed() {
+		return (inboundDone && (receiverQueue == null || receiverQueue.isEmpty()));
 	}
 
 	@Override
@@ -125,11 +110,6 @@ final class FluxReceive extends Flux<Object>
 				});
 			}
 		}
-	}
-
-	@Override
-	public long requestedFromDownstream() {
-		return receiverDemand;
 	}
 
 	@Override
