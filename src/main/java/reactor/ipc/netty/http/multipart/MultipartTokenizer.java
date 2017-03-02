@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,16 +22,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.core.Producer;
-import reactor.core.Receiver;
-import reactor.core.Trackable;
 import reactor.core.publisher.Operators;
 
 /**
  * @author Ben Hale
  */
 final class MultipartTokenizer
-		implements Subscriber<ByteBuf>, Subscription, Trackable, Receiver, Producer{
+		implements Subscriber<ByteBuf>, Subscription {
 
 	static final char[] CRLF = new char[]{'\r', '\n'};
 
@@ -70,21 +67,6 @@ final class MultipartTokenizer
 	}
 
 	@Override
-	public Subscription upstream() {
-		return subscription;
-	}
-
-	@Override
-	public boolean isStarted() {
-		return subscription != null;
-	}
-
-	@Override
-	public Subscriber<? super Token> downstream() {
-		return actual;
-	}
-
-	@Override
 	public final void onSubscribe(Subscription s) {
 		if (Operators.validate(subscription, s)) {
 				subscription = s;
@@ -105,29 +87,6 @@ final class MultipartTokenizer
 			s.cancel();
 		}
 	}
-
-	@Override
-	public boolean isTerminated() {
-		return null != subscription && subscription instanceof Trackable && (
-				(Trackable) subscription).isTerminated();
-	}
-
-	@Override
-	public long getCapacity() {
-		return Trackable.class.isAssignableFrom(actual
-				.getClass()) ?
-				((Trackable) actual).getCapacity() :
-				Long.MAX_VALUE;
-	}
-
-	@Override
-	public long getPending() {
-		return Trackable.class.isAssignableFrom(actual
-				.getClass()) ?
-				((Trackable) actual).getPending() :
-				-1L;
-	}
-
 
 	@Override
 	public void onComplete() {

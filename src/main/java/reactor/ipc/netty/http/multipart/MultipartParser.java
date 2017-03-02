@@ -16,8 +16,6 @@
 
 package reactor.ipc.netty.http.multipart;
 
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
@@ -25,15 +23,11 @@ import io.netty.buffer.ByteBufAllocator;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.Disposable;
-import reactor.core.MultiProducer;
-import reactor.core.Producer;
-import reactor.core.Receiver;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.UnicastProcessor;
-import reactor.core.Trackable;
 import reactor.core.publisher.Operators;
-import reactor.util.concurrent.QueueSupplier;
+import reactor.core.publisher.UnicastProcessor;
 import reactor.ipc.netty.ByteBufFlux;
+import reactor.util.concurrent.QueueSupplier;
 
 /**
  * @author Ben Hale
@@ -41,8 +35,7 @@ import reactor.ipc.netty.ByteBufFlux;
  */
 
 final class MultipartParser
-		implements Subscriber<MultipartTokenizer.Token>, Subscription, Disposable, Producer,
-		           MultiProducer, Receiver, Trackable {
+		implements Subscriber<MultipartTokenizer.Token>, Subscription, Disposable {
 
 	final Subscriber<? super ByteBufFlux> actual;
 	final ByteBufAllocator                alloc;
@@ -167,36 +160,5 @@ final class MultipartParser
 		if (WIP.decrementAndGet(this) == 0) {
 			s.cancel();
 		}
-	}
-
-	@Override
-	public Object downstream() {
-		return actual;
-	}
-
-	@Override
-	public boolean isStarted() {
-		return s != null && !done;
-	}
-
-	@Override
-	public boolean isTerminated() {
-		return done;
-	}
-
-	@Override
-	public Object upstream() {
-		return s;
-	}
-
-	@Override
-	public Iterator<?> downstreams() {
-		return Arrays.asList(window)
-		             .iterator();
-	}
-
-	@Override
-	public long downstreamCount() {
-		return window != null ? 1L : 0L;
 	}
 }
