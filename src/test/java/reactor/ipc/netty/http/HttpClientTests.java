@@ -178,6 +178,22 @@ public class HttpClientTests {
 	}
 
 	@Test
+	public void serverInfiniteClientClose() throws Exception {
+
+		NettyContext c = HttpServer.create(0)
+		                           .newHandler((req, resp) -> resp.neverComplete())
+		                           .block(Duration.ofSeconds(30));
+
+		Mono<HttpClientResponse> remote = HttpClient.create(opts -> opts.connect(c.address().getPort()))
+		                                            .get("/");
+
+		HttpClientResponse r = remote.block();
+		r.dispose();
+		//while(r.channel().isActive());
+		c.dispose();
+	}
+
+	@Test
 	@Ignore
 	public void proxy() throws Exception {
 		Mono<HttpClientResponse> remote = HttpClient.create(o -> o.proxy("127.0.0.1", 8888))
