@@ -125,6 +125,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.nettyRequest =
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
+		this.requestHeaders.set(HttpHeaderNames.USER_AGENT, HttpClient.USER_AGENT);
 		this.inboundPrefetch = 16;
 		chunkedTransfer(true);
 	}

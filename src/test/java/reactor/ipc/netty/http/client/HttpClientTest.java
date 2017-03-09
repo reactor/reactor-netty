@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.client;
 
 import java.io.InputStream;
 import java.nio.file.Paths;
@@ -38,9 +38,6 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.AbortedException;
-import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.http.client.HttpClientException;
-import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -50,7 +47,7 @@ import reactor.test.StepVerifier;
  * @author Stephane Maldini
  * @since 0.6
  */
-public class HttpClientTests {
+public class HttpClientTest {
 
 	@Test
 	public void abort() throws Exception {
@@ -455,6 +452,28 @@ public class HttpClientTests {
 				            && "".equals(tuple.getT2()))
 		            .expectComplete()
 		            .verify();
+	}
+
+	@Test
+	public void testUserAgent() {
+		NettyContext c = HttpServer.create(0)
+		                           .newHandler((req, resp) -> {
+			                           Assert.assertTrue(""+req.requestHeaders()
+			                                                   .get(HttpHeaderNames.USER_AGENT),
+					                           req.requestHeaders()
+			                                               .contains(HttpHeaderNames.USER_AGENT) && req.requestHeaders()
+			                                                                                           .get(HttpHeaderNames.USER_AGENT)
+			                                                                                           .equals(HttpClient.USER_AGENT));
+
+			                           return resp;
+		                           })
+		                           .block();
+
+		HttpClient.create(c.address().getPort())
+		          .get("/")
+		          .block();
+
+		c.dispose();
 	}
 
 }

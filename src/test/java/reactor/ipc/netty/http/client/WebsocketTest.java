@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.client;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -40,7 +40,7 @@ import static org.hamcrest.CoreMatchers.is;
  * @author tjreactive
  * @author smaldini
  */
-public class WebsocketTests {
+public class WebsocketTest {
 
 	static final String auth = "bearer abc";
 

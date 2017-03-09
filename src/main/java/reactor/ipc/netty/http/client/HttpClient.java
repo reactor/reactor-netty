@@ -19,6 +19,7 @@ package reactor.ipc.netty.http.client;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -57,6 +58,9 @@ import reactor.ipc.netty.tcp.TcpClient;
  * @author Simon Baslé
  */
 public class HttpClient implements NettyConnector<HttpClientResponse, HttpClientRequest> {
+
+	public static final String USER_AGENT = String.format("ReactorNetty/%s", reactorNettyVersion());
+
 
 	/**
 	 * @return a simple HTTP client
@@ -373,6 +377,11 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
 			        .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
 		}
+	}
+
+	static String reactorNettyVersion() {
+		return Optional.ofNullable(HttpClient.class.getPackage().getImplementationVersion())
+		               .orElse("dev");
 	}
 
 }
