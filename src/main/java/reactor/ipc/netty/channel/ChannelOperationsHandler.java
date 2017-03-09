@@ -137,9 +137,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 		}
 		catch (Throwable err) {
-			ReferenceCountUtil.release(msg);
 			Exceptions.throwIfFatal(err);
 			exceptionCaught(ctx, err);
+			ReferenceCountUtil.safeRelease(msg);
 		}
 	}
 
