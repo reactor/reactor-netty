@@ -98,7 +98,7 @@ public class HttpClientOperationsTest {
 		ops.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		assertThat(channel.pipeline().names().iterator().next(), is("json$extractoror"));
+		assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
 		assertThat(channel.readInbound(), instanceOf(ByteBuf.class));
 		assertThat(channel.readInbound(), instanceOf(LastHttpContent.class));
 		assertThat(channel.readInbound(), nullValue());

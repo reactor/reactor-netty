@@ -22,7 +22,6 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -249,6 +248,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	protected void onInboundCancel() {
+		channel().close();
+	}
+
+	@Override
 	public HttpClientRequest header(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
 			this.requestHeaders.set(name, value);
@@ -460,10 +464,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onOutboundComplete() {
-		if (isWebsocket()) {
-			return;
-		}
-		if (isInboundCancelled()) {
+		if (isWebsocket() || isInboundCancelled()) {
 			return;
 		}
 		if (markHeadersAsSent()) {
@@ -504,7 +505,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			if(isInboundCancelled()){
 				ReferenceCountUtil.release(msg);
-				channel().read();
 				return;
 			}
 
@@ -559,13 +559,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		super.onInboundNext(ctx, msg);
-		if (isInboundCancelled()) {
-			ctx.read();
-		}
-		else {
-			prefetchMore(ctx);
-		}
-
+		prefetchMore(ctx);
 	}
 
 	@Override

@@ -19,8 +19,10 @@ package reactor.ipc.netty.http;
 import java.io.InputStream;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -180,8 +182,28 @@ public class HttpClientTests {
 	@Test
 	public void serverInfiniteClientClose() throws Exception {
 
+		CountDownLatch latch = new CountDownLatch(1);
 		NettyContext c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> resp.neverComplete())
+		                           .newHandler((req, resp) -> {
+			                           req.context()
+			                              .onClose(latch::countDown);
+
+			                           return Flux.interval(Duration.ofSeconds(1))
+			                                      .flatMap(d -> {
+				                                      req.context()
+				                                         .channel()
+				                                         .config()
+				                                         .setAutoRead(true);
+
+				                                      return resp.sendObject(Unpooled.EMPTY_BUFFER)
+				                                                 .then()
+				                                                 .doOnSuccess(x -> req.context()
+				                                                                      .channel()
+				                                                                      .config()
+				                                                                      .setAutoRead(
+						                                                                      false));
+			                                      });
+		                           })
 		                           .block(Duration.ofSeconds(30));
 
 		Mono<HttpClientResponse> remote = HttpClient.create(opts -> opts.connect(c.address().getPort()))
@@ -189,7 +211,10 @@ public class HttpClientTests {
 
 		HttpClientResponse r = remote.block();
 		r.dispose();
-		//while(r.channel().isActive());
+		while (r.channel()
+		        .isActive()) {
+		}
+		latch.await();
 		c.dispose();
 	}
 

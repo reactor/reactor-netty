@@ -162,7 +162,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 			if (a == null) {
 				if (d && getPending() == 0) {
-					cancelReceiver();
 					Throwable ex = inboundError;
 					if (ex != null) {
 						parent.context.fireContextError(ex);
@@ -331,7 +330,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		Subscriber<?> receiver = this.receiver;
 		if (receiverFastpath && receiver != null) {
 			receiver.onComplete();
-			cancelReceiver();
 			return true;
 		}
 		drainReceiver();
@@ -351,7 +349,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			channel.close();
 		}
 		if (receiverFastpath && receiver != null) {
-			cancelReceiver();
 			parent.context.fireContextError(err);
 			receiver.onError(err);
 			return true;
@@ -363,7 +360,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	}
 
 	final void terminateReceiver(Queue<?> q, Subscriber<?> a) {
-		cancelReceiver();
 		if (q != null) {
 			q.clear();
 		}
@@ -380,7 +376,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final void unsubscribeReceiver() {
 		receiverDemand = 0L;
 		receiver = null;
-		parent.onInboundCancel();
+		if(isCancelled()) {
+			parent.onInboundCancel();
+		}
 	}
 
 	@SuppressWarnings("rawtypes")
