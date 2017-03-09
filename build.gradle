@@ -198,7 +198,12 @@ configure(rootProject) { project ->
 	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
 
 	//Default reactor-netty impl
-	compile "io.netty:netty-all:$nettyVersion"
+	//compile "io.netty:netty-all:$nettyVersion"
+
+	compile "io.netty:netty-handler:${nettyVersion}"
+	compile "io.netty:netty-handler-proxy:${nettyVersion}"
+	compile "io.netty:netty-codec-http:${nettyVersion}"
+	compile "io.netty:netty-transport-native-epoll:${nettyVersion}"
 
 	// Testing
 	testCompile "org.apache.httpcomponents:fluent-hc:4.3.6"
