@@ -123,7 +123,7 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	 * error during write
 	 */
 	default NettyOutbound sendByteArray(Publisher<? extends byte[]> dataStream) {
-		return sendObject(Flux.from(dataStream)
+		return send(Flux.from(dataStream)
 		                .map(Unpooled::wrappedBuffer));
 	}
 

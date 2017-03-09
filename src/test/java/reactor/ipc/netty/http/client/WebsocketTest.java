@@ -136,6 +136,36 @@ public class WebsocketTest {
 		            .verify();
 	}
 
+
+	@Test
+	public void unidirectionalBinary() {
+		int c = 10;
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket(
+				                       (i, o) -> o.options(opt -> opt.flushOnEach())
+				                                  .sendByteArray(
+						                                  Mono.just("test".getBytes())
+						                                      .delayElementMillis(100)
+						                                      .repeat())))
+		                       .block(Duration.ofSeconds(30));
+
+		Flux<String> ws = HttpClient.create(httpServer.address()
+		                                              .getPort())
+		                            .ws("/")
+		                            .flatMap(in -> in.receiveWebsocket()
+		                                             .aggregateFrames()
+		                                             .receive()
+		                                             .asString());
+
+		StepVerifier.create(ws.take(c)
+		                      .log())
+		            .expectNextSequence(Flux.range(1, c)
+		                                    .map(v -> "test")
+		                                    .toIterable())
+		            .expectComplete()
+		            .verify();
+	}
+
 	@Test
 	public void duplexEcho() throws Exception {
 
