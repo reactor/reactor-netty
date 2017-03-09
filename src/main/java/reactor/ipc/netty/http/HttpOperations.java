@@ -66,6 +66,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
 		super(ioChannel, handler, context);
+		//reset channel to manual read if re-used
+		ioChannel.config().setAutoRead(false);
 	}
 
 	/**

@@ -66,6 +66,7 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -481,6 +482,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	protected void onOutboundError(Throwable err) {
+		if(NettyContext.isPersistent(channel()) && responseState == null){
+			parentContext().fireContextError(err);
+			return;
+		}
+		super.onOutboundError(err);
+	}
+
+	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpResponse) {
 			HttpResponse response = (HttpResponse) msg;
@@ -544,6 +554,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
 			}
+			//force auto read to enable more accurate close selection now inbound is done
+			channel().config().setAutoRead(true);
 			onHandlerTerminate();
 			return;
 		}

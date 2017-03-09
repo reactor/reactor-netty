@@ -28,6 +28,7 @@ import java.util.function.Function;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -364,10 +365,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				if (isOutboundDone()) {
 					onHandlerTerminate();
 				}
-				return;
-			}
-			if (isOutboundDone()) {
-				onOutboundReadMore();
+				else {
+					//force auto read to enable more accurate close selection now inbound is done
+					channel().config()
+					         .setAutoRead(true);
+				}
 			}
 		}
 		else {
@@ -406,15 +408,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		});
 	}
 
-	final void onOutboundReadMore() {
-		if (isKeepAlive()) {
-			if (log.isDebugEnabled()) {
-				log.debug("Consuming keep-alive connection, prepare to ignore extra " + "frames");
-			}
-			channel().read();
-		}
-	}
-
 	@Override
 	protected void onOutboundError(Throwable err) {
 
@@ -430,24 +423,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.INTERNAL_SERVER_ERROR);
 			response.headers()
-			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+			        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 			channel().writeAndFlush(response)
-			         .addListener(r -> onHandlerTerminate());
-			onOutboundReadMore();
+			         .addListener(ChannelFutureListener.CLOSE);
 			return;
 		}
 
 		if (HttpUtil.isContentLengthSet(nettyResponse)) {
-			channel().writeAndFlush(EMPTY_BUFFER)
-			         .addListener(r -> onHandlerTerminate());
-			onOutboundReadMore();
+			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+			         .addListener(ChannelFutureListener.CLOSE);
 			return;
 		}
 		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
-		         .addListener(r -> onHandlerTerminate());
-		if (isKeepAlive()) {
-			onOutboundReadMore();
-		}
+		         .addListener(ChannelFutureListener.CLOSE);
 	}
 
 	@Override

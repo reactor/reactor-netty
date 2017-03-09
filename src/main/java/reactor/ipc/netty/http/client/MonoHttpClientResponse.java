@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.channel.AbortedException;
 
 /**
  * @author Stephane Maldini
@@ -173,6 +174,10 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			if (throwable instanceof RedirectClientException) {
 				RedirectClientException re = (RedirectClientException) throwable;
 				redirect(re.location);
+				return true;
+			}
+			if (AbortedException.isConnectionReset(throwable)) {
+				redirect(activeURI.toString());
 				return true;
 			}
 			return false;
