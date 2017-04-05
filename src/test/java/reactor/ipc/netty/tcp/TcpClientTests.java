@@ -215,13 +215,16 @@ public class TcpClientTests {
 			                                    switch (attempt) {
 				                                    case 1:
 					                                    totalDelay.addAndGet(100);
-					                                    return Mono.delayMillis(100L);
+					                                    return Mono.delay(Duration
+							                                    .ofMillis(100));
 				                                    case 2:
 					                                    totalDelay.addAndGet(500);
-					                                    return Mono.delayMillis(500L);
+					                                    return Mono.delay(Duration
+							                                    .ofMillis(500));
 				                                    case 3:
 					                                    totalDelay.addAndGet(1000);
-					                                    return Mono.delayMillis(1000L);
+					                                    return Mono.delay(Duration
+							                                    .ofSeconds(1));
 				                                    default:
 					                                    latch.countDown();
 					                                    return Mono.<Long>empty();
@@ -292,7 +295,7 @@ public class TcpClientTests {
 				latch.countDown();
 			});
 
-			return Mono.delayMillis(3000)
+			return Mono.delay(Duration.ofSeconds(3))
 			           .then()
 			           .log();
 		})
@@ -342,7 +345,7 @@ public class TcpClientTests {
 					                               new ArrayList<>();
 			                               for (int i = 0; i < 5; i++) {
 				                               allWrites.add(out.sendString(Flux.just("a")
-				                                                                .delayElementsMillis(750)));
+				                                                                .delayElements(Duration.ofMillis(750))));
 			                               }
 			                               return Flux.merge(allWrites);
 		                               })

@@ -115,7 +115,7 @@ public class WebsocketTest {
 				                       (i, o) -> o.options(opt -> opt.flushOnEach())
 				                                  .sendString(
 						                                  Mono.just("test")
-						                                      .delayElementMillis(100)
+						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
 		                       .block(Duration.ofSeconds(30));
 
@@ -145,7 +145,7 @@ public class WebsocketTest {
 				                       (i, o) -> o.options(opt -> opt.flushOnEach())
 				                                  .sendByteArray(
 						                                  Mono.just("test".getBytes())
-						                                      .delayElementMillis(100)
+						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
 		                       .block(Duration.ofSeconds(30));
 
@@ -191,7 +191,7 @@ public class WebsocketTest {
 				                        .subscribeWith(server))))
 		                       .block(Duration.ofSeconds(30));
 
-		Flux.intervalMillis(200)
+		Flux.interval(Duration.ofMillis(200))
 		    .map(Object::toString)
 		    .subscribe(client::onNext);
 

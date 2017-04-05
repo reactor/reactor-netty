@@ -61,8 +61,9 @@ public class HttpClientTest {
 				                                                     new DefaultFullHttpResponse(
 						                                                     HttpVersion.HTTP_1_1,
 						                                                     HttpResponseStatus.ACCEPTED))
-		                                                                    .then(Mono.delayMillis(
-				                                                                    2000)
+		                                                                    .then(Mono.delay(
+				                                                                    Duration.ofSeconds(
+						                                                                    2))
 		                                                                              .then())))
 		                          .block(Duration.ofSeconds(30));
 
@@ -294,7 +295,7 @@ public class HttpClientTest {
 		FutureMono.from(r.context()
 		                 .channel()
 		                 .closeFuture())
-		          .blockMillis(5000);
+		          .block(Duration.ofSeconds(5));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
 	}
@@ -311,7 +312,7 @@ public class HttpClientTest {
 		FutureMono.from(r.context()
 		                 .channel()
 		                 .closeFuture())
-		          .blockMillis(5000);
+		          .block(Duration.ofSeconds(5));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
 	}
@@ -349,7 +350,7 @@ public class HttpClientTest {
 		FutureMono.from(r.context()
 		                 .channel()
 		                 .closeFuture())
-		          .blockMillis(5000);
+		          .block(Duration.ofSeconds(5));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
 	}
@@ -402,7 +403,8 @@ public class HttpClientTest {
 										signal.onComplete();
 										return out.context(c -> c.addHandlerFirst(
 												new HttpResponseEncoder()))
-										          .sendObject(Mono.delayMillis(2000)
+										          .sendObject(Mono.delay(Duration
+												          .ofSeconds(2))
 												          .map(t ->
 												          new DefaultFullHttpResponse(
 														          HttpVersion.HTTP_1_1,
