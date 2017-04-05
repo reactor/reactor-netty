@@ -47,7 +47,7 @@ ext {
   gradleVersion = '3.3'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.0.5.RELEASE"
+  reactorCoreVersion = "3.0.6.RELEASE"
   reactorIpcVersion = "0.6.1.RELEASE"
 
   // Languages
@@ -56,7 +56,7 @@ ext {
   // Logging
   slf4jVersion = '1.7.12'
   logbackVersion = '1.1.2'
-  testAddonVersion = '3.0.5.RELEASE'
+  testAddonVersion = '3.0.6.RELEASE'
 
   // Libraries
   nettyVersion = '4.1.8.Final'

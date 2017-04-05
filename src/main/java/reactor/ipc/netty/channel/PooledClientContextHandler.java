@@ -109,7 +109,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			log.debug("Acquiring existing channel from pool: {} {}", future, pool
 					.toString());
 		}
-		sink.setCancellation(this);
+		sink.onCancel(this);
 		((Future<CHANNEL>) future).addListener(this);
 	}
 
