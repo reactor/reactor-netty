@@ -220,7 +220,7 @@ public interface NettyContext extends Disposable {
 	 *
 	 * @return this NettyContext
 	 */
-	default NettyContext markPersistent(boolean persist){
+	default NettyContext  markPersistent(boolean persist){
 		if(persist && !channel().hasAttr(ReactorNetty.PERSISTENT_CHANNEL)) {
 			return this;
 		}
