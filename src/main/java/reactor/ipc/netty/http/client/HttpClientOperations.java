@@ -349,10 +349,10 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
 		if (method() == HttpMethod.GET || method() == HttpMethod.HEAD) {
 			ByteBufAllocator alloc = channel().alloc();
-			Flux.from(source)
+			return then(Flux.from(source)
 			    .doOnNext(ByteBuf::retain)
 			    .collect(alloc::buffer, ByteBuf::writeBytes)
-			    .then(agg -> {
+			    .flatMapMany(agg -> {
 				    if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
 						    outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
 						    outboundHttpMessage())) {
@@ -361,7 +361,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 							                         agg.readableBytes());
 				    }
 				    return send(Mono.just(agg)).then();
-			    });
+			    }));
 		}
 		return super.send(source);
 	}
