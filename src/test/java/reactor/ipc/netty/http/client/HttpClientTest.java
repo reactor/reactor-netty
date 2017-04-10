@@ -74,7 +74,7 @@ public class HttpClientTest {
 				 .getPort())
 		                                        .poolResources(pool))
 		                    .get("/")
-		                    .then(r -> Mono.just(r.status()
+		                    .flatMap(r -> Mono.just(r.status()
 		                                          .code()))
 		                    .log()
 		                    .block(Duration.ofSeconds(30));
@@ -124,7 +124,7 @@ public class HttpClientTest {
 				 .getPort())
 		                                        .poolResources(pool))
 		                    .get("/")
-		                    .then(r -> Mono.just(r.status()
+		                    .flatMap(r -> Mono.just(r.status()
 		                                          .code()))
 		                    .log()
 		                    .block(Duration.ofSeconds(30));
@@ -159,13 +159,13 @@ public class HttpClientTest {
 		                                            .get("/test/test.css");
 
 		Mono<String> page = remote
-				.flatMap(r -> r.receive()
+				.flatMapMany(r -> r.receive()
 				               .asString()
 				               .limitRate(1))
 				.reduce(String::concat);
 
 		Mono<String> cancelledPage = remote
-				.flatMap(r -> r.receive()
+				.flatMapMany(r -> r.receive()
 				               .asString()
 				               .take(5)
 				               .limitRate(1))
@@ -225,7 +225,7 @@ public class HttpClientTest {
 				                .sendHeaders());
 
 		Mono<String> page = remote
-				.flatMap(r -> r.receive()
+				.flatMapMany(r -> r.receive()
 				               .retain()
 				               .asString()
 				               .limitRate(1))
@@ -247,14 +247,14 @@ public class HttpClientTest {
 				                                                .file("test2", f))
 				                          .log()
 				                          .then())
-		                    .then(r -> Mono.just(r.status()
+		                    .flatMap(r -> Mono.just(r.status()
 		                                          .code()))
 		                    .block(Duration.ofSeconds(30));
 		res = HttpClient.create("google.com")
 		                .get("/search",
 				                c -> c.followRedirect()
 				                      .sendHeaders())
-		                .then(r -> Mono.just(r.status()
+		                .flatMap(r -> Mono.just(r.status()
 		                                      .code()))
 		                .log()
 		                .block(Duration.ofSeconds(30));
@@ -270,7 +270,7 @@ public class HttpClientTest {
 		                    .get("/unsupportedURI",
 				                    c -> c.followRedirect()
 				                          .sendHeaders())
-		                    .then(r -> Mono.just(r.status()
+		                    .flatMap(r -> Mono.just(r.status()
 		                                          .code()))
 		                    .log()
 		                    .otherwise(HttpClientException.class,
@@ -380,7 +380,7 @@ public class HttpClientTest {
 
 		StepVerifier.create(HttpClient.create()
 		                              .get("https://developer.chrome.com")
-		                              .then(r -> Mono.just(r.status().code()))
+		                              .flatMap(r -> Mono.just(r.status().code()))
 		)
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -388,7 +388,7 @@ public class HttpClientTest {
 
 		StepVerifier.create(HttpClient.create()
 		                              .get("https://developer.chrome.com")
-		                              .then(r -> Mono.just(r.status().code()))
+		                              .flatMap(r -> Mono.just(r.status().code()))
 		)
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -431,7 +431,7 @@ public class HttpClientTest {
 						          .addHeader("Accept-Encoding", "gzip")
 						          .addHeader("Accept-Encoding", "deflate")
 				          )
-				          .then(r -> r.receive().asString().elementAt(0).map(s -> s.substring(0, 100))
+				          .flatMap(r -> r.receive().asString().elementAt(0).map(s -> s.substring(0, 100))
 				                      .and(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
 		)
 		            .expectNextMatches(tuple -> !tuple.getT1().contains("<html>") && !tuple.getT1().contains("<head>")
@@ -447,7 +447,7 @@ public class HttpClientTest {
 					          return req.addHeader("Accept-Encoding", "gzip")
 					                    .addHeader("Accept-Encoding", "deflate");
 				          })
-				          .then(r -> r.receive().asString().elementAt(0).map(s -> s.substring(0, 100))
+				          .flatMap(r -> r.receive().asString().elementAt(0).map(s -> s.substring(0, 100))
 				                      .and(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
 		)
 		            .expectNextMatches(tuple -> tuple.getT1().contains("<html>") && tuple.getT1().contains("<head>")
