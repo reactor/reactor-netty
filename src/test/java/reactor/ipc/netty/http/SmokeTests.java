@@ -300,7 +300,7 @@ public class SmokeTests {
 						                                        .getPort()));
 
 		Mono<List<String>> content = httpClient.get("/data")
-		                                       .then(f -> f.receive()
+		                                       .flatMap(f -> f.receive()
 		                                                   .asString()
 		                                                   .collectList())
 		                                       .cache();

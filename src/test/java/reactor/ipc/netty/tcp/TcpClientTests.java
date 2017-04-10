@@ -367,7 +367,7 @@ public class TcpClientTests {
 
 		final CountDownLatch latch = new CountDownLatch(1);
 		System.out.println(client.get("http://www.google.com/?q=test%20d%20dq")
-		                         .then(r -> r.receive()
+		                         .flatMap(r -> r.receive()
 		                                     .asString()
 		                                     .collectList())
 		                         .doOnSuccess(v -> latch.countDown())

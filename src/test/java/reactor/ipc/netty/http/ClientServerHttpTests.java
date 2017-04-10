@@ -282,7 +282,7 @@ public class ClientServerHttpTests {
 		                                                                 .getPort());
 
 		return httpClient.get("/data")
-		                 .flatMap(s -> s.receive()
+		                 .flatMapMany(s -> s.receive()
 		                                .asString()
 		                                .log("client")
 		                                .next())

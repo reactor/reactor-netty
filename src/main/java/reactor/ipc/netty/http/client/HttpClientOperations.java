@@ -352,7 +352,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			Flux.from(source)
 			    .doOnNext(ByteBuf::retain)
 			    .collect(alloc::buffer, ByteBuf::writeBytes)
-			    .then(agg -> {
+			    .flatMap(agg -> {
 				    if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
 						    outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
 						    outboundHttpMessage())) {

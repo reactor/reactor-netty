@@ -60,7 +60,7 @@ class HttpSpec extends Specification {
 	  //return a producing stream to send some data along the request
 	  req.sendString(Mono.just("Hello").log('client-send'))
 
-	}.then({
+	}.flatMap({
 	  replies
 		->
 		//successful request, listen for the first returned next reply and pass it downstream
@@ -112,7 +112,7 @@ class HttpSpec extends Specification {
 	  req.sendString(Flux.just("Hello")
 			  .log('client-send'))
 
-	}.then( { replies ->
+	}.flatMap( { replies ->
 		//successful request, listen for the first returned next reply and pass it downstream
 		replies.receive()
 				.aggregate()
@@ -170,7 +170,7 @@ class HttpSpec extends Specification {
 	//prepare an http post request-reply flow
 	client
 			.get('/test')
-			.then({ replies ->
+			.flatMap({ replies ->
 	  Mono.just(replies.status().code())
 			  .log("received-status-1")
 	} as Function)
@@ -186,7 +186,7 @@ class HttpSpec extends Specification {
 	//prepare an http post request-reply flow
 	def content = client
 			.get('/test2')
-			.flatMap { replies -> replies.receive().log("received-status-2")
+			.flatMapMany { replies -> replies.receive().log("received-status-2")
 	}
 	.next()
 			.block(Duration.ofSeconds(30))
@@ -200,7 +200,7 @@ class HttpSpec extends Specification {
 	//prepare an http post request-reply flow
 	client
 			.get('/test3')
-			.flatMap { replies ->
+			.flatMapMany { replies ->
 	  Flux.just(replies.status().code)
 			  .log("received-status-3")
 	}
@@ -262,7 +262,7 @@ class HttpSpec extends Specification {
 				.range(1, 1000)
 				.log('client-send')
 				.map { it.toString() })
-	}.flatMap {
+	}.flatMapMany {
 	  replies
 		->
 		//successful handshake, listen for the first returned next replies and pass it downstream
