@@ -96,7 +96,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 				URI uri = bridge.activeURI;
 				HttpClientOperations ch = (HttpClientOperations) in;
 				ch.getNettyRequest()
-				  .setUri(uri.getPath() + (uri.getQuery() == null ? "" :
+				  .setUri(uri.getRawPath() + (uri.getQuery() == null ? "" :
 						  "?" + uri.getRawQuery()))
 				  .setMethod(parent.method)
 				  .setProtocolVersion(HttpVersion.HTTP_1_1)
