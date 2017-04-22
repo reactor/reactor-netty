@@ -95,13 +95,18 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			try {
 				URI uri = bridge.activeURI;
 				HttpClientOperations ch = (HttpClientOperations) in;
+				String host = uri.getHost();
+				int port = uri.getPort();
+				if (port != 80 && port != 443) {
+					host = host + ':' + port;
+				}
 				ch.getNettyRequest()
 				  .setUri(uri.getPath() + (uri.getQuery() == null ? "" :
 						  "?" + uri.getRawQuery()))
 				  .setMethod(parent.method)
 				  .setProtocolVersion(HttpVersion.HTTP_1_1)
 				  .headers()
-				  .add(HttpHeaderNames.HOST, uri.getHost())
+				  .add(HttpHeaderNames.HOST, host)
 				  .add(HttpHeaderNames.ACCEPT, ALL);
 
 				if (parent.method == HttpMethod.GET || parent.method == HttpMethod.HEAD) {
