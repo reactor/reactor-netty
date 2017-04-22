@@ -97,7 +97,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 				HttpClientOperations ch = (HttpClientOperations) in;
 				String host = uri.getHost();
 				int port = uri.getPort();
-				if (port != 80 && port != 443) {
+				if (port != -1 && port != 80 && port != 443) {
 					host = host + ':' + port;
 				}
 				ch.getNettyRequest()
