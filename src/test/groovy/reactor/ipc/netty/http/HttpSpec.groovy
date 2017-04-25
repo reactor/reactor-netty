@@ -21,7 +21,6 @@ import reactor.core.scheduler.Schedulers
 import reactor.ipc.netty.http.client.HttpClient
 import reactor.ipc.netty.http.client.HttpClientException
 import reactor.ipc.netty.http.server.HttpServer
-import reactor.util.Loggers
 import spock.lang.Specification
 
 import java.time.Duration
@@ -186,7 +185,7 @@ class HttpSpec extends Specification {
 	//prepare an http post request-reply flow
 	def content = client
 			.get('/test2')
-			.flatMap { replies -> replies.receive().log("received-status-2")
+			.flatMapMany { replies -> replies.receive().log("received-status-2")
 	}
 	.next()
 			.block(Duration.ofSeconds(30))
@@ -200,7 +199,7 @@ class HttpSpec extends Specification {
 	//prepare an http post request-reply flow
 	client
 			.get('/test3')
-			.flatMap { replies ->
+			.flatMapMany { replies ->
 	  Flux.just(replies.status().code)
 			  .log("received-status-3")
 	}

@@ -66,7 +66,6 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
-import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -663,9 +662,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 			if (replace(ops)) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
-				                                 .then(() -> Mono.from(websocketHandler.apply(
+				                                 .then(Mono.defer(() -> Mono.from(websocketHandler.apply(
 						                                 ops,
-						                                 ops)));
+						                                 ops))));
 				if (websocketHandler != noopHandler()) {
 					handshake = handshake.doAfterTerminate(ops);
 				}
@@ -680,8 +679,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 				if (websocketHandler != noopHandler()) {
 					handshake =
-							handshake.then(() -> Mono.from(websocketHandler.apply(ops, ops)))
-							         .doAfterTerminate(ops);
+							handshake.then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops)))
+							         .doAfterTerminate(ops));
 				}
 				return handshake;
 			}
@@ -790,7 +789,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				else {
 					FutureMono.from(f)
 					          .cast(Long.class)
-					          .otherwiseIfEmpty(Mono.just(encoder.length()))
+					          .switchIfEmpty(Mono.just(encoder.length()))
 					          .flux()
 					          .subscribe(s);
 				}
