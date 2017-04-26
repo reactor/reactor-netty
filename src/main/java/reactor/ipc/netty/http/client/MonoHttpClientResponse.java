@@ -101,7 +101,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 					host = host + ':' + port;
 				}
 				ch.getNettyRequest()
-				  .setUri(uri.getPath() + (uri.getQuery() == null ? "" :
+				  .setUri(uri.getRawPath() + (uri.getQuery() == null ? "" :
 						  "?" + uri.getRawQuery()))
 				  .setMethod(parent.method)
 				  .setProtocolVersion(HttpVersion.HTTP_1_1)
