@@ -48,7 +48,7 @@ ext {
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
   reactorCoreVersion = "3.0.7.RELEASE"
-  reactorIpcVersion = "0.6.1.RELEASE"
+  reactorIpcVersion = "0.6.2.RELEASE"
 
   // Languages
   groovyVersion = '2.4.1'
@@ -59,12 +59,8 @@ ext {
   testAddonVersion = reactorCoreVersion
 
   // Libraries
-  nettyVersion = '4.1.8.Final'
+  nettyVersion = '4.1.9.Final'
   jacksonDatabindVersion = '2.5.1'
-  protobufVersion = '2.6.1'
-  kryoVersion = '3.0.3'
-  snappyVersion = '1.1.1.6'
-  aeronVersion = '0.9.4'
   rxJavaVersion = '1.0.14'
 
   // Testing
