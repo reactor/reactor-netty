@@ -162,13 +162,14 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			MonoSink<NettyContext> sink,
 			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
-		this.options = options;
 		this.channelOpFactory =
 				Objects.requireNonNull(channelOpFactory, "channelOpFactory");
+		this.options = options;
 		this.sink = sink;
 		this.loggingHandler = loggingHandler;
 		this.autoCreateOperations = true;
 		this.providedAddress = providedAddress;
+		sink.onCancel(this);
 	}
 
 	/**
