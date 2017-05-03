@@ -166,6 +166,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					if (ex != null) {
 						parent.context.fireContextError(ex);
 					}
+					else if(parent.shouldEmitEmptyContext()){
+						parent.context.fireContextActive(null);
+					}
 					else {
 						parent.context.fireContextActive(parent);
 					}
