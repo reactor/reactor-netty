@@ -169,7 +169,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		this.loggingHandler = loggingHandler;
 		this.autoCreateOperations = true;
 		this.providedAddress = providedAddress;
-		sink.onCancel(this);
+
 	}
 
 	/**
