@@ -488,8 +488,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if(NettyContext.isPersistent(channel()) && responseState == null){
-			onHandlerTerminate();
 			parentContext().fireContextError(err);
+			onHandlerTerminate();
 			return;
 		}
 		super.onOutboundError(err);
