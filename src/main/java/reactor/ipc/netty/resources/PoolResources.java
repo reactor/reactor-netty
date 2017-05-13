@@ -132,7 +132,7 @@ public interface PoolResources extends Disposable {
 						checker,
 						FixedChannelPool.AcquireTimeoutAction.FAIL,
 						acquireTimeout,
-						maxConnections,
+						maxConnections == -1 ? Integer.MAX_VALUE : maxConnections,
 						Integer.MAX_VALUE
 						));
 	}
