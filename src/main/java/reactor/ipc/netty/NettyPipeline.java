@@ -59,12 +59,15 @@ public interface NettyPipeline {
 	String ReactiveBridge     = RIGHT + "reactiveBridge";
 	String HttpEncoder        = LEFT + "httpEncoder";
 	String HttpDecoder        = LEFT + "httpDecoder";
+	String HttpDecompressor   = LEFT + "decompressor";
+	String HttpCompressor     = LEFT + "compressor";
 	String HttpAggregator     = LEFT + "httpAggregator";
 	String HttpServerHandler  = LEFT + "httpServerHandler";
 	String OnChannelWriteIdle = LEFT + "onChannelWriteIdle";
 	String OnChannelReadIdle  = LEFT + "onChannelReadIdle";
 	String ChunkedWriter      = LEFT + "chunkedWriter";
 	String LoggingHandler     = LEFT + "loggingHandler";
+	String CompressionHandler = LEFT + "compressionHandler";
 
 	/**
 	 * A builder for sending strategy, similar prefixed methods being mutually exclusive
@@ -134,5 +137,9 @@ public interface NettyPipeline {
 	 */
 	static Object handlerTerminatedEvent() {
 		return ReactorNetty.TERMINATED;
+	}
+
+	static Object responseWriteCompletedEvent() {
+		return ReactorNetty.RESPONSE_WRITE_COMPLETED;
 	}
 }

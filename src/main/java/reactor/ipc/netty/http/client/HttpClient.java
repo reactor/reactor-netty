@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.logging.LoggingHandler;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -372,12 +373,13 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 					} : EMPTY).onPipeline(this);
 		}
 
-		@Override
-		public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
-			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
-			        .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
-		}
-	}
+        @Override
+        public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
+            pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor())
+                    .addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
+                    .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
+        }
+    }
 
 	static String reactorNettyVersion() {
 		return Optional.ofNullable(HttpClient.class.getPackage().getImplementationVersion())
