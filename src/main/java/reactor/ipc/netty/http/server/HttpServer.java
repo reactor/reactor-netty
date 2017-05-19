@@ -164,13 +164,12 @@ public final class HttpServer
 			                     .autoCreateOperations(false);
 		}
 
-        @Override
-        public void accept(ChannelPipeline p, ContextHandler<Channel> c) {
-            p.addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
-                    .addLast(NettyPipeline.HttpEncoder,new HttpResponseEncoder())
-                    .addLast(NettyPipeline.CompressionHandler, new CompressionHandler(options.compression()))
-                    .addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(c));
-        }
+		@Override
+		public void accept(ChannelPipeline p, ContextHandler<Channel> c) {
+			p.addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
+			 .addLast(NettyPipeline.HttpEncoder, new HttpResponseEncoder())
+			 .addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(c));
+		}
 
 		@Override
 		protected LoggingHandler loggingHandler() {

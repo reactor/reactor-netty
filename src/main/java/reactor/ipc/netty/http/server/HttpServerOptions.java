@@ -18,7 +18,6 @@ package reactor.ipc.netty.http.server;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -39,8 +38,6 @@ import reactor.ipc.netty.options.ServerOptions;
  */
 public final class HttpServerOptions extends ServerOptions {
 
-    Compression compression = new Compression.CompressionBuilder().build();
-
 	/**
 	 * Create a new server builder
 	 * @return a new server builder
@@ -52,10 +49,9 @@ public final class HttpServerOptions extends ServerOptions {
 	HttpServerOptions(){
 	}
 
-    HttpServerOptions(HttpServerOptions options) {
-        super(options);
-        this.compression = options.compression();
-    }
+	HttpServerOptions(HttpServerOptions options){
+		super(options);
+	}
 
 	@Override
 	public HttpServerOptions afterChannelInit(Consumer<? super Channel> afterChannelInit) {
@@ -170,77 +166,9 @@ public final class HttpServerOptions extends ServerOptions {
 		return this;
 	}
 
-    @Override
-    public HttpServerOptions sslSelfSigned() {
-        super.sslSelfSigned();
-        return this;
-    }
-
-	/**
-	 *Set response compression options
-	 * @param compression options for {@link Compression}
-	 * @return {@code this}
-	 */
-    public HttpServerOptions compression(Compression compression) {
-        Objects.requireNonNull(compression, "compression");
-        this.compression = compression;
-        return this;
-    }
-
-	/**
-	 * @return response compression options
-	 */
-    public Compression compression() {
-        return compression;
-    }
-
-    public static class Compression {
-        private final boolean enabled;
-        private final int minResponseSize;
-
-        /**
-         * @param enabled true if compression is enabled, false otherwise
-         * @param minResponseSize compression is performed once response size exceeds given value
-         */
-        Compression(boolean enabled,
-                    int minResponseSize) {
-            this.enabled = enabled;
-            this.minResponseSize = minResponseSize;
-        }
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public int getMinResponseSize() {
-            return minResponseSize;
-        }
-
-
-        public static class CompressionBuilder {
-            private boolean enabled;
-            private int minResponseSize;
-
-            public CompressionBuilder setEnabled(boolean enabled) {
-                this.enabled = enabled;
-                return this;
-            }
-
-            public CompressionBuilder setMinResponseSize(int minResponseSize) {
-                if (minResponseSize < 0) {
-                    throw new IllegalArgumentException("minResponseSize should be non-negative");
-                }
-                this.minResponseSize = minResponseSize;
-                return this;
-            }
-
-            public Compression build() {
-                if (!enabled) {
-                    minResponseSize = 0;
-                }
-                return new Compression(enabled, minResponseSize);
-            }
-        }
-    }
-
+	@Override
+	public HttpServerOptions sslSelfSigned() {
+		super.sslSelfSigned();
+		return this;
+	}
 }
