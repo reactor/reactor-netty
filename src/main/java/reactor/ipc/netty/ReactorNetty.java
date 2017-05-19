@@ -225,13 +225,6 @@ final class ReactorNetty {
 		}
 	}
 
-	static final class ResponseWriteCompleted {
-		@Override
-		public String toString() {
-			return "[Response Write Completed]";
-		}
-	}
-
 	/**
 	 * An appending write that delegates to its origin context and append the passed
 	 * publisher after the origin success if any.
@@ -304,7 +297,6 @@ final class ReactorNetty {
 	}
 
 	static final Object TERMINATED = new TerminatedHandlerEvent();
-	static final Object RESPONSE_WRITE_COMPLETED = new ResponseWriteCompleted();
 	static final Logger log        = Loggers.getLogger(ReactorNetty.class);
 
 	/**
