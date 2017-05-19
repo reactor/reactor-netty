@@ -375,8 +375,10 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
         @Override
         public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
-            pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor())
-                    .addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
+			if (options.supportsCompression()) {
+				pipeline.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+			}
+			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
                     .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
         }
     }

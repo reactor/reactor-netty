@@ -11,6 +11,7 @@ import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.http.server.HttpServerOptions;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 
 /**
@@ -26,7 +27,9 @@ public class HttpCompressionClientServerTests {
                 Mono.just("reply"))).block(Duration.ofMillis(10_000));
 
 
-        HttpClient client = HttpClient.create(port(nettyContext));
+        HttpClient client = HttpClient.create(o -> o
+                .supportsCompression(true)
+                .connect(address(nettyContext)));
         HttpClientResponse resp = client.get("/test", req ->
                 req.header("Accept-Encoding", "gzip"))
                 .block();
@@ -51,7 +54,9 @@ public class HttpCompressionClientServerTests {
                 Mono.just("reply"))).block(Duration.ofMillis(10_000));
 
 
-        HttpClient client = HttpClient.create(port(nettyContext));
+        HttpClient client = HttpClient.create(o -> o
+                .supportsCompression(true)
+                .connect(address(nettyContext)));
         HttpClientResponse resp = client.get("/test", req ->
                 req.header("Accept-Encoding", "gzip"))
                 .block();
@@ -75,7 +80,9 @@ public class HttpCompressionClientServerTests {
                 Mono.just("reply"))).block(Duration.ofMillis(10_000));
 
 
-        HttpClient client = HttpClient.create(port(nettyContext));
+        HttpClient client = HttpClient.create(o -> o
+                .supportsCompression(true)
+                .connect(address(nettyContext)));
         HttpClientResponse resp = client.get("/test", req ->
                 req.header("Accept-Encoding", "gzip"))
                 .block();
@@ -99,7 +106,9 @@ public class HttpCompressionClientServerTests {
                 Mono.just("reply"))).block(Duration.ofMillis(10_000));
 
 
-        HttpClient client = HttpClient.create(port(nettyContext));
+        HttpClient client = HttpClient.create(o -> o
+                .supportsCompression(true)
+                .connect(address(nettyContext)));
         HttpClientResponse resp = client.get("/test", req ->
                 req.header("Accept-Encoding", "gzip"))
                 .block();
@@ -123,7 +132,9 @@ public class HttpCompressionClientServerTests {
                 Mono.just("reply"))).block(Duration.ofMillis(10_000));
 
 
-        HttpClient client = HttpClient.create(port(nettyContext));
+        HttpClient client = HttpClient.create(o -> o
+                .supportsCompression(true)
+                .connect(address(nettyContext)));
         HttpClientResponse resp = client.get("/test", req ->
                 req.header("Accept-Encoding", "gzip"))
                 .block();
@@ -147,7 +158,9 @@ public class HttpCompressionClientServerTests {
                 Mono.empty())).block(Duration.ofMillis(10_000));
 
 
-        HttpClient client = HttpClient.create(port(nettyContext));
+        HttpClient client = HttpClient.create(o -> o
+                .supportsCompression(true)
+                .connect(address(nettyContext)));
         HttpClientResponse resp = client.get("/test", req ->
                 req.header("Accept-Encoding", "gzip"))
                 .block();
@@ -158,7 +171,7 @@ public class HttpCompressionClientServerTests {
         nettyContext.onClose().block();
     }
 
-    private int port(NettyContext nettyContext) {
-        return nettyContext.address().getPort();
+    private InetSocketAddress address(NettyContext nettyContext) {
+        return new InetSocketAddress(nettyContext.address().getPort());
     }
 }

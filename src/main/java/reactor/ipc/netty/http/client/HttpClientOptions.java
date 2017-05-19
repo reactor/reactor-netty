@@ -52,6 +52,8 @@ import reactor.ipc.netty.resources.PoolResources;
  */
 public final class HttpClientOptions extends ClientOptions {
 
+	private boolean enabled;
+
 	/**
 	 * Create new {@link HttpClientOptions}.
 	 *
@@ -64,8 +66,9 @@ public final class HttpClientOptions extends ClientOptions {
 	HttpClientOptions() {
 	}
 
-	HttpClientOptions(ClientOptions options) {
+	HttpClientOptions(HttpClientOptions options) {
 		super(options);
+		this.enabled = options.enabled;
 	}
 
 	@Override
@@ -124,6 +127,15 @@ public final class HttpClientOptions extends ClientOptions {
 	public HttpClientOptions eventLoopGroup(EventLoopGroup eventLoopGroup) {
 		super.eventLoopGroup(eventLoopGroup);
 		return this;
+	}
+
+	public HttpClientOptions supportsCompression(boolean enabled) {
+		this.enabled = enabled;
+		return this;
+	}
+
+	public boolean supportsCompression() {
+		return enabled;
 	}
 
 	/**
