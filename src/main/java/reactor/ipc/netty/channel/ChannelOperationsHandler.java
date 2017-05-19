@@ -444,6 +444,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 		@Override
 		public void onComplete() {
+			parent.ctx.pipeline()
+					.fireUserEventTriggered(NettyPipeline.responseWriteCompletedEvent());
 			long p = produced;
 			ChannelFuture f = lastWrite;
 			parent.innerActive = false;
