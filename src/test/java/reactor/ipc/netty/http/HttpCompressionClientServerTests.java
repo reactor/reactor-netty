@@ -87,8 +87,6 @@ public class HttpCompressionClientServerTests {
                 req.header("Accept-Encoding", "gzip"))
                 .block();
 
-        HttpHeaders headers = resp.responseHeaders();
-        Assert.assertTrue(headers.contains("Content-Encoding", "gzip", true));
         String reply = resp.receive().asString().blockFirst();
         Assert.assertEquals("reply", reply);
         nettyContext.dispose();
@@ -139,8 +137,6 @@ public class HttpCompressionClientServerTests {
                 req.header("Accept-Encoding", "gzip"))
                 .block();
 
-        HttpHeaders headers = resp.responseHeaders();
-        Assert.assertTrue(headers.contains("Content-Encoding", "gzip", true));
         String reply = resp.receive().asString().blockFirst();
         Assert.assertEquals("reply", reply);
         nettyContext.dispose();
@@ -148,25 +144,47 @@ public class HttpCompressionClientServerTests {
     }
 
     @Test
-    public void emptyBody() throws Exception {
+    public void compressionServerEnabledClientDisabled() throws Exception {
         HttpServer server = HttpServer.create(o -> {
             o.listen(0).compression(new HttpServerOptions.Compression.CompressionBuilder()
                     .setEnabled(true).build());
         });
 
+        String serverReply = "reply";
         NettyContext nettyContext = server.newHandler((in, out) -> out.sendString(
-                Mono.empty())).block(Duration.ofMillis(10_000));
+                Mono.just(serverReply))).block(Duration.ofMillis(10_000));
 
 
         HttpClient client = HttpClient.create(o -> o
-                .supportsCompression(true)
+                .supportsCompression(false)
                 .connect(address(nettyContext)));
         HttpClientResponse resp = client.get("/test", req ->
                 req.header("Accept-Encoding", "gzip"))
                 .block();
+        String reply = resp.receive().asString().blockFirst();
+        Assert.assertNotEquals(serverReply, reply);
+        nettyContext.dispose();
+        nettyContext.onClose().block();
+    }
 
-        HttpHeaders headers = resp.responseHeaders();
-        Assert.assertFalse(headers.contains("Content-Encoding", "gzip", true));
+    @Test
+    public void compressionServerDefaultClientDefault() throws Exception {
+        HttpServer server = HttpServer.create(o -> {
+            o.listen(0).compression(new HttpServerOptions.Compression.CompressionBuilder().build());
+        });
+
+        String serverReply = "reply";
+        NettyContext nettyContext = server.newHandler((in, out) -> out.sendString(
+                Mono.just(serverReply))).block(Duration.ofMillis(10_000));
+
+
+        HttpClient client = HttpClient.create(o ->
+                o.connect(address(nettyContext)));
+        HttpClientResponse resp = client.get("/test", req ->
+                req.header("Accept-Encoding", "gzip"))
+                .block();
+        String reply = resp.receive().asString().blockFirst();
+        Assert.assertEquals(serverReply, reply);
         nettyContext.dispose();
         nettyContext.onClose().block();
     }

@@ -32,6 +32,8 @@ class CompressionHandler extends ChannelDuplexHandler {
                 offerByteBuf(ctx, msg, promise);
             } else if (msg instanceof HttpMessage) {
                 offerHttpMessage(msg, promise);
+            } else {
+                super.write(ctx, msg, promise);
             }
         } else {
             super.write(ctx, msg, promise);

@@ -1,7 +1,9 @@
 package reactor.ipc.netty.http.server;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpContentCompressor;
 
 /**
@@ -18,6 +20,9 @@ public class FilteringHttpContentCompressor extends HttpContentCompressor {
             FilterMessage filterMsg = (FilterMessage) msg;
             ctx.write(filterMsg.unwrap(), promise);
         } else {
+            if (msg instanceof ByteBuf) {
+              msg = new DefaultHttpContent((ByteBuf) msg);
+            }
             super.write(ctx, msg, promise);
         }
     }
