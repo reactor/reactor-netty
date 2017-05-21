@@ -88,7 +88,7 @@ public class HttpCompressionClientServerTests {
     }
 
     @Test
-    public void compressionDefault() throws Exception {
+    public void serverCompressionDefault() throws Exception {
         HttpServer server = HttpServer.create(0);
 
         NettyContext nettyContext = server.newHandler((in, out) -> out.sendString(
@@ -101,8 +101,6 @@ public class HttpCompressionClientServerTests {
                 req.header("Accept-Encoding", "gzip"))
                 .block();
 
-        HttpHeaders headers = resp.responseHeaders();
-        Assert.assertFalse(headers.contains("Content-Encoding", "gzip", true));
         String reply = resp.receive().asString().blockFirst();
         Assert.assertEquals("reply", reply);
         nettyContext.dispose();
@@ -110,7 +108,7 @@ public class HttpCompressionClientServerTests {
     }
 
     @Test
-    public void compressionDisabled() throws Exception {
+    public void serverCompressionDisabled() throws Exception {
         HttpServer server = HttpServer.create(o -> {
             o.listen(0).compression(new HttpServerOptions.Compression.CompressionBuilder()
                     .setEnabled(false).setMinResponseSize(0).build());
@@ -127,8 +125,6 @@ public class HttpCompressionClientServerTests {
                 req.header("Accept-Encoding", "gzip"))
                 .block();
 
-        HttpHeaders headers = resp.responseHeaders();
-        Assert.assertFalse(headers.contains("Content-Encoding", "gzip", true));
         String reply = resp.receive().asString().blockFirst();
         Assert.assertEquals("reply", reply);
         nettyContext.dispose();
@@ -136,7 +132,7 @@ public class HttpCompressionClientServerTests {
     }
 
     @Test
-    public void compressionAlwaysEnabled() throws Exception {
+    public void serverCompressionAlwaysEnabled() throws Exception {
         HttpServer server = HttpServer.create(o -> {
             o.listen(0).compression(new HttpServerOptions.Compression.CompressionBuilder()
                     .setEnabled(true).setMinResponseSize(0).build());
@@ -160,7 +156,7 @@ public class HttpCompressionClientServerTests {
     }
 
     @Test
-    public void compressionEnabledSmallResponse() throws Exception {
+    public void serverCompressionEnabledSmallResponse() throws Exception {
         HttpServer server = HttpServer.create(o -> {
             o.listen(0).compression(new HttpServerOptions.Compression.CompressionBuilder()
                     .setEnabled(true).setMinResponseSize(25).build());
@@ -186,7 +182,7 @@ public class HttpCompressionClientServerTests {
     }
 
     @Test
-    public void compressionEnabledBigResponse() throws Exception {
+    public void serverCompressionEnabledBigResponse() throws Exception {
         HttpServer server = HttpServer.create(o -> {
             o.listen(0).compression(new HttpServerOptions.Compression.CompressionBuilder()
                     .setEnabled(true).setMinResponseSize(4).build());
@@ -234,6 +230,7 @@ public class HttpCompressionClientServerTests {
                 req.header("Accept-Encoding", "gzip"))
                 .block();
         String reply = resp.receive().asString().blockFirst();
+        Assert.assertTrue(resp.responseHeaders().contains("Content-Encoding","gzip",true));
         Assert.assertNotEquals(serverReply, reply);
         nettyContext.dispose();
         nettyContext.onClose().block();
@@ -245,18 +242,15 @@ public class HttpCompressionClientServerTests {
             o.listen(0).compression(new HttpServerOptions.Compression.CompressionBuilder().build());
         });
 
-        String serverReply = "reply";
         NettyContext nettyContext = server.newHandler((in, out) -> out.sendString(
-                Mono.just(serverReply))).block(Duration.ofMillis(10_000));
-
-
+                Mono.just("reply"))).block(Duration.ofMillis(10_000));
         HttpClient client = HttpClient.create(o ->
                 o.connect(address(nettyContext)));
         HttpClientResponse resp = client.get("/test", req ->
                 req.header("Accept-Encoding", "gzip"))
                 .block();
         String reply = resp.receive().asString().blockFirst();
-        Assert.assertEquals(serverReply, reply);
+        Assert.assertEquals("reply", reply);
         nettyContext.dispose();
         nettyContext.onClose().block();
     }
