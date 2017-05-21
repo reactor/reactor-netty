@@ -52,7 +52,7 @@ import reactor.ipc.netty.resources.PoolResources;
  */
 public final class HttpClientOptions extends ClientOptions {
 
-	private boolean enabled;
+	private Compression compression = new Compression.Builder().build();
 
 	/**
 	 * Create new {@link HttpClientOptions}.
@@ -68,7 +68,7 @@ public final class HttpClientOptions extends ClientOptions {
 
 	HttpClientOptions(HttpClientOptions options) {
 		super(options);
-		this.enabled = options.enabled;
+		this.compression = options.compression;
 	}
 
 	@Override
@@ -129,13 +129,21 @@ public final class HttpClientOptions extends ClientOptions {
 		return this;
 	}
 
-	public HttpClientOptions supportsCompression(boolean enabled) {
-		this.enabled = enabled;
+	/**
+	 * @param compression configures compression support
+	 * @return {@code this}
+	 */
+	public HttpClientOptions compression(Compression compression) {
+		Objects.requireNonNull(compression, "compression");
+		this.compression = compression;
 		return this;
 	}
 
-	public boolean supportsCompression() {
-		return enabled;
+	/**
+	 * @return compression configuration
+	 */
+	public Compression getCompression() {
+		return compression;
 	}
 
 	/**
@@ -397,5 +405,56 @@ public final class HttpClientOptions extends ClientOptions {
 			sslContext = null;
 		}
 		DEFAULT_SSL_CONTEXT = sslContext;
+	}
+
+	public static class Compression {
+		private final boolean isEnabled;
+		private final boolean includeAcceptEncodingGzip;
+
+		Compression(boolean isEnabled, boolean includeAcceptEncodingGzip) {
+			this.isEnabled = isEnabled;
+			this.includeAcceptEncodingGzip = includeAcceptEncodingGzip;
+		}
+
+		/**
+		 * @return true if support for http compression is enabled, false otherwise
+		 */
+		public boolean isEnabled() {
+			return isEnabled;
+		}
+
+		/**
+		 * @return true if "Accept-Encoding:gzip" header is added to every request, false otherwise
+		 */
+		public boolean includeAcceptEncoding() {
+			return includeAcceptEncodingGzip;
+		}
+
+		public static class Builder {
+            private boolean isEnabled;
+            private boolean acceptEncoding;
+
+			/**
+			 * @param isEnabled add support for http compression
+			 * @return {@code this}
+			 */
+			public Builder setEnabled(boolean isEnabled) {
+                this.isEnabled = isEnabled;
+                return this;
+            }
+
+			/**
+			 * @param includeAcceptEncoding add "Accept-Encoding:gzip" header to every request
+			 * @return {@code this}
+			 */
+			public Builder setIncludeAcceptEncoding(boolean includeAcceptEncoding) {
+                this.acceptEncoding = includeAcceptEncoding;
+                return this;
+            }
+
+            public Compression build() {
+                return new Compression(isEnabled, acceptEncoding);
+            }
+        }
 	}
 }

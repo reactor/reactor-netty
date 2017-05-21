@@ -249,7 +249,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 			throw new IllegalArgumentException("Method && url cannot be both null");
 		}
 
-		return new MonoHttpClientResponse(this, url, method, handler);
+		return new MonoHttpClientResponse(this, url, method, handler(handler, options));
 	}
 
 	/**
@@ -377,8 +377,8 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
         public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
 			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
                     .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
-			if (options.supportsCompression()) {
-				pipeline.addAfter(NettyPipeline.HttpDecoder,
+            if (options.getCompression().isEnabled()) {
+                pipeline.addAfter(NettyPipeline.HttpDecoder,
                         NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
 			}
         }
@@ -389,4 +389,17 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		               .orElse("dev");
 	}
 
+    static Function<? super HttpClientRequest, ? extends Publisher<Void>> handler(
+            Function<? super HttpClientRequest, ? extends Publisher<Void>> h,
+            HttpClientOptions opts) {
+        if (h == null) {
+            return null;
+        }
+        HttpClientOptions.Compression compression = opts.getCompression();
+        if (compression.isEnabled() && compression.includeAcceptEncoding()) {
+            return req -> h.apply(req.header("Accept-Encoding", "gzip"));
+        } else {
+            return h;
+        }
+    }
 }
