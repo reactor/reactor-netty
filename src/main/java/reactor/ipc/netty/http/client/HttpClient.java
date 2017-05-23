@@ -29,12 +29,14 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
-import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.logging.LoggingHandler;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -373,33 +375,35 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 					} : EMPTY).onPipeline(this);
 		}
 
-        @Override
-        public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
+		@Override
+		public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
 			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
-                    .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
-            if (options.getCompression().isEnabled()) {
-                pipeline.addAfter(NettyPipeline.HttpDecoder,
-                        NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+			        .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
+			if (options.acceptGzip) {
+				pipeline.addAfter(NettyPipeline.HttpDecoder,
+						NettyPipeline.HttpDecompressor,
+						new HttpContentDecompressor());
 			}
-        }
-    }
+		}
+	}
 
 	static String reactorNettyVersion() {
 		return Optional.ofNullable(HttpClient.class.getPackage().getImplementationVersion())
 		               .orElse("dev");
 	}
 
-    static Function<? super HttpClientRequest, ? extends Publisher<Void>> handler(
-            Function<? super HttpClientRequest, ? extends Publisher<Void>> h,
-            HttpClientOptions opts) {
-        if (h == null) {
-            return null;
-        }
-        HttpClientOptions.Compression compression = opts.getCompression();
-        if (compression.isEnabled() && compression.includeAcceptEncoding()) {
-            return req -> h.apply(req.header("Accept-Encoding", "gzip"));
-        } else {
-            return h;
-        }
-    }
+	static Function<? super HttpClientRequest, ? extends Publisher<Void>> handler(Function<? super HttpClientRequest, ? extends Publisher<Void>> h,
+			HttpClientOptions opts) {
+		if (h == null) {
+			return null;
+		}
+
+		if (opts.acceptGzip) {
+			return req -> h.apply(req.header(HttpHeaderNames.ACCEPT_ENCODING,
+					HttpHeaderValues.GZIP));
+		}
+		else {
+			return h;
+		}
+	}
 }

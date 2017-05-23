@@ -21,7 +21,6 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -29,19 +28,17 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
-import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
 /**
@@ -52,7 +49,7 @@ import reactor.ipc.netty.resources.PoolResources;
  */
 public final class HttpClientOptions extends ClientOptions {
 
-	private Compression compression = new Compression.Builder().build();
+	boolean acceptGzip;
 
 	/**
 	 * Create new {@link HttpClientOptions}.
@@ -68,7 +65,7 @@ public final class HttpClientOptions extends ClientOptions {
 
 	HttpClientOptions(HttpClientOptions options) {
 		super(options);
-		this.compression = options.compression;
+		this.acceptGzip = options.acceptGzip;
 	}
 
 	@Override
@@ -130,20 +127,15 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * @param compression configures compression support
-	 * @return {@code this}
+	 * Enable GZip accept-encoding header and support for compressed response
+	 *
+	 * @param enabled true whether gzip support is enabled
+	 *
+	 * @return this builder
 	 */
-	public HttpClientOptions compression(Compression compression) {
-		Objects.requireNonNull(compression, "compression");
-		this.compression = compression;
+	public HttpClientOptions compression(boolean enabled) {
+		this.acceptGzip = enabled;
 		return this;
-	}
-
-	/**
-	 * @return compression configuration
-	 */
-	public Compression getCompression() {
-		return compression;
 	}
 
 	/**
@@ -267,7 +259,7 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 *Let this client connect through an HTTP proxy by providing an address.
+	 * Let this client connect through an HTTP proxy by providing an address.
 	 *
 	 * @param connectAddress The proxy address to connect to.
 	 *
@@ -279,7 +271,8 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	/**
-	 * Let this client connect through an HTTP proxy by providing an address and credentials.
+	 * Let this client connect through an HTTP proxy by providing an address and
+	 * credentials.
 	 *
 	 * @param connectAddress The address to connect to.
 	 * @param username The proxy username to use.
@@ -361,7 +354,7 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	@Override
-	protected SslContext defaultSslContext(){
+	protected SslContext defaultSslContext() {
 		return DEFAULT_SSL_CONTEXT;
 	}
 
@@ -398,63 +391,13 @@ public final class HttpClientOptions extends ClientOptions {
 
 	static {
 		SslContext sslContext;
-		try{
-			sslContext = SslContextBuilder.forClient().build();
+		try {
+			sslContext = SslContextBuilder.forClient()
+			                              .build();
 		}
-		catch (Exception e){
+		catch (Exception e) {
 			sslContext = null;
 		}
 		DEFAULT_SSL_CONTEXT = sslContext;
-	}
-
-	public static class Compression {
-		private final boolean isEnabled;
-		private final boolean includeAcceptEncodingGzip;
-
-		Compression(boolean isEnabled, boolean includeAcceptEncodingGzip) {
-			this.isEnabled = isEnabled;
-			this.includeAcceptEncodingGzip = includeAcceptEncodingGzip;
-		}
-
-		/**
-		 * @return true if support for http compression is enabled, false otherwise
-		 */
-		public boolean isEnabled() {
-			return isEnabled;
-		}
-
-		/**
-		 * @return true if "Accept-Encoding:gzip" header is added to every request, false otherwise
-		 */
-		public boolean includeAcceptEncoding() {
-			return includeAcceptEncodingGzip;
-		}
-
-		public static class Builder {
-            private boolean isEnabled;
-            private boolean acceptEncoding;
-
-			/**
-			 * @param isEnabled add support for http compression
-			 * @return {@code this}
-			 */
-			public Builder setEnabled(boolean isEnabled) {
-                this.isEnabled = isEnabled;
-                return this;
-            }
-
-			/**
-			 * @param includeAcceptEncoding add "Accept-Encoding:gzip" header to every request
-			 * @return {@code this}
-			 */
-			public Builder setIncludeAcceptEncoding(boolean includeAcceptEncoding) {
-                this.acceptEncoding = includeAcceptEncoding;
-                return this;
-            }
-
-            public Compression build() {
-                return new Compression(isEnabled, acceptEncoding);
-            }
-        }
 	}
 }
