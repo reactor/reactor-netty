@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.logging.LoggingHandler;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -248,7 +249,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 			throw new IllegalArgumentException("Method && url cannot be both null");
 		}
 
-		return new MonoHttpClientResponse(this, url, method, handler);
+		return new MonoHttpClientResponse(this, url, method, handler(handler, options));
 	}
 
 	/**
@@ -372,16 +373,33 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 					} : EMPTY).onPipeline(this);
 		}
 
-		@Override
-		public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
+        @Override
+        public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
 			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
-			        .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
-		}
-	}
+                    .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
+            if (options.getCompression().isEnabled()) {
+                pipeline.addAfter(NettyPipeline.HttpDecoder,
+                        NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+			}
+        }
+    }
 
 	static String reactorNettyVersion() {
 		return Optional.ofNullable(HttpClient.class.getPackage().getImplementationVersion())
 		               .orElse("dev");
 	}
 
+    static Function<? super HttpClientRequest, ? extends Publisher<Void>> handler(
+            Function<? super HttpClientRequest, ? extends Publisher<Void>> h,
+            HttpClientOptions opts) {
+        if (h == null) {
+            return null;
+        }
+        HttpClientOptions.Compression compression = opts.getCompression();
+        if (compression.isEnabled() && compression.includeAcceptEncoding()) {
+            return req -> h.apply(req.header("Accept-Encoding", "gzip"));
+        } else {
+            return h;
+        }
+    }
 }
