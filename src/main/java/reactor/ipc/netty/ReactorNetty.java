@@ -39,7 +39,7 @@ import reactor.util.Loggers;
  *
  * @author Stephane Maldini
  */
-final class ReactorNetty {
+public final class ReactorNetty {
 
 	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");
 
@@ -56,7 +56,7 @@ final class ReactorNetty {
 	 * @param handler the decoder to add before the final reactor-specific handlers.
 	 * @see NettyContext#addHandlerLast(String, ChannelHandler).
 	 */
-	static void addHandlerBeforeReactorEndHandlers(NettyContext context, String
+	public static void addHandlerBeforeReactorEndHandlers(NettyContext context, String
 			name,	ChannelHandler handler) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
@@ -109,7 +109,7 @@ final class ReactorNetty {
 	 * @param handler the encoder to add after the initial reactor-specific handlers.
 	 * @see NettyContext#addHandlerFirst(String, ChannelHandler)
 	 */
-	static void addHandlerAfterReactorCodecs(NettyContext context, String
+	public static void addHandlerAfterReactorCodecs(NettyContext context, String
 			name,
 			ChannelHandler handler) {
 		Objects.requireNonNull(name, "name");
@@ -156,7 +156,7 @@ final class ReactorNetty {
 		context.onClose(() -> context.removeHandler(name));
 	}
 
-	static void removeHandler(Channel channel, String name){
+	public static void removeHandler(Channel channel, String name){
 		if (channel.isActive() && channel.pipeline()
 		                                 .context(name) != null) {
 			channel.pipeline()
@@ -178,7 +178,7 @@ final class ReactorNetty {
 		}
 	}
 
-	static void replaceHandler(Channel channel, String name, ChannelHandler handler){
+	public static void replaceHandler(Channel channel, String name, ChannelHandler handler){
 		if (channel.isActive() && channel.pipeline()
 		                                 .context(name) != null) {
 			channel.pipeline()
