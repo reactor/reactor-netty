@@ -74,6 +74,8 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+
 /**
  * @author Stephane Maldini
  * @author Simon Baslé
@@ -340,7 +342,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public Mono<Void> send() {
-		if (markHeadersAsSent()) {
+		if (markSentHeaderAndBody()) {
 			HttpMessage request = newFullEmptyBodyMessage();
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
 		}
@@ -473,13 +475,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (isWebsocket() || isInboundCancelled()) {
 			return;
 		}
-		if (markHeadersAsSent()) {
+		if (markSentHeaderAndBody()) {
 			if (log.isDebugEnabled()) {
 				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
 			}
 			channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
-		else  {
+		else if (markSentBody()) {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		channel().read();
@@ -661,7 +663,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 
 		//prevent further header to be sent for handshaking
-		if (markHeadersAsSent()) {
+		if (markSentHeaders()) {
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
@@ -742,7 +744,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 
 		void _subscribe(Subscriber<? super Long> s) {
-			if (!parent.markHeadersAsSent()) {
+			if (!parent.markSentHeaders()) {
 				Operators.error(s,
 						new IllegalStateException("headers have already " + "been sent"));
 				return;

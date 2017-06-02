@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
@@ -46,6 +47,38 @@ import reactor.test.StepVerifier;
  * @author Stephane Maldini
  */
 public class HttpServerTests {
+
+	//from https://github.com/reactor/reactor-netty/issues/90
+	@Test
+	public void testRestart() {
+		// start a first server with a handler that answers HTTP 200 OK
+		NettyContext context = HttpServer.create(8080)
+		                                 .newHandler((req, resp) -> resp.status(200)
+		                                                                .send().log())
+		                                 .block();
+
+		HttpClientResponse response = HttpClient.create(8080).get("/").block();
+
+		// checking the response status, OK
+		Assertions.assertThat(response.status().code()).isEqualTo(200);
+		// dispose the Netty context and wait for the channel close
+		context.dispose();
+		context.onClose().block();
+
+		//REQUIRED - bug pool does not detect/translate properly lifecycle
+		HttpResources.reset();
+
+		// create a totally new server instance, with a different handler that answers HTTP 201
+		context = HttpServer.create(8080)
+		                    .newHandler((req, resp) -> resp.status(201).send()).block();
+
+		response = HttpClient.create(8080).get("/").block();
+
+		// fails, response status is 200 and debugging shows the the previous handler is called
+		Assertions.assertThat(response.status().code()).isEqualTo(201);
+		context.dispose();
+		context.onClose().block();
+	}
 
 	@Test
 	public void httpPipelining() throws Exception {

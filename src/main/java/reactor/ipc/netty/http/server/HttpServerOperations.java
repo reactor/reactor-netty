@@ -265,7 +265,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public Mono<Void> send() {
-		if (markHeadersAsSent()) {
+		if (markSentHeaderAndBody()) {
 			HttpMessage response = newFullEmptyBodyMessage();
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(response));
 		}
@@ -387,17 +387,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (log.isDebugEnabled()) {
 			log.debug("Last HTTP response frame");
 		}
-		if (markHeadersAsSent()) {
+		if (markSentHeaderAndBody()) {
 			if (log.isDebugEnabled()) {
 				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
 			}
 
 			f = channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
-		else {
+		else if (markSentBody()) {
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
-
+		else{
+			f = channel().writeAndFlush(EMPTY_BUFFER);
+		}
 		f.addListener(s -> {
 			if (isInboundDone()) {
 				onHandlerTerminate();
@@ -417,7 +419,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 
 		discreteRemoteClose(err);
-		if (markHeadersAsSent()) {
+		if (markSentHeaders()) {
 			log.error("Error starting response. Replying error status", err);
 
 			HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
@@ -430,12 +432,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 
-		if (HttpUtil.isContentLengthSet(nettyResponse)) {
+		if (markSentBody()) {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
 			         .addListener(ChannelFutureListener.CLOSE);
 			return;
 		}
-		channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+		channel().writeAndFlush(EMPTY_BUFFER)
 		         .addListener(ChannelFutureListener.CLOSE);
 	}
 
@@ -448,7 +450,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
-		if (markHeadersAsSent()) {
+		if (markSentHeaders()) {
 			HttpServerWSOperations ops = new HttpServerWSOperations(url, protocols, this);
 
 			if (replace(ops)) {

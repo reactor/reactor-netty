@@ -56,6 +56,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	volatile int statusAndHeadersSent = 0;
 
+	static final int READY        = 0;
+	static final int HEADERS_SENT = 1;
+	static final int BODY_SENT    = 2;
+
 	protected HttpOperations(Channel ioChannel,
 			HttpOperations<INBOUND, OUTBOUND> replaced) {
 		super(ioChannel, replaced);
@@ -76,7 +80,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 * @return true if headers have been sent
 	 */
 	public final boolean hasSentHeaders() {
-		return statusAndHeadersSent == 1;
+		return statusAndHeadersSent != READY;
 	}
 
 	@Override
@@ -87,7 +91,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	//@Override
 	//TODO document this
 	public NettyOutbound sendHeaders() {
-		if (markHeadersAsSent()) {
+		if (markSentHeaders()) {
 			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 				outboundHttpMessage().headers()
 				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -97,7 +101,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())
 					&& (!HttpUtil.isContentLengthSet(outboundHttpMessage()) ||
 			HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0)) {
-				if(isKeepAlive()){
+				if(isKeepAlive() && markSentBody()){
 					message = newFullEmptyBodyMessage();
 				}
 				else {
@@ -122,7 +126,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	public Mono<Void> then() {
-		if (markHeadersAsSent()) {
+		if (markSentHeaders()) {
 			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 				outboundHttpMessage().headers()
 				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -212,8 +216,26 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 *
 	 * @return true if marked for the first time
 	 */
-	protected final boolean markHeadersAsSent() {
-		return HEADERS_SENT.compareAndSet(this, 0, 1);
+	protected final boolean markSentHeaders() {
+		return HTTP_STATE.compareAndSet(this, READY, HEADERS_SENT);
+	}
+
+	/**
+	 * Mark the body sent
+	 *
+	 * @return true if marked for the first time
+	 */
+	protected final boolean markSentBody() {
+		return HTTP_STATE.compareAndSet(this, HEADERS_SENT, BODY_SENT);
+	}
+
+	/**
+	 * Mark the headers and body sent
+	 *
+	 * @return true if marked for the first time
+	 */
+	protected final boolean markSentHeaderAndBody() {
+		return HTTP_STATE.compareAndSet(this, READY, BODY_SENT);
 	}
 
 	/**
@@ -223,7 +245,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 */
 	protected abstract HttpMessage outboundHttpMessage();
 
-	final static AtomicIntegerFieldUpdater<HttpOperations> HEADERS_SENT =
+	final static AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");
 

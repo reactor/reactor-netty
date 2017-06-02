@@ -110,6 +110,7 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 		}
 		if (f.channel()
 		     .isActive()) {
+
 				f.channel()
 				 .close();
 		}
