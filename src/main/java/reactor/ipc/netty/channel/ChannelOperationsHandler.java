@@ -161,7 +161,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	final public void exceptionCaught(ChannelHandlerContext ctx, Throwable err)
 			throws Exception {
-		Exceptions.throwIfFatal(err);
+		Exceptions.throwIfJvmFatal(err);
 		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 		if (ops != null) {
 			ops.onInboundError(err);
