@@ -120,7 +120,10 @@ public interface PoolResources extends Disposable {
 	 * ChannelPool}
 	 */
 	static PoolResources fixed(String name, int maxConnections, long acquireTimeout) {
-		if (maxConnections != -1 && maxConnections <= 0) {
+		if (maxConnections == -1) {
+			return elastic(name);
+		}
+		if (maxConnections <= 0) {
 			throw new IllegalArgumentException("Max Connections value must be strictly " + "positive");
 		}
 		if (acquireTimeout != -1L && acquireTimeout < 0) {
