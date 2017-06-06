@@ -590,27 +590,34 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	final boolean checkResponseCode(HttpResponse response) {
 		int code = response.status()
 		                   .code();
-		if (code >= 500 && serverError) {
-			if (log.isDebugEnabled()) {
-				log.debug("{} Received Server Error, stop reading: {}", channel(),
-						response
-						.toString());
+		if (code >= 500) {
+			if (serverError){
+				if (log.isDebugEnabled()) {
+					log.debug("{} Received Server Error, stop reading: {}", channel(),
+							response
+									.toString());
+				}
+				Exception ex = new HttpClientException(uri(), response);
+				parentContext().fireContextError(ex);
+				onHandlerTerminate();
+				return false;
 			}
-			Exception ex = new HttpClientException(uri(), response);
-			parentContext().fireContextError(ex);
-			onHandlerTerminate();
-			return false;
+			return true;
 		}
 
-		if (code >= 400 && clientError) {
-			if (log.isDebugEnabled()) {
-				log.debug("{} Received Request Error, stop reading: {}", channel(),
-						response.toString());
+		if (code >= 400) {
+			if (clientError) {
+				if (log.isDebugEnabled()) {
+					log.debug("{} Received Request Error, stop reading: {}",
+							channel(),
+							response.toString());
+				}
+				Exception ex = new HttpClientException(uri(), response);
+				parentContext().fireContextError(ex);
+				onHandlerTerminate();
+				return false;
 			}
-			Exception ex = new HttpClientException(uri(), response);
-			parentContext().fireContextError(ex);
-			onHandlerTerminate();
-			return false;
+			return true;
 		}
 		if (code == 301 || code == 302 && isFollowRedirect()) {
 			if (log.isDebugEnabled()) {

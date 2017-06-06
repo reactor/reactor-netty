@@ -43,6 +43,8 @@ import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 /**
  * @author Stephane Maldini
  */
@@ -78,6 +80,23 @@ public class HttpServerTests {
 		Assertions.assertThat(response.status().code()).isEqualTo(201);
 		context.dispose();
 		context.onClose().block();
+	}
+
+	@Test
+	public void errorResponseAndReturn() throws Exception {
+		NettyContext c = HttpServer.create(0)
+		                           .newHandler((req, resp) -> Mono.error(new Exception("returnError")))
+		                           .block();
+
+		assertThat(HttpClient.create(c.address()
+		                              .getPort())
+		                     .get("/return", r -> r.failOnServerError(false))
+		                     .block()
+		                     .status()
+		                     .code()).isEqualTo(500);
+
+		c.dispose();
+
 	}
 
 	@Test
