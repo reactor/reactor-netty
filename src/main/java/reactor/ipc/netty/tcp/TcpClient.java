@@ -132,6 +132,10 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		return this.options.duplicate();
 	}
 
+	public final NettyContextFacade startSimple(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+		return new NettyContextFacade(newHandler(handler), "Reactor Netty TCP Client");
+	}
+
 	@Override
 	public String toString() {
 		return "TcpClient: " + options.asSimpleString();

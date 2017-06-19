@@ -152,6 +152,10 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		});
 	}
 
+	public NettyContextFacade startSimple(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+		return new NettyContextFacade(newHandler(handler), "Reactor Netty TCP Server");
+	}
+
 	/**
 	 * Get a copy of the {@link ServerOptions} currently in effect.
 	 *

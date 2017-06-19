@@ -122,7 +122,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		try {
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops != null) {
-				ChannelOperations.get(ctx.channel()).onInboundNext(ctx, msg);
+				ops.onInboundNext(ctx, msg);
 			}
 			else {
 				if (log.isDebugEnabled()) {

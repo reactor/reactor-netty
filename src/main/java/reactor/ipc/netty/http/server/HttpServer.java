@@ -38,6 +38,7 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.options.ServerOptions;
+import reactor.ipc.netty.tcp.NettyContextFacade;
 import reactor.ipc.netty.tcp.TcpServer;
 
 /**
@@ -154,6 +155,15 @@ public final class HttpServer
 		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
 		routesBuilder.accept(routes);
 		return newHandler(routes);
+	}
+
+
+	public NettyContextFacade startSimple(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+		return new NettyContextFacade(newHandler(handler), "Reactor Netty HTTP Server");
+	}
+
+	public NettyContextFacade startSimpleRouter(Consumer<? super HttpServerRoutes> routesBuilder) {
+		return new NettyContextFacade(newRouter(routesBuilder), "Reactor Netty HTTP Router");
 	}
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
