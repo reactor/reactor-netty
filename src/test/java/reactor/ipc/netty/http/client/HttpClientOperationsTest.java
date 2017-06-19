@@ -40,19 +40,19 @@ import static org.junit.Assert.*;
  */
 public class HttpClientOperationsTest {
 
-	ContextHandler handler = new ContextHandler((a, b, c) -> null, null, null, null, null) {
+	ContextHandler<Channel> handler = new ContextHandler<Channel>((a, b, c) -> null, null, null, null, null) {
 		@Override
 		public void fireContextActive(NettyContext context) {
 
 		}
 
 		@Override
-		public void setFuture(Future future) {
+		public void setFuture(Future<?> future) {
 
 		}
 
 		@Override
-		protected void doPipeline(Channel ch) {
+		protected void doPipeline(Channel channel) {
 
 		}
 
@@ -62,7 +62,7 @@ public class HttpClientOperationsTest {
 		}
 
 		@Override
-		public void accept(Object o) {
+		public void accept(Channel channel) {
 
 		}
 
