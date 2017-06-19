@@ -47,7 +47,7 @@ class HttpResponseStatusCodesHandlingSpec extends Specification {
 			  .just("Hello")
 			  .log('client-send'))
 	}
-	.flatMap { replies ->
+	.flatMapMany { replies ->
 	  //successful request, listen for replies
 	  replies
 			  .receive()

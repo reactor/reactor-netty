@@ -252,7 +252,7 @@ public class ClientServerHttpTests {
 	private void setupFakeProtocolListener() throws Exception {
 		broadcaster = TopicProcessor.create();
 		final Processor<List<String>, List<String>> processor =
-				WorkQueueProcessor.create(false);
+				WorkQueueProcessor.<List<String>>builder().autoCancel(false).build();
 		Flux.from(broadcaster)
 		    .buffer(5)
 		    .subscribe(processor);
@@ -282,13 +282,13 @@ public class ClientServerHttpTests {
 		                                                                 .getPort());
 
 		return httpClient.get("/data")
-		                 .flatMap(s -> s.receive()
+		                 .flatMapMany(s -> s.receive()
 		                                .asString()
 		                                .log("client")
 		                                .next())
 		                 .collectList()
 		                 .cache()
-		                 .subscribe();
+		                 .toProcessor();
 	}
 
 	private List<List<String>> getClientDatas(int threadCount, Sender sender, int count)

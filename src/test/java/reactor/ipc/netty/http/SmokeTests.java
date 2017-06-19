@@ -245,8 +245,8 @@ public class SmokeTests {
 
 	private void setupFakeProtocolListener() throws Exception {
 
-		processor = TopicProcessor.create(false);
-		workProcessor = WorkQueueProcessor.create(false);
+		processor = TopicProcessor.<ByteBuf>builder().autoCancel(false).build();
+		workProcessor = WorkQueueProcessor.<ByteBuf>builder().autoCancel(false).build();
 		Flux<ByteBuf> bufferStream = Flux.from(processor)
 		                                 .window(windowBatch)
 		                                 .doOnNext(d -> windows.getAndIncrement())
@@ -300,7 +300,7 @@ public class SmokeTests {
 						                                        .getPort()));
 
 		Mono<List<String>> content = httpClient.get("/data")
-		                                       .then(f -> f.receive()
+		                                       .flatMap(f -> f.receive()
 		                                                   .asString()
 		                                                   .collectList())
 		                                       .cache();

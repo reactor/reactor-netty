@@ -107,7 +107,7 @@ public class HttpServerTests {
 		NettyContext c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
 		                                                          .sendString(Mono.just(i.incrementAndGet())
-		                                                                          .then(d -> Mono.delay(
+		                                                                          .flatMap(d -> Mono.delay(
 				                                                                          Duration.ofSeconds(
 						                                                                          4 - d))
 		                                                                                         .map(x -> d + "\n"))))

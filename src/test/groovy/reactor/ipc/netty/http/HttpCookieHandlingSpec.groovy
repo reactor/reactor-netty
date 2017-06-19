@@ -40,7 +40,7 @@ class HttpCookieHandlingSpec extends Specification {
 
 	def cookieResponse = HttpClient.create("localhost", server.address().port).
 			get('/test')
-			.then({ replies -> Mono.just(replies.cookies()) }
+			.flatMap({ replies -> Mono.just(replies.cookies()) }
 					as Function<HttpClientResponse, Mono<Map<CharSequence, Set<Cookie>>>>)
 			.doOnSuccess {
 	  			println it
