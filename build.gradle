@@ -47,7 +47,7 @@ ext {
   gradleVersion = '3.3'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.0.7.RELEASE"
+  reactorCoreVersion = "3.1.0.M2"
   reactorIpcVersion = "0.6.2.RELEASE"
 
   // Languages
@@ -206,7 +206,7 @@ configure(rootProject) { project ->
 	testCompile "org.apache.httpcomponents:fluent-hc:4.3.6"
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.reactivex:rxjava:$rxJavaVersion"
-	testCompile "io.projectreactor.addons:reactor-test:$testAddonVersion"
+	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
 
 	testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 

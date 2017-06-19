@@ -64,7 +64,7 @@ public class WebsocketTest {
 		                .get("/test",
 				                out -> out.addHeader("Authorization", auth)
 				                          .sendWebsocket())
-		                .flatMap(in -> in.receive()
+		                .flatMapMany(in -> in.receive()
 		                                 .asString())
 		                .log()
 		                .collectList()
@@ -97,7 +97,7 @@ public class WebsocketTest {
 //		                       .get("/test",
 //				                       out -> out.addHeader("Authorization", auth)
 //				                                 .sendWebsocket())
-//		                       .flatMap(in -> in.receiveWebsocket()
+//		                       .flatMapMany(in -> in.receiveWebsocket()
 //		                                        .receive()
 //		                                        .asByteArray())
 //		                       .doOnNext(d -> System.out.println(d.length))
@@ -122,7 +122,7 @@ public class WebsocketTest {
 		Flux<String> ws = HttpClient.create(httpServer.address()
 		                                              .getPort())
 		                            .ws("/")
-		                            .flatMap(in -> in.receiveWebsocket()
+		                            .flatMapMany(in -> in.receiveWebsocket()
 		                                             .aggregateFrames()
 		                                             .receive()
 		                                             .asString());
@@ -152,7 +152,7 @@ public class WebsocketTest {
 		Flux<String> ws = HttpClient.create(httpServer.address()
 		                                              .getPort())
 		                            .ws("/")
-		                            .flatMap(in -> in.receiveWebsocket()
+		                            .flatMapMany(in -> in.receiveWebsocket()
 		                                             .aggregateFrames()
 		                                             .receive()
 		                                             .asString());
@@ -198,7 +198,7 @@ public class WebsocketTest {
 		HttpClient.create(httpServer.address()
 		                            .getPort())
 		          .ws("/test")
-		          .then(in -> in.receiveWebsocket((i, o) -> o.options(opt -> opt.flushOnEach())
+		          .flatMap(in -> in.receiveWebsocket((i, o) -> o.options(opt -> opt.flushOnEach())
 		                                                     .sendString(i.receive()
 		                                                                  .asString()
 		                                                                  .subscribeWith(
@@ -222,7 +222,7 @@ public class WebsocketTest {
 				          .get("/test",
 						          out -> out.addHeader("Authorization", auth)
 						                    .sendWebsocket("SUBPROTOCOL,OTHER"))
-				          .flatMap(in -> in.receive().asString())
+				          .flatMapMany(in -> in.receive().asString())
 		)
 		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
 	}
@@ -241,7 +241,7 @@ public class WebsocketTest {
 				          .get("/test",
 						          out -> out.addHeader("Authorization", auth)
 						                    .sendWebsocket("SUBPROTOCOL,OTHER"))
-				          .flatMap(in -> in.receive().asString())
+				          .flatMapMany(in -> in.receive().asString())
 		)
 		            //the SERVER returned null which means that it couldn't select a protocol
 		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
@@ -260,7 +260,7 @@ public class WebsocketTest {
 		                       .get("/test",
 				                out -> out.addHeader("Authorization", auth)
 				                          .sendWebsocket("SUBPROTOCOL,OTHER"))
-		                .flatMap(in -> in.receive().asString()).log().collectList().block(Duration.ofSeconds(30)).get(0);
+		                .flatMapMany(in -> in.receive().asString()).log().collectList().block(Duration.ofSeconds(30)).get(0);
 
 		Assert.assertThat(res, is("test"));
 	}
@@ -279,7 +279,7 @@ public class WebsocketTest {
 				                out -> out.addHeader("Authorization", auth)
 				                          .sendWebsocket("Common,OTHER"))
 		                       .map(HttpClientResponse::receiveWebsocket)
-		                       .flatMap(in -> in.receive().asString()
+		                       .flatMapMany(in -> in.receive().asString()
 				                       .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
 		                       .log().collectList().block(Duration.ofSeconds(30)).get(0);
 
@@ -299,7 +299,7 @@ public class WebsocketTest {
 				                       out -> out.addHeader("Authorization", auth)
 				                                 .sendWebsocket())
 		                       .map(HttpClientResponse::receiveWebsocket)
-		                       .flatMap(in -> in.receive()
+		                       .flatMapMany(in -> in.receive()
 		                                        .asString()
 		                                        .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
 		                       .log()
@@ -323,7 +323,7 @@ public class WebsocketTest {
 				                       out -> out.addHeader("Authorization", auth)
 				                                 .sendWebsocket("proto1, proto2"))
 		                       .map(HttpClientResponse::receiveWebsocket)
-		                       .flatMap(in -> in.receive()
+		                       .flatMapMany(in -> in.receive()
 		                                        .asString()
 		                                        .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
 		                       .log()
@@ -357,7 +357,7 @@ public class WebsocketTest {
 		HttpClient.create(httpServer.address()
 		                            .getPort())
 		          .ws("/test", "proto1,proto2")
-		          .then(in -> {
+		          .flatMap(in -> {
 			          clientSelectedProtocolWhenSimplyUpgrading.set(in.receiveWebsocket().selectedSubprotocol());
 			          return in.receiveWebsocket((i, o) -> {
 				          clientSelectedProtocol.set(o.selectedSubprotocol());

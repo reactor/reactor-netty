@@ -247,11 +247,11 @@ public class TcpServerTests {
 	public void test5() throws Exception {
 		//Hot stream of data, could be injected from anywhere
 		EmitterProcessor<String> broadcaster =
-				EmitterProcessor.<String>create().connect();
+				EmitterProcessor.<String>create();
 
 		//Get a reference to the tail of the operation pipeline (microbatching + partitioning)
 		final Processor<List<String>, List<String>> processor =
-				WorkQueueProcessor.create(false);
+				WorkQueueProcessor.<List<String>>builder().autoCancel(false).build();
 
 		broadcaster
 
@@ -327,7 +327,7 @@ public class TcpServerTests {
 				(in, out) -> HttpClient.create()
 				                       .get("foaas.herokuapp.com/life/" + in.param(
 						                       "search"))
-				                       .flatMap(repliesOut -> out.send(repliesOut.receive()))))
+				                       .flatMapMany(repliesOut -> out.send(repliesOut.receive()))))
 		      .block(Duration.ofSeconds(30))
 		      .onClose()
 		      .block(Duration.ofSeconds(30));
@@ -342,7 +342,7 @@ public class TcpServerTests {
 				                       .get("ws://localhost:3000",
 						                       requestOut -> requestOut.sendWebsocket()
 						                                               .sendString(Mono.just("ping")))
-				                       .flatMap(repliesOut -> out.sendGroups(repliesOut.receive()
+				                       .flatMapMany(repliesOut -> out.sendGroups(repliesOut.receive()
 				                                                                       .window(100)))))
 		      .block(Duration.ofSeconds(30))
 		      .onClose()
