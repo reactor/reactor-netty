@@ -331,6 +331,20 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 				});
 	}
 
+	/**
+	 * Get a copy of the {@link HttpClientOptions} currently in effect.
+	 *
+	 * @return the http client options
+	 */
+	public HttpClientOptions options() {
+		return options.duplicate();
+	}
+
+	@Override
+	public String toString() {
+		return "HttpClient: " + options.asSimpleString();
+	}
+
 	static final HttpMethod     WS             = new HttpMethod("WS");
 	final static String         WS_SCHEME      = "ws";
 	final static String         WSS_SCHEME     = "wss";

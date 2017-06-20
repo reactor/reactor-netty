@@ -207,4 +207,28 @@ public final class HttpServerOptions extends ServerOptions {
 		return this;
 	}
 
+	@Override
+	public String asSimpleString() {
+		StringBuilder s = new StringBuilder(super.asSimpleString());
+
+		if (minCompressionResponseSize >= 0) {
+			s.append(", gzip");
+			if (minCompressionResponseSize > 0) {
+				s.append( " over ").append(minCompressionResponseSize).append(" bytes");
+			}
+		}
+
+		return s.toString();
+	}
+
+	@Override
+	public String asDetailedString() {
+		return super.asDetailedString() +
+				", minCompressionResponseSize=" + minCompressionResponseSize;
+	}
+
+	@Override
+	public String toString() {
+		return "HttpServerOptions{" + asDetailedString() + "}";
+	}
 }

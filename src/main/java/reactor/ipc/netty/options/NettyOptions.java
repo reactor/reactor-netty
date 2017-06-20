@@ -367,9 +367,23 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 		return (SO) this;
 	}
 
+	public String asSimpleString() {
+		return this.asDetailedString();
+	}
+
+	public String asDetailedString() {
+		return "bootstrapTemplate=" + bootstrapTemplate +
+				", sslHandshakeTimeoutMillis=" + sslHandshakeTimeoutMillis +
+				", sslContext=" + sslContext +
+				", preferNative=" + preferNative +
+				", afterChannelInit=" + afterChannelInit +
+				", onChannelInit=" + onChannelInit +
+				", loopResources=" + loopResources;
+	}
+
 	@Override
 	public String toString() {
-		return "NettyOptions{" + "bootstrapTemplate=" + bootstrapTemplate + ", sslHandshakeTimeoutMillis=" + sslHandshakeTimeoutMillis + ", sslContext=" + sslContext + ", preferNative=" + preferNative + ", afterChannelInit=" + afterChannelInit + ", onChannelInit=" + onChannelInit + ", loopResources=" + loopResources + '}';
+		return "NettyOptions{" + asDetailedString() + "}";
 	}
 
 	static final boolean DEFAULT_NATIVE =

@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -374,6 +375,21 @@ public class TcpClientTests {
 		                         .block(Duration.ofSeconds(30)));
 
 		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
+	}
+
+	@Test
+	public void toStringShowsOptions() {
+		TcpClient client = TcpClient.create(opt -> opt.connect("foo", 123));
+
+		Assertions.assertThat(client.toString()).isEqualTo("TcpClient: connecting to foo:123");
+	}
+
+	@Test
+	public void gettingOptionsDuplicates() {
+		TcpClient client = TcpClient.create(opt -> opt.connect("foo", 123));
+		Assertions.assertThat(client.options())
+		          .isNotSameAs(client.options)
+		          .isNotSameAs(client.options());
 	}
 
 	private static final class EchoServer

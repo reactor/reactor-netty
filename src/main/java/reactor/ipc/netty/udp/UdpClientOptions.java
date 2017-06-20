@@ -51,4 +51,9 @@ final class UdpClientOptions extends ClientOptions {
 	public ClientOptions connect(@Nonnull String host, int port) {
 		return connect(new InetSocketAddress(host, port));
 	}
+
+	@Override
+	public String toString() {
+		return "UdpClientOptions{" + asDetailedString() + "}";
+	}
 }

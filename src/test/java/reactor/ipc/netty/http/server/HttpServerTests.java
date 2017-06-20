@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http;
+package reactor.ipc.netty.http.server;
 
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -36,9 +36,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
-import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
@@ -228,4 +228,20 @@ public class HttpServerTests {
 		HttpResources.reset();
 	}
 
+
+	@Test
+	public void toStringShowsOptions() {
+		HttpServer server = HttpServer.create(opt -> opt.listen("foo", 123)
+		                                                .compression(987));
+
+		Assertions.assertThat(server.toString()).isEqualTo("HttpServer: listening on foo:123, gzip over 987 bytes");
+	}
+
+	@Test
+	public void gettingOptionsDuplicates() {
+		HttpServer server = HttpServer.create(opt -> opt.listen("foo", 123).compression(true));
+		Assertions.assertThat(server.options())
+		          .isNotSameAs(server.options)
+		          .isNotSameAs(server.options());
+	}
 }

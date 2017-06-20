@@ -33,6 +33,7 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -347,6 +348,21 @@ public class TcpServerTests {
 		      .block(Duration.ofSeconds(30))
 		      .onClose()
 		      .block(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void toStringShowsOptions() {
+		TcpServer server = TcpServer.create(opt -> opt.listen("foo", 123));
+
+		Assertions.assertThat(server.toString()).isEqualTo("TcpServer: listening on foo:123");
+	}
+
+	@Test
+	public void gettingOptionsDuplicates() {
+		TcpServer server = TcpServer.create(opt -> opt.listen("foo", 123));
+		Assertions.assertThat(server.options())
+		          .isNotSameAs(server.options)
+		          .isNotSameAs(server.options());
 	}
 
 	public static class Pojo {
