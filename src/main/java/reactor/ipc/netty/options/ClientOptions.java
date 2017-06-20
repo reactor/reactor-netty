@@ -467,4 +467,36 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 			bootstrap.channel(loops.onChannel(elg));
 		}
 	}
+
+
+	@Override
+	public String asSimpleString() {
+		StringBuilder s = new StringBuilder();
+		if (getAddress() == null) {
+			s.append("connecting to no base address");
+		}
+		else {
+			s.append("connecting to ").append(getAddress());
+		}
+		if (proxyType != null) {
+			s.append(" through ").append(proxyType).append(" proxy");
+		}
+		return s.toString();
+	}
+
+	@Override
+	public String asDetailedString() {
+		if (proxyType == null) {
+			return "connectAddress=" + getAddress() + ", proxy=null, " + super.asDetailedString();
+		}
+		return "connectAddress=" + getAddress() +
+				", proxy=" + proxyType +
+				"(" + proxyAddress.get() + "), " +
+				super.asDetailedString();
+	}
+
+	@Override
+	public String toString() {
+		return "ClientOptions{" + asDetailedString() + "}";
+	}
 }

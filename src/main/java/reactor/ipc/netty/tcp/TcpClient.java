@@ -117,24 +117,24 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		this.options = Objects.requireNonNull(options, "options");
 	}
 
-	/**
-	 * Get the {@link ClientOptions} currently in effect.
-	 *
-	 * @return the client options
-	 */
-	public final ClientOptions options() {
-		return this.options;
-	}
-
 	@Override
 	public final Mono<? extends NettyContext> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return newHandler(handler, null, true, null);
 	}
 
+	/**
+	 * Get a copy of the {@link ClientOptions} currently in effect.
+	 *
+	 * @return the client options
+	 */
+	public final ClientOptions options() {
+		return this.options.duplicate();
+	}
+
 	@Override
 	public String toString() {
-		return "TcpClient:" + options.toString();
+		return "TcpClient: " + options.asSimpleString();
 	}
 
 	/**

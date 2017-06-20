@@ -43,6 +43,8 @@ import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * @author Stephane Maldini
  * @since 0.6
@@ -474,4 +476,19 @@ public class HttpClientTest {
 		c.dispose();
 	}
 
+	@Test
+	public void toStringShowsOptions() {
+		HttpClient client = HttpClient.create(opt -> opt.connect("foo", 123)
+		                                                .compression(true));
+
+		assertThat(client.toString()).isEqualTo("HttpClient: connecting to foo:123 with gzip");
+	}
+
+	@Test
+	public void gettingOptionsDuplicates() {
+		HttpClient client = HttpClient.create(opt -> opt.connect("foo", 123).compression(true));
+		assertThat(client.options())
+				.isNotSameAs(client.options)
+				.isNotSameAs(client.options());
+	}
 }

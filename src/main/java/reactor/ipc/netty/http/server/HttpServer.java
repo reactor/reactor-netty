@@ -37,7 +37,6 @@ import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
-import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.options.ServerOptions;
 import reactor.ipc.netty.tcp.TcpServer;
 
@@ -119,6 +118,20 @@ public final class HttpServer
 	HttpServer(HttpServerOptions options) {
 		this.server = new TcpBridgeServer(options);
 		this.options = options;
+	}
+
+	/**
+	 * Get a copy of the {@link HttpServerOptions} currently in effect.
+	 *
+	 * @return the http server options
+	 */
+	public final HttpServerOptions options() {
+		return this.options.duplicate();
+	}
+
+	@Override
+	public String toString() {
+		return "HttpServer: " + options.asSimpleString();
 	}
 
 	@Override

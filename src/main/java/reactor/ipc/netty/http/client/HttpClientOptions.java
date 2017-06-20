@@ -379,6 +379,21 @@ public final class HttpClientOptions extends ClientOptions {
 		}
 	}
 
+	@Override
+	public String asSimpleString() {
+		return super.asSimpleString() + (acceptGzip ? " with gzip" : "");
+	}
+
+	@Override
+	public String asDetailedString() {
+		return super.asDetailedString() + ", acceptGzip=" + acceptGzip;
+	}
+
+	@Override
+	public String toString() {
+		return "HttpClientOptions{" + asDetailedString() + "}";
+	}
+
 	static boolean isSecure(URI uri) {
 		return uri.getScheme() != null && (uri.getScheme()
 		                                      .toLowerCase()

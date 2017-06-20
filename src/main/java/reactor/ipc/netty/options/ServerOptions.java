@@ -274,5 +274,20 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 		         .channel(loops.onServerChannel(elg));
 	}
 
+	@Override
+	public String asSimpleString() {
+		return "listening on " + this.getAddress();
+	}
+
+	@Override
+	public String asDetailedString() {
+		return "address=" + getAddress() + ", " + super.asDetailedString();
+	}
+
+	@Override
+	public String toString() {
+		return "ServerOptions{" + asDetailedString() + "}";
+	}
+
 	final static InetSocketAddress LOCALHOST_AUTO_PORT = new InetSocketAddress(0);
 }

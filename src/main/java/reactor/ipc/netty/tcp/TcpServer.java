@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.tcp;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -153,9 +152,18 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		});
 	}
 
+	/**
+	 * Get a copy of the {@link ServerOptions} currently in effect.
+	 *
+	 * @return the server options
+	 */
+	public ServerOptions options() {
+		return this.options.duplicate();
+	}
+
 	@Override
 	public String toString() {
-		return "TcpServer:" + options.toString();
+		return "TcpServer: " + options.asSimpleString();
 	}
 
 	/**
