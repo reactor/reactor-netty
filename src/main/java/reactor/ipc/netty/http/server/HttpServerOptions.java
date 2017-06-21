@@ -201,9 +201,9 @@ public final class HttpServerOptions extends ServerOptions {
 	 */
 	public HttpServerOptions compression(int minResponseSize) {
 		if (minResponseSize < 0) {
-			throw new IllegalArgumentException("minResponseSize should be non-negative");
+			throw new IllegalArgumentException("minResponseSize must be positive");
 		}
-		this.minCompressionResponseSize = 0;
+		this.minCompressionResponseSize = minResponseSize;
 		return this;
 	}
 
