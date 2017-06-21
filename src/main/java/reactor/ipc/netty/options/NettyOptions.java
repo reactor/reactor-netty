@@ -168,6 +168,16 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	}
 
 	/**
+	 * Checks if these options denotes secured communication, ie. a {@link javax.net.ssl.SSLContext}
+	 * was set other than the default one.
+	 *
+	 * @return true if the options denote secured communication (SSL is active)
+	 */
+	public boolean isSecure() {
+		return sslContext != null;
+	}
+
+	/**
 	 * Provide an {@link EventLoopGroup} supplier.
 	 * Note that server might call it twice for both their selection and io loops.
 	 *
