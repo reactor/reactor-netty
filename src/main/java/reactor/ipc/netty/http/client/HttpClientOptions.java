@@ -360,8 +360,14 @@ public final class HttpClientOptions extends ClientOptions {
 
 	final String formatSchemeAndHost(String url, boolean ws) {
 		if (!url.startsWith(HttpClient.HTTP_SCHEME) && !url.startsWith(HttpClient.WS_SCHEME)) {
-			final String scheme =
-					(ws ? HttpClient.WS_SCHEME : HttpClient.HTTP_SCHEME) + "://";
+			StringBuilder schemeBuilder = new StringBuilder();
+			if (ws) {
+				schemeBuilder.append(isSecure() ? HttpClient.WSS_SCHEME : HttpClient.WS_SCHEME);
+			}
+			else {
+				schemeBuilder.append(isSecure() ? HttpClient.HTTPS_SCHEME : HttpClient.HTTP_SCHEME);
+			}
+			final String scheme = schemeBuilder.append("://").toString();
 			if (url.startsWith("/")) {
 				SocketAddress remote = getAddress();
 

@@ -18,9 +18,12 @@ package reactor.ipc.netty.http.client;
 
 import java.io.InputStream;
 import java.nio.file.Paths;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+
+import javax.net.ssl.SSLException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -29,6 +32,10 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -490,5 +497,58 @@ public class HttpClientTest {
 		assertThat(client.options())
 				.isNotSameAs(client.options)
 				.isNotSameAs(client.options());
+	}
+
+	@Test
+	public void sshExchangeRelativeGet() throws CertificateException, SSLException {
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+		                                        .build();
+		SslContext sslClient = SslContextBuilder.forClient()
+		                                        //make the client to trust the self signed certificate
+		                                        .trustManager(ssc.cert())
+		                                        .build();
+
+		NettyContext context =
+				HttpServer.create(opt -> opt.sslContext(sslServer))
+				          .newHandler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+				          .block();
+
+
+		HttpClientResponse response = HttpClient.create(
+				opt -> opt.connect(context.address().getPort())
+				          .sslContext(sslClient))
+		                                        .get("/foo")
+		                                        .block(Duration.ofMillis(200));
+		context.dispose();
+		context.onClose().block();
+
+		String responseString = response.receive().aggregate().asString(CharsetUtil.UTF_8).block();
+		assertThat(responseString).isEqualTo("hello /foo");
+	}
+
+	@Test
+	public void sshExchangeAbsoluteGet() throws CertificateException, SSLException {
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext sslClient = SslContextBuilder.forClient()
+		                                        .trustManager(ssc.cert()).build();
+
+		NettyContext context =
+				HttpServer.create(opt -> opt.sslContext(sslServer))
+				          .newHandler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+				          .block();
+
+		HttpClientResponse response = HttpClient.create(
+				opt -> opt.connect(context.address().getPort())
+				          .sslContext(sslClient)
+		)
+		                                        .get("https://localhost:" + context.address().getPort() + "/foo")
+		                                        .block(Duration.ofMillis(200));
+		context.dispose();
+		context.onClose().block();
+
+		String responseString = response.receive().aggregate().asString(CharsetUtil.UTF_8).block();
+		assertThat(responseString).isEqualTo("hello /foo");
 	}
 }

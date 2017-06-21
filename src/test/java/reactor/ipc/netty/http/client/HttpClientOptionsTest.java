@@ -64,4 +64,107 @@ public class HttpClientOptionsTest {
 				.endsWith(", acceptGzip=true}");
 	}
 
+	@Test
+	public void formatSchemeAndHostRelative() throws Exception {
+		String test1 = HttpClientOptions.create()
+		                                .formatSchemeAndHost("/foo", false);
+		String test2 = HttpClientOptions.create()
+		                                .formatSchemeAndHost("/foo", true);
+
+		assertThat(test1).isEqualTo("http://localhost/foo");
+		assertThat(test2).isEqualTo("ws://localhost/foo");
+	}
+
+	@Test
+	public void formatSchemeAndHostRelativeSslSupport() throws Exception {
+		String test1 = HttpClientOptions.create()
+		                                .sslSupport()
+		                                .formatSchemeAndHost("/foo", false);
+		String test2 = HttpClientOptions.create()
+		                                .sslSupport()
+		                                .formatSchemeAndHost("/foo", true);
+
+		assertThat(test1).isEqualTo("https://localhost/foo");
+		assertThat(test2).isEqualTo("wss://localhost/foo");
+	}
+
+	@Test
+	public void formatSchemeAndHostRelativeNoLeadingSlash() throws Exception {
+		String test1 = HttpClientOptions.create()
+		                                .formatSchemeAndHost("foo:8080/bar", false);
+		String test2 = HttpClientOptions.create()
+		                                .formatSchemeAndHost("foo:8080/bar", true);
+
+		assertThat(test1).isEqualTo("http://foo:8080/bar");
+		assertThat(test2).isEqualTo("ws://foo:8080/bar");
+	}
+
+	@Test
+	public void formatSchemeAndHostRelativeAddress() throws Exception {
+		String test1 = HttpClientOptions.create()
+		                                .connect("127.0.0.1", 8080)
+		                                .formatSchemeAndHost("/foo", false);
+		String test2 = HttpClientOptions.create()
+		                                .connect("127.0.0.1", 8080)
+		                                .formatSchemeAndHost("/foo", true);
+
+		assertThat(test1).isEqualTo("http://127.0.0.1:8080/foo");
+		assertThat(test2).isEqualTo("ws://127.0.0.1:8080/foo");
+	}
+
+	@Test
+	public void formatSchemeAndHostRelativeAddressSsl() throws Exception {
+		String test1 = HttpClientOptions.create()
+		                                .connect("example", 8080)
+		                                .sslSupport()
+		                                .formatSchemeAndHost("/foo", false);
+		String test2 = HttpClientOptions.create()
+		                                .connect("example", 8080)
+		                                .sslSupport()
+		                                .formatSchemeAndHost("/foo", true);
+
+		assertThat(test1).isEqualTo("https://example:8080/foo");
+		assertThat(test2).isEqualTo("wss://example:8080/foo");
+	}
+
+	@Test
+	public void formatSchemeAndHostAbsoluteHttp() throws Exception {
+		String test1 = HttpClientOptions.create()
+		                                .formatSchemeAndHost("https://localhost/foo", false);
+		String test2 = HttpClientOptions.create()
+		                                .formatSchemeAndHost("http://localhost/foo", true);
+
+		String test3 = HttpClientOptions.create()
+		                                .sslSupport()
+		                                .formatSchemeAndHost("http://localhost/foo", false);
+		String test4 = HttpClientOptions.create()
+		                                .sslSupport()
+		                                .formatSchemeAndHost("https://localhost/foo", true);
+
+		assertThat(test1).isEqualTo("https://localhost/foo");
+		assertThat(test2).isEqualTo("http://localhost/foo");
+		assertThat(test3).isEqualTo("http://localhost/foo");
+		assertThat(test4).isEqualTo("https://localhost/foo");
+	}
+
+	@Test
+	public void formatSchemeAndHostAbsoluteWs() throws Exception {
+		String test1 = HttpClientOptions.create()
+		                                .formatSchemeAndHost("wss://localhost/foo", false);
+		String test2 = HttpClientOptions.create()
+		                                .formatSchemeAndHost("ws://localhost/foo", true);
+
+		String test3 = HttpClientOptions.create()
+		                                .sslSupport()
+		                                .formatSchemeAndHost("ws://localhost/foo", false);
+		String test4 = HttpClientOptions.create()
+		                                .sslSupport()
+		                                .formatSchemeAndHost("wss://localhost/foo", true);
+
+		assertThat(test1).isEqualTo("wss://localhost/foo");
+		assertThat(test2).isEqualTo("ws://localhost/foo");
+		assertThat(test3).isEqualTo("ws://localhost/foo");
+		assertThat(test4).isEqualTo("wss://localhost/foo");
+	}
+
 }
