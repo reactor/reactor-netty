@@ -16,11 +16,17 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.net.ssl.SSLException;
 
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -29,7 +35,9 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
-import org.assertj.core.api.Assertions;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
@@ -43,12 +51,70 @@ import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Stephane Maldini
  */
 public class HttpServerTests {
+
+	@Test
+	public void secureSendFile()
+			throws CertificateException, SSLException, InterruptedException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
+
+		NettyContext context =
+				HttpServer.create(opt -> opt.sslContext(sslServer))
+				          .newHandler((req, resp) -> resp.sendFile(largeFile))
+				          .block();
+
+
+		HttpClientResponse response =
+				HttpClient.create(opt -> opt.connect(context.address().getPort())
+				                            .sslContext(sslClient))
+				          .get("/foo")
+				          .block(Duration.ofSeconds(120));
+
+		context.dispose();
+		context.onClose().block();
+
+		String body = response.receive().aggregate().asString().block();
+
+		assertThat(body)
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+				.contains("1024 mark here -><- 1024 mark here")
+				.endsWith("End of File");
+	}
+
+	@Test
+	public void chunkedSendFile() throws InterruptedException, IOException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+		long fileSize = Files.size(largeFile);
+
+		NettyContext context =
+				HttpServer.create(opt -> opt.listen("localhost"))
+				          .newHandler((req, resp) -> resp.sendFileChunked(largeFile, 0, fileSize))
+				          .block();
+
+
+		HttpClientResponse response =
+				HttpClient.create(opt -> opt.connect(context.address().getPort()))
+				          .get("/foo")
+				          .block(Duration.ofSeconds(120));
+
+		context.dispose();
+		context.onClose().block();
+
+		String body = response.receive().aggregate().asString().block();
+
+		assertThat(body)
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+				.contains("1024 mark here -><- 1024 mark here")
+				.endsWith("End of File");
+	}
 
 	//from https://github.com/reactor/reactor-netty/issues/90
 	@Test
@@ -62,7 +128,7 @@ public class HttpServerTests {
 		HttpClientResponse response = HttpClient.create(8080).get("/").block();
 
 		// checking the response status, OK
-		Assertions.assertThat(response.status().code()).isEqualTo(200);
+		assertThat(response.status().code()).isEqualTo(200);
 		// dispose the Netty context and wait for the channel close
 		context.dispose();
 		context.onClose().block();
@@ -77,7 +143,7 @@ public class HttpServerTests {
 		response = HttpClient.create(8080).get("/").block();
 
 		// fails, response status is 200 and debugging shows the the previous handler is called
-		Assertions.assertThat(response.status().code()).isEqualTo(201);
+		assertThat(response.status().code()).isEqualTo(201);
 		context.dispose();
 		context.onClose().block();
 	}
@@ -234,13 +300,13 @@ public class HttpServerTests {
 		HttpServer server = HttpServer.create(opt -> opt.listen("foo", 123)
 		                                                .compression(987));
 
-		Assertions.assertThat(server.toString()).isEqualTo("HttpServer: listening on foo:123, gzip over 987 bytes");
+		assertThat(server.toString()).isEqualTo("HttpServer: listening on foo:123, gzip over 987 bytes");
 	}
 
 	@Test
 	public void gettingOptionsDuplicates() {
 		HttpServer server = HttpServer.create(opt -> opt.listen("foo", 123).compression(true));
-		Assertions.assertThat(server.options())
+		assertThat(server.options())
 		          .isNotSameAs(server.options)
 		          .isNotSameAs(server.options());
 	}

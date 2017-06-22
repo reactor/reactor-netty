@@ -16,19 +16,24 @@
 
 package reactor.ipc.netty.http.client;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
-
+import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -44,6 +49,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
@@ -550,5 +556,77 @@ public class HttpClientTest {
 
 		String responseString = response.receive().aggregate().asString(CharsetUtil.UTF_8).block();
 		assertThat(responseString).isEqualTo("hello /foo");
+	}
+
+	@Test
+	public void secureSendFile()
+			throws CertificateException, SSLException, InterruptedException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
+		AtomicReference<String> uploaded = new AtomicReference<>();
+
+		NettyContext context =
+				HttpServer.create(opt -> opt.sslContext(sslServer))
+				          .newRouter(r -> r.post("/upload", (req, resp) ->
+						          req.receive()
+						             .aggregate()
+						             .asString()
+						             .doOnNext(uploaded::set)
+						             .then(resp.status(201).sendString(Mono.just("Received File")).then())))
+				          .block();
+
+		HttpClientResponse response =
+				HttpClient.create(opt -> opt.connect(context.address().getPort())
+				                            .sslContext(sslClient))
+				          .post("/upload", r -> r.sendFile(largeFile))
+				          .block(Duration.ofSeconds(120));
+
+		context.dispose();
+		context.onClose().block();
+
+		String responseBody = response.receive().aggregate().asString().block();
+		assertThat(response.status().code()).isEqualTo(201);
+		assertThat(responseBody).isEqualTo("Received File");
+
+		assertThat(uploaded.get())
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+				.contains("1024 mark here -><- 1024 mark here")
+				.endsWith("End of File");
+	}
+
+	@Test
+	public void chunkedSendFile() throws InterruptedException, IOException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+		AtomicReference<String> uploaded = new AtomicReference<>();
+
+		NettyContext context =
+				HttpServer.create(opt -> opt.listen("localhost"))
+				          .newRouter(r -> r.post("/upload", (req, resp) ->
+						          req
+								          .receive()
+								          .aggregate()
+								          .asString()
+								          .doOnNext(uploaded::set)
+								          .then(resp.status(201).sendString(Mono.just("Received File")).then())))
+				          .block();
+
+		HttpClientResponse response =
+				HttpClient.create(opt -> opt.connect(context.address().getPort()))
+				          .post("/upload", r -> r.sendFile(largeFile))
+				          .block(Duration.ofSeconds(120));
+
+		context.dispose();
+		context.onClose().block();
+
+		String responseBody = response.receive().aggregate().asString().block();
+		assertThat(response.status().code()).isEqualTo(201);
+		assertThat(responseBody).isEqualTo("Received File");
+
+		assertThat(uploaded.get())
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+				.contains("1024 mark here -><- 1024 mark here")
+				.endsWith("End of File");
 	}
 }

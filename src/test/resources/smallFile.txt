@@ -1,0 +1,3 @@
+This is an UTF-8 file that is smaller than 1024 bytes.
+It contains accents like é.
+End of File
