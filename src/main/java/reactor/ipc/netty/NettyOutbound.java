@@ -18,12 +18,11 @@ package reactor.ipc.netty;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
+import java.io.RandomAccessFile;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -32,11 +31,17 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedFile;
+import io.netty.handler.stream.ChunkedInput;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.connector.Outbound;
+import reactor.ipc.netty.channel.data.AbstractFileChunkedStrategy;
+import reactor.ipc.netty.channel.data.FileChunkedStrategy;
 
 /**
  * @author Stephane Maldini
@@ -156,6 +161,20 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 		}
 	}
 
+	FileChunkedStrategy<ByteBuf> FILE_CHUNKED_STRATEGY_BUFFER = new AbstractFileChunkedStrategy<ByteBuf>() {
+
+		@Override
+		public ChunkedInput<ByteBuf> chunkFile(RandomAccessFile file) {
+			try {
+				//TODO tune the chunk size
+				return new ChunkedFile(file, 1024);
+			}
+			catch (IOException e) {
+				throw Exceptions.propagate(e);
+			}
+		}
+	};
+
 	/**
 	 * Send content from given {@link Path} using
 	 * {@link java.nio.channels.FileChannel#transferTo(long, long, WritableByteChannel)}
@@ -180,16 +199,50 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	 */
 	default NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file);
-		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> FutureMono.from(context().channel()
-				                               .writeAndFlush(new DefaultFileRegion(fc,
-						                               position,
-						                               count))),
+		if (context().channel().pipeline().get(SslHandler.class) != null) {
+			return sendFileChunked(file, position, count);
+		}
+
+		return then(Mono.using(() -> new RandomAccessFile(file.toFile(), "r"),
+				fc -> FutureMono.from(context().channel().writeAndFlush(new DefaultFileRegion(fc.getChannel(), position, count))),
 				fc -> {
 					try {
 						fc.close();
 					}
 					catch (IOException ioe) {/*IGNORE*/}
+				}));
+	}
+
+	default FileChunkedStrategy getFileChunkedStrategy() {
+		return FILE_CHUNKED_STRATEGY_BUFFER;
+	}
+
+	default NettyOutbound sendFileChunked(Path file, long position, long count) {
+		Objects.requireNonNull(file);
+		final FileChunkedStrategy strategy = getFileChunkedStrategy();
+		final boolean needChunkedWriteHandler = context().channel().pipeline().get(NettyPipeline.ChunkedWriter) == null;
+		if (needChunkedWriteHandler) {
+			strategy.preparePipeline(context());
+		}
+
+		return then(Mono.using(() -> new RandomAccessFile(file.toFile(), "r"),
+				fc -> {
+						try {
+							ChunkedInput<?> message = strategy.chunkFile(fc);
+							return FutureMono.from(context().channel().writeAndFlush(message));
+						}
+						catch (Exception e) {
+							return Mono.error(e);
+						}
+				},
+				fc -> {
+					try {
+						fc.close();
+					}
+					catch (IOException ioe) {/*IGNORE*/}
+					finally {
+						strategy.cleanupPipeline(context());
+					}
 				}));
 	}
 

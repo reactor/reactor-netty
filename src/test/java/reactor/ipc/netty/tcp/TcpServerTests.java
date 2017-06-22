@@ -19,7 +19,12 @@ package reactor.ipc.netty.tcp;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -27,12 +32,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
+import javax.net.ssl.SSLException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -47,9 +54,9 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -363,6 +370,153 @@ public class TcpServerTests {
 		Assertions.assertThat(server.options())
 		          .isNotSameAs(server.options)
 		          .isNotSameAs(server.options());
+	}
+
+	@Test
+	public void secureSendFile()
+			throws CertificateException, SSLException, InterruptedException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
+
+		NettyContext context =
+				TcpServer.create(opt -> opt.sslContext(sslServer))
+				         .newHandler((in, out) ->
+						         in.receive()
+						           .asString()
+						           .flatMap(word -> "GOGOGO".equals(word) ?
+								           out.sendFile(largeFile).then() :
+								           out.sendString(Mono.just("NOPE"))
+						           ).then(out.neverComplete())
+				         )
+				         .block();
+
+		List<String> client1Response = new ArrayList<>();
+		List<String> client2Response = new ArrayList<>();
+
+		CountDownLatch clientLatch = new CountDownLatch(2);
+
+		NettyContext client1 =
+				TcpClient.create(opt -> opt.connect(context.address().getPort())
+				                           .sslContext(sslClient))
+				         .newHandler((in, out) -> {
+					         in.receive()
+					           .asString()
+					           .log("-----------------CLIENT1")
+					           .doOnNext(client1Response::add)
+					           .subscribe(v -> clientLatch.countDown());
+
+					         return out.sendString(Mono.just("gogogo"))
+					                   //TODO cannot nevercomplete here (the client onClose hangs), cannot use `then()` either :(
+					                   .then(Mono.delay(Duration.ofMillis(500)).then());
+				         })
+				         .block(Duration.ofMillis(500));
+
+		NettyContext client2 =
+				TcpClient.create(opt -> opt.connect(context.address().getPort())
+				                           .sslContext(sslClient))
+				         .newHandler((in, out) -> {
+					         in.receive()
+					           .asString()
+					           .log("-----------------CLIENT2")
+					           .doOnNext(client2Response::add)
+					           .subscribe(v -> clientLatch.countDown());
+
+					         return out.sendString(Mono.just("GOGOGO"))
+					                   //TODO cannot nevercomplete here (the client onClose hangs), cannot use `then()` either :(
+					                   .then(Mono.delay(Duration.ofMillis(500)).then());
+				         })
+				         .block(Duration.ofMillis(500));
+
+		clientLatch.await(1, TimeUnit.SECONDS);
+
+		client1.dispose();
+		client1.onClose().block();
+
+		client2.dispose();
+		client2.onClose().block();
+
+		context.dispose();
+		context.onClose().block();
+
+		Assertions.assertThat(client1Response).containsExactly("NOPE");
+
+		Assertions.assertThat(client2Response.toString())
+		          .startsWith("[This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+		          .contains("1024 mark here ->")
+		          .contains("<- 1024 mark here")
+		          .endsWith("End of File]");
+	}
+
+	@Test
+	public void chunkedSendFile() throws InterruptedException, IOException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+		long fileSize = Files.size(largeFile);
+
+		NettyContext context =
+				TcpServer.create()
+				         .newHandler((in, out) ->
+						         in.receive()
+						           .asString()
+						           .flatMap(word -> "GOGOGO".equals(word) ?
+								           out.sendFileChunked(largeFile, 0, fileSize).then() :
+								           out.sendString(Mono.just("NOPE"))
+						           ).then(out.neverComplete())
+				         )
+				         .block();
+
+		List<String> client1Response = new ArrayList<>();
+		List<String> client2Response = new ArrayList<>();
+
+		CountDownLatch clientLatch = new CountDownLatch(2);
+
+		NettyContext client1 =
+				TcpClient.create(opt -> opt.connect(context.address().getPort()))
+				         .newHandler((in, out) -> {
+					         in.receive()
+					           .asString()
+					           .doOnNext(client1Response::add)
+					           .subscribe(v -> clientLatch.countDown());
+
+					         return out.sendString(Mono.just("gogogo"))
+					                   //TODO cannot nevercomplete here (the client onClose hangs), cannot use `then()` either :(
+					                   .then(Mono.delay(Duration.ofMillis(500)).then());
+				         })
+				         .block(Duration.ofMillis(500));
+
+		NettyContext client2 =
+				TcpClient.create(opt -> opt.connect(context.address().getPort()))
+				         .newHandler((in, out) -> {
+					         in.receive()
+					           .asString()
+					           .doOnNext(client2Response::add)
+					           .subscribe(v -> clientLatch.countDown());
+
+					         return out.sendString(Mono.just("GOGOGO"))
+					                   //TODO cannot nevercomplete here (the client onClose hangs), cannot use `then()` either :(
+					                   .then(Mono.delay(Duration.ofMillis(500)).then());
+				         })
+				         .block(Duration.ofMillis(500));
+
+		clientLatch.await(1, TimeUnit.SECONDS);
+
+		client1.dispose();
+		client1.onClose().block();
+
+		client2.dispose();
+		client2.onClose().block();
+
+		context.dispose();
+		context.onClose().block();
+
+		Assertions.assertThat(client1Response).containsExactly("NOPE");
+
+		Assertions.assertThat(client2Response.toString())
+		          .startsWith("[This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+		          .contains("1024 mark here ->")
+		          .contains("<- 1024 mark here")
+		          .endsWith("End of File]");
 	}
 
 	public static class Pojo {
