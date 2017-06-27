@@ -27,6 +27,7 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
 import reactor.core.Disposable;
+import reactor.core.publisher.Mono;
 
 /**
  * A {@link io.netty.channel.pool.ChannelPool} selector with associated factories.
@@ -160,5 +161,19 @@ public interface PoolResources extends Disposable {
 	@Override
 	default void dispose() {
 		//noop default
+		disposeDeferred().subscribe();
+	}
+
+	/**
+	 * Returns a Mono that triggers the disposal of underlying resources when subscribed to.
+	 * Note that if the resources cleanup process was started in the meantime, the last
+	 * Mono subscribed will immediately terminate, even if the first one subscribed is
+	 * still finishing cleanup.
+	 *
+	 * @return a Mono representing the cleanup (first one to be subscribed represents the
+	 * actual cleanup, others terminate immediately).
+	 **/
+	default Mono<Void> disposeDeferred() {
+		return Mono.empty(); //noop default
 	}
 }

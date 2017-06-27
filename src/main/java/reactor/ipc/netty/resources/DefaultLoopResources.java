@@ -23,6 +23,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.Future;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.FutureMono;
 
 /**
  * An adapted global eventLoop handler.
@@ -84,25 +87,43 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
-	public void dispose() {
-		if(running.compareAndSet(false, true)){
-			clientLoops.shutdownGracefully();
-			serverSelectLoops.shutdownGracefully();
-			serverLoops.shutdownGracefully();
+	public Mono<Void> disposeDeferred() {
+		return Mono.defer(() -> {
+			if(running.compareAndSet(false, true)){
+				Future<?> clFuture = clientLoops.shutdownGracefully();
+				Mono<?> clMono = FutureMono.from((Future) clFuture);
 
-			EventLoopGroup group = cacheNativeClientLoops.get();
-			if(group != null){
-				group.shutdownGracefully();
+				Future<?> sslFuture = serverSelectLoops.shutdownGracefully();
+				Mono<?> sslMono = FutureMono.from((Future)sslFuture);
+
+				Future<?> slFuture = serverLoops.shutdownGracefully();
+				Mono<?> slMono = FutureMono.from((Future)slFuture);
+
+				Mono<?> cnclMono = Mono.empty();
+				EventLoopGroup group = cacheNativeClientLoops.get();
+				if(group != null){
+					final Future<?> cnclFuture = group.shutdownGracefully();
+					cnclMono = FutureMono.from((Future)cnclFuture);
+				}
+
+				Mono<?> cnslMono = Mono.empty();
+				group = cacheNativeSelectLoops.get();
+				if(group != null){
+					Future<?> cnslFuture = group.shutdownGracefully();
+					cnslMono = FutureMono.from((Future)cnslFuture);
+				}
+
+				Mono<?> cnsrvlMono = Mono.empty();
+				group = cacheNativeServerLoops.get();
+				if(group != null){
+					Future<?> cnsrvlFuture = group.shutdownGracefully();
+					cnsrvlMono = FutureMono.from((Future)cnsrvlFuture);
+				}
+
+				return Mono.when(clMono, slMono, cnclMono, cnslMono, cnsrvlMono).then();
 			}
-			group = cacheNativeSelectLoops.get();
-			if(group != null){
-				group.shutdownGracefully();
-			}
-			group = cacheNativeServerLoops.get();
-			if(group != null){
-				group.shutdownGracefully();
-			}
-		}
+			return Mono.empty();
+		});
 	}
 
 	@Override

@@ -25,6 +25,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import reactor.core.Disposable;
+import reactor.core.publisher.Mono;
 
 /**
  * An {@link EventLoopGroup} selector with associated
@@ -217,5 +218,19 @@ public interface LoopResources extends Disposable {
 	@Override
 	default void dispose() {
 		//noop default
+		disposeDeferred().subscribe();
+	}
+
+	/**
+	 * Returns a Mono that triggers the disposal of underlying resources when subscribed to.
+	 * Note that if the resources cleanup process was started in the meantime, the last
+	 * Mono subscribed will immediately terminate, even if the first one subscribed is
+	 * still finishing cleanup.
+	 *
+	 * @return a Mono representing the cleanup (first one to be subscribed represents the
+	 * actual cleanup, others terminate immediately).
+	 **/
+	default Mono<Void> disposeDeferred() {
+		return Mono.empty(); //noop default
 	}
 }
