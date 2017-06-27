@@ -72,11 +72,15 @@ public class TcpResources implements PoolResources, LoopResources {
 	 * @return the global HTTP resources
 	 */
 	public static TcpResources reset() {
+		shutdown();
+		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
+	}
+
+	public static void shutdown() {
 		TcpResources resources = tcpResources.getAndSet(null);
 		if (resources != null) {
 			resources._dispose();
 		}
-		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
 	}
 
 	final PoolResources defaultPools;
@@ -95,6 +99,7 @@ public class TcpResources implements PoolResources, LoopResources {
 	/**
 	 * Dispose underlying resources
 	 */
+	//TODO make public?
 	protected void _dispose(){
 		defaultPools.dispose();
 		defaultLoops.dispose();
