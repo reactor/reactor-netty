@@ -38,7 +38,7 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.options.ServerOptions;
-import reactor.ipc.netty.tcp.NettyContextFacade;
+import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpServer;
 
 /**
@@ -157,13 +157,19 @@ public final class HttpServer
 		return newHandler(routes);
 	}
 
-
-	public NettyContextFacade startSimple(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
-		return new NettyContextFacade(newHandler(handler), "Reactor Netty HTTP Server");
+	public BlockingNettyContext startRouter(Consumer<? super HttpServerRoutes> routesBuilder) {
+		Objects.requireNonNull(routesBuilder, "routeBuilder");
+		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
+		routesBuilder.accept(routes);
+		return start(routes);
 	}
 
-	public NettyContextFacade startSimpleRouter(Consumer<? super HttpServerRoutes> routesBuilder) {
-		return new NettyContextFacade(newRouter(routesBuilder), "Reactor Netty HTTP Router");
+	public void startRouterAndAwait(Consumer<? super HttpServerRoutes> routesBuilder,
+			Consumer<BlockingNettyContext> onStart) {
+		Objects.requireNonNull(routesBuilder, "routeBuilder");
+		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
+		routesBuilder.accept(routes);
+		startAndAwait(routes, onStart);
 	}
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);

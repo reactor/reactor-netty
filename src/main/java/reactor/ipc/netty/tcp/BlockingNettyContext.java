@@ -15,21 +15,21 @@ import reactor.util.Loggers;
  *
  * @author Simon Baslé
  */
-public class NettyContextFacade {
+public class BlockingNettyContext {
 
-	private static final Logger LOG = Loggers.getLogger(NettyContextFacade.class);
+	private static final Logger LOG = Loggers.getLogger(BlockingNettyContext.class);
 
 	private final NettyContext context;
 	private final String description;
 
 	private Duration lifecycleTimeout;
 
-	public NettyContextFacade(Mono<? extends NettyContext> contextAsync,
+	public BlockingNettyContext(Mono<? extends NettyContext> contextAsync,
 			String description) {
 		this(contextAsync, description, Duration.ofSeconds(3));
 	}
 
-	public NettyContextFacade(Mono<? extends NettyContext> contextAsync,
+	public BlockingNettyContext(Mono<? extends NettyContext> contextAsync,
 			String description, Duration lifecycleTimeout) {
 		this.description = description;
 		this.lifecycleTimeout = lifecycleTimeout;
@@ -37,6 +37,10 @@ public class NettyContextFacade {
 				.timeout(lifecycleTimeout, Mono.error(new TimeoutException(description + " couldn't be started within " + lifecycleTimeout.toMillis() + "ms")))
 				.doOnNext(ctx -> LOG.info("Started {} on {}", description, ctx.address()))
 				.block();
+
+		context.onClose().subscribe(null,
+				e -> LOG.error("Stopped {} on {} with an error {}", description, context.address(), e),
+				() -> LOG.info("Stopped {} on {}", description, context.address()));
 	}
 
 	/**
@@ -82,10 +86,12 @@ public class NettyContextFacade {
 	 * Stop the {@link NettyContext} and wait for its termination, up to the {@link #setLifecycleTimeout(Duration) lifecycle timeout}.
 	 */
 	public void stop() {
+		if (context.isDisposed()) {
+			return;
+		}
 		context.dispose();
 		context.onClose()
 		       .timeout(lifecycleTimeout, Mono.error(new TimeoutException(description + " couldn't be stopped within " + lifecycleTimeout.toMillis() + "ms")))
-		       .doOnSuccess(aVoid -> LOG.info("Stopped {} on {}", description, context.address()))
 		       .block();
 	}
 }

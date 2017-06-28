@@ -16,8 +16,15 @@
 
 package reactor.ipc.netty;
 
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import javax.annotation.Nullable;
+
 import io.netty.buffer.ByteBuf;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Mono;
 import reactor.ipc.connector.Connector;
+import reactor.ipc.netty.tcp.BlockingNettyContext;
 
 /**
  * A Netty {@link Connector}
@@ -29,4 +36,25 @@ import reactor.ipc.connector.Connector;
 public interface NettyConnector<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
 		extends Connector<ByteBuf, ByteBuf, INBOUND, OUTBOUND> {
 
+	@Override
+	Mono<? extends NettyContext> newHandler(BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> ioHandler);
+
+	default <T extends BiFunction<INBOUND, OUTBOUND, ? extends Publisher<Void>>>
+	BlockingNettyContext start(T handler) {
+		return new BlockingNettyContext(newHandler(handler), getClass().getSimpleName());
+	}
+
+	default <T extends BiFunction<INBOUND, OUTBOUND, ? extends Publisher<Void>>>
+	void startAndAwait(T handler, @Nullable Consumer<BlockingNettyContext> onStart) {
+		BlockingNettyContext facade = new BlockingNettyContext(newHandler(handler), getClass().getSimpleName());
+
+		if (onStart != null) {
+			onStart.accept(facade);
+		}
+		Runtime.getRuntime().addShutdownHook(new Thread(facade::stop));
+
+		facade.getContext()
+		      .onClose()
+		      .block();
+	}
 }

@@ -17,7 +17,7 @@ import reactor.ipc.netty.NettyPipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class NettyContextFacadeTest {
+public class BlockingNettyContextTest {
 
 	static final NettyContext NEVER_STOP_CONTEXT = new NettyContext() {
 		@Override
@@ -38,9 +38,9 @@ public class NettyContextFacadeTest {
 
 	@Test
 	public void simpleServerFromAsyncServer() throws InterruptedException {
-		NettyContextFacade simpleServer =
+		BlockingNettyContext simpleServer =
 				TcpServer.create()
-				         .startSimple((in, out) -> out
+				         .start((in, out) -> out
 						         .options(NettyPipeline.SendOptions::flushOnEach)
 						         .sendString(
 								         in.receive()
@@ -58,39 +58,35 @@ public class NettyContextFacadeTest {
 		AtomicReference<List<String>> data1 = new AtomicReference<>();
 		AtomicReference<List<String>> data2 = new AtomicReference<>();
 
-		NettyContextFacade simpleClient1 =
+		BlockingNettyContext simpleClient1 =
 				TcpClient.create(simpleServer.getPort())
-				         .startSimple((in, out) -> {
-					         return out.options(NettyPipeline.SendOptions::flushOnEach)
-					                   .sendString(Flux.just("Hello", "World", "CONTROL"))
-					                   .then(in.receive()
-					                           .asString()
-					                           .takeUntil(s -> s.endsWith("DONE"))
-					                           .map(s -> s.replaceAll("DONE", ""))
-					                           .filter(s -> !s.isEmpty())
-					                           .collectList()
-					                           .doOnNext(data1::set)
-					                           .doOnNext(System.err::println)
-					                           .then());
-				         });
+				         .start((in, out) -> out.options(NettyPipeline.SendOptions::flushOnEach)
+				                                .sendString(Flux.just("Hello", "World", "CONTROL"))
+				                                .then(in.receive()
+				                                        .asString()
+				                                        .takeUntil(s -> s.endsWith("DONE"))
+				                                        .map(s -> s.replaceAll("DONE", ""))
+				                                        .filter(s -> !s.isEmpty())
+				                                        .collectList()
+				                                        .doOnNext(data1::set)
+				                                        .doOnNext(System.err::println)
+				                                        .then()));
 
-		NettyContextFacade simpleClient2 =
+		BlockingNettyContext simpleClient2 =
 				TcpClient.create(simpleServer.getPort())
-				         .startSimple((in, out) -> {
-					         return out.options(NettyPipeline.SendOptions::flushOnEach)
-					                   .sendString(Flux.just("How", "Are", "You?", "CONTROL"))
-					                   .then(in.receive()
-					                           .asString()
-					                           .takeUntil(s -> s.endsWith("DONE"))
-					                           .map(s -> s.replaceAll("DONE", ""))
-					                           .filter(s -> !s.isEmpty())
-					                           .collectList()
-					                           .doOnNext(data2::set)
-					                           .doOnNext(System.err::println)
-					                           .then());
-				         });
+				         .start((in, out) -> out.options(NettyPipeline.SendOptions::flushOnEach)
+				                                .sendString(Flux.just("How", "Are", "You?", "CONTROL"))
+				                                .then(in.receive()
+				                                        .asString()
+				                                        .takeUntil(s -> s.endsWith("DONE"))
+				                                        .map(s -> s.replaceAll("DONE", ""))
+				                                        .filter(s -> !s.isEmpty())
+				                                        .collectList()
+				                                        .doOnNext(data2::set)
+				                                        .doOnNext(System.err::println)
+				                                        .then()));
 
-		Thread.sleep(1000);
+		Thread.sleep(100);
 		System.err.println("STOPPING 1");
 		simpleClient1.stop();
 
@@ -120,15 +116,15 @@ public class NettyContextFacadeTest {
 	@Test
 	public void testTimeoutOnStart() {
 		assertThatExceptionOfType(RuntimeException.class)
-				.isThrownBy(() -> new NettyContextFacade(Mono.never(), "TEST NEVER START", Duration.ofMillis(100)))
+				.isThrownBy(() -> new BlockingNettyContext(Mono.never(), "TEST NEVER START", Duration.ofMillis(100)))
 				.withCauseExactlyInstanceOf(TimeoutException.class)
 				.withMessage("java.util.concurrent.TimeoutException: TEST NEVER START couldn't be started within 100ms");
 	}
 
 	@Test
 	public void testTimeoutOnStop() {
-		final NettyContextFacade neverStop =
-				new NettyContextFacade(Mono.just(NEVER_STOP_CONTEXT), "TEST NEVER STOP", Duration.ofMillis(100));
+		final BlockingNettyContext neverStop =
+				new BlockingNettyContext(Mono.just(NEVER_STOP_CONTEXT), "TEST NEVER STOP", Duration.ofMillis(100));
 
 		assertThatExceptionOfType(RuntimeException.class)
 				.isThrownBy(neverStop::stop)
@@ -138,8 +134,8 @@ public class NettyContextFacadeTest {
 
 	@Test
 	public void testTimeoutOnStopChangedTimeout() {
-		final NettyContextFacade neverStop =
-				new NettyContextFacade(Mono.just(NEVER_STOP_CONTEXT), "TEST NEVER STOP", Duration.ofMillis(500));
+		final BlockingNettyContext neverStop =
+				new BlockingNettyContext(Mono.just(NEVER_STOP_CONTEXT), "TEST NEVER STOP", Duration.ofMillis(500));
 
 		neverStop.setLifecycleTimeout(Duration.ofMillis(100));
 
@@ -151,7 +147,8 @@ public class NettyContextFacadeTest {
 
 	@Test
 	public void getContextAddressAndHost() {
-		NettyContextFacade facade = new NettyContextFacade(Mono.just(NEVER_STOP_CONTEXT), "foo");
+		BlockingNettyContext
+				facade = new BlockingNettyContext(Mono.just(NEVER_STOP_CONTEXT), "foo");
 
 		assertThat(facade.getContext()).isSameAs(NEVER_STOP_CONTEXT);
 		assertThat(facade.getPort()).isEqualTo(NEVER_STOP_CONTEXT.address().getPort());
