@@ -520,21 +520,28 @@ public class TcpServerTests {
 		          .endsWith("End of File]");
 	}
 
-	@Test(timeout = 20000)
+	@Test(timeout = 2000)
 	public void startAndAwait() throws InterruptedException {
 		AtomicReference<BlockingNettyContext> bnc = new AtomicReference<>();
+		CountDownLatch startLatch = new CountDownLatch(1);
 
 		Thread t = new Thread(() -> TcpServer.create()
 		                                     .startAndAwait((in, out) -> out.sendString(Mono.just("foo")),
-				                                     bnc::set));
+				v -> {bnc.set(v);
+					                                     startLatch.countDown();
+				                                     }));
 		t.start();
+		//let the server initialize
+		startLatch.await();
 
-		Thread.sleep(5000);
+		//check nothing happens for 200ms
+		t.join(200);
+		Assertions.assertThat(t.isAlive()).isTrue();
+
+		//check that stopping the bnc stops the server
 		bnc.get().stop();
-
 		t.join();
-
-		System.out.println("done");
+		Assertions.assertThat(t.isAlive()).isFalse();
 	}
 
 	public static class Pojo {
