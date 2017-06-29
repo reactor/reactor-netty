@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -111,8 +112,10 @@ final class HttpClientWSOperations extends HttpClientOperations
 					}
 				}
 				catch (WebSocketHandshakeException wshe) {
-					onInboundError(wshe);
-					return;
+					if (serverError) {
+						onInboundError(wshe);
+						return;
+					}
 				}
 
 				parentContext().fireContextActive(this);
