@@ -17,15 +17,12 @@
 package reactor.ipc.netty.channel;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -37,7 +34,6 @@ import org.reactivestreams.Subscription;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSource;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
@@ -193,7 +189,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final Mono<Void> onClose() {
-		return MonoSource.wrap(onInactive);
+		return Mono.fromDirect(onInactive);
 	}
 
 	@Override

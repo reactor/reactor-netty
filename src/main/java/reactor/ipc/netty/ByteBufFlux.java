@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,21 +23,17 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.handler.timeout.IdleStateHandler;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSource;
+import reactor.core.publisher.FluxOperator;
 import reactor.core.publisher.Mono;
+import reactor.util.context.Context;
 
 /**
  * A decorating {@link Flux} {@link NettyInbound} with various {@link ByteBuf} related
@@ -45,7 +41,7 @@ import reactor.core.publisher.Mono;
  *
  * @author Stephane Maldini
  */
-public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
+public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 
 	/**
 	 * Decorate as {@link ByteBufFlux}
@@ -242,8 +238,8 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	}
 
 	@Override
-	public void subscribe(Subscriber<? super ByteBuf> s) {
-		source.subscribe(s);
+	public void subscribe(Subscriber<? super ByteBuf> s, Context ctx) {
+		source.subscribe(s, ctx);
 	}
 
 	/**

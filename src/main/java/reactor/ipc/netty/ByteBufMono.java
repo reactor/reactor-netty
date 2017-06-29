@@ -24,8 +24,10 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSource;
+import reactor.core.publisher.MonoOperator;
+import reactor.util.context.Context;
 
 /**
  * A decorating {@link Mono} {@link NettyInbound} with various {@link ByteBuf} related
@@ -33,7 +35,7 @@ import reactor.core.publisher.MonoSource;
  *
  * @author Stephane Maldini
  */
-public final class ByteBufMono extends MonoSource<ByteBuf, ByteBuf> {
+public final class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 
 	/**
 	 * a {@link ByteBuffer} inbound {@link Mono}
@@ -78,6 +80,15 @@ public final class ByteBufMono extends MonoSource<ByteBuf, ByteBuf> {
 	}
 
 	/**
+	 * Convert to an {@link InputStream} inbound {@link Mono}
+	 *
+	 * @return a {@link InputStream} inbound {@link Mono}
+	 */
+	public Mono<InputStream> asInputStream() {
+		return map(ReleasingInputStream::new);
+	}
+
+	/**
 	 * Disable auto memory release on each signal published in order to prevent premature
 	 * recycling when buffers are accumulated downstream (async).
 	 *
@@ -87,13 +98,9 @@ public final class ByteBufMono extends MonoSource<ByteBuf, ByteBuf> {
 		return new ByteBufMono(doOnNext(ByteBuf::retain));
 	}
 
-	/**
-	 * Convert to an {@link InputStream} inbound {@link Mono}
-	 *
-	 * @return a {@link InputStream} inbound {@link Mono}
-	 */
-	public Mono<InputStream> asInputStream() {
-		return map(ReleasingInputStream::new);
+	@Override
+	public void subscribe(Subscriber<? super ByteBuf> actual, Context context) {
+		source.subscribe(actual, context);
 	}
 
 	protected ByteBufMono(Mono<?> source) {

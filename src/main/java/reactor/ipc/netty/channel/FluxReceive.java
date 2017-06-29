@@ -34,6 +34,7 @@ import reactor.core.publisher.Operators;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
+import reactor.util.context.Context;
 
 /**
  * @author Stephane Maldini
@@ -113,11 +114,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	}
 
 	@Override
-	public void subscribe(Subscriber<? super Object> s) {
-		if (s == null) {
-			throw Exceptions.argumentIsNullException();
-		}
-
+	public void subscribe(Subscriber<? super Object> s, Context ctx) {
 		if (eventLoop.inEventLoop()){
 			startReceiver(s);
 		}

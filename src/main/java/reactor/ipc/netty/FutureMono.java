@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
+import reactor.util.context.Context;
 
 /**
  * Convert Netty Future into void {@link Mono}.
@@ -75,11 +76,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		public final void subscribe(final Subscriber<? super Void> s) {
-			if (s == null) {
-				throw Exceptions.argumentIsNullException();
-			}
-
+		public final void subscribe(final Subscriber<? super Void> s, Context ctx) {
 			if(future.isDone()){
 				if(future.isSuccess()){
 					Operators.complete(s);
@@ -106,11 +103,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		public void subscribe(Subscriber<? super Void> s) {
-			if (s == null) {
-				throw Exceptions.argumentIsNullException();
-			}
-
+		public void subscribe(Subscriber<? super Void> s, Context ctx) {
 			F f = deferredFuture.get();
 
 			if (f == null) {

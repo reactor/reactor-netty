@@ -35,6 +35,7 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.AbortedException;
+import reactor.util.context.Context;
 
 /**
  * @author Stephane Maldini
@@ -66,7 +67,8 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public void subscribe(final Subscriber<? super HttpClientResponse> subscriber) {
+	public void subscribe(final Subscriber<? super HttpClientResponse> subscriber,
+			Context ctx) {
 		ReconnectableBridge bridge = new ReconnectableBridge();
 		bridge.activeURI = startURI;
 

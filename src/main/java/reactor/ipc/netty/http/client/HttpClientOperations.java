@@ -73,6 +73,7 @@ import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 
@@ -733,11 +734,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 
 		@Override
-		public void subscribe(Subscriber<? super Long> s) {
-			if (s == null) {
-				throw Exceptions.argumentIsNullException();
-			}
-
+		public void subscribe(Subscriber<? super Long> s, Context context) {
 			if (parent.channel()
 			          .eventLoop()
 			          .inEventLoop()) {

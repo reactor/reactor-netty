@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,28 +18,29 @@ package reactor.ipc.netty.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-import reactor.core.publisher.FluxSource;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxOperator;
 import reactor.ipc.netty.ByteBufFlux;
+import reactor.util.context.Context;
 
 /**
  * @author Ben Hale
  */
-final class MultipartDecoder extends FluxSource<ByteBuf, ByteBufFlux> {
+final class MultipartDecoder extends FluxOperator<ByteBuf, ByteBufFlux> {
 
 	final String boundary;
 	final ByteBufAllocator alloc;
 
-	MultipartDecoder(Publisher<ByteBuf> source, String boundary, ByteBufAllocator alloc) {
+	MultipartDecoder(Flux<ByteBuf> source, String boundary, ByteBufAllocator alloc) {
 		super(source);
 		this.boundary = boundary;
 		this.alloc = alloc;
 	}
 
 	@Override
-	public void subscribe(Subscriber<? super ByteBufFlux> subscriber) {
+	public void subscribe(Subscriber<? super ByteBufFlux> subscriber, Context ctx) {
 		this.source.subscribe(new MultipartTokenizer(this.boundary,
-				new MultipartParser(subscriber, alloc)));
+				new MultipartParser(subscriber, alloc)), ctx);
 	}
 }
