@@ -113,6 +113,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.redirectable = replaced.redirectable;
 		this.inboundPrefetch = replaced.inboundPrefetch;
 		this.requestHeaders = replaced.requestHeaders;
+		this.clientError = replaced.clientError;
+		this.serverError = replaced.serverError;
 	}
 
 	HttpClientOperations(Channel channel,

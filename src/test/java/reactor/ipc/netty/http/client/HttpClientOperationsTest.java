@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.client;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -28,6 +29,7 @@ import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -134,5 +136,32 @@ public class HttpClientOperationsTest {
 		assertThat(channel.readInbound(), instanceOf(ByteBuf.class));
 		assertThat(channel.readInbound(), instanceOf(LastHttpContent.class));
 		assertThat(channel.readInbound(), nullValue());
+	}
+
+	@Test
+	public void testConstructorWithProvidedReplacement() {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		channel.pipeline().addFirst(NettyPipeline.SslHandler, new ChannelHandlerAdapter() {
+		});
+
+		HttpClientOperations ops1 = new HttpClientOperations(channel,
+				(response, request) -> null, handler);
+		ops1.followRedirect();
+		ops1.failOnClientError(false);
+		ops1.failOnServerError(false);
+
+		HttpClientOperations ops2 = new HttpClientOperations(channel, ops1);
+
+		assertSame(ops1.channel(), ops2.channel());
+		assertSame(ops1.started, ops2.started);
+		assertSame(ops1.redirectedFrom, ops2.redirectedFrom);
+		assertSame(ops1.isSecure, ops2.isSecure);
+		assertSame(ops1.nettyRequest, ops2.nettyRequest);
+		assertSame(ops1.responseState, ops2.responseState);
+		assertSame(ops1.redirectable, ops2.redirectable);
+		assertSame(ops1.inboundPrefetch, ops2.inboundPrefetch);
+		assertSame(ops1.requestHeaders, ops2.requestHeaders);
+		assertSame(ops1.clientError, ops2.clientError);
+		assertSame(ops1.serverError, ops2.serverError);
 	}
 }
