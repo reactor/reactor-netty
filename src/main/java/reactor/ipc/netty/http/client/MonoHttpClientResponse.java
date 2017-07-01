@@ -78,7 +78,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 				bridge))
 		    .retry(bridge)
 		    .cast(HttpClientResponse.class)
-		    .subscribe(subscriber);
+		    .subscribe(subscriber, ctx);
 	}
 
 	static final class HttpClientHandler

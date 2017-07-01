@@ -738,16 +738,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (parent.channel()
 			          .eventLoop()
 			          .inEventLoop()) {
-				_subscribe(s);
+				_subscribe(s, context);
 			}
 			else {
 				parent.channel()
 				      .eventLoop()
-				      .execute(() -> _subscribe(s));
+				      .execute(() -> _subscribe(s, context));
 			}
 		}
 
-		void _subscribe(Subscriber<? super Long> s) {
+		void _subscribe(Subscriber<? super Long> s, Context context) {
 			if (!parent.markSentHeaders()) {
 				Operators.error(s,
 						new IllegalStateException("headers have already " + "been sent"));
@@ -803,7 +803,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					          .cast(Long.class)
 					          .switchIfEmpty(Mono.just(encoder.length()))
 					          .flux()
-					          .subscribe(s);
+					          .subscribe(s, context);
 				}
 
 
