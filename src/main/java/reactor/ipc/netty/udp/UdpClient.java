@@ -42,6 +42,7 @@ import reactor.ipc.netty.resources.LoopResources;
  * A UDP client connector.
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> {
 
@@ -62,7 +63,6 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the client on default port
-	 *
 	 * @return a new {@link UdpClient}
 	 */
 	public static UdpClient create(String bindAddress) {
@@ -75,7 +75,6 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param port the port to listen on the localhost bind address
-	 *
 	 * @return a new {@link UdpClient}
 	 */
 	public static UdpClient create(int port) {
@@ -90,11 +89,10 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the client on the
 	 * passed port
 	 * @param port the port to listen on the passed bind address
-	 *
 	 * @return a new {@link UdpClient}
 	 */
 	public static UdpClient create(String bindAddress, int port) {
-		return create(opts -> opts.connect(bindAddress, port));
+		return create(opts -> opts.host(bindAddress).port(port));
 	}
 
 	/**
@@ -103,21 +101,30 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param options the configurator
-	 *
 	 * @return a new {@link UdpClient}
 	 */
-	public static UdpClient create(Consumer<? super ClientOptions> options) {
-		Objects.requireNonNull(options, "options");
-		UdpClientOptions clientOptions = new UdpClientOptions();
-		clientOptions.loopResources(DEFAULT_UDP_LOOPS);
-		options.accept(clientOptions);
-		return new UdpClient(clientOptions.duplicate());
+	public static UdpClient create(Consumer<? super ClientOptions.Builder<?>> options) {
+		return builder().options(options).build();
+	}
+
+	/**
+	 * Creates a builder for {@link UdpClient UdpClient}
+	 *
+	 * @return a new UdpClient builder
+	 */
+	public static UdpClient.Builder builder() {
+		return new UdpClient.Builder();
 	}
 
 	final UdpClientOptions options;
 
-	UdpClient(UdpClientOptions options) {
-		this.options = Objects.requireNonNull(options, "options");
+	private UdpClient(UdpClient.Builder builder) {
+		UdpClientOptions.Builder clientOptionsBuilder = UdpClientOptions.builder();
+		clientOptionsBuilder.loopResources(DEFAULT_UDP_LOOPS);
+		if (Objects.nonNull(builder.options)) {
+			builder.options.accept(clientOptionsBuilder);
+		}
+		this.options = clientOptionsBuilder.build();
 	}
 
 	@Override
@@ -169,4 +176,26 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 
 	static final LoopResources DEFAULT_UDP_LOOPS =
 			LoopResources.create("udp", DEFAULT_UDP_THREAD_COUNT, true);
+
+	public static final class Builder {
+		private Consumer<? super UdpClientOptions.Builder> options;
+
+		private Builder() {
+		}
+
+		/**
+		 * The options for the client, including address and port.
+		 *
+		 * @param options the options for the client, including address and port.
+		 * @return {@code this}
+		 */
+		public final Builder options(Consumer<? super UdpClientOptions.Builder> options) {
+			this.options = Objects.requireNonNull(options, "options");
+			return this;
+		}
+
+		public UdpClient build() {
+			return new UdpClient(this);
+		}
+	}
 }
