@@ -1,75 +1,85 @@
 package reactor.ipc.netty.http.client;
 
+import org.junit.Before;
 import org.junit.Test;
-import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.options.ClientProxyOptions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class HttpClientOptionsTest {
+	private HttpClientOptions.Builder builder;
+	private ClientProxyOptions proxyOptions;
+
+	@Before
+	public void setUp() {
+		this.builder = HttpClientOptions.builder();
+		this.proxyOptions =
+				ClientProxyOptions.builder()
+				                  .type(ClientProxyOptions.Proxy.SOCKS4)
+				                  .host("http://proxy")
+				                  .port(456)
+				                  .build();
+	}
 
 	@Test
 	public void asSimpleString() {
-		HttpClientOptions opt = HttpClientOptions.create();
-
-		assertThat(opt.asSimpleString()).isEqualTo("connecting to no base address");
+		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to no base address");
 
 		//proxy
-		opt.proxy(ClientOptions.Proxy.SOCKS4, "http://proxy", 456);
-		assertThat(opt.asSimpleString()).isEqualTo("connecting to no base address through SOCKS4 proxy");
+		this.builder.proxyOptions(proxyOptions);
+		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to no base address through SOCKS4 proxy");
 
 		//address
-		opt.connect("http://google.com", 123);
-		assertThat(opt.asSimpleString()).isEqualTo("connecting to http://google.com:123 through SOCKS4 proxy");
+		this.builder.host("http://google.com").port(123);
+		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to http://google.com:123 through SOCKS4 proxy");
 
 		//gzip
-		opt.compression(true);
-		assertThat(opt.asSimpleString()).isEqualTo("connecting to http://google.com:123 through SOCKS4 proxy with gzip");
+		this.builder.compression(true);
+		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to http://google.com:123 through SOCKS4 proxy with gzip");
 	}
 
 	@Test
 	public void asDetailedString() {
-		HttpClientOptions opt = HttpClientOptions.create();
-
-		assertThat(opt.asDetailedString())
+		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=null, proxy=null")
 				.endsWith(", acceptGzip=false");
 
 		//proxy
-		opt.proxy(ClientOptions.Proxy.SOCKS4, "http://proxy", 456);
-		assertThat(opt.asDetailedString())
+		this.builder.proxyOptions(proxyOptions);
+		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=null, proxy=SOCKS4(http://proxy:456)")
 				.endsWith(", acceptGzip=false");
 
 		//address
-		opt.connect("http://google.com", 123);
-		assertThat(opt.asDetailedString())
+		this.builder.host("http://google.com").port(123);
+		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")
 				.endsWith(", acceptGzip=false");
 
 		//gzip
-		opt.compression(true);
-		assertThat(opt.asDetailedString())
+		this.builder.compression(true);
+		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")
 				.endsWith(", acceptGzip=true");
 	}
 
 	@Test
 	public void toStringContainsAsDetailedString() {
-		HttpClientOptions opt = HttpClientOptions.create()
-		                                         .connect("http://google.com", 123)
-		                                         .proxy(ClientOptions.Proxy.SOCKS4, "http://proxy", 456)
-		                                         .compression(true);
-		assertThat(opt.toString())
+		this.builder.host("http://google.com")
+		            .port(123)
+		            .proxyOptions(proxyOptions)
+		            .compression(true);
+		assertThat(this.builder.build().toString())
 				.startsWith("HttpClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")
 				.endsWith(", acceptGzip=true}");
 	}
 
 	@Test
 	public void formatSchemeAndHostRelative() throws Exception {
-		String test1 = HttpClientOptions.create()
-		                                .formatSchemeAndHost("/foo", false);
-		String test2 = HttpClientOptions.create()
-		                                .formatSchemeAndHost("/foo", true);
+		String test1 = this.builder.build()
+		                           .formatSchemeAndHost("/foo", false);
+		String test2 = this.builder.build()
+		                           .formatSchemeAndHost("/foo", true);
 
 		assertThat(test1).isEqualTo("http://localhost/foo");
 		assertThat(test2).isEqualTo("ws://localhost/foo");
@@ -77,12 +87,12 @@ public class HttpClientOptionsTest {
 
 	@Test
 	public void formatSchemeAndHostRelativeSslSupport() throws Exception {
-		String test1 = HttpClientOptions.create()
-		                                .sslSupport()
-		                                .formatSchemeAndHost("/foo", false);
-		String test2 = HttpClientOptions.create()
-		                                .sslSupport()
-		                                .formatSchemeAndHost("/foo", true);
+		String test1 = this.builder.sslSupport()
+		                           .build()
+		                           .formatSchemeAndHost("/foo", false);
+		String test2 = this.builder.sslSupport()
+		                           .build()
+		                           .formatSchemeAndHost("/foo", true);
 
 		assertThat(test1).isEqualTo("https://localhost/foo");
 		assertThat(test2).isEqualTo("wss://localhost/foo");
@@ -90,10 +100,10 @@ public class HttpClientOptionsTest {
 
 	@Test
 	public void formatSchemeAndHostRelativeNoLeadingSlash() throws Exception {
-		String test1 = HttpClientOptions.create()
-		                                .formatSchemeAndHost("foo:8080/bar", false);
-		String test2 = HttpClientOptions.create()
-		                                .formatSchemeAndHost("foo:8080/bar", true);
+		String test1 = this.builder.build()
+		                           .formatSchemeAndHost("foo:8080/bar", false);
+		String test2 = this.builder.build()
+		                           .formatSchemeAndHost("foo:8080/bar", true);
 
 		assertThat(test1).isEqualTo("http://foo:8080/bar");
 		assertThat(test2).isEqualTo("ws://foo:8080/bar");
@@ -101,12 +111,14 @@ public class HttpClientOptionsTest {
 
 	@Test
 	public void formatSchemeAndHostRelativeAddress() throws Exception {
-		String test1 = HttpClientOptions.create()
-		                                .connect("127.0.0.1", 8080)
-		                                .formatSchemeAndHost("/foo", false);
-		String test2 = HttpClientOptions.create()
-		                                .connect("127.0.0.1", 8080)
-		                                .formatSchemeAndHost("/foo", true);
+		String test1 = this.builder.host("127.0.0.1")
+		                           .port(8080)
+		                           .build()
+		                           .formatSchemeAndHost("/foo", false);
+		String test2 = this.builder.host("127.0.0.1")
+		                           .port(8080)
+		                           .build()
+		                           .formatSchemeAndHost("/foo", true);
 
 		assertThat(test1).isEqualTo("http://127.0.0.1:8080/foo");
 		assertThat(test2).isEqualTo("ws://127.0.0.1:8080/foo");
@@ -114,14 +126,16 @@ public class HttpClientOptionsTest {
 
 	@Test
 	public void formatSchemeAndHostRelativeAddressSsl() throws Exception {
-		String test1 = HttpClientOptions.create()
-		                                .connect("example", 8080)
-		                                .sslSupport()
-		                                .formatSchemeAndHost("/foo", false);
-		String test2 = HttpClientOptions.create()
-		                                .connect("example", 8080)
-		                                .sslSupport()
-		                                .formatSchemeAndHost("/foo", true);
+		String test1 = this.builder.host("example")
+		                           .port(8080)
+		                           .sslSupport()
+		                           .build()
+		                           .formatSchemeAndHost("/foo", false);
+		String test2 = this.builder.host("example")
+		                           .port(8080)
+		                           .sslSupport()
+		                           .build()
+		                           .formatSchemeAndHost("/foo", true);
 
 		assertThat(test1).isEqualTo("https://example:8080/foo");
 		assertThat(test2).isEqualTo("wss://example:8080/foo");
@@ -129,17 +143,17 @@ public class HttpClientOptionsTest {
 
 	@Test
 	public void formatSchemeAndHostAbsoluteHttp() throws Exception {
-		String test1 = HttpClientOptions.create()
-		                                .formatSchemeAndHost("https://localhost/foo", false);
-		String test2 = HttpClientOptions.create()
-		                                .formatSchemeAndHost("http://localhost/foo", true);
+		String test1 = this.builder.build()
+		                           .formatSchemeAndHost("https://localhost/foo", false);
+		String test2 = this.builder.build()
+		                           .formatSchemeAndHost("http://localhost/foo", true);
 
-		String test3 = HttpClientOptions.create()
-		                                .sslSupport()
-		                                .formatSchemeAndHost("http://localhost/foo", false);
-		String test4 = HttpClientOptions.create()
-		                                .sslSupport()
-		                                .formatSchemeAndHost("https://localhost/foo", true);
+		String test3 = this.builder.sslSupport()
+		                           .build()
+		                           .formatSchemeAndHost("http://localhost/foo", false);
+		String test4 = this.builder.sslSupport()
+		                           .build()
+		                           .formatSchemeAndHost("https://localhost/foo", true);
 
 		assertThat(test1).isEqualTo("https://localhost/foo");
 		assertThat(test2).isEqualTo("http://localhost/foo");
@@ -149,17 +163,17 @@ public class HttpClientOptionsTest {
 
 	@Test
 	public void formatSchemeAndHostAbsoluteWs() throws Exception {
-		String test1 = HttpClientOptions.create()
-		                                .formatSchemeAndHost("wss://localhost/foo", false);
-		String test2 = HttpClientOptions.create()
-		                                .formatSchemeAndHost("ws://localhost/foo", true);
+		String test1 = this.builder.build()
+		                           .formatSchemeAndHost("wss://localhost/foo", false);
+		String test2 = this.builder.build()
+		                           .formatSchemeAndHost("ws://localhost/foo", true);
 
-		String test3 = HttpClientOptions.create()
-		                                .sslSupport()
-		                                .formatSchemeAndHost("ws://localhost/foo", false);
-		String test4 = HttpClientOptions.create()
-		                                .sslSupport()
-		                                .formatSchemeAndHost("wss://localhost/foo", true);
+		String test3 = this.builder.sslSupport()
+		                           .build()
+		                           .formatSchemeAndHost("ws://localhost/foo", false);
+		String test4 = this.builder.sslSupport()
+		                           .build()
+		                           .formatSchemeAndHost("wss://localhost/foo", true);
 
 		assertThat(test1).isEqualTo("wss://localhost/foo");
 		assertThat(test2).isEqualTo("ws://localhost/foo");

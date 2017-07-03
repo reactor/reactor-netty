@@ -9,81 +9,82 @@ public class HttpServerOptionsTest {
 
 	@Test
 	public void minResponseForCompressionNegative() {
-		HttpServerOptions options = HttpServerOptions.create();
+		HttpServerOptions.Builder builder = HttpServerOptions.builder();
 
 		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> options.compression(-1))
+				.isThrownBy(() -> builder.compression(-1))
 				.withMessage("minResponseSize must be positive");
 	}
 
 	@Test
 	public void minResponseForCompressionZero() {
-		HttpServerOptions options = HttpServerOptions.create();
-		options.compression(0);
+		HttpServerOptions.Builder builder = HttpServerOptions.builder();
+		builder.compression(0);
 
-		assertThat(options.minCompressionResponseSize).isZero();
+		assertThat(builder.build().minCompressionResponseSize()).isZero();
 	}
 
 	@Test
 	public void minResponseForCompressionPositive() {
-		HttpServerOptions options = HttpServerOptions.create();
-		options.compression(10);
+		HttpServerOptions.Builder builder = HttpServerOptions.builder();
+		builder.compression(10);
 
-		assertThat(options.minCompressionResponseSize).isEqualTo(10);
+		assertThat(builder.build().minCompressionResponseSize()).isEqualTo(10);
 	}
 
 	@Test
 	public void asSimpleString() {
-		HttpServerOptions opt = HttpServerOptions.create();
+		HttpServerOptions.Builder builder = HttpServerOptions.builder();
 
-		assertThat(opt.asSimpleString()).isEqualTo("listening on 0.0.0.0/0.0.0.0:0");
+		assertThat(builder.build().asSimpleString()).isEqualTo("listening on 0.0.0.0/0.0.0.0:0");
 
 		//address
-		opt.listen("foo", 123);
-		assertThat(opt.asSimpleString()).isEqualTo("listening on foo:123");
+		builder.host("foo").port(123);
+		assertThat(builder.build().asSimpleString()).isEqualTo("listening on foo:123");
 
 		//gzip
-		opt.compression(true);
-		assertThat(opt.asSimpleString()).isEqualTo("listening on foo:123, gzip");
+		builder.compression(true);
+		assertThat(builder.build().asSimpleString()).isEqualTo("listening on foo:123, gzip");
 
 		//gzip with threshold
-		opt.compression(534);
-		assertThat(opt.asSimpleString()).isEqualTo("listening on foo:123, gzip over 534 bytes");
+		builder.compression(534);
+		assertThat(builder.build().asSimpleString()).isEqualTo("listening on foo:123, gzip over 534 bytes");
 	}
 
 	@Test
 	public void asDetailedString() {
-		HttpServerOptions opt = HttpServerOptions.create();
+		HttpServerOptions.Builder builder = HttpServerOptions.builder();
 
-		assertThat(opt.asDetailedString())
+		assertThat(builder.build().asDetailedString())
 				.startsWith("address=0.0.0.0/0.0.0.0:0")
 				.endsWith(", minCompressionResponseSize=-1");
 
 		//address
-		opt.listen("foo", 123);
-		assertThat(opt.asDetailedString())
+		builder.host("foo").port(123);
+		assertThat(builder.build().asDetailedString())
 				.startsWith("address=foo:123")
 				.endsWith(", minCompressionResponseSize=-1");
 
 		//gzip
-		opt.compression(true);
-		assertThat(opt.asDetailedString())
+		builder.compression(true);
+		assertThat(builder.build().asDetailedString())
 				.startsWith("address=foo:123")
 				.endsWith(", minCompressionResponseSize=0");
 
 		//gzip with threshold
-		opt.compression(534);
-		assertThat(opt.asDetailedString())
+		builder.compression(534);
+		assertThat(builder.build().asDetailedString())
 				.startsWith("address=foo:123")
 				.endsWith(", minCompressionResponseSize=534");
 	}
 
 	@Test
 	public void toStringContainsAsDetailedString() {
-		HttpServerOptions opt = HttpServerOptions.create()
-		                                         .listen("http://google.com", 123)
-		                                         .compression(534);
-		assertThat(opt.toString())
+		HttpServerOptions.Builder builder = HttpServerOptions.builder()
+		                                                     .compression(534)
+		                                                     .host("http://google.com")
+		                                                     .port(123);
+		assertThat(builder.build().toString())
 				.startsWith("HttpServerOptions{address=http://google.com:123")
 				.endsWith(", minCompressionResponseSize=534}");
 	}

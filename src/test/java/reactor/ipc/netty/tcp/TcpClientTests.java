@@ -161,7 +161,8 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<String>();
 
-				TcpClient.create(opts -> opts.connect("localhost", echoServerPort)
+				TcpClient.create(opts -> opts.host("localhost")
+				                             .port(echoServerPort)
 				                             .afterChannelInit(c -> c.pipeline()
 				                                                     .addBefore(
 						                                                     NettyPipeline.ReactiveBridge,
@@ -194,7 +195,8 @@ public class TcpClientTests {
 	@Test
 	public void closingPromiseIsFulfilled() throws InterruptedException {
 		TcpClient client =
-				TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
+				TcpClient.create(opts -> opts.host("localhost")
+				                             .port(abortServerPort)
 				                             .disablePool());
 
 		client.newHandler((in, out) -> Mono.empty())
@@ -246,8 +248,9 @@ public class TcpClientTests {
 
 		try {
 			TcpClient tcpClient =
-					TcpClient.create(opts -> opts.connect("localhost", abortServerPort)
-							.disablePool());
+					TcpClient.create(opts -> opts.host("localhost")
+					                             .port(abortServerPort)
+					                             .disablePool());
 
 			Mono<? extends NettyContext> handler = tcpClient.newHandler((in, out) -> {
 				System.out.println("Start");
@@ -280,8 +283,7 @@ public class TcpClientTests {
 		final long start = System.currentTimeMillis();
 
 		TcpClient client =
-				TcpClient.create(opts -> opts.connect("localhost", timeoutServerPort)
-				                             );
+				TcpClient.create(opts -> opts.host("localhost").port(timeoutServerPort));
 
 		NettyContext s = client.newHandler((in, out) -> {
 			in.onReadIdle(500, () -> {
@@ -379,14 +381,14 @@ public class TcpClientTests {
 
 	@Test
 	public void toStringShowsOptions() {
-		TcpClient client = TcpClient.create(opt -> opt.connect("foo", 123));
+		TcpClient client = TcpClient.create(opt -> opt.host("foo").port(123));
 
 		Assertions.assertThat(client.toString()).isEqualTo("TcpClient: connecting to foo:123");
 	}
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		TcpClient client = TcpClient.create(opt -> opt.connect("foo", 123));
+		TcpClient client = TcpClient.create(opt -> opt.host("foo").port(123));
 		Assertions.assertThat(client.options())
 		          .isNotSameAs(client.options)
 		          .isNotSameAs(client.options());

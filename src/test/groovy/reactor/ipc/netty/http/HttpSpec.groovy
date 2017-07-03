@@ -46,10 +46,7 @@ class HttpSpec extends Specification {
 	}.block(Duration.ofSeconds(30))
 
 	//Prepare a client using default impl (Netty) to connect on http://localhost:port/ and assign global codec to send/receive String data
-	def client = HttpClient.create { opts ->
-	  opts.connect("localhost", server.address()
-			  .port)
-	}
+	def client = HttpClient.create("localhost", server.address().port)
 
 	//prepare an http post request-reply flow
 	def content = client.post('/test/World') { req ->

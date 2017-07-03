@@ -134,7 +134,7 @@ public class UdpServerTests {
 		for (int i = 0; i < 4; i++) {
 			NettyContext server =
 					UdpClient.create(opts -> opts.option(ChannelOption.SO_REUSEADDR, true)
-					                             .connect(port)
+					                             .connectAddress(() -> new InetSocketAddress(port))
 					                             .protocolFamily(InternetProtocolFamily.IPv4))
 					         .newHandler((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
