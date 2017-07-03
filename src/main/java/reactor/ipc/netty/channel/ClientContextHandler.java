@@ -91,7 +91,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline) {
-		ProxyHandler proxy = clientOptions.getProxyHandler();
+		ProxyHandler proxy = clientOptions.useProxy() ? clientOptions.proxyOptions().getProxyHandler() : null;
 		if (proxy != null) {
 			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy);
 			if(log.isDebugEnabled()){

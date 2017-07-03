@@ -155,7 +155,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 *
 	 * @return true if proxy options have been set
 	 */
-	protected boolean useProxy() {
+	public boolean useProxy() {
 		return this.proxyOptions != null;
 	}
 
