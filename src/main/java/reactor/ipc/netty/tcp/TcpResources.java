@@ -76,6 +76,10 @@ public class TcpResources implements PoolResources, LoopResources {
 		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
 	}
 
+	/**
+	 * Shutdown the global {@link TcpResources} without resetting them,
+	 * effectively cleaning up associated resources without creating new ones.
+	 */
 	public static void shutdown() {
 		TcpResources resources = tcpResources.getAndSet(null);
 		if (resources != null) {
