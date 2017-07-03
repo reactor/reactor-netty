@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import javax.net.ssl.SSLException;
 
@@ -517,6 +518,30 @@ public class TcpServerTests {
 		          .contains("1024 mark here ->")
 		          .contains("<- 1024 mark here")
 		          .endsWith("End of File]");
+	}
+
+	@Test(timeout = 2000)
+	public void startAndAwait() throws InterruptedException {
+		AtomicReference<BlockingNettyContext> bnc = new AtomicReference<>();
+		CountDownLatch startLatch = new CountDownLatch(1);
+
+		Thread t = new Thread(() -> TcpServer.create()
+		                                     .startAndAwait((in, out) -> out.sendString(Mono.just("foo")),
+				v -> {bnc.set(v);
+					                                     startLatch.countDown();
+				                                     }));
+		t.start();
+		//let the server initialize
+		startLatch.await();
+
+		//check nothing happens for 200ms
+		t.join(200);
+		Assertions.assertThat(t.isAlive()).isTrue();
+
+		//check that stopping the bnc stops the server
+		bnc.get().shutdown();
+		t.join();
+		Assertions.assertThat(t.isAlive()).isFalse();
 	}
 
 	public static class Pojo {
