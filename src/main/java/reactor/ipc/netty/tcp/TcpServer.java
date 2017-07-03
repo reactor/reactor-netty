@@ -44,6 +44,7 @@ import reactor.util.Loggers;
  * * A TCP server connector.
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 
@@ -68,15 +69,10 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param options {@link ServerOptions} configuration input
-	 *
 	 * @return a new {@link TcpServer}
 	 */
-	public static TcpServer create(Consumer<? super ServerOptions> options) {
-		Objects.requireNonNull(options, "options");
-		ServerOptions serverOptions = ServerOptions.create();
-		serverOptions.loopResources(TcpResources.get());
-		options.accept(serverOptions);
-		return new TcpServer(serverOptions.duplicate());
+	public static TcpServer create(Consumer<? super ServerOptions.Builder<?>> options) {
+		return builder().options(options).build();
 	}
 
 	/**
@@ -87,7 +83,6 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param port the port to listen on loopback
-	 *
 	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(int port) {
@@ -103,7 +98,6 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	 *
 	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
 	 * default port
-	 *
 	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(String bindAddress) {
@@ -120,14 +114,35 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
 	 * passed port
 	 * @param port the port to listen on the passed bind address
-	 *
 	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(String bindAddress, int port) {
-		return create(opts -> opts.listen(bindAddress, port));
+		return builder().bindAddress(bindAddress).port(port).build();
+	}
+
+	/**
+	 * Creates a builder for {@link TcpServer TcpServer}
+	 *
+	 * @return a new TcpServer builder
+	 */
+	public static TcpServer.Builder builder() {
+		return new TcpServer.Builder();
 	}
 
 	final ServerOptions options;
+
+	protected TcpServer(TcpServer.Builder builder) {
+		ServerOptions.Builder<?> serverOptionsBuilder = ServerOptions.builder();
+		serverOptionsBuilder.loopResources(TcpResources.get());
+		if (Objects.isNull(builder.options)) {
+			serverOptionsBuilder.host(builder.bindAddress)
+			                    .port(builder.port);
+		}
+		else {
+			builder.options.accept(serverOptionsBuilder);
+		}
+		this.options = serverOptionsBuilder.build();
+	}
 
 	/**
 	 * @param options server options
@@ -194,4 +209,50 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpServer.class);
 
 	static final Logger log = Loggers.getLogger(TcpServer.class);
+
+	public static final class Builder {
+		private String bindAddress = NetUtil.LOCALHOST.getHostAddress();
+		private int port = 80;
+		private Consumer<? super ServerOptions.Builder<?>> options;
+
+		private Builder() {
+		}
+
+		/**
+		 * The address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
+		 *
+		 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
+		 * @return {@code this}
+		 */
+		public final Builder bindAddress(String bindAddress) {
+			this.bindAddress = Objects.requireNonNull(bindAddress, "bindAddress");
+			return this;
+		}
+
+		/**
+		 * The port to listen to, or 0 to dynamically attribute one.
+		 *
+		 * @param port the port to listen to, or 0 to dynamically attribute one.
+		 * @return {@code this}
+		 */
+		public final Builder port(int port) {
+			this.port = Objects.requireNonNull(port, "port");
+			return this;
+		}
+
+		/**
+		 * The options for the server, including bind address and port.
+		 *
+		 * @param options the options for the server, including bind address and port.
+		 * @return {@code this}
+		 */
+		public final Builder options(Consumer<? super ServerOptions.Builder<?>> options) {
+			this.options = Objects.requireNonNull(options, "options");
+			return this;
+		}
+
+		public TcpServer build() {
+			return new TcpServer(this);
+		}
+	}
 }

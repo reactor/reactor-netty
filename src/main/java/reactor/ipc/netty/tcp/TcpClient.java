@@ -46,6 +46,7 @@ import reactor.ipc.netty.resources.PoolResources;
  * A TCP client connector.
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
@@ -64,8 +65,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param bindAddress the address to connect to on port 12012
-	 * <p>
-	 * a new {@link TcpClient}
+	 * @return a new {@link TcpClient}
 	 */
 	public static TcpClient create(String bindAddress) {
 		return create(bindAddress, NettyOptions.DEFAULT_PORT);
@@ -76,8 +76,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param port the port to connect to on "localhost"
-	 * <p>
-	 * a new {@link TcpClient}
+	 * @return a new {@link TcpClient}
 	 */
 	public static TcpClient create(int port) {
 		return create(NetUtil.LOCALHOST.getHostAddress(), port);
@@ -89,29 +88,43 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 *
 	 * @param bindAddress the address to connect to
 	 * @param port the port to connect to
-	 * <p>
-	 * a new {@link TcpClient}
+	 * @return a new {@link TcpClient}
 	 */
 	public static TcpClient create(String bindAddress, int port) {
-		return create(opts -> opts.connect(bindAddress, port));
+		return create(opts -> opts.host(bindAddress).port(port));
 	}
 
 	/**
 	 * Bind a new TCP client to the specified connect address and port.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param options a new {@link TcpClient}
+	 * @param options {@link ClientOptions} configuration input
+	 * @return a new {@link TcpClient}
 	 */
-	public static TcpClient create(Consumer<? super ClientOptions> options) {
-		Objects.requireNonNull(options, "options");
-		ClientOptions clientOptions = ClientOptions.create();
-		clientOptions.loopResources(TcpResources.get())
-		             .poolResources(TcpResources.get());
-		options.accept(clientOptions);
-		return new TcpClient(clientOptions.duplicate());
+	public static TcpClient create(Consumer<? super ClientOptions.Builder<?>> options) {
+		return builder().options(options).build();
+	}
+
+	/**
+	 * Creates a builder for {@link TcpClient TcpClient}
+	 *
+	 * @return a new TcpClient builder
+	 */
+	public static TcpClient.Builder builder() {
+		return new TcpClient.Builder();
 	}
 
 	final ClientOptions options;
+
+	protected TcpClient(TcpClient.Builder builder) {
+		ClientOptions.Builder<?> clientOptionsBuilder = ClientOptions.builder();
+		clientOptionsBuilder.loopResources(TcpResources.get())
+		                    .poolResources(TcpResources.get());
+		if (Objects.nonNull(builder.options)) {
+			builder.options.accept(clientOptionsBuilder);
+		}
+		this.options = clientOptionsBuilder.build();
+	}
 
 	protected TcpClient(ClientOptions options) {
 		this.options = Objects.requireNonNull(options, "options");
@@ -145,7 +158,6 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 *
 	 * @return a new Mono to connect on subscribe
 	 */
-	@SuppressWarnings("unchecked")
 	protected Mono<NettyContext> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 			InetSocketAddress address,
 			boolean secure,
@@ -213,4 +225,26 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
 
+
+	public static final class Builder {
+		private Consumer<? super ClientOptions.Builder<?>> options;
+
+		private Builder() {
+		}
+
+		/**
+		 * The options for the client, including address and port.
+		 *
+		 * @param options the options for the client, including address and port.
+		 * @return {@code this}
+		 */
+		public final Builder options(Consumer<? super ClientOptions.Builder<?>> options) {
+			this.options = Objects.requireNonNull(options, "options");
+			return this;
+		}
+
+		public TcpClient build() {
+			return new TcpClient(this);
+		}
+	}
 }
