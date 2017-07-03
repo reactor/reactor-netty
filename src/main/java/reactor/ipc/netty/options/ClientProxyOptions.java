@@ -88,7 +88,7 @@ public class ClientProxyOptions {
 	 * @return a new eventual {@link ProxyHandler}
 	 */
 	public final ProxyHandler getProxyHandler() {
-		if (Objects.isNull(this.type)) {
+		if (Objects.isNull(this.type) || Objects.isNull(this.address)) {
 			return null;
 		}
 		InetSocketAddress proxyAddr = this.address.get();
@@ -122,12 +122,12 @@ public class ClientProxyOptions {
 
 	public String asSimpleString() {
 		return "proxy=" + type() +
-				"(" + address().get() + ")";
+				"(" + (address() == null ? null : address().get()) + ")";
 	}
 
 	public String asDetailedString() {
-		return "proxyAddress=" + address().get() +
-				", proxyType=" + type();
+		return "address=" + (address() == null ? null : address().get()) +
+				", type=" + type();
 	}
 
 	@Override
