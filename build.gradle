@@ -29,6 +29,7 @@ buildscript {
 
 plugins {
   id 'org.asciidoctor.convert' version '1.5.2'
+  id "com.github.hierynomus.license" version "0.14.0"
 }
 
 description = 'Reactive Streams Netty driver'
@@ -253,4 +254,14 @@ configure(rootProject) { project ->
 configurations.all {
   // check for updates every build
   resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+
+  license {
+    header rootProject.file('codequality/HEADER')
+    includes(["**/*.java", "**/*.groovy", "**/*.css"])
+    strictCheck true
+    mapping {
+        java = 'SLASHSTAR_STYLE'
+        css = 'SLASHSTAR_STYLE'
+    }
+  }
 }
