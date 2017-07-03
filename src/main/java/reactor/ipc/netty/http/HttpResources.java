@@ -64,11 +64,19 @@ public final class HttpResources extends TcpResources {
 	 * @return the global HTTP resources
 	 */
 	public static HttpResources reset() {
+		shutdown();
+		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
+	}
+
+	/**
+	 * Shutdown the global {@link HttpResources} without resetting them,
+	 * effectively cleaning up associated resources without creating new ones.
+	 */
+	public static void shutdown() {
 		HttpResources resources = httpResources.getAndSet(null);
 		if (resources != null) {
 			resources._dispose();
 		}
-		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
 	}
 
 	HttpResources(LoopResources loops, PoolResources pools) {
