@@ -539,7 +539,7 @@ public class TcpServerTests {
 		Assertions.assertThat(t.isAlive()).isTrue();
 
 		//check that stopping the bnc stops the server
-		bnc.get().stop();
+		bnc.get().shutdown();
 		t.join();
 		Assertions.assertThat(t.isAlive()).isFalse();
 	}

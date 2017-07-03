@@ -88,13 +88,13 @@ public class BlockingNettyContextTest {
 
 		Thread.sleep(100);
 		System.err.println("STOPPING 1");
-		simpleClient1.stop();
+		simpleClient1.shutdown();
 
 		System.err.println("STOPPING 2");
-		simpleClient2.stop();
+		simpleClient2.shutdown();
 
 		System.err.println("STOPPING SERVER");
-		simpleServer.stop();
+		simpleServer.shutdown();
 
 		assertThat(data1.get())
 				.allSatisfy(s -> assertThat(s).startsWith("ECHO: "));
@@ -127,7 +127,7 @@ public class BlockingNettyContextTest {
 				new BlockingNettyContext(Mono.just(NEVER_STOP_CONTEXT), "TEST NEVER STOP", Duration.ofMillis(100));
 
 		assertThatExceptionOfType(RuntimeException.class)
-				.isThrownBy(neverStop::stop)
+				.isThrownBy(neverStop::shutdown)
 				.withCauseExactlyInstanceOf(TimeoutException.class)
 				.withMessage("java.util.concurrent.TimeoutException: TEST NEVER STOP couldn't be stopped within 100ms");
 	}
@@ -140,7 +140,7 @@ public class BlockingNettyContextTest {
 		neverStop.setLifecycleTimeout(Duration.ofMillis(100));
 
 		assertThatExceptionOfType(RuntimeException.class)
-				.isThrownBy(neverStop::stop)
+				.isThrownBy(neverStop::shutdown)
 				.withCauseExactlyInstanceOf(TimeoutException.class)
 				.withMessage("java.util.concurrent.TimeoutException: TEST NEVER STOP couldn't be stopped within 100ms");
 	}

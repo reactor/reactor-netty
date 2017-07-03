@@ -44,10 +44,10 @@ public class BlockingNettyContext {
 	}
 
 	/**
-	 * Change the lifecycle timeout applied to the {@link #stop()} operation (as this can
+	 * Change the lifecycle timeout applied to the {@link #shutdown()} operation (as this can
 	 * only be called AFTER the {@link NettyContext} has been "started").
 	 *
-	 * @param timeout the new timeout to apply on stop.
+	 * @param timeout the new timeout to apply on shutdown.
 	 */
 	public void setLifecycleTimeout(Duration timeout) {
 		this.lifecycleTimeout = timeout;
@@ -83,9 +83,10 @@ public class BlockingNettyContext {
 	}
 
 	/**
-	 * Stop the {@link NettyContext} and wait for its termination, up to the {@link #setLifecycleTimeout(Duration) lifecycle timeout}.
+	 * Shut down the {@link NettyContext} and wait for its termination, up to the
+	 * {@link #setLifecycleTimeout(Duration) lifecycle timeout}.
 	 */
-	public void stop() {
+	public void shutdown() {
 		if (context.isDisposed()) {
 			return;
 		}
