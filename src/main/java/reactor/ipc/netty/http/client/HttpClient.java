@@ -34,10 +34,10 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.logging.LoggingHandler;
+
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -59,6 +59,7 @@ import reactor.ipc.netty.tcp.TcpClient;
  *
  * @author Stephane Maldini
  * @author Simon Baslé
+ * @author Violeta Georgieva
  */
 public class HttpClient implements NettyConnector<HttpClientResponse, HttpClientRequest> {
 
@@ -66,25 +67,30 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 
 	/**
+	 * Creates a simple HTTP Client with no address to which this client should connect
+	 * and with default sslContext support.
+	 *
 	 * @return a simple HTTP client
 	 */
 	public static HttpClient create() {
-		return create(HttpClientOptions::sslSupport);
+		return create(HttpClientOptions.Builder::sslSupport);
 	}
 
 	/**
+	 * Creates a simple HTTP client using provided {@link HttpClientOptions options}
+	 *
+	 * @param options the options for the client, including the address to which this
+	 * client should connect
 	 * @return a simple HTTP client using provided {@link HttpClientOptions options}
 	 */
-	public static HttpClient create(Consumer<? super HttpClientOptions> options) {
-		Objects.requireNonNull(options, "options");
-		HttpClientOptions clientOptions = HttpClientOptions.create();
-		clientOptions.loopResources(HttpResources.get())
-		             .poolResources(HttpResources.get());
-		options.accept(clientOptions);
-		return new HttpClient(clientOptions.duplicate());
+	public static HttpClient create(Consumer<? super HttpClientOptions.Builder> options) {
+		return builder().options(options).build();
 	}
 
 	/**
+	 * Creates a simple HTTP client bound on the provided address and port 80
+	 *
+	 * @param address the host to which this client should connect.
 	 * @return a simple HTTP client bound on the provided address and port 80
 	 */
 	public static HttpClient create(String address) {
@@ -92,25 +98,47 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	}
 
 	/**
+	 * Creates a simple HTTP client bound on the provided address and port
+	 *
+	 * @param address the host to which this client should connect.
+	 * @param port the port to which this client should connect.
 	 * @return a simple HTTP client bound on the provided address and port
 	 */
 	public static HttpClient create(String address, int port) {
-		return create(opts -> opts.connect(address, port));
+		return create(opts -> opts.connectAddress(() -> InetSocketAddress.createUnresolved(address, port)));
 	}
 
 	/**
+	 * Creates a simple HTTP client bound on localhost and the provided port
+	 *
+	 * @param port the port to which this client should connect.
 	 * @return a simple HTTP client bound on localhost and the provided port
 	 */
 	public static HttpClient create(int port) {
 		return create("localhost", port);
 	}
 
-	final TcpBridgeClient   client;
+	/**
+	 * Creates a builder for {@link HttpClient HttpClient}
+	 *
+	 * @return a new HttpClient builder
+	 */
+	public static HttpClient.Builder builder() {
+		return new HttpClient.Builder();
+	}
+
+	final TcpBridgeClient client;
 	final HttpClientOptions options;
 
-	protected HttpClient(final HttpClientOptions options) {
+	private HttpClient(HttpClient.Builder builder) {
+		HttpClientOptions.Builder clientOptionsBuilder = HttpClientOptions.builder();
+		clientOptionsBuilder.loopResources(HttpResources.get())
+		                    .poolResources(HttpResources.get());
+		if (Objects.nonNull(builder.options)) {
+			builder.options.accept(clientOptionsBuilder);
+		}
+		this.options = clientOptionsBuilder.build();
 		this.client = new TcpBridgeClient(options);
-		this.options = options;
 	}
 
 	/**
@@ -119,7 +147,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -132,7 +159,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * HTTP DELETE the passed URL.
 	 *
 	 * @param url the target remote URL
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -146,7 +172,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -159,7 +184,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * HTTP GET the passed URL.
 	 *
 	 * @param url the target remote URL
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -179,7 +203,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -192,7 +215,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * HTTP PATCH the passed URL.
 	 *
 	 * @param url the target remote URL
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -206,7 +228,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -221,13 +242,11 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 *
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on open channel
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
 	public final Mono<HttpClientResponse> put(String url,
 			Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
-		HttpRequest r;
 		return request(HttpMethod.PUT, url, handler);
 	}
 
@@ -239,7 +258,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * @param method the HTTP method to send
 	 * @param url the target remote URL
 	 * @param handler the {@link Function} to invoke on opened TCP connection
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -258,7 +276,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * WebSocket to the passed URL.
 	 *
 	 * @param url the target remote URL
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -272,7 +289,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * @param url the target remote URL
 	 * @param headerBuilder the  header {@link Consumer} to invoke before sending websocket
 	 * handshake
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -296,7 +312,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 *
 	 * @param url the target remote URL
 	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if not relevant.
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -318,7 +333,6 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * @param headerBuilder the  header {@link Consumer} to invoke before sending websocket
 	 * handshake
 	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if not relevant.
-	 *
 	 * @return a {@link Mono} of the {@link HttpServerResponse} ready to consume for
 	 * response
 	 */
@@ -393,7 +407,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
 			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
 			        .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
-			if (options.acceptGzip) {
+			if (options.acceptGzip()) {
 				pipeline.addAfter(NettyPipeline.HttpDecoder,
 						NettyPipeline.HttpDecompressor,
 						new HttpContentDecompressor());
@@ -412,12 +426,35 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 			return null;
 		}
 
-		if (opts.acceptGzip) {
+		if (opts.acceptGzip()) {
 			return req -> h.apply(req.header(HttpHeaderNames.ACCEPT_ENCODING,
 					HttpHeaderValues.GZIP));
 		}
 		else {
 			return h;
+		}
+	}
+
+	public static final class Builder {
+		private Consumer<? super HttpClientOptions.Builder> options;
+
+		private Builder() {
+		}
+
+
+		/**
+		 * The options for the client, including address and port.
+		 *
+		 * @param options the options for the client, including address and port.
+		 * @return {@code this}
+		 */
+		public final Builder options(Consumer<? super HttpClientOptions.Builder> options) {
+			this.options = Objects.requireNonNull(options, "options");
+			return this;
+		}
+
+		public HttpClient build() {
+			return new HttpClient(this);
 		}
 	}
 }

@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
+
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -45,6 +46,7 @@ import reactor.ipc.netty.tcp.TcpServer;
  * Base functionality needed by all servers that communicate with clients over HTTP.
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 public final class HttpServer
 		implements NettyConnector<HttpServerRequest, HttpServerResponse> {
@@ -56,7 +58,7 @@ public final class HttpServer
 	 * @return a simple HTTP Server
 	 */
 	public static HttpServer create() {
-		return create(NetUtil.LOCALHOST.getHostAddress());
+		return builder().build();
 	}
 
 	/**
@@ -65,15 +67,10 @@ public final class HttpServer
 	 * Use {@literal 0} to let the system assign a random port.
 	 *
 	 * @param options the options for the server, including bind address and port.
-	 *
 	 * @return a simple HTTP server
 	 */
-	public static HttpServer create(Consumer<? super HttpServerOptions> options) {
-		Objects.requireNonNull(options, "options");
-		HttpServerOptions serverOptions = HttpServerOptions.create();
-		serverOptions.loopResources(HttpResources.get());
-		options.accept(serverOptions);
-		return new HttpServer(serverOptions.duplicate());
+	public static HttpServer create(Consumer<? super HttpServerOptions.Builder> options) {
+		return builder().options(options).build();
 	}
 
 	/**
@@ -82,11 +79,10 @@ public final class HttpServer
 	 * Use {@literal 0} to let the system assign a random port.
 	 *
 	 * @param port the port to listen to, or 0 to dynamically attribute one.
-	 *
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(int port) {
-		return create("0.0.0.0", port);
+		return builder().bindAddress("0.0.0.0").port(port).build();
 	}
 
 	/**
@@ -94,11 +90,10 @@ public final class HttpServer
 	 * port {@literal 80}.
 	 *
 	 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
-	 *
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(String bindAddress) {
-		return create(bindAddress, 80);
+		return builder().bindAddress(bindAddress).build();
 	}
 
 	/**
@@ -106,19 +101,36 @@ public final class HttpServer
 	 *
 	 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
 	 * @param port the port to listen to, or 0 to dynamically attribute one.
-	 *
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(String bindAddress, int port) {
-		return create(opts -> opts.listen(bindAddress, port));
+		return builder().bindAddress(bindAddress).port(port).build();
 	}
 
-	final TcpBridgeServer server;
+	/**
+	 * Creates a builder for {@link HttpServer HttpServer}
+	 *
+	 * @return a new HttpServer builder
+	 */
+	public static HttpServer.Builder builder() {
+		return new HttpServer.Builder();
+	}
+
+	private final TcpBridgeServer server;
 	final HttpServerOptions options;
 
-	HttpServer(HttpServerOptions options) {
-		this.server = new TcpBridgeServer(options);
-		this.options = options;
+	private HttpServer(HttpServer.Builder builder) {
+		HttpServerOptions.Builder serverOptionsBuilder = HttpServerOptions.builder();
+		serverOptionsBuilder.loopResources(HttpResources.get());
+		if (Objects.isNull(builder.options)) {
+			serverOptionsBuilder.host(builder.bindAddress)
+			                    .port(builder.port);
+		}
+		else {
+			builder.options.accept(serverOptionsBuilder);
+		}
+		this.options = serverOptionsBuilder.build();
+		this.server = new TcpBridgeServer(this.options);
 	}
 
 	/**
@@ -198,8 +210,8 @@ public final class HttpServer
             p.addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
                     .addLast(NettyPipeline.HttpEncoder,new HttpResponseEncoder());
 
-            if(options.minCompressionResponseSize >= 0) {
-                    p.addLast(NettyPipeline.CompressionHandler, new CompressionHandler(options.minCompressionResponseSize));
+            if(options.minCompressionResponseSize() >= 0) {
+                    p.addLast(NettyPipeline.CompressionHandler, new CompressionHandler(options.minCompressionResponseSize()));
             }
 
             p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(c));
@@ -208,6 +220,52 @@ public final class HttpServer
 		@Override
 		protected LoggingHandler loggingHandler() {
 			return loggingHandler;
+		}
+	}
+
+	public static final class Builder {
+		private String bindAddress = NetUtil.LOCALHOST.getHostAddress();
+		private int port = 80;
+		private Consumer<? super HttpServerOptions.Builder> options;
+
+		private Builder() {
+		}
+
+		/**
+		 * The address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
+		 *
+		 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
+		 * @return {@code this}
+		 */
+		public final Builder bindAddress(String bindAddress) {
+			this.bindAddress = Objects.requireNonNull(bindAddress, "bindAddress");
+			return this;
+		}
+
+		/**
+		 * The port to listen to, or 0 to dynamically attribute one.
+		 *
+		 * @param port the port to listen to, or 0 to dynamically attribute one.
+		 * @return {@code this}
+		 */
+		public final Builder port(int port) {
+			this.port = Objects.requireNonNull(port, "port");
+			return this;
+		}
+
+		/**
+		 * The options for the server, including bind address and port.
+		 *
+		 * @param options the options for the server, including bind address and port.
+		 * @return {@code this}
+		 */
+		public final Builder options(Consumer<? super HttpServerOptions.Builder> options) {
+			this.options = Objects.requireNonNull(options, "options");
+			return this;
+		}
+
+		public HttpServer build() {
+			return new HttpServer(this);
 		}
 	}
 }

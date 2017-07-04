@@ -52,6 +52,7 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.options.ClientProxyOptions;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -80,9 +81,8 @@ public class HttpClientTest {
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
-		int res = HttpClient.create(opts -> opts.connect("localhost",
-				x.address()
-				 .getPort())
+		int res = HttpClient.create(opts -> opts.host("localhost")
+		                                        .port(x.address().getPort())
 		                                        .poolResources(pool))
 		                    .get("/")
 		                    .flatMap(r -> Mono.just(r.status()
@@ -90,17 +90,15 @@ public class HttpClientTest {
 		                    .log()
 		                    .block(Duration.ofSeconds(30));
 
-		HttpClient.create(opts -> opts.connect("localhost",
-					x.address()
-					 .getPort())
+		HttpClient.create(opts -> opts.host("localhost")
+		                              .port(x.address().getPort())
 		                              .poolResources(pool))
 		          .get("/")
 		          .log()
 		          .block(Duration.ofSeconds(30));
 
-		HttpClient.create(opts -> opts.connect("localhost",
-				x.address()
-				 .getPort())
+		HttpClient.create(opts -> opts.host("localhost")
+		                              .port(x.address().getPort())
 		                              .poolResources(pool))
 		          .get("/")
 		          .log()
@@ -130,9 +128,8 @@ public class HttpClientTest {
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
-		int res = HttpClient.create(opts -> opts.connect("localhost",
-				x.address()
-				 .getPort())
+		int res = HttpClient.create(opts -> opts.host("localhost")
+		                                        .port(x.address().getPort())
 		                                        .poolResources(pool))
 		                    .get("/")
 		                    .flatMap(r -> Mono.just(r.status()
@@ -141,9 +138,8 @@ public class HttpClientTest {
 		                    .block(Duration.ofSeconds(30));
 
 		try {
-			HttpClient.create(opts -> opts.connect("localhost",
-					x.address()
-					 .getPort())
+			HttpClient.create(opts -> opts.host("localhost")
+			                              .port(x.address().getPort())
 			                              .poolResources(pool))
 			          .get("/")
 			          .log()
@@ -165,8 +161,7 @@ public class HttpClientTest {
 				                                               .getFile())))
 		                           .block(Duration.ofSeconds(30));
 
-		Mono<HttpClientResponse> remote = HttpClient.create(opts -> opts.connect(c
-				.address().getPort()))
+		Mono<HttpClientResponse> remote = HttpClient.create(c.address().getPort())
 		                                            .get("/test/test.css");
 
 		Mono<String> page = remote
@@ -215,7 +210,7 @@ public class HttpClientTest {
 		                           })
 		                           .block(Duration.ofSeconds(30));
 
-		Mono<HttpClientResponse> remote = HttpClient.create(opts -> opts.connect(c.address().getPort()))
+		Mono<HttpClientResponse> remote = HttpClient.create(c.address().getPort())
 		                                            .get("/");
 
 		HttpClientResponse r = remote.block();
@@ -230,7 +225,10 @@ public class HttpClientTest {
 	@Test
 	@Ignore
 	public void proxy() throws Exception {
-		Mono<HttpClientResponse> remote = HttpClient.create(o -> o.proxy("127.0.0.1", 8888))
+		Mono<HttpClientResponse> remote = HttpClient.create(o -> o.proxyOptions(ClientProxyOptions.builder()
+		                                                                                          .host("127.0.0.1")
+		                                                                                          .port(8888)
+		                                                                                          .build()))
 		          .get("https://projectreactor.io",
 				          c -> c.followRedirect()
 				                .sendHeaders());
@@ -491,7 +489,8 @@ public class HttpClientTest {
 
 	@Test
 	public void toStringShowsOptions() {
-		HttpClient client = HttpClient.create(opt -> opt.connect("foo", 123)
+		HttpClient client = HttpClient.create(opt -> opt.host("foo")
+		                                                .port(123)
 		                                                .compression(true));
 
 		assertThat(client.toString()).isEqualTo("HttpClient: connecting to foo:123 with gzip");
@@ -499,7 +498,7 @@ public class HttpClientTest {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		HttpClient client = HttpClient.create(opt -> opt.connect("foo", 123).compression(true));
+		HttpClient client = HttpClient.create(opt -> opt.host("foo").port(123).compression(true));
 		assertThat(client.options())
 				.isNotSameAs(client.options)
 				.isNotSameAs(client.options());
@@ -522,7 +521,7 @@ public class HttpClientTest {
 
 
 		HttpClientResponse response = HttpClient.create(
-				opt -> opt.connect(context.address().getPort())
+				opt -> opt.port(context.address().getPort())
 				          .sslContext(sslClient))
 		                                        .get("/foo")
 		                                        .block(Duration.ofMillis(200));
@@ -546,7 +545,7 @@ public class HttpClientTest {
 				          .block();
 
 		HttpClientResponse response = HttpClient.create(
-				opt -> opt.connect(context.address().getPort())
+				opt -> opt.port(context.address().getPort())
 				          .sslContext(sslClient)
 		)
 		                                        .get("https://localhost:" + context.address().getPort() + "/foo")
@@ -578,7 +577,7 @@ public class HttpClientTest {
 				          .block();
 
 		HttpClientResponse response =
-				HttpClient.create(opt -> opt.connect(context.address().getPort())
+				HttpClient.create(opt -> opt.port(context.address().getPort())
 				                            .sslContext(sslClient))
 				          .post("/upload", r -> r.sendFile(largeFile))
 				          .block(Duration.ofSeconds(120));
@@ -602,7 +601,7 @@ public class HttpClientTest {
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
 		NettyContext context =
-				HttpServer.create(opt -> opt.listen("localhost"))
+				HttpServer.create(opt -> opt.host("localhost"))
 				          .newRouter(r -> r.post("/upload", (req, resp) ->
 						          req
 								          .receive()
@@ -613,7 +612,7 @@ public class HttpClientTest {
 				          .block();
 
 		HttpClientResponse response =
-				HttpClient.create(opt -> opt.connect(context.address().getPort()))
+				HttpClient.create(opt -> opt.port(context.address().getPort()))
 				          .post("/upload", r -> r.sendFile(largeFile))
 				          .block(Duration.ofSeconds(120));
 

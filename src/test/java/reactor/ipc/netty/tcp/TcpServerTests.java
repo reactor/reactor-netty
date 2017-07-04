@@ -104,8 +104,8 @@ public class TcpServerTests {
 		                                            .trustManager(
 				                                            InsecureTrustManagerFactory.INSTANCE)
 		                                            .build();
-		final TcpServer server = TcpServer.create(opts -> opts.listen("localhost")
-		                                                       .sslSelfSigned());
+		final TcpServer server = TcpServer.create(opts -> opts.host("localhost")
+		                                                      .sslSelfSigned());
 
 		ObjectMapper m = new ObjectMapper();
 
@@ -132,9 +132,8 @@ public class TcpServerTests {
 		})
 		                                     .block(Duration.ofSeconds(30));
 
-		final TcpClient client = TcpClient.create(opts -> opts.connect("localhost",
-				connectedServer.address()
-				               .getPort())
+		final TcpClient client = TcpClient.create(opts -> opts.host("localhost")
+		                                                      .port(connectedServer.address().getPort())
 		                                                      .sslContext(clientOptions));
 
 		NettyContext connectedClient = client.newHandler((in, out) -> {
@@ -175,7 +174,7 @@ public class TcpServerTests {
 	@Test(timeout = 10000)
 	public void testHang() throws Exception {
 		NettyContext httpServer = HttpServer
-				.create(opts -> opts.listen("0.0.0.0", 0))
+				.create(opts -> opts.host("0.0.0.0").port(0))
 				.newRouter(r -> r.get("/data", (request, response) -> {
 					return response.send(Mono.empty());
 				})).block(Duration.ofSeconds(30));
@@ -235,7 +234,7 @@ public class TcpServerTests {
 				                                                 "codec",
 				                                                 new LineBasedFrameDecoder(
 						                                                 8 * 1024)))
-		                                                 .listen(port));
+		                                                 .port(port));
 
 		NettyContext connected = server.newHandler(serverHandler)
 		                               .block(Duration.ofSeconds(30));
@@ -360,14 +359,14 @@ public class TcpServerTests {
 
 	@Test
 	public void toStringShowsOptions() {
-		TcpServer server = TcpServer.create(opt -> opt.listen("foo", 123));
+		TcpServer server = TcpServer.create(opt -> opt.host("foo").port(123));
 
 		Assertions.assertThat(server.toString()).isEqualTo("TcpServer: listening on foo:123");
 	}
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		TcpServer server = TcpServer.create(opt -> opt.listen("foo", 123));
+		TcpServer server = TcpServer.create(opt -> opt.host("foo").port(123));
 		Assertions.assertThat(server.options())
 		          .isNotSameAs(server.options)
 		          .isNotSameAs(server.options());
@@ -399,7 +398,7 @@ public class TcpServerTests {
 		CountDownLatch clientLatch = new CountDownLatch(2);
 
 		NettyContext client1 =
-				TcpClient.create(opt -> opt.connect(context.address().getPort())
+				TcpClient.create(opt -> opt.port(context.address().getPort())
 				                           .sslContext(sslClient))
 				         .newHandler((in, out) -> {
 					         in.receive()
@@ -415,7 +414,7 @@ public class TcpServerTests {
 				         .block(Duration.ofMillis(500));
 
 		NettyContext client2 =
-				TcpClient.create(opt -> opt.connect(context.address().getPort())
+				TcpClient.create(opt -> opt.port(context.address().getPort())
 				                           .sslContext(sslClient))
 				         .newHandler((in, out) -> {
 					         in.receive()
@@ -473,7 +472,7 @@ public class TcpServerTests {
 		CountDownLatch clientLatch = new CountDownLatch(2);
 
 		NettyContext client1 =
-				TcpClient.create(opt -> opt.connect(context.address().getPort()))
+				TcpClient.create(opt -> opt.port(context.address().getPort()))
 				         .newHandler((in, out) -> {
 					         in.receive()
 					           .asString()
@@ -487,7 +486,7 @@ public class TcpServerTests {
 				         .block(Duration.ofMillis(500));
 
 		NettyContext client2 =
-				TcpClient.create(opt -> opt.connect(context.address().getPort()))
+				TcpClient.create(opt -> opt.port(context.address().getPort()))
 				         .newHandler((in, out) -> {
 					         in.receive()
 					           .asString()

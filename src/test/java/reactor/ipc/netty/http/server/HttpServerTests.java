@@ -73,7 +73,7 @@ public class HttpServerTests {
 
 
 		HttpClientResponse response =
-				HttpClient.create(opt -> opt.connect(context.address().getPort())
+				HttpClient.create(opt -> opt.port(context.address().getPort())
 				                            .sslContext(sslClient))
 				          .get("/foo")
 				          .block(Duration.ofSeconds(120));
@@ -95,13 +95,13 @@ public class HttpServerTests {
 		long fileSize = Files.size(largeFile);
 
 		NettyContext context =
-				HttpServer.create(opt -> opt.listen("localhost"))
+				HttpServer.create(opt -> opt.host("localhost"))
 				          .newHandler((req, resp) -> resp.sendFileChunked(largeFile, 0, fileSize))
 				          .block();
 
 
 		HttpClientResponse response =
-				HttpClient.create(opt -> opt.connect(context.address().getPort()))
+				HttpClient.create(opt -> opt.port(context.address().getPort()))
 				          .get("/foo")
 				          .block(Duration.ofSeconds(120));
 
@@ -278,8 +278,7 @@ public class HttpServerTests {
 		                                         .get("/test/test4.css")
 		                                         .block(Duration.ofSeconds(30));
 
-		HttpClientResponse response6 = HttpClient.create(opts -> opts.connect(c.address()
-		                                                                       .getPort())
+		HttpClientResponse response6 = HttpClient.create(opts -> opts.port(c.address().getPort())
 		                                                             .disablePool())
 		                                         .get("/test/test5.css")
 		                                         .block(Duration.ofSeconds(30));
@@ -297,7 +296,8 @@ public class HttpServerTests {
 
 	@Test
 	public void toStringShowsOptions() {
-		HttpServer server = HttpServer.create(opt -> opt.listen("foo", 123)
+		HttpServer server = HttpServer.create(opt -> opt.host("foo")
+		                                                .port(123)
 		                                                .compression(987));
 
 		assertThat(server.toString()).isEqualTo("HttpServer: listening on foo:123, gzip over 987 bytes");
@@ -305,7 +305,7 @@ public class HttpServerTests {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		HttpServer server = HttpServer.create(opt -> opt.listen("foo", 123).compression(true));
+		HttpServer server = HttpServer.create(opt -> opt.host("foo").port(123).compression(true));
 		assertThat(server.options())
 		          .isNotSameAs(server.options)
 		          .isNotSameAs(server.options());

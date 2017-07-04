@@ -16,195 +16,47 @@
 
 package reactor.ipc.netty.http.server;
 
-import java.net.InetSocketAddress;
-import java.time.Duration;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.util.AttributeKey;
+import io.netty.bootstrap.ServerBootstrap;
 import reactor.ipc.netty.options.ServerOptions;
-import reactor.ipc.netty.resources.LoopResources;
 
 /**
- * Encapsulates configuration options for http server.
+ * Encapsulates configuration options for the http server.
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 public final class HttpServerOptions extends ServerOptions {
 
-	int minCompressionResponseSize = -1;
+	/**
+	 * Create a new HttpServerOptions.Builder
+	 *
+	 * @return a new HttpServerOptions.Builder
+	 */
+	@SuppressWarnings("unchecked")
+	public static HttpServerOptions.Builder builder() {
+		return new HttpServerOptions.Builder();
+	}
+
+	private final int minCompressionResponseSize;
+
+	private HttpServerOptions(HttpServerOptions.Builder builder) {
+		super(builder);
+		this.minCompressionResponseSize = builder.minCompressionResponseSize;
+	}
 
 	/**
-	 * Create a new server builder
+	 * Returns the minimum response size before the output is compressed.
+	 * By default the compression is disabled.
 	 *
-	 * @return a new server builder
+	 * @return Returns the minimum response size before the output is compressed.
 	 */
-	public static HttpServerOptions create() {
-		return new HttpServerOptions();
-	}
-
-	HttpServerOptions() {
-	}
-
-	HttpServerOptions(HttpServerOptions options) {
-		super(options);
-		this.minCompressionResponseSize = options.minCompressionResponseSize;
-	}
-
-	@Override
-	public HttpServerOptions afterChannelInit(Consumer<? super Channel> afterChannelInit) {
-		super.afterChannelInit(afterChannelInit);
-		return this;
-	}
-
-	@Override
-	public <T> ServerOptions attr(AttributeKey<T> key, T value) {
-		super.attr(key, value);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions channelGroup(ChannelGroup channelGroup) {
-		super.channelGroup(channelGroup);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions loopResources(LoopResources eventLoopSelector) {
-		super.loopResources(eventLoopSelector);
-		return this;
+	public int minCompressionResponseSize() {
+		return minCompressionResponseSize;
 	}
 
 	@Override
 	public HttpServerOptions duplicate() {
-		return new HttpServerOptions(this);
-	}
-
-	@Override
-	public HttpServerOptions eventLoopGroup(EventLoopGroup eventLoopGroup) {
-		super.eventLoopGroup(eventLoopGroup);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions listen(String host, int port) {
-		super.listen(host, port);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions listen(InetSocketAddress listenAddress) {
-		super.listen(listenAddress);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions listen(int port) {
-		super.listen(port);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions listen(String host) {
-		super.listen(host);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions onChannelInit(Predicate<? super Channel> onChannelInit) {
-		super.onChannelInit(onChannelInit);
-		return this;
-	}
-
-	@Override
-	public <T> HttpServerOptions option(ChannelOption<T> key, T value) {
-		super.option(key, value);
-		return this;
-	}
-
-	@Override
-	public <T> HttpServerOptions selectorAttr(AttributeKey<T> key, T value) {
-		super.selectorAttr(key, value);
-		return this;
-	}
-
-	@Override
-	public <T> HttpServerOptions selectorOption(ChannelOption<T> key, T value) {
-		super.selectorOption(key, value);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions preferNative(boolean preferNative) {
-		super.preferNative(preferNative);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions sslContext(SslContext sslContext) {
-		super.sslContext(sslContext);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions sslHandshakeTimeout(Duration sslHandshakeTimeout) {
-		super.sslHandshakeTimeout(sslHandshakeTimeout);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
-		super.sslHandshakeTimeoutMillis(sslHandshakeTimeoutMillis);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions sslSelfSigned(Consumer<? super SslContextBuilder> configurator) {
-		super.sslSelfSigned(configurator);
-		return this;
-	}
-
-	@Override
-	public HttpServerOptions sslSelfSigned() {
-		super.sslSelfSigned();
-		return this;
-	}
-
-	/**
-	 * Enable GZip response compression if the client request presents accept encoding
-	 * headers
-	 *
-	 * @param enabled true whether compression is enabled
-	 *
-	 * @return this builder
-	 */
-	public HttpServerOptions compression(boolean enabled) {
-		this.minCompressionResponseSize = enabled ? 0 : -1;
-		return this;
-	}
-
-	/**
-	 * Enable GZip response compression if the client request presents accept encoding
-	 * headers
-	 * AND the response reaches a minimum threshold
-	 *
-	 * @param minResponseSize compression is performed once response size exceeds given
-	 * value in byte
-	 *
-	 * @return this builder
-	 */
-	public HttpServerOptions compression(int minResponseSize) {
-		if (minResponseSize < 0) {
-			throw new IllegalArgumentException("minResponseSize must be positive");
-		}
-		this.minCompressionResponseSize = minResponseSize;
-		return this;
+		return builder().from(this).build();
 	}
 
 	@Override
@@ -230,5 +82,60 @@ public final class HttpServerOptions extends ServerOptions {
 	@Override
 	public String toString() {
 		return "HttpServerOptions{" + asDetailedString() + "}";
+	}
+
+	public static final class Builder extends ServerOptions.Builder<Builder> {
+		private int minCompressionResponseSize = -1;
+
+		private Builder(){
+			super(new ServerBootstrap());
+		}
+
+		/**
+		 * Enable GZip response compression if the client request presents accept encoding
+		 * headers
+		 *
+		 * @param enabled true whether compression is enabled
+		 * @return {@code this}
+		 */
+		public final Builder compression(boolean enabled) {
+			this.minCompressionResponseSize = enabled ? 0 : -1;
+			return get();
+		}
+
+		/**
+		 * Enable GZip response compression if the client request presents accept encoding
+		 * headers
+		 * AND the response reaches a minimum threshold
+		 *
+		 * @param minResponseSize compression is performed once response size exceeds given
+		 * value in byte
+		 * @return {@code this}
+		 */
+		public final Builder compression(int minResponseSize) {
+			if (minResponseSize < 0) {
+				throw new IllegalArgumentException("minResponseSize must be positive");
+			}
+			this.minCompressionResponseSize = minResponseSize;
+			return get();
+		}
+
+		/**
+		 * Fill the builder with attribute values from the provided options.
+		 *
+		 * @param options The instance from which to copy values
+		 * @return {@code this}
+		 */
+		public final Builder from(HttpServerOptions options) {
+			super.from(options);
+			this.minCompressionResponseSize = options.minCompressionResponseSize;
+			return get();
+		}
+
+		@Override
+		public HttpServerOptions build() {
+			super.build();
+			return new HttpServerOptions(this);
+		}
 	}
 }

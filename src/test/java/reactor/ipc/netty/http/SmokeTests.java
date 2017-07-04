@@ -257,7 +257,7 @@ public class SmokeTests {
 		                                 //.log("log", LogOperator.REQUEST)
 		                                 .subscribeWith(workProcessor);
 
-		httpServer = HttpServer.create(opts -> opts.listen(port))
+		httpServer = HttpServer.create(opts -> opts.port(port))
 		                       .newHandler((request, response) -> {
 			                       response.chunkedTransfer(false);
 
@@ -295,9 +295,8 @@ public class SmokeTests {
 
 	private List<String> getClientDataPromise() throws Exception {
 		HttpClient httpClient =
-				HttpClient.create(opts -> opts.connect("localhost",
-						                              httpServer.address()
-						                                        .getPort()));
+				HttpClient.create(opts -> opts.host("localhost")
+						              .port(httpServer.address().getPort()));
 
 		Mono<List<String>> content = httpClient.get("/data")
 		                                       .flatMap(f -> f.receive()

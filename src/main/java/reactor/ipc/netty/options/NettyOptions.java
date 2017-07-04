@@ -35,21 +35,20 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import reactor.ipc.netty.resources.LoopResources;
-import reactor.ipc.netty.resources.PoolResources;
 import reactor.util.function.Tuple2;
 
 /**
  * A common connector builder with low-level connection options including sslContext, tcp
  * configuration, channel init handlers.
  *
- * @param <BOOSTRAP> A Netty {@link Bootstrap} type
+ * @param <BOOTSTRAP> A Netty {@link Bootstrap} type
  * @param <SO> A NettyOptions subclass
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
-@SuppressWarnings("unchecked")
-public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, ?>, SO extends NettyOptions<BOOSTRAP, SO>>
-		implements Supplier<BOOSTRAP> {
+public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP, ?>, SO extends NettyOptions<BOOTSTRAP, SO>>
+		implements Supplier<BOOTSTRAP> {
 
 	/**
 	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
@@ -59,112 +58,35 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
 					12012;
 
-	static void defaultNettyOptions(AbstractBootstrap<?, ?> bootstrap) {
-		bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-	}
+	private final BOOTSTRAP bootstrapTemplate;
+	private final boolean preferNative;
+	private final LoopResources loopResources;
+	private final SslContext sslContext;
+	private final long sslHandshakeTimeoutMillis;
+	protected final Consumer<? super Channel> afterChannelInit;
+	protected final Consumer<? super Channel> afterChannelInitUser;
+	private final Predicate<? super Channel> onChannelInit;
 
-	final BOOSTRAP bootstrapTemplate;
-
-	boolean                    preferNative              = DEFAULT_NATIVE;
-	LoopResources              loopResources             = null;
-	ChannelGroup               channelGroup              = null;
-	SslContext                 sslContext                = null;
-	long                       sslHandshakeTimeoutMillis = 10000L;
-	Consumer<? super Channel>  afterChannelInit          = null;
-	Consumer<? super Channel>  afterChannelInitUser      = null;
-	Predicate<? super Channel> onChannelInit             = null;
-
-	NettyOptions(BOOSTRAP bootstrapTemplate) {
-		this.bootstrapTemplate = bootstrapTemplate;
-		defaultNettyOptions(bootstrapTemplate);
-	}
-
-	NettyOptions(NettyOptions<BOOSTRAP, ?> options) {
-		this.bootstrapTemplate = options.bootstrapTemplate.clone();
-		this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis;
-		this.sslContext = options.sslContext;
-
-		this.afterChannelInit = options.afterChannelInit;
-		this.afterChannelInitUser = options.afterChannelInitUser;
-		this.onChannelInit = options.onChannelInit;
-		this.channelGroup = options.channelGroup;
-		this.loopResources = options.loopResources;
-		this.preferNative = options.preferNative;
+	protected NettyOptions(NettyOptions.Builder<BOOTSTRAP, SO, ?> builder) {
+		this.bootstrapTemplate = builder.bootstrapTemplate;
+		this.preferNative = builder.preferNative;
+		this.loopResources = builder.loopResources;
+		this.sslContext = builder.sslContext;
+		this.sslHandshakeTimeoutMillis = builder.sslHandshakeTimeoutMillis;
+		this.afterChannelInit = builder.afterChannelInit;
+		this.afterChannelInitUser = builder.afterChannelInitUser;
+		this.onChannelInit = builder.onChannelInit;
 	}
 
 	/**
 	 * Returns the callback after each {@link Channel} initialization and after
-	 * reactor-netty
-	 * pipeline handlers have been registered.
+	 * reactor-netty pipeline handlers have been registered.
 	 *
 	 * @return the post channel setup handler
-	 *
 	 * @see #onChannelInit()
 	 */
 	public final Consumer<? super Channel> afterChannelInit() {
 		return afterChannelInitUser;
-	}
-
-	/**
-	 * Setup the callback after each {@link Channel} initialization and after
-	 * reactor-netty
-	 * pipeline handlers have been registered.
-	 *
-	 * @param afterChannelInit the post channel setup handler
-	 *
-	 * @return {@code this}
-	 *
-	 * @see #onChannelInit(Predicate)
-	 */
-	public SO afterChannelInit(Consumer<? super Channel> afterChannelInit) {
-		Objects.requireNonNull(afterChannelInit, "afterChannelInit");
-		this.afterChannelInitUser = afterChannelInit;
-		if (channelGroup != null) {
-			this.afterChannelInit = c -> {
-				afterChannelInit.accept(c);
-				channelGroup.add(c);
-			};
-		}
-		else {
-			this.afterChannelInit = afterChannelInit;
-		}
-		return (SO) this;
-	}
-
-	/**
-	 * Attribute default attribute to the future {@link Channel} connection. They will
-	 * be available via {@link reactor.ipc.netty.NettyInbound#attr(AttributeKey)}.
-	 *
-	 * @param key the attribute key
-	 * @param value the attribute value
-	 * @param <T> the attribute type
-	 * @return this builder
-	 * @see Bootstrap#attr(AttributeKey, Object)
-	 */
-	public <T> SO attr(AttributeKey<T> key, T value) {
-		bootstrapTemplate.attr(key, value);
-		return (SO) this;
-	}
-
-	/**
-	 * Provide a {@link ChannelGroup} for each active remote channel will be held in the
-	 * provided group.
-	 *
-	 * @param channelGroup a {@link ChannelGroup} to monitor remote channel
-	 *
-	 * @return this builder
-	 */
-	public SO channelGroup(ChannelGroup channelGroup) {
-		Objects.requireNonNull(channelGroup, "channelGroup");
-		this.channelGroup = channelGroup;
-		Consumer<? super Channel> c = this.afterChannelInitUser;
-		if (c != null) {
-			afterChannelInit(c);
-		}
-		else {
-			this.afterChannelInit = channelGroup::add;
-		}
-		return (SO) this;
 	}
 
 	/**
@@ -178,43 +100,16 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	}
 
 	/**
-	 * Provide an {@link EventLoopGroup} supplier.
-	 * Note that server might call it twice for both their selection and io loops.
-	 *
-	 * @param channelResources a selector accepting native runtime expectation and
-	 * returning an eventLoopGroup
-	 *
-	 * @return this builder
-	 */
-	public SO loopResources(LoopResources channelResources) {
-		Objects.requireNonNull(channelResources, "loopResources");
-		this.loopResources = channelResources;
-		return (SO) this;
-	}
-
-	/**
 	 * Return a copy of all options and references such as
-	 * {@link #onChannelInit(Predicate)}. Further option uses on the returned builder will
+	 * {@link NettyOptions.Builder#onChannelInit(Predicate)}. Further option uses on the returned builder will
 	 * be fully isolated from this option builder.
 	 *
 	 * @return a new duplicated builder;
 	 */
 	public abstract SO duplicate();
 
-	/**
-	 * Provide a shared {@link EventLoopGroup} each Connector handler.
-	 *
-	 * @param eventLoopGroup an eventLoopGroup to share
-	 *
-	 * @return an {@link EventLoopGroup} provider given the native runtime expectation
-	 */
-	public SO eventLoopGroup(EventLoopGroup eventLoopGroup) {
-		Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
-		return loopResources(preferNative -> eventLoopGroup);
-	}
-
 	@Override
-	public BOOSTRAP get() {
+	public BOOTSTRAP get() {
 		return bootstrapTemplate.clone();
 	}
 
@@ -239,7 +134,6 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	 *
 	 * @param allocator {@link ByteBufAllocator} to allocate for packet storage
 	 * @param sniInfo {@link Tuple2} with hostname and port for SNI (any null will skip SNI).
-	 *
 	 * @return a new eventual {@link SslHandler} with SNI activated
 	 */
 	public final SslHandler getSslHandler(ByteBufAllocator allocator,
@@ -265,79 +159,40 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 
 	/**
 	 * Returns the callback for each {@link Channel} initialization and before
-	 * reactor-netty
-	 * pipeline handlers have been registered.
+	 * reactor-netty pipeline handlers have been registered.
 	 *
 	 * @return The pre channel pipeline setup handler
-	 *
 	 * @see #afterChannelInit()
 	 */
 	public final Predicate<? super Channel> onChannelInit() {
-		return onChannelInit;
-	}
-
-	/**
-	 * A callback for each {@link Channel} initialization and before reactor-netty
-	 * pipeline handlers have been registered.
-	 *
-	 * @param onChannelInit pre channel pipeline setup handler
-	 *
-	 * @return {@code this}
-	 *
-	 * @see #afterChannelInit(Consumer)
-	 */
-	public SO onChannelInit(Predicate<? super Channel> onChannelInit) {
-		this.onChannelInit = Objects.requireNonNull(onChannelInit, "onChannelInit");
-		return (SO) this;
-	}
-
-	/**
-	 * Set a {@link ChannelOption} value for low level connection settings like
-	 * SO_TIMEOUT or SO_KEEPALIVE. This will apply to each new channel from remote
-	 * peer.
-	 *
-	 * @param key the option key
-	 * @param <T> the option type
-	 *
-	 * @return {@code this}
-	 * @see Bootstrap#option(ChannelOption, Object)
-	 */
-	public <T> SO option(ChannelOption<T> key, T value) {
-		this.bootstrapTemplate.option(key, value);
-		return (SO) this;
-	}
-
-	/**
-	 * Set the preferred native option. Determine if epoll should be used if available.
-	 *
-	 * @param preferNative Should the connector prefer native (epoll) if available
-	 *
-	 * @return {@code this}
-	 */
-	public SO preferNative(boolean preferNative) {
-		this.preferNative = preferNative;
-		return (SO) this;
+		return this.onChannelInit;
 	}
 
 	/**
 	 * Is this option preferring native loops (epoll)
+	 *
 	 * @return true if this option is preferring native loops (epoll)
 	 */
-	public final boolean preferNative(){
-		return preferNative;
+	public final boolean preferNative() {
+		return this.preferNative;
 	}
 
 	/**
-	 * Set the options to use for configuring SSL. Setting this to {@code null} means
-	 * don't use SSL at all (the default).
+	 * Returns the SslContext
 	 *
-	 * @param sslContext The context to set when configuring SSL
-	 *
-	 * @return {@literal this}
+	 * @return the SslContext
 	 */
-	public SO sslContext(SslContext sslContext) {
-		this.sslContext = sslContext;
-		return (SO) this;
+	public final SslContext sslContext() {
+		return this.sslContext;
+	}
+
+	/**
+	 * Returns the SSL handshake timeout in millis
+	 *
+	 * @return the SSL handshake timeout in millis
+	 */
+	public final long sslHandshakeTimeoutMillis() {
+		return this.sslHandshakeTimeoutMillis;
 	}
 
 	/**
@@ -347,34 +202,6 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	 */
 	protected SslContext defaultSslContext() {
 		return null;
-	}
-
-	/**
-	 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
-	 *
-	 * @param sslHandshakeTimeout The timeout {@link Duration}
-	 *
-	 * @return {@literal this}
-	 */
-	public SO sslHandshakeTimeout(Duration sslHandshakeTimeout) {
-		Objects.requireNonNull(sslHandshakeTimeout, "sslHandshakeTimeout");
-		return sslHandshakeTimeoutMillis(sslHandshakeTimeout.toMillis());
-	}
-
-	/**
-	 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
-	 *
-	 * @param sslHandshakeTimeoutMillis The timeout in milliseconds
-	 *
-	 * @return {@literal this}
-	 */
-	public SO sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
-		if(sslHandshakeTimeoutMillis < 0L){
-			throw new IllegalArgumentException("ssl handshake timeout must be positive," +
-					" was: "+sslHandshakeTimeoutMillis);
-		}
-		this.sslHandshakeTimeoutMillis = sslHandshakeTimeoutMillis;
-		return (SO) this;
 	}
 
 	public String asSimpleString() {
@@ -396,6 +223,206 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 		return "NettyOptions{" + asDetailedString() + "}";
 	}
 
-	static final boolean DEFAULT_NATIVE =
-			Boolean.parseBoolean(System.getProperty("reactor.ipc.netty.epoll", "true"));
+	public static abstract class Builder<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP, ?>,
+			SO extends NettyOptions<BOOTSTRAP, SO>, BUILDER extends Builder<BOOTSTRAP, SO, BUILDER>>
+			implements Supplier<BUILDER>{
+
+		private static final boolean DEFAULT_NATIVE =
+				Boolean.parseBoolean(System.getProperty("reactor.ipc.netty.epoll", "true"));
+
+		protected BOOTSTRAP bootstrapTemplate;
+		private boolean preferNative = DEFAULT_NATIVE;
+		private LoopResources loopResources = null;
+		private ChannelGroup channelGroup = null;
+		private SslContext sslContext = null;
+		private long sslHandshakeTimeoutMillis = 10000L;
+		private Consumer<? super Channel> afterChannelInit = null;
+		private Consumer<? super Channel> afterChannelInitUser = null;
+		private Predicate<? super Channel> onChannelInit = null;
+
+		protected Builder(BOOTSTRAP bootstrapTemplate) {
+			this.bootstrapTemplate = bootstrapTemplate;
+			defaultNettyOptions(this.bootstrapTemplate);
+		}
+
+		private void defaultNettyOptions(AbstractBootstrap<?, ?> bootstrap) {
+			bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+		}
+
+		/**
+		 * Attribute default attribute to the future {@link Channel} connection. They will
+		 * be available via {@link reactor.ipc.netty.NettyInbound#attr(AttributeKey)}.
+		 *
+		 * @param key the attribute key
+		 * @param value the attribute value
+		 * @param <T> the attribute type
+		 * @return {@code this}
+		 * @see Bootstrap#attr(AttributeKey, Object)
+		 */
+		public <T> BUILDER attr(AttributeKey<T> key, T value) {
+			this.bootstrapTemplate.attr(key, value);
+			return get();
+		}
+
+		/**
+		 * Set a {@link ChannelOption} value for low level connection settings like
+		 * SO_TIMEOUT or SO_KEEPALIVE. This will apply to each new channel from remote
+		 * peer.
+		 *
+		 * @param key the option key
+		 * @param value the option value
+		 * @param <T> the option type
+		 * @return {@code this}
+		 * @see Bootstrap#option(ChannelOption, Object)
+		 */
+		public <T> BUILDER option(ChannelOption<T> key, T value) {
+			this.bootstrapTemplate.option(key, value);
+			return get();
+		}
+
+		/**
+		 * Set the preferred native option. Determine if epoll should be used if available.
+		 *
+		 * @param preferNative Should the connector prefer native (epoll) if available
+		 * @return {@code this}
+		 */
+		public final BUILDER preferNative(boolean preferNative) {
+			this.preferNative = preferNative;
+			return get();
+		}
+
+		/**
+		 * Provide an {@link EventLoopGroup} supplier.
+		 * Note that server might call it twice for both their selection and io loops.
+		 *
+		 * @param channelResources a selector accepting native runtime expectation and
+		 * returning an eventLoopGroup
+		 * @return {@code this}
+		 */
+		public final BUILDER loopResources(LoopResources channelResources) {
+			this.loopResources = Objects.requireNonNull(channelResources, "loopResources");
+			return get();
+		}
+
+		/**
+		 * Provide a shared {@link EventLoopGroup} each Connector handler.
+		 *
+		 * @param eventLoopGroup an eventLoopGroup to share
+		 * @return {@code this}
+		 */
+		public final BUILDER eventLoopGroup(EventLoopGroup eventLoopGroup) {
+			Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
+			return loopResources(preferNative -> eventLoopGroup);
+		}
+
+		/**
+		 * Provide a {@link ChannelGroup} for each active remote channel will be held in the
+		 * provided group.
+		 *
+		 * @param channelGroup a {@link ChannelGroup} to monitor remote channel
+		 * @return {@code this}
+		 */
+		public final BUILDER channelGroup(ChannelGroup channelGroup) {
+			this.channelGroup = Objects.requireNonNull(channelGroup, "channelGroup");
+			Consumer<? super Channel> c = this.afterChannelInitUser;
+			if (Objects.nonNull(c)) {
+				afterChannelInit(c);
+			}
+			else {
+				this.afterChannelInit = channelGroup::add;
+			}
+			return get();
+		}
+
+		/**
+		 * Set the options to use for configuring SSL. Setting this to {@code null} means
+		 * don't use SSL at all (the default).
+		 *
+		 * @param sslContext The context to set when configuring SSL
+		 * @return {@code this}
+		 */
+		public final BUILDER sslContext(SslContext sslContext) {
+			this.sslContext = sslContext;
+			return get();
+		}
+
+		/**
+		 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
+		 *
+		 * @param sslHandshakeTimeout The timeout {@link Duration}
+		 * @return {@code this}
+		 */
+		public final BUILDER sslHandshakeTimeout(Duration sslHandshakeTimeout) {
+			Objects.requireNonNull(sslHandshakeTimeout, "sslHandshakeTimeout");
+			return sslHandshakeTimeoutMillis(sslHandshakeTimeout.toMillis());
+		}
+
+		/**
+		 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
+		 *
+		 * @param sslHandshakeTimeoutMillis The timeout in milliseconds
+		 * @return {@code this}
+		 */
+		public final BUILDER sslHandshakeTimeoutMillis(long sslHandshakeTimeoutMillis) {
+			if(sslHandshakeTimeoutMillis < 0L){
+				throw new IllegalArgumentException("ssl handshake timeout must be positive," +
+						" was: "+sslHandshakeTimeoutMillis);
+			}
+			this.sslHandshakeTimeoutMillis = sslHandshakeTimeoutMillis;
+			return get();
+		}
+
+		/**
+		 * Setup the callback after each {@link Channel} initialization and after
+		 * reactor-netty pipeline handlers have been registered.
+		 *
+		 * @param afterChannelInit the post channel setup handler
+		 * @return {@code this}
+		 * @see #onChannelInit(Predicate)
+		 */
+		public final BUILDER afterChannelInit(Consumer<? super Channel> afterChannelInit) {
+			this.afterChannelInitUser = Objects.requireNonNull(afterChannelInit, "afterChannelInit");
+			if (Objects.nonNull(channelGroup)) {
+				this.afterChannelInit = c -> {
+					afterChannelInit.accept(c);
+					channelGroup.add(c);
+				};
+			}
+			else {
+				this.afterChannelInit = afterChannelInit;
+			}
+			return get();
+		}
+
+		/**
+		 * A callback for each {@link Channel} initialization and before reactor-netty
+		 * pipeline handlers have been registered.
+		 *
+		 * @param onChannelInit pre channel pipeline setup handler
+		 * @return {@code this}
+		 * @see #afterChannelInit(Consumer)
+		 */
+		public final BUILDER onChannelInit(Predicate<? super Channel> onChannelInit) {
+			this.onChannelInit = Objects.requireNonNull(onChannelInit, "onChannelInit");
+			return get();
+		}
+
+		/**
+		 * Fill the builder with attribute values from the provided options.
+		 *
+		 * @param options The instance from which to copy values
+		 * @return {@code this}
+		 */
+		public BUILDER from(SO options) {
+			this.bootstrapTemplate = options.get();
+			this.preferNative = options.preferNative();
+			this.loopResources = options.getLoopResources();
+			this.sslContext = options.sslContext();
+			this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis();
+			this.afterChannelInit = options.afterChannelInit;
+			this.afterChannelInitUser = options.afterChannelInitUser;
+			this.onChannelInit = options.onChannelInit();
+			return get();
+		}
+	}
 }

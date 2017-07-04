@@ -45,9 +45,8 @@ public class HttpErrorTests {
 				                                }))
 		                                .block(Duration.ofSeconds(30));
 
-		HttpClient client = HttpClient.create(opt -> opt.connect("localhost",
-				server.address()
-				      .getPort())
+		HttpClient client = HttpClient.create(opt -> opt.host("localhost")
+		                                                .port(server.address().getPort())
 		                                                .disablePool());
 
 		HttpClientResponse r = client.get("/")

@@ -15,45 +15,54 @@
  */
 package reactor.ipc.netty.udp;
 
-import java.net.InetSocketAddress;
-import javax.annotation.Nonnull;
-
+import io.netty.bootstrap.Bootstrap;
 import reactor.ipc.netty.options.ClientOptions;
 
 /**
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 final class UdpClientOptions extends ClientOptions {
+
+	/**
+	 * Creates a builder for {@link ClientOptions ClientOptions}
+	 *
+	 * @return a new ClientOptions builder
+	 */
+	@SuppressWarnings("unchecked")
+	public static UdpClientOptions.Builder builder() {
+		return new Builder();
+	}
 
 	@Override
 	protected boolean useDatagramChannel() {
 		return true;
 	}
 
-	UdpClientOptions() {
-	}
-
-	UdpClientOptions(ClientOptions options) {
-		super(options);
+	UdpClientOptions(UdpClientOptions.Builder builder) {
+		super(builder);
 	}
 
 	@Override
 	public UdpClientOptions duplicate() {
-		return new UdpClientOptions(this);
-	}
-
-	@Override
-	public ClientOptions connect(int port) {
-		return connect(new InetSocketAddress(port));
-	}
-
-	@Override
-	public ClientOptions connect(@Nonnull String host, int port) {
-		return connect(new InetSocketAddress(host, port));
+		return builder().from(this).build();
 	}
 
 	@Override
 	public String toString() {
 		return "UdpClientOptions{" + asDetailedString() + "}";
+	}
+
+	public static final class Builder extends ClientOptions.Builder<Builder> {
+
+		private Builder() {
+			super(new Bootstrap());
+		}
+
+		@Override
+		public UdpClientOptions build() {
+			super.build();
+			return new UdpClientOptions(this);
+		}
 	}
 }
