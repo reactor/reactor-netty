@@ -102,10 +102,7 @@ final class MultipartParser
 
 				WIP.getAndIncrement(this);
 
-				w = UnicastProcessor.<ByteBuf>builder()
-				                    .queue(QueueSupplier.<ByteBuf>unbounded().get())
-				                    .onTerminate(this)
-				                    .build();
+				w = UnicastProcessor.create(QueueSupplier.<ByteBuf>unbounded().get(), this);
 
 				window = w;
 
