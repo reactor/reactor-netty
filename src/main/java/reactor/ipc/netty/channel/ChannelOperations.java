@@ -42,6 +42,7 @@ import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.context.Context;
 
 /**
  * A bridge between an immutable {@link Channel} and {@link NettyInbound} /
@@ -145,8 +146,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.context = Objects.requireNonNull(context, "context");
 		this.inbound = new FluxReceive(this);
 		this.onInactive = processor;
-		context.onCloseOrRelease(channel)
-		       .subscribe(onInactive);
+		Mono.fromDirect(context.onCloseOrRelease(channel))
+		    .subscribe(onInactive, Context.from(context.sink));
 	}
 
 	@Override
