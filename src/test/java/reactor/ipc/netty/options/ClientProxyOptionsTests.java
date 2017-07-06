@@ -48,16 +48,24 @@ public class ClientProxyOptionsTests {
 	public void asDetailedString() {
 		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
 
-		assertThat(builder.build().asDetailedString()).isEqualTo("address=null, type=null");
+		assertThat(builder.build().asDetailedString())
+				.isEqualTo("address=null, nonProxyHosts=null, type=null");
 
 		builder.type(Proxy.HTTP);
-		assertThat(builder.build().asDetailedString()).isEqualTo("address=null, type=HTTP");
+		assertThat(builder.build().asDetailedString())
+				.isEqualTo("address=null, nonProxyHosts=null, type=HTTP");
 
 		builder.host("http://proxy").port(456);
-		assertThat(builder.build().asDetailedString()).isEqualTo("address=http://proxy:456, type=HTTP");
+		assertThat(builder.build().asDetailedString())
+				.isEqualTo("address=http://proxy:456, nonProxyHosts=null, type=HTTP");
 
 		builder.address(() -> new InetSocketAddress("http://another.proxy", 123));
-		assertThat(builder.build().asSimpleString()).isEqualTo("proxy=HTTP(http://another.proxy:123)");
+		assertThat(builder.build().asDetailedString())
+				.isEqualTo("address=http://another.proxy:123, nonProxyHosts=null, type=HTTP");
+
+		builder.nonProxyHosts("localhost");
+		assertThat(builder.build().asDetailedString())
+				.isEqualTo("address=http://another.proxy:123, nonProxyHosts=localhost, type=HTTP");
 	}
 
 	@Test
@@ -67,7 +75,8 @@ public class ClientProxyOptionsTests {
 		       .port(456)
 		       .type(Proxy.HTTP)
 		       .build();
-		assertThat(builder.build().toString()).isEqualTo("ClientProxyOptions{address=http://proxy:456, type=HTTP}");
+		assertThat(builder.build().toString()).isEqualTo(
+				"ClientProxyOptions{address=http://proxy:456, nonProxyHosts=null, type=HTTP}");
 	}
 
 	@Test

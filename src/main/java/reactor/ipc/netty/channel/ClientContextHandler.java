@@ -87,11 +87,11 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	@Override
 	protected void doPipeline(Channel ch) {
 		addSslAndLogHandlers(clientOptions, this, loggingHandler, secure, getSNI(), ch.pipeline());
-		addProxyHandler(clientOptions, ch.pipeline());
+		addProxyHandler(clientOptions, ch.pipeline(), providedAddress);
 	}
 
-	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline) {
-		ProxyHandler proxy = clientOptions.useProxy() ? clientOptions.proxyOptions().getProxyHandler() : null;
+	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline, SocketAddress providedAddress) {
+		ProxyHandler proxy = clientOptions.useProxy(providedAddress) ? clientOptions.proxyOptions().getProxyHandler() : null;
 		if (proxy != null) {
 			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy);
 			if(log.isDebugEnabled()){

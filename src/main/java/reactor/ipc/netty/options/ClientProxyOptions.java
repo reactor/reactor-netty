@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
@@ -45,6 +46,7 @@ public class ClientProxyOptions {
 	private final String username;
 	private final Function<? super String, ? extends String> password;
 	private final Supplier<? extends InetSocketAddress> address;
+	private final Pattern nonProxyHosts;
 	private final Proxy type;
 
 	private ClientProxyOptions(ClientProxyOptions.Builder builder) {
@@ -60,6 +62,12 @@ public class ClientProxyOptions {
 		}
 		else {
 			this.address = builder.address;
+		}
+		if (builder.nonProxyHosts != null) {
+			this.nonProxyHosts = Pattern.compile(builder.nonProxyHosts, Pattern.CASE_INSENSITIVE);
+		}
+		else {
+			this.nonProxyHosts = null;
 		}
 		this.type = builder.type;
 	}
@@ -80,6 +88,18 @@ public class ClientProxyOptions {
 	 */
 	public final Supplier<? extends InetSocketAddress> address() {
 		return this.address;
+	}
+
+	/**
+	 * Regular expression (<code>using java.util.regex</code>) for a configured
+	 * list of hosts that should be reached directly, bypassing the proxy.
+	 *
+	 * @return Regular expression (<code>using java.util.regex</code>) for
+	 * a configured list of hosts that should be reached directly, bypassing the
+	 * proxy.
+	 */
+	public final Pattern nonProxyHosts() {
+		return this.nonProxyHosts;
 	}
 
 	/**
@@ -127,6 +147,7 @@ public class ClientProxyOptions {
 
 	public String asDetailedString() {
 		return "address=" + (address() == null ? null : address().get()) +
+				", nonProxyHosts=" + nonProxyHosts() +
 				", type=" + type();
 	}
 
@@ -141,6 +162,7 @@ public class ClientProxyOptions {
 		private String host;
 		private int port;
 		private Supplier<? extends InetSocketAddress> address;
+		private String nonProxyHosts;
 		private Proxy type;
 
 		private Builder() {
@@ -213,6 +235,19 @@ public class ClientProxyOptions {
 		 */
 		public final Builder address(Supplier<? extends InetSocketAddress> addressSupplier) {
 			this.address = Objects.requireNonNull(addressSupplier, "addressSupplier");
+			return this;
+		}
+
+		/**
+		 * Regular expression (<code>using java.util.regex</code>) for a configured
+		 * list of hosts that should be reached directly, bypassing the proxy.
+		 *
+		 * @param nonProxyHostsPattern Regular expression (<code>using java.util.regex</code>)
+		 * for a configured list of hosts that should be reached directly, bypassing the proxy.
+		 * @return {@code this}
+		 */
+		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
+			this.nonProxyHosts = nonProxyHostsPattern;
 			return this;
 		}
 

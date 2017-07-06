@@ -21,6 +21,8 @@ import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.InetSocketAddress;
+
 public class ClientOptionsTest {
 	private ClientOptions.Builder<?> builder;
 	private ClientProxyOptions proxyOptions;
@@ -76,4 +78,29 @@ public class ClientOptionsTest {
 				.endsWith("}");
 	}
 
+	@Test
+	public void useProxy() {
+		ClientProxyOptions.Builder proxyBuilder = ClientProxyOptions.builder()
+		                                             .type(ClientProxyOptions.Proxy.SOCKS4)
+		                                             .host("http://proxy")
+		                                             .port(456);
+
+		ClientOptions.Builder<?> opsBuilder = ClientOptions.builder();
+
+		assertThat(opsBuilder.build().useProxy("hostName")).isFalse();
+		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("google.com", 123))).isFalse();
+
+		opsBuilder.proxyOptions(proxyBuilder.build());
+		assertThat(opsBuilder.build().useProxy("hostName")).isTrue();
+		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("google.com", 123))).isTrue();
+
+		proxyBuilder.nonProxyHosts("localhost");
+		opsBuilder.proxyOptions(proxyBuilder.build());
+		assertThat(opsBuilder.build().useProxy((String) null)).isTrue();
+		assertThat(opsBuilder.build().useProxy((InetSocketAddress) null)).isTrue();
+		assertThat(opsBuilder.build().useProxy("hostName")).isTrue();
+		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("google.com", 123))).isTrue();
+		assertThat(opsBuilder.build().useProxy("localhost")).isFalse();
+		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("localhost", 8080))).isFalse();
+	}
 }

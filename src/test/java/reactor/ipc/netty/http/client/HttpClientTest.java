@@ -22,8 +22,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,7 +31,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -49,7 +46,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.options.ClientProxyOptions;
@@ -243,6 +239,40 @@ public class HttpClientTest {
 				.reduce(String::concat);
 
 		page.block(Duration.ofSeconds(30));
+	}
+
+	@Test
+	@Ignore
+	public void nonProxyHosts() throws Exception {
+		HttpClient client = HttpClient.create(o -> o.proxyOptions(ClientProxyOptions.builder()
+		                                                                            .type(Proxy.HTTP)
+		                                                                            .nonProxyHosts("spring.io")
+		                                                                            .host("127.0.0.1")
+		                                                                            .port(8888)
+		                                                                            .build()));
+		Mono<HttpClientResponse> remote1 = client.get("https://projectreactor.io",
+		                                                 c -> c.followRedirect()
+		                                                       .sendHeaders());
+		Mono<HttpClientResponse> remote2 = client.get("https://spring.io",
+		                                                 c -> c.followRedirect()
+		                                                       .sendHeaders());
+
+		Mono<String> page1 = remote1
+				.flatMapMany(r -> r.receive()
+				               .retain()
+				               .asString()
+				               .limitRate(1))
+				.reduce(String::concat);
+
+		Mono<String> page2 = remote2
+				.flatMapMany(r -> r.receive()
+				               .retain()
+				               .asString()
+				               .limitRate(1))
+				.reduce(String::concat);
+
+		page1.block(Duration.ofSeconds(30));
+		page2.block(Duration.ofSeconds(30));
 	}
 
 	//@Test

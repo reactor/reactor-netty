@@ -73,7 +73,7 @@ public final class HttpClientOptions extends ClientOptions {
 	 * Return a new {@link InetSocketAddress} from the URI.
 	 * <p>
 	 * If the port is undefined (-1), a default port is used (80 or 443 depending on
-	 * whether the URI is secure or not). If {@link #useProxy() a proxy} is used, the
+	 * whether the URI is secure or not). If {@link #useProxy(String) a proxy} is used, the
 	 * returned address is provided unresolved.
 	 *
 	 * @param uri {@link URI} to extract host and port information from
@@ -83,7 +83,7 @@ public final class HttpClientOptions extends ClientOptions {
 		Objects.requireNonNull(uri, "uri");
 		boolean secure = isSecure(uri);
 		int port = uri.getPort() != -1 ? uri.getPort() : (secure ? 443 : 80);
-		return useProxy() ? InetSocketAddress.createUnresolved(uri.getHost(), port) :
+		return useProxy(uri.getHost()) ? InetSocketAddress.createUnresolved(uri.getHost(), port) :
 				new InetSocketAddress(uri.getHost(), port);
 	}
 
@@ -114,7 +114,7 @@ public final class HttpClientOptions extends ClientOptions {
 			if (url.startsWith("/")) {
 				SocketAddress remote = getAddress();
 
-				if (remote != null && !useProxy() && remote instanceof InetSocketAddress) {
+				if (remote != null && !useProxy(remote) && remote instanceof InetSocketAddress) {
 					InetSocketAddress inet = (InetSocketAddress) remote;
 
 					return scheme + inet.getHostName() + ":" + inet.getPort() + url;
