@@ -102,18 +102,25 @@ public final class HttpClientOptions extends ClientOptions {
 			else {
 				schemeBuilder.append(isSecure() ? HttpClient.HTTPS_SCHEME : HttpClient.HTTP_SCHEME);
 			}
+
 			final String scheme = schemeBuilder.append("://").toString();
 			if (url.startsWith("/")) {
+				//consider relative URL, use the base hostname/port or fallback to localhost
 				SocketAddress remote = getAddress();
 
-				if (remote != null && remote instanceof InetSocketAddress) {
+				if (remote instanceof InetSocketAddress) {
 					InetSocketAddress inet = (InetSocketAddress) remote;
 
 					return scheme + inet.getHostName() + ":" + inet.getPort() + url;
 				}
-				return scheme + "localhost" + url;
+				else {
+					return scheme + "localhost" + url;
+				}
 			}
-			return scheme + url;
+			else {
+				//consider absolute URL
+				return scheme + url;
+			}
 		}
 		else {
 			return url;
