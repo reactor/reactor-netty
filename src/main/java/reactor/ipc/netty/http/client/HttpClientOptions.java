@@ -106,7 +106,7 @@ public final class HttpClientOptions extends ClientOptions {
 			if (url.startsWith("/")) {
 				SocketAddress remote = getAddress();
 
-				if (remote != null && !useProxy(remote) && remote instanceof InetSocketAddress) {
+				if (remote != null && remote instanceof InetSocketAddress) {
 					InetSocketAddress inet = (InetSocketAddress) remote;
 
 					return scheme + inet.getHostName() + ":" + inet.getPort() + url;
