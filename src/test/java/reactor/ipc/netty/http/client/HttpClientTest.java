@@ -271,8 +271,15 @@ public class HttpClientTest {
 				               .limitRate(1))
 				.reduce(String::concat);
 
-		page1.block(Duration.ofSeconds(30));
-		page2.block(Duration.ofSeconds(30));
+		StepVerifier.create(page1)
+		            .expectNextMatches(s -> s.contains("<title>Project Reactor</title>"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(page2)
+		            .expectNextMatches(s -> s.contains("<title>Spring</title>"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	//@Test

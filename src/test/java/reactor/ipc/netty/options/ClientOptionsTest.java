@@ -102,5 +102,6 @@ public class ClientOptionsTest {
 		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("google.com", 123))).isTrue();
 		assertThat(opsBuilder.build().useProxy("localhost")).isFalse();
 		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("localhost", 8080))).isFalse();
+		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("127.0.0.1", 8080))).isFalse();
 	}
 }
