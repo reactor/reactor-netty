@@ -147,7 +147,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.inbound = new FluxReceive(this);
 		this.onInactive = processor;
 		Mono.fromDirect(context.onCloseOrRelease(channel))
-		    .subscribe(onInactive, Context.from(context.sink));
+		    .subscribe(onInactive);
 	}
 
 	@Override
@@ -376,7 +376,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			log.debug("[{}] {} handler is being applied: {}", formatName(), channel
 					(), handler);
 		}
-		handler.apply((INBOUND) this, (OUTBOUND) this)
+		Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
 		       .subscribe(this);
 	}
 
@@ -455,6 +455,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final String formatName() {
 		return getClass().getSimpleName()
 		                 .replace("Operations", "");
+	}
+
+	@Override
+	public Context currentContext() {
+		return Operators.context(context.sink);
 	}
 
 	/**

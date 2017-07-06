@@ -61,9 +61,8 @@ ext {
   assertJVersion = '3.6.1'
 
   // Libraries
-  nettyVersion = '4.1.9.Final'
+  nettyVersion = '4.1.12.Final'
   jacksonDatabindVersion = '2.5.1'
-  rxJavaVersion = '1.0.14'
 
   // Testing
   mockitoVersion = '1.10.19'
@@ -210,7 +209,6 @@ configure(rootProject) { project ->
 	// Testing
 	testCompile "org.apache.httpcomponents:fluent-hc:4.3.6"
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
-	testCompile "io.reactivex:rxjava:$rxJavaVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
 
 	testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"

@@ -126,16 +126,18 @@ public abstract class FutureMono extends Mono<Void> {
 			s.onSubscribe(fs);
 			f.addListener(fs);
 		}
+
+
 	}
 
 	final static class FutureSubscription<F extends Future<Void>> implements
 	                                                GenericFutureListener<F>,
 	                                                Subscription {
 
-		final Subscriber<? super Void> s;
+		final CoreSubscriber<? super Void> s;
 		final F                        future;
 
-		FutureSubscription(F future, Subscriber<? super Void> s) {
+		FutureSubscription(F future, CoreSubscriber<? super Void> s) {
 			this.s = s;
 			this.future = future;
 		}

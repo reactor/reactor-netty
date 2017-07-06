@@ -20,8 +20,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
@@ -35,9 +35,9 @@ import reactor.util.concurrent.QueueSupplier;
  */
 
 final class MultipartParser
-		implements Subscriber<MultipartTokenizer.Token>, Subscription, Disposable {
+		implements CoreSubscriber<MultipartTokenizer.Token>, Subscription, Disposable {
 
-	final Subscriber<? super ByteBufFlux> actual;
+	final CoreSubscriber<? super ByteBufFlux> actual;
 	final ByteBufAllocator                alloc;
 
 	volatile int wip;
@@ -56,7 +56,7 @@ final class MultipartParser
 
 	boolean done;
 
-	MultipartParser(Subscriber<? super ByteBufFlux> actual, ByteBufAllocator alloc) {
+	MultipartParser(CoreSubscriber<? super ByteBufFlux> actual, ByteBufAllocator alloc) {
 		this.actual = actual;
 		this.wip = 1;
 		this.alloc = alloc;

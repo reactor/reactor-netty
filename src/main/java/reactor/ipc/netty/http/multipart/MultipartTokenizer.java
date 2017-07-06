@@ -20,15 +20,15 @@ import java.nio.charset.Charset;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Operators;
 
 /**
  * @author Ben Hale
  */
 final class MultipartTokenizer
-		implements Subscriber<ByteBuf>, Subscription {
+		implements CoreSubscriber<ByteBuf>, Subscription {
 
 	static final char[] CRLF = new char[]{'\r', '\n'};
 
@@ -36,7 +36,7 @@ final class MultipartTokenizer
 
 	final char[] boundary;
 
-	final Subscriber<? super Token> actual;
+	final CoreSubscriber<? super Token> actual;
 
 	int bodyPosition;
 
@@ -60,7 +60,7 @@ final class MultipartTokenizer
 
 	Stage stage;
 
-	MultipartTokenizer(String boundary, Subscriber<? super Token> subscriber) {
+	MultipartTokenizer(String boundary, CoreSubscriber<? super Token> subscriber) {
 		this.actual = subscriber;
 		this.boundary = boundary.toCharArray();
 		reset();
