@@ -95,12 +95,14 @@ public class TcpResources implements PoolResources, LoopResources {
 	 *
 	 * @return a {@link Mono} triggering the {@link #shutdown()} when subscribed to.
 	 */
-	public static Mono<Void> shutdownDeferred() {
-		TcpResources resources = tcpResources.getAndSet(null);
-		if (resources != null) {
-			return resources._disposeDeferred();
-		}
-		return Mono.empty();
+	public static Mono<Void> shutdownLater() {
+		return Mono.defer(() -> {
+			TcpResources resources = tcpResources.getAndSet(null);
+			if (resources != null) {
+				return resources._disposeLater();
+			}
+			return Mono.empty();
+		});
 	}
 
 	final PoolResources defaultPools;
@@ -117,7 +119,7 @@ public class TcpResources implements PoolResources, LoopResources {
 	}
 
 	@Override
-	public Mono<Void> disposeDeferred() {
+	public Mono<Void> disposeLater() {
 		return Mono.empty(); //noop on global by default
 	}
 
@@ -134,11 +136,16 @@ public class TcpResources implements PoolResources, LoopResources {
 	 * Dispose underlying resources in a listenable fashion.
 	 * @return the Mono that represents the end of disposal
 	 */
-	protected Mono<Void> _disposeDeferred() {
+	protected Mono<Void> _disposeLater() {
 		return Mono.when(
-				defaultLoops.disposeDeferred(),
-				defaultPools.disposeDeferred())
+				defaultLoops.disposeLater(),
+				defaultPools.disposeLater())
 		           .then();
+	}
+
+	@Override
+	public boolean isDisposed() {
+		return defaultLoops.isDisposed() && defaultPools.isDisposed();
 	}
 
 	@Override

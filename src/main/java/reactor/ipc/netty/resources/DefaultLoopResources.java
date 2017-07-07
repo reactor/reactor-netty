@@ -60,7 +60,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 			int selectCount,
 			int workerCount,
 			boolean daemon) {
-		this.running = new AtomicBoolean();
+		this.running = new AtomicBoolean(true);
 		this.daemon = daemon;
 		this.workerCount = workerCount;
 		this.prefix = prefix;
@@ -87,42 +87,49 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
-	public Mono<Void> disposeDeferred() {
+	public boolean isDisposed() {
+		return !running.get();
+	}
+
+	@Override
+	public Mono<Void> disposeLater() {
 		return Mono.defer(() -> {
-			if(running.compareAndSet(false, true)){
-				Future<?> clFuture = clientLoops.shutdownGracefully();
-				Mono<?> clMono = FutureMono.from((Future) clFuture);
+			EventLoopGroup cacheNativeClientGroup = cacheNativeClientLoops.get();
+			EventLoopGroup cacheNativeSelectGroup = cacheNativeSelectLoops.get();
+			EventLoopGroup cacheNativeServerGroup = cacheNativeServerLoops.get();
 
-				Future<?> sslFuture = serverSelectLoops.shutdownGracefully();
-				Mono<?> sslMono = FutureMono.from((Future)sslFuture);
-
-				Future<?> slFuture = serverLoops.shutdownGracefully();
-				Mono<?> slMono = FutureMono.from((Future)slFuture);
-
-				Mono<?> cnclMono = Mono.empty();
-				EventLoopGroup group = cacheNativeClientLoops.get();
-				if(group != null){
-					final Future<?> cnclFuture = group.shutdownGracefully();
-					cnclMono = FutureMono.from((Future)cnclFuture);
+			if(running.compareAndSet(true, false)) {
+				clientLoops.shutdownGracefully();
+				serverSelectLoops.shutdownGracefully();
+				serverLoops.shutdownGracefully();
+				if(cacheNativeClientGroup != null){
+					cacheNativeClientGroup.shutdownGracefully();
 				}
-
-				Mono<?> cnslMono = Mono.empty();
-				group = cacheNativeSelectLoops.get();
-				if(group != null){
-					Future<?> cnslFuture = group.shutdownGracefully();
-					cnslMono = FutureMono.from((Future)cnslFuture);
+				if(cacheNativeSelectGroup != null){
+					cacheNativeSelectGroup.shutdownGracefully();
 				}
-
-				Mono<?> cnsrvlMono = Mono.empty();
-				group = cacheNativeServerLoops.get();
-				if(group != null){
-					Future<?> cnsrvlFuture = group.shutdownGracefully();
-					cnsrvlMono = FutureMono.from((Future)cnsrvlFuture);
+				if(cacheNativeServerGroup != null){
+					cacheNativeServerGroup.shutdownGracefully();
 				}
-
-				return Mono.when(clMono, slMono, cnclMono, cnslMono, cnsrvlMono).then();
 			}
-			return Mono.empty();
+
+			Mono<?> clMono = FutureMono.from((Future) clientLoops.terminationFuture());
+			Mono<?> sslMono = FutureMono.from((Future)serverSelectLoops.terminationFuture());
+			Mono<?> slMono = FutureMono.from((Future)serverLoops.terminationFuture());
+			Mono<?> cnclMono = Mono.empty();
+			if(cacheNativeClientGroup != null){
+				cnclMono = FutureMono.from((Future) cacheNativeClientGroup.terminationFuture());
+			}
+			Mono<?> cnslMono = Mono.empty();
+			if(cacheNativeSelectGroup != null){
+				cnslMono = FutureMono.from((Future) cacheNativeSelectGroup.terminationFuture());
+			}
+			Mono<?> cnsrvlMono = Mono.empty();
+			if(cacheNativeServerGroup != null){
+				cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.terminationFuture());
+			}
+
+			return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono).then();
 		});
 	}
 

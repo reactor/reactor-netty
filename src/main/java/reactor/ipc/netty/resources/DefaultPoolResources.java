@@ -188,13 +188,12 @@ final class DefaultPoolResources implements PoolResources {
 
 	@Override
 	public void dispose() {
-		disposeDeferred().subscribe();
+		disposeLater().subscribe();
 	}
 
 	@Override
-	public Mono<Void> disposeDeferred() {
+	public Mono<Void> disposeLater() {
 		return Mono.defer(() -> {
-
 			Pool pool;
 			for (SocketAddress key: channelPools.keySet()) {
 				pool = channelPools.remove(key);
@@ -204,6 +203,13 @@ final class DefaultPoolResources implements PoolResources {
 			}
 			return Mono.empty();
 		});
+	}
+
+	@Override
+	public boolean isDisposed() {
+		return channelPools.isEmpty() || channelPools.values()
+		                                             .stream()
+		                                             .allMatch(AtomicBoolean::get);
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultPoolResources.class);

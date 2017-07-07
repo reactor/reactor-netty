@@ -87,12 +87,14 @@ public final class HttpResources extends TcpResources {
 	 *
 	 * @return a {@link Mono} triggering the {@link #shutdown()} when subscribed to.
 	 */
-	public static Mono<Void> shutdownDeferred() {
-		HttpResources resources = httpResources.getAndSet(null);
-		if (resources != null) {
-			return resources._disposeDeferred();
-		}
-		return Mono.empty();
+	public static Mono<Void> shutdownLater() {
+		return Mono.defer(() -> {
+			HttpResources resources = httpResources.getAndSet(null);
+			if (resources != null) {
+				return resources._disposeLater();
+			}
+			return Mono.empty();
+		});
 	}
 
 	HttpResources(LoopResources loops, PoolResources pools) {
