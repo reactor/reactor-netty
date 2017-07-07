@@ -19,7 +19,6 @@ package reactor.ipc.netty;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
@@ -30,11 +29,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxOperator;
 import reactor.core.publisher.Mono;
-import reactor.util.context.Context;
 
 /**
  * A decorating {@link Flux} {@link NettyInbound} with various {@link ByteBuf} related
@@ -239,8 +237,8 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	}
 
 	@Override
-	public void subscribe(Subscriber<? super ByteBuf> s, Context ctx) {
-		source.subscribe(s, ctx);
+	public void subscribe(CoreSubscriber<? super ByteBuf> s) {
+		source.subscribe(s);
 	}
 
 	/**

@@ -38,8 +38,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.NettyOutbound;
@@ -405,7 +405,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	static final class PublisherSender
-			implements Subscriber<Object>, Subscription, ChannelFutureListener {
+			implements CoreSubscriber<Object>, Subscription, ChannelFutureListener {
 
 		final ChannelOperationsHandler parent;
 

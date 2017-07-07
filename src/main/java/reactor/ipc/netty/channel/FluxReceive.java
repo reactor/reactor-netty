@@ -25,16 +25,14 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.QueueSupplier;
-import reactor.util.context.Context;
 
 /**
  * @author Stephane Maldini
@@ -45,10 +43,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final ChannelOperations<?, ?> parent;
 	final EventLoop         eventLoop;
 
-	Subscriber<? super Object> receiver;
-	boolean                    receiverFastpath;
-	long                       receiverDemand;
-	Queue<Object>              receiverQueue;
+	CoreSubscriber<? super Object> receiver;
+	boolean                        receiverFastpath;
+	long                           receiverDemand;
+	Queue<Object>                  receiverQueue;
 
 	volatile boolean   inboundDone;
 	Throwable inboundError;
@@ -114,7 +112,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	}
 
 	@Override
-	public void subscribe(Subscriber<? super Object> s, Context ctx) {
+	public void subscribe(CoreSubscriber<? super Object> s) {
 		if (eventLoop.inEventLoop()){
 			startReceiver(s);
 		}
@@ -154,7 +152,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		int missed = 1;
 		for(;;) {
 			final Queue<Object> q = receiverQueue;
-			final Subscriber<? super Object> a = receiver;
+			final CoreSubscriber<? super Object> a = receiver;
 			boolean d = inboundDone;
 
 			if (a == null) {
@@ -243,7 +241,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return false;
 	}
 
-	final void startReceiver(Subscriber<? super Object> s) {
+	final void startReceiver(CoreSubscriber<? super Object> s) {
 		if (receiver == null) {
 			if (log.isDebugEnabled()) {
 				log.debug("{} Subscribing inbound receiver [pending: {}, cancelled:{}, " +
@@ -327,7 +325,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			return false;
 		}
 		inboundDone = true;
-		Subscriber<?> receiver = this.receiver;
+		CoreSubscriber<?> receiver = this.receiver;
 		if (receiverFastpath && receiver != null) {
 			receiver.onComplete();
 			return true;
@@ -341,7 +339,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			Operators.onErrorDropped(err);
 			return false;
 		}
-		Subscriber<?> receiver = this.receiver;
+		CoreSubscriber<?> receiver = this.receiver;
 		this.inboundError = err;
 		this.inboundDone = true;
 
@@ -359,7 +357,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return false;
 	}
 
-	final void terminateReceiver(Queue<?> q, Subscriber<?> a) {
+	final void terminateReceiver(Queue<?> q, CoreSubscriber<?> a) {
 		if (q != null) {
 			q.clear();
 		}
