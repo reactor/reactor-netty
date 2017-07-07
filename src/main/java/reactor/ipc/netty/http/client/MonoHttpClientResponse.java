@@ -29,13 +29,12 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
+import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.AbortedException;
-import reactor.util.context.Context;
 
 /**
  * @author Stephane Maldini
@@ -67,8 +66,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public void subscribe(final Subscriber<? super HttpClientResponse> subscriber,
-			Context ctx) {
+	public void subscribe(final CoreSubscriber<? super HttpClientResponse> subscriber) {
 		ReconnectableBridge bridge = new ReconnectableBridge();
 		bridge.activeURI = startURI;
 
@@ -78,7 +76,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 				bridge))
 		    .retry(bridge)
 		    .cast(HttpClientResponse.class)
-		    .subscribe(subscriber, ctx);
+		    .subscribe(subscriber);
 	}
 
 	static final class HttpClientHandler

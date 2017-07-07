@@ -29,8 +29,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -52,7 +52,7 @@ import reactor.util.Loggers;
  * @since 0.6
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
-		implements NettyInbound, NettyOutbound, NettyContext, Subscriber<Void> {
+		implements NettyInbound, NettyOutbound, NettyContext, CoreSubscriber<Void> {
 
 	/**
 	 * Create a new {@link ChannelOperations} attached to the {@link Channel} attribute

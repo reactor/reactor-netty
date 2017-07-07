@@ -18,11 +18,10 @@ package reactor.ipc.netty.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import org.reactivestreams.Subscriber;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxOperator;
 import reactor.ipc.netty.ByteBufFlux;
-import reactor.util.context.Context;
 
 /**
  * @author Ben Hale
@@ -39,8 +38,8 @@ final class MultipartDecoder extends FluxOperator<ByteBuf, ByteBufFlux> {
 	}
 
 	@Override
-	public void subscribe(Subscriber<? super ByteBufFlux> subscriber, Context ctx) {
+	public void subscribe(CoreSubscriber<? super ByteBufFlux> subscriber) {
 		this.source.subscribe(new MultipartTokenizer(this.boundary,
-				new MultipartParser(subscriber, alloc)), ctx);
+				new MultipartParser(subscriber, alloc)));
 	}
 }

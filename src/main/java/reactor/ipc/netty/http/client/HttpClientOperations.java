@@ -57,7 +57,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
+import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -73,9 +73,6 @@ import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.context.Context;
-
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 
 /**
  * @author Stephane Maldini
@@ -736,20 +733,20 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 
 		@Override
-		public void subscribe(Subscriber<? super Long> s, Context context) {
+		public void subscribe(CoreSubscriber<? super Long> s) {
 			if (parent.channel()
 			          .eventLoop()
 			          .inEventLoop()) {
-				_subscribe(s, context);
+				_subscribe(s);
 			}
 			else {
 				parent.channel()
 				      .eventLoop()
-				      .execute(() -> _subscribe(s, context));
+				      .execute(() -> _subscribe(s));
 			}
 		}
 
-		void _subscribe(Subscriber<? super Long> s, Context context) {
+		void _subscribe(CoreSubscriber<? super Long> s) {
 			if (!parent.markSentHeaders()) {
 				Operators.error(s,
 						new IllegalStateException("headers have already " + "been sent"));
@@ -805,7 +802,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					          .cast(Long.class)
 					          .switchIfEmpty(Mono.just(encoder.length()))
 					          .flux()
-					          .subscribe(s, context);
+					          .subscribe(s);
 				}
 
 

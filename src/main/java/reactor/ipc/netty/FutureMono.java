@@ -22,10 +22,9 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import reactor.core.Exceptions;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
-import reactor.util.context.Context;
 
 /**
  * Convert Netty Future into void {@link Mono}.
@@ -76,7 +75,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		public final void subscribe(final Subscriber<? super Void> s, Context ctx) {
+		public final void subscribe(final CoreSubscriber<? super Void> s) {
 			if(future.isDone()){
 				if(future.isSuccess()){
 					Operators.complete(s);
@@ -103,7 +102,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		public void subscribe(Subscriber<? super Void> s, Context ctx) {
+		public void subscribe(CoreSubscriber<? super Void> s) {
 			F f = deferredFuture.get();
 
 			if (f == null) {

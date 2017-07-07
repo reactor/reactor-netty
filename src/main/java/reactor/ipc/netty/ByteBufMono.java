@@ -24,10 +24,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
-import org.reactivestreams.Subscriber;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoOperator;
-import reactor.util.context.Context;
 
 /**
  * A decorating {@link Mono} {@link NettyInbound} with various {@link ByteBuf} related
@@ -99,8 +98,8 @@ public final class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 	}
 
 	@Override
-	public void subscribe(Subscriber<? super ByteBuf> actual, Context context) {
-		source.subscribe(actual, context);
+	public void subscribe(CoreSubscriber<? super ByteBuf> actual) {
+		source.subscribe(actual);
 	}
 
 	protected ByteBufMono(Mono<?> source) {
