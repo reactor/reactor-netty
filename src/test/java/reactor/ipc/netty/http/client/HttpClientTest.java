@@ -500,6 +500,32 @@ public class HttpClientTest {
 	}
 
 	@Test
+	public void gzipEnabled() {
+		doTestGzip(true);
+	}
+
+	@Test
+	public void gzipDisabled() {
+		doTestGzip(false);
+	}
+
+	private void doTestGzip(boolean gzipEnabled) {
+		String expectedResponse = gzipEnabled ? "gzip" : "no gzip";
+		NettyContext server = HttpServer.create(0)
+		        .newHandler((req,res) -> res.sendString(
+		                Mono.just(req.requestHeaders().get(HttpHeaderNames.ACCEPT_ENCODING, "no gzip"))))
+		        .block(Duration.ofSeconds(30));
+		StepVerifier.create(
+		        HttpClient.create(ops -> ops.port(server.address().getPort()).compression(gzipEnabled))
+		                  .get("/")
+		                  .flatMap(r -> r.receive().asString().elementAt(0))
+		        )
+		            .expectNextMatches(str -> expectedResponse.equals(str))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
 	public void testUserAgent() {
 		NettyContext c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> {
