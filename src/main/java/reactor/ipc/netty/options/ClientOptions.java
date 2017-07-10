@@ -151,12 +151,41 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	}
 
 	/**
-	 * Return true if proxy options have been set
+	 * Return true if proxy options have been set and the host is not
+	 * configured to bypass the proxy.
 	 *
-	 * @return true if proxy options have been set
+	 * @param address The address to which this client should connect.
+	 * @return true if proxy options have been set and the host is not
+	 * configured to bypass the proxy.
 	 */
-	public boolean useProxy() {
-		return this.proxyOptions != null;
+	public boolean useProxy(SocketAddress address) {
+		if (this.proxyOptions != null) { 
+			if (this.proxyOptions.nonProxyHosts() != null && 
+					address instanceof InetSocketAddress) {
+				String hostName = ((InetSocketAddress) address).getHostName();
+				return !this.proxyOptions.nonProxyHosts().matcher(hostName).matches();
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Return true if proxy options have been set and the host is not
+	 * configured to bypass the proxy.
+	 *
+	 * @param hostName The host name to which this client should connect.
+	 * @return true if proxy options have been set and the host is not
+	 * configured to bypass the proxy.
+	 */
+	public boolean useProxy(String hostName) {
+		if (this.proxyOptions != null) { 
+			if (this.proxyOptions.nonProxyHosts() != null && hostName != null) {
+				return !this.proxyOptions.nonProxyHosts().matcher(hostName).matches();
+			}
+			return true;
+		}
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")
