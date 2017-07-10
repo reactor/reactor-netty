@@ -77,7 +77,7 @@ public class ClientProxyOptions {
 	 *
 	 * @return The proxy type
 	 */
-	public final Proxy type() {
+	public final Proxy getType() {
 		return this.type;
 	}
 
@@ -86,7 +86,7 @@ public class ClientProxyOptions {
 	 *
 	 * @return The supplier for the address to connect to.
 	 */
-	public final Supplier<? extends InetSocketAddress> address() {
+	public final Supplier<? extends InetSocketAddress> getAddress() {
 		return this.address;
 	}
 
@@ -98,7 +98,7 @@ public class ClientProxyOptions {
 	 * a configured list of hosts that should be reached directly, bypassing the
 	 * proxy.
 	 */
-	public final Pattern nonProxyHosts() {
+	public final Pattern getNonProxyHosts() {
 		return this.nonProxyHosts;
 	}
 
@@ -107,7 +107,7 @@ public class ClientProxyOptions {
 	 *
 	 * @return a new eventual {@link ProxyHandler}
 	 */
-	public final ProxyHandler getProxyHandler() {
+	public final ProxyHandler newProxyHandler() {
 		if (Objects.isNull(this.type) || Objects.isNull(this.address)) {
 			return null;
 		}
@@ -141,14 +141,14 @@ public class ClientProxyOptions {
 
 
 	public String asSimpleString() {
-		return "proxy=" + type() +
-				"(" + (address() == null ? null : address().get()) + ")";
+		return "proxy=" + this.type +
+				"(" + (this.address == null ? null : this.address.get()) + ")";
 	}
 
 	public String asDetailedString() {
-		return "address=" + (address() == null ? null : address().get()) +
-				", nonProxyHosts=" + nonProxyHosts() +
-				", type=" + type();
+		return "address=" + (this.address == null ? null : this.address.get()) +
+				", nonProxyHosts=" + this.nonProxyHosts +
+				", type=" + this.type;
 	}
 
 	@Override

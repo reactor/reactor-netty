@@ -91,7 +91,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline, SocketAddress providedAddress) {
-		ProxyHandler proxy = clientOptions.useProxy(providedAddress) ? clientOptions.proxyOptions().getProxyHandler() : null;
+		ProxyHandler proxy = clientOptions.useProxy(providedAddress) ? clientOptions.getProxyOptions().newProxyHandler() : null;
 		if (proxy != null) {
 			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy);
 			if(log.isDebugEnabled()){

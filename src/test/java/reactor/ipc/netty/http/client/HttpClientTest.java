@@ -48,7 +48,6 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.options.ClientProxyOptions;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -222,11 +221,9 @@ public class HttpClientTest {
 	@Test
 	@Ignore
 	public void proxy() throws Exception {
-		Mono<HttpClientResponse> remote = HttpClient.create(o -> o.proxyOptions(ClientProxyOptions.builder()
-		                                                                                          .type(Proxy.HTTP)
-		                                                                                          .host("127.0.0.1")
-		                                                                                          .port(8888)
-		                                                                                          .build()))
+		Mono<HttpClientResponse> remote = HttpClient.create(o -> o.proxy(ops -> ops.type(Proxy.HTTP)
+		                                                                           .host("127.0.0.1")
+		                                                                           .port(8888)))
 		          .get("https://projectreactor.io",
 				          c -> c.followRedirect()
 				                .sendHeaders());
@@ -244,12 +241,10 @@ public class HttpClientTest {
 	@Test
 	@Ignore
 	public void nonProxyHosts() throws Exception {
-		HttpClient client = HttpClient.create(o -> o.proxyOptions(ClientProxyOptions.builder()
-		                                                                            .type(Proxy.HTTP)
-		                                                                            .nonProxyHosts("spring.io")
-		                                                                            .host("127.0.0.1")
-		                                                                            .port(8888)
-		                                                                            .build()));
+		HttpClient client = HttpClient.create(o -> o.proxy(ops -> ops.type(Proxy.HTTP)
+		                                                             .nonProxyHosts("spring.io")
+		                                                             .host("127.0.0.1")
+		                                                             .port(8888)));
 		Mono<HttpClientResponse> remote1 = client.get("https://projectreactor.io",
 		                                                 c -> c.followRedirect()
 		                                                       .sendHeaders());

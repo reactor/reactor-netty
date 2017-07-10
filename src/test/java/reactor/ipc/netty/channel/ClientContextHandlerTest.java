@@ -25,7 +25,6 @@ import org.junit.Test;
 import io.netty.channel.embedded.EmbeddedChannel;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
-import reactor.ipc.netty.options.ClientProxyOptions;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 
 public class ClientContextHandlerTest {
@@ -39,10 +38,9 @@ public class ClientContextHandlerTest {
 				new InetSocketAddress("localhost", 8080));
 		assertThat(channel.pipeline().get(NettyPipeline.ProxyHandler)).isNull();
 
-		builder.proxyOptions(ClientProxyOptions.builder()
-		                                       .type(Proxy.HTTP)
-		                                       .host("proxy")
-		                                       .port(8080).build());
+		builder.proxy(ops -> ops.type(Proxy.HTTP)
+		                        .host("proxy")
+		                        .port(8080));
 		ClientContextHandler.addProxyHandler(builder.build(), channel.pipeline(),
 				new InetSocketAddress("localhost", 8080));
 		assertThat(channel.pipeline().get(NettyPipeline.ProxyHandler)).isNull();

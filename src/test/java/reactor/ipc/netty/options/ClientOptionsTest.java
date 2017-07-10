@@ -22,20 +22,18 @@ import org.junit.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.InetSocketAddress;
+import java.util.function.Consumer;
 
 public class ClientOptionsTest {
 	private ClientOptions.Builder<?> builder;
-	private ClientProxyOptions proxyOptions;
+	private Consumer<? super ClientProxyOptions.Builder> proxyOptions;
 
 	@Before
 	public void setUp() {
 		this.builder = ClientOptions.builder();
-		this.proxyOptions =
-				ClientProxyOptions.builder()
-				                  .type(ClientProxyOptions.Proxy.SOCKS4)
-				                  .host("http://proxy")
-				                  .port(456)
-				                  .build();
+		this.proxyOptions = ops -> ops.type(ClientProxyOptions.Proxy.SOCKS4)
+		                              .host("http://proxy")
+		                              .port(456);
 	}
 
 	@Test
@@ -43,7 +41,7 @@ public class ClientOptionsTest {
 		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to no base address");
 
 		//proxy
-		this.builder.proxyOptions(this.proxyOptions);
+		this.builder.proxy(this.proxyOptions);
 		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to no base address through SOCKS4 proxy");
 
 		//address
@@ -57,7 +55,7 @@ public class ClientOptionsTest {
 				.startsWith("connectAddress=null, proxy=null");
 
 		//proxy
-		this.builder.proxyOptions(this.proxyOptions);
+		this.builder.proxy(this.proxyOptions);
 		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=null, proxy=SOCKS4(http://proxy:456)");
 
@@ -71,7 +69,7 @@ public class ClientOptionsTest {
 	public void toStringContainsAsDetailedString() {
 		this.builder.host("http://google.com")
 		            .port(123)
-		            .proxyOptions(proxyOptions)
+		            .proxy(proxyOptions)
 		            .build();
 		assertThat(this.builder.build().toString())
 				.startsWith("ClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")
@@ -80,22 +78,23 @@ public class ClientOptionsTest {
 
 	@Test
 	public void useProxy() {
-		ClientProxyOptions.Builder proxyBuilder = ClientProxyOptions.builder()
-		                                             .type(ClientProxyOptions.Proxy.SOCKS4)
-		                                             .host("http://proxy")
-		                                             .port(456);
+		Consumer<? super ClientProxyOptions.Builder> proxyBuilder = ops ->
+		                                             ops.type(ClientProxyOptions.Proxy.SOCKS4)
+		                                                .host("http://proxy")
+		                                                .port(456);
 
 		ClientOptions.Builder<?> opsBuilder = ClientOptions.builder();
 
 		assertThat(opsBuilder.build().useProxy("hostName")).isFalse();
 		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("google.com", 123))).isFalse();
 
-		opsBuilder.proxyOptions(proxyBuilder.build());
+		opsBuilder.proxy(proxyBuilder);
 		assertThat(opsBuilder.build().useProxy("hostName")).isTrue();
 		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("google.com", 123))).isTrue();
 
-		proxyBuilder.nonProxyHosts("localhost");
-		opsBuilder.proxyOptions(proxyBuilder.build());
+		Consumer<? super ClientProxyOptions.Builder> extProxyBuilder = 
+				proxyBuilder.andThen(ops -> ((ClientProxyOptions.Builder) ops).nonProxyHosts("localhost"));
+		opsBuilder.proxy(extProxyBuilder);
 		assertThat(opsBuilder.build().useProxy((String) null)).isTrue();
 		assertThat(opsBuilder.build().useProxy((InetSocketAddress) null)).isTrue();
 		assertThat(opsBuilder.build().useProxy("hostName")).isTrue();
