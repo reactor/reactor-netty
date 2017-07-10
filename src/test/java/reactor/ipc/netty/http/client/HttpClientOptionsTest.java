@@ -22,19 +22,18 @@ import reactor.ipc.netty.options.ClientProxyOptions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.function.Consumer;
+
 public class HttpClientOptionsTest {
 	private HttpClientOptions.Builder builder;
-	private ClientProxyOptions proxyOptions;
+	private Consumer<? super ClientProxyOptions.Builder> proxyOptions;
 
 	@Before
 	public void setUp() {
 		this.builder = HttpClientOptions.builder();
-		this.proxyOptions =
-				ClientProxyOptions.builder()
-				                  .type(ClientProxyOptions.Proxy.SOCKS4)
-				                  .host("http://proxy")
-				                  .port(456)
-				                  .build();
+		this.proxyOptions = ops -> ops.type(ClientProxyOptions.Proxy.SOCKS4)
+		                              .host("http://proxy")
+		                              .port(456);
 	}
 
 	@Test
@@ -42,7 +41,7 @@ public class HttpClientOptionsTest {
 		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to no base address");
 
 		//proxy
-		this.builder.proxyOptions(proxyOptions);
+		this.builder.proxy(proxyOptions);
 		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to no base address through SOCKS4 proxy");
 
 		//address
@@ -61,7 +60,7 @@ public class HttpClientOptionsTest {
 				.endsWith(", acceptGzip=false");
 
 		//proxy
-		this.builder.proxyOptions(proxyOptions);
+		this.builder.proxy(proxyOptions);
 		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=null, proxy=SOCKS4(http://proxy:456)")
 				.endsWith(", acceptGzip=false");
@@ -83,7 +82,7 @@ public class HttpClientOptionsTest {
 	public void toStringContainsAsDetailedString() {
 		this.builder.host("http://google.com")
 		            .port(123)
-		            .proxyOptions(proxyOptions)
+		            .proxy(proxyOptions)
 		            .compression(true);
 		assertThat(this.builder.build().toString())
 				.startsWith("HttpClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")

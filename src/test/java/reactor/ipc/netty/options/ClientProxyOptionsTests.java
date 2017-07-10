@@ -82,14 +82,14 @@ public class ClientProxyOptionsTests {
 	@Test
 	public void getProxyHandlerTypeNotSpecified() {
 		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
-		assertThat(builder.build().getProxyHandler()).isNull();
+		assertThat(builder.build().newProxyHandler()).isNull();
 	}
 
 	@Test
 	public void getProxyHandlerAddressNotSpecified() {
 		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
 		builder.type(Proxy.HTTP);
-		assertThat(builder.build().getProxyHandler()).isNull();
+		assertThat(builder.build().newProxyHandler()).isNull();
 	}
 
 	@Test
@@ -99,15 +99,15 @@ public class ClientProxyOptionsTests {
 		       .port(456)
 		       .type(Proxy.HTTP);
 
-		assertThat(builder.build().getProxyHandler()).isInstanceOf(HttpProxyHandler.class);
-		assertThat(builder.build().getProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");
+		assertThat(builder.build().newProxyHandler()).isInstanceOf(HttpProxyHandler.class);
+		assertThat(builder.build().newProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");
 
 		builder.username("test1");
-		assertThat(((HttpProxyHandler) builder.build().getProxyHandler()).username()).isNull();
+		assertThat(((HttpProxyHandler) builder.build().newProxyHandler()).username()).isNull();
 
 		builder.password(name -> "test2");
-		assertThat(((HttpProxyHandler) builder.build().getProxyHandler()).username()).isEqualTo("test1");
-		assertThat(((HttpProxyHandler) builder.build().getProxyHandler()).password()).isEqualTo("test2");
+		assertThat(((HttpProxyHandler) builder.build().newProxyHandler()).username()).isEqualTo("test1");
+		assertThat(((HttpProxyHandler) builder.build().newProxyHandler()).password()).isEqualTo("test2");
 	}
 
 	@Test
@@ -117,11 +117,11 @@ public class ClientProxyOptionsTests {
 		       .port(456)
 		       .type(Proxy.SOCKS4);
 
-		assertThat(builder.build().getProxyHandler()).isInstanceOf(Socks4ProxyHandler.class);
-		assertThat(builder.build().getProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");
+		assertThat(builder.build().newProxyHandler()).isInstanceOf(Socks4ProxyHandler.class);
+		assertThat(builder.build().newProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");
 
 		builder.username("test1");
-		assertThat(((Socks4ProxyHandler) builder.build().getProxyHandler()).username()).isEqualTo("test1");
+		assertThat(((Socks4ProxyHandler) builder.build().newProxyHandler()).username()).isEqualTo("test1");
 	}
 
 	@Test
@@ -131,14 +131,14 @@ public class ClientProxyOptionsTests {
 		       .port(456)
 		       .type(Proxy.SOCKS5);
 
-		assertThat(builder.build().getProxyHandler()).isInstanceOf(Socks5ProxyHandler.class);
-		assertThat(builder.build().getProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");
+		assertThat(builder.build().newProxyHandler()).isInstanceOf(Socks5ProxyHandler.class);
+		assertThat(builder.build().newProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");
 
 		builder.username("test1");
-		assertThat(((Socks5ProxyHandler) builder.build().getProxyHandler()).username()).isNull();
+		assertThat(((Socks5ProxyHandler) builder.build().newProxyHandler()).username()).isNull();
 
 		builder.password(name -> "test2");
-		assertThat(((Socks5ProxyHandler) builder.build().getProxyHandler()).username()).isEqualTo("test1");
-		assertThat(((Socks5ProxyHandler) builder.build().getProxyHandler()).password()).isEqualTo("test2");
+		assertThat(((Socks5ProxyHandler) builder.build().newProxyHandler()).username()).isEqualTo("test1");
+		assertThat(((Socks5ProxyHandler) builder.build().newProxyHandler()).password()).isEqualTo("test2");
 	}
 }

@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.ssl.SslContext;
@@ -46,15 +47,6 @@ public final class HttpClientOptions extends ClientOptions {
 	@SuppressWarnings("unchecked")
 	public static HttpClientOptions.Builder builder() {
 		return new HttpClientOptions.Builder();
-	}
-
-	/**
-	 * Create a new ClientProxyOptions.Builder for an HTTP proxy
-	 *
-	 * @return a new ClientProxyOptions.Builder for an HTTP proxy
-	 */
-	public static ClientProxyOptions.Builder httpProxyBuilder() {
-		return ClientProxyOptions.builder().type(Proxy.HTTP);
 	}
 
 	private final boolean acceptGzip;
@@ -180,6 +172,17 @@ public final class HttpClientOptions extends ClientOptions {
 		 */
 		public final Builder compression(boolean enabled) {
 			this.acceptGzip = enabled;
+			return get();
+		}
+
+		/**
+		 * The HTTP proxy configuration
+		 *
+		 * @param proxyOptions the HTTP proxy configuration
+		 * @return {@code this}
+		 */
+		public final Builder httpProxy(Consumer<? super ClientProxyOptions.Builder> proxyOptions) {
+			super.proxy(proxyOptions.andThen(ops -> ((ClientProxyOptions.Builder) ops).type(Proxy.HTTP)));
 			return get();
 		}
 

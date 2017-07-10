@@ -90,7 +90,14 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 */
 	protected ClientOptions(ClientOptions.Builder<?> builder){
 		super(builder);
-		this.proxyOptions = builder.proxyOptions;
+		if (Objects.nonNull(builder.proxyOptions) &&
+				Objects.nonNull(builder.proxyOptions.getType()) &&
+				Objects.nonNull(builder.proxyOptions.getAddress())) {
+			this.proxyOptions = builder.proxyOptions;
+		}
+		else {
+				this.proxyOptions = null;
+		}
 		if (Objects.isNull(builder.connectAddress)) {
 			if (builder.port >= 0) {
 				if (Objects.isNull(builder.host)) {
@@ -137,7 +144,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		return this.poolResources;
 	}
 
-	public ClientProxyOptions proxyOptions() {
+	public final ClientProxyOptions getProxyOptions() {
 		return this.proxyOptions;
 	}
 
@@ -160,10 +167,10 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 */
 	public boolean useProxy(SocketAddress address) {
 		if (this.proxyOptions != null) { 
-			if (this.proxyOptions.nonProxyHosts() != null && 
+			if (this.proxyOptions.getNonProxyHosts() != null && 
 					address instanceof InetSocketAddress) {
 				String hostName = ((InetSocketAddress) address).getHostName();
-				return !this.proxyOptions.nonProxyHosts().matcher(hostName).matches();
+				return !this.proxyOptions.getNonProxyHosts().matcher(hostName).matches();
 			}
 			return true;
 		}
@@ -180,8 +187,8 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 */
 	public boolean useProxy(String hostName) {
 		if (this.proxyOptions != null) { 
-			if (this.proxyOptions.nonProxyHosts() != null && hostName != null) {
-				return !this.proxyOptions.nonProxyHosts().matcher(hostName).matches();
+			if (this.proxyOptions.getNonProxyHosts() != null && hostName != null) {
+				return !this.proxyOptions.getNonProxyHosts().matcher(hostName).matches();
 			}
 			return true;
 		}
@@ -228,7 +235,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 			s.append("connecting to ").append(getAddress());
 		}
 		if (proxyOptions != null) {
-			s.append(" through ").append(proxyOptions.type()).append(" proxy");
+			s.append(" through ").append(proxyOptions.getType()).append(" proxy");
 		}
 		return s.toString();
 	}
@@ -397,8 +404,11 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		 * @param proxyOptions the proxy configuration
 		 * @return {@code this}
 		 */
-		public final BUILDER proxyOptions(ClientProxyOptions proxyOptions) {
-			this.proxyOptions = Objects.requireNonNull(proxyOptions, "proxyOptions");
+		public final BUILDER proxy(Consumer<? super ClientProxyOptions.Builder> proxyOptions) {
+			Objects.requireNonNull(proxyOptions, "proxyOptions");
+			ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
+			proxyOptions.accept(builder);
+			this.proxyOptions = builder.build();
 			if(bootstrapTemplate.config().resolver() == DefaultAddressResolverGroup.INSTANCE) {
 				resolver(NoopAddressResolverGroup.INSTANCE);
 			}
