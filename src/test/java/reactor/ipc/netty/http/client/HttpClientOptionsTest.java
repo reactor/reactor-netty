@@ -157,6 +157,17 @@ public class HttpClientOptionsTest {
 	}
 
 	@Test
+	public void formatSchemeAndHostRelativeAndProxy() {
+		String test = this.builder.proxy(proxyOptions)
+				.host("google.com")
+				.port(80)
+				.build()
+				.formatSchemeAndHost("/foo", false);
+
+		assertThat(test).isEqualTo("http://google.com:80/foo");
+	}
+
+	@Test
 	public void formatSchemeAndHostAbsoluteHttp() throws Exception {
 		String test1 = this.builder.build()
 		                           .formatSchemeAndHost("https://localhost/foo", false);
