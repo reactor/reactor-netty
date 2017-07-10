@@ -422,13 +422,15 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 	static Function<? super HttpClientRequest, ? extends Publisher<Void>> handler(Function<? super HttpClientRequest, ? extends Publisher<Void>> h,
 			HttpClientOptions opts) {
-		if (h == null) {
-			return null;
-		}
-
 		if (opts.acceptGzip()) {
-			return req -> h.apply(req.header(HttpHeaderNames.ACCEPT_ENCODING,
-					HttpHeaderValues.GZIP));
+			if (h != null) {
+				return req -> h.apply(req.header(HttpHeaderNames.ACCEPT_ENCODING,
+						HttpHeaderValues.GZIP));
+			}
+			else {
+				return req -> req.header(HttpHeaderNames.ACCEPT_ENCODING,
+						HttpHeaderValues.GZIP);
+			}
 		}
 		else {
 			return h;
