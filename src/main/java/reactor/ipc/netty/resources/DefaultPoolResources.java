@@ -32,6 +32,7 @@ import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
+import reactor.core.publisher.Mono;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -187,13 +188,27 @@ final class DefaultPoolResources implements PoolResources {
 
 	@Override
 	public void dispose() {
-		Pool pool;
-		for (SocketAddress key: channelPools.keySet()) {
-			pool = channelPools.remove(key);
-			if(pool != null){
-				pool.close();
+		disposeLater().subscribe();
+	}
+
+	@Override
+	public Mono<Void> disposeLater() {
+		return Mono.fromRunnable(() -> {
+			Pool pool;
+			for (SocketAddress key: channelPools.keySet()) {
+				pool = channelPools.remove(key);
+				if(pool != null){
+					pool.close();
+				}
 			}
-		}
+		});
+	}
+
+	@Override
+	public boolean isDisposed() {
+		return channelPools.isEmpty() || channelPools.values()
+		                                             .stream()
+		                                             .allMatch(AtomicBoolean::get);
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultPoolResources.class);

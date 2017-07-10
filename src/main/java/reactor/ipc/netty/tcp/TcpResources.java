@@ -28,6 +28,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.DatagramChannel;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
@@ -87,6 +88,23 @@ public class TcpResources implements PoolResources, LoopResources {
 		}
 	}
 
+	/**
+	 * Prepare to shutdown the global {@link TcpResources} without resetting them,
+	 * effectively cleaning up associated resources without creating new ones. This only
+	 * occurs when the returned {@link Mono} is subscribed to.
+	 *
+	 * @return a {@link Mono} triggering the {@link #shutdown()} when subscribed to.
+	 */
+	public static Mono<Void> shutdownLater() {
+		return Mono.defer(() -> {
+			TcpResources resources = tcpResources.getAndSet(null);
+			if (resources != null) {
+				return resources._disposeLater();
+			}
+			return Mono.empty();
+		});
+	}
+
 	final PoolResources defaultPools;
 	final LoopResources defaultLoops;
 
@@ -100,6 +118,11 @@ public class TcpResources implements PoolResources, LoopResources {
 		//noop on global by default
 	}
 
+	@Override
+	public Mono<Void> disposeLater() {
+		return Mono.empty(); //noop on global by default
+	}
+
 	/**
 	 * Dispose underlying resources
 	 */
@@ -107,6 +130,22 @@ public class TcpResources implements PoolResources, LoopResources {
 	protected void _dispose(){
 		defaultPools.dispose();
 		defaultLoops.dispose();
+	}
+
+	/**
+	 * Dispose underlying resources in a listenable fashion.
+	 * @return the Mono that represents the end of disposal
+	 */
+	protected Mono<Void> _disposeLater() {
+		return Mono.when(
+				defaultLoops.disposeLater(),
+				defaultPools.disposeLater())
+		           .then();
+	}
+
+	@Override
+	public boolean isDisposed() {
+		return defaultLoops.isDisposed() && defaultPools.isDisposed();
 	}
 
 	@Override
