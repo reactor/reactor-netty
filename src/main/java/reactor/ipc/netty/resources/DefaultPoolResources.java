@@ -193,7 +193,7 @@ final class DefaultPoolResources implements PoolResources {
 
 	@Override
 	public Mono<Void> disposeLater() {
-		return Mono.defer(() -> {
+		return Mono.fromRunnable(() -> {
 			Pool pool;
 			for (SocketAddress key: channelPools.keySet()) {
 				pool = channelPools.remove(key);
@@ -201,7 +201,6 @@ final class DefaultPoolResources implements PoolResources {
 					pool.close();
 				}
 			}
-			return Mono.empty();
 		});
 	}
 
