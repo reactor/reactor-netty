@@ -158,7 +158,7 @@ public class HttpClientOptionsTest {
 
 	@Test
 	public void formatSchemeAndHostRelativeAndProxy() {
-		String test = this.builder.proxyOptions(proxyOptions)
+		String test = this.builder.proxy(proxyOptions)
 				.host("google.com")
 				.port(80)
 				.build()
