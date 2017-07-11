@@ -29,7 +29,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
@@ -231,11 +230,19 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					return null;
 				}
 
+				if (this.options.afterNettyContextInit() != null) {
+					try {
+						this.options.afterNettyContextInit().accept(op.context());
+					}
+					catch (Throwable t) {
+						log.error("Could not apply afterNettyContextInit callback {}", t.toString());
+					}
+				}
+
 				channel.pipeline()
 				       .get(ChannelOperationsHandler.class).lastContext = this;
 
-				channel.eventLoop()
-				       .execute(op::onHandlerStart);
+				channel.eventLoop().execute(op::onHandlerStart);
 			}
 			return op;
 		}
