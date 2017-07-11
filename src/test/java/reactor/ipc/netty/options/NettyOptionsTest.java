@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class NettyOptionsTest {
 
 	@Test
-	public void afterChannelInit() {
+	public void afterChannelInit() throws InterruptedException {
 		List<Channel> initializedChannels = new ArrayList<>();
 
 		NettyContext nettyContext =
@@ -46,15 +46,12 @@ public class NettyOptionsTest {
 
 		assertThat(initializedChannels).hasSize(0);
 
-		Mono.when(
-				HttpClient.create(nettyContext.address().getPort())
-				          .get("/", req -> req.failOnClientError(false).send()),
-				HttpClient.create(nettyContext.address().getPort())
-				          .get("/", req -> req.failOnClientError(false).send()))
-		    .block();
+		HttpClient.create(nettyContext.address().getPort())
+		          .get("/", req -> req.failOnClientError(false).send())
+		          .block();
 
 		assertThat(initializedChannels)
-				.hasSize(2)
+				.hasSize(1)
 				.doesNotContain(nettyContext.channel());
 	}
 
@@ -71,17 +68,12 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		Mono.when(
-				HttpClient.create(nettyContext.address().getPort())
-				          .get("/", req -> req.failOnClientError(false).send())
-				,
-				HttpClient.create(nettyContext.address().getPort())
-				          .get("/", req -> req.failOnClientError(false).send())
-		)
-		    .block();
+		HttpClient.create(nettyContext.address().getPort())
+		          .get("/", req -> req.failOnClientError(false).send())
+		          .block();
 
-		assertThat(initializedChannels).hasSize(2);
 		assertThat((Iterable<Channel>) group)
+				.hasSize(1)
 				.hasSameElementsAs(initializedChannels)
 				.doesNotContain(nettyContext.channel());
 	}
@@ -100,17 +92,12 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		Mono.when(
-				HttpClient.create(nettyContext.address().getPort())
-				          .get("/", req -> req.failOnClientError(false).send())
-				,
-				HttpClient.create(nettyContext.address().getPort())
-				          .get("/", req -> req.failOnClientError(false).send())
-		)
-		    .block();
+		HttpClient.create(nettyContext.address().getPort())
+		          .get("/", req -> req.failOnClientError(false).send())
+		          .block();
 
-		assertThat(initializedChannels).hasSize(2);
 		assertThat((Iterable<Channel>) group)
+				.hasSize(1)
 				.hasSameElementsAs(initializedChannels)
 				.doesNotContain(nettyContext.channel());
 	}
@@ -131,18 +118,15 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		Mono.when(
-				HttpClient.create(nettyContext.address().getPort())
-				          .get("/", req -> req.failOnClientError(false).send()),
-				HttpClient.create(nettyContext.address().getPort())
-				          .get("/", req -> req.failOnClientError(false).send()))
-		    .block();
+		HttpClient.create(nettyContext.address().getPort())
+		          .get("/", req -> req.failOnClientError(false).send())
+		          .block();
 
 		assertThat((Iterable<Channel>) group)
 				//the main NettyContext channel is not impacted by pipeline options
 				.doesNotContain(nettyContext.channel())
-				//both GET triggered a Channel added to the group
-				.hasSize(2);
+				//the GET triggered a Channel added to the group
+				.hasSize(1);
 	}
 
 	@Test
