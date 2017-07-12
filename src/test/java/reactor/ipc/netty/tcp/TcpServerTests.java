@@ -519,14 +519,15 @@ public class TcpServerTests {
 		          .endsWith("End of File]");
 	}
 
-	@Test(timeout = 2000)
+	@Test(timeout = 3000)
 	public void startAndAwait() throws InterruptedException {
 		AtomicReference<BlockingNettyContext> bnc = new AtomicReference<>();
 		CountDownLatch startLatch = new CountDownLatch(1);
 
 		Thread t = new Thread(() -> TcpServer.create()
 		                                     .startAndAwait((in, out) -> out.sendString(Mono.just("foo")),
-				v -> {bnc.set(v);
+				                                     v -> {
+					                                     bnc.set(v);
 					                                     startLatch.countDown();
 				                                     }));
 		t.start();

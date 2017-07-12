@@ -19,6 +19,7 @@ package reactor.ipc.netty.tcp;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyContext;
@@ -38,6 +39,7 @@ public class BlockingNettyContext {
 
 	private final NettyContext context;
 	private final String description;
+	private final AtomicBoolean isShutdown;
 
 	private Duration lifecycleTimeout;
 
@@ -48,6 +50,7 @@ public class BlockingNettyContext {
 
 	public BlockingNettyContext(Mono<? extends NettyContext> contextAsync,
 			String description, Duration lifecycleTimeout) {
+		this.isShutdown = new AtomicBoolean(false);
 		this.description = description;
 		this.lifecycleTimeout = lifecycleTimeout;
 		this.context = contextAsync
@@ -104,16 +107,16 @@ public class BlockingNettyContext {
 	 * {@link #setLifecycleTimeout(Duration) lifecycle timeout}.
 	 */
 	public void shutdown() {
-		if (context.isDisposed()) {
+		if (!isShutdown.compareAndSet(false, true)) {
 			return;
 		}
 		context.dispose();
 		Mono.when(
+				context.onClose(),
 				TcpResources.shutdownLater(),
-				HttpResources.shutdownLater(),
-				context.onClose()
+				HttpResources.shutdownLater()
 		)
-		    .timeout(lifecycleTimeout, Mono.error(new TimeoutException(description + " and resources couldn't be stopped within " + lifecycleTimeout.toMillis() + "ms")))
+		    .timeout(lifecycleTimeout, Mono.error(new TimeoutException(description + " and global resources couldn't be stopped within " + lifecycleTimeout.toMillis() + "ms")))
 		    .block();
 	}
 }
