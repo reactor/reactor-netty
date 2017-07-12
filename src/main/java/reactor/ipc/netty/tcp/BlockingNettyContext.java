@@ -22,6 +22,7 @@ import java.util.concurrent.TimeoutException;
 
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.http.HttpResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -107,8 +108,12 @@ public class BlockingNettyContext {
 			return;
 		}
 		context.dispose();
-		context.onClose()
-		       .timeout(lifecycleTimeout, Mono.error(new TimeoutException(description + " couldn't be stopped within " + lifecycleTimeout.toMillis() + "ms")))
-		       .block();
+		Mono.when(
+				TcpResources.shutdownLater(),
+				HttpResources.shutdownLater(),
+				context.onClose()
+		)
+		    .timeout(lifecycleTimeout, Mono.error(new TimeoutException(description + " and resources couldn't be stopped within " + lifecycleTimeout.toMillis() + "ms")))
+		    .block();
 	}
 }

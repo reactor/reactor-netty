@@ -48,6 +48,7 @@ import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 
@@ -309,5 +310,30 @@ public class HttpServerTests {
 		assertThat(server.options())
 		          .isNotSameAs(server.options)
 		          .isNotSameAs(server.options());
+	}
+
+	@Test
+	public void testRestartWithoutPoolReset() {
+		// start a first server with a handler that answers HTTP 200 OK
+		BlockingNettyContext context = HttpServer.create(8080)
+		                                         .start((req, resp) -> resp.status(200).send());
+
+		HttpClientResponse response = HttpClient.create(8080).get("/").block();
+
+		// checking the response status, OK
+		assertThat(response.status().code()).isEqualTo(200);
+
+		// completely shut down the server, including Tcp and Http resources and
+		context.shutdown();
+
+		// create a totally new server instance, with a different handler that answers HTTP 201
+		context = HttpServer.create(8080)
+		                    .start((req, resp) -> resp.status(201).send());
+
+		response = HttpClient.create(8080).get("/").block();
+
+		// fails, response status is 200 and debugging shows the the previous handler is called
+		assertThat(response.status().code()).isEqualTo(201);
+		context.shutdown();
 	}
 }
