@@ -27,7 +27,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.UnicastProcessor;
 import reactor.ipc.netty.ByteBufFlux;
-import reactor.util.concurrent.QueueSupplier;
+import reactor.util.concurrent.Queues;
 
 /**
  * @author Ben Hale
@@ -102,7 +102,7 @@ final class MultipartParser
 
 				WIP.getAndIncrement(this);
 
-				w = UnicastProcessor.create(QueueSupplier.<ByteBuf>unbounded().get(), this);
+				w = UnicastProcessor.create(Queues.<ByteBuf>unbounded().get(), this);
 
 				window = w;
 

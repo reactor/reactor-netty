@@ -32,7 +32,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.concurrent.QueueSupplier;
+import reactor.util.concurrent.Queues;
 
 /**
  * @author Stephane Maldini
@@ -300,8 +300,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		else {
 			Queue<Object> q = receiverQueue;
 			if (q == null) {
-				q = QueueSupplier.unbounded()
-				                 .get();
+				q = Queues.unbounded()
+				          .get();
 				receiverQueue = q;
 			}
 			if (log.isDebugEnabled()){

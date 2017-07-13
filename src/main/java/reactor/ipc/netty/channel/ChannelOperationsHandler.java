@@ -46,7 +46,7 @@ import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.concurrent.QueueSupplier;
+import reactor.util.concurrent.Queues;
 
 /**
  * Netty {@link io.netty.channel.ChannelDuplexHandler} implementation that bridge data
@@ -237,8 +237,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 
 		if (pendingWrites == null) {
-			this.pendingWrites = QueueSupplier.unbounded()
-			                                  .get();
+			this.pendingWrites = Queues.unbounded()
+			                           .get();
 			this.pendingWriteOffer = (BiPredicate<ChannelPromise, Object>) pendingWrites;
 		}
 

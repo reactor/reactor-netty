@@ -33,7 +33,7 @@ import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.util.concurrent.QueueSupplier;
+import reactor.util.concurrent.Queues;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
 
@@ -124,8 +124,8 @@ final class HttpServerHandler extends ChannelDuplexHandler
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
 		if (pipelined == null) {
-			pipelined = QueueSupplier.unbounded()
-			                         .get();
+			pipelined = Queues.unbounded()
+			                  .get();
 		}
 		if (!pipelined.offer(msg)) {
 			ctx.fireExceptionCaught(Exceptions.failWithOverflow());
