@@ -459,7 +459,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public Context currentContext() {
-		return Operators.context(context.sink);
+		return context.sink.currentContext();
 	}
 
 	/**
