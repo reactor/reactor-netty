@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -419,7 +420,7 @@ public class TcpServerTests {
 				                           .sslContext(sslClient))
 				         .newHandler((in, out) -> {
 					         in.receive()
-					           .asString()
+					           .asString(StandardCharsets.UTF_8)
 					           .log("-----------------CLIENT2")
 					           .doOnNext(client2Response::add)
 					           .subscribe(v -> clientLatch.countDown());
@@ -490,7 +491,7 @@ public class TcpServerTests {
 				TcpClient.create(opt -> opt.port(context.address().getPort()))
 				         .newHandler((in, out) -> {
 					         in.receive()
-					           .asString()
+					           .asString(StandardCharsets.UTF_8)
 					           .doOnNext(client2Response::add)
 					           .subscribe(v -> clientLatch.countDown());
 

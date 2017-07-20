@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.client;
 
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
@@ -629,7 +630,7 @@ public class HttpClientTest {
 				          .newRouter(r -> r.post("/upload", (req, resp) ->
 						          req.receive()
 						             .aggregate()
-						             .asString()
+						             .asString(StandardCharsets.UTF_8)
 						             .doOnNext(uploaded::set)
 						             .then(resp.status(201).sendString(Mono.just("Received File")).then())))
 				          .block();
@@ -664,7 +665,7 @@ public class HttpClientTest {
 						          req
 								          .receive()
 								          .aggregate()
-								          .asString()
+								          .asString(StandardCharsets.UTF_8)
 								          .doOnNext(uploaded::set)
 								          .then(resp.status(201).sendString(Mono.just("Received File")).then())))
 				          .block();

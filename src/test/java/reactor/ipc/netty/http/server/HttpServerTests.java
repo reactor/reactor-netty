@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.server;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -81,7 +82,7 @@ public class HttpServerTests {
 		context.dispose();
 		context.onClose().block();
 
-		String body = response.receive().aggregate().asString().block();
+		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 
 		assertThat(body)
 				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
@@ -108,7 +109,7 @@ public class HttpServerTests {
 		context.dispose();
 		context.onClose().block();
 
-		String body = response.receive().aggregate().asString().block();
+		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 
 		assertThat(body)
 				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")

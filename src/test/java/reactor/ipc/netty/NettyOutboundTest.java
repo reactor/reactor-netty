@@ -22,6 +22,7 @@ import java.io.RandomAccessFile;
 import java.net.URISyntaxException;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -93,7 +94,7 @@ public class NettyOutboundTest {
 						WritableByteChannel wbc = Channels.newChannel(bais);
 
 						msg.transferTo(wbc, msg.position());
-						out.add(new String(bais.toByteArray()));
+						out.add(new String(bais.toByteArray(), StandardCharsets.UTF_8));
 					}
 				},
 				new MessageToMessageEncoder<Object>() {
