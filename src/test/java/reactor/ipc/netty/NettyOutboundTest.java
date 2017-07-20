@@ -25,7 +25,6 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -81,8 +80,7 @@ public class NettyOutboundTest {
 	}
 
 	@Test
-	public void sendFileWithoutTlsUsesFileRegion() throws URISyntaxException,
-	                                                      IOException {
+	public void sendFileWithoutTlsUsesFileRegion() throws URISyntaxException {
 		List<Class<?>> messageClasses = new ArrayList<>(2);
 
 		EmbeddedChannel channel = new EmbeddedChannel(
@@ -137,7 +135,7 @@ public class NettyOutboundTest {
 
 	@Test
 	public void sendFileWithTlsUsesChunkedFile()
-			throws URISyntaxException, NoSuchAlgorithmException, SSLException,
+			throws URISyntaxException, SSLException,
 			       CertificateException {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -214,7 +212,7 @@ public class NettyOutboundTest {
 
 	@Test
 	public void sendFileWithForceChunkedFileUsesStrategyChunks()
-			throws URISyntaxException, NoSuchAlgorithmException, IOException {
+			throws URISyntaxException, IOException {
 		List<Class<?>> messageWritten = new ArrayList<>(2);
 		EmbeddedChannel channel = new EmbeddedChannel(
 				//outbound: pipeline reads inverted
@@ -249,7 +247,7 @@ public class NettyOutboundTest {
 				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
 			}
 		};
-		Path path = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 
 		channel.writeOneOutbound(1);
 		outbound.sendFileChunked(path, 0, Files.size(path))

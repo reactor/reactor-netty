@@ -17,12 +17,12 @@
 package reactor.ipc.netty.http.server;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,8 +60,8 @@ public class HttpServerTests {
 
 	@Test
 	public void secureSendFile()
-			throws CertificateException, SSLException, InterruptedException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+			throws CertificateException, SSLException, URISyntaxException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
@@ -90,8 +90,8 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void chunkedSendFile() throws InterruptedException, IOException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+	public void chunkedSendFile() throws IOException, URISyntaxException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 
 		NettyContext context =
@@ -239,11 +239,10 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void keepAlive() {
+	public void keepAlive() throws URISyntaxException {
+		Path resource = Paths.get(getClass().getResource("/public").toURI());
 		NettyContext c = HttpServer.create(0)
-		                           .newRouter(routes -> routes.directory("/test",
-				                           Paths.get(getClass().getResource("/public")
-				                                               .getFile())))
+		                           .newRouter(routes -> routes.directory("/test", resource))
 		                           .block(Duration.ofSeconds(30));
 
 		HttpResources.set(PoolResources.fixed("http", 1));

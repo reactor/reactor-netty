@@ -19,6 +19,7 @@ package reactor.ipc.netty.tcp;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -374,8 +375,8 @@ public class TcpServerTests {
 
 	@Test
 	public void secureSendFile()
-			throws CertificateException, SSLException, InterruptedException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+			throws CertificateException, SSLException, InterruptedException, URISyntaxException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
@@ -450,8 +451,8 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void chunkedSendFile() throws InterruptedException, IOException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+	public void chunkedSendFile() throws InterruptedException, IOException, URISyntaxException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 
 		NettyContext context =

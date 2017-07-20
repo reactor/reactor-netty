@@ -16,8 +16,8 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
@@ -150,11 +150,9 @@ public class HttpClientTest {
 
 	@Test
 	public void backpressured() throws Exception {
-
+		Path resource = Paths.get(getClass().getResource("/public").toURI());
 		NettyContext c = HttpServer.create(0)
-		                           .newRouter(routes -> routes.directory("/test",
-				                           Paths.get(getClass().getResource("/public")
-				                                               .getFile())))
+		                           .newRouter(routes -> routes.directory("/test", resource))
 		                           .block(Duration.ofSeconds(30));
 
 		Mono<HttpClientResponse> remote = HttpClient.create(c.address().getPort())
@@ -619,8 +617,8 @@ public class HttpClientTest {
 
 	@Test
 	public void secureSendFile()
-			throws CertificateException, SSLException, InterruptedException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+			throws CertificateException, SSLException, URISyntaxException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
@@ -656,8 +654,8 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void chunkedSendFile() throws InterruptedException, IOException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").getFile());
+	public void chunkedSendFile() throws URISyntaxException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
 		NettyContext context =
