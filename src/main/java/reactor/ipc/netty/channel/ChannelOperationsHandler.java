@@ -64,7 +64,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	/**
 	 * Cast the supplied queue (SpscLinkedArrayQueue) to use its atomic dual-insert
-	 * backed by {@link BiPredicate#test)
+	 * backed by {@link BiPredicate#test}
 	 **/
 	BiPredicate<ChannelPromise, Object> pendingWriteOffer;
 	Queue<?>                            pendingWrites;
