@@ -54,7 +54,7 @@ public class ClientProxyOptions {
 		this.password = builder.password;
 		if (Objects.isNull(builder.address)) {
 			if (Objects.nonNull(builder.host)) {
-				this.address = () -> InetSocketAddress.createUnresolved(builder.host, builder.port);
+				this.address = () -> new InetSocketAddress(builder.host, builder.port);
 			}
 			else {
 				this.address = null;
