@@ -131,7 +131,7 @@ public class NettyOutboundTest {
 				.element(1)
 				.asString()
 				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. It contains accents like é. GARBAGE")
-				.endsWith("GARBAGE\nEnd of File");
+				.endsWith("GARBAGE End of File");
 	}
 
 	@Test
