@@ -649,7 +649,7 @@ public class HttpClientTest {
 		assertThat(responseBody).isEqualTo("Received File");
 
 		assertThat(uploaded.get())
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 				.contains("1024 mark here -><- 1024 mark here")
 				.endsWith("End of File");
 	}
@@ -683,7 +683,7 @@ public class HttpClientTest {
 		assertThat(responseBody).isEqualTo("Received File");
 
 		assertThat(uploaded.get())
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 				.contains("1024 mark here -><- 1024 mark here")
 				.endsWith("End of File");
 	}

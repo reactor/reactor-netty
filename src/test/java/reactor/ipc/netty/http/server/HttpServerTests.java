@@ -85,7 +85,7 @@ public class HttpServerTests {
 		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 
 		assertThat(body)
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 				.contains("1024 mark here -><- 1024 mark here")
 				.endsWith("End of File");
 	}
@@ -112,7 +112,7 @@ public class HttpServerTests {
 		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 
 		assertThat(body)
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\n" + "It contains accents like é.")
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 				.contains("1024 mark here -><- 1024 mark here")
 				.endsWith("End of File");
 	}

@@ -130,7 +130,7 @@ public class NettyOutboundTest {
 		assertThat(channel.outboundMessages())
 				.element(1)
 				.asString()
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\nIt contains accents like é.\nGARBAGE")
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. It contains accents like é. GARBAGE")
 				.endsWith("GARBAGE\nEnd of File");
 	}
 
@@ -202,7 +202,7 @@ public class NettyOutboundTest {
 				.hasSize(2)
 				.element(0)
 				.asString()
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\nIt contains accents like é.\nGARBAGE")
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. It contains accents like é. GARBAGE")
 				.endsWith("1024 mark here ->");
 		assertThat(clearMessages)
 				.element(1)
@@ -261,7 +261,7 @@ public class NettyOutboundTest {
 				.hasSize(3)
 				.element(1)
 				.asString()
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes.\nIt contains accents like é.\nGARBAGE")
+				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. It contains accents like é. GARBAGE")
 				.endsWith("1024 mark here ->");
 
 		assertThat(channel.outboundMessages())
