@@ -30,36 +30,26 @@ public class ClientProxyOptionsTests {
 
 	@Test
 	public void asSimpleString() {
-		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
+		ClientProxyOptions.TypeSpec typeSpec = ClientProxyOptions.builder();
 
-		assertThat(builder.build().asSimpleString()).isEqualTo("proxy=null(null)");
-
-		builder.type(Proxy.HTTP);
-		assertThat(builder.build().asSimpleString()).isEqualTo("proxy=HTTP(null)");
-
-		builder.host("http://proxy").port(456);
+		ClientProxyOptions.AddressSpec addrSpec = typeSpec.type(Proxy.HTTP);
+		ClientProxyOptions.Builder builder = addrSpec.host("http://proxy").port(456);
 		assertThat(builder.build().asSimpleString()).isEqualTo("proxy=HTTP(http://proxy:456)");
 
-		builder.address(new InetSocketAddress("http://another.proxy", 123));
+		builder = addrSpec.address(new InetSocketAddress("http://another.proxy", 123));
 		assertThat(builder.build().asSimpleString()).isEqualTo("proxy=HTTP(http://another.proxy:123)");
 	}
 
 	@Test
 	public void asDetailedString() {
-		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
+		ClientProxyOptions.TypeSpec typeSpec = ClientProxyOptions.builder();
 
-		assertThat(builder.build().asDetailedString())
-				.isEqualTo("address=null, nonProxyHosts=null, type=null");
-
-		builder.type(Proxy.HTTP);
-		assertThat(builder.build().asDetailedString())
-				.isEqualTo("address=null, nonProxyHosts=null, type=HTTP");
-
-		builder.host("http://proxy").port(456);
+		ClientProxyOptions.AddressSpec addrSpec = typeSpec.type(Proxy.HTTP);
+		ClientProxyOptions.Builder builder = addrSpec.host("http://proxy").port(456);
 		assertThat(builder.build().asDetailedString())
 				.isEqualTo("address=http://proxy:456, nonProxyHosts=null, type=HTTP");
 
-		builder.address(() -> new InetSocketAddress("http://another.proxy", 123));
+		builder = addrSpec.address(() -> new InetSocketAddress("http://another.proxy", 123));
 		assertThat(builder.build().asDetailedString())
 				.isEqualTo("address=http://another.proxy:123, nonProxyHosts=null, type=HTTP");
 
@@ -70,34 +60,20 @@ public class ClientProxyOptionsTests {
 
 	@Test
 	public void toStringContainsAsDetailedString() {
-		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
-		builder.host("http://proxy")
-		       .port(456)
-		       .type(Proxy.HTTP)
-		       .build();
+		ClientProxyOptions.TypeSpec typeSpec = ClientProxyOptions.builder();
+		ClientProxyOptions.Builder builder = typeSpec.type(Proxy.HTTP)
+		                                             .host("http://proxy")
+		                                             .port(456);
 		assertThat(builder.build().toString()).isEqualTo(
 				"ClientProxyOptions{address=http://proxy:456, nonProxyHosts=null, type=HTTP}");
 	}
 
 	@Test
-	public void getProxyHandlerTypeNotSpecified() {
-		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
-		assertThat(builder.build().newProxyHandler()).isNull();
-	}
-
-	@Test
-	public void getProxyHandlerAddressNotSpecified() {
-		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
-		builder.type(Proxy.HTTP);
-		assertThat(builder.build().newProxyHandler()).isNull();
-	}
-
-	@Test
 	public void getProxyHandlerTypeHttp() {
-		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
-		builder.host("http://proxy")
-		       .port(456)
-		       .type(Proxy.HTTP);
+		ClientProxyOptions.TypeSpec typeSpec = ClientProxyOptions.builder();
+		ClientProxyOptions.Builder builder = typeSpec.type(Proxy.HTTP)
+		                                             .host("http://proxy")
+		                                             .port(456);
 
 		assertThat(builder.build().newProxyHandler()).isInstanceOf(HttpProxyHandler.class);
 		assertThat(builder.build().newProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");
@@ -112,10 +88,10 @@ public class ClientProxyOptionsTests {
 
 	@Test
 	public void getProxyHandlerTypeSocks4() {
-		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
-		builder.host("http://proxy")
-		       .port(456)
-		       .type(Proxy.SOCKS4);
+		ClientProxyOptions.TypeSpec typeSpec = ClientProxyOptions.builder();
+		ClientProxyOptions.Builder builder = typeSpec.type(Proxy.SOCKS4)
+		                                             .host("http://proxy")
+		                                             .port(456);
 
 		assertThat(builder.build().newProxyHandler()).isInstanceOf(Socks4ProxyHandler.class);
 		assertThat(builder.build().newProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");
@@ -126,10 +102,10 @@ public class ClientProxyOptionsTests {
 
 	@Test
 	public void getProxyHandlerTypeSocks5() {
-		ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
-		builder.host("http://proxy")
-		       .port(456)
-		       .type(Proxy.SOCKS5);
+		ClientProxyOptions.TypeSpec typeSpec = ClientProxyOptions.builder();
+		ClientProxyOptions.Builder builder = typeSpec.type(Proxy.SOCKS5)
+		                                           .host("http://proxy")
+		                                           .port(456);
 
 		assertThat(builder.build().newProxyHandler()).isInstanceOf(Socks5ProxyHandler.class);
 		assertThat(builder.build().newProxyHandler().proxyAddress().toString()).isEqualTo("http://proxy:456");

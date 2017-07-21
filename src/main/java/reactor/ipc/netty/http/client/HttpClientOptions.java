@@ -20,7 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.ssl.SslContext;
@@ -188,8 +188,8 @@ public final class HttpClientOptions extends ClientOptions {
 		 * @param proxyOptions the HTTP proxy configuration
 		 * @return {@code this}
 		 */
-		public final Builder httpProxy(Consumer<? super ClientProxyOptions.Builder> proxyOptions) {
-			super.proxy(proxyOptions.andThen(ops -> ((ClientProxyOptions.Builder) ops).type(Proxy.HTTP)));
+		public final Builder httpProxy(Function<ClientProxyOptions.AddressSpec, ClientProxyOptions.Builder> proxyOptions) {
+			super.proxy(t -> proxyOptions.apply(t.type(Proxy.HTTP)));
 			return get();
 		}
 

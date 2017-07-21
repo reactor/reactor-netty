@@ -78,9 +78,9 @@ public class HttpClientTest {
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
-		int res = HttpClient.create(opts -> opts.host("localhost")
-		                                        .port(x.address().getPort())
-		                                        .poolResources(pool))
+		HttpClient.create(opts -> opts.host("localhost")
+		                              .port(x.address().getPort())
+		                              .poolResources(pool))
 		                    .get("/")
 		                    .flatMap(r -> Mono.just(r.status()
 		                                          .code()))
@@ -125,9 +125,9 @@ public class HttpClientTest {
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
-		int res = HttpClient.create(opts -> opts.host("localhost")
-		                                        .port(x.address().getPort())
-		                                        .poolResources(pool))
+		HttpClient.create(opts -> opts.host("localhost")
+		                              .port(x.address().getPort())
+		                              .poolResources(pool))
 		                    .get("/")
 		                    .flatMap(r -> Mono.just(r.status()
 		                                          .code()))
@@ -241,9 +241,9 @@ public class HttpClientTest {
 	@Ignore
 	public void nonProxyHosts() throws Exception {
 		HttpClient client = HttpClient.create(o -> o.proxy(ops -> ops.type(Proxy.HTTP)
-		                                                             .nonProxyHosts("spring.io")
 		                                                             .host("127.0.0.1")
-		                                                             .port(8888)));
+		                                                             .port(8888)
+		                                                             .nonProxyHosts("spring.io")));
 		Mono<HttpClientResponse> remote1 = client.get("https://projectreactor.io",
 		                                                 c -> c.followRedirect()
 		                                                       .sendHeaders());

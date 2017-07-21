@@ -22,11 +22,11 @@ import reactor.ipc.netty.options.ClientProxyOptions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class HttpClientOptionsTest {
 	private HttpClientOptions.Builder builder;
-	private Consumer<? super ClientProxyOptions.Builder> proxyOptions;
+	private Function<ClientProxyOptions.TypeSpec, ClientProxyOptions.Builder> proxyOptions;
 
 	@Before
 	public void setUp() {

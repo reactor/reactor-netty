@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
@@ -90,14 +91,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 */
 	protected ClientOptions(ClientOptions.Builder<?> builder){
 		super(builder);
-		if (Objects.nonNull(builder.proxyOptions) &&
-				Objects.nonNull(builder.proxyOptions.getType()) &&
-				Objects.nonNull(builder.proxyOptions.getAddress())) {
-			this.proxyOptions = builder.proxyOptions;
-		}
-		else {
-				this.proxyOptions = null;
-		}
+		this.proxyOptions = builder.proxyOptions;
 		if (Objects.isNull(builder.connectAddress)) {
 			if (builder.port >= 0) {
 				if (Objects.isNull(builder.host)) {
@@ -404,10 +398,9 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		 * @param proxyOptions the proxy configuration
 		 * @return {@code this}
 		 */
-		public final BUILDER proxy(Consumer<? super ClientProxyOptions.Builder> proxyOptions) {
+		public final BUILDER proxy(Function<ClientProxyOptions.TypeSpec, ClientProxyOptions.Builder> proxyOptions) {
 			Objects.requireNonNull(proxyOptions, "proxyOptions");
-			ClientProxyOptions.Builder builder = ClientProxyOptions.builder();
-			proxyOptions.accept(builder);
+			ClientProxyOptions.Builder builder = proxyOptions.apply(ClientProxyOptions.builder());
 			this.proxyOptions = builder.build();
 			if(bootstrapTemplate.config().resolver() == DefaultAddressResolverGroup.INSTANCE) {
 				resolver(NoopAddressResolverGroup.INSTANCE);

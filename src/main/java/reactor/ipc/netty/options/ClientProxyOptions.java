@@ -39,8 +39,8 @@ public class ClientProxyOptions {
 	 *
 	 * @return a new ClientProxyOptions builder
 	 */
-	public static ClientProxyOptions.Builder builder() {
-		return new ClientProxyOptions.Builder();
+	public static ClientProxyOptions.TypeSpec builder() {
+		return new ClientProxyOptions.Build();
 	}
 
 	private final String username;
@@ -49,16 +49,11 @@ public class ClientProxyOptions {
 	private final Pattern nonProxyHosts;
 	private final Proxy type;
 
-	private ClientProxyOptions(ClientProxyOptions.Builder builder) {
+	private ClientProxyOptions(ClientProxyOptions.Build builder) {
 		this.username = builder.username;
 		this.password = builder.password;
 		if (Objects.isNull(builder.address)) {
-			if (Objects.nonNull(builder.host)) {
-				this.address = () -> new InetSocketAddress(builder.host, builder.port);
-			}
-			else {
-				this.address = null;
-			}
+			this.address = () -> new InetSocketAddress(builder.host, builder.port);
 		}
 		else {
 			this.address = builder.address;
@@ -108,9 +103,6 @@ public class ClientProxyOptions {
 	 * @return a new eventual {@link ProxyHandler}
 	 */
 	public final ProxyHandler newProxyHandler() {
-		if (Objects.isNull(this.type) || Objects.isNull(this.address)) {
-			return null;
-		}
 		InetSocketAddress proxyAddr = this.address.get();
 		String username = this.username;
 		String password = Objects.nonNull(username) && Objects.nonNull(this.password) ?
@@ -142,11 +134,11 @@ public class ClientProxyOptions {
 
 	public String asSimpleString() {
 		return "proxy=" + this.type +
-				"(" + (this.address == null ? null : this.address.get()) + ")";
+				"(" + this.address.get() + ")";
 	}
 
 	public String asDetailedString() {
-		return "address=" + (this.address == null ? null : this.address.get()) +
+		return "address=" + this.address.get() +
 				", nonProxyHosts=" + this.nonProxyHosts +
 				", type=" + this.type;
 	}
@@ -156,7 +148,7 @@ public class ClientProxyOptions {
 		return "ClientProxyOptions{" + asDetailedString() + "}";
 	}
 
-	public static final class Builder {
+	private static final class Build implements TypeSpec, AddressSpec, Builder {
 		private String username;
 		private Function<? super String, ? extends String> password;
 		private String host;
@@ -165,59 +157,34 @@ public class ClientProxyOptions {
 		private String nonProxyHosts;
 		private Proxy type;
 
-		private Builder() {
+		private Build() {
 		}
 
-		/**
-		 * The proxy username.
-		 *
-		 * @param username The proxy username.
-		 * @return {@code this}
-		 */
+		@Override
 		public final Builder username(String username) {
 			this.username = username;
 			return this;
 		}
 
-		/**
-		 * A function to supply the proxy's password from the username.
-		 *
-		 * @param password A function to supply the proxy's password from the username.
-		 * @return {@code this}
-		 */
+		@Override
 		public final Builder password(Function<? super String, ? extends String> password) {
 			this.password = password;
 			return this;
 		}
 
-		/**
-		 * The proxy host to connect to.
-		 *
-		 * @param host The proxy host to connect to.
-		 * @return {@code this}
-		 */
+		@Override
 		public final Builder host(String host) {
 			this.host = Objects.requireNonNull(host, "host");
 			return this;
 		}
 
-		/**
-		 * The proxy port to connect to.
-		 *
-		 * @param port The proxy port to connect to.
-		 * @return {@code this}
-		 */
+		@Override
 		public final Builder port(int port) {
 			this.port = Objects.requireNonNull(port, "port");
 			return this;
 		}
 
-		/**
-		 * The address to connect to.
-		 *
-		 * @param address The address to connect to.
-		 * @return {@code this}
-		 */
+		@Override
 		public final Builder address(InetSocketAddress address) {
 			Objects.requireNonNull(address, "address");
 			this.address = address.isUnresolved() ?
@@ -227,16 +194,93 @@ public class ClientProxyOptions {
 			return this;
 		}
 
+		@Override
+		public final Builder address(Supplier<? extends InetSocketAddress> addressSupplier) {
+			this.address = Objects.requireNonNull(addressSupplier, "addressSupplier");
+			return this;
+		}
+
+		@Override
+		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
+			this.nonProxyHosts = nonProxyHostsPattern;
+			return this;
+		}
+
+		@Override
+		public final AddressSpec type(Proxy type) {
+			this.type = Objects.requireNonNull(type, "type");
+			return this;
+		}
+
+		@Override
+		public ClientProxyOptions build() {
+			return new ClientProxyOptions(this);
+		}
+	}
+
+	public interface TypeSpec {
+
+		/**
+		 * The proxy type.
+		 *
+		 * @param type The proxy type.
+		 * @return {@code this}
+		 */
+		public AddressSpec type(Proxy type);
+	}
+
+	public interface AddressSpec {
+
+		/**
+		 * The proxy host to connect to.
+		 *
+		 * @param host The proxy host to connect to.
+		 * @return {@code this}
+		 */
+		public Builder host(String host);
+
+		/**
+		 * The address to connect to.
+		 *
+		 * @param address The address to connect to.
+		 * @return {@code this}
+		 */
+		public Builder address(InetSocketAddress address);
+
 		/**
 		 * The supplier for the address to connect to.
 		 *
 		 * @param addressSupplier The supplier for the address to connect to.
 		 * @return {@code this}
 		 */
-		public final Builder address(Supplier<? extends InetSocketAddress> addressSupplier) {
-			this.address = Objects.requireNonNull(addressSupplier, "addressSupplier");
-			return this;
-		}
+		public Builder address(Supplier<? extends InetSocketAddress> addressSupplier);
+	}
+
+	public interface Builder {
+
+		/**
+		 * The proxy username.
+		 *
+		 * @param username The proxy username.
+		 * @return {@code this}
+		 */
+		public Builder username(String username);
+
+		/**
+		 * A function to supply the proxy's password from the username.
+		 *
+		 * @param password A function to supply the proxy's password from the username.
+		 * @return {@code this}
+		 */
+		public Builder password(Function<? super String, ? extends String> password);
+
+		/**
+		 * The proxy port to connect to.
+		 *
+		 * @param port The proxy port to connect to.
+		 * @return {@code this}
+		 */
+		public Builder port(int port);
 
 		/**
 		 * Regular expression (<code>using java.util.regex</code>) for a configured
@@ -246,24 +290,13 @@ public class ClientProxyOptions {
 		 * for a configured list of hosts that should be reached directly, bypassing the proxy.
 		 * @return {@code this}
 		 */
-		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
-			this.nonProxyHosts = nonProxyHostsPattern;
-			return this;
-		}
+		public Builder nonProxyHosts(String nonProxyHostsPattern);
 
 		/**
-		 * The proxy type.
+		 * Builds new ClientProxyOptions
 		 *
-		 * @param type The proxy type.
-		 * @return {@code this}
+		 * @return builds new ClientProxyOptions
 		 */
-		public final Builder type(Proxy type) {
-			this.type = Objects.requireNonNull(type, "type");
-			return this;
-		}
-
-		public ClientProxyOptions build() {
-			return new ClientProxyOptions(this);
-		}
+		public ClientProxyOptions build();
 	}
 }
