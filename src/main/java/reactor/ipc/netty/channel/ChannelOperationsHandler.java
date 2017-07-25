@@ -66,7 +66,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	 * Cast the supplied queue (SpscLinkedArrayQueue) to use its atomic dual-insert
 	 * backed by {@link BiPredicate#test}
 	 **/
-	BiPredicate<ChannelPromise, Object> pendingWriteOffer;
+	BiPredicate<ChannelFuture, Object> pendingWriteOffer;
 	Queue<?>                            pendingWrites;
 	ChannelHandlerContext               ctx;
 	boolean                             flushOnEach;
@@ -239,7 +239,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		if (pendingWrites == null) {
 			this.pendingWrites = Queues.unbounded()
 			                           .get();
-			this.pendingWriteOffer = (BiPredicate<ChannelPromise, Object>) pendingWrites;
+			this.pendingWriteOffer = (BiPredicate<ChannelFuture, Object>) pendingWrites;
 		}
 
 		if (!pendingWriteOffer.test(promise, msg)) {
@@ -338,18 +338,18 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					continue;
 				}
 
-				ChannelPromise promise;
+				ChannelFuture future;
 				Object v = pendingWrites.poll();
 
 				try {
-					promise = (ChannelPromise) v;
+					future = (ChannelFuture) v;
 				}
 				catch (Throwable e) {
 					ctx.fireExceptionCaught(e);
 					return;
 				}
 
-				boolean empty = promise == null;
+				boolean empty = future == null;
 
 				if (empty) {
 					if (WIP.decrementAndGet(this) == 0) {
@@ -360,48 +360,67 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 				v = pendingWrites.poll();
 
-				if (v instanceof Publisher) {
-					Publisher<?> p = (Publisher<?>) v;
-
-					if (p instanceof Callable) {
-						@SuppressWarnings("unchecked") Callable<?> supplier =
-								(Callable<?>) p;
-
-						Object vr;
-
-						try {
-							vr = supplier.call();
+				if (!innerActive && v instanceof PendingWritesOnCompletion) {
+					boolean last = pendingWrites.isEmpty();
+					if (!future.isDone() && hasPendingWriteBytes()) {
+						ctx.flush();
+						if (!future.isDone() && hasPendingWriteBytes()) {
+							pendingWriteOffer.test(future, v);
 						}
-						catch (Throwable e) {
-							promise.setFailure(e);
-							continue;
-						}
-
-						if (vr == null) {
-							promise.setSuccess();
-							continue;
-						}
-
-						if (inner.unbounded) {
-							doWrite(vr, promise, null);
+					}
+					if (last && WIP.decrementAndGet(this) == 0) {
+						break;
+					}
+				}
+				else if (future instanceof ChannelPromise) {
+					ChannelPromise promise = (ChannelPromise) future;
+					if (v instanceof Publisher) {
+						Publisher<?> p = (Publisher<?>) v;
+	
+						if (p instanceof Callable) {
+							@SuppressWarnings("unchecked") Callable<?> supplier =
+									(Callable<?>) p;
+	
+							Object vr;
+	
+							try {
+								vr = supplier.call();
+							}
+							catch (Throwable e) {
+								promise.setFailure(e);
+								continue;
+							}
+	
+							if (vr == null) {
+								promise.setSuccess();
+								continue;
+							}
+	
+							if (inner.unbounded) {
+								doWrite(vr, promise, null);
+							}
+							else {
+								innerActive = true;
+								inner.promise = promise;
+								inner.onSubscribe(Operators.scalarSubscription(inner, vr));
+							}
 						}
 						else {
 							innerActive = true;
 							inner.promise = promise;
-							inner.onSubscribe(Operators.scalarSubscription(inner, vr));
+							p.subscribe(inner);
 						}
 					}
 					else {
-						innerActive = true;
-						inner.promise = promise;
-						p.subscribe(inner);
+						doWrite(v, promise, null);
 					}
-				}
-				else {
-					doWrite(v, promise, null);
 				}
 			}
 		}
+	}
+
+	private boolean hasPendingWriteBytes() {
+		return ctx.channel().unsafe().outboundBuffer().totalPendingWriteBytes() > 0;
 	}
 
 	static final class PublisherSender
@@ -467,6 +486,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 
 			if (f != null) {
+				if (!f.isDone() && parent.hasPendingWriteBytes()) {
+					parent.pendingWriteOffer.test(f, new PendingWritesOnCompletion());
+				}
 				f.addListener(this);
 			}
 			else {
@@ -496,6 +518,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 
 			if (f != null) {
+				if (!f.isDone() && parent.hasPendingWriteBytes()) {
+					parent.pendingWriteOffer.test(f, new PendingWritesOnCompletion());
+				}
 				f.addListener(this);
 			}
 			else {
@@ -733,4 +758,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	static final BiConsumer<?, ? super ByteBuf> NOOP_ENCODER = (a, b) -> {
 	};
+
+	private static final class PendingWritesOnCompletion {
+		@Override
+		public String toString() {
+			return "[Pending Writes on Completion]";
+		}
+	}
 }
