@@ -266,10 +266,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				    .isWritable() //force flush if write buffer full
 				) {
 			pendingBytes = 0L;
-			if (inner != null) {
+
+			ChannelFuture future = ctx.writeAndFlush(msg, promise);
+			
+			if (inner != null && !hasPendingWriteBytes()) {
 				inner.justFlushed = true;
 			}
-			return ctx.writeAndFlush(msg, promise);
+			return future;
 		}
 		else {
 			if (msg instanceof ByteBuf) {
@@ -290,7 +293,15 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (inner != null && inner.justFlushed) {
 				inner.justFlushed = false;
 			}
-			return ctx.write(msg, promise);
+			ChannelFuture future = ctx.write(msg, promise);
+			if (!ctx.channel().isWritable()) {
+				pendingBytes = 0L;
+				ctx.flush();
+				if (inner != null && !hasPendingWriteBytes()) {
+					inner.justFlushed = true;
+				}
+			}
+			return future;
 		}
 	}
 
@@ -475,8 +486,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				if (!justFlushed) {
 					if (parent.ctx.channel()
 					              .isActive()) {
-						justFlushed = true;
 						parent.ctx.flush();
+						if (!parent.hasPendingWriteBytes()) {
+						    justFlushed = true;
+						}
 					}
 					else {
 						promise.setFailure(new AbortedException("Connection has been closed"));
@@ -508,8 +521,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				produced(p);
 				if (parent.ctx.channel()
 				              .isActive()) {
-					justFlushed = true;
 					parent.ctx.flush();
+					if (!parent.hasPendingWriteBytes()) {
+					    justFlushed = true;
+					}
 				}
 				else {
 					promise.setFailure(new AbortedException("Connection has been closed"));
