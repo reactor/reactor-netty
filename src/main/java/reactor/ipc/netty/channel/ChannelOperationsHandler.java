@@ -81,7 +81,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@SuppressWarnings("unchecked")
 	ChannelOperationsHandler(ContextHandler<?> contextHandler) {
 		this.inner = new PublisherSender(this);
-		this.prefetch = 32;
+		this.prefetch = 1;
 		this.encoder = NOOP_ENCODER;
 		this.lastContext = null;
 		this.originContext = contextHandler; // only set if parent context is closable,
