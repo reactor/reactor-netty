@@ -487,7 +487,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 			if (f != null) {
 				if (!f.isDone() && parent.hasPendingWriteBytes()) {
-					parent.pendingWriteOffer.test(f, new PendingWritesOnCompletion());
+					parent.pendingWriteOffer.test(f, PENDING_WRITES);
 				}
 				f.addListener(this);
 			}
@@ -519,7 +519,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 			if (f != null) {
 				if (!f.isDone() && parent.hasPendingWriteBytes()) {
-					parent.pendingWriteOffer.test(f, new PendingWritesOnCompletion());
+					parent.pendingWriteOffer.test(f, PENDING_WRITES);
 				}
 				f.addListener(this);
 			}
@@ -748,6 +748,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		@SuppressWarnings("rawtypes")
 		static final AtomicIntegerFieldUpdater<PublisherSender> WIP                 =
 				AtomicIntegerFieldUpdater.newUpdater(PublisherSender.class, "wip");
+
+		private static final PendingWritesOnCompletion PENDING_WRITES = new PendingWritesOnCompletion();
 	}
 
 	@SuppressWarnings("rawtypes")
