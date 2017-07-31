@@ -18,11 +18,12 @@ package reactor.ipc.netty;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -32,8 +33,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.stream.ChunkedFile;
 import io.netty.handler.stream.ChunkedInput;
+import io.netty.handler.stream.ChunkedNioFile;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
@@ -164,10 +165,10 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	FileChunkedStrategy<ByteBuf> FILE_CHUNKED_STRATEGY_BUFFER = new AbstractFileChunkedStrategy<ByteBuf>() {
 
 		@Override
-		public ChunkedInput<ByteBuf> chunkFile(RandomAccessFile file) {
+		public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel) {
 			try {
 				//TODO tune the chunk size
-				return new ChunkedFile(file, 1024);
+				return new ChunkedNioFile(fileChannel, 1024);
 			}
 			catch (IOException e) {
 				throw Exceptions.propagate(e);
@@ -203,8 +204,8 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 			return sendFileChunked(file, position, count);
 		}
 
-		return then(Mono.using(() -> new RandomAccessFile(file.toFile(), "r"),
-				fc -> FutureMono.from(context().channel().writeAndFlush(new DefaultFileRegion(fc.getChannel(), position, count))),
+		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
+				fc -> FutureMono.from(context().channel().writeAndFlush(new DefaultFileRegion(fc, position, count))),
 				fc -> {
 					try {
 						fc.close();
@@ -225,7 +226,7 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 			strategy.preparePipeline(context());
 		}
 
-		return then(Mono.using(() -> new RandomAccessFile(file.toFile(), "r"),
+		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
 				fc -> {
 						try {
 							ChunkedInput<?> message = strategy.chunkFile(fc);
