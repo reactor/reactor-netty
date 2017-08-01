@@ -17,6 +17,7 @@
 package reactor.ipc.netty.channel.data;
 
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 
 import io.netty.channel.Channel;
 import io.netty.handler.stream.ChunkedInput;
@@ -46,10 +47,10 @@ public interface FileChunkedStrategy<T> {
 	 * "view" of the file, eg. as a {@link io.netty.handler.stream.ChunkedFile} or a
 	 * {@link io.netty.handler.codec.http.HttpChunkedInput} around a ChunkedFile.
 	 *
-	 * @param file the file being sent
+	 * @param fileChannel the {@link FileChannel} for the file being sent
 	 * @return the file, as a {@link ChunkedInput}
 	 */
-	ChunkedInput<T> chunkFile(RandomAccessFile file);
+	ChunkedInput<T> chunkFile(FileChannel fileChannel);
 
 	/**
 	 * Once the file has been written, allows to clean the pipeline

@@ -18,9 +18,9 @@ package reactor.ipc.netty;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.URISyntaxException;
 import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -44,8 +44,8 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.handler.stream.ChunkedFile;
 import io.netty.handler.stream.ChunkedInput;
+import io.netty.handler.stream.ChunkedNioFile;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -196,7 +196,7 @@ public class NettyOutboundTest {
 			System.err.println(e);
 		}
 
-		assertThat(messageWritten).containsExactly(Integer.class, ChunkedFile.class);
+		assertThat(messageWritten).containsExactly(Integer.class, ChunkedNioFile.class);
 
 		assertThat(clearMessages)
 				.hasSize(2)
@@ -255,7 +255,7 @@ public class NettyOutboundTest {
 		        .then().block();
 
 		assertThat(channel.inboundMessages()).isEmpty();
-		assertThat(messageWritten).containsExactly(Integer.class, ChunkedFile.class);
+		assertThat(messageWritten).containsExactly(Integer.class, ChunkedNioFile.class);
 
 		assertThat(channel.outboundMessages())
 				.hasSize(3)
@@ -274,9 +274,9 @@ public class NettyOutboundTest {
 	private static final FileChunkedStrategy FILE_CHUNKED_STRATEGY_1024_NOPIPELINE =
 			new FileChunkedStrategy<ByteBuf>() {
 				@Override
-				public ChunkedInput<ByteBuf> chunkFile(RandomAccessFile file) {
+				public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel) {
 					try {
-						return new ChunkedFile(file, 1024);
+						return new ChunkedNioFile(fileChannel, 1024);
 					}
 					catch (IOException e) {
 						throw Exceptions.propagate(e);

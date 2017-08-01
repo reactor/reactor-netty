@@ -17,7 +17,7 @@
 package reactor.ipc.netty.http;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -38,8 +38,8 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.stream.ChunkedFile;
 import io.netty.handler.stream.ChunkedInput;
+import io.netty.handler.stream.ChunkedNioFile;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
@@ -181,10 +181,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	FileChunkedStrategy<HttpContent> FILE_CHUNKED_STRATEGY_HTTP_CONTENT = new AbstractFileChunkedStrategy<HttpContent>() {
 
 		@Override
-		public ChunkedInput<HttpContent> chunkFile(RandomAccessFile file) {
+		public ChunkedInput<HttpContent> chunkFile(FileChannel fileChannel) {
 			try {
 				//TODO tune the chunk size
-				return new HttpChunkedInput(new ChunkedFile(file, 1024));
+				return new HttpChunkedInput(new ChunkedNioFile(fileChannel, 1024));
 			}
 			catch (IOException e) {
 				throw Exceptions.propagate(e);
