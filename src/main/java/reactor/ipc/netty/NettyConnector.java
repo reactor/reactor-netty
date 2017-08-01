@@ -64,8 +64,25 @@ public interface NettyConnector<INBOUND extends NettyInbound, OUTBOUND extends N
 	 * a sigkill signal.
 	 *
 	 * @param handler the handler to execute.
+	 */
+	default <T extends BiFunction<INBOUND, OUTBOUND, ? extends Publisher<Void>>>
+	void startAndAwait(T handler) {
+		startAndAwait(handler, null);
+	}
+
+	/**
+	 * Start a Client or Server in a fully blocking fashion, not only waiting for it to
+	 * initialize but also blocking during the full lifecycle of the client/server.
+	 * Since most servers will be long-lived, this is more adapted to running a server
+	 * out of a main method, only allowing shutdown of the servers through sigkill.
+	 * <p>
+	 * Note that a {@link Runtime#addShutdownHook(Thread) JVM shutdown hook} is added
+	 * by this method in order to properly disconnect the client/server upon receiving
+	 * a sigkill signal.
+	 *
+	 * @param handler the handler to execute.
 	 * @param onStart an optional callback to be invoked once the client/server has finished
-	 * initializing (see {@link #startAndAwait(BiFunction, Consumer)}).
+	 * initializing.
 	 */
 	default <T extends BiFunction<INBOUND, OUTBOUND, ? extends Publisher<Void>>>
 	void startAndAwait(T handler, @Nullable Consumer<BlockingNettyContext> onStart) {

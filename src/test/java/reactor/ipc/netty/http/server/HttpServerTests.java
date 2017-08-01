@@ -28,8 +28,14 @@ import java.nio.file.StandardCopyOption;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
@@ -54,10 +60,12 @@ import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * @author Stephane Maldini
@@ -344,5 +352,53 @@ public class HttpServerTests {
 		assertThat(server.options())
 		          .isNotSameAs(server.options)
 		          .isNotSameAs(server.options());
+	}
+
+	@Test
+	public void startRouter() {
+		BlockingNettyContext facade = HttpServer.create(0)
+		                                        .startRouter(routes -> routes.get("/hello",
+				                                        (req, resp) -> resp.sendString(Mono.just("hello!"))));
+
+		try {
+			assertThat(HttpClient.create(facade.getPort())
+			                     .get("/hello")
+			                     .block()
+			                     .status()
+			                     .code()).isEqualTo(200);
+
+			assertThat(HttpClient.create(facade.getPort())
+			                     .get("/helloMan", req -> req.failOnClientError(false))
+			                     .block()
+			                     .status()
+			                     .code()).isEqualTo(404);
+		}
+		finally {
+			facade.shutdown();
+		}
+	}
+
+	@Test
+	public void startRouterAndAwait()
+			throws InterruptedException, ExecutionException, TimeoutException {
+		ExecutorService ex = Executors.newSingleThreadExecutor();
+		AtomicReference<BlockingNettyContext> ref = new AtomicReference<>();
+
+		Future<?> f = ex.submit(() -> HttpServer.create(0)
+		                                        .startRouterAndAwait(routes -> routes.get("/hello", (req, resp) -> resp.sendString(Mono.just("hello!"))),
+				                                        ref::set)
+		);
+
+		//if the server cannot be started, a ExecutionException will be thrown instead
+		assertThatExceptionOfType(TimeoutException.class)
+				.isThrownBy(() -> f.get(1, TimeUnit.SECONDS));
+
+		//the router is not done and is still blocking the thread
+		assertThat(f.isDone()).isFalse();
+		assertThat(ref.get()).isNotNull().withFailMessage("Server is not initialized after 1s");
+
+		//shutdown the router to unblock the thread
+		ref.get().shutdown();
+		assertThat(f.isDone()).isTrue();
 	}
 }
