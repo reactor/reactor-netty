@@ -53,7 +53,7 @@ public final class HttpServer
 
 	/**
 	 * Build a simple Netty HTTP server listening on localhost (127.0.0.1) and
-	 * port {@literal 80}.
+	 * port {@literal 8080}.
 	 *
 	 * @return a simple HTTP Server
 	 */
@@ -87,7 +87,7 @@ public final class HttpServer
 
 	/**
 	 * Build a simple Netty HTTP server listening on the provided bind address and
-	 * port {@literal 80}.
+	 * port {@literal 8080}.
 	 *
 	 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
 	 * @return a simple HTTP server
@@ -225,7 +225,7 @@ public final class HttpServer
 
 	public static final class Builder {
 		private String bindAddress = NetUtil.LOCALHOST.getHostAddress();
-		private int port = 80;
+		private int port = 8080;
 		private Consumer<? super HttpServerOptions.Builder> options;
 
 		private Builder() {

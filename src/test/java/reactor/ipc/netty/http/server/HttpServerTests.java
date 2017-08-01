@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.server;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
@@ -54,6 +55,7 @@ import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 
@@ -63,6 +65,49 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Stephane Maldini
  */
 public class HttpServerTests {
+
+	@Test
+	public void defaultHttpPort() {
+		BlockingNettyContext blockingFacade = HttpServer.create()
+		                                                .start((req, resp) -> resp.sendNotFound());
+		blockingFacade.shutdown();
+
+		assertThat(blockingFacade.getPort())
+				.isEqualTo(8080)
+				.isEqualTo(blockingFacade.getContext().address().getPort());
+	}
+
+	@Test
+	public void defaultHttpPortWithAddress() {
+		BlockingNettyContext blockingFacade = HttpServer.create("localhost")
+		                                                .start((req, resp) -> resp.sendNotFound());
+		blockingFacade.shutdown();
+
+		assertThat(blockingFacade.getPort())
+				.isEqualTo(8080)
+				.isEqualTo(blockingFacade.getContext().address().getPort());
+	}
+
+	@Test
+	public void httpPortOptionTakesPrecedenceOverBuilderField() {
+		HttpServer.Builder builder = HttpServer.builder()
+		                                       .options(o -> o.port(9081))
+		                                       .port(9080);
+		HttpServer binding = builder.build();
+		BlockingNettyContext blockingFacade = binding.start((req, resp) -> resp.sendNotFound());
+		blockingFacade.shutdown();
+
+		assertThat(builder).hasFieldOrPropertyWithValue("port", 9080);
+
+		assertThat(blockingFacade.getPort())
+				.isEqualTo(9081)
+				.isEqualTo(blockingFacade.getContext().address().getPort());
+
+
+		assertThat(binding.options().getAddress())
+				.isInstanceOf(InetSocketAddress.class)
+				.hasFieldOrPropertyWithValue("port", 9081);
+	}
 
 	@Test
 	public void sendFileSecure()
