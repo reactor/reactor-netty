@@ -16,12 +16,16 @@
 
 package reactor.ipc.netty.channel;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.Duration;
 
 import org.junit.Test;
 
+import io.netty.channel.embedded.EmbeddedChannel;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
@@ -50,5 +54,22 @@ public class ChannelOperationsHandlerTest {
 		            .expectNextMatches(res -> res.status().code() == 200)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void keepPrefetchSizeConstant() {
+		ChannelOperationsHandler handler = new ChannelOperationsHandler(null);
+
+		EmbeddedChannel channel = new EmbeddedChannel(handler);
+		channel.config().setWriteBufferLowWaterMark(1024)
+		                .setWriteBufferHighWaterMark(1024);
+
+		assertThat(handler.prefetch == (handler.inner.requested - handler.inner.produced));
+
+		StepVerifier.create(FutureMono.deferFuture(() -> channel.writeAndFlush(Flux.range(0, 70))))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(handler.prefetch == (handler.inner.requested - handler.inner.produced));
 	}
 }

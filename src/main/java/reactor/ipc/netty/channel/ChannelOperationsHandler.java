@@ -55,7 +55,7 @@ import reactor.util.concurrent.Queues;
  * @author Stephane Maldini
  */
 final class ChannelOperationsHandler extends ChannelDuplexHandler
-		implements NettyPipeline.SendOptions {
+		implements NettyPipeline.SendOptions, ChannelFutureListener {
 
 	final PublisherSender                inner;
 	final BiConsumer<?, ? super ByteBuf> encoder;
@@ -81,7 +81,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@SuppressWarnings("unchecked")
 	ChannelOperationsHandler(ContextHandler<?> contextHandler) {
 		this.inner = new PublisherSender(this);
-		this.prefetch = 1;
+		this.prefetch = 32;
 		this.encoder = NOOP_ENCODER;
 		this.lastContext = null;
 		this.originContext = contextHandler; // only set if parent context is closable,
@@ -150,10 +150,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					ctx.channel(),
 					ctx.channel()
 					   .isWritable());
-		}
-		if (ctx.channel()
-		       .isWritable()) {
-			inner.request(prefetch);
 		}
 		drain();
 	}
@@ -257,6 +253,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	public NettyPipeline.SendOptions flushOnEach() {
 		flushOnEach = true;
 		return this;
+	}
+
+	@Override
+	public void operationComplete(ChannelFuture future) throws Exception {
+		if (future.isSuccess()) {
+			inner.request(1L);
+		}
 	}
 
 	ChannelFuture doWrite(Object msg, ChannelPromise promise, PublisherSender inner) {
@@ -552,6 +555,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (parent.ctx.channel()
 			              .isWritable()) {
 				request(1L);
+			}
+			else {
+				lastWrite.addListener(parent);
 			}
 		}
 
