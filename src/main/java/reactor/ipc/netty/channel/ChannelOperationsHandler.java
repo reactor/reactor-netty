@@ -378,7 +378,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 				v = pendingWrites.poll();
 
-				if (!innerActive && v instanceof PendingWritesOnCompletion) {
+				if (!innerActive && v == PublisherSender.PENDING_WRITES) {
 					boolean last = pendingWrites.isEmpty();
 					if (!future.isDone() && hasPendingWriteBytes()) {
 						ctx.flush();
