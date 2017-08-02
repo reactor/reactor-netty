@@ -34,6 +34,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.util.ReferenceCountUtil;
@@ -346,6 +347,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 				if (pendingWrites == null || innerActive || !ctx.channel()
 				                                                .isWritable()) {
+					if (!ctx.channel().isWritable() && hasPendingWriteBytes()) {
+						ctx.flush();
+					}
 					if (WIP.decrementAndGet(this) == 0) {
 						break;
 					}
@@ -434,7 +438,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	private boolean hasPendingWriteBytes() {
-		return ctx.channel().unsafe().outboundBuffer().totalPendingWriteBytes() > 0;
+		ChannelOutboundBuffer outBuffer = ctx.channel().unsafe().outboundBuffer();
+		return outBuffer != null ? outBuffer.totalPendingWriteBytes() > 0 : false;
 	}
 
 	static final class PublisherSender
