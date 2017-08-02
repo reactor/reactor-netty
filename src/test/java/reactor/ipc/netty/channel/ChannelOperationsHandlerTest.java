@@ -57,12 +57,21 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	@Test
-	public void keepPrefetchSizeConstant() {
+	public void keepPrefetchSizeConstantEqualsWriteBufferLowHighWaterMark() {
+		doTestPrefetchSize(1024, 1024);
+	}
+
+	@Test
+	public void keepPrefetchSizeConstantDifferentWriteBufferLowHighWaterMark() {
+		doTestPrefetchSize(0, 1024);
+	}
+
+	private void doTestPrefetchSize(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
 		ChannelOperationsHandler handler = new ChannelOperationsHandler(null);
 
 		EmbeddedChannel channel = new EmbeddedChannel(handler);
-		channel.config().setWriteBufferLowWaterMark(1024)
-		                .setWriteBufferHighWaterMark(1024);
+		channel.config().setWriteBufferLowWaterMark(writeBufferLowWaterMark)
+		                .setWriteBufferHighWaterMark(writeBufferHighWaterMark);
 
 		assertThat(handler.prefetch == (handler.inner.requested - handler.inner.produced)).isTrue();
 
