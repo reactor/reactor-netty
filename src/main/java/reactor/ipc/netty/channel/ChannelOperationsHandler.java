@@ -30,6 +30,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel.Unsafe;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -67,13 +68,15 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	 * Cast the supplied queue (SpscLinkedArrayQueue) to use its atomic dual-insert
 	 * backed by {@link BiPredicate#test}
 	 **/
-	BiPredicate<ChannelFuture, Object> pendingWriteOffer;
+	BiPredicate<ChannelFuture, Object>  pendingWriteOffer;
 	Queue<?>                            pendingWrites;
 	ChannelHandlerContext               ctx;
 	boolean                             flushOnEach;
 
 	long                                pendingBytes;
-	ContextHandler<?> lastContext;
+	ContextHandler<?>                   lastContext;
+
+	private Unsafe                      unsafe;
 
 	volatile boolean innerActive;
 	volatile boolean removed;
@@ -179,6 +182,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		this.ctx = ctx;
+		this.unsafe = ctx.channel().unsafe();
 		inner.request(prefetch);
 	}
 
@@ -438,7 +442,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	private boolean hasPendingWriteBytes() {
-		ChannelOutboundBuffer outBuffer = ctx.channel().unsafe().outboundBuffer();
+		// On close the outboundBuffer is made null. After that point
+		// adding messages and flushes to outboundBuffer is not allowed.
+		ChannelOutboundBuffer outBuffer = this.unsafe.outboundBuffer();
 		return outBuffer != null ? outBuffer.totalPendingWriteBytes() > 0 : false;
 	}
 
