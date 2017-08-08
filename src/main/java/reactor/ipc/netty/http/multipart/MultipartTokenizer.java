@@ -160,8 +160,11 @@ final class MultipartTokenizer
 
 	@Override
 	public void request(long n) {
+		if(!Operators.validate(n)){
+			return;
+		}
 		try {
-			Operators.checkRequest(n);
+
 			if (Integer.MAX_VALUE > n) {  // TODO: Support smaller request sizes
 				actual.onError(Operators.onOperatorError(this, new
 						IllegalArgumentException(
