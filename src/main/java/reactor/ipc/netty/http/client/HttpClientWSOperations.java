@@ -25,15 +25,20 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker13;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
@@ -60,12 +65,34 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 		Channel channel = channel();
 
-		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
-				WebSocketVersion.V13,
-				protocols,
-				true,
-				replaced.requestHeaders().remove(HttpHeaderNames.HOST));
-
+		if (replaced.requestHeaders.get(HttpHeaderNames.UPGRADE, "")
+		                           .equals(HttpHeaderValues.WEBSOCKET)) {
+			handshaker = new WebSocketClientHandshaker13(currentURI,
+					WebSocketVersion.V13,
+					protocols,
+					true,
+					null,
+					65536) {
+				@Override
+				protected FullHttpRequest newHandshakeRequest() {
+					FullHttpRequest request =
+							new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+									HttpMethod.GET,
+									replaced.uri());
+					request.headers()
+					       .set(replaced.requestHeaders);
+					return request;
+				}
+			};
+		}
+		else {
+			handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
+					WebSocketVersion.V13,
+					protocols,
+					true,
+					replaced.requestHeaders()
+					        .remove(HttpHeaderNames.HOST));
+		}
 		handshakerResult = channel.newPromise();
 
 		String handlerName = channel.pipeline()
