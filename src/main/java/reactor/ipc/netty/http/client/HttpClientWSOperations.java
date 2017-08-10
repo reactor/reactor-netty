@@ -25,20 +25,14 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker13;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
@@ -65,8 +59,11 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 		Channel channel = channel();
 
-		if (replaced.requestHeaders.get(HttpHeaderNames.UPGRADE, "")
-		                           .equals(HttpHeaderValues.WEBSOCKET)) {
+		//The following is commented until further review - this allows a user to
+		// override websocket headers written (especially key hash) if the original
+		// headers contain UPGRADE:websocket.
+		/*if (replaced.requestHeaders.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues
+				.WEBSOCKET, true)) {
 			handshaker = new WebSocketClientHandshaker13(currentURI,
 					WebSocketVersion.V13,
 					protocols,
@@ -83,16 +80,36 @@ final class HttpClientWSOperations extends HttpClientOperations
 					       .set(replaced.requestHeaders);
 					return request;
 				}
+
+				@Override
+				protected void verify(FullHttpResponse response) {
+					final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
+					final HttpHeaders headers = response.headers();
+
+					if (!response.status().equals(status)) {
+						throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
+					}
+
+					CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
+					if (!HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
+						throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
+					}
+
+					if (!headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+						throw new WebSocketHandshakeException("Invalid handshake response connection: "
+								+ headers.get(HttpHeaderNames.CONNECTION));
+					}
+				}
 			};
 		}
-		else {
+		else {*/
 			handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 					WebSocketVersion.V13,
 					protocols,
 					true,
 					replaced.requestHeaders()
 					        .remove(HttpHeaderNames.HOST));
-		}
+//		}
 		handshakerResult = channel.newPromise();
 
 		String handlerName = channel.pipeline()
