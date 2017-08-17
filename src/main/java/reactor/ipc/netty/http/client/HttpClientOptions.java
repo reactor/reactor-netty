@@ -342,6 +342,30 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	@Override
+	public HttpClientOptions sslCloseNotifyFlushTimeout(Duration sslCloseNotifyFlushTimeout) {
+		super.sslCloseNotifyFlushTimeout(sslCloseNotifyFlushTimeout);
+		return this;
+	}
+
+	@Override
+	public HttpClientOptions sslCloseNotifyFlushTimeoutMillis(long sslCloseNotifyFlushTimeoutMillis) {
+		super.sslCloseNotifyFlushTimeoutMillis(sslCloseNotifyFlushTimeoutMillis);
+		return this;
+	}
+
+	@Override
+	public HttpClientOptions sslCloseNotifyReadTimeout(Duration sslCloseNotifyReadTimeout) {
+		super.sslCloseNotifyReadTimeout(sslCloseNotifyReadTimeout);
+		return this;
+	}
+
+	@Override
+	public HttpClientOptions sslCloseNotifyReadTimeoutMillis(long sslCloseNotifyReadTimeoutMillis) {
+		super.sslCloseNotifyReadTimeoutMillis(sslCloseNotifyReadTimeoutMillis);
+		return this;
+	}
+
+	@Override
 	public HttpClientOptions sslSupport() {
 		super.sslSupport();
 		return this;

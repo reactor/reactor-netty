@@ -65,14 +65,16 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 
 	final BOOSTRAP bootstrapTemplate;
 
-	boolean                    preferNative              = DEFAULT_NATIVE;
-	LoopResources              loopResources             = null;
-	ChannelGroup               channelGroup              = null;
-	SslContext                 sslContext                = null;
-	long                       sslHandshakeTimeoutMillis = 10000L;
-	Consumer<? super Channel>  afterChannelInit          = null;
-	Consumer<? super Channel>  afterChannelInitUser      = null;
-	Predicate<? super Channel> onChannelInit             = null;
+	boolean                    preferNative                     = DEFAULT_NATIVE;
+	LoopResources              loopResources                    = null;
+	ChannelGroup               channelGroup                     = null;
+	SslContext                 sslContext                       = null;
+	long                       sslHandshakeTimeoutMillis        = 10000L;
+	long                       sslCloseNotifyFlushTimeoutMillis = 3000L;
+	long                       sslCloseNotifyReadTimeoutMillis  = 0L;
+	Consumer<? super Channel>  afterChannelInit                 = null;
+	Consumer<? super Channel>  afterChannelInitUser             = null;
+	Predicate<? super Channel> onChannelInit                    = null;
 
 	NettyOptions(BOOSTRAP bootstrapTemplate) {
 		this.bootstrapTemplate = bootstrapTemplate;
@@ -82,6 +84,8 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 	NettyOptions(NettyOptions<BOOSTRAP, ?> options) {
 		this.bootstrapTemplate = options.bootstrapTemplate.clone();
 		this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis;
+		this.sslCloseNotifyFlushTimeoutMillis = options.sslCloseNotifyFlushTimeoutMillis;
+		this.sslCloseNotifyReadTimeoutMillis = options.sslCloseNotifyReadTimeoutMillis;
 		this.sslContext = options.sslContext;
 
 		this.afterChannelInit = options.afterChannelInit;
@@ -250,6 +254,8 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 			sslHandler = sslContext.newHandler(allocator);
 		}
 		sslHandler.setHandshakeTimeoutMillis(sslHandshakeTimeoutMillis);
+		sslHandler.setCloseNotifyFlushTimeoutMillis(sslCloseNotifyFlushTimeoutMillis);
+		sslHandler.setCloseNotifyReadTimeoutMillis(sslCloseNotifyReadTimeoutMillis);
 		return sslHandler;
 	}
 
@@ -367,9 +373,79 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 		return (SO) this;
 	}
 
+
+	/**
+	 * Set the options to use for configuring SSL close_notify flush timeout. Default to 3000 ms.
+	 *
+	 * @param sslCloseNotifyFlushTimeout The timeout {@link Duration}
+	 *
+	 * @return {@literal this}
+	 */
+	public SO sslCloseNotifyFlushTimeout(Duration sslCloseNotifyFlushTimeout) {
+		Objects.requireNonNull(sslCloseNotifyFlushTimeout, "sslCloseNotifyFlushTimeout");
+		return sslCloseNotifyFlushTimeoutMillis(sslCloseNotifyFlushTimeout.toMillis());
+	}
+
+
+	/**
+	 * Set the options to use for configuring SSL close_notify flush timeout. Default to 3000 ms.
+	 *
+	 * @param sslCloseNotifyFlushTimeoutMillis The timeout in milliseconds
+	 *
+	 * @return {@literal this}
+	 */
+	public SO sslCloseNotifyFlushTimeoutMillis(long sslCloseNotifyFlushTimeoutMillis) {
+		if (sslCloseNotifyFlushTimeoutMillis < 0L) {
+			throw new IllegalArgumentException("ssl close_notify flush timeout must be positive," +
+					" was: " + sslCloseNotifyFlushTimeoutMillis);
+		}
+		this.sslCloseNotifyFlushTimeoutMillis = sslCloseNotifyFlushTimeoutMillis;
+		return (SO) this;
+	}
+
+
+	/**
+	 * Set the options to use for configuring SSL close_notify read timeout. Default to 0 ms.
+	 *
+	 * @param sslCloseNotifyReadTimeout The timeout {@link Duration}
+	 *
+	 * @return {@literal this}
+	 */
+	public SO sslCloseNotifyReadTimeout(Duration sslCloseNotifyReadTimeout) {
+		Objects.requireNonNull(sslCloseNotifyReadTimeout, "sslCloseNotifyReadTimeout");
+		return sslCloseNotifyFlushTimeoutMillis(sslCloseNotifyReadTimeout.toMillis());
+	}
+
+
+	/**
+	 * Set the options to use for configuring SSL close_notify read timeout. Default to 0 ms.
+	 *
+	 * @param sslCloseNotifyReadTimeoutMillis The timeout in milliseconds
+	 *
+	 * @return {@literal this}
+	 */
+	public SO sslCloseNotifyReadTimeoutMillis(long sslCloseNotifyReadTimeoutMillis) {
+		if (sslCloseNotifyReadTimeoutMillis < 0L) {
+			throw new IllegalArgumentException("ssl close_notify read timeout must be positive," +
+					" was: " + sslCloseNotifyReadTimeoutMillis);
+		}
+		this.sslCloseNotifyReadTimeoutMillis = sslCloseNotifyReadTimeoutMillis;
+		return (SO) this;
+	}
+
 	@Override
 	public String toString() {
-		return "NettyOptions{" + "bootstrapTemplate=" + bootstrapTemplate + ", sslHandshakeTimeoutMillis=" + sslHandshakeTimeoutMillis + ", sslContext=" + sslContext + ", preferNative=" + preferNative + ", afterChannelInit=" + afterChannelInit + ", onChannelInit=" + onChannelInit + ", loopResources=" + loopResources + '}';
+		return "NettyOptions{"
+				+ "bootstrapTemplate=" + bootstrapTemplate
+				+ ", sslHandshakeTimeoutMillis=" + sslHandshakeTimeoutMillis
+				+ ", sslCloseNotifyFlushTimeoutMillis=" + sslCloseNotifyFlushTimeoutMillis
+				+ ", sslCloseNotifyReadTimeoutMillis=" + sslCloseNotifyReadTimeoutMillis
+				+ ", sslContext=" + sslContext
+				+ ", preferNative=" + preferNative
+				+ ", afterChannelInit=" + afterChannelInit
+				+ ", onChannelInit=" + onChannelInit
+				+ ", loopResources=" + loopResources
+				+ '}';
 	}
 
 	static final boolean DEFAULT_NATIVE =

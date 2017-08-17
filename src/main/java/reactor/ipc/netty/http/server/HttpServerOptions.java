@@ -165,6 +165,30 @@ public final class HttpServerOptions extends ServerOptions {
 	}
 
 	@Override
+	public HttpServerOptions sslCloseNotifyFlushTimeout(Duration sslCloseNotifyFlushTimeout) {
+		super.sslCloseNotifyFlushTimeout(sslCloseNotifyFlushTimeout);
+		return this;
+	}
+
+	@Override
+	public HttpServerOptions sslCloseNotifyFlushTimeoutMillis(long sslCloseNotifyFlushTimeoutMillis) {
+		super.sslCloseNotifyFlushTimeoutMillis(sslCloseNotifyFlushTimeoutMillis);
+		return this;
+	}
+
+	@Override
+	public HttpServerOptions sslCloseNotifyReadTimeout(Duration sslCloseNotifyReadTimeout) {
+		super.sslCloseNotifyReadTimeout(sslCloseNotifyReadTimeout);
+		return this;
+	}
+
+	@Override
+	public HttpServerOptions sslCloseNotifyReadTimeoutMillis(long sslCloseNotifyReadTimeoutMillis) {
+		super.sslCloseNotifyReadTimeoutMillis(sslCloseNotifyReadTimeoutMillis);
+		return this;
+	}
+
+	@Override
 	public HttpServerOptions sslSelfSigned(Consumer<? super SslContextBuilder> configurator) {
 		super.sslSelfSigned(configurator);
 		return this;
