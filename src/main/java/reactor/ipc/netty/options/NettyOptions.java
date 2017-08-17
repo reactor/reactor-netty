@@ -64,6 +64,8 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 	private final LoopResources                    loopResources;
 	private final SslContext                       sslContext;
 	private final long                             sslHandshakeTimeoutMillis;
+	private final long                             sslCloseNotifyFlushTimeoutMillis;
+	private final long                             sslCloseNotifyReadTimeoutMillis;
 	protected final Consumer<? super Channel>      afterChannelInit;
 	protected final Consumer<? super NettyContext> afterNettyContextInit;
 	private final Predicate<? super Channel>       onChannelInit;
@@ -74,6 +76,8 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 		this.loopResources = builder.loopResources;
 		this.sslContext = builder.sslContext;
 		this.sslHandshakeTimeoutMillis = builder.sslHandshakeTimeoutMillis;
+		this.sslCloseNotifyFlushTimeoutMillis = builder.sslCloseNotifyFlushTimeoutMillis;
+		this.sslCloseNotifyReadTimeoutMillis = builder.sslCloseNotifyReadTimeoutMillis;
 		this.afterNettyContextInit = builder.afterNettyContextInit;
 		this.onChannelInit = builder.onChannelInit;
 
@@ -182,6 +186,8 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 			sslHandler = sslContext.newHandler(allocator);
 		}
 		sslHandler.setHandshakeTimeoutMillis(sslHandshakeTimeoutMillis);
+		sslHandler.setCloseNotifyFlushTimeoutMillis(sslCloseNotifyFlushTimeoutMillis);
+		sslHandler.setCloseNotifyReadTimeoutMillis(sslCloseNotifyReadTimeoutMillis);
 		return sslHandler;
 	}
 
@@ -225,6 +231,24 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 	}
 
 	/**
+	 * Returns the SSL close_notify flush timeout in millis
+	 *
+	 * @return the SSL close_notify flush timeout in millis
+	 */
+	public final long sslCloseNotifyFlushTimeoutMillis() {
+		return this.sslCloseNotifyFlushTimeoutMillis;
+	}
+
+	/**
+	 * Returns the SSL close_notify read timeout in millis
+	 *
+	 * @return the SSL close_notify read timeout in millis
+	 */
+	public final long sslCloseNotifyReadTimeoutMillis() {
+		return this.sslCloseNotifyReadTimeoutMillis;
+	}
+
+	/**
 	 * Default Ssl context if none configured or null;
 	 *
 	 * @return a default {@link SslContext}
@@ -240,6 +264,8 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 	public String asDetailedString() {
 		return "bootstrapTemplate=" + bootstrapTemplate +
 				", sslHandshakeTimeoutMillis=" + sslHandshakeTimeoutMillis +
+				", sslCloseNotifyFlushTimeoutMillis=" + sslCloseNotifyFlushTimeoutMillis +
+				", sslCloseNotifyReadTimeoutMillis=" + sslCloseNotifyReadTimeoutMillis +
 				", sslContext=" + sslContext +
 				", preferNative=" + preferNative +
 				", afterChannelInit=" + afterChannelInit +
@@ -260,14 +286,16 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 				Boolean.parseBoolean(System.getProperty("reactor.ipc.netty.epoll", "true"));
 
 		protected BOOTSTRAP bootstrapTemplate;
-		private boolean                        preferNative              = DEFAULT_NATIVE;
-		private LoopResources                  loopResources             = null;
-		private ChannelGroup                   channelGroup              = null;
-		private SslContext                     sslContext                = null;
-		private long                           sslHandshakeTimeoutMillis = 10000L;
-		private Consumer<? super Channel>      afterChannelInit          = null;
-		private Consumer<? super NettyContext> afterNettyContextInit     = null;
-		private Predicate<? super Channel>     onChannelInit             = null;
+		private boolean                        preferNative                     = DEFAULT_NATIVE;
+		private LoopResources                  loopResources                    = null;
+		private ChannelGroup                   channelGroup                     = null;
+		private SslContext                     sslContext                       = null;
+		private long                           sslHandshakeTimeoutMillis        = 10000L;
+		private long                           sslCloseNotifyFlushTimeoutMillis = 3000L;
+		private long                           sslCloseNotifyReadTimeoutMillis  = 0L;
+		private Consumer<? super Channel>      afterChannelInit                 = null;
+		private Consumer<? super NettyContext> afterNettyContextInit            = null;
+		private Predicate<? super Channel>     onChannelInit                    = null;
 
 		protected Builder(BOOTSTRAP bootstrapTemplate) {
 			this.bootstrapTemplate = bootstrapTemplate;
@@ -397,6 +425,65 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 		}
 
 		/**
+		 * Set the options to use for configuring SSL close_notify flush timeout. Default to 3000 ms.
+		 *
+		 * @param sslCloseNotifyFlushTimeout The timeout {@link Duration}
+		 *
+		 * @return {@code this}
+		 */
+		public final BUILDER sslCloseNotifyFlushTimeout(Duration sslCloseNotifyFlushTimeout) {
+			Objects.requireNonNull(sslCloseNotifyFlushTimeout, "sslCloseNotifyFlushTimeout");
+			return sslCloseNotifyFlushTimeoutMillis(sslCloseNotifyFlushTimeout.toMillis());
+		}
+
+
+		/**
+		 * Set the options to use for configuring SSL close_notify flush timeout. Default to 3000 ms.
+		 *
+		 * @param sslCloseNotifyFlushTimeoutMillis The timeout in milliseconds
+		 *
+		 * @return {@code this}
+		 */
+		public final BUILDER sslCloseNotifyFlushTimeoutMillis(long sslCloseNotifyFlushTimeoutMillis) {
+			if (sslCloseNotifyFlushTimeoutMillis < 0L) {
+				throw new IllegalArgumentException("ssl close_notify flush timeout must be positive," +
+						" was: " + sslCloseNotifyFlushTimeoutMillis);
+			}
+			this.sslCloseNotifyFlushTimeoutMillis = sslCloseNotifyFlushTimeoutMillis;
+			return get();
+		}
+
+
+		/**
+		 * Set the options to use for configuring SSL close_notify read timeout. Default to 0 ms.
+		 *
+		 * @param sslCloseNotifyReadTimeout The timeout {@link Duration}
+		 *
+		 * @return {@code this}
+		 */
+		public final BUILDER sslCloseNotifyReadTimeout(Duration sslCloseNotifyReadTimeout) {
+			Objects.requireNonNull(sslCloseNotifyReadTimeout, "sslCloseNotifyReadTimeout");
+			return sslCloseNotifyFlushTimeoutMillis(sslCloseNotifyReadTimeout.toMillis());
+		}
+
+
+		/**
+		 * Set the options to use for configuring SSL close_notify read timeout. Default to 0 ms.
+		 *
+		 * @param sslCloseNotifyReadTimeoutMillis The timeout in milliseconds
+		 *
+		 * @return {@code this}
+		 */
+		public final BUILDER sslCloseNotifyReadTimeoutMillis(long sslCloseNotifyReadTimeoutMillis) {
+			if (sslCloseNotifyReadTimeoutMillis < 0L) {
+				throw new IllegalArgumentException("ssl close_notify read timeout must be positive," +
+						" was: " + sslCloseNotifyReadTimeoutMillis);
+			}
+			this.sslCloseNotifyReadTimeoutMillis = sslCloseNotifyReadTimeoutMillis;
+			return get();
+		}
+
+		/**
 		 * Setup a callback called after each {@link Channel} initialization, once
 		 * reactor-netty pipeline handlers have been registered.
 		 *
@@ -451,6 +538,8 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 			this.loopResources = options.getLoopResources();
 			this.sslContext = options.sslContext();
 			this.sslHandshakeTimeoutMillis = options.sslHandshakeTimeoutMillis();
+			this.sslCloseNotifyFlushTimeoutMillis = options.sslCloseNotifyFlushTimeoutMillis();
+			this.sslCloseNotifyReadTimeoutMillis = options.sslCloseNotifyReadTimeoutMillis();
 			this.afterChannelInit = options.afterChannelInit();
 			this.onChannelInit = options.onChannelInit();
 			this.afterNettyContextInit = options.afterNettyContextInit();
