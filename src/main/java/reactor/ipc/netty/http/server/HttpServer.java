@@ -26,12 +26,11 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.NetUtil;
-
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -39,7 +38,6 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.options.ServerOptions;
-import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpServer;
 
 /**
@@ -49,7 +47,7 @@ import reactor.ipc.netty.tcp.TcpServer;
  * @author Violeta Georgieva
  */
 public final class HttpServer
-		implements NettyConnector<HttpServerRequest, HttpServerResponse> {
+		implements HttpBinding {
 
 	/**
 	 * Build a simple Netty HTTP server listening on localhost (127.0.0.1) and
@@ -133,6 +131,16 @@ public final class HttpServer
 		this.server = new TcpBridgeServer(this.options);
 	}
 
+	public static final HttpMultiServer bindMultiple(
+			Consumer<? super HttpServerOptions.Builder> firstOptions) {
+		return new HttpMultiServer(firstOptions);
+	}
+
+	public static final HttpBinding hybridSecure(String bindAddress, int securePort, int normalPort, SslContext sslContext) {
+		return new HttpMultiServer(o -> o.sslContext(sslContext).host(bindAddress).port(securePort))
+				.and(o -> o.host(bindAddress).port(normalPort));
+	}
+
 	/**
 	 * Get a copy of the {@link HttpServerOptions} currently in effect.
 	 *
@@ -149,40 +157,13 @@ public final class HttpServer
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public Mono<? extends NettyContext> newHandler(BiFunction<? super HttpServerRequest, ? super
-			HttpServerResponse, ? extends Publisher<Void>> handler) {
+	public Mono<? extends NettyContext> newHandler(
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return server.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) handler);
 	}
 
-	/**
-	 * Define routes for the server through the provided {@link HttpServerRoutes} builder.
-	 *
-	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
-	 * @return a new {@link Mono} starting the router on subscribe
-	 */
-	public Mono<? extends NettyContext> newRouter(Consumer<? super HttpServerRoutes>
-			routesBuilder) {
-		Objects.requireNonNull(routesBuilder, "routeBuilder");
-		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
-		routesBuilder.accept(routes);
-		return newHandler(routes);
-	}
-
-	public BlockingNettyContext startRouter(Consumer<? super HttpServerRoutes> routesBuilder) {
-		Objects.requireNonNull(routesBuilder, "routeBuilder");
-		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
-		routesBuilder.accept(routes);
-		return start(routes);
-	}
-
-	public void startRouterAndAwait(Consumer<? super HttpServerRoutes> routesBuilder,
-			Consumer<BlockingNettyContext> onStart) {
-		Objects.requireNonNull(routesBuilder, "routeBuilder");
-		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
-		routesBuilder.accept(routes);
-		startAndAwait(routes, onStart);
-	}
+	//note: methods around routers (newRouter, startRouter, startRouterAndAwait) are in HttpBinding
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
 
