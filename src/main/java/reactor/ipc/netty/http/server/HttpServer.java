@@ -169,6 +169,15 @@ public final class HttpServer
 		return newHandler(routes);
 	}
 
+	/**
+	 * Start an HttpServer with routes defined through the provided {@link HttpServerRoutes}
+	 * builder, in a blocking fashion, and wait for it to finish initializing.
+	 * The returned {@link BlockingNettyContext} class offers a simplified API around operating
+	 * the client/server in a blocking fashion, including to {@link BlockingNettyContext#shutdown() shut it down}.
+	 *
+	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
+	 * @return a {@link BlockingNettyContext}
+	 */
 	public BlockingNettyContext startRouter(Consumer<? super HttpServerRoutes> routesBuilder) {
 		Objects.requireNonNull(routesBuilder, "routeBuilder");
 		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
@@ -176,6 +185,37 @@ public final class HttpServer
 		return start(routes);
 	}
 
+	/**
+	 * Start an HttpServer with routes defined through the provided {@link HttpServerRoutes}
+	 * builder, in a fully blocking fashion, not only waiting for it to
+	 * initialize but also blocking during the full lifecycle of the server.
+	 * Since most servers will be long-lived, this is more adapted to running a server
+	 * out of a main method, only allowing shutdown of the servers through sigkill.
+	 * <p>
+	 * Note that a {@link Runtime#addShutdownHook(Thread) JVM shutdown hook} is added
+	 * by this method in order to properly disconnect the client/server upon receiving
+	 * a sigkill signal.
+	 *
+	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
+	 */
+	public void startRouterAndAwait(Consumer<? super HttpServerRoutes> routesBuilder) {
+		startRouterAndAwait(routesBuilder, null);
+	}
+
+	/**
+	 * Start an HttpServer with routes defined through the provided {@link HttpServerRoutes}
+	 * builder, in a fully blocking fashion, not only waiting for it to
+	 * initialize but also blocking during the full lifecycle of the server.
+	 * Since most servers will be long-lived, this is more adapted to running a server
+	 * out of a main method, only allowing shutdown of the servers through sigkill.
+	 * <p>
+	 * Note that a {@link Runtime#addShutdownHook(Thread) JVM shutdown hook} is added
+	 * by this method in order to properly disconnect the client/server upon receiving
+	 * a sigkill signal.
+	 *
+	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
+	 * @param onStart an optional callback to be invoked once the server has finished initializing.
+	 */
 	public void startRouterAndAwait(Consumer<? super HttpServerRoutes> routesBuilder,
 			Consumer<BlockingNettyContext> onStart) {
 		Objects.requireNonNull(routesBuilder, "routeBuilder");
