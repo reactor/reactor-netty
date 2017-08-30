@@ -181,6 +181,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 			ContextHandler<SocketChannel> contextHandler =
 					doHandler(targetHandler, sink, secure, remote, pool, onSetup);
+			sink.onCancel(contextHandler);
 
 			if (pool == null) {
 				Bootstrap b = options.get();

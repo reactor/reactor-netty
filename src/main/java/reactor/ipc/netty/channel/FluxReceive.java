@@ -156,6 +156,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			boolean d = inboundDone;
 
 			if (a == null) {
+				if (isCancelled()) {
+					cleanQueue(q);
+					return false;
+				}
 				if (d && getPending() == 0) {
 					Throwable ex = inboundError;
 					if (ex != null) {
