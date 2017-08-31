@@ -255,7 +255,7 @@ public class TcpResources implements PoolResources, LoopResources {
 			BiFunction<LoopResources, PoolResources, T> onNew) {
 		if (previous == null) {
 			loops = loops == null ? LoopResources.create("reactor-" + name) : loops;
-			pools = pools == null ? PoolResources.fixed(name) : pools;
+			pools = pools == null ? PoolResources.elastic(name) : pools;
 		}
 		else {
 			loops = loops == null ? previous.defaultLoops : loops;
