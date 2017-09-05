@@ -474,7 +474,7 @@ public class HttpClientTest {
 						          .addHeader("Accept-Encoding", "deflate")
 				          )
 				          .flatMap(r -> r.receive().asString().elementAt(0).map(s -> s.substring(0, 100))
-				                      .and(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
+				                      .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
 		)
 		            .expectNextMatches(tuple -> !tuple.getT1().contains("<html>") && !tuple.getT1().contains("<head>")
 				            && "gzip".equals(tuple.getT2()))
@@ -490,7 +490,7 @@ public class HttpClientTest {
 					                    .addHeader("Accept-Encoding", "deflate");
 				          })
 				          .flatMap(r -> r.receive().asString().elementAt(0).map(s -> s.substring(0, 100))
-				                      .and(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
+				                      .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
 		)
 		            .expectNextMatches(tuple -> tuple.getT1().contains("<html>") && tuple.getT1().contains("<head>")
 				            && "".equals(tuple.getT2()))
