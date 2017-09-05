@@ -33,6 +33,7 @@ import reactor.core.publisher.Operators;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
+import reactor.util.context.Context;
 
 /**
  * @author Stephane Maldini
@@ -340,7 +341,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	final boolean onInboundError(Throwable err) {
 		if (isCancelled() || inboundDone) {
-			Operators.onErrorDropped(err);
+			Context c = receiver == null ? Context.empty() : receiver.currentContext();
+			Operators.onErrorDropped(err, c);
 			return false;
 		}
 		CoreSubscriber<?> receiver = this.receiver;

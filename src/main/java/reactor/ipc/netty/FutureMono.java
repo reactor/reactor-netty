@@ -107,8 +107,8 @@ public abstract class FutureMono extends Mono<Void> {
 
 			if (f == null) {
 				Operators.error(s,
-						Operators.onOperatorError(new NullPointerException(
-								"Deferred supplied null")));
+						Operators.onOperatorError(new NullPointerException("Deferred supplied null"),
+								s.currentContext()));
 				return;
 			}
 

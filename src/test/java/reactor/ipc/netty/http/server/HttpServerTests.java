@@ -443,6 +443,7 @@ public class HttpServerTests {
 
 		//shutdown the router to unblock the thread
 		ref.get().shutdown();
+		Thread.sleep(100);
 		assertThat(f.isDone()).isTrue();
 	}
 }

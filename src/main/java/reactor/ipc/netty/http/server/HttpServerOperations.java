@@ -456,7 +456,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (replace(ops)) {
 				return FutureMono.from(ops.handshakerResult)
 				                 .then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops))))
-				                 .doAfterTerminate(ops);
+				                 .doAfterSuccessOrError(ops);
 			}
 		}
 		else {
