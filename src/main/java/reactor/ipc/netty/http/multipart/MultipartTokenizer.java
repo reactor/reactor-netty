@@ -101,7 +101,7 @@ final class MultipartTokenizer
 	@Override
 	public void onError(Throwable throwable) {
 		if (this.done) {
-			Operators.onErrorDropped(throwable);
+			Operators.onErrorDropped(throwable, actual.currentContext());
 			return;
 		}
 
@@ -112,7 +112,7 @@ final class MultipartTokenizer
 	@Override
 	public void onNext(ByteBuf byteBuf) {
 		if (this.done) {
-			Operators.onNextDropped(byteBuf);
+			Operators.onNextDropped(byteBuf, actual.currentContext());
 			return;
 		}
 
@@ -168,7 +168,8 @@ final class MultipartTokenizer
 			if (Integer.MAX_VALUE > n) {  // TODO: Support smaller request sizes
 				actual.onError(Operators.onOperatorError(this, new
 						IllegalArgumentException(
-						"This operation only supports unbounded requests, was " + n), n));
+						"This operation only supports unbounded requests, was " + n), n,
+						actual.currentContext()));
 				return;
 			}
 			Subscription s = this.subscription;
@@ -176,7 +177,8 @@ final class MultipartTokenizer
 				s.request(n);
 			}
 		} catch (Throwable throwable) {
-			actual.onError(Operators.onOperatorError(this, throwable, n));
+			actual.onError(Operators.onOperatorError(this, throwable, n,
+					actual.currentContext()));
 		}
 	}
 

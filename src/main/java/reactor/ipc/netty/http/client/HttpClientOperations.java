@@ -681,7 +681,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						                                 ops,
 						                                 ops))));
 				if (websocketHandler != noopHandler()) {
-					handshake = handshake.doAfterTerminate(ops);
+					handshake = handshake.doAfterSuccessOrError(ops);
 				}
 				return handshake;
 			}
@@ -695,7 +695,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				if (websocketHandler != noopHandler()) {
 					handshake =
 							handshake.then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops)))
-							         .doAfterTerminate(ops));
+							         .doAfterSuccessOrError(ops));
 				}
 				return handshake;
 			}

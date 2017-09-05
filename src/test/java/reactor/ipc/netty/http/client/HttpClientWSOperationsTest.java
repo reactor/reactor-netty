@@ -104,7 +104,7 @@ public class HttpClientWSOperationsTest {
 	}
 
 	private Mono<HttpClientRequest> doLoginFirst(Mono<HttpClientRequest> request, int port) {
-		return Mono.when(request, login(port))
+		return Mono.zip(request, login(port))
 		           .map(tuple -> {
 		               HttpClientRequest req = tuple.getT1();
 		               req.addHeader("Authorization", tuple.getT2());

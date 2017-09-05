@@ -129,7 +129,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 				cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.terminationFuture());
 			}
 
-			return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono).then();
+			return Mono.zip(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono).then();
 		});
 	}
 
