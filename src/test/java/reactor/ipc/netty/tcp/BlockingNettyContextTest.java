@@ -52,6 +52,23 @@ public class BlockingNettyContextTest {
 		}
 	};
 
+	static final NettyContext IMMEDIATE_STOP_CONTEXT = new NettyContext() {
+		@Override
+		public Channel channel() {
+			return new EmbeddedChannel();
+		}
+
+		@Override
+		public InetSocketAddress address() {
+			return InetSocketAddress.createUnresolved("localhost", 4321);
+		}
+
+		@Override
+		public Mono<Void> onClose() {
+			return Mono.empty();
+		}
+	};
+
 	@Test
 	public void simpleServerFromAsyncServer() throws InterruptedException {
 		BlockingNettyContext simpleServer =
@@ -169,5 +186,69 @@ public class BlockingNettyContextTest {
 		assertThat(facade.getContext()).isSameAs(NEVER_STOP_CONTEXT);
 		assertThat(facade.getPort()).isEqualTo(NEVER_STOP_CONTEXT.address().getPort());
 		assertThat(facade.getHost()).isEqualTo(NEVER_STOP_CONTEXT.address().getHostString());
+	}
+
+	@Test
+	public void shutdownHookDeregisteredOnShutdown() {
+		BlockingNettyContext facade =
+				new BlockingNettyContext(Mono.just(IMMEDIATE_STOP_CONTEXT), "test");
+
+		facade.installShutdownHook();
+		Thread hook = facade.getShutdownHook();
+
+		assertThat(hook).isNotNull();
+
+		facade.shutdown();
+
+		assertThat(Runtime.getRuntime().removeShutdownHook(hook))
+				.withFailMessage("hook wasn't deregistered by shutdown")
+				.isFalse();
+		assertThat(facade.getShutdownHook())
+				.withFailMessage("hook reference wasn't nulled by shutdown")
+				.isNull();
+	}
+
+	@Test
+	public void installShutdownHookTwice() {
+		BlockingNettyContext facade =
+				new BlockingNettyContext(Mono.just(IMMEDIATE_STOP_CONTEXT), "test");
+
+		facade.installShutdownHook();
+		Thread hook1 = facade.getShutdownHook();
+
+		facade.installShutdownHook();
+		Thread hook2 = facade.getShutdownHook();
+
+		assertThat(hook1).isSameAs(hook2);
+
+		facade.shutdown();
+
+		assertThat(facade.getShutdownHook())
+				.withFailMessage("hook1 wasn't nulled out by shutdown")
+				.isNull();
+		assertThat(Runtime.getRuntime().removeShutdownHook(hook1))
+				.withFailMessage("hook1 wasn't deregistered by shutdown")
+				.isFalse();
+	}
+
+	@Test
+	public void smokeTestShutdownHook() {
+		BlockingNettyContext simpleServer =
+				TcpServer.create()
+				         .start((in, out) -> out
+						         .options(NettyPipeline.SendOptions::flushOnEach)
+						         .sendString(
+								         in.receive()
+								           .asString()
+								           .takeUntil(s -> s.endsWith("CONTROL"))
+								           .map(s -> "ECHO: " + s.replaceAll("CONTROL", ""))
+								           .concatWith(Mono.just("DONE"))
+						         )
+						         .neverComplete()
+				         );
+
+		simpleServer.installShutdownHook();
+		simpleServer.getShutdownHook().setName("BlockingNettyContextTest.smokeTestShutdownHook");
+		//this test doesn't assert anything, but look out for JVM shutdown hook messages
 	}
 }

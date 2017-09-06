@@ -88,10 +88,11 @@ public interface NettyConnector<INBOUND extends NettyInbound, OUTBOUND extends N
 	void startAndAwait(T handler, @Nullable Consumer<BlockingNettyContext> onStart) {
 		BlockingNettyContext facade = new BlockingNettyContext(newHandler(handler), getClass().getSimpleName());
 
+		facade.installShutdownHook();
+
 		if (onStart != null) {
 			onStart.accept(facade);
 		}
-		Runtime.getRuntime().addShutdownHook(new Thread(facade::shutdown));
 
 		facade.getContext()
 		      .onClose()
