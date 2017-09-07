@@ -134,11 +134,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected boolean shouldEmitEmptyContext() {
-		return true;
-	}
-
-	@Override
 	public HttpClientRequest addCookie(Cookie cookie) {
 		if (!hasSentHeaders()) {
 			this.requestHeaders.add(HttpHeaderNames.COOKIE,
