@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.client;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -258,6 +259,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	protected void onInboundCancel() {
 		channel().close();
+	}
+
+	@Override
+	protected void onInboundComplete() {
+		if (responseState == null) {
+			parentContext().fireContextError(new IOException("Connection closed prematurely"));
+			return;
+		}
+		super.onInboundComplete();
 	}
 
 	@Override
