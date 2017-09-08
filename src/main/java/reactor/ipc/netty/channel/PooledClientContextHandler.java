@@ -80,10 +80,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	public void fireContextActive(NettyContext context) {
 		if (!fired) {
 			fired = true;
-			if(context != null) {
+			if (context != null) {
 				sink.success(context);
 			}
-			else{
+			else {
 				sink.success();
 			}
 		}
@@ -100,7 +100,8 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 			if (f == DISPOSED) {
 				if (log.isDebugEnabled()) {
-					log.debug("Cancelled existing channel from pool: {}", pool.toString());
+					log.debug("Cancelled existing channel from pool: {}",
+							pool.toString());
 				}
 				sink.success();
 				return;
@@ -111,8 +112,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			}
 		}
 		if (log.isDebugEnabled()) {
-			log.debug("Acquiring existing channel from pool: {} {}", future, pool
-					.toString());
+			log.debug("Acquiring existing channel from pool: {} {}",
+					future,
+					pool.toString());
 		}
 		((Future<CHANNEL>) future).addListener(this);
 	}
@@ -135,7 +137,8 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		if (DISPOSED == this.future) {
 			if (log.isDebugEnabled()) {
 				log.debug("Dropping acquisition {} because of {}",
-						future, "asynchronous user cancellation");
+						future,
+						"asynchronous user cancellation");
 			}
 			if (future.isSuccess()) {
 				disposeOperationThenRelease(future.get());
@@ -153,7 +156,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			}
 			return;
 		}
-
 
 		CHANNEL c = future.get();
 
@@ -191,11 +193,13 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			if (log.isDebugEnabled()) {
 				log.debug("Created new pooled channel: " + c.toString());
 			}
-			c.closeFuture().addListener(ff -> release(c));
+			c.closeFuture()
+			 .addListener(ff -> release(c));
 			return;
 		}
 		if (!c.isActive()) {
-			log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}", c.toString());
+			log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}",
+					c.toString());
 			release(c);
 			setFuture(pool.acquire());
 			return;
@@ -203,7 +207,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		if (log.isDebugEnabled()) {
 			log.debug("Acquired active channel: " + c.toString());
 		}
-		if(createOperations(c, null) == null){
+		if (createOperations(c, null) == null) {
 			setFuture(pool.acquire());
 		}
 	}
@@ -239,7 +243,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 	}
 
-	final void disposeOperationThenRelease(CHANNEL c){
+	final void disposeOperationThenRelease(CHANNEL c) {
 		ChannelOperations<?, ?> ops = ChannelOperations.get(c);
 		//defer to operation dispose if present
 		if (ops != null) {
@@ -261,13 +265,11 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 		pool.release(c)
 		    .addListener(f -> {
-			    if (c.isActive()) {
-				    if (f.isSuccess()) {
-					    onReleaseEmitter.onComplete();
-				    }
-				    else {
-					    onReleaseEmitter.onError(f.cause());
-				    }
+			    if (f.isSuccess()) {
+				    onReleaseEmitter.onComplete();
+			    }
+			    else {
+				    onReleaseEmitter.onError(f.cause());
 			    }
 		    });
 
