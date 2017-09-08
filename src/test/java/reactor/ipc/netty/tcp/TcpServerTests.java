@@ -261,7 +261,7 @@ public class TcpServerTests {
 	public void test5() throws Exception {
 		//Hot stream of data, could be injected from anywhere
 		EmitterProcessor<String> broadcaster =
-				EmitterProcessor.<String>create();
+				EmitterProcessor.create();
 
 		//Get a reference to the tail of the operation pipeline (microbatching + partitioning)
 		final Processor<List<String>, List<String>> processor =
@@ -519,10 +519,9 @@ public class TcpServerTests {
 					           .subscribe(v -> clientLatch.countDown());
 
 					         return out.sendString(Mono.just("gogogo"))
-					                   //TODO cannot nevercomplete here (the client onClose hangs), cannot use `then()` either :(
-					                   .then(Mono.delay(Duration.ofMillis(500)).then());
+					                   .neverComplete();
 				         })
-				         .block(Duration.ofMillis(500));
+				         .block();
 
 		NettyContext client2 =
 				TcpClient.create(opt -> opt.port(context.address().getPort()))
@@ -533,12 +532,11 @@ public class TcpServerTests {
 					           .subscribe(v -> clientLatch.countDown());
 
 					         return out.sendString(Mono.just("GOGOGO"))
-					                   //TODO cannot nevercomplete here (the client onClose hangs), cannot use `then()` either :(
-					                   .then(Mono.delay(Duration.ofMillis(500)).then());
+					                   .neverComplete();
 				         })
-				         .block(Duration.ofMillis(500));
+				         .block();
 
-		clientLatch.await(1, TimeUnit.SECONDS);
+		clientLatch.await();
 
 		client1.dispose();
 		client1.onClose().block();
