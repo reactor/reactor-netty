@@ -19,12 +19,10 @@ package reactor.ipc.netty;
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import reactor.core.publisher.Flux;
-import reactor.ipc.connector.Inbound;
 
 /**
  * An inbound-traffic API delegating to an underlying {@link Channel}
@@ -32,7 +30,7 @@ import reactor.ipc.connector.Inbound;
  * @author Stephane Maldini
  * @since 0.6
  */
-public interface NettyInbound extends Inbound<ByteBuf> {
+public interface NettyInbound {
 
 	/**
 	 * Return a pre-configured attribute stored in every inbound channel
@@ -88,7 +86,6 @@ public interface NettyInbound extends Inbound<ByteBuf> {
 	 * A {@link Flux} extension that allows for extra decoding operators
 	 * @return a new {@link ByteBufFlux}
 	 */
-	@Override
 	default ByteBufFlux receive() {
 		return ByteBufFlux.fromInbound(receiveObject(),
 				context().channel()

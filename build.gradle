@@ -201,7 +201,6 @@ configure(rootProject) { project ->
 	// Logging
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
 
-	compile "io.projectreactor.ipc:reactor-ipc:$reactorIpcVersion"
 	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
 
 	//Default reactor-netty impl

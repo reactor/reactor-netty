@@ -40,14 +40,27 @@ import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.connector.Outbound;
 import reactor.ipc.netty.channel.data.AbstractFileChunkedStrategy;
 import reactor.ipc.netty.channel.data.FileChunkedStrategy;
 
 /**
  * @author Stephane Maldini
  */
-public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
+public interface NettyOutbound extends Publisher<Void> {
+
+	FileChunkedStrategy<ByteBuf> FILE_CHUNKED_STRATEGY_BUFFER = new AbstractFileChunkedStrategy<ByteBuf>() {
+
+		@Override
+		public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel) {
+			try {
+				//TODO tune the chunk size
+				return new ChunkedNioFile(fileChannel, 1024);
+			}
+			catch (IOException e) {
+				throw Exceptions.propagate(e);
+			}
+		}
+	};
 
 	/**
 	 * Return the assigned {@link ByteBufAllocator}.
@@ -57,22 +70,6 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	default ByteBufAllocator alloc() {
 		return context().channel()
 		                .alloc();
-	}
-
-	/**
-	 * Provide a new {@link NettyOutbound} scoped configuration for sending. The
-	 * {@link NettyPipeline.SendOptions} changes will apply to the next written object or
-	 * {@link Publisher}.
-	 *
-	 * @param configurator the callback invoked to retrieve send configuration
-	 *
-	 * @return {@code this} instance
-	 */
-	default NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-		context().channel()
-		         .pipeline()
-		         .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator, null));
-		return this;
 	}
 
 	/**
@@ -97,6 +94,21 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 		return this;
 	}
 
+	default FileChunkedStrategy getFileChunkedStrategy() {
+		return FILE_CHUNKED_STRATEGY_BUFFER;
+	}
+
+	/**
+	 * Return a never completing {@link Mono} after this {@link NettyOutbound#then()} has
+	 * completed.
+	 *
+	 * @return a never completing {@link Mono} after this {@link NettyOutbound#then()} has
+	 * completed.
+	 */
+	default Mono<Void> neverComplete() {
+		return then(Mono.never()).then();
+	}
+
 	/**
 	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given
 	 * timeout. This replaces any previously set idle callback.
@@ -113,7 +125,33 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 		return this;
 	}
 
-	@Override
+	/**
+	 * Provide a new {@link NettyOutbound} scoped configuration for sending. The
+	 * {@link NettyPipeline.SendOptions} changes will apply to the next written object or
+	 * {@link Publisher}.
+	 *
+	 * @param configurator the callback invoked to retrieve send configuration
+	 *
+	 * @return {@code this} instance
+	 */
+	default NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+		context().channel()
+		         .pipeline()
+		         .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator, null));
+		return this;
+	}
+
+	/**
+	 * Send data to the peer, listen for any error on write and close on terminal signal
+	 * (complete|error). <p>A new {@link NettyOutbound} type (or the same) for typed send
+	 * sequences. An implementor can therefore specialize the Outbound after a first after
+	 * a prepending data publisher.
+	 *
+	 * @param dataStream the dataStream publishing OUT items to write on this channel
+	 *
+	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
+	 * signal successful sequence write (e.g. after "flush") or  any error during write.
+	 */
 	default NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
 		return sendObject(dataStream);
 	}
@@ -162,20 +200,6 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 		}
 	}
 
-	FileChunkedStrategy<ByteBuf> FILE_CHUNKED_STRATEGY_BUFFER = new AbstractFileChunkedStrategy<ByteBuf>() {
-
-		@Override
-		public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel) {
-			try {
-				//TODO tune the chunk size
-				return new ChunkedNioFile(fileChannel, 1024);
-			}
-			catch (IOException e) {
-				throw Exceptions.propagate(e);
-			}
-		}
-	};
-
 	/**
 	 * Send content from given {@link Path} using
 	 * {@link java.nio.channels.FileChannel#transferTo(long, long, WritableByteChannel)}
@@ -212,10 +236,6 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 					}
 					catch (IOException ioe) {/*IGNORE*/}
 				}));
-	}
-
-	default FileChunkedStrategy getFileChunkedStrategy() {
-		return FILE_CHUNKED_STRATEGY_BUFFER;
 	}
 
 	default NettyOutbound sendFileChunked(Path file, long position, long count) {
@@ -337,6 +357,15 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	}
 
 	/**
+	 * Obtain a {@link Mono} of pending outbound(s) write completion.
+	 *
+	 * @return a {@link Mono} of pending outbound(s) write completion
+	 */
+	default Mono<Void> then() {
+		return Mono.empty();
+	}
+
+	/**
 	 * Append a {@link Publisher} task such as a Mono and return a new
 	 * {@link NettyOutbound} to sequence further send.
 	 *
@@ -345,7 +374,6 @@ public interface NettyOutbound extends Outbound<ByteBuf>, Publisher<Void> {
 	 *
 	 * @return a new {@link NettyOutbound} that
 	 */
-	@Override
 	default NettyOutbound then(Publisher<Void> other) {
 		return new ReactorNetty.OutboundThen(this, other);
 	}

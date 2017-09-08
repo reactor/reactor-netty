@@ -29,7 +29,6 @@ import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.http.HttpInfos;
-import reactor.ipc.netty.http.multipart.MultipartInbound;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
@@ -92,27 +91,6 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	 */
 	default Flux<HttpContent> receiveContent(){
 		return receiveObject().ofType(HttpContent.class);
-	}
-
-	/**
-	 * Return a decoded {@link MultipartInbound}
-	 *
-	 * @return a decoded {@link MultipartInbound}
-	 */
-	default MultipartInbound receiveMultipart() {
-		HttpClientResponse thiz = this;
-		return new MultipartInbound() {
-
-			@Override
-			public NettyContext context() {
-				return thiz.context();
-			}
-
-			@Override
-			public Flux<ByteBufFlux> receiveParts() {
-				return MultipartInbound.from(thiz);
-			}
-		};
 	}
 
 	/**
