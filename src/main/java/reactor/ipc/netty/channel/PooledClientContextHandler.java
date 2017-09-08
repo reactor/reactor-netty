@@ -255,19 +255,19 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			log.debug("Releasing channel: {}", c.toString());
 		}
 
+		if (!NettyContext.isPersistent(c) && c.isActive()) {
+			c.close();
+		}
+
 		pool.release(c)
 		    .addListener(f -> {
-			    if (!c.isActive()) {
-				    return;
-			    }
-			    if (!NettyContext.isPersistent(c) && c.isActive()) {
-				    c.close();
-			    }
-			    else if (f.isSuccess()) {
-				    onReleaseEmitter.onComplete();
-			    }
-			    else {
-				    onReleaseEmitter.onError(f.cause());
+			    if (c.isActive()) {
+				    if (f.isSuccess()) {
+					    onReleaseEmitter.onComplete();
+				    }
+				    else {
+					    onReleaseEmitter.onError(f.cause());
+				    }
 			    }
 		    });
 

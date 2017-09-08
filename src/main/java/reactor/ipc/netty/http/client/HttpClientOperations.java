@@ -296,6 +296,10 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public boolean isKeepAlive() {
+		ResponseState rs = responseState;
+		if (rs != null) {
+			return HttpUtil.isKeepAlive(rs.response);
+		}
 		return HttpUtil.isKeepAlive(nettyRequest);
 	}
 
@@ -522,6 +526,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				return;
 			}
 			started = true;
+			setNettyResponse(response);
 
 			if (!isKeepAlive()) {
 				markPersistent(false);
@@ -531,7 +536,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				return;
 			}
 
-			setNettyResponse(response);
 
 			if (log.isDebugEnabled()) {
 				log.debug("{} Received response (auto-read:{}) : {}",
