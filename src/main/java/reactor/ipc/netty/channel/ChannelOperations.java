@@ -184,6 +184,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public void dispose() {
 		inbound.cancel();
+		channel.close();
 	}
 
 	@Override
