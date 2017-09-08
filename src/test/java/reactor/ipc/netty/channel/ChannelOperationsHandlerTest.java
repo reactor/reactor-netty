@@ -16,8 +16,6 @@
 
 package reactor.ipc.netty.channel;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -29,9 +27,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
-
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
@@ -40,8 +37,9 @@ import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ChannelOperationsHandlerTest {
 
@@ -109,11 +107,13 @@ public class ChannelOperationsHandlerTest {
 		Mono<HttpClientResponse> response =
 				HttpClient.create(ops -> ops.host("localhost")
 				                            .port(abortServerPort))
-				          .get("/", req -> req.sendString(Flux.just("a", "b", "c")));
+				          .get("/",
+						          req -> req.sendHeaders()
+						                    .sendString(Flux.just("a", "b", "c")));
 
 		StepVerifier.create(response)
 		            .expectError()
-		            .verify(Duration.ofSeconds(1));
+		            .verify();
 
 		abortServer.close();
 	}
