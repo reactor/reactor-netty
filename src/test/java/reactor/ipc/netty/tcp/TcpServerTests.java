@@ -58,6 +58,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyContext;
@@ -394,14 +395,12 @@ public class TcpServerTests {
 						           .flatMap(word -> "GOGOGO".equals(word) ?
 								           out.sendFile(largeFile).then() :
 								           out.sendString(Mono.just("NOPE"))
-						           ).then(out.neverComplete())
+						           )
 				         )
 				         .block();
 
-		List<String> client1Response = new ArrayList<>();
-		List<String> client2Response = new ArrayList<>();
-
-		CountDownLatch clientLatch = new CountDownLatch(2);
+		MonoProcessor<String> m1 = MonoProcessor.create();
+		MonoProcessor<String> m2 = MonoProcessor.create();
 
 		NettyContext client1 =
 				TcpClient.create(opt -> opt.port(context.address().getPort())
@@ -410,14 +409,12 @@ public class TcpServerTests {
 					         in.receive()
 					           .asString()
 					           .log("-----------------CLIENT1")
-					           .doOnNext(client1Response::add)
-					           .subscribe(v -> clientLatch.countDown());
+					           .subscribe(m1::onNext);
 
 					         return out.sendString(Mono.just("gogogo"))
-					                   //TODO cannot nevercomplete here (the client onClose hangs), cannot use `then()` either :(
-					                   .then(Mono.delay(Duration.ofMillis(500)).then());
+							         .neverComplete();
 				         })
-				         .block(Duration.ofMillis(500));
+				         .block();
 
 		NettyContext client2 =
 				TcpClient.create(opt -> opt.port(context.address().getPort())
@@ -425,17 +422,18 @@ public class TcpServerTests {
 				         .newHandler((in, out) -> {
 					         in.receive()
 					           .asString(StandardCharsets.UTF_8)
+					           .take(2)
+					           .reduceWith(String::new, String::concat)
 					           .log("-----------------CLIENT2")
-					           .doOnNext(client2Response::add)
-					           .subscribe(v -> clientLatch.countDown());
+					           .subscribe(m2::onNext);
 
 					         return out.sendString(Mono.just("GOGOGO"))
-					                   //TODO cannot nevercomplete here (the client onClose hangs), cannot use `then()` either :(
-					                   .then(Mono.delay(Duration.ofMillis(500)).then());
+					                   .neverComplete();
 				         })
-				         .block(Duration.ofMillis(500));
+				         .block();
 
-		clientLatch.await(1, TimeUnit.SECONDS);
+		String client1Response = m1.block();
+		String client2Response = m2.block();
 
 		client1.dispose();
 		client1.onClose().block();
@@ -446,13 +444,13 @@ public class TcpServerTests {
 		context.dispose();
 		context.onClose().block();
 
-		Assertions.assertThat(client1Response).containsExactly("NOPE");
+		Assertions.assertThat(client1Response).isEqualTo("NOPE");
 
-		Assertions.assertThat(client2Response.toString())
-		          .startsWith("[This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
+		Assertions.assertThat(client2Response)
+		          .startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 		          .contains("1024 mark here ->")
 		          .contains("<- 1024 mark here")
-		          .endsWith("End of File]");
+		          .endsWith("End of File");
 	}
 
 	@Test
