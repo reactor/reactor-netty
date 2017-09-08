@@ -491,6 +491,9 @@ public class TcpServerTests {
 
 	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn)
 			throws InterruptedException {
+
+
+
 		NettyContext context =
 				TcpServer.create()
 				         .newHandler((in, out) ->
@@ -499,22 +502,20 @@ public class TcpServerTests {
 						           .flatMap(word -> "GOGOGO".equals(word) ?
 								           fn.apply(out).then() :
 								           out.sendString(Mono.just("NOPE"))
-						           ).then(out.neverComplete())
+						           )
 				         )
 				         .block();
 
-		List<String> client1Response = new ArrayList<>();
-		List<String> client2Response = new ArrayList<>();
-
-		CountDownLatch clientLatch = new CountDownLatch(2);
+		MonoProcessor<String> m1 = MonoProcessor.create();
+		MonoProcessor<String> m2 = MonoProcessor.create();
 
 		NettyContext client1 =
 				TcpClient.create(opt -> opt.port(context.address().getPort()))
 				         .newHandler((in, out) -> {
 					         in.receive()
 					           .asString()
-					           .doOnNext(client1Response::add)
-					           .subscribe(v -> clientLatch.countDown());
+					           .log("-----------------CLIENT1")
+					           .subscribe(m1::onNext);
 
 					         return out.sendString(Mono.just("gogogo"))
 					                   .neverComplete();
@@ -526,15 +527,18 @@ public class TcpServerTests {
 				         .newHandler((in, out) -> {
 					         in.receive()
 					           .asString(StandardCharsets.UTF_8)
-					           .doOnNext(client2Response::add)
-					           .subscribe(v -> clientLatch.countDown());
+					           .take(2)
+					           .reduceWith(String::new, String::concat)
+					           .log("-----------------CLIENT2")
+					           .subscribe(m2::onNext);
 
 					         return out.sendString(Mono.just("GOGOGO"))
 					                   .neverComplete();
 				         })
 				         .block();
 
-		clientLatch.await();
+		String client1Response = m1.block();
+		String client2Response = m2.block();
 
 		client1.dispose();
 		client1.onClose().block();
@@ -545,13 +549,13 @@ public class TcpServerTests {
 		context.dispose();
 		context.onClose().block();
 
-		Assertions.assertThat(client1Response).containsExactly("NOPE");
+		Assertions.assertThat(client1Response).isEqualTo("NOPE");
 
-		Assertions.assertThat(client2Response.toString())
-		          .startsWith("[This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
+		Assertions.assertThat(client2Response)
+		          .startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 		          .contains("1024 mark here ->")
 		          .contains("<- 1024 mark here")
-		          .endsWith("End of File]");
+		          .endsWith("End of File");
 	}
 
 	@Test(timeout = 2000)
