@@ -94,7 +94,7 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	@Test
-	public void testChannelInactiveThrowsAbortedException() throws Exception {
+	public void testChannelInactiveThrowsIOException() throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 
 		int abortServerPort = SocketUtils.findAvailableTcpPort();
@@ -108,8 +108,7 @@ public class ChannelOperationsHandlerTest {
 
 		Mono<HttpClientResponse> response =
 				HttpClient.create(ops -> ops.host("localhost")
-				                            .port(abortServerPort)
-				                            .poolResources(PoolResources.fixed("http", 1)))
+				                            .port(abortServerPort))
 				          .get("/", req -> req.sendString(Flux.just("a", "b", "c")));
 
 		StepVerifier.create(response)
