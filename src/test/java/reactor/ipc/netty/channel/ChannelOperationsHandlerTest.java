@@ -105,8 +105,7 @@ public class ChannelOperationsHandlerTest {
 		}
 
 		Mono<HttpClientResponse> response =
-				HttpClient.create(ops -> ops.host("localhost")
-				                            .port(abortServerPort))
+				HttpClient.create(ops -> ops.connect("localhost", abortServerPort))
 				          .get("/",
 						          req -> req.sendHeaders()
 						                    .sendString(Flux.just("a", "b", "c")));
