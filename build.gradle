@@ -173,7 +173,7 @@ configure(rootProject) { project ->
 
   repositories {
 	if (version.endsWith('BUILD-SNAPSHOT') || project.hasProperty('platformVersion')) {
-	  //mavenLocal()
+	  mavenLocal()
 	  maven { url 'http://repo.spring.io/libs-snapshot' }
 	}
 	maven { url 'http://repo.spring.io/libs-milestone' }
