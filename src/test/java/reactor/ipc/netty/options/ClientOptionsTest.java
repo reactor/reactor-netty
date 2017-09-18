@@ -93,7 +93,7 @@ public class ClientOptionsTest {
 		assertThat(opsBuilder.build().useProxy(new InetSocketAddress("google.com", 123))).isTrue();
 
 		Function<ClientProxyOptions.TypeSpec, ClientProxyOptions.Builder> extProxyBuilder = 
-				proxyBuilder.andThen(ops -> ops.nonProxyHosts("localhost"));
+				proxyBuilder.andThen(ops -> ops.nonProxyHosts("localhost|127\\.0\\.0\\.1"));
 		opsBuilder.proxy(extProxyBuilder);
 		assertThat(opsBuilder.build().useProxy((String) null)).isTrue();
 		assertThat(opsBuilder.build().useProxy((InetSocketAddress) null)).isTrue();
