@@ -31,6 +31,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
@@ -211,7 +212,9 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
 
-		TcpClient.create("localhost", abortServerPort + 3)
+		TcpClient.create(ops -> ops.host("localhost")
+		                           .port(abortServerPort + 3)
+		                           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100))
 		         .newHandler((in, out) -> Mono.never())
 		         .retryWhen(errors -> errors.zipWith(Flux.range(1, 4), (a, b) -> b)
 		                                    .flatMap(attempt -> {
