@@ -153,7 +153,6 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 			         .childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
 			         .childOption(ChannelOption.AUTO_READ, false)
 			         .childOption(ChannelOption.SO_KEEPALIVE, true)
-			         .childOption(ChannelOption.SO_LINGER, 0)
 			         .childOption(ChannelOption.TCP_NODELAY, true)
 			         .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000);
 		}
