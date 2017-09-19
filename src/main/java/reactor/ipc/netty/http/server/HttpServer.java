@@ -121,7 +121,6 @@ public final class HttpServer
 
 	private HttpServer(HttpServer.Builder builder) {
 		HttpServerOptions.Builder serverOptionsBuilder = HttpServerOptions.builder();
-		serverOptionsBuilder.loopResources(HttpResources.get());
 		if (Objects.isNull(builder.options)) {
 			serverOptionsBuilder.host(builder.bindAddress)
 			                    .port(builder.port);
@@ -129,6 +128,7 @@ public final class HttpServer
 		else {
 			builder.options.accept(serverOptionsBuilder);
 		}
+		serverOptionsBuilder.loopResources(HttpResources.get());
 		this.options = serverOptionsBuilder.build();
 		this.server = new TcpBridgeServer(this.options);
 	}

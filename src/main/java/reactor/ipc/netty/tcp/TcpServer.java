@@ -133,7 +133,6 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 
 	protected TcpServer(TcpServer.Builder builder) {
 		ServerOptions.Builder<?> serverOptionsBuilder = ServerOptions.builder();
-		serverOptionsBuilder.loopResources(TcpResources.get());
 		if (Objects.isNull(builder.options)) {
 			serverOptionsBuilder.host(builder.bindAddress)
 			                    .port(builder.port);
@@ -141,6 +140,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		else {
 			builder.options.accept(serverOptionsBuilder);
 		}
+		serverOptionsBuilder.loopResources(TcpResources.get());
 		this.options = serverOptionsBuilder.build();
 	}
 

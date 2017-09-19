@@ -132,10 +132,12 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 	private HttpClient(HttpClient.Builder builder) {
 		HttpClientOptions.Builder clientOptionsBuilder = HttpClientOptions.builder();
-		clientOptionsBuilder.loopResources(HttpResources.get())
-		                    .poolResources(HttpResources.get());
 		if (Objects.nonNull(builder.options)) {
 			builder.options.accept(clientOptionsBuilder);
+		}
+		clientOptionsBuilder.loopResources(HttpResources.get());
+		if (!clientOptionsBuilder.isPoolDisabled()) {
+			clientOptionsBuilder.poolResources(HttpResources.get());
 		}
 		this.options = clientOptionsBuilder.build();
 		this.client = new TcpBridgeClient(options);

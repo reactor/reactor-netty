@@ -252,6 +252,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	public static class Builder<BUILDER extends Builder<BUILDER>>
 			extends NettyOptions.Builder<Bootstrap, ClientOptions, BUILDER> {
 		private PoolResources poolResources;
+		private boolean poolDisabled = false;
 		private InternetProtocolFamily protocolFamily;
 		private String host;
 		private int port = -1;
@@ -299,6 +300,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		 */
 		public final BUILDER poolResources(PoolResources poolResources) {
 			this.poolResources = Objects.requireNonNull(poolResources, "poolResources");
+			this.poolDisabled = false;
 			return get();
 		}
 
@@ -309,7 +311,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		 */
 		public BUILDER disablePool() {
 			this.poolResources = null;
+			this.poolDisabled = true;
 			return get();
+		}
+
+		public final boolean isPoolDisabled() {
+			return poolDisabled;
 		}
 
 		/**
