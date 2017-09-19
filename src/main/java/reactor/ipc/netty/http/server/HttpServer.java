@@ -37,7 +37,6 @@ import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
-import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.options.ServerOptions;
 import reactor.ipc.netty.tcp.TcpServer;
 
@@ -71,8 +70,8 @@ public final class HttpServer
 	public static HttpServer create(Consumer<? super HttpServerOptions> options) {
 		Objects.requireNonNull(options, "options");
 		HttpServerOptions serverOptions = HttpServerOptions.create();
-		serverOptions.loopResources(HttpResources.get());
 		options.accept(serverOptions);
+		serverOptions.loopResources(HttpResources.get());
 		return new HttpServer(serverOptions.duplicate());
 	}
 

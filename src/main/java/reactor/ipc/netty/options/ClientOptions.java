@@ -73,6 +73,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 * Client connection pool selector
 	 */
 	PoolResources poolResources;
+	boolean poolDisabled = false;
 
 	/**
 	 * Proxy options
@@ -84,6 +85,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 
 	InternetProtocolFamily                protocolFamily = null;
 	Supplier<? extends SocketAddress> connectAddress = null;
+
 
 	/**
 	 * Build a new {@link ClientOptions} out of a new {@link Bootstrap}
@@ -174,7 +176,12 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	 */
 	public ClientOptions disablePool() {
 		this.poolResources = null;
+		this.poolDisabled = true;
 		return this;
+	}
+
+	public final boolean isPoolDisabled() {
+		return this.poolDisabled;
 	}
 
 	@Override
@@ -245,6 +252,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	public ClientOptions poolResources(PoolResources poolResources) {
 		Objects.requireNonNull(poolResources, "poolResources");
 		this.poolResources = poolResources;
+		this.poolDisabled = false;
 		return this;
 	}
 

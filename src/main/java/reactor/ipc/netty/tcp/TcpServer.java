@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.tcp;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -75,8 +74,8 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	public static TcpServer create(Consumer<? super ServerOptions> options) {
 		Objects.requireNonNull(options, "options");
 		ServerOptions serverOptions = ServerOptions.create();
-		serverOptions.loopResources(TcpResources.get());
 		options.accept(serverOptions);
+		serverOptions.loopResources(TcpResources.get());
 		return new TcpServer(serverOptions.duplicate());
 	}
 
