@@ -140,7 +140,9 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		else {
 			builder.options.accept(serverOptionsBuilder);
 		}
-		serverOptionsBuilder.loopResources(TcpResources.get());
+		if (!serverOptionsBuilder.isLoopAvailable()) {
+			serverOptionsBuilder.loopResources(TcpResources.get());
+		}
 		this.options = serverOptionsBuilder.build();
 	}
 

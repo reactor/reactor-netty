@@ -319,6 +319,10 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 			return poolDisabled;
 		}
 
+		public final boolean isPoolAvailable() {
+			return this.poolResources != null;
+		}
+
 		/**
 		 * Configures the version family for the socket.
 		 *

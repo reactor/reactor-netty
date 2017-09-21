@@ -128,7 +128,9 @@ public final class HttpServer
 		else {
 			builder.options.accept(serverOptionsBuilder);
 		}
-		serverOptionsBuilder.loopResources(HttpResources.get());
+		if (!serverOptionsBuilder.isLoopAvailable()) {
+			serverOptionsBuilder.loopResources(HttpResources.get());
+		}
 		this.options = serverOptionsBuilder.build();
 		this.server = new TcpBridgeServer(this.options);
 	}

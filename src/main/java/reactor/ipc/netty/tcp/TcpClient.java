@@ -121,8 +121,10 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 		if (Objects.nonNull(builder.options)) {
 			builder.options.accept(clientOptionsBuilder);
 		}
-		clientOptionsBuilder.loopResources(TcpResources.get());
-		if (!clientOptionsBuilder.isPoolDisabled()) {
+		if (!clientOptionsBuilder.isLoopAvailable()) {
+			clientOptionsBuilder.loopResources(TcpResources.get());
+		}
+		if (!clientOptionsBuilder.isPoolAvailable() && !clientOptionsBuilder.isPoolDisabled()) {
 			clientOptionsBuilder.poolResources(TcpResources.get());
 		}
 		this.options = clientOptionsBuilder.build();

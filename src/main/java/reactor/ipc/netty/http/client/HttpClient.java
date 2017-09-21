@@ -135,8 +135,10 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		if (Objects.nonNull(builder.options)) {
 			builder.options.accept(clientOptionsBuilder);
 		}
-		clientOptionsBuilder.loopResources(HttpResources.get());
-		if (!clientOptionsBuilder.isPoolDisabled()) {
+		if (!clientOptionsBuilder.isLoopAvailable()) {
+			clientOptionsBuilder.loopResources(HttpResources.get());
+		}
+		if (!clientOptionsBuilder.isPoolAvailable() && !clientOptionsBuilder.isPoolDisabled()) {
 			clientOptionsBuilder.poolResources(HttpResources.get());
 		}
 		this.options = clientOptionsBuilder.build();

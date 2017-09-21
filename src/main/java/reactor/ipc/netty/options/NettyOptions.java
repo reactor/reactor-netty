@@ -361,6 +361,10 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 			return get();
 		}
 
+		public final boolean isLoopAvailable() {
+			return this.loopResources != null;
+		}
+
 		/**
 		 * Provide a shared {@link EventLoopGroup} each Connector handler.
 		 *
