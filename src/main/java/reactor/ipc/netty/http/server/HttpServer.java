@@ -71,7 +71,9 @@ public final class HttpServer
 		Objects.requireNonNull(options, "options");
 		HttpServerOptions serverOptions = HttpServerOptions.create();
 		options.accept(serverOptions);
-		serverOptions.loopResources(HttpResources.get());
+		if (!serverOptions.isLoopAvailable()) {
+			serverOptions.loopResources(HttpResources.get());
+		}
 		return new HttpServer(serverOptions.duplicate());
 	}
 

@@ -79,8 +79,10 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		Objects.requireNonNull(options, "options");
 		HttpClientOptions clientOptions = HttpClientOptions.create();
 		options.accept(clientOptions);
-		clientOptions.loopResources(HttpResources.get());
-		if (!clientOptions.isPoolDisabled()) {
+		if (!clientOptions.isLoopAvailable()) {
+			clientOptions.loopResources(HttpResources.get());
+		}
+		if (!clientOptions.isPoolAvailable() && !clientOptions.isPoolDisabled()) {
 			clientOptions.poolResources(HttpResources.get());
 		}
 		return new HttpClient(clientOptions.duplicate());

@@ -75,7 +75,9 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		Objects.requireNonNull(options, "options");
 		ServerOptions serverOptions = ServerOptions.create();
 		options.accept(serverOptions);
-		serverOptions.loopResources(TcpResources.get());
+		if (!serverOptions.isLoopAvailable()) {
+			serverOptions.loopResources(TcpResources.get());
+		}
 		return new TcpServer(serverOptions.duplicate());
 	}
 

@@ -184,6 +184,10 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		return this.poolDisabled;
 	}
 
+	public final boolean isPoolAvailable() {
+		return this.poolResources != null;
+	}
+
 	@Override
 	public ClientOptions duplicate() {
 		return new ClientOptions(this);

@@ -110,7 +110,9 @@ final public class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 		Objects.requireNonNull(options, "options");
 		UdpClientOptions clientOptions = new UdpClientOptions();
 		options.accept(clientOptions);
-		clientOptions.loopResources(DEFAULT_UDP_LOOPS);
+		if (!clientOptions.isLoopAvailable()) {
+			clientOptions.loopResources(DEFAULT_UDP_LOOPS);
+		}
 		return new UdpClient(clientOptions.duplicate());
 	}
 

@@ -35,7 +35,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import reactor.ipc.netty.resources.LoopResources;
-import reactor.ipc.netty.resources.PoolResources;
 import reactor.util.function.Tuple2;
 
 /**
@@ -184,6 +183,10 @@ public abstract class NettyOptions<BOOSTRAP extends AbstractBootstrap<BOOSTRAP, 
 		Objects.requireNonNull(channelResources, "loopResources");
 		this.loopResources = channelResources;
 		return (SO) this;
+	}
+
+	public final boolean isLoopAvailable() {
+		return this.loopResources != null;
 	}
 
 	/**
