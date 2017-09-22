@@ -139,7 +139,7 @@ public interface NettyPipeline {
 		return ReactorNetty.TERMINATED;
 	}
 
-	static Object responseWriteCompletedEvent() {
-		return ReactorNetty.RESPONSE_WRITE_COMPLETED;
+	static Object responseCompressionEvent() {
+		return ReactorNetty.RESPONSE_COMPRESSION_EVENT;
 	}
 }

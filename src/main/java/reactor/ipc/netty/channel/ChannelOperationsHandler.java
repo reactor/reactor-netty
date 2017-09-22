@@ -488,8 +488,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 		@Override
 		public void onComplete() {
-			parent.ctx.pipeline()
-					.fireUserEventTriggered(NettyPipeline.responseWriteCompletedEvent());
+			if (parent.ctx.pipeline().get(NettyPipeline.CompressionHandler) != null) {
+				parent.ctx.pipeline()
+				          .fireUserEventTriggered(NettyPipeline.responseCompressionEvent());
+			}
 			long p = produced;
 			ChannelFuture f = lastWrite;
 			parent.innerActive = false;

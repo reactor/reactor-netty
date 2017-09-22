@@ -119,6 +119,9 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			doPipeline(ctx, msg);
 			return;
 		}
+		else if (msg instanceof LastHttpContent) {
+			ctx.read();
+		}
 		ctx.fireChannelRead(msg);
 	}
 
@@ -157,15 +160,11 @@ final class HttpServerHandler extends ChannelDuplexHandler
 							pendingResponses);
 				}
 				promise.addListener(ChannelFutureListener.CLOSE);
+				ctx.write(msg, promise);
+				return;
 			}
-		}
-		ctx.write(msg, promise);
-	}
+			ctx.write(msg, promise);
 
-	@Override
-	public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
-			throws Exception {
-		if (evt == NettyPipeline.handlerTerminatedEvent()) {
 			if(mustRecycleEncoder) {
 				mustRecycleEncoder = false;
 				pendingResponses -= 1;
@@ -187,9 +186,9 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			else {
 				ctx.read();
 			}
+			return;
 		}
-
-		ctx.fireUserEventTriggered(evt);
+		ctx.write(msg, promise);
 	}
 
 	void trackResponse(HttpResponse response) {

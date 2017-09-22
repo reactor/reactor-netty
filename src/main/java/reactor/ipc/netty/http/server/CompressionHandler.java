@@ -58,7 +58,7 @@ final class CompressionHandler extends ChannelDuplexHandler {
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
 			throws Exception {
-		if (evt == NettyPipeline.responseWriteCompletedEvent()) {
+		if (evt == NettyPipeline.responseCompressionEvent()) {
 			if (bodyCompressThreshold > 0 || !messages.isEmpty()) {
 				while (!messages.isEmpty()) {
 					Object msg = messages.poll();

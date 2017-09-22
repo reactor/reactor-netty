@@ -398,10 +398,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		else{
-			f = channel().writeAndFlush(EMPTY_BUFFER);
+			onHandlerTerminate();
+			return;
 		}
 		f.addListener(s -> {
-			if (isInboundDone()) {
+			if (isOutboundDone()) {
 				onHandlerTerminate();
 			}
 			if (!s.isSuccess() && log.isDebugEnabled()) {

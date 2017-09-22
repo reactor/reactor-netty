@@ -608,7 +608,7 @@ public class HttpClientTest {
 				          .sslContext(sslClient)
 		)
 		                                        .get("https://localhost:" + context.address().getPort() + "/foo")
-		                                        .block(Duration.ofMillis(200));
+		                                        .block();
 		context.dispose();
 		context.onClose().block();
 
@@ -686,5 +686,36 @@ public class HttpClientTest {
 				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 				.contains("1024 mark here -><- 1024 mark here")
 				.endsWith("End of File");
+	}
+
+	@Test
+	public void test() {
+		NettyContext context =
+				HttpServer.create(opt -> opt.host("localhost"))
+				          .newRouter(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
+				                                                         .status(HttpResponseStatus.CREATED)
+				                                                         .sendHeaders())
+				                           .put("/204", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
+				                                                         .sendHeaders())
+				                           .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
+				                                                         .sendHeaders()))
+				          .block(Duration.ofSeconds(30));
+
+		HttpClientResponse response1 =
+				HttpClient.create(opt -> opt.port(context.address().getPort()))
+				          .put("/201", req -> req.sendHeaders())
+				          .block();
+		//response1.dispose();
+
+		/*HttpClientResponse response2 =
+				HttpClient.create(opt -> opt.port(context.address().getPort()))
+				          .put("/204", req -> req.sendHeaders())
+				          .block(Duration.ofSeconds(30));*/
+
+		HttpClientResponse response3 =
+				HttpClient.create(opt -> opt.port(context.address().getPort()))
+				          .get("/200", req -> req.sendHeaders())
+				          .block(Duration.ofSeconds(30));
+		//response3.dispose();
 	}
 }

@@ -303,9 +303,9 @@ final class ReactorNetty {
 		}
 	}
 
-	static final Object TERMINATED = new TerminatedHandlerEvent();
-	static final Object RESPONSE_WRITE_COMPLETED = new ResponseWriteCompleted();
-	static final Logger log        = Loggers.getLogger(ReactorNetty.class);
+	static final Object TERMINATED                 = new TerminatedHandlerEvent();
+	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
+	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
 
 	/**
 	 * A handler that can be used to extract {@link ByteBuf} out of {@link ByteBufHolder},
