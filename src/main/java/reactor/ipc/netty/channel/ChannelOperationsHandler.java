@@ -445,7 +445,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		// On close the outboundBuffer is made null. After that point
 		// adding messages and flushes to outboundBuffer is not allowed.
 		ChannelOutboundBuffer outBuffer = this.unsafe.outboundBuffer();
-		return outBuffer != null ? outBuffer.totalPendingWriteBytes() > 0 : false;
+		return outBuffer != null && outBuffer.totalPendingWriteBytes() > 0;
 	}
 
 	static final class PublisherSender
@@ -640,7 +640,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					return;
 				}
 
-				Operators.getAndAddCap(MISSED_REQUESTED, this, n);
+				Operators.addCap(MISSED_REQUESTED, this, n);
 
 				drain();
 			}
@@ -758,7 +758,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				return;
 			}
 
-			Operators.getAndAddCap(MISSED_PRODUCED, this, n);
+			Operators.addCap(MISSED_PRODUCED, this, n);
 
 			drain();
 		}
