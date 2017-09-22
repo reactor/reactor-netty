@@ -29,7 +29,6 @@ import java.nio.file.StandardCopyOption;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -45,7 +44,9 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -155,7 +156,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void sendZipFileChunked() throws IOException, URISyntaxException {
+	public void sendZipFileChunked() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -169,7 +170,7 @@ public class HttpServerTests {
 
 	@Test
 	public void sendZipFileDefault()
-			throws URISyntaxException, IOException, InterruptedException {
+			throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 
@@ -181,7 +182,7 @@ public class HttpServerTests {
 		}
 	}
 
-	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn) throws IOException, URISyntaxException {
+	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn) {
 		NettyContext context =
 				HttpServer.create(opt -> opt.host("localhost"))
 				          .newHandler((req, resp) -> fn.apply(resp))
@@ -424,7 +425,7 @@ public class HttpServerTests {
 
 	@Test
 	public void startRouterAndAwait()
-			throws InterruptedException, ExecutionException, TimeoutException {
+			throws InterruptedException {
 		ExecutorService ex = Executors.newSingleThreadExecutor();
 		AtomicReference<BlockingNettyContext> ref = new AtomicReference<>();
 
@@ -445,5 +446,45 @@ public class HttpServerTests {
 		ref.get().shutdown();
 		Thread.sleep(100);
 		assertThat(f.isDone()).isTrue();
+	}
+
+	@Test
+	public void nonContentStatusCodes() {
+		NettyContext server =
+				HttpServer.create(ops -> ops.host("localhost"))
+				          .newRouter(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
+				                                                           .sendHeaders())
+				                           .get("/204-2", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT))
+				                           .get("/205-1", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
+				                                                           .sendHeaders())
+				                           .get("/205-2", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT))
+				                           .get("/304-1", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
+				                                                           .sendHeaders())
+				                           .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
+				          .block(Duration.ofSeconds(30));
+
+		int port = server.address().getPort();
+		checkResponse("/204-1", port);
+		checkResponse("/204-2", port);
+		checkResponse("/205-1", port);
+		checkResponse("/205-2", port);
+		checkResponse("/304-1", port);
+		checkResponse("/304-2", port);
+
+		server.dispose();
+	}
+
+	private void checkResponse(String url, int port) {
+		Mono<HttpHeaders> response =
+				HttpClient.create(ops -> ops.port(port))
+				          .get(url)
+				          .flatMap(res -> Mono.just(res.responseHeaders()));
+
+		StepVerifier.create(response)
+		            .expectNextMatches(h -> !h.contains("Transfer-Encoding") &&
+		                                     h.contains("Content-Length") &&
+		                                     Integer.parseInt(h.get("Content-Length")) == 0)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 }
