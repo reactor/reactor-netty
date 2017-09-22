@@ -554,11 +554,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				super.onInboundNext(ctx, msg);
 				onHandlerTerminate();
 			}
-			else if (response.status().equals(HttpResponseStatus.NO_CONTENT) ||
-					response.status().equals(HttpResponseStatus.NOT_MODIFIED) ||
-					response.status().equals(HttpResponseStatus.RESET_CONTENT)) {
-				onHandlerTerminate();
-			}
 			return;
 		}
 		if (msg instanceof LastHttpContent) {
