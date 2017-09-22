@@ -695,7 +695,7 @@ public class HttpClientTest {
 				          .newRouter(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                         .status(HttpResponseStatus.CREATED)
 				                                                         .sendHeaders())
-				                           .put("/204", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
+				                           .put("/204", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                         .sendHeaders())
 				                           .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                         .sendHeaders()))
@@ -707,10 +707,10 @@ public class HttpClientTest {
 				          .block();
 		//response1.dispose();
 
-		/*HttpClientResponse response2 =
+		HttpClientResponse response2 =
 				HttpClient.create(opt -> opt.port(context.address().getPort()))
 				          .put("/204", req -> req.sendHeaders())
-				          .block(Duration.ofSeconds(30));*/
+				          .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response3 =
 				HttpClient.create(opt -> opt.port(context.address().getPort()))
