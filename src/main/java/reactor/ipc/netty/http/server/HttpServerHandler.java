@@ -119,7 +119,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			doPipeline(ctx, msg);
 			return;
 		}
-		else if (msg instanceof LastHttpContent) {
+		else if (persistentConnection && msg instanceof LastHttpContent) {
 			ctx.read();
 		}
 		ctx.fireChannelRead(msg);
