@@ -48,7 +48,7 @@ ext {
   gradleVersion = '3.3'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.1.0.RC2"
+  reactorCoreVersion = "3.1.0.RELEASE"
 
   // Languages
   groovyVersion = '2.4.1'
@@ -195,7 +195,7 @@ configure(rootProject) { project ->
   // dependencies that are common across all java projects
   dependencies {
 	// JSR-305 annotations
-	optional "com.google.code.findbugs:jsr305:3.0.0"
+	optional "com.google.code.findbugs:jsr305:3.0.2"
 
 	// Logging
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
