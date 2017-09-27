@@ -477,7 +477,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void handleOutboundWithNoContent() {
 		int status = nettyResponse.status().code();
-		if (status == 204 || status == 205 || status == 304) {
+		if (status == 205) {
 			nettyResponse.headers()
 			             .remove(HttpHeaderNames.TRANSFER_ENCODING)
 			             .set(HttpHeaderNames.CONTENT_LENGTH, 0);

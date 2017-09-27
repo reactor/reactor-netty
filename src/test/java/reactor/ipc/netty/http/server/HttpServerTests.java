@@ -475,15 +475,27 @@ public class HttpServerTests {
 	}
 
 	private void checkResponse(String url, int port) {
-		Mono<HttpHeaders> response =
+		Mono<HttpClientResponse> response =
 				HttpClient.create(ops -> ops.port(port))
-				          .get(url)
-				          .flatMap(res -> Mono.just(res.responseHeaders()));
+				          .get(url);
 
 		StepVerifier.create(response)
-		            .expectNextMatches(h -> !h.contains("Transfer-Encoding") &&
-		                                     h.contains("Content-Length") &&
-		                                     Integer.parseInt(h.get("Content-Length")) == 0)
+		            .expectNextMatches(r -> {
+		                int code = r.status().code();
+		                HttpHeaders h = r.responseHeaders();
+		                if (code == 204 || code == 304) {
+		                    return !h.contains("Transfer-Encoding") &&
+		                           !h.contains("Content-Length");
+		                }
+		                else if (code == 205) {
+		                    return !h.contains("Transfer-Encoding") &&
+		                            h.contains("Content-Length") &&
+		                            Integer.parseInt(h.get("Content-Length")) == 0;
+		                }
+		                else {
+		                    return false;
+		                }
+		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
