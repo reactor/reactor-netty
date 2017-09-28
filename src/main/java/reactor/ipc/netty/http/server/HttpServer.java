@@ -121,11 +121,10 @@ public final class HttpServer
 
 	private HttpServer(HttpServer.Builder builder) {
 		HttpServerOptions.Builder serverOptionsBuilder = HttpServerOptions.builder();
-		if (Objects.isNull(builder.options)) {
-			serverOptionsBuilder.host(builder.bindAddress)
-			                    .port(builder.port);
-		}
-		else {
+		serverOptionsBuilder
+				.host(builder.bindAddress)
+				.port(builder.port);
+		if (Objects.nonNull(builder.options)) {
 			builder.options.accept(serverOptionsBuilder);
 		}
 		if (!serverOptionsBuilder.isLoopAvailable()) {
