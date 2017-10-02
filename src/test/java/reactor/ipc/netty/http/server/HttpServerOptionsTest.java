@@ -52,7 +52,8 @@ public class HttpServerOptionsTest {
 	public void asSimpleString() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
 
-		assertThat(builder.build().asSimpleString()).isEqualTo("listening on 0.0.0.0/0.0.0.0:0");
+		assertThat(builder.build().asSimpleString())
+				.matches("^listening on (0\\.0\\.0\\.0/0\\.0\\.0\\.0:0|/0:0:0:0:0:0:0:1.*)$");
 
 		//address
 		builder.host("foo").port(123);
@@ -72,7 +73,7 @@ public class HttpServerOptionsTest {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
 
 		assertThat(builder.build().asDetailedString())
-				.startsWith("address=0.0.0.0/0.0.0.0:0")
+				.matches("^address=(0\\.0\\.0\\.0/0\\.0\\.0\\.0:0|/0:0:0:0:0:0:0:1).*")
 				.endsWith(", minCompressionResponseSize=-1");
 
 		//address

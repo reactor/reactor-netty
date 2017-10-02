@@ -456,7 +456,7 @@ public class HttpClientTest {
 		                          })
 		                          .block(Duration.ofSeconds(30));
 
-		StepVerifier.create(HttpClient.create(x.address().getHostName(), x.address().getPort())
+		StepVerifier.create(createHttpClientForContext(x)
 		                              .get("/")
 		                              .timeout(signal)
 		)
@@ -583,7 +583,7 @@ public class HttpClientTest {
 
 
 		HttpClientResponse response = HttpClient.create(
-				opt -> opt.port(context.address().getPort())
+				opt -> applyHostAndPortFromContext(opt, context)
 				          .sslContext(sslClient))
 		                                        .get("/foo")
 		                                        .block(Duration.ofMillis(200));
@@ -607,11 +607,9 @@ public class HttpClientTest {
 				          .block();
 
 		HttpClientResponse response = HttpClient.create(
-				opt -> opt.port(context.address().getPort())
-				          .sslContext(sslClient)
-		)
-		                                        .get("https://localhost:" + context.address().getPort() + "/foo")
-		                                        .block();
+				opt -> applyHostAndPortFromContext(opt, context)
+						.sslContext(sslClient))
+				.get("/foo").block();
 		context.dispose();
 		context.onClose().block();
 
@@ -639,7 +637,7 @@ public class HttpClientTest {
 				          .block();
 
 		HttpClientResponse response =
-				HttpClient.create(opt -> opt.port(context.address().getPort())
+				HttpClient.create(opt -> applyHostAndPortFromContext(opt, context)
 				                            .sslContext(sslClient))
 				          .post("/upload", r -> r.sendFile(largeFile))
 				          .block(Duration.ofSeconds(120));
@@ -674,7 +672,7 @@ public class HttpClientTest {
 				          .block();
 
 		HttpClientResponse response =
-				HttpClient.create(opt -> opt.port(context.address().getPort()))
+				createHttpClientForContext(context)
 				          .post("/upload", r -> r.sendFile(largeFile))
 				          .block(Duration.ofSeconds(120));
 
@@ -705,20 +703,29 @@ public class HttpClientTest {
 				          .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response1 =
-				HttpClient.create(opt -> opt.port(context.address().getPort()))
+				createHttpClientForContext(context)
 				          .put("/201", req -> req.sendHeaders())
 				          .block();
 		//response1.dispose();
 
 		HttpClientResponse response2 =
-				HttpClient.create(opt -> opt.port(context.address().getPort()))
+				createHttpClientForContext(context)
 				          .put("/204", req -> req.sendHeaders())
 				          .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response3 =
-				HttpClient.create(opt -> opt.port(context.address().getPort()))
+				createHttpClientForContext(context)
 				          .get("/200", req -> req.sendHeaders())
 				          .block(Duration.ofSeconds(30));
 		//response3.dispose();
+	}
+
+	private HttpClient createHttpClientForContext(NettyContext context) {
+		return HttpClient.create(opt -> applyHostAndPortFromContext(opt, context));
+	}
+
+	private HttpClientOptions.Builder applyHostAndPortFromContext(HttpClientOptions.Builder httpClientOptions, NettyContext context) {
+		httpClientOptions.connectAddress(() -> context.address());
+		return httpClientOptions;
 	}
 }

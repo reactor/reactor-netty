@@ -104,7 +104,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	 * @return a simple HTTP client bound on the provided address and port
 	 */
 	public static HttpClient create(String address, int port) {
-		return create(opts -> opts.connectAddress(() -> InetSocketAddress.createUnresolved(address, port)));
+		return create(opts -> opts.host(address).port(port));
 	}
 
 	/**

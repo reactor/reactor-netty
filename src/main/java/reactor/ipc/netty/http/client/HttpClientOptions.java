@@ -25,6 +25,7 @@ import java.util.function.Function;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.util.NetUtil;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.ClientProxyOptions;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
@@ -75,8 +76,9 @@ public final class HttpClientOptions extends ClientOptions {
 		Objects.requireNonNull(uri, "uri");
 		boolean secure = isSecure(uri);
 		int port = uri.getPort() != -1 ? uri.getPort() : (secure ? 443 : 80);
-		return useProxy(uri.getHost()) ? InetSocketAddress.createUnresolved(uri.getHost(), port) :
-				new InetSocketAddress(uri.getHost(), port);
+		// TODO: find out whether the remote address should be resolved using blocking operation at this point
+		boolean shouldResolveAddress = !useProxy(uri.getHost());
+		return createInetSocketAddress(uri.getHost(), port, shouldResolveAddress);
 	}
 
 	/**
@@ -109,9 +111,8 @@ public final class HttpClientOptions extends ClientOptions {
 				SocketAddress remote = getAddress();
 
 				if (remote instanceof InetSocketAddress) {
-					InetSocketAddress inet = (InetSocketAddress) remote;
-
-					return scheme + inet.getHostName() + ":" + inet.getPort() + url;
+					// NetUtil.toSocketAddressString properly handles IPv6 addresses
+					return scheme + NetUtil.toSocketAddressString((InetSocketAddress) remote) + url;
 				}
 				else {
 					return scheme + "localhost" + url;

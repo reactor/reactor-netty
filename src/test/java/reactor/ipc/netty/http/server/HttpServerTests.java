@@ -190,7 +190,7 @@ public class HttpServerTests {
 
 
 		HttpClientResponse response =
-				HttpClient.create(opt -> opt.port(context.address().getPort()))
+				HttpClient.create(opt -> opt.connectAddress(() -> context.address()))
 				          .get("/foo")
 				          .block(Duration.ofSeconds(120));
 
@@ -463,20 +463,19 @@ public class HttpServerTests {
 				                           .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
 				          .block(Duration.ofSeconds(30));
 
-		int port = server.address().getPort();
-		checkResponse("/204-1", port);
-		checkResponse("/204-2", port);
-		checkResponse("/205-1", port);
-		checkResponse("/205-2", port);
-		checkResponse("/304-1", port);
-		checkResponse("/304-2", port);
+		checkResponse("/204-1", server.address());
+		checkResponse("/204-2", server.address());
+		checkResponse("/205-1", server.address());
+		checkResponse("/205-2", server.address());
+		checkResponse("/304-1", server.address());
+		checkResponse("/304-2", server.address());
 
 		server.dispose();
 	}
 
-	private void checkResponse(String url, int port) {
+	private void checkResponse(String url, InetSocketAddress address) {
 		Mono<HttpClientResponse> response =
-				HttpClient.create(ops -> ops.port(port))
+				HttpClient.create(ops -> ops.connectAddress(() -> address))
 				          .get(url);
 
 		StepVerifier.create(response)

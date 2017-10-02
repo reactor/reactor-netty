@@ -743,7 +743,7 @@ public class TcpServerTests {
 		                                                           .log("flatmap-retry")))
 		                 .block(Duration.ofSeconds(30));
 
-		TcpClient.create("localhost", server.address().getPort())
+		TcpClient.create(ops -> ops.connectAddress(() -> server.address()))
 		         .newHandler((in, out) -> {
 		             in.receive()
 		               .asString()
@@ -784,7 +784,7 @@ public class TcpServerTests {
 		public void run() {
 			try {
 				SocketChannel ch =
-						SocketChannel.open(new InetSocketAddress(NetUtil.LOCALHOST.getHostAddress(), port));
+						SocketChannel.open(new InetSocketAddress(NetUtil.LOCALHOST, port));
 				int len = ch.write(ByteBuffer.wrap(output.getBytes(Charset.defaultCharset())));
 				Assertions.assertThat(ch.isConnected()).isTrue();
 				data = ByteBuffer.allocate(len);

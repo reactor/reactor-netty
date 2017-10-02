@@ -75,11 +75,13 @@ public class ServerOptions extends NettyOptions<ServerBootstrap, ServerOptions> 
 				this.localAddress = new InetSocketAddress(builder.port);
 			}
 			else {
-				this.localAddress = new InetSocketAddress(builder.host, builder.port);
+				this.localAddress = InetSocketAddressUtil.createResolved(builder.host, builder.port);
 			}
 		}
 		else {
-			this.localAddress = builder.listenAddress;
+			this.localAddress = builder.listenAddress instanceof InetSocketAddress
+					? InetSocketAddressUtil.replaceWithResolved((InetSocketAddress) builder.listenAddress)
+					: builder.listenAddress;
 		}
 	}
 
