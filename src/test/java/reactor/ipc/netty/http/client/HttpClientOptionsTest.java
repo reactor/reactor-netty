@@ -140,6 +140,21 @@ public class HttpClientOptionsTest {
 	}
 
 	@Test
+	public void formatSchemeAndHostIPv6Address() throws Exception {
+		String test1 = this.builder.host("::1")
+				.port(8080)
+				.build()
+				.formatSchemeAndHost("/foo", false);
+		String test2 = this.builder.host("::1")
+				.port(8080)
+				.build()
+				.formatSchemeAndHost("/foo", true);
+
+		assertThat(test1).isEqualTo("http://[::1]:8080/foo");
+		assertThat(test2).isEqualTo("ws://[::1]:8080/foo");
+	}
+
+	@Test
 	public void formatSchemeAndHostRelativeAddressSsl() throws Exception {
 		String test1 = this.builder.host("example")
 		                           .port(8080)

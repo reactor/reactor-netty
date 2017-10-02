@@ -16,10 +16,12 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -48,6 +50,8 @@ import reactor.util.Loggers;
  */
 public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 
+	private static final int DEFAULT_PORT_FOR_CREATE = 0;
+
 	/**
 	 * Bind a new TCP server to "localhost" on a randomly assigned port.
 	 * <p> The assigned port can be found once a handler has been bound, using
@@ -58,7 +62,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create() {
-		return create(NetUtil.LOCALHOST.getHostAddress());
+		return builder().listenAddress(new InetSocketAddress(NetUtil.LOCALHOST, DEFAULT_PORT_FOR_CREATE)).build();
 	}
 
 	/**
@@ -86,7 +90,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(int port) {
-		return create("0.0.0.0", port);
+		return builder().listenAddress(new InetSocketAddress(port)).build();
 	}
 
 	/**
@@ -101,7 +105,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create(String bindAddress) {
-		return create(bindAddress, 0);
+		return create(bindAddress, DEFAULT_PORT_FOR_CREATE);
 	}
 
 	/**
@@ -134,8 +138,12 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	protected TcpServer(TcpServer.Builder builder) {
 		ServerOptions.Builder<?> serverOptionsBuilder = ServerOptions.builder();
 		if (Objects.isNull(builder.options)) {
-			serverOptionsBuilder.host(builder.bindAddress)
-			                    .port(builder.port);
+			if (Objects.isNull(builder.bindAddress)) {
+				serverOptionsBuilder.listenAddress(builder.listenAddress.get());
+			}
+			else {
+				serverOptionsBuilder.host(builder.bindAddress).port(builder.port);
+			}
 		}
 		else {
 			builder.options.accept(serverOptionsBuilder);
@@ -213,8 +221,9 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	static final Logger log = Loggers.getLogger(TcpServer.class);
 
 	public static final class Builder {
-		private String bindAddress = NetUtil.LOCALHOST.getHostAddress();
+		private String bindAddress = null;
 		private int port = 80;
+		private Supplier<InetSocketAddress> listenAddress = () -> new InetSocketAddress(NetUtil.LOCALHOST, port);
 		private Consumer<? super ServerOptions.Builder<?>> options;
 
 		private Builder() {
@@ -232,13 +241,25 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 		}
 
 		/**
+		 * The {@link InetSocketAddress} to listen on.
+		 *
+		 * @param listenAddress the listen address
+		 * @return {@code this}
+		 */
+		public final Builder listenAddress(InetSocketAddress listenAddress) {
+			Objects.requireNonNull(listenAddress, "listenAddress");
+			this.listenAddress = () -> listenAddress;
+			return this;
+		}
+
+		/**
 		 * The port to listen to, or 0 to dynamically attribute one.
 		 *
 		 * @param port the port to listen to, or 0 to dynamically attribute one.
 		 * @return {@code this}
 		 */
 		public final Builder port(int port) {
-			this.port = Objects.requireNonNull(port, "port");
+			this.port = port;
 			return this;
 		}
 

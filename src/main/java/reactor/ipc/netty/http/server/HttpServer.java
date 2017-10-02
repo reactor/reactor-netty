@@ -16,10 +16,12 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -82,7 +84,7 @@ public final class HttpServer
 	 * @return a simple HTTP server
 	 */
 	public static HttpServer create(int port) {
-		return builder().bindAddress("0.0.0.0").port(port).build();
+		return builder().listenAddress(new InetSocketAddress(port)).build();
 	}
 
 	/**
@@ -122,8 +124,12 @@ public final class HttpServer
 	private HttpServer(HttpServer.Builder builder) {
 		HttpServerOptions.Builder serverOptionsBuilder = HttpServerOptions.builder();
 		if (Objects.isNull(builder.options)) {
-			serverOptionsBuilder.host(builder.bindAddress)
-			                    .port(builder.port);
+			if (Objects.isNull(builder.bindAddress)) {
+				serverOptionsBuilder.listenAddress(builder.listenAddress.get());
+			}
+			else {
+				serverOptionsBuilder.host(builder.bindAddress).port(builder.port);
+			}
 		}
 		else {
 			builder.options.accept(serverOptionsBuilder);
@@ -266,8 +272,9 @@ public final class HttpServer
 	}
 
 	public static final class Builder {
-		private String bindAddress = NetUtil.LOCALHOST.getHostAddress();
+		private String bindAddress = null;
 		private int port = 8080;
+		private Supplier<InetSocketAddress> listenAddress = () -> new InetSocketAddress(NetUtil.LOCALHOST, port);
 		private Consumer<? super HttpServerOptions.Builder> options;
 
 		private Builder() {
@@ -285,13 +292,25 @@ public final class HttpServer
 		}
 
 		/**
+		 * The {@link InetSocketAddress} to listen on.
+		 *
+		 * @param listenAddress the listen address
+		 * @return {@code this}
+		 */
+		public final Builder listenAddress(InetSocketAddress listenAddress) {
+			Objects.requireNonNull(listenAddress, "listenAddress");
+			this.listenAddress = () -> listenAddress;
+			return this;
+		}
+
+		/**
 		 * The port to listen to, or 0 to dynamically attribute one.
 		 *
 		 * @param port the port to listen to, or 0 to dynamically attribute one.
 		 * @return {@code this}
 		 */
 		public final Builder port(int port) {
-			this.port = Objects.requireNonNull(port, "port");
+			this.port = port;
 			return this;
 		}
 

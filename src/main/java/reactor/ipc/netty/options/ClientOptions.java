@@ -95,10 +95,10 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		if (Objects.isNull(builder.connectAddress)) {
 			if (builder.port >= 0) {
 				if (Objects.isNull(builder.host)) {
-					this.connectAddress = () -> new InetSocketAddress(NetUtil.LOCALHOST.getHostAddress(), builder.port);
+					this.connectAddress = () -> new InetSocketAddress(NetUtil.LOCALHOST, builder.port);
 				}
 				else {
-					this.connectAddress = () -> InetSocketAddress.createUnresolved(builder.host, builder.port);
+					this.connectAddress = () -> InetSocketAddressUtil.createUnresolved(builder.host, builder.port);
 				}
 			}
 			else {
@@ -163,7 +163,7 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 		if (this.proxyOptions != null) { 
 			if (this.proxyOptions.getNonProxyHosts() != null && 
 					address instanceof InetSocketAddress) {
-				String hostName = ((InetSocketAddress) address).getHostName();
+				String hostName = ((InetSocketAddress) address).getHostString();
 				return !this.proxyOptions.getNonProxyHosts().matcher(hostName).matches();
 			}
 			return true;
@@ -247,6 +247,10 @@ public class ClientOptions extends NettyOptions<Bootstrap, ClientOptions> {
 	@Override
 	public String toString() {
 		return "ClientOptions{" + asDetailedString() + "}";
+	}
+
+	protected InetSocketAddress createInetSocketAddress(String hostname, int port, boolean resolve) {
+		return InetSocketAddressUtil.createInetSocketAddress(hostname, port, resolve);
 	}
 
 	public static class Builder<BUILDER extends Builder<BUILDER>>

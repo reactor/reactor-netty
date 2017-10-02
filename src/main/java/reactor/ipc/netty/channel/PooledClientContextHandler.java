@@ -290,7 +290,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	protected Tuple2<String, Integer> getSNI() {
 		if (providedAddress instanceof InetSocketAddress) {
 			InetSocketAddress ipa = (InetSocketAddress) providedAddress;
-			return Tuples.of(ipa.getHostName(), ipa.getPort());
+			return Tuples.of(ipa.getHostString(), ipa.getPort());
 		}
 		return null;
 	}
