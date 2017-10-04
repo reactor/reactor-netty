@@ -29,13 +29,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.logging.LoggingHandler;
 
 import org.reactivestreams.Publisher;
@@ -409,10 +408,9 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 
 		@Override
 		public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {
-			pipeline.addLast(NettyPipeline.HttpDecoder, new HttpResponseDecoder())
-			        .addLast(NettyPipeline.HttpEncoder, new HttpRequestEncoder());
+			pipeline.addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
 			if (options.acceptGzip()) {
-				pipeline.addAfter(NettyPipeline.HttpDecoder,
+				pipeline.addAfter(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpDecompressor,
 						new HttpContentDecompressor());
 			}

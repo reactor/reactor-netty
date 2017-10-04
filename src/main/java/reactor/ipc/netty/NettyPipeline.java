@@ -57,8 +57,7 @@ public interface NettyPipeline {
 	String SslLoggingHandler  = LEFT + "sslLoggingHandler";
 	String ProxyHandler       = LEFT + "proxyHandler";
 	String ReactiveBridge     = RIGHT + "reactiveBridge";
-	String HttpEncoder        = LEFT + "httpEncoder";
-	String HttpDecoder        = LEFT + "httpDecoder";
+	String HttpCodec          = LEFT + "httpCodec";
 	String HttpDecompressor   = LEFT + "decompressor";
 	String HttpCompressor     = LEFT + "compressor";
 	String HttpAggregator     = LEFT + "httpAggregator";

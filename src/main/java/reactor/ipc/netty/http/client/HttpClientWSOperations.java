@@ -26,9 +26,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -113,10 +113,10 @@ final class HttpClientWSOperations extends HttpClientOperations
 		handshakerResult = channel.newPromise();
 
 		String handlerName = channel.pipeline()
-		                            .context(HttpRequestEncoder.class)
+		                            .context(HttpClientCodec.class)
 		                            .name();
 
-		if (!handlerName.equals(NettyPipeline.HttpEncoder)) {
+		if (!handlerName.equals(NettyPipeline.HttpCodec)) {
 			channel.pipeline()
 			       .remove(handlerName);
 		}
