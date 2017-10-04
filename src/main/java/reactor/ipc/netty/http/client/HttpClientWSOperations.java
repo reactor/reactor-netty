@@ -28,7 +28,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -36,7 +35,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
@@ -112,14 +110,6 @@ final class HttpClientWSOperations extends HttpClientOperations
 //		}
 		handshakerResult = channel.newPromise();
 
-		String handlerName = channel.pipeline()
-		                            .context(HttpRequestEncoder.class)
-		                            .name();
-
-		if (!handlerName.equals(NettyPipeline.HttpEncoder)) {
-			channel.pipeline()
-			       .remove(handlerName);
-		}
 		handshaker.handshake(channel)
 		          .addListener(f -> {
 			          markPersistent(false);

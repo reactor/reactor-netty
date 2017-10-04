@@ -26,7 +26,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
@@ -170,7 +170,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				pendingResponses -= 1;
 
 				ctx.pipeline()
-				   .replace(NettyPipeline.HttpEncoder, NettyPipeline.HttpEncoder, new HttpResponseEncoder());
+				   .replace(NettyPipeline.HttpCodec, NettyPipeline.HttpCodec, new HttpServerCodec());
 			}
 
 			if (pipelined != null && !pipelined.isEmpty()) {

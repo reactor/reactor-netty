@@ -23,8 +23,7 @@ import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
 
@@ -249,8 +248,7 @@ public final class HttpServer
 
         @Override
         public void accept(ChannelPipeline p, ContextHandler<Channel> c) {
-            p.addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
-                    .addLast(NettyPipeline.HttpEncoder,new HttpResponseEncoder());
+            p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
 
             if(options.minCompressionResponseSize() >= 0) {
                     p.addLast(NettyPipeline.CompressionHandler, new CompressionHandler(options.minCompressionResponseSize()));

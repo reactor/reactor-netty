@@ -27,8 +27,7 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,7 +78,7 @@ public class NettyContextTest {
 	public void addByteDecoderWhenNoRight() throws Exception {
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new ChannelHandlerAdapter() {
+		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
 		       });
 		ChannelHandler decoder = new LineBasedFrameDecoder(12);
 
@@ -89,7 +88,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						"decoder$extract",
 						"decoder",
 						"DefaultChannelPipeline$TailContext#0"));
@@ -115,8 +114,7 @@ public class NettyContextTest {
 	public void addByteDecoderWhenFullReactorPipeline() throws Exception {
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
-		       .addLast(NettyPipeline.HttpEncoder, new HttpResponseEncoder())
+		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
 		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
@@ -128,8 +126,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
-						NettyPipeline.HttpEncoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpServerHandler,
 						"decoder$extract",
 						"decoder",
@@ -159,7 +156,7 @@ public class NettyContextTest {
 	public void addNonByteDecoderWhenNoRight() throws Exception {
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new ChannelHandlerAdapter() {
+		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
 		       });
 		ChannelHandler decoder = new ChannelHandlerAdapter() {
 		};
@@ -168,7 +165,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						"decoder",
 						"DefaultChannelPipeline$TailContext#0"));
 	}
@@ -190,8 +187,7 @@ public class NettyContextTest {
 	public void addNonByteDecoderWhenFullReactorPipeline() throws Exception {
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
-		       .addLast(NettyPipeline.HttpEncoder, new HttpResponseEncoder())
+		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
 		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
@@ -202,8 +198,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
-						NettyPipeline.HttpEncoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpServerHandler,
 						"decoder",
 						NettyPipeline.ReactiveBridge,
@@ -216,8 +211,7 @@ public class NettyContextTest {
 		ChannelHandler decoder2 = new LineBasedFrameDecoder(13);
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
-		       .addLast(NettyPipeline.HttpEncoder, new HttpResponseEncoder())
+		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
 		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
@@ -232,8 +226,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
-						NettyPipeline.HttpEncoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpServerHandler,
 						"decoder1$extract",
 						"decoder1",
@@ -264,7 +257,7 @@ public class NettyContextTest {
 	public void addByteEncoderWhenNoRight() throws Exception {
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new ChannelHandlerAdapter() {
+		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
 		       });
 		ChannelHandler encoder = new LineBasedFrameDecoder(12);
 
@@ -272,7 +265,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						"encoder",
 						"DefaultChannelPipeline$TailContext#0"));
 	}
@@ -293,8 +286,7 @@ public class NettyContextTest {
 	public void addByteEncoderWhenFullReactorPipeline() throws Exception {
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
-		       .addLast(NettyPipeline.HttpEncoder, new HttpResponseEncoder())
+		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
 		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
@@ -304,8 +296,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
-						NettyPipeline.HttpEncoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpServerHandler,
 						"encoder",
 						NettyPipeline.ReactiveBridge,
@@ -334,7 +325,7 @@ public class NettyContextTest {
 	public void addNonByteEncoderWhenNoRight() throws Exception {
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new ChannelHandlerAdapter() {
+		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
 		       });
 		ChannelHandler encoder = new ChannelHandlerAdapter() {
 		};
@@ -343,7 +334,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						"encoder",
 						"DefaultChannelPipeline$TailContext#0"));
 	}
@@ -365,8 +356,7 @@ public class NettyContextTest {
 	public void addNonByteEncoderWhenFullReactorPipeline() throws Exception {
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
-		       .addLast(NettyPipeline.HttpEncoder, new HttpResponseEncoder())
+		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
 		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
@@ -377,8 +367,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
-						NettyPipeline.HttpEncoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpServerHandler,
 						"encoder",
 						NettyPipeline.ReactiveBridge,
@@ -391,8 +380,7 @@ public class NettyContextTest {
 		ChannelHandler encoder2 = new LineBasedFrameDecoder(13);
 
 		channel.pipeline()
-		       .addLast(NettyPipeline.HttpDecoder, new HttpRequestDecoder())
-		       .addLast(NettyPipeline.HttpEncoder, new HttpResponseEncoder())
+		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
 		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
@@ -402,8 +390,7 @@ public class NettyContextTest {
 
 		assertEquals(channel.pipeline()
 		                    .names(),
-				Arrays.asList(NettyPipeline.HttpDecoder,
-						NettyPipeline.HttpEncoder,
+				Arrays.asList(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpServerHandler,
 						"encoder2",
 						"encoder1",
