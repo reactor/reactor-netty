@@ -184,7 +184,7 @@ public class TcpClientTests {
 					                     }).then())
 				         )
 				         .block(Duration.ofSeconds(15))
-				         .onClose()
+				         .onDispose()
 				         .block(Duration.ofSeconds(30));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
@@ -202,7 +202,7 @@ public class TcpClientTests {
 
 		client.newHandler((in, out) -> Mono.empty())
 		      .block(Duration.ofSeconds(30))
-		      .onClose()
+		      .onDispose()
 		      .block(Duration.ofSeconds(30));
 	}
 
@@ -265,7 +265,7 @@ public class TcpClientTests {
 
 			handler.log()
 			       .block(Duration.ofSeconds(30))
-			       .onClose()
+			       .onDispose()
 			       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
 			       .block(Duration.ofSeconds(30));
 
@@ -294,7 +294,7 @@ public class TcpClientTests {
 				  latch.countDown();
 			})
 			  .context()
-			  .onClose(close::countDown);
+			  .onDispose(close::countDown);
 
 			out.onWriteIdle(500, () -> {
 				totalDelay.addAndGet(System.currentTimeMillis() - start);
