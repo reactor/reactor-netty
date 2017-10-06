@@ -30,7 +30,7 @@ import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientException;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -43,7 +43,7 @@ public class HttpTests {
 
 	@Test
 	public void httpRespondsEmpty() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newRouter(r ->
 				              r.post("/test/{param}", (req, res) -> Mono.empty()))
@@ -70,7 +70,7 @@ public class HttpTests {
 
 	@Test
 	public void httpRespondsToRequestsFromClients() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newRouter(r ->
 				              r.post("/test/{param}", (req, res) ->
@@ -125,9 +125,11 @@ public class HttpTests {
 		                             }
 		                             return Mono.just(Unpooled.copyInt(i));
 		                         });
-		NettyContext server =
-				HttpServer.create(0)
-				          .newRouter(r -> r.get("/test", (req, res) -> {throw new RuntimeException();})
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.get("/test", (req, res) -> {throw new
+						          RuntimeException();})
 				                           .get("/test2", (req, res) -> res.send(Flux.error(new Exception()))
 				                                                           .then()
 				                                                           .log("send-1")
@@ -149,7 +151,7 @@ public class HttpTests {
 				                                                              .then()
 				                                                              .log("send-5")
 				                                                              .doOnError(t -> errored5.countDown())))
-				          .block(Duration.ofSeconds(30));
+				          .bindNow(Duration.ofSeconds(30));
 
 		HttpClient client =
 				HttpClient.create("localhost", server.address().getPort());
@@ -236,7 +238,7 @@ public class HttpTests {
 		AtomicInteger clientRes = new AtomicInteger();
 		AtomicInteger serverRes = new AtomicInteger();
 
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newRouter(r -> r.get("/test/{param}", (req, res) -> {
 				              System.out.println(req.requestHeaders().get("test"));
@@ -288,7 +290,7 @@ public class HttpTests {
 	@Test
 	public void test100Continue() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newHandler((req, res) -> req.receive()
 				                                       .aggregate()
@@ -320,7 +322,7 @@ public class HttpTests {
 	public void streamAndPoolExplicitCompression() throws Exception {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
-		NettyContext server =
+		Connection server =
 				HttpServer.create(opts -> opts.port(0))
 				          .newRouter(r -> r.post("/hi", (req, res) -> req.receive()
 				                                                       .aggregate()
@@ -384,7 +386,7 @@ public class HttpTests {
 	public void streamAndPoolDefaultCompression() throws Exception {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
-		NettyContext server =
+		Connection server =
 				HttpServer.create(opts -> opts.port(0).compression(true))
 				          .newRouter(r -> r.post("/hi", (req, res) -> req.receive()
 				                                                         .aggregate()

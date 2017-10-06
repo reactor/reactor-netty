@@ -37,7 +37,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
@@ -54,7 +54,7 @@ public class WebsocketTest {
 
 	static final String auth = "bearer abc";
 
-	NettyContext httpServer = null;
+	Connection httpServer = null;
 
 	@After
 	public void disposeHttpServer() {
@@ -564,7 +564,7 @@ public class WebsocketTest {
 		HttpClient.create(httpServer.address().getPort())
 		          .ws("/test")
 		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
-		                  NettyContext context = in.context();
+		                  Connection context = in.context();
 		                  Mono.delay(Duration.ofSeconds(3))
 		                      .subscribe(c -> {
 		                              System.out.println("context.dispose()");
@@ -617,7 +617,7 @@ public class WebsocketTest {
 		HttpClient.create(httpServer.address().getPort())
 		          .ws("/test")
 		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
-		              NettyContext context = in.context();
+		              Connection context = in.context();
 		              context.onClose()
 		                     .subscribe(
 		                             c -> { // no-op

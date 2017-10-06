@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -36,7 +36,7 @@ public class HttpResponseStatusCodesHandlingTests {
 
 	@Test
 	public void httpStatusCode404IsHandledByTheClient() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newRouter(r -> r.post("/test", (req, res) -> res.send(req.receive()
 				                                                                    .log("server-received"))))

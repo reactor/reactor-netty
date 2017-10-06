@@ -52,8 +52,8 @@ import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ChannelOperations;
@@ -120,7 +120,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerOperations context(Consumer<NettyContext> contextCallback) {
+	public HttpServerOperations context(Consumer<Connection> contextCallback) {
 		contextCallback.accept(context());
 		return this;
 	}

@@ -43,7 +43,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.channel.AbortedException;
@@ -119,8 +119,8 @@ public class TcpClientTests {
 	public void testTcpClient() throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		NettyContext client = TcpClient.create("localhost", echoServerPort)
-		                               .newHandler((in, out) -> {
+		Connection client = TcpClient.create("localhost", echoServerPort)
+		                             .newHandler((in, out) -> {
 			                               in.receive()
 			                                 .log("conn")
 			                                 .subscribe(s -> latch.countDown());
@@ -128,7 +128,7 @@ public class TcpClientTests {
 			                               return out.sendString(Flux.just("Hello World!"))
 			                                  .neverComplete();
 		                               })
-		                               .block(Duration.ofSeconds(30));
+		                             .block(Duration.ofSeconds(30));
 
 		latch.await(30, TimeUnit.SECONDS);
 
@@ -144,14 +144,14 @@ public class TcpClientTests {
 		TcpClient client =
 				TcpClient.create(echoServerPort);
 
-		NettyContext s = client.newHandler((in, out) -> {
+		Connection s = client.newHandler((in, out) -> {
 			in.receive()
 			  .subscribe(d -> latch.countDown());
 
 			return out.sendString(Flux.just("Hello"))
 			   .neverComplete();
 		})
-		                       .block(Duration.ofSeconds(5));
+		                     .block(Duration.ofSeconds(5));
 
 		latch.await(5, TimeUnit.SECONDS);
 
@@ -338,7 +338,7 @@ public class TcpClientTests {
 					                             .port(abortServerPort)
 					                             .disablePool());
 
-			Mono<? extends NettyContext> handler = tcpClient.newHandler((in, out) -> {
+			Mono<? extends Connection> handler = tcpClient.newHandler((in, out) -> {
 				System.out.println("Start");
 				connectionLatch.countDown();
 				in.receive()
@@ -367,7 +367,7 @@ public class TcpClientTests {
 		TcpClient tcpClient = TcpClient.create(opts -> opts.host("localhost")
 		                                                   .port(echoServerPort)
 		                                                   .disablePool());
-		NettyContext c;
+		Connection c;
 
 		c = tcpClient.newHandler((i, o) -> {
 			o.sendObject(Mono.never()
@@ -411,7 +411,7 @@ public class TcpClientTests {
 		TcpClient client =
 				TcpClient.create(opts -> opts.host("localhost").port(timeoutServerPort));
 
-		NettyContext s = client.newHandler((in, out) -> {
+		Connection s = client.newHandler((in, out) -> {
 			in.onReadIdle(500, () -> {
 				  totalDelay.addAndGet(System.currentTimeMillis() - start);
 				  latch.countDown();
@@ -428,7 +428,7 @@ public class TcpClientTests {
 			           .then()
 			           .log();
 		})
-		                       .block(Duration.ofSeconds(30));
+		                     .block(Duration.ofSeconds(30));
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 		assertTrue("close was counted down", close.await(30, TimeUnit.SECONDS));
@@ -444,11 +444,11 @@ public class TcpClientTests {
 
 		TcpClient client = TcpClient.create("localhost", heartbeatServerPort);
 
-		NettyContext s = client.newHandler((in, out) -> {
+		Connection s = client.newHandler((in, out) -> {
 			in.onReadIdle(500, latch::countDown);
 			return Flux.never();
 		})
-		                       .block(Duration.ofSeconds(30));
+		                     .block(Duration.ofSeconds(30));
 
 		assertTrue(latch.await(15, TimeUnit.SECONDS));
 		heartbeatServer.close();
@@ -465,8 +465,8 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(1);
 		long start = System.currentTimeMillis();
 
-		NettyContext client = TcpClient.create("localhost", echoServerPort)
-		                               .newHandler((in, out) -> {
+		Connection client = TcpClient.create("localhost", echoServerPort)
+		                             .newHandler((in, out) -> {
 			                               System.out.println("hello");
 			                               out.onWriteIdle(500, latch::countDown);
 
@@ -478,7 +478,7 @@ public class TcpClientTests {
 			                               }
 			                               return Flux.merge(allWrites);
 		                               })
-		                               .block(Duration.ofSeconds(30));
+		                             .block(Duration.ofSeconds(30));
 
 		System.out.println("Started");
 

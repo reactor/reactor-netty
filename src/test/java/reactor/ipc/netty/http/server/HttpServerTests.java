@@ -50,7 +50,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
@@ -94,7 +94,7 @@ public class HttpServerTests {
 
 	@Test
 	public void releaseInboundChannelOnNonKeepAliveRequest() throws Exception {
-		NettyContext c = HttpServer.create(0)
+		Connection c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> req.receive().then(resp.status(200).send()))
 		                           .block();
 
@@ -145,10 +145,10 @@ public class HttpServerTests {
 	@Test
 	public void testRestart() {
 		// start a first server with a handler that answers HTTP 200 OK
-		NettyContext context = HttpServer.create(8080)
-		                                 .newHandler((req, resp) -> resp.status(200)
+		Connection context = HttpServer.create(8080)
+		                               .newHandler((req, resp) -> resp.status(200)
 		                                                                .send().log())
-		                                 .block();
+		                               .block();
 
 		HttpClientResponse response = HttpClient.create(8080).get("/").block();
 
@@ -177,9 +177,9 @@ public class HttpServerTests {
 
 	@Test
 	public void errorResponseAndReturn() throws Exception {
-		NettyContext c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> Mono.error(new Exception("returnError")))
-		                           .block();
+		Connection c = HttpServer.create(0)
+		                         .newHandler((req, resp) -> Mono.error(new Exception("returnError")))
+		                         .block();
 
 		HttpClientResponse res =
 				HttpClient.create(c.address().getPort())
@@ -197,14 +197,14 @@ public class HttpServerTests {
 
 		AtomicInteger i = new AtomicInteger();
 
-		NettyContext server = HttpServer.create(0)
+		Connection server = HttpServer.create(0)
 		                           .newHandler((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
 		                                                          .sendString(Mono.just(i.incrementAndGet())
 		                                                                          .flatMap(d -> Mono.delay(
 				                                                                          Duration.ofSeconds(
 						                                                                          4 - d))
 		                                                                                         .map(x -> d + "\n"))))
-		                           .block(Duration.ofSeconds(30));
+		                         .block(Duration.ofSeconds(30));
 
 		DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
 				HttpMethod.GET,
@@ -212,7 +212,7 @@ public class HttpServerTests {
 
 		CountDownLatch latch = new CountDownLatch(6);
 
-		NettyContext client = TcpClient.create(server.address()
+		Connection client = TcpClient.create(server.address()
 		                                             .getPort())
 		                               .newHandler((in, out) -> {
 			                                   in.context()
@@ -249,9 +249,9 @@ public class HttpServerTests {
 		Flux<String> test = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
 
-		NettyContext c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
-		                           .block(Duration.ofSeconds(30));
+		Connection c = HttpServer.create(0)
+		                         .newHandler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
+		                         .block(Duration.ofSeconds(30));
 
 		Flux<String> client = HttpClient.create(c.address()
 		                                         .getPort())
@@ -271,9 +271,9 @@ public class HttpServerTests {
 	@Test
 	public void keepAlive() throws URISyntaxException {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
-		NettyContext c = HttpServer.create(0)
-		                           .newRouter(routes -> routes.directory("/test", resource))
-		                           .block(Duration.ofSeconds(30));
+		Connection c = HttpServer.create(0)
+		                         .newRouter(routes -> routes.directory("/test", resource))
+		                         .block(Duration.ofSeconds(30));
 
 		HttpResources.set(PoolResources.fixed("http", 1));
 
@@ -400,7 +400,7 @@ public class HttpServerTests {
 
 	@Test
 	public void nonContentStatusCodes() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(ops -> ops.host("localhost"))
 				          .newRouter(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                           .sendHeaders())
@@ -456,7 +456,7 @@ public class HttpServerTests {
 
 	@Test
 	public void testContentLengthHeadRequest() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(ops -> ops.host("localhost"))
 				          .newRouter(r -> r.route(req -> req.uri().startsWith("/1"),
 				                                  (req, res) -> res.sendString(Mono.just("OK")))
@@ -554,7 +554,7 @@ public class HttpServerTests {
 
 	@Test
 	public void testIssue186() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.status(200).send())
 				          .block(Duration.ofSeconds(30));
@@ -596,7 +596,7 @@ public class HttpServerTests {
 				    })
 				    .map(i -> "foo " + i);
 
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.sendString(content))
 				          .block(Duration.ofSeconds(30));
@@ -622,7 +622,7 @@ public class HttpServerTests {
 	@Test
 	public void contextShouldBeTransferredFromDownStreamToUpsream() {
 		AtomicReference<Context> context = new AtomicReference<>();
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.status(200).send())
 				          .block(Duration.ofSeconds(30));
@@ -669,7 +669,7 @@ public class HttpServerTests {
 	}
 
 	public void redirectTests(String url) {
-		NettyContext server = HttpServer.create(9999)
+		Connection server = HttpServer.create(9999)
 		                                .newHandler((req, res) -> {
 			                                if (req.uri()
 			                                       .contains("/login") && req.method()
@@ -723,7 +723,7 @@ public class HttpServerTests {
 	}
 
 	private void doTestIssue309(String path, Consumer<? super HttpServerOptions.Builder> ops) {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(ops)
 				          .newHandler((req, res) -> res.sendString(Mono.just("Should not be reached")))
 				          .block();

@@ -15,7 +15,6 @@
  */
 package reactor.ipc.netty.tcp;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -32,13 +31,12 @@ import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class TcpResourcesTest {
@@ -135,7 +133,7 @@ public class TcpResourcesTest {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(2);
 
-		NettyContext server = TcpServer.create(port)
+		Connection server = TcpServer.create(port)
 		                               .newHandler((in, out) -> {
 		                               	try {
 			                                in.receive()
@@ -150,7 +148,7 @@ public class TcpResourcesTest {
 		                               })
 		                               .block(Duration.ofSeconds(30));
 
-		NettyContext client = TcpClient.create(port)
+		Connection client = TcpClient.create(port)
 		                               .newHandler((in, out) -> {
 		                               	try {
 			                                out.sendString(Flux.just("Hello World!"))

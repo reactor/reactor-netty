@@ -22,7 +22,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
@@ -46,7 +46,7 @@ public class HttpRedirectTest {
 
 	private void redirectTests(String url) {
 		AtomicInteger counter = new AtomicInteger(1);
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newHandler((req, res) -> {
 				              if (req.uri().contains("/login") &&
@@ -82,7 +82,7 @@ public class HttpRedirectTest {
 
 	@Test
 	public void testIssue253() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(9991)
 				          .newRouter(r -> r.get("/1",
 				                                   (req, res) -> res.sendRedirect("http://localhost:9991/3"))
@@ -124,7 +124,7 @@ public class HttpRedirectTest {
 
 	@Test
 	public void testIssue278() {
-		NettyContext server1 =
+		Connection server1 =
 				HttpServer.create(8888)
 				          .newRouter(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
 				                           .get("/2", (req, res) -> res.sendRedirect("http://localhost:8888/3"))
@@ -132,7 +132,7 @@ public class HttpRedirectTest {
 				                           .get("/4", (req, res) -> res.sendRedirect("http://localhost:8889/1")))
 				          .block(Duration.ofSeconds(30));
 
-		NettyContext server2 =
+		Connection server2 =
 				HttpServer.create(8889)
 				          .newRouter(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
 				          .block(Duration.ofSeconds(30));

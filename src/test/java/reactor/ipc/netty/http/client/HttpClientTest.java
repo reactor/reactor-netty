@@ -51,10 +51,9 @@ import org.junit.Test;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.AbortedException;
-import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 import reactor.ipc.netty.resources.PoolResources;
@@ -71,8 +70,8 @@ public class HttpClientTest {
 
 	@Test
 	public void abort() throws Exception {
-		NettyContext x = TcpServer.create("localhost", 0)
-		                          .newHandler((in, out) -> in.receive()
+		Connection x = TcpServer.create("localhost", 0)
+		                        .newHandler((in, out) -> in.receive()
 		                                                     .take(1)
 		                                                     .thenMany(Flux.defer(() ->
 						                                                     out.context(c ->
@@ -81,7 +80,7 @@ public class HttpClientTest {
 						                                                        .then(Mono.delay(Duration.ofSeconds(2)).then()))
 		                                                     )
 		                          )
-		                          .block(Duration.ofSeconds(30));
+		                        .block(Duration.ofSeconds(30));
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -131,7 +130,7 @@ public class HttpClientTest {
 		final PoolResources pool = PoolResources.fixed("local", 1);
 		CountDownLatch latch = new CountDownLatch(3);
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
-		NettyContext serverContext = HttpServer.create(8080)
+		Connection serverContext = HttpServer.create(8080)
 		                                       .newRouter(r -> r.post("/",
 				                                       (req, resp) -> req.receive()
 				                                                         .asString()
@@ -166,14 +165,14 @@ public class HttpClientTest {
 	@Test
 	@Ignore
 	public void pipelined() throws Exception {
-		NettyContext x = TcpServer.create("localhost", 0)
-		                          .newHandler((in, out) -> out.context(c -> c.addHandlerFirst(new
+		Connection x = TcpServer.create("localhost", 0)
+		                        .newHandler((in, out) -> out.context(c -> c.addHandlerFirst(new
 				                          HttpResponseEncoder()))
 		                                                      .sendObject(Flux.just(
 				                                                      response(),
 				                                                      response()))
 		                                                      .neverComplete())
-		                          .block(Duration.ofSeconds(30));
+		                        .block(Duration.ofSeconds(30));
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -208,9 +207,9 @@ public class HttpClientTest {
 	@Test
 	public void backpressured() throws Exception {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
-		NettyContext c = HttpServer.create(0)
-		                           .newRouter(routes -> routes.directory("/test", resource))
-		                           .block(Duration.ofSeconds(30));
+		Connection c = HttpServer.create(0)
+		                         .newRouter(routes -> routes.directory("/test", resource))
+		                         .block(Duration.ofSeconds(30));
 
 		Mono<HttpClientResponse> remote = HttpClient.create(c.address().getPort())
 		                                            .get("/test/test.css");
@@ -238,8 +237,8 @@ public class HttpClientTest {
 	public void serverInfiniteClientClose() throws Exception {
 
 		CountDownLatch latch = new CountDownLatch(1);
-		NettyContext c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> {
+		Connection c = HttpServer.create(0)
+		                         .newHandler((req, resp) -> {
 			                           req.context()
 			                              .onClose(latch::countDown);
 
@@ -259,7 +258,7 @@ public class HttpClientTest {
 						                                                                      false));
 			                                      });
 		                           })
-		                           .block(Duration.ofSeconds(30));
+		                         .block(Duration.ofSeconds(30));
 
 		Mono<HttpClientResponse> remote = HttpClient.create(c.address().getPort())
 		                                            .get("/");
@@ -539,8 +538,8 @@ public class HttpClientTest {
 	@Test
 	public void prematureCancel() throws Exception {
 		DirectProcessor<Void> signal = DirectProcessor.create();
-		NettyContext x = TcpServer.create("localhost", 0)
-		                          .newHandler((in, out) -> {
+		Connection x = TcpServer.create("localhost", 0)
+		                        .newHandler((in, out) -> {
 										signal.onComplete();
 										return out.context(c -> c.addHandlerFirst(
 												new HttpResponseEncoder()))
@@ -553,7 +552,7 @@ public class HttpClientTest {
 																          .PROCESSING)))
 												.neverComplete();
 		                          })
-		                          .block(Duration.ofSeconds(30));
+		                        .block(Duration.ofSeconds(30));
 
 		StepVerifier.create(createHttpClientForContext(x)
 		                              .get("/")
@@ -568,7 +567,7 @@ public class HttpClientTest {
 
 		String content = "HELLO WORLD";
 
-		NettyContext c = HttpServer.create(opts -> opts.compression(true).port(0))
+		Connection c = HttpServer.create(opts -> opts.compression(true).port(0))
 		          .newHandler((req, res) -> res.sendString(Mono.just(content)))
 		          .block();
 
@@ -627,10 +626,10 @@ public class HttpClientTest {
 
 	private void doTestGzip(boolean gzipEnabled) {
 		String expectedResponse = gzipEnabled ? "gzip" : "no gzip";
-		NettyContext server = HttpServer.create(0)
-		        .newHandler((req,res) -> res.sendString(
+		Connection server = HttpServer.create(0)
+		                              .newHandler((req,res) -> res.sendString(
 		                Mono.just(req.requestHeaders().get(HttpHeaderNames.ACCEPT_ENCODING, "no gzip"))))
-		        .block(Duration.ofSeconds(30));
+		                              .block(Duration.ofSeconds(30));
 		StepVerifier.create(
 		        HttpClient.create(ops -> ops.port(server.address().getPort()).compression(gzipEnabled))
 		                  .get("/")
@@ -651,8 +650,8 @@ public class HttpClientTest {
 
 	@Test
 	public void testUserAgent() {
-		NettyContext c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> {
+		Connection c = HttpServer.create(0)
+		                         .newHandler((req, resp) -> {
 			                           Assert.assertTrue(""+req.requestHeaders()
 			                                                   .get(HttpHeaderNames.USER_AGENT),
 					                           req.requestHeaders()
@@ -662,7 +661,7 @@ public class HttpClientTest {
 
 			                           return resp;
 		                           })
-		                           .block();
+		                         .block();
 
 		HttpClientResponse resp = HttpClient.create(c.address().getPort())
 		                                    .get("/")
@@ -698,7 +697,7 @@ public class HttpClientTest {
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
 		                                        .build();
 
-		NettyContext context =
+		Connection context =
 				HttpServer.create(opt -> opt.sslContext(sslServer))
 				          .newHandler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
 				          .block();
@@ -723,7 +722,7 @@ public class HttpClientTest {
 		SslContext sslClient = SslContextBuilder.forClient()
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
-		NettyContext context =
+		Connection context =
 				HttpServer.create(opt -> opt.sslContext(sslServer))
 				          .newHandler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
 				          .block();
@@ -749,7 +748,7 @@ public class HttpClientTest {
 				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
-		NettyContext context =
+		Connection context =
 				HttpServer.create(opt -> opt.sslContext(sslServer))
 				          .newRouter(r -> r.post("/upload", (req, resp) ->
 						          req.receive()
@@ -783,7 +782,7 @@ public class HttpClientTest {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
-		NettyContext context =
+		Connection context =
 				HttpServer.create(opt -> opt.host("localhost"))
 				          .newRouter(r -> r.post("/upload", (req, resp) ->
 						          req
@@ -814,7 +813,7 @@ public class HttpClientTest {
 
 	@Test
 	public void test() {
-		NettyContext context =
+		Connection context =
 				HttpServer.create(opt -> opt.host("localhost"))
 				          .newRouter(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                         .status(HttpResponseStatus.CREATED)
@@ -846,12 +845,10 @@ public class HttpClientTest {
 		context.dispose();
 	}
 
-
-
 	@Test
 	public void closePool() {
 		PoolResources pr = PoolResources.fixed("wstest", 1);
-		NettyContext httpServer = HttpServer.create(0)
+		Connection httpServer = HttpServer.create(0)
 		                       .newHandler((in, out) ->  out.options(opt -> opt.flushOnEach())
 				                                  .sendString(
 						                                  Mono.just("test")
@@ -881,18 +878,18 @@ public class HttpClientTest {
 		pr.dispose();
 	}
 
-	private HttpClient createHttpClientForContext(NettyContext context) {
+	private HttpClient createHttpClientForContext(Connection context) {
 		return HttpClient.create(opt -> applyHostAndPortFromContext(opt, context));
 	}
 
-	private HttpClientOptions.Builder applyHostAndPortFromContext(HttpClientOptions.Builder httpClientOptions, NettyContext context) {
+	private HttpClientOptions.Builder applyHostAndPortFromContext(HttpClientOptions.Builder httpClientOptions, Connection context) {
 		httpClientOptions.connectAddress(() -> context.address());
 		return httpClientOptions;
 	}
 
 	@Test
 	public void testIssue303() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newHandler((req, resp) -> resp.sendString(Mono.just("OK")))
 				          .block(Duration.ofSeconds(30));

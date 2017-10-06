@@ -40,7 +40,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientOptions;
@@ -129,7 +129,7 @@ public class HttpSendFileTests {
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression, Consumer<String> bodyAssertion) {
-		NettyContext context =
+		Connection context =
 				HttpServer.create(opt -> customizeServerOptions(opt.host("localhost")))
 				          .newHandler((req, resp) -> fn.apply(resp))
 				          .block();
@@ -187,7 +187,7 @@ public class HttpSendFileTests {
 			channel.read(buf, 0, buf, new TestCompletionHandler(channel, fluxSink, allocator, chunk));
 		});
 
-		NettyContext context =
+		Connection context =
 				HttpServer.create(opt -> customizeServerOptions(opt.host("localhost")))
 				          .newHandler((req, resp) -> resp.sendByteArray(req.receive()
 				                                                           .aggregate()

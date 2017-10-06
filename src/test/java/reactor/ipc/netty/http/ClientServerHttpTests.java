@@ -38,7 +38,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -56,7 +56,7 @@ public class ClientServerHttpTests {
 
 	static final Logger log = Loggers.getLogger(ClientServerHttpTests.class);
 
-	private NettyContext              httpServer;
+	private Connection                httpServer;
 	private Processor<String, String> broadcaster;
 
 	@Test

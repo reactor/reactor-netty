@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cookie.Cookie;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
@@ -68,7 +68,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse chunkedTransfer(boolean chunked);
 
 	@Override
-	default HttpServerResponse context(Consumer<NettyContext> contextCallback){
+	default HttpServerResponse context(Consumer<Connection> contextCallback){
 		contextCallback.accept(context());
 		return this;
 	}
