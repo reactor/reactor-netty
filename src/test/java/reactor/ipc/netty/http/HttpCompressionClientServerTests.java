@@ -64,7 +64,7 @@ public class HttpCompressionClientServerTests {
 
 		res.dispose();
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		            .block();
 	}
 
@@ -91,7 +91,7 @@ public class HttpCompressionClientServerTests {
 
 		resp.dispose();
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		            .block();
 	}
 
@@ -121,7 +121,7 @@ public class HttpCompressionClientServerTests {
 
 		resp.dispose();
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		            .block();
 	}
 
@@ -163,7 +163,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(deflated).isEqualTo("reply");
 
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -198,7 +198,7 @@ public class HttpCompressionClientServerTests {
 
 		resp.dispose();
         connection.dispose();
-        connection.onClose()
+        connection.onDispose()
 		            .block();
 	}
 
@@ -239,7 +239,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(deflated).isEqualTo("reply");
 
         connection.dispose();
-        connection.onClose()
+        connection.onDispose()
 		            .block();
 	}
 
@@ -273,7 +273,7 @@ public class HttpCompressionClientServerTests {
 
 		resp.dispose();
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		            .block();
 	}
 
@@ -315,7 +315,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(deflated).isEqualTo("reply");
 
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -344,7 +344,7 @@ public class HttpCompressionClientServerTests {
 
 		resp.dispose();
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		            .block();
 	}
 
@@ -372,7 +372,7 @@ public class HttpCompressionClientServerTests {
 
 		resp.dispose();
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		            .block();
 	}
 
@@ -398,7 +398,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(zip.get()).isEqualTo("gzip");
 		resp.dispose();
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 				.block();
 	}
 

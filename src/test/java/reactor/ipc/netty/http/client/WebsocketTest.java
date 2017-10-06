@@ -571,7 +571,7 @@ public class WebsocketTest {
 		                              context.dispose();
 		                              latch.countDown();
 		                      });
-		                  context.onClose()
+		                  context.onDispose()
 		                         .subscribe(
 		                                 c -> { // no-op
 		                                 },
@@ -618,7 +618,7 @@ public class WebsocketTest {
 		          .ws("/test")
 		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
 		              Connection context = in.context();
-		              context.onClose()
+		              context.onDispose()
 		                     .subscribe(
 		                             c -> { // no-op
 		                             },

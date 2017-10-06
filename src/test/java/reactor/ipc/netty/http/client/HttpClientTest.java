@@ -240,7 +240,7 @@ public class HttpClientTest {
 		Connection c = HttpServer.create(0)
 		                         .newHandler((req, resp) -> {
 			                           req.context()
-			                              .onClose(latch::countDown);
+			                              .onDispose(latch::countDown);
 
 			                           return Flux.interval(Duration.ofSeconds(1))
 			                                      .flatMap(d -> {
@@ -709,7 +709,7 @@ public class HttpClientTest {
 		                                        .get("/foo")
 		                                        .block();
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 
 		String responseString = response.receive().aggregate().asString(CharsetUtil.UTF_8).block();
 		assertThat(responseString).isEqualTo("hello /foo");
@@ -732,7 +732,7 @@ public class HttpClientTest {
 						.sslContext(sslClient))
 				.get("/foo").block();
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 
 		String responseString = response.receive().aggregate().asString(CharsetUtil.UTF_8).block();
 		assertThat(responseString).isEqualTo("hello /foo");
@@ -765,7 +765,7 @@ public class HttpClientTest {
 				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 
 		String responseBody = response.receive().aggregate().asString().block();
 		assertThat(response.status().code()).isEqualTo(201);
@@ -799,7 +799,7 @@ public class HttpClientTest {
 				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 
 		String responseBody = response.receive().aggregate().asString().block();
 		assertThat(response.status().code()).isEqualTo(201);

@@ -142,7 +142,7 @@ public class HttpSendFileTests {
 				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 
 		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 		bodyAssertion.accept(body);

@@ -47,7 +47,7 @@ public class BlockingConnectionTest {
 		}
 
 		@Override
-		public Mono<Void> onClose() {
+		public Mono<Void> onDispose() {
 			return Mono.never();
 		}
 	};
@@ -64,7 +64,7 @@ public class BlockingConnectionTest {
 		}
 
 		@Override
-		public Mono<Void> onClose() {
+		public Mono<Void> onDispose() {
 			return Mono.empty();
 		}
 	};
