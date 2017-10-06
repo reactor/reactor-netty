@@ -30,7 +30,7 @@ import io.netty.util.concurrent.SucceededFuture;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -64,7 +64,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	PooledClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			ClientOptions options,
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
@@ -77,7 +77,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public void fireContextActive(NettyContext context) {
+	public void fireContextActive(Connection context) {
 		if (!fired) {
 			fired = true;
 			if (context != null) {
@@ -260,7 +260,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			log.debug("Releasing channel: {}", c.toString());
 		}
 
-		if (!NettyContext.isPersistent(c) && c.isActive()) {
+		if (!Connection.isPersistent(c) && c.isActive()) {
 			c.close();
 		}
 

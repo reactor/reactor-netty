@@ -34,10 +34,10 @@ public class NettyInboundTest {
 	@Test
 	public void onReadIdleReplaces() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
-		NettyContext mockContext = () -> channel;
+		Connection mockContext = () -> channel;
 		NettyInbound inbound = new NettyInbound() {
 			@Override
-			public NettyContext context() {
+			public Connection context() {
 				return mockContext;
 			}
 

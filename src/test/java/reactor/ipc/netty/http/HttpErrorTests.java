@@ -23,8 +23,8 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -36,14 +36,14 @@ public class HttpErrorTests {
 
 	@Test
 	public void test() {
-		NettyContext server = HttpServer.create(0)
-		                                .newRouter(httpServerRoutes -> httpServerRoutes.get(
+		Connection server = HttpServer.create(0)
+		                              .newRouter(httpServerRoutes -> httpServerRoutes.get(
 				                                "/",
 				                                (httpServerRequest, httpServerResponse) -> {
 					                                return httpServerResponse.sendString(
 							                                Mono.error(new IllegalArgumentException()));
 				                                }))
-		                                .block(Duration.ofSeconds(30));
+		                              .block(Duration.ofSeconds(30));
 
 		HttpClient client = HttpClient.create(opt -> opt.host("localhost")
 		                                                .port(server.address().getPort())

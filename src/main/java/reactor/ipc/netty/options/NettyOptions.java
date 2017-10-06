@@ -34,7 +34,7 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.function.Tuple2;
 
@@ -60,15 +60,15 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 					12012;
 
 	private final BOOTSTRAP                        bootstrapTemplate;
-	private final boolean                          preferNative;
-	private final LoopResources                    loopResources;
-	private final SslContext                       sslContext;
-	private final long                             sslHandshakeTimeoutMillis;
-	private final long                             sslCloseNotifyFlushTimeoutMillis;
-	private final long                             sslCloseNotifyReadTimeoutMillis;
-	protected final Consumer<? super Channel>      afterChannelInit;
-	protected final Consumer<? super NettyContext> afterNettyContextInit;
-	private final Predicate<? super Channel>       onChannelInit;
+	private final boolean                        preferNative;
+	private final LoopResources                  loopResources;
+	private final SslContext                     sslContext;
+	private final long                           sslHandshakeTimeoutMillis;
+	private final long                           sslCloseNotifyFlushTimeoutMillis;
+	private final long                           sslCloseNotifyReadTimeoutMillis;
+	protected final Consumer<? super Channel>    afterChannelInit;
+	protected final Consumer<? super Connection> afterNettyContextInit;
+	private final Predicate<? super Channel>     onChannelInit;
 
 	protected NettyOptions(NettyOptions.Builder<BOOTSTRAP, SO, ?> builder) {
 		this.bootstrapTemplate = builder.bootstrapTemplate;
@@ -111,13 +111,13 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 
 	/**
 	 * Returns the callback for post {@link Channel} initialization, reactor-netty
-	 * pipeline handlers registration and {@link NettyContext} initialisation.
+	 * pipeline handlers registration and {@link Connection} initialisation.
 	 *
-	 * @return the post {@link NettyContext} setup handler
+	 * @return the post {@link Connection} setup handler
 	 * @see #onChannelInit()
 	 * @see #afterChannelInit()
 	 */
-	public final Consumer<? super NettyContext> afterNettyContextInit() {
+	public final Consumer<? super Connection> afterNettyContextInit() {
 		return this.afterNettyContextInit;
 	}
 
@@ -288,14 +288,14 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 		protected BOOTSTRAP bootstrapTemplate;
 		private boolean                        preferNative                     = DEFAULT_NATIVE;
 		private LoopResources                  loopResources                    = null;
-		private ChannelGroup                   channelGroup                     = null;
-		private SslContext                     sslContext                       = null;
-		private long                           sslHandshakeTimeoutMillis        = 10000L;
-		private long                           sslCloseNotifyFlushTimeoutMillis = 3000L;
-		private long                           sslCloseNotifyReadTimeoutMillis  = 0L;
-		private Consumer<? super Channel>      afterChannelInit                 = null;
-		private Consumer<? super NettyContext> afterNettyContextInit            = null;
-		private Predicate<? super Channel>     onChannelInit                    = null;
+		private ChannelGroup                 channelGroup                     = null;
+		private SslContext                   sslContext                       = null;
+		private long                         sslHandshakeTimeoutMillis        = 10000L;
+		private long                         sslCloseNotifyFlushTimeoutMillis = 3000L;
+		private long                         sslCloseNotifyReadTimeoutMillis  = 0L;
+		private Consumer<? super Channel>    afterChannelInit                 = null;
+		private Consumer<? super Connection> afterNettyContextInit            = null;
+		private Predicate<? super Channel>   onChannelInit                    = null;
 
 		protected Builder(BOOTSTRAP bootstrapTemplate) {
 			this.bootstrapTemplate = bootstrapTemplate;
@@ -517,7 +517,7 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 
 		/**
 		 * Setup a callback called after each {@link Channel} initialization, once the
-		 * reactor-netty pipeline handlers have been registered and the {@link NettyContext}
+		 * reactor-netty pipeline handlers have been registered and the {@link Connection}
 		 * is available.
 		 *
 		 * @param afterNettyContextInit the post channel setup handler
@@ -525,7 +525,7 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 		 * @see #onChannelInit(Predicate)
 		 * @see #afterChannelInit(Consumer)
 		 */
-		public final BUILDER afterNettyContextInit(Consumer<? super NettyContext> afterNettyContextInit) {
+		public final BUILDER afterNettyContextInit(Consumer<? super Connection> afterNettyContextInit) {
 			this.afterNettyContextInit = Objects.requireNonNull(afterNettyContextInit, "afterNettyContextInit");
 			return get();
 		}
