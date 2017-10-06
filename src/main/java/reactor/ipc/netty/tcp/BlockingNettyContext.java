@@ -145,7 +145,7 @@ public class BlockingNettyContext {
 		removeShutdownHook(); //only applies if not called from the hook's thread
 
 		context.dispose();
-		context.onClose()
+		context.onDispose()
 		       .doOnError(e -> LOG.error("Stopped {} on {} with an error {}", description, context.address(), e))
 		       .doOnTerminate(() -> LOG.info("Stopped {} on {}", description, context.address()))
 		       .timeout(lifecycleTimeout, Mono.error(new TimeoutException(description + " couldn't be stopped within " + lifecycleTimeout.toMillis() + "ms")))
@@ -160,7 +160,7 @@ public class BlockingNettyContext {
 		final String hookDesc = Thread.currentThread().toString();
 
 		context.dispose();
-		context.onClose()
+		context.onDispose()
 		       .doOnError(e -> LOG.error("Stopped {} on {} with an error {} from JVM hook {}",
 				       description, context.address(), e, hookDesc))
 		       .doOnTerminate(() -> LOG.info("Stopped {} on {} from JVM hook {}",

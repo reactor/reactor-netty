@@ -58,7 +58,7 @@ public class HttpCompressionClientServerTests {
 		      .block();
 
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -84,7 +84,7 @@ public class HttpCompressionClientServerTests {
 		Assert.assertEquals("reply", reply);
 
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -112,7 +112,7 @@ public class HttpCompressionClientServerTests {
 		                   .blockFirst();
 		Assert.assertEquals("reply", reply);
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -154,7 +154,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(deflated).isEqualTo("reply");
 
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -186,7 +186,7 @@ public class HttpCompressionClientServerTests {
 		                   .blockFirst();
 		Assert.assertEquals("reply", reply);
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -228,7 +228,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(deflated).isEqualTo("reply");
 
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -256,7 +256,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(reply).isEqualTo(serverReply);
 
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
@@ -283,7 +283,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(reply).isEqualTo("reply");
 
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 		          .block();
 	}
 
