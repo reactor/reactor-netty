@@ -23,9 +23,8 @@ import java.util.function.Function;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import reactor.core.publisher.Flux;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyInbound;
-import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpInfos;
 
 /**
@@ -44,7 +43,7 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	}
 
 	@Override
-	default HttpServerRequest context(Consumer<NettyContext> contextCallback) {
+	default HttpServerRequest context(Consumer<Connection> contextCallback) {
 		NettyInbound.super.context(contextCallback);
 		return this;
 	}

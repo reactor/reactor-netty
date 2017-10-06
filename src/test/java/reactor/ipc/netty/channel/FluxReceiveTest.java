@@ -24,7 +24,7 @@ import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 
@@ -38,7 +38,7 @@ public class FluxReceiveTest {
 		Random rndm = new Random();
 		rndm.nextBytes(content);
 
-		NettyContext server1 =
+		Connection server1 =
 				HttpServer.create(0)
 				          .newRouter(routes ->
 				                     routes.get("/target", (req, res) ->
@@ -46,7 +46,7 @@ public class FluxReceiveTest {
 				                                                 .delayElements(Duration.ofMillis(100)))))
 				          .block(Duration.ofSeconds(30));
 
-		NettyContext server2 =
+		Connection server2 =
 				HttpServer.create(0)
 				          .newRouter(routes ->
 				                     routes.get("/forward", (req, res) ->
