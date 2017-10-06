@@ -35,8 +35,8 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyConnector;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
@@ -53,7 +53,7 @@ import reactor.util.context.Context;
  * @since 0.6
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
-		implements NettyInbound, NettyOutbound, NettyContext, CoreSubscriber<Void> {
+		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void> {
 
 	/**
 	 * Create a new {@link ChannelOperations} attached to the {@link Channel} attribute
@@ -176,12 +176,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final NettyContext context() {
+	public final Connection context() {
 		return this;
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> context(Consumer<NettyContext> contextCallback) {
+	public ChannelOperations<INBOUND, OUTBOUND> context(Consumer<Connection> contextCallback) {
 		contextCallback.accept(context());
 		return this;
 	}
@@ -203,7 +203,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public NettyContext onClose(final Runnable onClose) {
+	public Connection onClose(final Runnable onClose) {
 		onInactive.subscribe(null, e -> onClose.run(), onClose);
 		return this;
 	}

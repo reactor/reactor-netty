@@ -45,23 +45,23 @@ public interface NettyInbound {
 	}
 
 	/**
-	 * Return a {@link NettyContext} to operate on the underlying
+	 * Return a {@link Connection} to operate on the underlying
 	 * {@link Channel} state.
 	 *
-	 * @return the {@link NettyContext}
+	 * @return the {@link Connection}
 	 */
-	NettyContext context();
+	Connection context();
 
 	/**
-	 * Immediately call the passed callback with a {@link NettyContext} to operate on the
+	 * Immediately call the passed callback with a {@link Connection} to operate on the
 	 * underlying
 	 * {@link Channel} state. This allows for chaining inbound API.
 	 *
 	 * @param contextCallback context callback
 	 *
-	 * @return the {@link NettyContext}
+	 * @return the {@link Connection}
 	 */
-	default NettyInbound context(Consumer<NettyContext> contextCallback){
+	default NettyInbound context(Consumer<Connection> contextCallback){
 		contextCallback.accept(context());
 		return this;
 	}

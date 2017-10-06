@@ -32,8 +32,8 @@ import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyConnector;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
@@ -156,7 +156,7 @@ public final class HttpServer
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public Mono<? extends NettyContext> newHandler(BiFunction<? super HttpServerRequest, ? super
+	public Mono<? extends Connection> newHandler(BiFunction<? super HttpServerRequest, ? super
 			HttpServerResponse, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return server.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) handler);
@@ -168,7 +168,7 @@ public final class HttpServer
 	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
 	 * @return a new {@link Mono} starting the router on subscribe
 	 */
-	public Mono<? extends NettyContext> newRouter(Consumer<? super HttpServerRoutes>
+	public Mono<? extends Connection> newRouter(Consumer<? super HttpServerRoutes>
 			routesBuilder) {
 		Objects.requireNonNull(routesBuilder, "routeBuilder");
 		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
@@ -243,7 +243,7 @@ public final class HttpServer
 		@Override
 		protected ContextHandler<Channel> doHandler(
 				BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
-				MonoSink<NettyContext> sink) {
+				MonoSink<Connection> sink) {
 			return ContextHandler.newServerContext(sink,
 					options,
 					loggingHandler,

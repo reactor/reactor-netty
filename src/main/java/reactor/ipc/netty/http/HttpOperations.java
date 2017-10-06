@@ -44,7 +44,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
@@ -196,7 +196,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 
 		@Override
-		public void afterWrite(NettyContext context) {
+		public void afterWrite(Connection context) {
 			markSentBody();
 		}
 	};
@@ -227,7 +227,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return this;
 	}
 
-	static void autoAddHttpExtractor(NettyContext c, String name, ChannelHandler
+	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler
 			handler){
 
 		if (handler instanceof ByteToMessageDecoder
@@ -241,7 +241,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 			c.channel().pipeline().addBefore(name, extractorName, HTTP_EXTRACTOR);
 
-			if(NettyContext.isPersistent(c.channel())){
+			if(Connection.isPersistent(c.channel())){
 				c.onClose(() -> c.removeHandler(extractorName));
 			}
 
