@@ -20,6 +20,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -29,12 +32,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.cert.CertificateException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -42,11 +45,17 @@ import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.NetUtil;
+
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -580,6 +589,213 @@ public class TcpServerTests {
 		bnc.get().shutdown();
 		t.join();
 		Assertions.assertThat(t.isAlive()).isFalse();
+	}
+
+	@Test
+	public void tcpServerCanEncodeAndDecodeJSON() throws Exception {
+		ObjectMapper mapper = new ObjectMapper();
+		Function<Pojo, ByteBuf> jsonEncoder = pojo -> {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			try {
+				mapper.writeValue(out, pojo);
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+			return Unpooled.copiedBuffer(out.toByteArray());
+		};
+		Function<String, Pojo> jsonDecoder = s -> {
+			try {
+				return mapper.readValue(s, Pojo.class);
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+		};
+
+		CountDownLatch dataLatch = new CountDownLatch(1);
+
+		NettyContext server =
+		        TcpServer.create()
+		                 .newHandler((in, out) -> out.send(in.receive()
+		                                                     .asString()
+		                                                     .map(jsonDecoder)
+		                                                     .log()
+		                                                     .take(1)
+		                                                     .map(pojo -> {
+		                                                         Assertions.assertThat(pojo.getName()).isEqualTo("John Doe");
+		                                                         return new Pojo("Jane Doe");
+		                                                     })
+		                                                     .map(jsonEncoder)))
+		                 .block(Duration.ofSeconds(30));
+
+		SimpleClient client = new SimpleClient(server.address().getPort(), dataLatch, "{\"name\":\"John Doe\"}");
+		client.start();
+
+		Assertions.assertThat(dataLatch.await(5, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(dataLatch.getCount()).isEqualTo(0);
+
+		Assertions.assertThat(client.e).isNull();
+		Assertions.assertThat(client.data).isNotNull();
+		Assertions.assertThat(client.data.remaining()).isEqualTo(19);
+		Assertions.assertThat(new String(client.data.array())).isEqualTo("{\"name\":\"Jane Doe\"}");
+
+		server.dispose();
+	}
+
+	@Test
+	public void flushEvery5ElementsWithManualDecoding() throws Exception {
+		ObjectMapper mapper = new ObjectMapper();
+		Function<List<Pojo>, ByteBuf> jsonEncoder = pojo -> {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			try {
+				mapper.writeValue(out, pojo);
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+			return Unpooled.copiedBuffer(out.toByteArray());
+		};
+		Function<String, Pojo[]> jsonDecoder = s -> {
+			try {
+				return mapper.readValue(s, Pojo[].class);
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+		};
+
+		CountDownLatch dataLatch = new CountDownLatch(10);
+
+		NettyContext server =
+		        TcpServer.create(o -> o.afterChannelInit(c -> c.pipeline()
+		                                                       .addLast(new JsonObjectDecoder())))
+		                 .newHandler((in, out) -> in.receive()
+		                                            .asString()
+		                                            .log("serve")
+		                                            .map(jsonDecoder)
+		                                            .concatMap(d -> Flux.fromArray(d))
+		                                            .window(5)
+		                                            .concatMap(w -> out.send(w.collectList().map(jsonEncoder))))
+		                 .block(Duration.ofSeconds(30));
+
+		TcpClient.create(o -> o.port(server.address().getPort())
+		                       .afterChannelInit(c -> c.pipeline()
+		                                               .addLast(new JsonObjectDecoder())))
+		         .newHandler((in, out) -> {
+		             in.receive()
+		               .asString()
+		               .map(jsonDecoder)
+		               .concatMap(d -> Flux.fromArray(d))
+		               .log("receive")
+		               .subscribe(c -> dataLatch.countDown());
+
+		             return out.send(Flux.range(1, 10)
+		                       .map(it -> new Pojo("test" + it))
+		                       .log("send")
+		                       .collectList()
+		                       .map(jsonEncoder))
+		                       .neverComplete();
+		         })
+		         .block(Duration.ofSeconds(30));
+
+		Assertions.assertThat(dataLatch.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(dataLatch.getCount()).isEqualTo(0);
+
+		server.dispose();
+	}
+
+	@Test
+	public void retryStrategiesWhenServerFails() throws Exception {
+		ObjectMapper mapper = new ObjectMapper();
+		Function<List<Pojo>, ByteBuf> jsonEncoder = pojo -> {
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			try {
+				mapper.writeValue(out, pojo);
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+			return Unpooled.copiedBuffer(out.toByteArray());
+		};
+		Function<String, Pojo[]> jsonDecoder = s -> {
+			try {
+				return mapper.readValue(s, Pojo[].class);
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+		};
+
+		int elem = 10;
+		CountDownLatch latch = new CountDownLatch(elem);
+
+		final AtomicInteger j = new AtomicInteger();
+		NettyContext server =
+		        TcpServer.create("localhost")
+		                 .newHandler((in, out) -> out.sendGroups(in.receive()
+		                                                           .asString()
+		                                                           .map(jsonDecoder)
+		                                                           .map(d -> Flux.fromArray(d)
+		                                                                         .doOnNext(pojo -> {
+		                                                                             if (j.getAndIncrement() < 2) {
+		                                                                                 throw new RuntimeException("test");
+		                                                                             }
+		                                                                         })
+		                                                                         .retry(2)
+		                                                                         .collectList()
+		                                                                         .map(jsonEncoder))
+		                                                           .doOnComplete(() -> System.out.println("wow"))
+		                                                           .log("flatmap-retry")))
+		                 .block(Duration.ofSeconds(30));
+
+		TcpClient.create("localhost", server.address().getPort())
+		         .newHandler((in, out) -> {
+		             in.receive()
+		               .asString()
+		               .map(jsonDecoder)
+		               .concatMap(d -> Flux.fromArray(d))
+		               .log("receive")
+		               .subscribe(c -> latch.countDown());
+
+		             return out.send(Flux.range(1, elem)
+		                                 .map(i -> new Pojo("test" + i))
+		                                 .log("send")
+		                                 .collectList()
+		                                 .map(jsonEncoder))
+		                       .neverComplete();
+		         })
+		         .block(Duration.ofSeconds(30));
+
+		Assertions.assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(latch.getCount()).isEqualTo(0);
+
+		server.dispose();
+	}
+
+	private static class SimpleClient extends Thread {
+		private final int port;
+		private final CountDownLatch latch;
+		private final String output;
+		private ByteBuffer data;
+		private Exception e;
+
+		SimpleClient(int port, CountDownLatch latch, String output) {
+			this.port = port;
+			this.latch = latch;
+			this.output = output;
+		}
+
+		@Override
+		public void run() {
+			try {
+				SocketChannel ch =
+						SocketChannel.open(new InetSocketAddress(NetUtil.LOCALHOST.getHostAddress(), port));
+				int len = ch.write(ByteBuffer.wrap(output.getBytes(Charset.defaultCharset())));
+				Assertions.assertThat(ch.isConnected()).isTrue();
+				data = ByteBuffer.allocate(len);
+				int read = ch.read(data);
+				Assertions.assertThat(read).isGreaterThan(0);
+				data.flip();
+				latch.countDown();
+			} catch(Exception e) {
+				this.e = e;
+			}
+		}
 	}
 
 	public static class Pojo {
