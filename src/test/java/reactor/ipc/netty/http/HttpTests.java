@@ -28,7 +28,7 @@ import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientException;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -41,7 +41,7 @@ public class HttpTests {
 
 	@Test
 	public void httpRespondsEmpty() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newRouter(r ->
 				              r.post("/test/{param}", (req, res) -> Mono.empty()))
@@ -68,7 +68,7 @@ public class HttpTests {
 
 	@Test
 	public void httpRespondsToRequestsFromClients() {
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newRouter(r ->
 				              r.post("/test/{param}", (req, res) ->
@@ -104,7 +104,7 @@ public class HttpTests {
 	public void httpErrorWithRequestsFromClients() throws Exception {
 		CountDownLatch errored = new CountDownLatch(1);
 
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 						  .newRouter(r -> r.get("/test", (req, res) -> {throw new RuntimeException();})
 						                   .get("/test2", (req, res) -> res.send(Flux.error(new Exception()))
@@ -153,7 +153,7 @@ public class HttpTests {
 		AtomicInteger clientRes = new AtomicInteger();
 		AtomicInteger serverRes = new AtomicInteger();
 
-		NettyContext server =
+		Connection server =
 				HttpServer.create(0)
 				          .newRouter(r -> r.get("/test/{param}", (req, res) -> {
 				              System.out.println(req.requestHeaders().get("test"));

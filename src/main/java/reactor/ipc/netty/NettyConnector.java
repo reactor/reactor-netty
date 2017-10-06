@@ -69,7 +69,7 @@ public interface NettyConnector<INBOUND extends NettyInbound, OUTBOUND extends N
 	 * the active handler (server, client connection...) or failing with the connection
 	 * error.
 	 */
-	Mono<? extends NettyContext> newHandler(BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> ioHandler);
+	Mono<? extends Connection> newHandler(BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> ioHandler);
 
 	/**
 	 * Start a Client or Server in a blocking fashion, and wait for it to finish initializing.

@@ -30,14 +30,14 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 
 public class UdpClientTest {
 
 	@Test
 	public void smokeTest() throws Exception {
 		CountDownLatch latch = new CountDownLatch(4);
-		NettyContext server =
+		Connection server =
 				UdpServer.create(0)
 				         .newHandler((in, out) -> in.receiveObject()
 				                                    .map(o -> {
@@ -55,7 +55,7 @@ public class UdpClientTest {
 				                                    .flatMap(p -> out.sendObject(p)))
 				         .block(Duration.ofSeconds(30));
 
-		NettyContext client1 =
+		Connection client1 =
 				UdpClient.create(server.address().getPort())
 				         .newHandler((in, out) -> {
 				                                  in.receive()
@@ -69,7 +69,7 @@ public class UdpClientTest {
 				         })
 				         .block(Duration.ofSeconds(30));
 
-		NettyContext client2 =
+		Connection client2 =
 				UdpClient.create(server.address().getPort())
 				         .newHandler((in, out) -> {
 				                                  in.receive()

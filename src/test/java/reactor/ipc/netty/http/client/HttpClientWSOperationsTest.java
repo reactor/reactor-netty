@@ -22,7 +22,7 @@ import java.time.Duration;
 import org.junit.Test;
 
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.test.StepVerifier;
@@ -64,7 +64,7 @@ public class HttpClientWSOperationsTest {
 
 	private void failOnClientServerError(boolean clientError, boolean serverError,
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
-		NettyContext httpServer = HttpServer.create(0).newRouter(
+		Connection httpServer = HttpServer.create(0).newRouter(
 			routes -> routes.post("/login", (req, res) -> {
 						res.status(serverStatus);
 						return res.sendHeaders();
@@ -78,7 +78,7 @@ public class HttpClientWSOperationsTest {
 						return res.sendWebsocket(serverSubprotocol, (i, o) -> o.sendString(Mono.just("test")));
 					})
 			)
-			.block(Duration.ofSeconds(30));
+		                                  .block(Duration.ofSeconds(30));
 
 		Mono<HttpClientResponse> response =
 			HttpClient.create(httpServer.address().getPort())
