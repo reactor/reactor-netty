@@ -16,16 +16,14 @@
 
 package reactor.ipc.netty.channel.data;
 
-import java.io.RandomAccessFile;
-
 import io.netty.handler.stream.ChunkedWriteHandler;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 
 /**
  * A base abstract implementation of a {@link FileChunkedStrategy}. Only the
  * {@link #chunkFile(FileChannel)} method needs to be implemented, but child classes
- * can also override {@link #afterWrite(NettyContext)} to add custom cleanup.
+ * can also override {@link #afterWrite(Connection)} to add custom cleanup.
  * The pipeline preparation and cleanup involves adding and removing the
  * {@link NettyPipeline#ChunkedWriter} handler if it was not already present. It will be
  * added before {@link NettyPipeline#ReactiveBridge} or last, if the bridge handler is not
@@ -48,7 +46,7 @@ public abstract class AbstractFileChunkedStrategy<T> implements FileChunkedStrat
 	 * @param context the context from which to obtain the channel and pipeline
 	 */
 	@Override
-	public final void preparePipeline(NettyContext context) {
+	public final void preparePipeline(Connection context) {
 		this.addHandler = context.channel()
 		                         .pipeline()
 		                         .get(NettyPipeline.ChunkedWriter) == null;
@@ -76,12 +74,12 @@ public abstract class AbstractFileChunkedStrategy<T> implements FileChunkedStrat
 	 * {@inheritDoc}
 	 * <p>
 	 * This removes the ChunkedWriter handler if it was added by this strategy. It then
-	 * calls the {@link #afterWrite(NettyContext)} method
+	 * calls the {@link #afterWrite(Connection)} method
 	 *
 	 * @param context the context from which to obtain the channel and pipeline
 	 */
 	@Override
-	public final void cleanupPipeline(NettyContext context) {
+	public final void cleanupPipeline(Connection context) {
 		if (addHandler) {
 			context.channel()
 			       .pipeline()
@@ -91,11 +89,11 @@ public abstract class AbstractFileChunkedStrategy<T> implements FileChunkedStrat
 	}
 
 	/**
-	 * Additional cleanup to perform at the end of {@link #cleanupPipeline(NettyContext)}.
+	 * Additional cleanup to perform at the end of {@link #cleanupPipeline(Connection)}.
 	 *
-	 * @param context the {@link NettyContext}
+	 * @param context the {@link Connection}
 	 */
-	protected void afterWrite(NettyContext context) {
+	protected void afterWrite(Connection context) {
 		//NO-OP
 	}
 }

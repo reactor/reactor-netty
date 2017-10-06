@@ -21,7 +21,7 @@ import java.nio.channels.FileChannel;
 
 import io.netty.channel.Channel;
 import io.netty.handler.stream.ChunkedInput;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 
 /**
  * A strategy applied by {@link reactor.ipc.netty.NettyOutbound} when sending a file
@@ -35,12 +35,12 @@ public interface FileChunkedStrategy<T> {
 
 	/**
 	 * Allow for preparing the pipeline (eg. by adding handlers dynamically) before sending
-	 * the chunked file. The {@link NettyContext} is provided and can be used to get the
-	 * {@link NettyContext#channel() channel()} then {@link Channel#pipeline() pipeline()}.
+	 * the chunked file. The {@link Connection} is provided and can be used to get the
+	 * {@link Connection#channel() channel()} then {@link Channel#pipeline() pipeline()}.
 	 *
 	 * @param context the context from which to obtain the channel and pipeline
 	 */
-	void preparePipeline(NettyContext context);
+	void preparePipeline(Connection context);
 
 	/**
 	 * Given the sent file as a {@link RandomAccessFile}, return a {@link ChunkedInput}
@@ -54,9 +54,9 @@ public interface FileChunkedStrategy<T> {
 
 	/**
 	 * Once the file has been written, allows to clean the pipeline
-	 * (see {@link #preparePipeline(NettyContext)}) and do other operations.
+	 * (see {@link #preparePipeline(Connection)}) and do other operations.
 	 *
 	 * @param context the context from which to obtain the channel and pipeline
 	 */
-	void cleanupPipeline(NettyContext context);
+	void cleanupPipeline(Connection context);
 }

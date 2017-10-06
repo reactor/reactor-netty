@@ -60,7 +60,7 @@ public class NettyOutboundTest {
 	@Test
 	public void onWriteIdleReplaces() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
-		NettyContext mockContext = () -> channel;
+		Connection mockContext = () -> channel;
 		NettyOutbound outbound = () -> mockContext;
 
 		AtomicLong idle1 = new AtomicLong();
@@ -106,10 +106,10 @@ public class NettyOutboundTest {
 						out.add(msg);
 					}
 				});
-		NettyContext mockContext = () -> channel;
+		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
-			public NettyContext context() {
+			public Connection context() {
 				return mockContext;
 			}
 
@@ -174,10 +174,10 @@ public class NettyOutboundTest {
 					}
 				});
 
-		NettyContext mockContext = () -> channel;
+		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
-			public NettyContext context() {
+			public Connection context() {
 				return mockContext;
 			}
 
@@ -240,10 +240,10 @@ public class NettyOutboundTest {
 						out.add(msg);
 					}
 				});
-		NettyContext mockContext = () -> channel;
+		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
-			public NettyContext context() {
+			public Connection context() {
 				return mockContext;
 			}
 
@@ -290,12 +290,12 @@ public class NettyOutboundTest {
 				}
 
 				@Override
-				public void preparePipeline(NettyContext context) {
+				public void preparePipeline(Connection context) {
 					//NO-OP
 				}
 
 				@Override
-				public void cleanupPipeline(NettyContext context) {
+				public void cleanupPipeline(Connection context) {
 					//NO-OP
 				}
 			};

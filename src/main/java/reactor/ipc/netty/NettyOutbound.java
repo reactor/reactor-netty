@@ -73,23 +73,23 @@ public interface NettyOutbound extends Publisher<Void> {
 	}
 
 	/**
-	 * Return a {@link NettyContext} to operate on the underlying
+	 * Return a {@link Connection} to operate on the underlying
 	 * {@link Channel} state.
 	 *
-	 * @return the {@link NettyContext}
+	 * @return the {@link Connection}
 	 */
-	NettyContext context();
+	Connection context();
 
 	/**
-	 * Immediately call the passed callback with a {@link NettyContext} to operate on the
+	 * Immediately call the passed callback with a {@link Connection} to operate on the
 	 * underlying
 	 * {@link Channel} state. This allows for chaining outbound API.
 	 *
 	 * @param contextCallback context callback
 	 *
-	 * @return the {@link NettyContext}
+	 * @return the {@link Connection}
 	 */
-	default NettyOutbound context(Consumer<NettyContext> contextCallback){
+	default NettyOutbound context(Consumer<Connection> contextCallback){
 		contextCallback.accept(context());
 		return this;
 	}

@@ -27,15 +27,15 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class BlockingNettyContextTest {
+public class BlockingConnectionTest {
 
-	static final NettyContext NEVER_STOP_CONTEXT = new NettyContext() {
+	static final Connection NEVER_STOP_CONTEXT = new Connection() {
 		@Override
 		public Channel channel() {
 			return new EmbeddedChannel();
@@ -52,7 +52,7 @@ public class BlockingNettyContextTest {
 		}
 	};
 
-	static final NettyContext IMMEDIATE_STOP_CONTEXT = new NettyContext() {
+	static final Connection IMMEDIATE_STOP_CONTEXT = new Connection() {
 		@Override
 		public Channel channel() {
 			return new EmbeddedChannel();
@@ -248,7 +248,7 @@ public class BlockingNettyContextTest {
 				         );
 
 		simpleServer.installShutdownHook();
-		simpleServer.getShutdownHook().setName("BlockingNettyContextTest.smokeTestShutdownHook");
+		simpleServer.getShutdownHook().setName("BlockingConnectionTest.smokeTestShutdownHook");
 		//this test doesn't assert anything, but look out for JVM shutdown hook messages
 	}
 }

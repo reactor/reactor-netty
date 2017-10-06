@@ -28,9 +28,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.http.client.HttpClientResponse;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
@@ -44,7 +42,7 @@ public class WebsocketTest {
 
 	static final String auth = "bearer abc";
 
-	NettyContext httpServer = null;
+	Connection httpServer = null;
 
 	@After
 	public void disposeHttpServer() {

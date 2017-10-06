@@ -34,7 +34,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
@@ -44,7 +44,7 @@ import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 
 /**
- * A one time-set channel pipeline callback to emit {@link NettyContext} state for clean
+ * A one time-set channel pipeline callback to emit {@link Connection} state for clean
  * disposing. A {@link ContextHandler} is bound to a user-facing {@link MonoSink}
  *
  * @param <CHANNEL> the channel type
@@ -67,7 +67,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @return a new {@link ContextHandler} for clients
 	 */
 	public static <CHANNEL extends Channel> ContextHandler<CHANNEL> newClientContext(
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			ClientOptions options,
 			LoggingHandler loggingHandler,
 			boolean secure,
@@ -97,7 +97,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @return a new {@link ContextHandler} for clients
 	 */
 	public static <CHANNEL extends Channel> ContextHandler<CHANNEL> newClientContext(
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			ClientOptions options,
 			LoggingHandler loggingHandler,
 			boolean secure,
@@ -130,14 +130,14 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 *
 	 * @return a new {@link ContextHandler} for servers
 	 */
-	public static ContextHandler<Channel> newServerContext(MonoSink<NettyContext> sink,
+	public static ContextHandler<Channel> newServerContext(MonoSink<Connection> sink,
 			ServerOptions options,
 			LoggingHandler loggingHandler,
 			ChannelOperations.OnNew<Channel> channelOpFactory) {
 		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, options.getAddress());
 	}
 
-	final MonoSink<NettyContext>           sink;
+	final MonoSink<Connection>             sink;
 	final NettyOptions<?, ?>               options;
 	final LoggingHandler                   loggingHandler;
 	final SocketAddress                    providedAddress;
@@ -158,7 +158,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	@SuppressWarnings("unchecked")
 	protected ContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			NettyOptions<?, ?> options,
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
 		this.channelOpFactory =
@@ -257,7 +257,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 *
 	 * @param context optional context to succeed the associated {@link MonoSink}
 	 */
-	public abstract void fireContextActive(NettyContext context);
+	public abstract void fireContextActive(Connection context);
 
 	/**
 	 * Trigger {@link MonoSink#error(Throwable)} that will signal

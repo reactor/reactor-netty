@@ -44,19 +44,19 @@ final class ReactorNetty {
 	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");
 
 	/**
-	 * A common implementation for the {@link NettyContext#addHandlerLast(String, ChannelHandler)}
+	 * A common implementation for the {@link Connection#addHandlerLast(String, ChannelHandler)}
 	 * method that can be reused by other implementors.
 	 * <p>
 	 * This implementation will look for reactor added handlers on the right hand side of
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#RIGHT}
 	 * prefix, and add the handler just before the first of these.
 	 *
-	 * @param context the {@link NettyContext} on which to add the decoder.
+	 * @param context the {@link Connection} on which to add the decoder.
 	 * @param name the name of the decoder.
 	 * @param handler the decoder to add before the final reactor-specific handlers.
-	 * @see NettyContext#addHandlerLast(String, ChannelHandler).
+	 * @see Connection#addHandlerLast(String, ChannelHandler).
 	 */
-	static void addHandlerBeforeReactorEndHandlers(NettyContext context, String
+	static void addHandlerBeforeReactorEndHandlers(Connection context, String
 			name,	ChannelHandler handler) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
@@ -97,19 +97,19 @@ final class ReactorNetty {
 	}
 
 	/**
-	 * A common implementation for the {@link NettyContext#addHandlerFirst(String, ChannelHandler)}
+	 * A common implementation for the {@link Connection#addHandlerFirst(String, ChannelHandler)}
 	 * method that can be reused by other implementors.
 	 * <p>
 	 * This implementation will look for reactor added handlers on the left hand side of
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#LEFT}
 	 * prefix, and add the handler just after the last of these.
 	 *
-	 * @param context the {@link NettyContext} on which to add the decoder.
+	 * @param context the {@link Connection} on which to add the decoder.
 	 * @param name the name of the encoder.
 	 * @param handler the encoder to add after the initial reactor-specific handlers.
-	 * @see NettyContext#addHandlerFirst(String, ChannelHandler)
+	 * @see Connection#addHandlerFirst(String, ChannelHandler)
 	 */
-	static void addHandlerAfterReactorCodecs(NettyContext context, String
+	static void addHandlerAfterReactorCodecs(Connection context, String
 			name,
 			ChannelHandler handler) {
 		Objects.requireNonNull(name, "name");
@@ -151,7 +151,7 @@ final class ReactorNetty {
 
 	static void registerForClose(boolean shouldCleanupOnClose,
 			String name,
-			NettyContext context) {
+			Connection context) {
 		if (!shouldCleanupOnClose) return;
 		context.onClose(() -> context.removeHandler(name));
 	}
@@ -202,14 +202,14 @@ final class ReactorNetty {
 
 	/**
 	 * Determines if user-provided handlers registered on the given channel should
-	 * automatically be registered for removal through a {@link NettyContext#onClose(Runnable)}
+	 * automatically be registered for removal through a {@link Connection#onClose(Runnable)}
 	 * (or similar on close hook). This depends on the
-	 * {@link NettyContext#isPersistent(Channel)} ()}
+	 * {@link Connection#isPersistent(Channel)} ()}
 	 * attribute.
 	 */
 	static boolean shouldCleanupOnClose(Channel channel) {
 		boolean registerForClose = true;
-		if (!NettyContext.isPersistent(channel)) {
+		if (!Connection.isPersistent(channel)) {
 			registerForClose = false;
 		}
 		return registerForClose;
@@ -238,8 +238,8 @@ final class ReactorNetty {
 	 */
 	static final class OutboundThen implements NettyOutbound {
 
-		final NettyContext sourceContext;
-		final Mono<Void>   thenMono;
+		final Connection sourceContext;
+		final Mono<Void> thenMono;
 
 		OutboundThen(NettyOutbound source, Publisher<Void> thenPublisher) {
 			this.sourceContext = source.context();
@@ -255,7 +255,7 @@ final class ReactorNetty {
 		}
 
 		@Override
-		public NettyContext context() {
+		public Connection context() {
 			return sourceContext;
 		}
 
