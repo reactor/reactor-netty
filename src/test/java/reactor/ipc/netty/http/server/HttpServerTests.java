@@ -118,6 +118,24 @@ public class HttpServerTests {
 	}
 
 	@Test
+	public void httpPortInBuilderFieldIsUsedWhenOptionsAreProvided() {
+		HttpServer.Builder builder = HttpServer.builder()
+				.options(o -> {})
+				.port(9080);
+		HttpServer binding = builder.build();
+		BlockingNettyContext blockingFacade = binding.start((req, resp) -> resp.sendNotFound());
+		blockingFacade.shutdown();
+
+		assertThat(blockingFacade.getPort())
+				.isEqualTo(9080)
+				.isEqualTo(blockingFacade.getContext().address().getPort());
+
+		assertThat(binding.options().getAddress())
+				.isInstanceOf(InetSocketAddress.class)
+				.hasFieldOrPropertyWithValue("port", 9080);
+	}
+
+	@Test
 	public void sendFileSecure()
 			throws CertificateException, SSLException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
