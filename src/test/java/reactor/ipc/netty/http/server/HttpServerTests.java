@@ -180,7 +180,7 @@ public class HttpServerTests {
 				          .block(Duration.ofSeconds(120));
 
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 
 		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 
@@ -237,7 +237,7 @@ public class HttpServerTests {
 				          .block(Duration.ofSeconds(120));
 
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 
 		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 
@@ -380,7 +380,7 @@ public class HttpServerTests {
 		// dispose the Netty context and wait for the channel close
 		response.dispose();
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 
 		//REQUIRED - bug pool does not detect/translate properly lifecycle
 		HttpResources.reset();
@@ -395,7 +395,7 @@ public class HttpServerTests {
 		assertThat(response.status().code()).isEqualTo(201);
 		response.dispose();
 		context.dispose();
-		context.onClose().block();
+		context.onDispose().block();
 	}
 
 	@Test
