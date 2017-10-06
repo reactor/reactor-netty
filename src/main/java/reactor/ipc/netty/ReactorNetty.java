@@ -30,7 +30,10 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
+import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -153,7 +156,7 @@ final class ReactorNetty {
 			String name,
 			Connection context) {
 		if (!shouldCleanupOnClose) return;
-		context.onClose(() -> context.removeHandler(name));
+		context.onDispose(() -> context.removeHandler(name));
 	}
 
 	static void removeHandler(Channel channel, String name){
@@ -202,7 +205,7 @@ final class ReactorNetty {
 
 	/**
 	 * Determines if user-provided handlers registered on the given channel should
-	 * automatically be registered for removal through a {@link Connection#onClose(Runnable)}
+	 * automatically be registered for removal through a {@link Connection#onDispose(Runnable)}
 	 * (or similar on close hook). This depends on the
 	 * {@link Connection#isPersistent(Channel)} ()}
 	 * attribute.
@@ -326,6 +329,28 @@ final class ReactorNetty {
 		@Override
 		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 			extractor.accept(ctx, msg);
+		}
+	}
+
+	static final class ChannelDisposer extends BaseSubscriber<Void> {
+
+		final DisposableChannel channelDisposable;
+
+		ChannelDisposer(DisposableChannel channelDisposable) {
+			this.channelDisposable = channelDisposable;
+		}
+
+		@Override
+		protected void hookOnSubscribe(Subscription subscription) {
+			request(Long.MAX_VALUE);
+			channelDisposable.onDispose(this);
+		}
+
+		@Override
+		protected void hookFinally(SignalType type) {
+			if (type != SignalType.CANCEL) {
+				dispose();
+			}
 		}
 	}
 }

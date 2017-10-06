@@ -59,6 +59,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
+import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -321,8 +322,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public final HttpClientOperations onClose(Runnable onClose) {
-		super.onClose(onClose);
+	public final HttpClientOperations onDispose(Disposable onDispose) {
+		super.onDispose(onDispose);
 		return this;
 	}
 
