@@ -31,6 +31,7 @@ import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
+import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -198,13 +199,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final Mono<Void> onClose() {
+	public final Mono<Void> onDispose() {
 		return Mono.fromDirect(onInactive);
 	}
 
 	@Override
-	public Connection onClose(final Runnable onClose) {
-		onInactive.subscribe(null, e -> onClose.run(), onClose);
+	public Connection onDispose(Disposable onDispose) {
+		onInactive.subscribe(null, e -> onDispose.dispose(), onDispose::dispose);
 		return this;
 	}
 
