@@ -150,6 +150,14 @@ configure(rootProject) { project ->
   }
 
   project.tasks.withType(Test).all {
+	// run tests with IPv4 only when IPv6 is available
+	if (project.hasProperty('preferIPv4Stack')) {
+		systemProperty("java.net.preferIPv4Stack", "true")
+	}
+	// run tests with preferring IPv6 addresses
+	if (project.hasProperty('preferIPv6Addresses')) {
+		systemProperty("java.net.preferIPv6Addresses", "true")
+	}
 	systemProperty("java.awt.headless", "true")
 	systemProperty("reactor.trace.cancel", "true")
 	systemProperty("reactor.trace.nocapacity", "true")

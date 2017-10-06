@@ -53,7 +53,7 @@ public class ClientProxyOptions {
 		this.username = builder.username;
 		this.password = builder.password;
 		if (Objects.isNull(builder.address)) {
-			this.address = () -> new InetSocketAddress(builder.host, builder.port);
+			this.address = () -> InetSocketAddressUtil.createResolved(builder.host, builder.port);
 		}
 		else {
 			this.address = builder.address;
@@ -187,10 +187,7 @@ public class ClientProxyOptions {
 		@Override
 		public final Builder address(InetSocketAddress address) {
 			Objects.requireNonNull(address, "address");
-			this.address = address.isUnresolved() ?
-					() -> new InetSocketAddress(address.getHostName(),
-							address.getPort()) :
-					() -> address;
+			this.address = () -> InetSocketAddressUtil.replaceWithResolved(address);
 			return this;
 		}
 

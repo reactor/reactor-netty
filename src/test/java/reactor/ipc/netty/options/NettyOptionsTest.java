@@ -46,7 +46,7 @@ public class NettyOptionsTest {
 
 		assertThat(initializedChannels).hasSize(0);
 
-		HttpClient.create(nettyContext.address().getPort())
+		HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
 		          .get("/", req -> req.failOnClientError(false).send())
 		          .block();
 
@@ -68,7 +68,7 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		HttpClient.create(nettyContext.address().getPort())
+		HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
 		          .get("/", req -> req.failOnClientError(false).send())
 		          .block();
 
@@ -92,7 +92,7 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		HttpClient.create(nettyContext.address().getPort())
+		HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
 		          .get("/", req -> req.failOnClientError(false).send())
 		          .block();
 
@@ -118,7 +118,7 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		HttpClient.create(nettyContext.address().getPort())
+		HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
 		          .get("/", req -> req.failOnClientError(false).send())
 		          .block();
 
@@ -147,7 +147,7 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		HttpClientResponse response1 = HttpClient.create(nettyContext.address().getPort())
+		HttpClientResponse response1 = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
 		                                         .get("/", req -> req.failOnClientError(false).send())
 		                                         .block();
 
@@ -158,7 +158,7 @@ public class NettyOptionsTest {
 		//...but the child channels that are created for requests are
 		assertThat(readCount.get()).isEqualTo(1);
 
-		HttpClientResponse response2 = HttpClient.create(nettyContext.address().getPort())
+		HttpClientResponse response2 = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
 		                                         .get("/", req -> req.failOnClientError(false).send())
 		                                         .block();
 

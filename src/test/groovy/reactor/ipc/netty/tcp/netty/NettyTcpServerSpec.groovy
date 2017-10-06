@@ -146,7 +146,7 @@ class NettyTcpServerSpec extends Specification {
 			  .log('flatmap-retry'))
 	}.block(Duration.ofSeconds(30))
 
-	def client = TcpClient.create("localhost", server.address().port)
+	def client = TcpClient.create({ opts -> opts.connectAddress({ -> server.address() }) })
 	client.newHandler { i, o ->
 	  i.receive()
 			  .asString()
@@ -190,7 +190,7 @@ class NettyTcpServerSpec extends Specification {
 	@Override
 	void run() {
 	  def ch = SocketChannel.
-			  open(new InetSocketAddress(NetUtil.LOCALHOST.getHostAddress(), port))
+			  open(new InetSocketAddress(NetUtil.LOCALHOST, port))
 	  def len = ch.write(ByteBuffer.wrap(output.getBytes(Charset.defaultCharset())))
 	  assert ch.connected
 	  data = ByteBuffer.allocate(len)

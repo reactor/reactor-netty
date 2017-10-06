@@ -299,7 +299,6 @@ public class HttpCompressionClientServerTests {
 	}
 
 	private InetSocketAddress address(NettyContext nettyContext) {
-		return new InetSocketAddress(nettyContext.address()
-		                                         .getPort());
+		return nettyContext.address();
 	}
 }
