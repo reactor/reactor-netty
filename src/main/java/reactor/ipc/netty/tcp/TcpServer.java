@@ -31,8 +31,8 @@ import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyConnector;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.ChannelOperations;
@@ -55,7 +55,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	/**
 	 * Bind a new TCP server to "localhost" on a randomly assigned port.
 	 * <p> The assigned port can be found once a handler has been bound, using
-	 * {@link NettyContext#address()} and its {@code getPort()} method.
+	 * {@link Connection#address()} and its {@code getPort()} method.
 	 * <p> Handlers will run on the same thread they have been receiving IO events.
 	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
@@ -96,7 +96,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	/**
 	 * Bind a new TCP server to the given bind address on a randomly assigned port.
 	 * <p> The assigned port can be found once a handler has been bound, using
-	 * {@link NettyContext#address()} and its {@code getPort()} method.
+	 * {@link Connection#address()} and its {@code getPort()} method.
 	 * <p> Handlers will run on the same thread they have been receiving IO events.
 	 * The type of emitted data or received data is {@link ByteBuf}
 	 *
@@ -162,7 +162,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	}
 
 	@Override
-	public final Mono<? extends NettyContext> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+	public final Mono<? extends Connection> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return Mono.create(sink -> {
 			ServerBootstrap b = options.get();
@@ -209,7 +209,7 @@ public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
 	 */
 	protected ContextHandler<Channel> doHandler(
 			BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> sink) {
+			MonoSink<Connection> sink) {
 		return ContextHandler.newServerContext(sink,
 				options,
 				loggingHandler(),

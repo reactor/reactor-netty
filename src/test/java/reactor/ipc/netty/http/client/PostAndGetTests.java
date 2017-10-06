@@ -31,7 +31,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.http.server.HttpServerRequest;
 import reactor.ipc.netty.http.server.HttpServerResponse;
@@ -44,7 +44,7 @@ import reactor.util.Loggers;
 @Ignore
 public class PostAndGetTests {
 
-	private NettyContext httpServer;
+	private Connection httpServer;
 
 	@Before
 	public void setup() throws InterruptedException {

@@ -31,7 +31,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
@@ -45,7 +45,7 @@ public class HttpOperationsTest {
 	public void httpAndJsonDecoders() {
 
 		EmbeddedChannel channel = new EmbeddedChannel();
-		NettyContext testContext = () -> channel;
+		Connection testContext = () -> channel;
 
 		ChannelHandler handler = new JsonObjectDecoder(true);
 		testContext.addHandlerLast("foo", handler);

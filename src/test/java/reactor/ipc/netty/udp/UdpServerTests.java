@@ -45,7 +45,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.Logger;
@@ -81,8 +81,8 @@ public class UdpServerTests {
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(4);
 
-		final NettyContext server = UdpServer.create(port)
-		                                     .newHandler((in, out) -> {
+		final Connection server = UdpServer.create(port)
+		                                   .newHandler((in, out) -> {
 			                                   in.receive()
 			                                     .asByteArray()
 			                                     .log()
@@ -93,7 +93,7 @@ public class UdpServerTests {
 			                                     });
 			                                   return Flux.never();
 		                                   })
-		                                     .doOnSuccess(v -> {
+		                                   .doOnSuccess(v -> {
 			                                   try {
 				                                   DatagramChannel udp =
 						                                   DatagramChannel.open();
@@ -114,7 +114,7 @@ public class UdpServerTests {
 				                                   e.printStackTrace();
 			                                   }
 		                                   })
-		                                     .block(Duration.ofSeconds(30));
+		                                   .block(Duration.ofSeconds(30));
 
 		assertThat("latch was counted down", latch.await(10, TimeUnit.SECONDS));
 		server.dispose();
@@ -129,11 +129,11 @@ public class UdpServerTests {
 		final InetAddress multicastGroup = InetAddress.getByName("230.0.0.1");
 		final NetworkInterface multicastInterface = findMulticastEnabledIPv4Interface();
 		log.info("Using network interface '{}' for multicast", multicastInterface);
-		final Collection<NettyContext> servers = new ArrayList<>();
+		final Collection<Connection> servers = new ArrayList<>();
 
 		LoopResources resources = LoopResources.create("test");
 		for (int i = 0; i < 4; i++) {
-			NettyContext server =
+			Connection server =
 					UdpServer.create(opts -> opts.option(ChannelOption.SO_REUSEADDR, true)
 					                             .connectAddress(() -> new InetSocketAddress(port))
 					                             .protocolFamily(InternetProtocolFamily.IPv4)
@@ -196,7 +196,7 @@ public class UdpServerTests {
 		assertThat("latch was not counted down enough: " + latch.getCount() + " left on " + (4 ^ 2),
 				latch.getCount() == 0);
 
-		for (NettyContext s : servers) {
+		for (Connection s : servers) {
 			s.dispose();
 		}
 	}

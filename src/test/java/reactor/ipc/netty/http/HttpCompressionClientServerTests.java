@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -43,12 +43,13 @@ public class HttpCompressionClientServerTests {
 		HttpServer server = HttpServer.create(o -> o.port(0)
 		                                            .compression(true));
 
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
 				      .block(Duration.ofMillis(10_000));
 
 		HttpClient client = HttpClient.create(o -> o.compression(true)
-		                                            .connectAddress(() -> address(nettyContext)));
+		                                            .connectAddress(() -> address(
+				                                            connection)));
 		HttpClientResponse res =
 				client.get("/test", o -> {
 				         Assert.assertTrue(o.requestHeaders()
@@ -58,8 +59,8 @@ public class HttpCompressionClientServerTests {
 				      .block();
 
 		res.dispose();
-		nettyContext.dispose();
-		nettyContext.onClose()
+		connection.dispose();
+		connection.onClose()
 		            .block();
 	}
 
@@ -67,11 +68,12 @@ public class HttpCompressionClientServerTests {
 	public void serverCompressionDefault() throws Exception {
 		HttpServer server = HttpServer.create(0);
 
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
 				      .block(Duration.ofMillis(10_000));
 
-		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
+		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
+				connection)));
 		HttpClientResponse resp =
 				client.get("/test", req -> req.header("Accept-Encoding", "gzip"))
 				      .block();
@@ -84,8 +86,8 @@ public class HttpCompressionClientServerTests {
 		Assert.assertEquals("reply", reply);
 
 		resp.dispose();
-		nettyContext.dispose();
-		nettyContext.onClose()
+		connection.dispose();
+		connection.onClose()
 		            .block();
 	}
 
@@ -94,12 +96,13 @@ public class HttpCompressionClientServerTests {
 		HttpServer server = HttpServer.create(o -> o.port(0)
 		                                            .compression(false));
 
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
 				      .block(Duration.ofMillis(10_000));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
+		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
+				connection)));
 		HttpClientResponse resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.get("/test", req -> req.header("Accept-Encoding", "gzip"))
@@ -113,8 +116,8 @@ public class HttpCompressionClientServerTests {
 		Assert.assertEquals("reply", reply);
 
 		resp.dispose();
-		nettyContext.dispose();
-		nettyContext.onClose()
+		connection.dispose();
+		connection.onClose()
 		            .block();
 	}
 
@@ -123,12 +126,13 @@ public class HttpCompressionClientServerTests {
 		HttpServer server = HttpServer.create(o -> o.port(0)
 		                                            .compression(true));
 
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
 				      .block(Duration.ofMillis(10_000));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
+		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
+				connection)));
 		HttpClientResponse resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.get("/test", req -> req.header("Accept-Encoding", "gzip"))
@@ -154,9 +158,9 @@ public class HttpCompressionClientServerTests {
 
 		assertThat(deflated).isEqualTo("reply");
 
-		nettyContext.dispose();
-		nettyContext.onClose()
-		            .block();
+		connection.dispose();
+		connection.onClose()
+		          .block();
 	}
 
 	@Test
@@ -164,12 +168,13 @@ public class HttpCompressionClientServerTests {
 		HttpServer server = HttpServer.create(o -> o.port(0)
 		                                            .compression(25));
 
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
 				      .block(Duration.ofMillis(10_000));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
+		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
+				connection)));
 		HttpClientResponse resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.get("/test", req -> req.header("Accept-Encoding", "gzip"))
@@ -187,8 +192,8 @@ public class HttpCompressionClientServerTests {
 		Assert.assertEquals("reply", reply);
 
 		resp.dispose();
-		nettyContext.dispose();
-		nettyContext.onClose()
+		connection.dispose();
+		connection.onClose()
 		            .block();
 	}
 
@@ -197,12 +202,13 @@ public class HttpCompressionClientServerTests {
 		HttpServer server = HttpServer.create(o -> o.port(0)
 		                                            .compression(4));
 
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
 				      .block(Duration.ofMillis(10_000));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
+		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
+				connection)));
 		HttpClientResponse resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.get("/test", req -> req.header("accept-encoding", "gzip"))
@@ -228,9 +234,9 @@ public class HttpCompressionClientServerTests {
 
 		assertThat(deflated).isEqualTo("reply");
 
-		nettyContext.dispose();
-		nettyContext.onClose()
-		            .block();
+		connection.dispose();
+		connection.onClose()
+		          .block();
 	}
 
 	@Test
@@ -239,12 +245,13 @@ public class HttpCompressionClientServerTests {
 		                                            .compression(true));
 
 		String serverReply = "reply";
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just(serverReply)))
 				      .block(Duration.ofMillis(10_000));
 
 		HttpClient client = HttpClient.create(o -> o.compression(false)
-		                                            .connectAddress(() -> address(nettyContext)));
+		                                            .connectAddress(() -> address(
+				                                            connection)));
 
 		HttpClientResponse resp = client.get("/test").block();
 
@@ -256,8 +263,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(reply).isEqualTo(serverReply);
 
 		resp.dispose();
-		nettyContext.dispose();
-		nettyContext.onClose()
+		connection.dispose();
+		connection.onClose()
 		            .block();
 	}
 
@@ -266,11 +273,12 @@ public class HttpCompressionClientServerTests {
 	public void compressionServerDefaultClientDefaultIsNone() throws Exception {
 		HttpServer server = HttpServer.create(o -> o.port(0));
 
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
 				      .block(Duration.ofMillis(10_000));
 
-		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
+		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
+				connection)));
 
 		HttpClientResponse resp =
 				client.get("/test").block();
@@ -283,8 +291,8 @@ public class HttpCompressionClientServerTests {
 		assertThat(reply).isEqualTo("reply");
 
 		resp.dispose();
-		nettyContext.dispose();
-		nettyContext.onClose()
+		connection.dispose();
+		connection.onClose()
 		            .block();
 	}
 
@@ -293,11 +301,12 @@ public class HttpCompressionClientServerTests {
 		AtomicReference<String> zip = new AtomicReference<>("fail");
 
 		HttpServer server = HttpServer.create(o -> o.port(0).compression(true));
-		NettyContext nettyContext =
+		Connection connection =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
 				      .block(Duration.ofMillis(10_000));
 		HttpClient client = HttpClient.create(opt -> opt.compression(true)
-		                                                .connectAddress(() -> address(nettyContext)));
+		                                                .connectAddress(() -> address(
+				                                                connection)));
 
 		HttpClientResponse resp =
 				client.get("/test", req -> {
@@ -308,12 +317,12 @@ public class HttpCompressionClientServerTests {
 
 		assertThat(zip.get()).isEqualTo("gzip");
 		resp.dispose();
-		nettyContext.dispose();
-		nettyContext.onClose()
+		connection.dispose();
+		connection.onClose()
 				.block();
 	}
 
-	private InetSocketAddress address(NettyContext nettyContext) {
-		return nettyContext.address();
+	private InetSocketAddress address(Connection connection) {
+		return connection.address();
 	}
 }

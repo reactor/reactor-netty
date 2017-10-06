@@ -29,7 +29,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
@@ -62,7 +62,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
 	@Override
-	default HttpClientRequest context(Consumer<NettyContext> contextCallback){
+	default HttpClientRequest context(Consumer<Connection> contextCallback){
 		contextCallback.accept(context());
 		return this;
 	}

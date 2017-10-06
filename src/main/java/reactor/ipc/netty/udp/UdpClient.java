@@ -29,8 +29,8 @@ import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyConnector;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.options.ClientOptions;
@@ -123,7 +123,7 @@ public final class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	}
 
 	@Override
-	public Mono<? extends NettyContext> newHandler(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler) {
+	public Mono<? extends Connection> newHandler(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler) {
 		final BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>>
 				targetHandler =
 				null == handler ? ChannelOperations.noopHandler() : handler;
@@ -152,7 +152,7 @@ public final class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 	 * @return a new {@link ContextHandler}
 	 */
 	protected ContextHandler<DatagramChannel> doHandler(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			SocketAddress providedAddress) {
 		return ContextHandler.newClientContext(sink,
 				options,
