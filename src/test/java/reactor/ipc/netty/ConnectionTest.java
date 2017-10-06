@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
 import org.junit.Before;
 import org.junit.Test;
+import reactor.core.Disposable;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -408,7 +409,7 @@ public class ConnectionTest {
 			}
 
 			@Override
-			public Connection onClose(Runnable onClose) {
+			public Connection onDispose(Disposable onClose) {
 				closeCount.incrementAndGet();
 				return this;
 			}
@@ -438,7 +439,7 @@ public class ConnectionTest {
 			}
 
 			@Override
-			public Connection onClose(Runnable onClose) {
+			public Connection onDispose(Disposable onClose) {
 				closeCount.incrementAndGet();
 				return this;
 			}
