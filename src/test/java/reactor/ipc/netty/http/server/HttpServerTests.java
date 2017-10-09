@@ -65,6 +65,7 @@ import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -497,5 +498,101 @@ public class HttpServerTests {
 		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testContentLengthHeadRequest() {
+		NettyContext server =
+				HttpServer.create(ops -> ops.host("localhost"))
+				          .newRouter(r -> r.route(req -> req.uri().startsWith("/1"),
+				                                  (req, res) -> res.sendString(Mono.just("OK")))
+				                           .route(req -> req.uri().startsWith("/2"),
+				                                  (req, res) -> res.chunkedTransfer(false)
+				                                                   .sendString(Mono.just("OK")))
+				                           .route(req -> req.uri().startsWith("/3"),
+				                                  (req, res) -> {
+				                                                res.responseHeaders().set("Content-Length", 2);
+				                                                return res.sendString(Mono.just("OK"));
+				                                                })
+				                           .route(req -> req.uri().startsWith("/4"),
+				                                  (req, res) -> res.sendHeaders())
+				                           .route(req -> req.uri().startsWith("/5"),
+				                                  (req, res) -> res.chunkedTransfer(false)
+				                                                   .sendHeaders())
+				                           .route(req -> req.uri().startsWith("/6"),
+				                                  (req, res) -> {
+				                                                res.responseHeaders().set("Content-Length", 2);
+				                                                return res.sendHeaders();
+				                                                })
+				                           .route(req -> req.uri().startsWith("/7"),
+				                                  (req, res) -> res.send())
+				                           .route(req -> req.uri().startsWith("/8"),
+				                                  (req, res) -> res.chunkedTransfer(false)
+				                                                   .send())
+				                           .route(req -> req.uri().startsWith("/9"),
+				                                  (req, res) -> {
+				                                                res.responseHeaders().set("Content-Length", 2);
+				                                                return res.send();
+				                                                })
+				                           )
+				          .block(Duration.ofSeconds(30));
+
+		doTestContentLengthHeadRequest("/1", server.address(), HttpMethod.GET, true, false);
+		doTestContentLengthHeadRequest("/1", server.address(), HttpMethod.HEAD, true, false);
+		doTestContentLengthHeadRequest("/2", server.address(), HttpMethod.GET, false, true);
+		doTestContentLengthHeadRequest("/2", server.address(), HttpMethod.HEAD, false, true);
+		doTestContentLengthHeadRequest("/3", server.address(), HttpMethod.GET, false, false);
+		doTestContentLengthHeadRequest("/3", server.address(), HttpMethod.HEAD, false, false);
+		doTestContentLengthHeadRequest("/4", server.address(), HttpMethod.HEAD, true, false);
+		doTestContentLengthHeadRequest("/5", server.address(), HttpMethod.HEAD, false, true);
+		doTestContentLengthHeadRequest("/6", server.address(), HttpMethod.HEAD, false, false);
+		doTestContentLengthHeadRequest("/7", server.address(), HttpMethod.HEAD, true, false);
+		doTestContentLengthHeadRequest("/8", server.address(), HttpMethod.HEAD, false, true);
+		doTestContentLengthHeadRequest("/9", server.address(), HttpMethod.HEAD, false, false);
+	}
+
+	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
+			HttpMethod method, boolean chunk, boolean close) {
+		Mono<Tuple2<HttpHeaders, String>> response =
+				HttpClient.create(ops -> ops.connectAddress(() -> address))
+				          .request(method, url, req -> req.send())
+				          .flatMap(res -> Mono.zip(Mono.just(res.responseHeaders()),
+				                                   res.receive()
+				                                      .aggregate()
+				                                      .asString()
+				                                      .defaultIfEmpty("NO BODY")));
+
+		StepVerifier.create(response)
+				    .expectNextMatches(t -> {
+				        if (chunk) {
+				            String chunked = t.getT1().get("Transfer-Encoding");
+				            if (HttpMethod.GET.equals(method)) {
+				                return chunked != null && "OK".equals(t.getT2());
+				            }
+				            else {
+				                return chunked == null && "NO BODY".equals(t.getT2());
+				            }
+				        }
+				        else if (close) {
+				            String connClosed = t.getT1().get("Connection");
+				            if (HttpMethod.GET.equals(method)) {
+				                return "close".equals(connClosed) && "OK".equals(t.getT2());
+				            }
+				            else {
+				                return "close".equals(connClosed) && "NO BODY".equals(t.getT2());
+				            }
+				        }
+				        else {
+				            String length = t.getT1().get("Content-Length");
+				            if (HttpMethod.GET.equals(method)) {
+				                return Integer.parseInt(length) == 2 && "OK".equals(t.getT2());
+				            }
+				            else {
+				                return Integer.parseInt(length) == 2 && "NO BODY".equals(t.getT2());
+				            }
+				        }
+				    })
+				    .expectComplete()
+				    .verify(Duration.ofMillis(100));
 	}
 }

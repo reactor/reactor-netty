@@ -121,9 +121,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		HttpResponse res =
 				new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
 
-		res.headers()
-		   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-		                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+		if (!HttpMethod.HEAD.equals(method())) {
+			res.headers()
+			   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+			                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+		}
+		else {
+			res.headers().set(responseHeaders);
+		}
 		return res;
 	}
 
