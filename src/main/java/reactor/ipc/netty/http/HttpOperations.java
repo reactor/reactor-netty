@@ -101,8 +101,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	//TODO document this
 	public NettyOutbound sendHeaders() {
 		if (markSentHeaders()) {
-			handleOutboundWithNoContent();
-
 			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 				outboundHttpMessage().headers()
 				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -138,8 +136,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public Mono<Void> then() {
 		if (markSentHeaders()) {
-			handleOutboundWithNoContent();
-
 			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 				outboundHttpMessage().headers()
 				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
@@ -306,8 +302,4 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				}
 			}
 	);
-
-	protected void handleOutboundWithNoContent() {
-		// no-op
-	}
 }

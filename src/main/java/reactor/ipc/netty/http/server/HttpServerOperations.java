@@ -480,14 +480,4 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.CONTINUE,
 					EMPTY_BUFFER);
-
-	@Override
-	protected void handleOutboundWithNoContent() {
-		int status = nettyResponse.status().code();
-		if (status == 205) {
-			nettyResponse.headers()
-			             .remove(HttpHeaderNames.TRANSFER_ENCODING)
-			             .set(HttpHeaderNames.CONTENT_LENGTH, 0);
-		}
-	}
 }

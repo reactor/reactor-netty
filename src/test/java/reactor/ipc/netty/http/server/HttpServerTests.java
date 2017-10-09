@@ -69,6 +69,7 @@ import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuple3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -522,25 +523,29 @@ public class HttpServerTests {
 	}
 
 	private void checkResponse(String url, InetSocketAddress address) {
-		Mono<HttpClientResponse> response =
+		Mono<Tuple3<Integer, HttpHeaders, String>> response =
 				HttpClient.create(ops -> ops.connectAddress(() -> address))
-				          .get(url);
+				          .get(url)
+				          .flatMap(res ->
+				              Mono.zip(Mono.just(res.status().code()),
+				                       Mono.just(res.responseHeaders()),
+				                       res.receive().aggregate().asString().defaultIfEmpty("NO BODY"))
+				              );
 
 		StepVerifier.create(response)
-		            .expectNextMatches(r -> {
-		                r.dispose();
-		                int code = r.status().code();
-		                HttpHeaders h = r.responseHeaders();
+		            .expectNextMatches(t -> {
+		                int code = t.getT1();
+		                HttpHeaders h = t.getT2();
 		                if (code == 204 || code == 304) {
 		                    return !h.contains("Transfer-Encoding") &&
-		                           !h.contains("Content-Length");
+		                           !h.contains("Content-Length") &&
+		                           "NO BODY".equals(t.getT3());
 		                }
 		                else if (code == 205) {
-		                    return !h.contains("Transfer-Encoding") &&
-		                            h.contains("Content-Length") &&
-		                            Integer.parseInt(h.get("Content-Length")) == 0;
-		                }
-		                else {
+		                    return h.contains("Transfer-Encoding") &&
+		                           !h.contains("Content-Length") &&
+		                           "NO BODY".equals(t.getT3());
+		                }else {
 		                    return false;
 		                }
 		            })
