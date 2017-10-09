@@ -168,9 +168,6 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			if(mustRecycleEncoder) {
 				mustRecycleEncoder = false;
 				pendingResponses -= 1;
-
-				ctx.pipeline()
-				   .replace(NettyPipeline.HttpCodec, NettyPipeline.HttpCodec, new HttpServerCodec());
 			}
 
 			if (pipelined != null && !pipelined.isEmpty()) {
