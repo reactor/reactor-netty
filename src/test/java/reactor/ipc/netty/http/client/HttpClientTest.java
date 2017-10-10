@@ -48,6 +48,7 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.AbortedException;
+import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 import reactor.ipc.netty.resources.PoolResources;
@@ -307,6 +308,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@Ignore // Issue https://github.com/reactor/reactor-netty/issues/181
 	public void simpleTest404() {
 		int res = HttpClient.create("google.com")
 		                    .get("/unsupportedURI",
@@ -323,6 +325,14 @@ public class HttpClientTest {
 		if (res != 404) {
 			throw new IllegalStateException("test status failed with " + res);
 		}
+	}
+
+	@Test
+	@Ignore // Issue https://github.com/reactor/reactor-netty/issues/181
+	public void simpleTest404_1() {
+		HttpResources.set(PoolResources.fixed("http", 1));
+		simpleTest404();
+		simpleTest404();
 	}
 
 	@Test
