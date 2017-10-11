@@ -608,7 +608,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				}
 				Exception ex = new HttpClientException(uri(), response);
 				parentContext().fireContextError(ex);
-				onHandlerTerminate();
+				receive().subscribe();
 				return false;
 			}
 			return true;
@@ -623,7 +623,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				}
 				Exception ex = new HttpClientException(uri(), response);
 				parentContext().fireContextError(ex);
-				onHandlerTerminate();
+				receive().subscribe();
 				return false;
 			}
 			return true;
@@ -638,7 +638,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			Exception ex = new RedirectClientException(uri(), response);
 			parentContext().fireContextError(ex);
-			onHandlerTerminate();
+			receive().subscribe();
 			return false;
 		}
 		return true;
