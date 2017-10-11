@@ -664,34 +664,33 @@ public class TcpServerTests {
 		CountDownLatch dataLatch = new CountDownLatch(10);
 
 		NettyContext server =
-		        TcpServer.create(o -> o.afterChannelInit(c -> c.pipeline()
-		                                                       .addLast(new JsonObjectDecoder())))
-		                 .newHandler((in, out) -> in.receive()
-		                                            .asString()
-		                                            .log("serve")
-		                                            .map(jsonDecoder)
-		                                            .concatMap(d -> Flux.fromArray(d))
-		                                            .window(5)
-		                                            .concatMap(w -> out.send(w.collectList().map(jsonEncoder))))
-		                 .block(Duration.ofSeconds(30));
+				TcpServer.create()
+				         .newHandler((in, out) -> in.context(c -> c.addHandler(new JsonObjectDecoder()))
+				                                    .receive()
+				                                    .asString()
+				                                    .log("serve")
+				                                    .map(jsonDecoder)
+				                                    .concatMap(d -> Flux.fromArray(d))
+				                                    .window(5)
+				                                    .concatMap(w -> out.send(w.collectList().map(jsonEncoder))))
+				         .block(Duration.ofSeconds(30));
 
-		TcpClient.create(o -> o.port(server.address().getPort())
-		                       .afterChannelInit(c -> c.pipeline()
-		                                               .addLast(new JsonObjectDecoder())))
+		TcpClient.create(o -> o.port(server.address().getPort()))
 		         .newHandler((in, out) -> {
-		             in.receive()
-		               .asString()
-		               .map(jsonDecoder)
-		               .concatMap(d -> Flux.fromArray(d))
-		               .log("receive")
-		               .subscribe(c -> dataLatch.countDown());
+			         in.context(c -> c.addHandler(new JsonObjectDecoder()))
+			           .receive()
+			           .asString()
+			           .log("receive")
+			           .map(jsonDecoder)
+			           .concatMap(d -> Flux.fromArray(d))
+			           .subscribe(c -> dataLatch.countDown());
 
-		             return out.send(Flux.range(1, 10)
-		                       .map(it -> new Pojo("test" + it))
-		                       .log("send")
-		                       .collectList()
-		                       .map(jsonEncoder))
-		                       .neverComplete();
+			         return out.send(Flux.range(1, 10)
+			                             .map(it -> new Pojo("test" + it))
+			                             .log("send")
+			                             .collectList()
+			                             .map(jsonEncoder))
+			                   .neverComplete();
 		         })
 		         .block(Duration.ofSeconds(30));
 
