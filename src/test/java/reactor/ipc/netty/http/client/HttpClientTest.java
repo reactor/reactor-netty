@@ -308,31 +308,35 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@Ignore // Issue https://github.com/reactor/reactor-netty/issues/181
 	public void simpleTest404() {
-		int res = HttpClient.create("google.com")
-		                    .get("/unsupportedURI",
-				                    c -> c.followRedirect()
-				                          .sendHeaders())
-		                    .flatMap(r -> Mono.just(r.status()
-		                                          .code()))
-		                    .log()
-		                    .onErrorResume(HttpClientException.class,
-				                    e -> Mono.just(e.status()
-				                                    .code()))
-		                    .block(Duration.ofSeconds(30));
+		doSimpleTest404(HttpClient.create("google.com"));
+	}
+
+	@Test
+	public void simpleTest404_1() {
+		HttpClient client =
+				HttpClient.create(ops -> ops.host("google.com")
+				                            .port(80)
+				                            .poolResources(PoolResources.fixed("http", 1)));
+		doSimpleTest404(client);
+		doSimpleTest404(client);
+	}
+
+	private void doSimpleTest404(HttpClient client) {
+		int res = client.get("/unsupportedURI",
+				             c -> c.followRedirect()
+				                   .sendHeaders())
+				        .flatMap(r -> Mono.just(r.status()
+				                                 .code()))
+				        .log()
+				        .onErrorResume(HttpClientException.class,
+				                       e -> Mono.just(e.status()
+				                                       .code()))
+				        .block(Duration.ofSeconds(30));
 
 		if (res != 404) {
 			throw new IllegalStateException("test status failed with " + res);
 		}
-	}
-
-	@Test
-	@Ignore // Issue https://github.com/reactor/reactor-netty/issues/181
-	public void simpleTest404_1() {
-		HttpResources.set(PoolResources.fixed("http", 1));
-		simpleTest404();
-		simpleTest404();
 	}
 
 	@Test
