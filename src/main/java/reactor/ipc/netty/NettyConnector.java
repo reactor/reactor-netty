@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty;
 
+import java.time.Duration;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
@@ -82,6 +83,21 @@ public interface NettyConnector<INBOUND extends NettyInbound, OUTBOUND extends N
 	default <T extends BiFunction<INBOUND, OUTBOUND, ? extends Publisher<Void>>>
 	BlockingNettyContext start(T handler) {
 		return new BlockingNettyContext(newHandler(handler), getClass().getSimpleName());
+	}
+
+	/**
+	 * Start a Client or Server in a blocking fashion, and wait for it to finish initializing.
+	 * The returned {@link BlockingNettyContext} class offers a simplified API around operating
+	 * the client/server in a blocking fashion, including to {@link BlockingNettyContext#shutdown() shut it down}.
+	 *
+	 * @param handler the handler to start the client or server with.
+	 * @param timeout wait for Client/Server to start for the specified timeout.
+	 * @param <T>
+	 * @return a {@link BlockingNettyContext}
+	 */
+	default <T extends BiFunction<INBOUND, OUTBOUND, ? extends Publisher<Void>>>
+	BlockingNettyContext start(T handler, Duration timeout) {
+		return new BlockingNettyContext(newHandler(handler), getClass().getSimpleName(), timeout);
 	}
 
 	/**

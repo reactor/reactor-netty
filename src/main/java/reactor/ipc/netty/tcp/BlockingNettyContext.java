@@ -43,7 +43,7 @@ public class BlockingNettyContext {
 
 	public BlockingNettyContext(Mono<? extends NettyContext> contextAsync,
 			String description) {
-		this(contextAsync, description, Duration.ofSeconds(3));
+		this(contextAsync, description, Duration.ofSeconds(45));
 	}
 
 	public BlockingNettyContext(Mono<? extends NettyContext> contextAsync,
