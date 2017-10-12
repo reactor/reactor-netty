@@ -445,7 +445,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		// On close the outboundBuffer is made null. After that point
 		// adding messages and flushes to outboundBuffer is not allowed.
 		ChannelOutboundBuffer outBuffer = this.unsafe.outboundBuffer();
-		return outBuffer != null ? outBuffer.totalPendingWriteBytes() > 0 : false;
+		return outBuffer != null && outBuffer.totalPendingWriteBytes() > 0;
 	}
 
 	static final class PublisherSender
@@ -563,13 +563,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			produced++;
 
 			lastWrite = parent.doWrite(t, parent.ctx.newPromise(), this);
-			if (parent.ctx.channel()
-			              .isWritable()) {
-				request(1L);
-			}
-			else {
+//			if (parent.ctx.channel()
+//			              .isWritable()) {
+//				request(1L);
+//			}
+//			else {
 				lastWrite.addListener(parent);
-			}
+//			}
 		}
 
 		@Override
