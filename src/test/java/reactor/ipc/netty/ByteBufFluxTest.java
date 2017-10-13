@@ -15,17 +15,17 @@
  */
 package reactor.ipc.netty;
 
-import io.netty.buffer.ByteBuf;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
+
+import io.netty.buffer.ByteBuf;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Unit tests for {@link ByteBufFlux}
@@ -58,12 +58,16 @@ public class ByteBufFluxTest {
         Assert.assertEquals(data.length, Files.size(tmpFile));
 
         // Use the ByteBufFlux to read the file in chunks of 3 bytes max and write them into a ByteArrayOutputStream for verification
-        final Iterator<ByteBuf> it = ByteBufFlux.fromPath(tmpFile, chunkSize).toIterable().iterator();
+        final Iterator<ByteBuf> it = ByteBufFlux.fromPath(tmpFile, chunkSize)
+                                                .retain()
+                                                .toIterable()
+                                                .iterator();
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         while (it.hasNext()) {
             ByteBuf bb = it.next();
             byte[] read = new byte[bb.readableBytes()];
             bb.readBytes(read);
+            bb.release();
             Assert.assertEquals(0, bb.readableBytes());
             out.write(read);
         }
