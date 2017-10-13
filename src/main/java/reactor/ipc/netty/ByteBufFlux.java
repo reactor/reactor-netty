@@ -23,16 +23,12 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
@@ -135,8 +131,8 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 		return new ByteBufFlux(Flux.generate(() -> FileChannel.open(path), (fc, sink) -> {
 			try {
 				ByteBuf buf = allocator.buffer();
-				long pos;
-				if ((pos = buf.writeBytes(fc, maxChunkSize)) < 0) {
+				if (buf.writeBytes(fc, maxChunkSize) < 0) {
+					buf.release();
 					sink.complete();
 				}
 				else {
@@ -168,6 +164,7 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 		return map(bb -> {
 			byte[] bytes = new byte[bb.readableBytes()];
 			bb.readBytes(bytes);
+			ReferenceCountUtil.release(bb);
 			return bytes;
 		});
 	}
@@ -198,7 +195,11 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	 * @return a {@link String} inbound {@link Flux}
 	 */
 	public final Flux<String> asString(Charset charset) {
-		return map(s -> s.toString(charset));
+		return map(bb -> {
+			String s = bb.toString(charset);
+			ReferenceCountUtil.release(bb);
+			return s;
+		});
 	}
 
 	/**
