@@ -563,13 +563,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			produced++;
 
 			lastWrite = parent.doWrite(t, parent.ctx.newPromise(), this);
-//			if (parent.ctx.channel()
-//			              .isWritable()) {
-//				request(1L);
-//			}
-//			else {
+			if (parent.ctx.channel()
+			              .isWritable()) {
+				request(1L);
+			}
+			else {
 				lastWrite.addListener(parent);
-//			}
+			}
 		}
 
 		@Override
