@@ -129,10 +129,9 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 			throw new IllegalArgumentException("chunk size must be strictly positive, " + "was: " + maxChunkSize);
 		}
 		return new ByteBufFlux(Flux.generate(() -> FileChannel.open(path), (fc, sink) -> {
+			ByteBuf buf = allocator.buffer();
 			try {
-				ByteBuf buf = allocator.buffer();
 				if (buf.writeBytes(fc, maxChunkSize) < 0) {
-					buf.release();
 					sink.complete();
 				}
 				else {
@@ -141,6 +140,9 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 			}
 			catch (IOException e) {
 				sink.error(e);
+			}
+			finally {
+				buf.release();
 			}
 			return fc;
 		}), allocator);
@@ -164,7 +166,6 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 		return map(bb -> {
 			byte[] bytes = new byte[bb.readableBytes()];
 			bb.readBytes(bytes);
-			ReferenceCountUtil.release(bb);
 			return bytes;
 		});
 	}
@@ -195,11 +196,7 @@ public final class ByteBufFlux extends FluxSource<ByteBuf, ByteBuf> {
 	 * @return a {@link String} inbound {@link Flux}
 	 */
 	public final Flux<String> asString(Charset charset) {
-		return map(bb -> {
-			String s = bb.toString(charset);
-			ReferenceCountUtil.release(bb);
-			return s;
-		});
+		return map(bb -> bb.toString(charset));
 	}
 
 	/**
