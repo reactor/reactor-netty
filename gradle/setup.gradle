@@ -91,6 +91,11 @@ def customizePom(pom, gradleProject) {
 				  name = 'Simon Baslé'
 				  email = 'sbasle@pivotal.io'
 				}
+				developer {
+				  id = 'violetagg'
+				  name = 'Violeta Georgieva'
+				  email = 'vgeorgieva@pivotal.io'
+				}
 			}
 			issueManagement {
 				system = "GitHub Issues"
