@@ -31,6 +31,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
+import reactor.core.Disposable;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
@@ -205,7 +206,8 @@ final class ReactorNetty {
 
 	/**
 	 * Determines if user-provided handlers registered on the given channel should
-	 * automatically be registered for removal through a {@link Connection#onDispose(Runnable)}
+	 * automatically be registered for removal through a
+	 * {@link Connection#onDispose(Disposable)}}
 	 * (or similar on close hook). This depends on the
 	 * {@link Connection#isPersistent(Channel)} ()}
 	 * attribute.
