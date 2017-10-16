@@ -18,6 +18,6 @@
  * Components for writing TCP-based clients and servers using Reactor abstractions.
  */
 @NonNullApi
-package reactor.ipc.netty.tcp;
+package reactor.ipc.netty;
 
 import reactor.util.annotation.NonNullApi;
