@@ -92,6 +92,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public Mono<Void> disposeLater() {
 		return Mono.defer(() -> {
 			EventLoopGroup cacheNativeClientGroup = cacheNativeClientLoops.get();
@@ -129,7 +130,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 				cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.terminationFuture());
 			}
 
-			return Mono.zip(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono).then();
+			return Mono.when(clMono, sslMono, slMono, cnclMono, cnslMono, cnsrvlMono);
 		});
 	}
 
