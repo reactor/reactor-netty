@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 
 /**
- * Components for writing HTTP-based clients and servers using Reactor abstractions.
+ * Components for writing TCP-based clients and servers using Reactor abstractions.
  */
 @NonNullApi
-package reactor.ipc.netty.http;
+package reactor.ipc.netty;
 
 import reactor.util.annotation.NonNullApi;
