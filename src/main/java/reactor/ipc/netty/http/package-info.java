@@ -17,4 +17,7 @@
 /**
  * Components for writing HTTP-based clients and servers using Reactor abstractions.
  */
+@NonNullApi
 package reactor.ipc.netty.http;
+
+import reactor.util.annotation.NonNullApi;
