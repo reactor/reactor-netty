@@ -80,20 +80,6 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	Connection context();
 
-	/**
-	 * Immediately call the passed callback with a {@link Connection} to operate on the
-	 * underlying
-	 * {@link Channel} state. This allows for chaining outbound API.
-	 *
-	 * @param contextCallback context callback
-	 *
-	 * @return the {@link Connection}
-	 */
-	default NettyOutbound context(Consumer<Connection> contextCallback){
-		contextCallback.accept(context());
-		return this;
-	}
-
 	default FileChunkedStrategy getFileChunkedStrategy() {
 		return FILE_CHUNKED_STRATEGY_BUFFER;
 	}
@@ -378,4 +364,15 @@ public interface NettyOutbound extends Publisher<Void> {
 		return new ReactorNetty.OutboundThen(this, other);
 	}
 
+
+	/**
+	 * Immediately call the passed callback with a {@link Connection} to operate on the
+	 * underlying
+	 * {@link Channel} state. This allows for chaining outbound API.
+	 *
+	 * @param withConnection context callback
+	 *
+	 * @return the {@link Connection}
+	 */
+	NettyOutbound withConnection(Consumer<? super Connection> withConnection);
 }
