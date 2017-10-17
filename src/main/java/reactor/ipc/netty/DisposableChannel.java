@@ -52,7 +52,8 @@ public interface DisposableChannel extends Disposable {
 			return ((ServerSocketChannel) c).localAddress();
 		}
 		if (c instanceof DatagramChannel) {
-			return ((DatagramChannel) c).localAddress();
+			InetSocketAddress a = ((DatagramChannel) c).remoteAddress();
+			return a != null ? a : ((DatagramChannel)c ).localAddress();
 		}
 		throw new IllegalStateException("Does not have an InetSocketAddress");
 	}
