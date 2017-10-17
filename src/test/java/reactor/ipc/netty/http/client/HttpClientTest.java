@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLException;
 
@@ -239,25 +240,23 @@ public class HttpClientTest {
 		CountDownLatch latch = new CountDownLatch(1);
 		Connection c = HttpServer.create(0)
 		                         .newHandler((req, resp) -> {
-			                           req.context()
-			                              .onDispose(latch::countDown);
+			                           req.withConnection(
+			                              cn -> cn.onDispose(latch::countDown));
 
 			                           return Flux.interval(Duration.ofSeconds(1))
-			                                      .flatMap(d -> {
-				                                      req.context()
-				                                         .channel()
-				                                         .config()
-				                                         .setAutoRead(true);
-
-				                                      return resp.sendObject(Unpooled.EMPTY_BUFFER)
+			                                      .flatMap(d ->
+				                                      resp.withConnection(cn ->
+						                                      cn.channel()
+						                                        .config()
+						                                        .setAutoRead(true))
+				                                          .sendObject(Unpooled.EMPTY_BUFFER)
 				                                                 .then()
-				                                                 .doOnSuccess(x -> req.context()
-				                                                                      .channel()
-				                                                                      .config()
-				                                                                      .setAutoRead(
-						                                                                      false));
-			                                      });
-		                           })
+				                                                 .doOnSuccess(x ->
+						                                                 req.withConnection(cn ->
+								                                                 cn.channel()
+								                                                   .config()
+								                                                   .setAutoRead(false))));
+		})
 		                         .block(Duration.ofSeconds(30));
 
 		Mono<HttpClientResponse> remote = HttpClient.create(c.address().getPort())
@@ -408,8 +407,7 @@ public class HttpClientTest {
 				                                       .sendString(Flux.just("hello")))
 		                                 .block();
 
-		FutureMono.from(r.context()
-		                 .channel()
+		FutureMono.from(r.channel()
 		                 .closeFuture())
 		          .block(Duration.ofSeconds(5));
 
@@ -426,8 +424,7 @@ public class HttpClientTest {
 				                                       .keepAlive(false))
 		                                 .block(Duration.ofSeconds(30));
 
-		FutureMono.from(r.context()
-		                 .channel()
+		FutureMono.from(r.channel()
 		                 .closeFuture())
 		          .block(Duration.ofSeconds(5));
 
@@ -450,9 +447,12 @@ public class HttpClientTest {
 				                                  c -> c.failOnClientError(false)
 				                                        .sendHeaders())
 		                                  .block(Duration.ofSeconds(30));
-		Assert.assertTrue(r.context()
-		                   .channel() == r2.context()
-		                                   .channel());
+
+		AtomicBoolean same = new AtomicBoolean();
+
+		r.withConnection(c -> r2.withConnection(c2 -> same.set(c2 == c.channel())));
+
+		Assert.assertTrue(same.get());
 
 		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
 		r.dispose();
@@ -476,9 +476,7 @@ public class HttpClientTest {
 				                                       .failOnClientError(false))
 		                                 .block(Duration.ofSeconds(30));
 
-		Assert.assertTrue(r.context()
-		                   .channel() == r2.context()
-		                                   .channel());
+		Assert.assertTrue(r.channel() == r2.channel());
 
 		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
 		r.dispose();

@@ -204,11 +204,12 @@ public class TcpServerTests {
 
 		Connection server = TcpServer.create(port)
 		                             .newHandler((in, out) -> {
-			                             InetSocketAddress remoteAddr =
-					                             in.remoteAddress();
-			                             assertNotNull("remote address is not null",
-					                             remoteAddr.getAddress());
-			                             latch.countDown();
+
+			in.withConnection(c -> {
+				InetSocketAddress addr = c.address();
+				assertNotNull("remote address is not null", addr.getAddress());
+				latch.countDown();
+			});
 
 			                             return Flux.never();
 		                             })

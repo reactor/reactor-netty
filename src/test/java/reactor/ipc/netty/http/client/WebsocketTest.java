@@ -564,14 +564,14 @@ public class WebsocketTest {
 		HttpClient.create(httpServer.address().getPort())
 		          .ws("/test")
 		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
-		                  Connection context = in.context();
+		              in.withConnection(conn -> {
 		                  Mono.delay(Duration.ofSeconds(3))
 		                      .subscribe(c -> {
 		                              System.out.println("context.dispose()");
-		                              context.dispose();
+		                              conn.dispose();
 		                              latch.countDown();
 		                      });
-		                  context.onDispose()
+		                  conn.onDispose()
 		                         .subscribe(
 		                                 c -> { // no-op
 		                                 },
@@ -583,10 +583,15 @@ public class WebsocketTest {
 		                                     System.out.println("context.onClose() completed");
 		                                     latch.countDown();
 		                                 });
+		              });
 		                  Mono.delay(Duration.ofSeconds(3))
 		                      .repeat(() -> {
-		                          System.out.println("context.isDisposed() " + context.isDisposed());
-		                          if (context.isDisposed()) {
+		                          AtomicBoolean disposed = new AtomicBoolean(false);
+		                          in.withConnection(conn -> {
+		                              disposed.set(conn.isDisposed());
+		                              System.out.println("context.isDisposed() " + conn.isDisposed());
+		                          });
+		                          if (disposed.get()) {
 		                              latch.countDown();
 		                              return false;
 		                          }
@@ -617,8 +622,8 @@ public class WebsocketTest {
 		HttpClient.create(httpServer.address().getPort())
 		          .ws("/test")
 		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
-		              Connection context = in.context();
-		              context.onDispose()
+		              in.withConnection(conn ->
+		                 conn.onDispose()
 		                     .subscribe(
 		                             c -> { // no-op
 		                             },
@@ -629,11 +634,15 @@ public class WebsocketTest {
 		                             () -> {
 		                                 System.out.println("context.onClose() completed");
 		                                 latch.countDown();
-		                             });
+		                             }));
 		              Mono.delay(Duration.ofSeconds(3))
 		                  .repeat(() -> {
-		                      System.out.println("context.isDisposed() " + context.isDisposed());
-		                      if (context.isDisposed()) {
+		                      AtomicBoolean disposed = new AtomicBoolean(false);
+		                      in.withConnection(conn -> {
+		                          disposed.set(conn.isDisposed());
+		                          System.out.println("context.isDisposed() " + conn.isDisposed());
+		                      });
+		                      if (disposed.get()) {
 		                          latch.countDown();
 		                          return false;
 		                      }

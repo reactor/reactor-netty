@@ -25,10 +25,12 @@ import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 
 /**
@@ -38,35 +40,33 @@ public class HttpErrorTests {
 
 	@Test
 	public void test() {
-		Connection server = HttpServer.create(0)
-		                              .newRouter(httpServerRoutes -> httpServerRoutes.get(
+		DisposableServer server = HttpServer.create()
+		                                    .port(0)
+		                                    .router(httpServerRoutes -> httpServerRoutes.get(
 				                                "/",
 				                                (httpServerRequest, httpServerResponse) -> {
 					                                return httpServerResponse.sendString(
 							                                Mono.error(new IllegalArgumentException()));
 				                                }))
-		                              .block(Duration.ofSeconds(30));
+		                                    .bindNow(Duration.ofSeconds(30));
 
-		HttpClient client = HttpClient.create(opt -> opt.host("localhost")
-		                                                .port(server.address().getPort())
-		                                                .disablePool());
+		HttpClient client = HttpClient.from(TcpClient.newConnection())
+		                              .port(server.address().getPort());
 
-		HttpClientResponse r = client.get("/")
+		HttpClientResponse r = client.get()
+		                             .uri("/")
+		                             .response()
 		                             .block(Duration.ofSeconds(30));
 
-		Mono<List<String>> result = r.receive()
+		List<String> result = r.receive()
 		                    .asString(StandardCharsets.UTF_8)
-		                    .collectList();
-
-		StepVerifier.create(result)
-		            .expectError(IOException.class)
-		            .verify(Duration.ofSeconds(30));
+		                    .collectList().block(Duration.ofSeconds(30));
 
 		System.out.println("END");
 
-		FutureMono.from(r.context().channel().closeFuture()).block(Duration.ofSeconds(30));
 
-		r.dispose();
+		Assert.assertTrue(result.isEmpty());
+		Assert.assertTrue(r.isDisposed());
 		server.dispose();
 	}
 }

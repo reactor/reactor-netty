@@ -212,23 +212,23 @@ public class HttpServerTests {
 
 		CountDownLatch latch = new CountDownLatch(6);
 
-		Connection client = TcpClient.create(server.address()
-		                                             .getPort())
-		                               .newHandler((in, out) -> {
-			                                   in.context()
-			                                     .addHandlerFirst(new HttpClientCodec());
+		Connection client =TcpClient.create(server.address()
+		                  .getPort())
+		         .newHandler((in, out) -> {
+			         in.withConnection(x -> x
+			           .addHandlerFirst(new HttpClientCodec()))
 
-			                                   in.receiveObject()
-			                                     .ofType(DefaultHttpContent.class)
-			                                     .as(ByteBufFlux::fromInbound)
-			                                     .asString()
-			                                     .log()
-			                                     .map(Integer::parseInt)
-			                                     .subscribe(d -> {
-				                                         for (int x = 0; x < d; x++) {
-					                                         latch.countDown();
-				                                         }
-			                                     });
+			         .receiveObject()
+			           .ofType(DefaultHttpContent.class)
+			           .as(ByteBufFlux::fromInbound)
+			           .asString()
+			           .log()
+			           .map(Integer::parseInt)
+			           .subscribe(d -> {
+				           for (int x = 0; x < d; x++) {
+					           latch.countDown();
+				           }
+			           });
 
 			                                   return out.sendObject(Flux.just(request.retain(),
 					                                                           request.retain(),
@@ -613,7 +613,7 @@ public class HttpServerTests {
 		            .expectError(IOException.class)
 		            .verify(Duration.ofSeconds(30));
 
-		FutureMono.from(r.context().channel().closeFuture()).block(Duration.ofSeconds(30));
+		FutureMono.from(r.channel().closeFuture()).block(Duration.ofSeconds(30));
 
 		r.dispose();
 		server.dispose();

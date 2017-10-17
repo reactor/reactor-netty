@@ -318,7 +318,7 @@ final class ReactorNetty {
 
 		@Override
 		public NettyOutbound sendObject(Object message) {
-			return source.sendObject(message);
+			return then(source.sendObject(message));
 		}
 
 		@Override
