@@ -59,7 +59,7 @@ public interface WebsocketInbound extends NettyInbound {
 	 * @return this inbound
 	 */
 	default WebsocketInbound aggregateFrames(int maxContentLength) {
-		context().addHandlerLast(new WebSocketFrameAggregator(maxContentLength));
+		withConnection(c -> c.addHandlerLast(new WebSocketFrameAggregator(maxContentLength)));
 		return this;
 	}
 

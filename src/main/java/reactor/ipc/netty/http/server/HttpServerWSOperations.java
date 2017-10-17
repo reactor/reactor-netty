@@ -19,6 +19,8 @@ package reactor.ipc.netty.http.server;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiConsumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -52,7 +54,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 
 	volatile int closeSent;
 
-	public HttpServerWSOperations(String wsUrl,
+	HttpServerWSOperations(String wsUrl,
 			String protocols,
 			HttpServerOperations replaced) {
 		super(replaced.channel(), replaced);
@@ -131,7 +133,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 		}
 	}
 
-	void sendClose(CloseWebSocketFrame frame, ChannelFutureListener listener) {
+	void sendClose(@Nullable CloseWebSocketFrame frame, ChannelFutureListener listener) {
 		if (frame != null && !frame.isFinalFragment()) {
 			channel().writeAndFlush(frame);
 			return;
@@ -139,9 +141,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 			ChannelFuture f = channel().writeAndFlush(
 					frame == null ? new CloseWebSocketFrame() : frame);
-			if (listener != null) {
-				f.addListener(listener);
-			}
+			f.addListener(listener);
 		}
 	}
 
