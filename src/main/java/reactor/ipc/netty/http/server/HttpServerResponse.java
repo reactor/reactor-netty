@@ -68,10 +68,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse chunkedTransfer(boolean chunked);
 
 	@Override
-	default HttpServerResponse withConnection(Consumer<? super Connection> withConnection){
-		withConnection.accept(context());
-		return this;
-	}
+	HttpServerResponse withConnection(Consumer<? super Connection> withConnection);
 
 	/**
 	 * Return  true if headers and status have been sent to the client

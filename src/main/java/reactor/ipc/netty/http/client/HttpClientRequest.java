@@ -62,10 +62,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
 	@Override
-	default HttpClientRequest withConnection(Consumer<? super Connection> withConnection){
-		withConnection.accept(context());
-		return this;
-	}
+	HttpClientRequest withConnection(Consumer<? super Connection> withConnection);
 
 	/**
 	 * Set transfer-encoding header

@@ -63,6 +63,17 @@ public class NettyOutboundTest {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
+
+			@Override
+			public NettyOutbound sendObject(Object message) {
+				return null;
+			}
+
+			@Override
+			public ByteBufAllocator alloc() {
+				return ByteBufAllocator.DEFAULT;
+			}
+
 			@Override
 			public Connection context() {
 				return mockContext;
@@ -120,6 +131,16 @@ public class NettyOutboundTest {
 				});
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
+			@Override
+			public NettyOutbound sendObject(Object message) {
+				return null;
+			}
+
+			@Override
+			public ByteBufAllocator alloc() {
+				return ByteBufAllocator.DEFAULT;
+			}
+
 			@Override
 			public Connection context() {
 				return mockContext;
@@ -192,6 +213,17 @@ public class NettyOutboundTest {
 
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
+
+			@Override
+			public NettyOutbound sendObject(Object message) {
+				return null;
+			}
+
+			@Override
+			public ByteBufAllocator alloc() {
+				return ByteBufAllocator.DEFAULT;
+			}
+
 			@Override
 			public Connection context() {
 				return mockContext;
@@ -262,6 +294,16 @@ public class NettyOutboundTest {
 				});
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
+			@Override
+			public NettyOutbound sendObject(Object message) {
+				return null;
+			}
+
+			@Override
+			public ByteBufAllocator alloc() {
+				return ByteBufAllocator.DEFAULT;
+			}
+
 			@Override
 			public Connection context() {
 				return mockContext;

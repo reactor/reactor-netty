@@ -23,6 +23,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -214,7 +216,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @return a new {@link ChannelOperations}
 	 */
 	@SuppressWarnings("unchecked")
-	public final ChannelOperations<?, ?> createOperations(Channel channel, Object msg) {
+	public final ChannelOperations<?, ?> createOperations(Channel channel, @Nullable Object msg) {
 
 		if (autoCreateOperations || msg != null) {
 			ChannelOperations<?, ?> op =
@@ -232,7 +234,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 				if (this.options.afterNettyContextInit() != null) {
 					try {
-						this.options.afterNettyContextInit().accept(op.context());
+						this.options.afterNettyContextInit().accept(op);
 					}
 					catch (Throwable t) {
 						log.error("Could not apply afterNettyContextInit callback {}", t.toString());
