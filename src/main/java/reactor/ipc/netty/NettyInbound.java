@@ -16,12 +16,9 @@
 
 package reactor.ipc.netty;
 
-import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Flux;
 
 /**
@@ -31,26 +28,6 @@ import reactor.core.publisher.Flux;
  * @since 0.6
  */
 public interface NettyInbound {
-
-	/**
-	 * Return a pre-configured attribute stored in every inbound channel
-	 * @param key attribute key
-	 * @param <T> a channel attribute type
-	 * @return a {@link Channel} attribute
-	 * @see Channel#attr(AttributeKey)
-	 */
-	default <T> Attribute<T> attr(AttributeKey<T> key) {
-		return context().channel()
-		                .attr(key);
-	}
-
-	/**
-	 * Return a {@link Connection} to operate on the underlying
-	 * {@link Channel} state.
-	 *
-	 * @return the {@link Connection}
-	 */
-	Connection context();
 
 	/**
 	 * Assign a {@link Runnable} to be invoked when reads have become idle for the given
@@ -72,11 +49,7 @@ public interface NettyInbound {
 	 * A {@link Flux} extension that allows for extra decoding operators
 	 * @return a new {@link ByteBufFlux}
 	 */
-	default ByteBufFlux receive() {
-		return ByteBufFlux.fromInbound(receiveObject(),
-				context().channel()
-				         .alloc());
-	}
+	ByteBufFlux receive();
 
 
 	/**
@@ -85,16 +58,6 @@ public interface NettyInbound {
 	 * @return a {@literal Object} inbound {@link Flux}
 	 */
 	Flux<?> receiveObject();
-
-	/**
-	 * Get the address of the remote peer.
-	 *
-	 * @return the peer's address
-	 */
-	default InetSocketAddress remoteAddress() {
-		return context().address();
-	}
-
 
 	/**
 	 * Call the passed callback with a {@link Connection} to operate on the

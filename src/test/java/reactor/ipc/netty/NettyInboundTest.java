@@ -37,15 +37,16 @@ public class NettyInboundTest {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection mockContext = () -> channel;
 		NettyInbound inbound = new NettyInbound() {
+
+			@Override
+			public ByteBufFlux receive() {
+				return ByteBufFlux.fromInbound(Flux.empty());
+			}
+
 			@Override
 			public NettyInbound withConnection(Consumer<? super Connection> withConnection) {
 				withConnection.accept(mockContext);
 				return this;
-			}
-
-			@Override
-			public Connection context() {
-				return mockContext;
 			}
 
 			@Override
