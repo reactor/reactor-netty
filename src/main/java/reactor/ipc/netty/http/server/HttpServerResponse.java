@@ -68,8 +68,8 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse chunkedTransfer(boolean chunked);
 
 	@Override
-	default HttpServerResponse context(Consumer<Connection> contextCallback){
-		contextCallback.accept(context());
+	default HttpServerResponse withConnection(Consumer<? super Connection> withConnection){
+		withConnection.accept(context());
 		return this;
 	}
 

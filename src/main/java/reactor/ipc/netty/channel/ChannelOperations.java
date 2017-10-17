@@ -183,8 +183,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> context(Consumer<Connection> contextCallback) {
-		contextCallback.accept(context());
+	public ChannelOperations<INBOUND, OUTBOUND> withConnection(Consumer<? super Connection> withConnection) {
+		withConnection.accept(context());
 		return this;
 	}
 
