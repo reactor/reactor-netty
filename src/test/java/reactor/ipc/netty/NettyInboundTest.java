@@ -18,6 +18,7 @@ package reactor.ipc.netty;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
@@ -36,6 +37,12 @@ public class NettyInboundTest {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection mockContext = () -> channel;
 		NettyInbound inbound = new NettyInbound() {
+			@Override
+			public NettyInbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
+			}
+
 			@Override
 			public Connection context() {
 				return mockContext;

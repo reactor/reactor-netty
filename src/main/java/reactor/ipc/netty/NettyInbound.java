@@ -53,20 +53,6 @@ public interface NettyInbound {
 	Connection context();
 
 	/**
-	 * Immediately call the passed callback with a {@link Connection} to operate on the
-	 * underlying
-	 * {@link Channel} state. This allows for chaining inbound API.
-	 *
-	 * @param contextCallback context callback
-	 *
-	 * @return the {@link Connection}
-	 */
-	default NettyInbound context(Consumer<Connection> contextCallback){
-		contextCallback.accept(context());
-		return this;
-	}
-
-	/**
 	 * Assign a {@link Runnable} to be invoked when reads have become idle for the given
 	 * timeout. This replaces any previously set idle callback.
 	 *
@@ -76,10 +62,10 @@ public interface NettyInbound {
 	 * @return {@literal this}
 	 */
 	default NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		context().removeHandler(NettyPipeline.OnChannelReadIdle);
-		context().addHandlerFirst(NettyPipeline.OnChannelReadIdle,
-				new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle));
-		return this;
+		return withConnection(c ->
+			c.removeHandler(NettyPipeline.OnChannelReadIdle)
+			 .addHandlerFirst(NettyPipeline.OnChannelReadIdle,
+					 new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle)));
 	}
 
 	/**
@@ -109,4 +95,15 @@ public interface NettyInbound {
 		return context().address();
 	}
 
+
+	/**
+	 * Call the passed callback with a {@link Connection} to operate on the
+	 * underlying
+	 * {@link Channel} state. This allows for chaining inbound API.
+	 *
+	 * @param withConnection connection callback
+	 *
+	 * @return the {@link Connection}
+	 */
+	NettyInbound withConnection(Consumer<? super Connection> withConnection);
 }

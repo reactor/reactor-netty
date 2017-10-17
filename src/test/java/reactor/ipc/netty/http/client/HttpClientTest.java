@@ -573,12 +573,15 @@ public class HttpClientTest {
 		//verify decoder does its job and removes the header
 		StepVerifier.create(
 				HttpClient.create()
-				          .get("http://www.httpwatch.com", req -> {
-					          req.context().addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
-					          return req.followRedirect()
-					                    .addHeader("Accept-Encoding", "gzip")
-					                    .addHeader("Accept-Encoding", "deflate");
-				          })
+				          .get("http://www.httpwatch.com", req ->
+					          req.withConnection(c -> c.addHandlerFirst
+							          ("gzipDecompressor", new
+							          HttpContentDecompressor()))
+					             .followRedirect()
+					             .addHeader
+							          ("Accept-Encoding", "gzip")
+					                    .addHeader("Accept-Encoding", "deflate")
+				          )
 				          .flatMap(r -> r.receive().asString().elementAt(0)
 				                         .map(s -> s.substring(0, Math.min(s.length() -1, 100)))
 				                         .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))

@@ -21,6 +21,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -266,8 +267,18 @@ final class ReactorNetty {
 		}
 
 		@Override
+		public ByteBufAllocator alloc() {
+			return source.alloc();
+		}
+
+		@Override
 		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
 			return source.withConnection(withConnection);
+		}
+
+		@Override
+		public NettyOutbound sendObject(Object message) {
+			return source.sendObject(message);
 		}
 
 		@Override
