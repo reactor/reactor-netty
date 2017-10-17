@@ -31,6 +31,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
@@ -61,7 +62,18 @@ public class NettyOutboundTest {
 	public void onWriteIdleReplaces() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection mockContext = () -> channel;
-		NettyOutbound outbound = () -> mockContext;
+		NettyOutbound outbound = new NettyOutbound() {
+			@Override
+			public Connection context() {
+				return mockContext;
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
+			}
+		};
 
 		AtomicLong idle1 = new AtomicLong();
 		AtomicLong idle2 = new AtomicLong();
@@ -116,6 +128,12 @@ public class NettyOutboundTest {
 			@Override
 			public FileChunkedStrategy getFileChunkedStrategy() {
 				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
 			}
 		};
 		channel.writeOneOutbound(1);
@@ -183,6 +201,12 @@ public class NettyOutboundTest {
 			public FileChunkedStrategy getFileChunkedStrategy() {
 				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
 			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
+			}
 		};
 		channel.writeOneOutbound(1);
 
@@ -246,6 +270,12 @@ public class NettyOutboundTest {
 			@Override
 			public FileChunkedStrategy getFileChunkedStrategy() {
 				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
 			}
 		};
 		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());

@@ -62,8 +62,8 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
 	@Override
-	default HttpClientRequest context(Consumer<Connection> contextCallback){
-		contextCallback.accept(context());
+	default HttpClientRequest withConnection(Consumer<? super Connection> withConnection){
+		withConnection.accept(context());
 		return this;
 	}
 
