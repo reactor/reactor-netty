@@ -46,8 +46,6 @@ public class AbortedException extends RuntimeException {
 		return nostack ? this : super.fillInStackTrace();
 	}
 
-
-
 	/**
 	 * Return true if connection has been simply aborted on a tcp level by verifying if
 	 * the given inbound error.
