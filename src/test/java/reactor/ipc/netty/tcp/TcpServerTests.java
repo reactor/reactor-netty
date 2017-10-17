@@ -668,7 +668,7 @@ public class TcpServerTests {
 
 		Connection server =
 				TcpServer.create()
-				         .newHandler((in, out) -> in.context(c -> c.addHandler(new JsonObjectDecoder()))
+				         .newHandler((in, out) -> in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
 				                                    .receive()
 				                                    .asString()
 				                                    .log("serve")
@@ -680,7 +680,7 @@ public class TcpServerTests {
 
 		Connection client = TcpClient.create(o -> o.port(server.address().getPort()))
 		                               .newHandler((in, out) -> {
-			                               in.context(c -> c.addHandler(new JsonObjectDecoder()))
+			                               in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
 			                                 .receive()
 			                                 .asString()
 			                                 .log("receive")

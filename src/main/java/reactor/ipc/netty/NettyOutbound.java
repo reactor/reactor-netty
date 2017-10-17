@@ -67,10 +67,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 *
 	 * @return the {@link ByteBufAllocator}
 	 */
-	default ByteBufAllocator alloc() {
-		return context().channel()
-		                .alloc();
-	}
+	ByteBufAllocator alloc();
 
 	/**
 	 * Return a {@link Connection} to operate on the underlying
@@ -105,10 +102,10 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return {@literal this}
 	 */
 	default NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
-		context().removeHandler(NettyPipeline.OnChannelWriteIdle);
-		context().addHandlerFirst(NettyPipeline.OnChannelWriteIdle,
-				new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle));
-		return this;
+		return withConnection(c ->
+			c.removeHandler(NettyPipeline.OnChannelWriteIdle)
+			 .addHandlerFirst(NettyPipeline.OnChannelWriteIdle,
+					new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle)));
 	}
 
 	/**
@@ -121,10 +118,9 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return {@code this} instance
 	 */
 	default NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-		context().channel()
-		         .pipeline()
-		         .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator, null));
-		return this;
+		return withConnection(c -> c.channel()
+		                            .pipeline()
+		                            .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator)));
 	}
 
 	/**
@@ -270,11 +266,11 @@ public interface NettyOutbound extends Publisher<Void> {
 	}
 
 	/**
-	 * Send Object to the peer, listen for any error on write and close on terminal signal
-	 * (complete|error). If more than one publisher is attached (multiple calls to send())
-	 * completion occurs after all publishers complete.
+	 * Send an object through netty pipeline. If type of Publisher, send all signals,
+	 * flushing on complete by default. Write occur in FIFO sequence.
 	 *
-	 * @param dataStream the dataStream publishing Buffer items to write on this channel
+	 * @param dataStream the dataStream publishing items to write on this channel
+	 * or a simple pojo supported by configured netty handlers
 	 *
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
@@ -287,15 +283,12 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * Send data to the peer, listen for any error on write and close on terminal signal
 	 * (complete|error).
 	 *
-	 * @param msg the object to publish
+	 * @param message the object to publish
 	 *
 	 * @return A {@link Mono} to signal successful sequence write (e.g. after "flush") or
 	 * any error during write
 	 */
-	default NettyOutbound sendObject(Object msg) {
-		return then(FutureMono.deferFuture(() -> context().channel()
-		                                                  .writeAndFlush(msg)));
-	}
+	NettyOutbound sendObject(Object message);
 
 	/**
 	 * Send String to the peer, listen for any error on write and close on terminal signal
@@ -362,13 +355,11 @@ public interface NettyOutbound extends Publisher<Void> {
 		return new ReactorNetty.OutboundThen(this, other);
 	}
 
-
 	/**
-	 * Immediately call the passed callback with a {@link Connection} to operate on the
-	 * underlying
-	 * {@link Channel} state. This allows for chaining outbound API.
+	 * Call the passed callback with a {@link Connection} to operate on the underlying
+	 * {@link Channel} state.
 	 *
-	 * @param withConnection context callback
+	 * @param withConnection connection callback
 	 *
 	 * @return the {@link Connection}
 	 */

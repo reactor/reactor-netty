@@ -68,10 +68,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse chunkedTransfer(boolean chunked);
 
 	@Override
-	default HttpServerResponse withConnection(Consumer<? super Connection> withConnection){
-		withConnection.accept(context());
-		return this;
-	}
+	HttpServerResponse withConnection(Consumer<? super Connection> withConnection);
 
 	/**
 	 * Enable/Disable compression handling (gzip/deflate) for the underlying response

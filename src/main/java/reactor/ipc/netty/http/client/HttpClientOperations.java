@@ -224,7 +224,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpClientOperations withConnection(Consumer<? super Connection> withConnection) {
 		Objects.requireNonNull(withConnection, "withConnection");
-		withConnection.accept(context());
+		withConnection.accept(this);
 		return this;
 	}
 
@@ -418,6 +418,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		Mono<Void> m = withWebsocketSupport(websocketUri(), subprotocols, noopHandler());
 
 		return new WebsocketOutbound() {
+
+			@Override
+			public ByteBufAllocator alloc() {
+				return HttpClientOperations.this.alloc();
+			}
+
+			@Override
+			public NettyOutbound sendObject(Object message) {
+				return HttpClientOperations.this.sendObject(message);
+			}
 
 			@Override
 			public String selectedSubprotocol() {

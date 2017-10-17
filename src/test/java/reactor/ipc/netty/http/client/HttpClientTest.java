@@ -595,7 +595,7 @@ public class HttpClientTest {
 		StepVerifier.create(
 				HttpClient.create(c.address().getPort())
 				          .get("/", req -> {
-					          req.context().addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
+							  req.withConnection(conn -> conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor()));
 					          return req.followRedirect()
 					                    .addHeader("Accept-Encoding", "gzip")
 					                    .addHeader("Accept-Encoding", "deflate");
