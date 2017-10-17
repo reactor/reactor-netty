@@ -255,7 +255,7 @@ public class HttpServerTests {
 
 		Flux<String> client = HttpClient.create(c.address()
 		                                         .getPort())
-		                                .get("/", out -> out.context(ctx -> ctx.addHandler(new LineBasedFrameDecoder(10))))
+		                                .get("/", out -> out.withConnection(conn -> conn.addHandler(new LineBasedFrameDecoder(10))))
 		                                .block(Duration.ofSeconds(30))
 		                                .receive()
 		                                .asString();

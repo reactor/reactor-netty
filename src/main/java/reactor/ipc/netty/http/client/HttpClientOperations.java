@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -221,8 +222,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public HttpClientOperations context(Consumer<Connection> contextCallback) {
-		contextCallback.accept(context());
+	public HttpClientOperations withConnection(Consumer<? super Connection> withConnection) {
+		Objects.requireNonNull(withConnection, "withConnection");
+		withConnection.accept(context());
 		return this;
 	}
 
@@ -232,7 +234,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (responseState != null) {
 			return responseState.cookieHolder.getCachedCookies();
 		}
-		return null;
+		return Collections.emptyMap();
 	}
 
 	@Override
@@ -430,6 +432,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			@Override
 			public Mono<Void> then() {
 				return m;
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				return HttpClientOperations.this.withConnection(withConnection);
 			}
 		};
 	}

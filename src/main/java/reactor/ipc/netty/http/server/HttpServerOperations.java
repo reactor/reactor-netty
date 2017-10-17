@@ -27,6 +27,8 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -120,8 +122,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerOperations context(Consumer<Connection> contextCallback) {
-		contextCallback.accept(context());
+	public HttpServerOperations withConnection(Consumer<? super Connection> withConnection) {
+		withConnection.accept(context());
 		return this;
 	}
 
@@ -239,6 +241,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@Nullable
 	public Map<String, String> params() {
 		return null != paramsResolver ? paramsResolver.apply(uri()) : null;
 	}

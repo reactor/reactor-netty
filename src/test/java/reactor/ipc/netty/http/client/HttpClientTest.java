@@ -74,7 +74,7 @@ public class HttpClientTest {
 		                        .newHandler((in, out) -> in.receive()
 		                                                     .take(1)
 		                                                     .thenMany(Flux.defer(() ->
-						                                                     out.context(c ->
+						                                                     out.withConnection(c ->
 								                                                     c.addHandlerFirst(new HttpResponseEncoder()))
 						                                                        .sendObject(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.ACCEPTED))
 						                                                        .then(Mono.delay(Duration.ofSeconds(2)).then()))
@@ -166,7 +166,7 @@ public class HttpClientTest {
 	@Ignore
 	public void pipelined() throws Exception {
 		Connection x = TcpServer.create("localhost", 0)
-		                        .newHandler((in, out) -> out.context(c -> c.addHandlerFirst(new
+		                        .newHandler((in, out) -> out.withConnection(c -> c.addHandlerFirst(new
 				                          HttpResponseEncoder()))
 		                                                      .sendObject(Flux.just(
 				                                                      response(),
@@ -541,7 +541,7 @@ public class HttpClientTest {
 		Connection x = TcpServer.create("localhost", 0)
 		                        .newHandler((in, out) -> {
 										signal.onComplete();
-										return out.context(c -> c.addHandlerFirst(
+										return out.withConnection(c -> c.addHandlerFirst(
 												new HttpResponseEncoder()))
 										          .sendObject(Mono.delay(Duration
 												          .ofSeconds(2))
