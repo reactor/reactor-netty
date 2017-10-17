@@ -292,9 +292,7 @@ public class TcpClientTests {
 			in.onReadIdle(500, () -> {
 				  totalDelay.addAndGet(System.currentTimeMillis() - start);
 				  latch.countDown();
-			})
-			  .context()
-			  .onDispose(close::countDown);
+			}).withConnection(c -> c.onDispose(close::countDown));
 
 			out.onWriteIdle(500, () -> {
 				totalDelay.addAndGet(System.currentTimeMillis() - start);

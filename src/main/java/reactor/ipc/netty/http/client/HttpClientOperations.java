@@ -408,7 +408,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 			@Override
 			public NettyOutbound sendObject(Object message) {
-				return HttpClientOperations.this.sendObject(message);
+				return then(HttpClientOperations.this.sendObject(message));
 			}
 
 			@Override
