@@ -18,6 +18,7 @@ package reactor.ipc.netty;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -243,11 +244,11 @@ final class ReactorNetty {
 	 */
 	static final class OutboundThen implements NettyOutbound {
 
-		final Connection sourceContext;
+		final NettyOutbound source;
 		final Mono<Void> thenMono;
 
 		OutboundThen(NettyOutbound source, Publisher<Void> thenPublisher) {
-			this.sourceContext = source.context();
+			this.source = source;
 
 			Mono<Void> parentMono = source.then();
 
@@ -261,7 +262,12 @@ final class ReactorNetty {
 
 		@Override
 		public Connection context() {
-			return sourceContext;
+			return source.context();
+		}
+
+		@Override
+		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+			return source.withConnection(withConnection);
 		}
 
 		@Override
