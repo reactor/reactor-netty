@@ -379,7 +379,7 @@ public class HttpClientTest {
 
 		AtomicBoolean same = new AtomicBoolean();
 
-		r.withConnection(c -> r2.withConnection(c2 -> same.set(c2 == c.channel())));
+		r.withConnection(c -> r2.withConnection(c2 -> same.set(c2.channel() == c.channel())));
 
 		Assert.assertTrue(same.get());
 
