@@ -43,10 +43,7 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	}
 
 	@Override
-	default HttpServerRequest context(Consumer<Connection> contextCallback) {
-		NettyInbound.super.context(contextCallback);
-		return this;
-	}
+	HttpServerRequest withConnection(Consumer<? super Connection> withConnection);
 
 	/**
 	 * URI parameter captured via {} "/test/{var}"
