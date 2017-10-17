@@ -22,6 +22,9 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramChannel;
@@ -37,6 +40,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -172,6 +176,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	public ByteBufAllocator alloc() {
+		return channel.alloc();
+	}
+
+	@Override
 	public final Channel channel() {
 		return channel;
 	}
@@ -183,7 +192,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> withConnection(Consumer<? super Connection> withConnection) {
-		withConnection.accept(context());
+		withConnection.accept(this);
 		return this;
 	}
 
@@ -254,17 +263,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public String toString() {
-		return channel.toString();
+	public NettyOutbound sendObject(Object message) {
+		return then(FutureMono.deferFuture(() -> channel.writeAndFlush(message)));
 	}
 
-	/**
-	 * Return true if inbound traffic is not expected anymore
-	 *
-	 * @return true if inbound traffic is not expected anymore
-	 */
-	protected final boolean isInboundDone() {
-		return inbound.inboundDone || !channel.isActive();
+	@Override
+	public String toString() {
+		return channel.toString();
 	}
 
 	/**
@@ -488,7 +493,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		 *
 		 * @return a new {@link ChannelOperations}
 		 */
-		ChannelOperations<?, ?> create(CHANNEL c, ContextHandler<?> contextHandler, Object msg);
+		@Nullable ChannelOperations<?, ?> create(CHANNEL c, ContextHandler<?> contextHandler,
+				Object msg);
 	}
 	/**
 	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}

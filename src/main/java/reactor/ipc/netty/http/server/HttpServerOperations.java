@@ -114,7 +114,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpServerOperations withConnection(Consumer<? super Connection> withConnection) {
-		withConnection.accept(context());
+		Objects.requireNonNull(withConnection, "withConnection");
+		withConnection.accept(this);
 		return this;
 	}
 
