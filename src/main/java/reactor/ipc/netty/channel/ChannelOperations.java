@@ -39,6 +39,7 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
+import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyConnector;
@@ -170,7 +171,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return ((SocketChannel) c).remoteAddress();
 		}
 		if (c instanceof DatagramChannel) {
-			return ((DatagramChannel) c).localAddress();
+			return ((DatagramChannel) c).remoteAddress();
 		}
 		throw new IllegalStateException("Does not have an InetSocketAddress");
 	}
@@ -258,8 +259,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final InetSocketAddress remoteAddress() {
-		return (InetSocketAddress) channel.remoteAddress();
+	public ByteBufFlux receive() {
+		return ByteBufFlux.fromInbound(receiveObject(), channel.alloc());
 	}
 
 	@Override

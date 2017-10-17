@@ -308,7 +308,7 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 
 		/**
 		 * Attribute default attribute to the future {@link Channel} connection. They will
-		 * be available via {@link reactor.ipc.netty.NettyInbound#attr(AttributeKey)}.
+		 * be available via {@link Channel#attr(AttributeKey)}.
 		 *
 		 * @param key the attribute key
 		 * @param value the attribute value

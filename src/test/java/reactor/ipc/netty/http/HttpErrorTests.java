@@ -59,8 +59,6 @@ public class HttpErrorTests {
 
 		System.out.println("END");
 
-		FutureMono.from(r.context().channel().closeFuture()).block(Duration.ofSeconds(30));
-
 		Assert.assertTrue(result.isEmpty());
 		Assert.assertTrue(r.isDisposed());
 		server.dispose();

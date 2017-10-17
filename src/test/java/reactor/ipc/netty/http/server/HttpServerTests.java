@@ -278,10 +278,8 @@ public class HttpServerTests {
 		TcpClient.create(c.address()
 		                  .getPort())
 		         .newHandler((in, out) -> {
-			         in.context()
-			           .addHandlerFirst(new HttpClientCodec());
-
-			         in.receiveObject()
+			         in.withConnection(x -> x.addHandlerFirst(new HttpClientCodec()))
+			           .receiveObject()
 			           .ofType(DefaultHttpContent.class)
 			           .as(ByteBufFlux::fromInbound)
 			           .asString()

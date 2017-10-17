@@ -302,8 +302,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default NettyOutbound sendString(Publisher<? extends String> dataStream,
-			Charset charset) {
+	default NettyOutbound sendString(Publisher<? extends String> dataStream, Charset charset) {
 		return sendObject(Flux.from(dataStream)
 		                      .map(s -> alloc()
 		                                   .buffer()
