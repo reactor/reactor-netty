@@ -80,6 +80,10 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			final HttpRequest request = (HttpRequest) msg;
 			if (persistentConnection) {
 				pendingResponses += 1;
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug("Increasing pending responses, now " +
+							"{}", pendingResponses);
+				}
 				persistentConnection = isKeepAlive(request);
 			}
 			else {
@@ -89,7 +93,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				}
 				return;
 			}
-			if (overflow || pendingResponses > 1) {
+			if (pendingResponses > 1) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug("buffering pipelined HTTP request, " +
 									"pending response count: {}, queue: {}",
@@ -108,6 +112,15 @@ final class HttpServerHandler extends ChannelDuplexHandler
 					return;
 				}
 			}
+		}
+		else if (persistentConnection && pendingResponses == 0) {
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug("Dropped HTTP content, " +
+								"Since response has been sent already:{}", msg);
+			}
+			ReferenceCountUtil.release(msg);
+			ctx.read();
+			return;
 		}
 		else if (overflow) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
@@ -165,9 +178,13 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			}
 			ctx.write(msg, promise);
 
-			if(mustRecycleEncoder) {
+			if(persistentConnection && mustRecycleEncoder) {
 				mustRecycleEncoder = false;
 				pendingResponses -= 1;
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug("Decreasing pending responses, now " +
+							"{}", pendingResponses);
+				}
 			}
 
 			if (pipelined != null && !pipelined.isEmpty()) {

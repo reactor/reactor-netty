@@ -600,17 +600,21 @@ public class HttpServerTests {
 	public void testIssue186() {
 		NettyContext server =
 				HttpServer.create(0)
-				          .newHandler((req, res) -> res.sendNotFound())
+				          .newHandler((req, res) -> res.status(200).send())
 				          .block(Duration.ofSeconds(300));
 
 		HttpClient client =
 				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
 						                    .poolResources(PoolResources.fixed("test", 1)));
 
-		doTestIssue186(client);
-		doTestIssue186(client);
+		try {
+			doTestIssue186(client);
+			doTestIssue186(client);
+		}
+		finally {
+			server.dispose();
+		}
 
-		server.dispose();
 	}
 
 	private void doTestIssue186(HttpClient client) {
