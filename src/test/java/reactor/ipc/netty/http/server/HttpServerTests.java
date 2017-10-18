@@ -595,4 +595,33 @@ public class HttpServerTests {
 				    .expectComplete()
 				    .verify(Duration.ofMillis(100));
 	}
+
+	@Test
+	public void testIssue186() {
+		NettyContext server =
+				HttpServer.create(0)
+				          .newHandler((req, res) -> res.sendNotFound())
+				          .block(Duration.ofSeconds(300));
+
+		HttpClient client =
+				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
+						                    .poolResources(PoolResources.fixed("test", 1)));
+
+		doTestIssue186(client);
+		doTestIssue186(client);
+
+		server.dispose();
+	}
+
+	private void doTestIssue186(HttpClient client) {
+		Mono<String> content = client.post("/", req -> req.failOnClientError(false)
+				                                          .sendString(Mono.just("bodysample")))
+				                      .flatMap(res -> res.receive()
+				                                         .aggregate()
+				                                         .asString());
+
+		StepVerifier.create(content)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(300));
+	}
 }
