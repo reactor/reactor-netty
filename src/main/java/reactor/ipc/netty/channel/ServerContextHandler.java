@@ -24,6 +24,11 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.AttributeKey;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.FutureMono;
@@ -37,6 +42,8 @@ import reactor.ipc.netty.options.ServerOptions;
 final class ServerContextHandler extends CloseableContextHandler<Channel>
 		implements NettyContext {
 
+	private static final AttributeKey<DirectProcessor<Void>> ON_TERMINATE_EMITTER = AttributeKey.newInstance("ON_TERMINATE_EMITTER");
+	private static final AttributeKey<Subscription> CLOSE_FUTURE_SUBSCRIPTION = AttributeKey.newInstance("CLOSE_FUTURE_SUBSCRIPTION");
 	final ServerOptions serverOptions;
 
 	ServerContextHandler(ChannelOperations.OnNew<Channel> channelOpFactory,
@@ -92,6 +99,12 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
+	protected Publisher<Void> onCloseOrRelease(Channel channel) {
+		createAndRegisterTerminateEmitterIfAbsent(channel);
+		return Mono.fromDirect(channel.attr(ON_TERMINATE_EMITTER).get());
+	}
+
+	@Override
 	public Channel channel() {
 		return f.channel();
 	}
@@ -102,14 +115,56 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 		         .isActive();
 	}
 
+	private void createAndRegisterTerminateEmitterIfAbsent(Channel ch) {
+		DirectProcessor<Void> onTerminateEmitter = DirectProcessor.create();
+		if(ch.attr(ON_TERMINATE_EMITTER).compareAndSet(null, onTerminateEmitter)) {
+			FutureMono.from(ch.closeFuture()).subscribe(new CoreSubscriber<Void>() {
+				@Override
+				public void onSubscribe(Subscription s) {
+					if (!ch.attr(CLOSE_FUTURE_SUBSCRIPTION).compareAndSet(null, s)) {
+						throw new IllegalStateException(
+								"A previous subscription was present.");
+					}
+					onTerminateEmitter.onSubscribe(s);
+				}
+
+				@Override
+				public void onNext(Void aVoid) {
+					onTerminateEmitter.onNext(aVoid);
+				}
+
+				@Override
+				public void onError(Throwable t) {
+					onTerminateEmitter.onError(t);
+				}
+
+				@Override
+				public void onComplete() {
+					onTerminateEmitter.onComplete();
+				}
+			});
+		}
+	}
+
 	@Override
 	public void terminateChannel(Channel channel) {
-		if (!f.channel()
-		     .isActive()) {
+		completeAndDisposeTerminateEmitterIfPresent(channel);
+		if (!f.channel().isActive()) {
 			return;
 		}
-		if(!NettyContext.isPersistent(channel)){
+		if (!NettyContext.isPersistent(channel)) {
 			channel.close();
+		}
+	}
+
+	private void completeAndDisposeTerminateEmitterIfPresent(Channel channel) {
+		DirectProcessor<Void> terminateEmitter = channel.attr(ON_TERMINATE_EMITTER).getAndSet(null);
+		if (terminateEmitter != null) {
+			terminateEmitter.onComplete();
+		}
+		Subscription closeFutureSubscription = channel.attr(CLOSE_FUTURE_SUBSCRIPTION).getAndSet(null);
+		if (closeFutureSubscription != null) {
+			closeFutureSubscription.cancel();
 		}
 	}
 
