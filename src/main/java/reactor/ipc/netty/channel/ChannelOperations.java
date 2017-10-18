@@ -119,14 +119,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 	}
 
-	final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
-			                    handler;
-	final Channel               channel;
-	final FluxReceive           inbound;
-	final DirectProcessor<Void> onInactive;
-	final ContextHandler<?>     context;
+	final    BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
+			                       handler;
+	final    Channel               channel;
+	final    FluxReceive           inbound;
+	final    DirectProcessor<Void> onInactive;
+	final    ContextHandler<?>     context;
 	@SuppressWarnings("unchecked")
-	volatile Subscription outboundSubscription;
+	volatile Subscription          outboundSubscription;
 	protected ChannelOperations(Channel channel,
 			ChannelOperations<INBOUND, OUTBOUND> replaced) {
 		this(channel, replaced.handler, replaced.context, replaced.onInactive);
@@ -146,8 +146,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.context = Objects.requireNonNull(context, "context");
 		this.inbound = new FluxReceive(this);
 		this.onInactive = processor;
+		Subscription[] _s = new Subscription[1];
 		Mono.fromDirect(context.onCloseOrRelease(channel))
+		    .doOnSubscribe(s -> _s[0] = s)
 		    .subscribe(onInactive);
+
+		if(_s[0] != null) { //remove closeFuture listener ref by onCloseOrRelease
+			// subscription when onInactive is called for any reason from
+			// onHandlerTerminate
+			onInactive.subscribe(null, null, _s[0]::cancel);
+		}
 	}
 
 	@Override
