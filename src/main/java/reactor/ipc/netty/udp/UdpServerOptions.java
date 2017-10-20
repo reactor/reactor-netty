@@ -19,18 +19,17 @@ import io.netty.bootstrap.Bootstrap;
 import reactor.ipc.netty.options.ClientOptions;
 
 /**
- * @author Stephane Maldini
  * @author Violeta Georgieva
  */
-final class UdpClientOptions extends ClientOptions {
+final class UdpServerOptions extends ClientOptions {
 
 	/**
-	 * Creates a builder for {@link UdpClientOptions UdpClientOptions}
+	 * Creates a builder for {@link UdpServerOptions UdpServerOptions}
 	 *
-	 * @return a new UdpClientOptions builder
+	 * @return a new UdpServerOptions builder
 	 */
 	@SuppressWarnings("unchecked")
-	public static UdpClientOptions.Builder builder() {
+	public static UdpServerOptions.Builder builder() {
 		return new Builder();
 	}
 
@@ -39,18 +38,18 @@ final class UdpClientOptions extends ClientOptions {
 		return true;
 	}
 
-	UdpClientOptions(UdpClientOptions.Builder builder) {
+	UdpServerOptions(UdpServerOptions.Builder builder) {
 		super(builder);
 	}
 
 	@Override
-	public UdpClientOptions duplicate() {
+	public UdpServerOptions duplicate() {
 		return builder().from(this).build();
 	}
 
 	@Override
 	public String toString() {
-		return "UdpClientOptions{" + asDetailedString() + "}";
+		return "UdpServerOptions{" + asDetailedString() + "}";
 	}
 
 	public static final class Builder extends ClientOptions.Builder<Builder> {
@@ -60,9 +59,10 @@ final class UdpClientOptions extends ClientOptions {
 		}
 
 		@Override
-		public UdpClientOptions build() {
+		public UdpServerOptions build() {
 			super.build();
-			return new UdpClientOptions(this);
+			return new UdpServerOptions(this);
 		}
 	}
+
 }

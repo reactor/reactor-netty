@@ -80,7 +80,7 @@ public class UdpServerTests {
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(4);
 
-		final NettyContext server = UdpClient.create(port)
+		final NettyContext server = UdpServer.create(port)
 		                                     .newHandler((in, out) -> {
 			                                   in.receive()
 			                                     .asByteArray()
@@ -120,7 +120,6 @@ public class UdpServerTests {
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	public void supportsUdpMulticast() throws Exception {
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(Schedulers.DEFAULT_POOL_SIZE);
@@ -133,7 +132,7 @@ public class UdpServerTests {
 
 		for (int i = 0; i < 4; i++) {
 			NettyContext server =
-					UdpClient.create(opts -> opts.option(ChannelOption.SO_REUSEADDR, true)
+					UdpServer.create(opts -> opts.option(ChannelOption.SO_REUSEADDR, true)
 					                             .connectAddress(() -> new InetSocketAddress(port))
 					                             .protocolFamily(InternetProtocolFamily.IPv4))
 					         .newHandler((in, out) -> {

@@ -39,89 +39,94 @@ import reactor.ipc.netty.options.NettyOptions;
 import reactor.ipc.netty.resources.LoopResources;
 
 /**
- * A UDP client connector.
+ * A UDP server connector.
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
  */
-public final class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> {
+final public class UdpServer implements NettyConnector<UdpInbound, UdpOutbound> {
 
 	/**
-	 * Bind a new UDP client to the "localhost" address and {@link NettyOptions#DEFAULT_PORT port 12012}.
+	 * Bind a new UDP server to the "localhost" address and {@link NettyOptions#DEFAULT_PORT port 12012}.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @return a new {@link UdpClient}
+	 * @return a new {@link UdpServer}
 	 */
-	public static UdpClient create() {
+	public static UdpServer create() {
 		return create(NetUtil.LOCALHOST.getHostAddress());
 	}
 
 	/**
-	 * Bind a new UDP client to the given bind address and {@link NettyOptions#DEFAULT_PORT port 12012}.
+	 * Bind a new UDP server to the given bind address and {@link NettyOptions#DEFAULT_PORT port 12012}.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the client on default port
-	 * @return a new {@link UdpClient}
+	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on default port
+	 * @return a new {@link UdpServer}
 	 */
-	public static UdpClient create(String bindAddress) {
+	public static UdpServer create(String bindAddress) {
 		return create(bindAddress, NettyOptions.DEFAULT_PORT);
 	}
 
 	/**
-	 * Bind a new UDP client to the "localhost" address and specified port.
+	 * Bind a new UDP server to the "localhost" address and specified port.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param port the port to listen on the localhost bind address
-	 * @return a new {@link UdpClient}
+	 * @return a new {@link UdpServer}
 	 */
-	public static UdpClient create(int port) {
+	public static UdpServer create(int port) {
 		return create(NetUtil.LOCALHOST.getHostAddress(), port);
 	}
 
 	/**
-	 * Bind a new UDP client to the given bind address and port.
+	 * Bind a new UDP server to the given bind address and port.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
-	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the client on the
+	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
 	 * passed port
 	 * @param port the port to listen on the passed bind address
-	 * @return a new {@link UdpClient}
+	 * @return a new {@link UdpServer}
 	 */
-	public static UdpClient create(String bindAddress, int port) {
+	public static UdpServer create(String bindAddress, int port) {
 		return create(opts -> opts.host(bindAddress).port(port));
 	}
 
 	/**
-	 * Bind a new UDP client to the bind address and port provided through the options.
+	 * Bind a new UDP server to the bind address and port provided through the options.
+	 * Handlers will run on the same thread they have been receiving IO events.
 	 * <p> The type of emitted data or received data is {@link ByteBuf}
 	 *
 	 * @param options the configurator
-	 * @return a new {@link UdpClient}
+	 * @return a new {@link UdpServer}
 	 */
-	public static UdpClient create(Consumer<? super ClientOptions.Builder<?>> options) {
+	public static UdpServer create(Consumer<? super ClientOptions.Builder<?>> options) {
 		return builder().options(options).build();
 	}
 
 	/**
-	 * Creates a builder for {@link UdpClient UdpClient}
+	 * Creates a builder for {@link UdpServer UdpServer}
 	 *
-	 * @return a new UdpClient builder
+	 * @return a new UdpServer builder
 	 */
-	public static UdpClient.Builder builder() {
-		return new UdpClient.Builder();
+	public static UdpServer.Builder builder() {
+		return new UdpServer.Builder();
 	}
 
-	final UdpClientOptions options;
+	final UdpServerOptions options;
 
-	private UdpClient(UdpClient.Builder builder) {
-		UdpClientOptions.Builder clientOptionsBuilder = UdpClientOptions.builder();
+	private UdpServer(UdpServer.Builder builder) {
+		UdpServerOptions.Builder serverOptionsBuilder = UdpServerOptions.builder();
 		if (Objects.nonNull(builder.options)) {
-			builder.options.accept(clientOptionsBuilder);
+			builder.options.accept(serverOptionsBuilder);
 		}
-		if (!clientOptionsBuilder.isLoopAvailable()) {
-			clientOptionsBuilder.loopResources(DEFAULT_UDP_LOOPS);
+		if (!serverOptionsBuilder.isLoopAvailable()) {
+			serverOptionsBuilder.loopResources(DEFAULT_UDP_LOOPS);
 		}
-		this.options = clientOptionsBuilder.build();
+		this.options = serverOptionsBuilder.build();
 	}
 
 	@Override
@@ -134,14 +139,14 @@ public final class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 			Bootstrap b = options.get();
 			SocketAddress adr = options.getAddress();
 			if(adr == null){
-				sink.error(new NullPointerException("Provided UdpClientOptions do not " +
+				sink.error(new NullPointerException("Provided UdpServerOptions do not " +
 						"define any address to bind to "));
 				return;
 			}
-			b.remoteAddress(adr);
+			b.localAddress(adr);
 			ContextHandler<DatagramChannel> c = doHandler(targetHandler, sink, adr);
 			b.handler(c);
-			c.setFuture(b.connect());
+			c.setFuture(b.bind());
 		});
 	}
 
@@ -169,30 +174,30 @@ public final class UdpClient implements NettyConnector<UdpInbound, UdpOutbound> 
 			"reactor.udp.ioThreadCount",
 			"" + Schedulers.DEFAULT_POOL_SIZE));
 
-	static final LoggingHandler loggingHandler = new LoggingHandler(UdpClient.class);
+	static final LoggingHandler loggingHandler = new LoggingHandler(UdpServer.class);
 
 	static final LoopResources DEFAULT_UDP_LOOPS =
 			LoopResources.create("udp", DEFAULT_UDP_THREAD_COUNT, true);
 
 	public static final class Builder {
-		private Consumer<? super UdpClientOptions.Builder> options;
+		private Consumer<? super UdpServerOptions.Builder> options;
 
 		private Builder() {
 		}
 
 		/**
-		 * The options for the client, including address and port.
+		 * The options for the server, including address and port.
 		 *
-		 * @param options the options for the client, including address and port.
+		 * @param options the options for the server, including address and port.
 		 * @return {@code this}
 		 */
-		public final Builder options(Consumer<? super UdpClientOptions.Builder> options) {
+		public final Builder options(Consumer<? super UdpServerOptions.Builder> options) {
 			this.options = Objects.requireNonNull(options, "options");
 			return this;
 		}
 
-		public UdpClient build() {
-			return new UdpClient(this);
+		public UdpServer build() {
+			return new UdpServer(this);
 		}
 	}
 }
