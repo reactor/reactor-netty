@@ -183,7 +183,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 
 
 	/**
-	 * Add Server-Side-Event content-type
+	 * Add "text/event-stream" content-type for Server-Sent Events
 	 * @return this response
 	 */
 	HttpServerResponse sse();
