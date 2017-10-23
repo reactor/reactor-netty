@@ -20,7 +20,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -45,14 +44,11 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.handler.stream.ChunkedInput;
 import io.netty.handler.stream.ChunkedNioFile;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
-import reactor.core.Exceptions;
-import reactor.ipc.netty.channel.data.FileChunkedStrategy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -147,11 +143,6 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
-				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
-			}
-
-			@Override
 			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
 				withConnection.accept(mockContext);
 				return this;
@@ -232,11 +223,6 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
-				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
-			}
-
-			@Override
 			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
 				withConnection.accept(mockContext);
 				return this;
@@ -314,11 +300,6 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
-				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
-			}
-
-			@Override
 			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
 				withConnection.accept(mockContext);
 				return this;
@@ -348,27 +329,4 @@ public class NettyOutboundTest {
 
 		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
-
-	private static final FileChunkedStrategy FILE_CHUNKED_STRATEGY_1024_NOPIPELINE =
-			new FileChunkedStrategy<ByteBuf>() {
-				@Override
-				public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel) {
-					try {
-						return new ChunkedNioFile(fileChannel, 1024);
-					}
-					catch (IOException e) {
-						throw Exceptions.propagate(e);
-					}
-				}
-
-				@Override
-				public void preparePipeline(Connection context) {
-					//NO-OP
-				}
-
-				@Override
-				public void cleanupPipeline(Connection context) {
-					//NO-OP
-				}
-			};
 }
