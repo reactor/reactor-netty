@@ -57,6 +57,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableChannel;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
@@ -596,7 +597,7 @@ public class HttpServerTests {
 
 	@Test
 	public void testIssue186() {
-		Connection server =
+		DisposableChannel server =
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.status(200).send())
 				          .block(Duration.ofSeconds(300));
