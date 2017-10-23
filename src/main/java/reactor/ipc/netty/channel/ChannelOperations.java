@@ -106,6 +106,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return the current {@link Channel} bound
 	 * {@link ChannelOperations} or null if none
 	 */
+	@Nullable
 	public static ChannelOperations<?, ?> get(Channel ch) {
 		return ch.attr(OPERATIONS_KEY)
 		          .get();
@@ -162,18 +163,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// onHandlerTerminate
 			onInactive.subscribe(null, null, _s[0]::cancel);
 		}
-	}
-
-	@Override
-	public InetSocketAddress address() {
-		Channel c = channel();
-		if (c instanceof SocketChannel) {
-			return ((SocketChannel) c).remoteAddress();
-		}
-		if (c instanceof DatagramChannel) {
-			return ((DatagramChannel) c).remoteAddress();
-		}
-		throw new IllegalStateException("Does not have an InetSocketAddress");
 	}
 
 	@Override
@@ -318,10 +307,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param msg the read payload
 	 */
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg == null) {
-			onInboundError(new NullPointerException("msg is null"));
-			return;
-		}
 		inbound.onInboundNext(msg);
 	}
 

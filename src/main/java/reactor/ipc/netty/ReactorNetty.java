@@ -15,6 +15,7 @@
  */
 package reactor.ipc.netty;
 
+import java.nio.channels.FileChannel;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -46,8 +47,6 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 final class ReactorNetty {
-
-	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");
 
 	/**
 	 * A common implementation for the {@link Connection#addHandlerLast(String, ChannelHandler)}
@@ -325,10 +324,6 @@ final class ReactorNetty {
 		}
 	}
 
-	static final Object TERMINATED                 = new TerminatedHandlerEvent();
-	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
-	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
-
 	/**
 	 * A handler that can be used to extract {@link ByteBuf} out of {@link ByteBufHolder},
 	 * optionally also outputting additional messages
@@ -339,8 +334,8 @@ final class ReactorNetty {
 	@ChannelHandler.Sharable
 	static final class ExtractorHandler extends ChannelInboundHandlerAdapter {
 
-		final BiConsumer<? super ChannelHandlerContext, Object> extractor;
 
+		final BiConsumer<? super ChannelHandlerContext, Object> extractor;
 		ExtractorHandler(BiConsumer<? super ChannelHandlerContext, Object> extractor) {
 			this.extractor = Objects.requireNonNull(extractor, "extractor");
 		}
@@ -349,12 +344,12 @@ final class ReactorNetty {
 		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 			extractor.accept(ctx, msg);
 		}
-	}
 
+	}
 	static final class ChannelDisposer extends BaseSubscriber<Void> {
 
-		final DisposableChannel channelDisposable;
 
+		final DisposableChannel channelDisposable;
 		ChannelDisposer(DisposableChannel channelDisposable) {
 			this.channelDisposable = channelDisposable;
 		}
@@ -371,5 +366,21 @@ final class ReactorNetty {
 				dispose();
 			}
 		}
+
 	}
+
+	static final Object TERMINATED                 = new TerminatedHandlerEvent();
+	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
+	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
+
+	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");
+
+	static final Consumer<? super FileChannel> fileCloser = fc -> {
+		try {
+			fc.close();
+		}
+		catch (Throwable e) {
+			log.trace("", e);
+		}
+	};
 }
