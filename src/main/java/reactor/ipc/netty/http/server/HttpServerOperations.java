@@ -25,7 +25,6 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
@@ -49,6 +48,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -337,7 +337,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Mono<Void> sendWebsocket(String protocols,
+	public Mono<Void> sendWebsocket(@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return withWebsocketSupport(uri(), protocols, websocketHandler);
 	}
@@ -459,7 +459,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,
-			String protocols,
+			@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
@@ -467,7 +467,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			if (replace(ops)) {
 				return FutureMono.from(ops.handshakerResult)
-				                 .then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops))))
+				                 .then(Mono.defer(() -> {
+				                 	//skip handler if no matching subprotocol
+					                 if (protocols != null && ops.selectedSubprotocol() == null) {
+						                 return Mono.empty();
+					                 }
+					                 return Mono.from(websocketHandler.apply(ops, ops));
+				                 }))
 				                 .doAfterSuccessOrError(ops);
 			}
 		}

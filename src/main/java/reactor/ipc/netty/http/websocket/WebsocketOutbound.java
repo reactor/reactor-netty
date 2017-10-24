@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.util.annotation.Nullable;
 
 /**
  * A websocket framed outbound
@@ -42,6 +43,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	 *
 	 * @return the subprotocol, or null
 	 */
+	@Nullable
 	String selectedSubprotocol();
 
 	@Override
