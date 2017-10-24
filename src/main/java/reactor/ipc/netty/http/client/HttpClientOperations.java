@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -93,7 +94,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return new HttpClientOperations(channel, handler, context);
 	}
 
-	final String[]    redirectedFrom;
+	final Supplier<String>[]    redirectedFrom;
 	final boolean     isSecure;
 	final HttpRequest nettyRequest;
 	final HttpHeaders requestHeaders;
@@ -123,7 +124,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		super(channel, handler, context);
 		this.isSecure = channel.pipeline()
 		                       .get(NettyPipeline.SslHandler) != null;
-		String[] redirects = channel.attr(REDIRECT_ATTR_KEY)
+		Supplier<String>[] redirects = channel.attr(REDIRECT_ATTR_KEY)
 		                            .get();
 		this.redirectedFrom = redirects == null ? EMPTY_REDIRECTIONS : redirects;
 		this.nettyRequest =
@@ -318,9 +319,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public String[] redirectedFrom() {
-		String[] redirectedFrom = this.redirectedFrom;
+		Supplier<String>[] redirectedFrom = this.redirectedFrom;
 		String[] dest = new String[redirectedFrom.length];
-		System.arraycopy(redirectedFrom, 0, dest, 0, redirectedFrom.length);
+		for (int i = 0; i < redirectedFrom.length; i++) {
+			dest[i] = redirectedFrom[i].get();
+		}
 		return dest;
 	}
 
@@ -811,9 +814,10 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	static final int                    MAX_REDIRECTS      = 50;
-	static final String[]               EMPTY_REDIRECTIONS = new String[0];
+	@SuppressWarnings("unchecked")
+	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];
 	static final Logger                 log                =
 			Loggers.getLogger(HttpClientOperations.class);
-	static final AttributeKey<String[]> REDIRECT_ATTR_KEY  =
+	static final AttributeKey<Supplier<String>[]> REDIRECT_ATTR_KEY  =
 			AttributeKey.newInstance("httpRedirects");
 }
