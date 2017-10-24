@@ -315,7 +315,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public boolean isWebsocket() {
 		ChannelOperations<?, ?> ops = get(channel());
-		return ops != null && ops.getClass().equals(HttpClientWSOperations.class);
+		return ops != null && ops.getClass().equals(WebsocketClientOperations.class);
 	}
 
 	@Override
@@ -417,8 +417,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			@Override
 			public String selectedSubprotocol() {
 				if (isWebsocket()) {
-					HttpClientWSOperations ops =
-							(HttpClientWSOperations) get(channel());
+					WebsocketClientOperations ops =
+							(WebsocketClientOperations) get(channel());
 
 					assert ops != null;
 					return ops.selectedSubprotocol();
@@ -702,7 +702,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (markSentHeaders()) {
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
+			WebsocketClientOperations
+					ops = new WebsocketClientOperations(url, protocols, this);
 
 			if (replace(ops)) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
@@ -716,8 +717,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 		}
 		else if (isWebsocket()) {
-			HttpClientWSOperations ops =
-					(HttpClientWSOperations) get(channel());
+			WebsocketClientOperations ops =
+					(WebsocketClientOperations) get(channel());
 			if(ops != null) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
 
