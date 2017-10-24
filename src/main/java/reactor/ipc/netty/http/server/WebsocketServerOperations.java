@@ -34,7 +34,6 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
-import io.netty.util.ReferenceCountUtil;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -46,7 +45,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
  * @author Stephane Maldini
  * @author Simon Baslé
  */
-final class HttpServerWSOperations extends HttpServerOperations
+final class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
 
 	final WebSocketServerHandshaker handshaker;
@@ -54,7 +53,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 
 	volatile int closeSent;
 
-	HttpServerWSOperations(String wsUrl,
+	WebsocketServerOperations(String wsUrl,
 			@Nullable String protocols,
 			HttpServerOperations replaced) {
 		super(replaced.channel(), replaced);
@@ -155,7 +154,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 		return handshaker.selectedSubprotocol();
 	}
 
-	static final AtomicIntegerFieldUpdater<HttpServerWSOperations> CLOSE_SENT =
-			AtomicIntegerFieldUpdater.newUpdater(HttpServerWSOperations.class,
+	static final AtomicIntegerFieldUpdater<WebsocketServerOperations> CLOSE_SENT =
+			AtomicIntegerFieldUpdater.newUpdater(WebsocketServerOperations.class,
 					"closeSent");
 }
