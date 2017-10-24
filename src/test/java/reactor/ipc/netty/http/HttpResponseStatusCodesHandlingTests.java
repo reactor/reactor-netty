@@ -44,25 +44,17 @@ public class HttpResponseStatusCodesHandlingTests {
 
 		HttpClient client = HttpClient.create("localhost", server.address().getPort());
 
-		List<String> replyReceived = new ArrayList<>();
-		Mono<String> content = client.get("/unsupportedURI", req ->
+		Mono<Integer> content = client.get("/unsupportedURI", req ->
 				                         req.addHeader("Content-Type", "text/plain")
 				                            .sendString(Flux.just("Hello")
 				                                            .log("client-send"))
 				                     )
-				                     .flatMapMany(res -> res.receive()
-				                                            .asString()
-				                                            .log("client-received")
-				                                            .doOnNext(s -> replyReceived.add(s)))
-				                     .next()
+				                     .flatMap(res -> Mono.just(res.status().code()))
 				                     .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
 
 		StepVerifier.create(content)
-				    .expectErrorMatches(t -> t.getMessage().equals("HTTP request failed with code: 404.\nFailing URI: " +
-						"/unsupportedURI"))
-				    .verify(Duration.ofSeconds(30));
-
-		Assertions.assertThat(replyReceived).isEmpty();
+				    .expectNext(404)
+				    .verifyComplete();
 
 		server.dispose();
 	}
