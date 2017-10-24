@@ -47,7 +47,6 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
@@ -342,9 +341,6 @@ public class HttpClientTest {
 				            return Mono.just(r.status().code());
 				        })
 				        .log()
-				        .onErrorResume(HttpClientException.class,
-				                       e -> Mono.just(e.status()
-				                                       .code()))
 				        .block(Duration.ofSeconds(30));
 
 		if (res != 404) {
@@ -357,7 +353,6 @@ public class HttpClientTest {
 		HttpClientResponse r = HttpClient.create("google.com")
 		                                 .get("/unsupportedURI",
 				                                 c -> c.chunkedTransfer(false)
-				                                       .failOnClientError(false)
 				                                       .sendString(Flux.just("hello")))
 		                                 .block(Duration.ofSeconds(30));
 
@@ -370,7 +365,6 @@ public class HttpClientTest {
 		HttpClientResponse r = HttpClient.create("google.com")
 		                                 .get("/unsupportedURI",
 				                                 c -> c.chunkedTransfer(false)
-				                                       .failOnClientError(false)
 				                                       .keepAlive(false))
 		                                 .block(Duration.ofSeconds(30));
 
@@ -384,14 +378,12 @@ public class HttpClientTest {
 
 		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(p))
 		                                 .get("http://google.com/unsupportedURI",
-				                                 c -> c.failOnClientError(false)
-				                                       .sendHeaders())
+				                                 c -> c.sendHeaders())
 		                                 .block(Duration.ofSeconds(30));
 
 		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
 		                                  .get("http://google.com/unsupportedURI",
-				                                  c -> c.failOnClientError(false)
-				                                        .sendHeaders())
+				                                  c -> c.sendHeaders())
 		                                  .block(Duration.ofSeconds(30));
 
 		AtomicBoolean same = new AtomicBoolean();
@@ -409,8 +401,7 @@ public class HttpClientTest {
 	public void disableChunkImplicitDefault() throws Exception {
 		HttpClientResponse r = HttpClient.create("google.com")
 		                                 .get("/unsupportedURI",
-				                                 c -> c.chunkedTransfer(false)
-				                                       .failOnClientError(false))
+				                                 c -> c.chunkedTransfer(false))
 		                                 .block(Duration.ofSeconds(30));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
@@ -423,16 +414,14 @@ public class HttpClientTest {
 		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(fixed))
 		                                 .get("http://google.com",
 				                                 c -> c.header("content-length", "1")
-				                                       .failOnClientError(false)
 				                                       .sendString(Mono.just(" ")))
 		                                 .block(Duration.ofSeconds(30));
 
-		HttpClientResponse r1 = HttpClient.create(opts -> opts.poolResources(fixed))
-		                                  .get("http://google.com",
-				                                  c -> c.header("content-length", "1")
-				                                        .failOnClientError(false)
-				                                        .sendString(Mono.just(" ")))
-		                                  .block(Duration.ofSeconds(30));
+		HttpClientResponse r1 =HttpClient.create(opts -> opts.poolResources(fixed))
+		          .get("http://google.com",
+				          c -> c.header("content-length", "1")
+				                .sendString(Mono.just(" ")))
+		          .block(Duration.ofSeconds(30));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.BAD_REQUEST);
 		r.dispose();

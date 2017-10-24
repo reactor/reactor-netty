@@ -220,7 +220,7 @@ public class WebsocketTest {
 				          .get("/test",
 						          out -> out.addHeader("Authorization", auth)
 						                    .sendWebsocket("SUBPROTOCOL,OTHER"))
-				          .flatMapMany(in -> in.receive().asString())
+				          .flatMapMany(in -> in.receiveWebsocket().receive().asString())
 		)
 		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
 	}
@@ -230,7 +230,9 @@ public class WebsocketTest {
 		httpServer = HttpServer.create(0)
 		                       .newHandler((in, out) -> out.sendWebsocket(
 				                       "protoA,protoB",
-				                       (i, o) -> o.sendString(Mono.just("test"))))
+				                       (i, o) -> {
+				                       	return o.sendString(Mono.just("test"));
+				                       }))
 		                       .block(Duration.ofSeconds(30));
 
 		StepVerifier.create(
@@ -239,7 +241,7 @@ public class WebsocketTest {
 				          .get("/test",
 						          out -> out.addHeader("Authorization", auth)
 						                    .sendWebsocket("SUBPROTOCOL,OTHER"))
-				          .flatMapMany(in -> in.receive().asString())
+				          .flatMapMany(in -> in.receiveWebsocket().receive().asString())
 		)
 		            //the SERVER returned null which means that it couldn't select a protocol
 		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
