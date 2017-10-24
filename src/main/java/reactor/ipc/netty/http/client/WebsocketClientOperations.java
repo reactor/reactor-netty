@@ -42,7 +42,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
  * @author Stephane Maldini
  * @author Simon Baslé
  */
-final class HttpClientWSOperations extends HttpClientOperations
+final class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
 
 	final WebSocketClientHandshaker handshaker;
@@ -50,7 +50,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 	volatile int closeSent;
 
-	HttpClientWSOperations(URI currentURI,
+	WebsocketClientOperations(URI currentURI,
 			String protocols,
 			HttpClientOperations replaced) {
 		super(replaced.channel(), replaced);
@@ -228,7 +228,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 		}
 	}
 
-	static final AtomicIntegerFieldUpdater<HttpClientWSOperations> CLOSE_SENT =
-			AtomicIntegerFieldUpdater.newUpdater(HttpClientWSOperations.class,
+	static final AtomicIntegerFieldUpdater<WebsocketClientOperations> CLOSE_SENT =
+			AtomicIntegerFieldUpdater.newUpdater(WebsocketClientOperations.class,
 					"closeSent");
 }
