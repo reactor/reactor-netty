@@ -25,6 +25,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -263,7 +265,7 @@ public interface HttpServerRoutes extends
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
 					Publisher<Void>> handler,
-			String protocols) {
+			@Nullable String protocols) {
 		Predicate<HttpServerRequest> condition = HttpPredicate.get(path);
 
 		return route(condition, (req, resp) -> {

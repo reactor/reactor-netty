@@ -141,19 +141,18 @@ final class HttpClientWSOperations extends HttpClientOperations
 			if (checkResponseCode(response)) {
 
 				try {
-					if (!handshaker.isHandshakeComplete()) {
-						handshaker.finishHandshake(channel(), response);
-					}
+					handshaker.finishHandshake(channel(), response);
+					handshakerResult.trySuccess();
 				}
 				catch (WebSocketHandshakeException wshe) {
-					if (serverError) {
+					if(response.status().code() == 101) {
 						onInboundError(wshe);
 						return;
 					}
 				}
 
 				parentContext().fireContextActive(this);
-				handshakerResult.trySuccess();
+
 			}
 			return;
 		}

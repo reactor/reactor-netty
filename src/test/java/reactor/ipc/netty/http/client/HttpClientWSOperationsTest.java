@@ -17,6 +17,8 @@ package reactor.ipc.netty.http.client;
 
 import java.time.Duration;
 
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
@@ -32,36 +34,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class HttpClientWSOperationsTest {
 
 	@Test
-	public void failOnClientErrorDisabled() {
-		failOnClientServerError(false, false, 401, "", "");
+	public void requestError() {
+		failOnClientServerError(401, "", "");
 	}
 
 	@Test
-	public void failOnClientErrorEnabled() {
-		failOnClientServerError(true, false, 401, "", "");
+	public void serverError() {
+		failOnClientServerError(500, "", "");
 	}
 
 	@Test
-	public void failOnServerErrorDisabled() {
-		failOnClientServerError(false, false, 500, "", "");
+	public void failedNegotiation() {
+		failOnClientServerError(200, "Server-Protocol", "Client-Protocol");
 	}
 
-	@Test
-	public void failOnServerErrorEnabled() {
-		failOnClientServerError(false, true, 500, "", "");
-	}
-
-	@Test
-	public void failOnServerErrorDisabledFailedNegotiation() {
-		failOnClientServerError(false, false, 200, "Server-Protocol", "Client-Protocol");
-	}
-
-	@Test
-	public void failOnServerErrorEnabledFailedNegotiation() {
-		failOnClientServerError(false, true, 200, "Server-Protocol", "Client-Protocol");
-	}
-
-	private void failOnClientServerError(boolean clientError, boolean serverError,
+	private void failOnClientServerError(
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
 		Connection httpServer = HttpServer.create(0).newRouter(
 			routes -> routes.post("/login", (req, res) -> {
@@ -81,22 +68,20 @@ public class HttpClientWSOperationsTest {
 
 		Mono<HttpClientResponse> response =
 			HttpClient.create(httpServer.address().getPort())
-			          .get("/ws", request -> Mono.just(request.failOnClientError(clientError)
-			                                                  .failOnServerError(serverError))
+			          .get("/ws", request -> Mono.just(request)
 			                                     .transform(req -> doLoginFirst(req, httpServer.address().getPort()))
 			                                     .flatMapMany(req -> ws(req, clientSubprotocol)))
 			          .switchIfEmpty(Mono.error(new Exception()));
 
-
-		if (clientError || serverError) {
+		if(!serverSubprotocol.equals(clientSubprotocol)) {
 			StepVerifier.create(response)
-			            .expectError()
-			            .verify(Duration.ofSeconds(30));
+			            .verifyError(WebSocketHandshakeException.class);
 		}
 		else {
 			StepVerifier.create(response)
-			            .assertNext(res ->
-			                assertThat(res.status().code()).isEqualTo(serverStatus == 200 ? 101 : serverStatus))
+			            .assertNext(res -> assertThat(res.status()
+			                                             .code()).isEqualTo(
+					            serverStatus == 200 ? 101 : serverStatus))
 			            .expectComplete()
 			            .verify(Duration.ofSeconds(30));
 		}
@@ -113,8 +98,7 @@ public class HttpClientWSOperationsTest {
 
 	private Mono<String> login(int port) {
 		return HttpClient.create(port)
-		                 .post("/login", req -> req.failOnClientError(false)
-		                                           .failOnServerError(false))
+		                 .post("/login", r -> r)
 		                 .map(res -> res.status().code() + "");
 	}
 

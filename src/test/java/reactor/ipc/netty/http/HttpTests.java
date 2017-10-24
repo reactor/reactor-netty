@@ -30,7 +30,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.http.client.HttpClientException;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
@@ -123,8 +122,8 @@ public class HttpTests {
 				      .log("received-status-1");
 
 		StepVerifier.create(code)
-				    .expectError(HttpClientException.class)
-				    .verify(Duration.ofSeconds(30));
+				    .expectNext(500)
+				    .verifyComplete();
 
 		ByteBuf content =
 				client.get("/test2")
@@ -137,13 +136,12 @@ public class HttpTests {
 		Assertions.assertThat(content).isNull();
 
 		code = client.get("/test3")
-				     .flatMapMany(res -> Flux.just(res.status().code())
-				                             .log("received-status-3"))
-				     .next();
+				     .flatMap(res -> Mono.just(res.status().code())
+				                             .log("received-status-3"));
 
 		StepVerifier.create(code)
-				    .expectError(HttpClientException.class)
-				    .verify(Duration.ofSeconds(30));
+		            .expectNext(500)
+		            .verifyComplete();
 
 		server.dispose();
 	}

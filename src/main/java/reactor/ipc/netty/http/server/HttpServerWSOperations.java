@@ -55,7 +55,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 	volatile int closeSent;
 
 	HttpServerWSOperations(String wsUrl,
-			String protocols,
+			@Nullable String protocols,
 			HttpServerOperations replaced) {
 		super(replaced.channel(), replaced);
 
