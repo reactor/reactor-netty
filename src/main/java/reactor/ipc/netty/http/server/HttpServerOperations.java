@@ -48,7 +48,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
-import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -463,7 +462,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
-			HttpServerWSOperations ops = new HttpServerWSOperations(url, protocols, this);
+			WebsocketServerOperations
+					ops = new WebsocketServerOperations(url, protocols, this);
 
 			if (replace(ops)) {
 				return FutureMono.from(ops.handshakerResult)
