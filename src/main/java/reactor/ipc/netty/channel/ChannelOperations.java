@@ -16,19 +16,16 @@
 
 package reactor.ipc.netty.channel;
 
-import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
@@ -176,11 +173,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final Connection context() {
-		return this;
-	}
-
-	@Override
 	public ChannelOperations<INBOUND, OUTBOUND> withConnection(Consumer<? super Connection> withConnection) {
 		withConnection.accept(this);
 		return this;
@@ -255,6 +247,21 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	public NettyOutbound sendObject(Object message) {
 		return then(FutureMono.deferFuture(() -> channel.writeAndFlush(message)));
+	}
+
+	@Override
+	public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+			BiFunction<? super Connection, ? super S, ?> mappedInput,
+			Consumer<? super S> sourceCleanup) {
+		Objects.requireNonNull(sourceInput, "sourceInput");
+		Objects.requireNonNull(mappedInput, "mappedInput");
+		Objects.requireNonNull(sourceCleanup, "sourceCleanup");
+
+		return then(Mono.using(
+				sourceInput,
+				s -> FutureMono.from(channel.writeAndFlush(mappedInput.apply(this, s))),
+				sourceCleanup)
+		);
 	}
 
 	@Override

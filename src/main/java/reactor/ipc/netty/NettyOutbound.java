@@ -26,17 +26,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedNioFile;
-import io.netty.handler.stream.ChunkedWriteHandler;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
@@ -54,14 +52,6 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return the {@link ByteBufAllocator}
 	 */
 	ByteBufAllocator alloc();
-
-	/**
-	 * Return a {@link Connection} to operate on the underlying
-	 * {@link Channel} state.
-	 *
-	 * @return the {@link Connection}
-	 */
-	Connection context();
 
 	/**
 	 * Return a never completing {@link Mono} after this {@link NettyOutbound#then()} has
@@ -189,12 +179,19 @@ public interface NettyOutbound extends Publisher<Void> {
 	default NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file, "filepath");
 
-		if (context().channel().pipeline().get(SslHandler.class) != null) {
-			return sendFileChunked(file, position, count);
-		}
-
 		return sendUsing(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> new DefaultFileRegion(fc, position, count),
+				(c, fc) -> {
+					if (ReactorNetty.hasSslHandler(c)) {
+						ReactorNetty.addChunkedWriter(c);
+						try {
+							return new ChunkedNioFile(fc, position, count, 1024);
+						}
+						catch (Exception ioe) {
+							throw Exceptions.propagate(ioe);
+						}
+					}
+					return new DefaultFileRegion(fc, position, count);
+				},
 				ReactorNetty.fileCloser);
 	}
 
@@ -217,15 +214,9 @@ public interface NettyOutbound extends Publisher<Void> {
 	default NettyOutbound sendFileChunked(Path file, long position, long count) {
 		Objects.requireNonNull(file, "filepath");
 
-		if (context().channel()
-		             .pipeline()
-		             .get(ChunkedWriteHandler.class) == null) {
-			context().addHandlerLast(NettyPipeline.ChunkedWriter,
-					new ChunkedWriteHandler());
-		}
-
 		return sendUsing(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> {
+				(c, fc) -> {
+					ReactorNetty.addChunkedWriter(c);
 					try {
 						return new ChunkedNioFile(fc, position, count, 1024);
 					}
@@ -296,17 +287,19 @@ public interface NettyOutbound extends Publisher<Void> {
 		                                   .writeBytes(s.getBytes(charset))));
 	}
 
-	default <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
-			Function<? super S, ?> mappedInput,
-			Consumer<? super S> sourceCleanup) {
-		Objects.requireNonNull(sourceInput, "sourceInput");
-		Objects.requireNonNull(mappedInput, "mappedInput");
-		Objects.requireNonNull(sourceCleanup, "sourceCleanup");
-
-		return then(Mono.using(sourceInput,
-				s -> FutureMono.from(context().channel().writeAndFlush(mappedInput.apply(s))),
-				sourceCleanup));
-	}
+	/**
+	 * Bind a send to a starting/cleanup lifecycle
+	 *
+	 * @param sourceInput state generator
+	 * @param mappedInput input to send
+	 * @param sourceCleanup state cleaner
+	 * @param <S> state type
+	 *
+	 * @return a new {@link NettyOutbound}
+	 */
+	<S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+			BiFunction<? super Connection, ? super S, ?> mappedInput,
+			Consumer<? super S> sourceCleanup);
 
 	/**
 	 * Subscribe a {@code Void} subscriber to this outbound and trigger all eventual
