@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -393,18 +394,27 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 
 			@Override
+			public String selectedSubprotocol() {
+				if (isWebsocket()) {
+					HttpClientWSOperations ops =
+							(HttpClientWSOperations) get(channel());
+
+					assert ops != null;
+					return ops.selectedSubprotocol();
+				}
+				return null;
+			}
+
+			@Override
 			public NettyOutbound sendObject(Object message) {
 				return then(HttpClientOperations.this.sendObject(message));
 			}
 
 			@Override
-			public String selectedSubprotocol() {
-				return null;
-			}
-
-			@Override
-			public Connection context() {
-				return HttpClientOperations.this;
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return then(HttpClientOperations.this.sendUsing(sourceInput, mappedInput, sourceCleanup));
 			}
 
 			@Override
