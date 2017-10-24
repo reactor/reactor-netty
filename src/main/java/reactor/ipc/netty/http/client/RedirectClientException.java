@@ -35,4 +35,9 @@ final class RedirectClientException extends HttpClientException {
 		                                          .get(HttpHeaderNames.LOCATION));
 	}
 
+	@Override
+	public synchronized Throwable fillInStackTrace() {
+		// omit stacktrace for this exception
+		return this;
+	}
 }
