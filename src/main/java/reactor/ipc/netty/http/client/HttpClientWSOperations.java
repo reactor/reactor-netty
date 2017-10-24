@@ -142,12 +142,11 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 
 				try {
-					if (!handshaker.isHandshakeComplete()) {
-						handshaker.finishHandshake(channel(), response);
-					}
+					handshaker.finishHandshake(channel(), response);
+					handshakerResult.trySuccess();
 				}
 				catch (WebSocketHandshakeException wshe) {
-					if (serverError) {
+					if(response.status().code() == 101) {
 						onInboundError(wshe);
 						return;
 					}
@@ -159,7 +158,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 				}
 
 				parentContext().fireContextActive(this);
-				handshakerResult.trySuccess();
+
 			}
 			return;
 		}

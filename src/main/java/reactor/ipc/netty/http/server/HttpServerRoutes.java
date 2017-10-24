@@ -25,6 +25,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -264,7 +266,7 @@ public interface HttpServerRoutes extends
 	@SuppressWarnings("unchecked")
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			String protocols) {
+			@Nullable String protocols) {
 		return ws(HttpPredicate.get(path), handler, protocols);
 	}
 

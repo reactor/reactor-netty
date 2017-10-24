@@ -46,7 +46,7 @@ public class NettyOptionsTest {
 		assertThat(initializedChannels).hasSize(0);
 
 		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
-		                                    .get("/", req -> req.failOnClientError(false).send())
+		                                    .get("/")
 		                                    .block();
 
 		assertThat(initializedChannels)
@@ -70,7 +70,7 @@ public class NettyOptionsTest {
 				          .getContext();
 
 		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
-		                                    .get("/", req -> req.failOnClientError(false).send())
+		                                    .get("/")
 		                                    .block();
 
 		assertThat((Iterable<Channel>) group)
@@ -96,7 +96,7 @@ public class NettyOptionsTest {
 				          .getContext();
 
 		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
-		                                    .get("/", req -> req.failOnClientError(false).send())
+		                                    .get("/")
 		                                    .block();
 
 		assertThat((Iterable<Channel>) group)
@@ -124,7 +124,7 @@ public class NettyOptionsTest {
 				          .getContext();
 
 		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
-		                                    .get("/", req -> req.failOnClientError(false).send())
+		                                    .get("/")
 		                                    .block();
 
 		assertThat((Iterable<Channel>) group)
@@ -155,7 +155,7 @@ public class NettyOptionsTest {
 				          .getContext();
 
 		HttpClientResponse response1 = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
-		                                         .get("/", req -> req.failOnClientError(false).send())
+		                                         .get("/")
 		                                         .block();
 
 		assertThat(response1.status().code()).isEqualTo(404);
@@ -167,7 +167,7 @@ public class NettyOptionsTest {
 		assertThat(readCount.get()).isEqualTo(1);
 
 		HttpClientResponse response2 = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
-		                                         .get("/", req -> req.failOnClientError(false).send())
+		                                         .get("/")
 		                                         .block();
 
 		assertThat(response2.status().code()).isEqualTo(404); //reactor handler was applied and produced a response

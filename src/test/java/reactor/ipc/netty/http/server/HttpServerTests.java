@@ -184,7 +184,7 @@ public class HttpServerTests {
 
 		HttpClientResponse res =
 				HttpClient.create(c.address().getPort())
-				          .get("/return", r -> r.failOnServerError(false))
+				          .get("/return")
 				          .block();
 		assertThat(res.status().code()).isEqualTo(500);
 		res.dispose();
@@ -364,7 +364,7 @@ public class HttpServerTests {
 			res.dispose();
 
 			res = HttpClient.create(facade.getPort())
-			                .get("/helloMan", req -> req.failOnClientError(false))
+			                .get("/helloMan")
 			                .block();
 			assertThat(res.status().code()).isEqualTo(404);
 			res.dispose();
@@ -575,8 +575,7 @@ public class HttpServerTests {
 	}
 
 	private void doTestIssue186(HttpClient client) {
-		Mono<String> content = client.post("/", req -> req.failOnClientError(false)
-				                                          .sendString(Mono.just("bodysample")))
+		Mono<String> content = client.post("/", req -> req.sendString(Mono.just("bodysample")))
 				                      .flatMap(res -> res.receive()
 				                                         .aggregate()
 				                                         .asString());
@@ -634,8 +633,8 @@ public class HttpServerTests {
 
 		try {
 
-			Mono<String> content = client.post("/", req -> req.failOnClientError(false)
-			                                                  .sendString(Mono.just("bodysample")
+			Mono<String> content = client.post("/", req ->
+			                                               req.sendString(Mono.just("bodysample")
 			                                                                  .subscriberContext(c -> {
 						                                                          context.set(c);
 				                                                                  return c;
@@ -731,7 +730,7 @@ public class HttpServerTests {
 
 		Mono<HttpResponseStatus> status =
 				HttpClient.create(server.address().getPort())
-				          .get(path, req -> req.failOnClientError(false))
+				          .get(path)
 				          .flatMap(res -> {
 				              res.dispose();
 				              HttpResponseStatus code = res.status();

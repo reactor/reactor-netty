@@ -222,7 +222,7 @@ public interface NettyOutbound extends Publisher<Void> {
 
 		if (context().channel()
 		             .pipeline()
-		             .get(NettyPipeline.ChunkedWriter) == null) {
+		             .get(ChunkedWriteHandler.class) == null) {
 			context().addHandlerLast(NettyPipeline.ChunkedWriter,
 					new ChunkedWriteHandler());
 		}
