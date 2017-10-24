@@ -25,12 +25,11 @@ import io.netty.handler.codec.http.HttpResponse;
  * An error for signalling that an error occurred during a communication over HTTP version
  *
  */
-final class RedirectClientException extends HttpClientException {
+final class RedirectClientException extends Exception {
 
 	final String location;
 
-	public RedirectClientException(String uri, HttpResponse response) {
-		super(uri, response);
+	RedirectClientException(HttpResponse response) {
 		location = Objects.requireNonNull(response.headers()
 		                                          .get(HttpHeaderNames.LOCATION));
 	}

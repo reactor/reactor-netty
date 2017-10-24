@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import reactor.core.publisher.Flux;
 import reactor.ipc.netty.NettyInbound;
+import reactor.util.annotation.Nullable;
 
 /**
  * A websocket framed inbound
@@ -36,6 +37,7 @@ public interface WebsocketInbound extends NettyInbound {
 	 *
 	 * @return the subprotocol, or null
 	 */
+	@Nullable
 	String selectedSubprotocol();
 
 	/**

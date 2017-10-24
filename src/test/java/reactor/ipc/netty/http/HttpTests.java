@@ -165,8 +165,8 @@ public class HttpTests {
 				      .log("received-status-1");
 
 		StepVerifier.create(code)
-				    .expectError(HttpClientException.class)
-				    .verify(Duration.ofSeconds(30));
+				    .expectNext(500)
+				    .verifyComplete();
 
 		Mono<ByteBuf> content =
 				client.get("/test2")
@@ -219,16 +219,15 @@ public class HttpTests {
 		Assertions.assertThat(errored5.await(30, TimeUnit.SECONDS)).isTrue();
 
 		code = client.get("/test3")
-				     .flatMapMany(res -> {
+				     .flatMap(res -> {
 				         res.dispose();
-				         return Flux.just(res.status().code())
+				         return Mono.just(res.status().code())
 				                    .log("received-status-3");
-				     })
-				     .next();
+				     });
 
 		StepVerifier.create(code)
-				    .expectError(HttpClientException.class)
-				    .verify(Duration.ofSeconds(30));
+		            .expectNext(500)
+		            .verifyComplete();
 
 		server.dispose();
 	}

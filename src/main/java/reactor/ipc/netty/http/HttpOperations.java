@@ -180,7 +180,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 		if (context().channel()
 		             .pipeline()
-		             .get(NettyPipeline.ChunkedWriter) == null) {
+		             .get(ChunkedWriteHandler.class) == null) {
 			context().addHandlerLast(NettyPipeline.ChunkedWriter,
 					new ChunkedWriteHandler());
 		}

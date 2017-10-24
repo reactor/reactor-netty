@@ -18,6 +18,8 @@ package reactor.ipc.netty.http.server;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -163,7 +165,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(uri(), websocketHandler);
+		return sendWebsocket(null, websocketHandler);
 	}
 
 	/**
@@ -175,7 +177,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	Mono<Void> sendWebsocket(String protocols,
+	Mono<Void> sendWebsocket(@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
 
 

@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -85,22 +87,6 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * @return {@literal this}
 	 */
 	HttpClientRequest followRedirect();
-
-	/**
-	 * Toggle the request to fail in case of a client-side error.
-	 *
-	 * @param shouldFail true if the request should fail in case of client errors.
-	 * @return {@literal this}
-	 */
-	HttpClientRequest failOnClientError(boolean shouldFail);
-
-	/**
-	 * Toggle the request to fail in case of a server-side error.
-	 *
-	 * @param shouldFail true if the request should fail in case of server errors.
-	 * @return {@literal this}
-	 */
-	HttpClientRequest failOnServerError(boolean shouldFail);
 
 	/**
 	 * Return  true if headers and status have been sent to the client
@@ -212,7 +198,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * Can be several protocols, separated by a comma, or null if no subprotocol is required.
 	 * @return a {@link WebsocketOutbound} completing when upgrade is confirmed
 	 */
-	WebsocketOutbound sendWebsocket(String subprotocols);
+	WebsocketOutbound sendWebsocket(@Nullable String subprotocols);
 
 	/**
 	 * An HTTP Form builder
