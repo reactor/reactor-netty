@@ -27,6 +27,8 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
@@ -100,8 +102,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	boolean started;
 
-	boolean clientError = true;
-	boolean serverError = true;
 	boolean redirectable;
 
 	HttpClientOperations(Channel channel, HttpClientOperations replaced) {
@@ -114,8 +114,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.redirectable = replaced.redirectable;
 		this.inboundPrefetch = replaced.inboundPrefetch;
 		this.requestHeaders = replaced.requestHeaders;
-		this.clientError = replaced.clientError;
-		this.serverError = replaced.serverError;
 	}
 
 	HttpClientOperations(Channel channel,
@@ -239,18 +237,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public HttpClientRequest followRedirect() {
 		redirectable = true;
-		return this;
-	}
-
-	@Override
-	public HttpClientRequest failOnClientError(boolean shouldFail) {
-		clientError = shouldFail;
-		return this;
-	}
-
-	@Override
-	public HttpClientRequest failOnServerError(boolean shouldFail) {
-		serverError = shouldFail;
 		return this;
 	}
 
@@ -618,35 +604,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	final boolean checkResponseCode(HttpResponse response) {
 		int code = response.status()
 		                   .code();
-		if (code >= 500) {
-			if (serverError){
-				if (log.isDebugEnabled()) {
-					log.debug("{} Received Server Error, stop reading: {}", channel(),
-							response
-									.toString());
-				}
-				Exception ex = new HttpClientException(uri(), response);
-				parentContext().fireContextError(ex);
-				receive().subscribe();
-				return false;
-			}
-			return true;
-		}
-
-		if (code >= 400) {
-			if (clientError) {
-				if (log.isDebugEnabled()) {
-					log.debug("{} Received Request Error, stop reading: {}",
-							channel(),
-							response.toString());
-				}
-				Exception ex = new HttpClientException(uri(), response);
-				parentContext().fireContextError(ex);
-				receive().subscribe();
-				return false;
-			}
-			return true;
-		}
 		if (code == 301 || code == 302 && isFollowRedirect()) {
 			if (log.isDebugEnabled()) {
 				log.debug("{} Received Redirect location: {}",
@@ -655,7 +612,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						        .entries()
 						        .toString());
 			}
-			Exception ex = new RedirectClientException(uri(), response);
+			Exception ex = new RedirectClientException(response);
 			parentContext().fireContextError(ex);
 			receive().subscribe();
 			return false;
@@ -694,7 +651,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	final Mono<Void> withWebsocketSupport(URI url,
-			String protocols,
+			@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 
 		//prevent further header to be sent for handshaking
