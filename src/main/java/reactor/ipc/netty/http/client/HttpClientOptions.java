@@ -16,16 +16,11 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.URI;
-import java.util.Objects;
 import java.util.function.Function;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.util.NetUtil;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.ClientProxyOptions;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
@@ -38,7 +33,7 @@ import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
  * @author Violeta Georgieva
  */
 public final class HttpClientOptions extends ClientOptions {
-
+	private final UriEndpointFactory uriEndpointFactory;
 
 	/**
 	 * Create a new HttpClientOptions.Builder
@@ -55,30 +50,13 @@ public final class HttpClientOptions extends ClientOptions {
 	private HttpClientOptions(HttpClientOptions.Builder builder) {
 		super(builder);
 		this.acceptGzip = builder.acceptGzip;
+		this.uriEndpointFactory = new UriEndpointFactory(() -> getAddress(), isSecure(),
+				(hostname, port) -> createInetSocketAddress(hostname, port, false));
 	}
 
 	@Override
 	public HttpClientOptions duplicate() {
 		return builder().from(this).build();
-	}
-
-	/**
-	 * Return a new {@link InetSocketAddress} from the URI.
-	 * <p>
-	 * If the port is undefined (-1), a default port is used (80 or 443 depending on
-	 * whether the URI is secure or not). If {@link #useProxy(String) a proxy} is used, the
-	 * returned address is provided unresolved.
-	 *
-	 * @param uri {@link URI} to extract host and port information from
-	 * @return a new eventual {@link InetSocketAddress}
-	 */
-	public final InetSocketAddress getRemoteAddress(URI uri) {
-		Objects.requireNonNull(uri, "uri");
-		boolean secure = isSecure(uri);
-		int port = uri.getPort() != -1 ? uri.getPort() : (secure ? 443 : 80);
-		// TODO: find out whether the remote address should be resolved using blocking operation at this point
-		boolean shouldResolveAddress = !useProxy(uri.getHost());
-		return createInetSocketAddress(uri.getHost(), port, shouldResolveAddress);
 	}
 
 	/**
@@ -95,38 +73,6 @@ public final class HttpClientOptions extends ClientOptions {
 		return DEFAULT_SSL_CONTEXT;
 	}
 
-	final String formatSchemeAndHost(String url, boolean ws) {
-		if (!url.startsWith(HttpClient.HTTP_SCHEME) && !url.startsWith(HttpClient.WS_SCHEME)) {
-			StringBuilder schemeBuilder = new StringBuilder();
-			if (ws) {
-				schemeBuilder.append(isSecure() ? HttpClient.WSS_SCHEME : HttpClient.WS_SCHEME);
-			}
-			else {
-				schemeBuilder.append(isSecure() ? HttpClient.HTTPS_SCHEME : HttpClient.HTTP_SCHEME);
-			}
-
-			final String scheme = schemeBuilder.append("://").toString();
-			if (url.startsWith("/")) {
-				//consider relative URL, use the base hostname/port or fallback to localhost
-				SocketAddress remote = getAddress();
-
-				if (remote instanceof InetSocketAddress) {
-					// NetUtil.toSocketAddressString properly handles IPv6 addresses
-					return scheme + NetUtil.toSocketAddressString((InetSocketAddress) remote) + url;
-				}
-				else {
-					return scheme + "localhost" + url;
-				}
-			}
-			else {
-				//consider absolute URL
-				return scheme + url;
-			}
-		}
-		else {
-			return url;
-		}
-	}
 
 	@Override
 	public String asSimpleString() {
@@ -143,14 +89,6 @@ public final class HttpClientOptions extends ClientOptions {
 		return "HttpClientOptions{" + asDetailedString() + "}";
 	}
 
-	static boolean isSecure(URI uri) {
-		return uri.getScheme() != null && (uri.getScheme()
-		                                      .toLowerCase()
-		                                      .equals(HttpClient.HTTPS_SCHEME) || uri.getScheme()
-		                                                                             .toLowerCase()
-		                                                                             .equals(HttpClient.WSS_SCHEME));
-	}
-
 	static final SslContext DEFAULT_SSL_CONTEXT;
 
 	static {
@@ -165,7 +103,11 @@ public final class HttpClientOptions extends ClientOptions {
 		DEFAULT_SSL_CONTEXT = sslContext;
 	}
 
-	public static final class Builder extends ClientOptions.Builder<Builder> {
+	UriEndpoint createUriEndpoint(String url, boolean ws) {
+		return uriEndpointFactory.createUriEndpoint(url, ws);
+	}
+
+    public static final class Builder extends ClientOptions.Builder<Builder> {
 		private boolean acceptGzip;
 
 		private Builder() {
