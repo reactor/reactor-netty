@@ -17,8 +17,10 @@ package reactor.ipc.netty;
 
 import java.nio.channels.FileChannel;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
@@ -28,6 +30,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -47,6 +51,14 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 final class ReactorNetty {
+
+	static void addChunkedWriter(Connection c){
+		if (c.channel()
+		     .pipeline()
+		     .get(ChunkedWriteHandler.class) == null) {
+			c.addHandlerLast(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
+		}
+	}
 
 	/**
 	 * A common implementation for the {@link Connection#addHandlerLast(String, ChannelHandler)}
@@ -152,6 +164,10 @@ final class ReactorNetty {
 					name,
 					channel.pipeline().names());
 		}
+	}
+
+	static boolean hasSslHandler(Connection c){
+		return c.channel().pipeline().get(SslHandler.class) != null;
 	}
 
 	static void registerForClose(boolean shouldCleanupOnClose,
@@ -261,8 +277,10 @@ final class ReactorNetty {
 		}
 
 		@Override
-		public Connection context() {
-			return source.context();
+		public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+				BiFunction<? super Connection, ? super S, ?> mappedInput,
+				Consumer<? super S> sourceCleanup) {
+			return then(source.sendUsing(sourceInput, mappedInput, sourceCleanup));
 		}
 
 		@Override
