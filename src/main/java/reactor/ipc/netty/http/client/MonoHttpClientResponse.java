@@ -16,12 +16,8 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.net.InetSocketAddress;
+import java.util.function.*;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -30,7 +26,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -42,7 +37,7 @@ import reactor.ipc.netty.channel.AbortedException;
 final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 
 	final HttpClient                                                     parent;
-	final URI                                                            startURI;
+	final UriEndpoint                                                    startURI;
 	final HttpMethod                                                     method;
 	final Function<? super HttpClientRequest, ? extends Publisher<Void>> handler;
 
@@ -52,14 +47,9 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			HttpMethod method,
 			Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
 		this.parent = parent;
-		try {
-			this.startURI = new URI(parent.options.formatSchemeAndHost(url,
-					method == HttpClient.WS));
-		}
-		catch (URISyntaxException e) {
-			throw Exceptions.bubble(e);
-		}
-		this.method = method == HttpClient.WS ? HttpMethod.GET : method;
+		boolean isWs = method == HttpClient.WS;
+		this.startURI = parent.options.createUriEndpoint(url, isWs);
+		this.method = isWs ? HttpMethod.GET : method;
 		this.handler = handler;
 
 	}
@@ -67,12 +57,12 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 	@Override
 	@SuppressWarnings("unchecked")
 	public void subscribe(final CoreSubscriber<? super HttpClientResponse> subscriber) {
-		ReconnectableBridge bridge = new ReconnectableBridge();
+		ReconnectableBridge bridge = new ReconnectableBridge(parent);
 		bridge.activeURI = startURI;
 
 		Mono.defer(() -> parent.client.newHandler(new HttpClientHandler(this, bridge),
-				parent.options.getRemoteAddress(bridge.activeURI),
-				HttpClientOptions.isSecure(bridge.activeURI),
+				bridge.activeURI.getRemoteAddress(),
+				bridge.activeURI.isSecure(),
 				bridge))
 		    .retry(bridge)
 		    .cast(HttpClientResponse.class)
@@ -93,20 +83,14 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 		@Override
 		public Publisher<Void> apply(NettyInbound in, NettyOutbound out) {
 			try {
-				URI uri = bridge.activeURI;
+				UriEndpoint uri = bridge.activeURI;
 				HttpClientOperations ch = (HttpClientOperations) in;
-				String host = uri.getHost();
-				int port = uri.getPort();
-				if (port != -1 && port != 80 && port != 443) {
-					host = host + ':' + port;
-				}
 				ch.getNettyRequest()
-				  .setUri(uri.getRawPath() + (uri.getQuery() == null ? "" :
-						  "?" + uri.getRawQuery()))
+				  .setUri(uri.getPathAndQuery())
 				  .setMethod(parent.method)
 				  .setProtocolVersion(HttpVersion.HTTP_1_1)
 				  .headers()
-				  .add(HttpHeaderNames.HOST, host)
+				  .add(HttpHeaderNames.HOST, resolveHostHeaderValue(ch.address()))
 				  .add(HttpHeaderNames.ACCEPT, ALL);
 
 				if (parent.method == HttpMethod.GET
@@ -127,6 +111,20 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			}
 		}
 
+		private static String resolveHostHeaderValue(InetSocketAddress remoteAddress) {
+			if (remoteAddress != null) {
+				String host = remoteAddress.getHostString();
+				int port = remoteAddress.getPort();
+				if (port != 80 && port != 443) {
+					host = host + ':' + port;
+				}
+				return host;
+			}
+			else {
+				return "localhost";
+			}
+		}
+
 		@Override
 		public String toString() {
 			return "HttpClientHandler{" + "startURI=" + bridge.activeURI + ", method=" + parent.method + ", handler=" + parent.handler + '}';
@@ -137,39 +135,42 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 	static final class ReconnectableBridge
 			implements Predicate<Throwable>, Consumer<Channel> {
 
-		volatile URI      activeURI;
-		volatile String[] redirectedFrom;
+		private final HttpClient parent;
+		volatile UriEndpoint activeURI;
+		volatile Supplier<String>[] redirectedFrom;
 
-		ReconnectableBridge() {
+		ReconnectableBridge(HttpClient parent) {
+			this.parent = parent;
 		}
 
 		void redirect(String to) {
-			String[] redirectedFrom = this.redirectedFrom;
-			URI from = activeURI;
-			try {
-				activeURI = new URI(to);
-			}
-			catch (URISyntaxException e) {
-				throw Exceptions.propagate(e);
-			}
+			Supplier<String>[] redirectedFrom = this.redirectedFrom;
+			UriEndpoint from = activeURI;
+			activeURI = parent.options.createUriEndpoint(to, activeURI.isWs());
+			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
+		}
+
+		@SuppressWarnings("unchecked")
+		private static Supplier<String>[] addToRedirectedFromArray(Supplier<String>[] redirectedFrom, UriEndpoint from) {
+			Supplier<String> fromUrlSupplier = () -> from.toExternalForm();
 			if (redirectedFrom == null) {
-				this.redirectedFrom = new String[]{from.toString()};
+				return new Supplier[] { fromUrlSupplier };
 			}
 			else {
-				String[] newRedirectedFrom = new String[redirectedFrom.length + 1];
+				Supplier<String>[] newRedirectedFrom = new Supplier[redirectedFrom.length + 1];
 				System.arraycopy(redirectedFrom,
 						0,
 						newRedirectedFrom,
 						0,
 						redirectedFrom.length);
-				newRedirectedFrom[redirectedFrom.length] = from.toString();
-				this.redirectedFrom = newRedirectedFrom;
+				newRedirectedFrom[redirectedFrom.length] = fromUrlSupplier;
+				return newRedirectedFrom;
 			}
 		}
 
 		@Override
 		public void accept(Channel channel) {
-			String[] redirectedFrom = this.redirectedFrom;
+			Supplier<String>[] redirectedFrom = this.redirectedFrom;
 			if (redirectedFrom != null) {
 				channel.attr(HttpClientOperations.REDIRECT_ATTR_KEY)
 				       .set(redirectedFrom);
@@ -190,7 +191,5 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			return false;
 		}
 	}
-
-
 }
 
