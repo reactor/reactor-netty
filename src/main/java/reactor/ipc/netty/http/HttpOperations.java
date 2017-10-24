@@ -179,36 +179,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
-	public NettyOutbound sendFileChunked(Path file, long position, long count) {
-		Objects.requireNonNull(file, "filepath");
-
-		if (context().channel()
-		             .pipeline()
-		             .get(ChunkedWriteHandler.class) == null) {
-			context().addHandlerLast(NettyPipeline.ChunkedWriter,
-					new ChunkedWriteHandler());
-		}
-
-		return sendUsing(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> {
-					try {
-						return new ChunkedNioFile(fc, position, count, 1024);
-					}
-					catch (Exception e) {
-						throw Exceptions.propagate(e);
-					}
-				},
-				fc -> {
-					try {
-						fc.close();
-					}
-					catch (Throwable t) {
-						//ignore
-					}
-				});
-	}
-
-	@Override
 	public String toString() {
 		if (isWebsocket()) {
 			return "ws:" + uri();
