@@ -29,7 +29,9 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
 
@@ -49,6 +51,8 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,10 +63,14 @@ public class NettyOutboundTest {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
+			@Override
+			public NettyOutbound sendObject(Publisher<?> dataStream) {
+				return this;
+			}
 
 			@Override
 			public NettyOutbound sendObject(Object message) {
-				return null;
+				return this;
 			}
 
 			@Override
@@ -71,8 +79,10 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public Connection context() {
-				return mockContext;
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return this;
 			}
 
 			@Override
@@ -128,8 +138,13 @@ public class NettyOutboundTest {
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
+			public NettyOutbound sendObject(Publisher<?> dataStream) {
+				return this;
+			}
+
+			@Override
 			public NettyOutbound sendObject(Object message) {
-				return null;
+				return this;
 			}
 
 			@Override
@@ -137,9 +152,12 @@ public class NettyOutboundTest {
 				return ByteBufAllocator.DEFAULT;
 			}
 
+
 			@Override
-			public Connection context() {
-				return mockContext;
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return then(mockSendUsing(mockContext, sourceInput, mappedInput, sourceCleanup));
 			}
 
 			@Override
@@ -206,10 +224,14 @@ public class NettyOutboundTest {
 
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
+			@Override
+			public NettyOutbound sendObject(Publisher<?> dataStream) {
+				return this;
+			}
 
 			@Override
 			public NettyOutbound sendObject(Object message) {
-				return null;
+				return this;
 			}
 
 			@Override
@@ -218,8 +240,10 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public Connection context() {
-				return mockContext;
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return then(mockSendUsing(mockContext, sourceInput, mappedInput, sourceCleanup));
 			}
 
 			@Override
@@ -285,8 +309,13 @@ public class NettyOutboundTest {
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
+			public NettyOutbound sendObject(Publisher<?> dataStream) {
+				return this;
+			}
+
+			@Override
 			public NettyOutbound sendObject(Object message) {
-				return null;
+				return this;
 			}
 
 			@Override
@@ -295,8 +324,10 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public Connection context() {
-				return mockContext;
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return then(mockSendUsing(mockContext, sourceInput, mappedInput, sourceCleanup));
 			}
 
 			@Override
@@ -328,5 +359,16 @@ public class NettyOutboundTest {
 				.endsWith("End of File");
 
 		assertThat(channel.finishAndReleaseAll()).isTrue();
+	}
+
+	static<S> Mono<Void> mockSendUsing(Connection c, Callable<? extends S> sourceInput,
+			BiFunction<? super Connection, ? super S, ?> mappedInput,
+			Consumer<? super S> sourceCleanup) {
+		return Mono.using(
+				sourceInput,
+				s -> FutureMono.from(c.channel()
+				                      .writeAndFlush(mappedInput.apply(c, s))),
+				sourceCleanup
+		);
 	}
 }
