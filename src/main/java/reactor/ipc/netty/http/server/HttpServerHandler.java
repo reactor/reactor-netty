@@ -26,12 +26,10 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.concurrent.Queues;
 
@@ -91,6 +89,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 					HttpServerOperations.log.debug("dropping pipelined HTTP request, " +
 									"previous response requested connection close");
 				}
+				ReferenceCountUtil.safeRelease(msg);
 				return;
 			}
 			if (pendingResponses > 1) {
