@@ -57,12 +57,14 @@ public class ClientOptionsTest {
 		//proxy
 		this.builder.proxy(this.proxyOptions);
 		assertThat(this.builder.build().asDetailedString())
-				.startsWith("connectAddress=null, proxy=SOCKS4(http://proxy:456)");
+				.startsWith("connectAddress=null, proxy=SOCKS4(http://proxy")
+				.contains(":456)");
 
 		//address
 		this.builder.host("http://google.com").port(123);
 		assertThat(this.builder.build().asDetailedString())
-				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)");
+				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.contains(":456)");
 	}
 
 	@Test
@@ -72,7 +74,8 @@ public class ClientOptionsTest {
 		            .proxy(proxyOptions)
 		            .build();
 		assertThat(this.builder.build().toString())
-				.startsWith("ClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")
+				.startsWith("ClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.contains(":456)")
 				.endsWith("}");
 	}
 

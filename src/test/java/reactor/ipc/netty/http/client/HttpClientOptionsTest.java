@@ -62,19 +62,22 @@ public class HttpClientOptionsTest {
 		//proxy
 		this.builder.proxy(proxyOptions);
 		assertThat(this.builder.build().asDetailedString())
-				.startsWith("connectAddress=null, proxy=SOCKS4(http://proxy:456)")
+				.startsWith("connectAddress=null, proxy=SOCKS4(http://proxy")
+				.contains(":456)")
 				.endsWith(", acceptGzip=false");
 
 		//address
 		this.builder.host("http://google.com").port(123);
 		assertThat(this.builder.build().asDetailedString())
-				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")
+				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.contains(":456)")
 				.endsWith(", acceptGzip=false");
 
 		//gzip
 		this.builder.compression(true);
 		assertThat(this.builder.build().asDetailedString())
-				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")
+				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.contains(":456)")
 				.endsWith(", acceptGzip=true");
 	}
 
@@ -85,7 +88,8 @@ public class HttpClientOptionsTest {
 		            .proxy(proxyOptions)
 		            .compression(true);
 		assertThat(this.builder.build().toString())
-				.startsWith("HttpClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy:456)")
+				.startsWith("HttpClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.contains(":456)")
 				.endsWith(", acceptGzip=true}");
 	}
 

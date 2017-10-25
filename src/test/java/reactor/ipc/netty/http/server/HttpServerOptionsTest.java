@@ -99,10 +99,11 @@ public class HttpServerOptionsTest {
 	public void toStringContainsAsDetailedString() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder()
 		                                                     .compression(534)
-		                                                     .host("http://google.com")
+		                                                     .host("google.com")
 		                                                     .port(123);
 		assertThat(builder.build().toString())
-				.startsWith("HttpServerOptions{address=http://google.com:123")
+				.startsWith("HttpServerOptions{address=google.com")
+				.contains(":123")
 				.endsWith(", minCompressionResponseSize=534}");
 	}
 
