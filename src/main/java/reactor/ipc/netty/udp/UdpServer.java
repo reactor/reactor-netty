@@ -29,14 +29,12 @@ import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
-import reactor.ipc.netty.resources.LoopResources;
 
 /**
  * A UDP server connector.
@@ -124,7 +122,7 @@ final public class UdpServer implements NettyConnector<UdpInbound, UdpOutbound> 
 			builder.options.accept(serverOptionsBuilder);
 		}
 		if (!serverOptionsBuilder.isLoopAvailable()) {
-			serverOptionsBuilder.loopResources(DEFAULT_UDP_LOOPS);
+			serverOptionsBuilder.loopResources(UdpResources.get());
 		}
 		this.options = serverOptionsBuilder.build();
 	}
@@ -170,14 +168,7 @@ final public class UdpServer implements NettyConnector<UdpInbound, UdpOutbound> 
 	}
 
 
-	static final int DEFAULT_UDP_THREAD_COUNT = Integer.parseInt(System.getProperty(
-			"reactor.udp.ioThreadCount",
-			"" + Schedulers.DEFAULT_POOL_SIZE));
-
 	static final LoggingHandler loggingHandler = new LoggingHandler(UdpServer.class);
-
-	static final LoopResources DEFAULT_UDP_LOOPS =
-			LoopResources.create("udp", DEFAULT_UDP_THREAD_COUNT, true);
 
 	public static final class Builder {
 		private Consumer<? super UdpServerOptions.Builder> options;
