@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -51,10 +53,14 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ResourceLeakDetector;
 import org.junit.Test;
+import org.reactivestreams.Subscription;
 import org.testng.Assert;
+import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
@@ -95,6 +101,47 @@ public class HttpServerTests {
 		assertThat(blockingFacade.getPort())
 				.isEqualTo(8080)
 				.isEqualTo(blockingFacade.getContext().address().getPort());
+	}
+
+	@Test
+	public void releaseInboundChannelOnNonKeepAliveRequest() throws Exception {
+		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+
+		NettyContext c = HttpServer.create(0)
+		                           .newHandler((req, resp) -> {
+			req.receive().log().subscribe(new BaseSubscriber<ByteBuf>() {
+				@Override
+				protected void hookOnSubscribe(Subscription subscription) {
+					Schedulers.single().schedule(() -> request(1), 100, TimeUnit.MILLISECONDS);
+				}
+
+				@Override
+				protected void hookOnNext(ByteBuf value) {
+					Schedulers.single().schedule(() -> request(1), 100, TimeUnit.MILLISECONDS);
+				}
+			});
+			return resp.status(200)
+			                               .send();
+		                           })
+		                           .block();
+
+		Flux<ByteBuf> src = Flux.range(0, 3)
+		                        .map(n -> Unpooled.wrappedBuffer(Integer.toString(n)
+		                                                                .getBytes()));
+
+		Flux.range(0, 100)
+		    .concatMap(n -> HttpClient.create(c.address()
+		                                       .getPort())
+		                              .post("/return",
+				                              r -> r.keepAlive(false)
+				                                    .send(src))
+		                              .map(resp -> {
+			                              resp.dispose();
+			                              return resp.status()
+			                                         .code();
+		                              }))
+		    .collectList()
+		    .block();
 	}
 
 	@Test

@@ -86,6 +86,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return receiverCancel == CANCELLED;
 	}
 
+//	final void discard() {
+//		inboundDone = true;
+//		receiverCancel = CANCELLED;
+//		drainReceiver();
+//	}
+
 	@Override
 	public void dispose() {
 		cancel();
@@ -146,9 +152,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
-	final boolean drainReceiver() {
+	final void drainReceiver() {
 		if(WIP.getAndIncrement(this) != 0){
-			return false;
+			return;
 		}
 		int missed = 1;
 		for(;;) {
@@ -159,20 +165,17 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			if (a == null) {
 				if (isCancelled()) {
 					cleanQueue(q);
-					return false;
+					return;
 				}
 				if (d && getPending() == 0) {
 					Throwable ex = inboundError;
 					if (ex != null) {
 						parent.context.fireContextError(ex);
 					}
-					else if(parent.shouldEmitEmptyContext()){
-						parent.context.fireContextActive(null);
-					}
 					else {
 						parent.context.fireContextActive(parent);
 					}
-					return false;
+					return;
 				}
 				missed = WIP.addAndGet(this, -missed);
 				if(missed == 0){
@@ -187,7 +190,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			while (e != r) {
 				if (isCancelled()) {
 					cleanQueue(q);
-					return false;
+					terminateReceiver(q, a);
+					return;
 				}
 
 				d = inboundDone;
@@ -196,7 +200,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 				if (d && empty) {
 					terminateReceiver(q, a);
-					return false;
+					return;
 				}
 
 				if (empty) {
@@ -215,12 +219,13 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 			if (isCancelled()) {
 				cleanQueue(q);
-				return false;
+				terminateReceiver(q, a);
+				return;
 			}
 
 			if (inboundDone && (q == null || q.isEmpty())) {
 				terminateReceiver(q, a);
-				return false;
+				return;
 			}
 
 			if (r == Long.MAX_VALUE) {
@@ -231,11 +236,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if(missed == 0){
 					break;
 				}
-				return true;
-			}
-
-			if ((receiverDemand -= e) > 0L || e > 0L) {
-				channel.read();
+				receiverFastpath = true;
 			}
 
 			missed = WIP.addAndGet(this, -missed);
@@ -243,7 +244,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				break;
 			}
 		}
-		return false;
+		Queue<Object> q = receiverQueue;
+		if (q == null || q.isEmpty()) {
+			channel.read();
+		}
 	}
 
 	final void startReceiver(CoreSubscriber<? super Object> s) {
@@ -319,31 +323,30 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				}
 			}
 			q.offer(msg);
-			if (drainReceiver()) {
-				receiverFastpath = true;
-			}
+			drainReceiver();
 		}
 	}
 
-	final boolean onInboundComplete() {
+	final void onInboundComplete() {
 		if (inboundDone) {
-			return false;
+			return;
 		}
 		inboundDone = true;
-		CoreSubscriber<?> receiver = this.receiver;
-		if (receiverFastpath && receiver != null) {
-			receiver.onComplete();
-			return true;
+		if (receiverFastpath) {
+			CoreSubscriber<?> receiver = this.receiver;
+			if (receiver != null) {
+				receiver.onComplete();
+			}
+			return;
 		}
 		drainReceiver();
-		return false;
 	}
 
-	final boolean onInboundError(Throwable err) {
+	final void onInboundError(Throwable err) {
 		if (isCancelled() || inboundDone) {
 			Context c = receiver == null ? Context.empty() : receiver.currentContext();
 			Operators.onErrorDropped(err, c);
-			return false;
+			return;
 		}
 		CoreSubscriber<?> receiver = this.receiver;
 		this.inboundError = err;
@@ -355,12 +358,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		if (receiverFastpath && receiver != null) {
 			parent.context.fireContextError(err);
 			receiver.onError(err);
-			return true;
 		}
 		else {
 			drainReceiver();
 		}
-		return false;
 	}
 
 	final void terminateReceiver(Queue<?> q, CoreSubscriber<?> a) {

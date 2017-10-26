@@ -285,10 +285,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		return outboundSubscription == Operators.cancelledSubscription() || !channel.isActive();
 	}
 
-	protected boolean shouldEmitEmptyContext() {
-		return false;
-	}
-
 	/**
 	 * Connector handler provided by user
 	 *
@@ -346,9 +342,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * React on inbound completion (last packet)
 	 */
 	protected void onInboundComplete() {
-		if (inbound.onInboundComplete()) {
-			context.fireContextActive(this);
-		}
+		inbound.onInboundComplete();
 	}
 
 	/**
@@ -422,8 +416,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			try {
 				Operators.terminate(OUTBOUND_CLOSE, this);
 				onInactive.onComplete(); //signal senders and other interests
-				onInboundComplete(); // signal receiver
-
+				inbound.onInboundComplete();
 			}
 			finally {
 				channel.pipeline()
@@ -433,15 +426,23 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
+	 * Drop pending content and complete inbound
+	 */
+//	protected final void discard(){
+//		if(log.isDebugEnabled()){
+//			log.debug("{} Discarding inbound content", channel);
+//		}
+//		inbound.discard();
+//	}
+
+	/**
 	 * React on inbound error
 	 *
 	 * @param err the {@link Throwable} cause
 	 */
 	protected final void onInboundError(Throwable err) {
 		discreteRemoteClose(err);
-		if (inbound.onInboundError(err)) {
-			context.fireContextError(err);
-		}
+		inbound.onInboundError(err);
 	}
 
 	/**

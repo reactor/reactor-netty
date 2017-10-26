@@ -142,7 +142,6 @@ final class HttpServerWSOperations extends HttpServerOperations
 			if (listener != null) {
 				f.addListener(listener);
 			}
-			return;
 		}
 	}
 
