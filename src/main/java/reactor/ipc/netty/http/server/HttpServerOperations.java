@@ -403,13 +403,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		else{
-//			discard();
+			discard();
 			onHandlerTerminate();
 			return;
 		}
 		f.addListener(s -> {
 			if (isOutboundDone()) {
-//				discard();
+				discard();
 				onHandlerTerminate();
 			}
 			if (!s.isSuccess() && log.isDebugEnabled()) {

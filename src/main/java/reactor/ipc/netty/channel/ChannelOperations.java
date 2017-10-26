@@ -428,12 +428,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	/**
 	 * Drop pending content and complete inbound
 	 */
-//	protected final void discard(){
-//		if(log.isDebugEnabled()){
-//			log.debug("{} Discarding inbound content", channel);
-//		}
-//		inbound.discard();
-//	}
+	protected final void discard(){
+		if(log.isDebugEnabled()){
+			log.debug("{} Discarding inbound content", channel);
+		}
+		inbound.discard();
+	}
 
 	/**
 	 * React on inbound error

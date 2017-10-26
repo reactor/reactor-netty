@@ -55,12 +55,9 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.Test;
-import org.reactivestreams.Subscription;
 import org.testng.Assert;
-import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
@@ -109,17 +106,7 @@ public class HttpServerTests {
 
 		NettyContext c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> {
-			req.receive().log().subscribe(new BaseSubscriber<ByteBuf>() {
-				@Override
-				protected void hookOnSubscribe(Subscription subscription) {
-					Schedulers.single().schedule(() -> request(1), 100, TimeUnit.MILLISECONDS);
-				}
 
-				@Override
-				protected void hookOnNext(ByteBuf value) {
-					Schedulers.single().schedule(() -> request(1), 100, TimeUnit.MILLISECONDS);
-				}
-			});
 			return resp.status(200)
 			                               .send();
 		                           })

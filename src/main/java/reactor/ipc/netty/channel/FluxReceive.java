@@ -86,11 +86,11 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return receiverCancel == CANCELLED;
 	}
 
-//	final void discard() {
-//		inboundDone = true;
-//		receiverCancel = CANCELLED;
-//		drainReceiver();
-//	}
+	final void discard() {
+		inboundDone = true;
+		receiverCancel = CANCELLED;
+		drainReceiver();
+	}
 
 	@Override
 	public void dispose() {
