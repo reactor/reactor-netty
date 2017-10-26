@@ -177,7 +177,11 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			}
 			ctx.write(msg, promise);
 
-			if(persistentConnection && mustRecycleEncoder) {
+			if (!persistentConnection) {
+				return;
+			}
+
+			if (mustRecycleEncoder) {
 				mustRecycleEncoder = false;
 				pendingResponses -= 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {

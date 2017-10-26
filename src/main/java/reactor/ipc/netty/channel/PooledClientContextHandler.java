@@ -186,6 +186,14 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			return;
 		}
 
+		if (!c.isActive()) {
+			log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}",
+					c.toString());
+			release(c);
+			setFuture(pool.acquire());
+			return;
+		}
+
 		ChannelOperationsHandler op = c.pipeline()
 		                               .get(ChannelOperationsHandler.class);
 
@@ -195,13 +203,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			}
 			c.closeFuture()
 			 .addListener(ff -> release(c));
-			return;
-		}
-		if (!c.isActive()) {
-			log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}",
-					c.toString());
-			release(c);
-			setFuture(pool.acquire());
 			return;
 		}
 		if (log.isDebugEnabled()) {
