@@ -239,14 +239,14 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				receiverFastpath = true;
 			}
 
+			if ((receiverDemand -= e) > 0L || e > 0L) {
+				channel.read();
+			}
+
 			missed = WIP.addAndGet(this, -missed);
 			if(missed == 0){
 				break;
 			}
-		}
-		Queue<Object> q = receiverQueue;
-		if (q == null || q.isEmpty()) {
-			channel.read();
 		}
 	}
 
