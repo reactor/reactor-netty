@@ -138,7 +138,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					log.debug("{} No ChannelOperation attached. Dropping: {}", ctx
 							.channel().toString(), loggingMsg);
 				}
-				ReferenceCountUtil.safeRelease(msg);
+				ReferenceCountUtil.release(msg);
 			}
 		}
 		catch (Throwable err) {

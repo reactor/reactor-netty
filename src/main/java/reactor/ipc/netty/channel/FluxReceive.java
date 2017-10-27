@@ -211,7 +211,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					a.onNext(v);
 				}
 				finally {
-					ReferenceCountUtil.safeRelease(v);
+					ReferenceCountUtil.release(v);
 				}
 
 				e++;
@@ -303,7 +303,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				receiver.onNext(msg);
 			}
 			finally {
-				ReferenceCountUtil.safeRelease(msg);
+				ReferenceCountUtil.release(msg);
 			}
 		}
 		else {

@@ -89,7 +89,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 					HttpServerOperations.log.debug("dropping pipelined HTTP request, " +
 									"previous response requested connection close");
 				}
-				ReferenceCountUtil.safeRelease(msg);
+				ReferenceCountUtil.release(msg);
 				return;
 			}
 			if (pendingResponses > 1) {
