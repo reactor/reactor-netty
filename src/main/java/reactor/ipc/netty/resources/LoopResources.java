@@ -78,7 +78,7 @@ public interface LoopResources extends Disposable {
 	 */
 	static LoopResources create(String prefix, int workerCount, boolean daemon) {
 		if (workerCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive " + "worker number, " + "was: " + workerCount);
+			throw new IllegalArgumentException("Must provide a strictly positive " + "worker threads number, " + "was: " + workerCount);
 		}
 		return new DefaultLoopResources(prefix, workerCount, daemon);
 	}
@@ -104,10 +104,10 @@ public interface LoopResources extends Disposable {
 			throw new IllegalArgumentException("Cannot use empty prefix");
 		}
 		if (workerCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive " + "worker number, " + "was: " + workerCount);
+			throw new IllegalArgumentException("Must provide a strictly positive " + "worker threads number, " + "was: " + workerCount);
 		}
 		if (selectCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive " + "worker number, " + "was: " + workerCount);
+			throw new IllegalArgumentException("Must provide a strictly positive " + "selector threads number, " + "was: " + selectCount);
 		}
 		return new DefaultLoopResources(prefix, selectCount, workerCount, daemon);
 	}
