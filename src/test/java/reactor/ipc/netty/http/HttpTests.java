@@ -119,7 +119,10 @@ public class HttpTests {
 
 		Mono<Integer> code =
 				client.get("/test")
-				      .flatMap(res -> Mono.just(res.status().code()))
+				      .flatMap(res -> {
+				          res.dispose();
+				          return Mono.just(res.status().code());
+				      })
 				      .log("received-status-1");
 
 		StepVerifier.create(code)
@@ -137,8 +140,11 @@ public class HttpTests {
 		Assertions.assertThat(content).isNull();
 
 		code = client.get("/test3")
-				     .flatMapMany(res -> Flux.just(res.status().code())
-				                             .log("received-status-3"))
+				     .flatMapMany(res -> {
+				         res.dispose();
+				         return Flux.just(res.status().code())
+				                    .log("received-status-3");
+				     })
 				     .next();
 
 		StepVerifier.create(code)

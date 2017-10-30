@@ -46,13 +46,15 @@ public class NettyOptionsTest {
 
 		assertThat(initializedChannels).hasSize(0);
 
-		HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		          .get("/", req -> req.failOnClientError(false).send())
-		          .block();
+		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
+		                                    .get("/", req -> req.failOnClientError(false).send())
+		                                    .block();
 
 		assertThat(initializedChannels)
 				.hasSize(1)
 				.doesNotContain(nettyContext.channel());
+		resp.dispose();
+		nettyContext.dispose();
 	}
 
 	@Test
@@ -68,14 +70,16 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		          .get("/", req -> req.failOnClientError(false).send())
-		          .block();
+		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
+		                                    .get("/", req -> req.failOnClientError(false).send())
+		                                    .block();
 
 		assertThat((Iterable<Channel>) group)
 				.hasSize(1)
 				.hasSameElementsAs(initializedChannels)
 				.doesNotContain(nettyContext.channel());
+		resp.dispose();
+		nettyContext.dispose();
 	}
 
 	@Test
@@ -92,14 +96,16 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		          .get("/", req -> req.failOnClientError(false).send())
-		          .block();
+		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
+		                                    .get("/", req -> req.failOnClientError(false).send())
+		                                    .block();
 
 		assertThat((Iterable<Channel>) group)
 				.hasSize(1)
 				.hasSameElementsAs(initializedChannels)
 				.doesNotContain(nettyContext.channel());
+		resp.dispose();
+		nettyContext.dispose();
 	}
 
 	@Test
@@ -118,15 +124,17 @@ public class NettyOptionsTest {
 				          .start((req, resp) -> resp.sendNotFound())
 				          .getContext();
 
-		HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		          .get("/", req -> req.failOnClientError(false).send())
-		          .block();
+		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
+		                                    .get("/", req -> req.failOnClientError(false).send())
+		                                    .block();
 
 		assertThat((Iterable<Channel>) group)
 				//the main NettyContext channel is not impacted by pipeline options
 				.doesNotContain(nettyContext.channel())
 				//the GET triggered a Channel added to the group
 				.hasSize(1);
+		resp.dispose();
+		nettyContext.dispose();
 	}
 
 	@Test
@@ -152,6 +160,7 @@ public class NettyOptionsTest {
 		                                         .block();
 
 		assertThat(response1.status().code()).isEqualTo(404);
+		response1.dispose();
 
 		//the "main" context doesn't get enriched with handlers from options...
 		assertThat(nettyContext.channel().pipeline().names()).doesNotContain(handlerName);
@@ -163,7 +172,10 @@ public class NettyOptionsTest {
 		                                         .block();
 
 		assertThat(response2.status().code()).isEqualTo(404); //reactor handler was applied and produced a response
+		response2.dispose();
 		assertThat(readCount.get()).isEqualTo(1); //BUT channelHandler wasn't applied a second time since not Shareable
+
+		nettyContext.dispose();
 	}
 
 }

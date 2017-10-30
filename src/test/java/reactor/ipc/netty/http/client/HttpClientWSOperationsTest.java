@@ -65,15 +65,11 @@ public class HttpClientWSOperationsTest {
 	private void failOnClientServerError(boolean clientError, boolean serverError,
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
 		NettyContext httpServer = HttpServer.create(0).newRouter(
-			routes -> routes.post("/login", (req, res) -> {
-						res.status(serverStatus);
-						return res.sendHeaders();
-					})
+			routes -> routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
 					.get("/ws", (req, res) -> {
 						int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
 						if (token >= 400) {
-							res.status(token);
-							return res.send();
+							return res.status(token).send();
 						}
 						return res.sendWebsocket(serverSubprotocol, (i, o) -> o.sendString(Mono.just("test")));
 					})
@@ -96,11 +92,15 @@ public class HttpClientWSOperationsTest {
 		}
 		else {
 			StepVerifier.create(response)
-			            .assertNext(res ->
-			                assertThat(res.status().code()).isEqualTo(serverStatus == 200 ? 101 : serverStatus))
+			            .assertNext(res -> {
+			                assertThat(res.status().code()).isEqualTo(serverStatus == 200 ? 101 : serverStatus);
+			                res.dispose();
+			            })
 			            .expectComplete()
 			            .verify(Duration.ofSeconds(30));
 		}
+
+		httpServer.dispose();
 	}
 
 	private Mono<HttpClientRequest> doLoginFirst(Mono<HttpClientRequest> request, int port) {
@@ -116,7 +116,10 @@ public class HttpClientWSOperationsTest {
 		return HttpClient.create(port)
 		                 .post("/login", req -> req.failOnClientError(false)
 		                                           .failOnServerError(false))
-		                 .map(res -> res.status().code() + "");
+		                 .map(res -> {
+		                     res.dispose();
+		                     return res.status().code() + "";
+		                 });
 	}
 
 	private WebsocketOutbound ws(HttpClientRequest request, String clientSubprotocol) {

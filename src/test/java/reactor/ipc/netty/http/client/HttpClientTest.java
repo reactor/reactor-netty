@@ -83,25 +83,31 @@ public class HttpClientTest {
 		                              .port(x.address().getPort())
 		                              .poolResources(pool))
 		                    .get("/")
-		                    .flatMap(r -> Mono.just(r.status()
-		                                          .code()))
+		                    .flatMap(r -> {
+		                        r.dispose();
+		                        return Mono.just(r.status().code());
+		                    })
 		                    .log()
 		                    .block(Duration.ofSeconds(30));
 
-		HttpClient.create(opts -> opts.host("localhost")
-		                              .port(x.address().getPort())
-		                              .poolResources(pool))
-		          .get("/")
-		          .log()
-		          .block(Duration.ofSeconds(30));
+		HttpClientResponse resp =
+				HttpClient.create(opts -> opts.host("localhost")
+				                              .port(x.address().getPort())
+				                              .poolResources(pool))
+				          .get("/")
+				          .log()
+				          .block(Duration.ofSeconds(30));
+		resp.dispose();
 
-		HttpClient.create(opts -> opts.host("localhost")
-		                              .port(x.address().getPort())
-		                              .poolResources(pool))
-		          .get("/")
-		          .log()
-		          .block(Duration.ofSeconds(30));
+		resp = HttpClient.create(opts -> opts.host("localhost")
+		                                     .port(x.address().getPort())
+		                                     .poolResources(pool))
+		                 .get("/")
+		                 .log()
+		                 .block(Duration.ofSeconds(30));
+		resp.dispose();
 
+		x.dispose();
 	}
 
 	DefaultFullHttpResponse response() {
@@ -130,8 +136,10 @@ public class HttpClientTest {
 		                              .port(x.address().getPort())
 		                              .poolResources(pool))
 		                    .get("/")
-		                    .flatMap(r -> Mono.just(r.status()
-		                                          .code()))
+		                    .flatMap(r -> {
+		                        r.dispose();
+		                        return Mono.just(r.status().code());
+		                    })
 		                    .log()
 		                    .block(Duration.ofSeconds(30));
 
@@ -147,6 +155,7 @@ public class HttpClientTest {
 			return;
 		}
 
+		x.dispose();
 		Assert.fail("Not aborted");
 	}
 
@@ -290,15 +299,19 @@ public class HttpClientTest {
 				                                                .file("test2", f))
 				                          .log()
 				                          .then())
-		                    .flatMap(r -> Mono.just(r.status()
-		                                          .code()))
+		                    .flatMap(r -> {
+		                        r.dispose();
+		                        return Mono.just(r.status().code());
+		                    })
 		                    .block(Duration.ofSeconds(30));
 		res = HttpClient.create("google.com")
 		                .get("/search",
 				                c -> c.followRedirect()
 				                      .sendHeaders())
-		                .flatMap(r -> Mono.just(r.status()
-		                                      .code()))
+		                .flatMap(r -> {
+		                    r.dispose();
+		                    return Mono.just(r.status().code());
+		                })
 		                .log()
 		                .block(Duration.ofSeconds(30));
 
@@ -326,8 +339,10 @@ public class HttpClientTest {
 		int res = client.get("/unsupportedURI",
 				             c -> c.followRedirect()
 				                   .sendHeaders())
-				        .flatMap(r -> Mono.just(r.status()
-				                                 .code()))
+				        .flatMap(r -> {
+				            r.dispose();
+				            return Mono.just(r.status().code());
+				        })
 				        .log()
 				        .onErrorResume(HttpClientException.class,
 				                       e -> Mono.just(e.status()
@@ -354,6 +369,7 @@ public class HttpClientTest {
 		          .block(Duration.ofSeconds(5));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+		r.dispose();
 	}
 
 	@Test
@@ -371,6 +387,7 @@ public class HttpClientTest {
 		          .block(Duration.ofSeconds(5));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+		r.dispose();
 	}
 
 	@Test
@@ -393,6 +410,8 @@ public class HttpClientTest {
 		                                   .channel());
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+		r.dispose();
+		r2.dispose();
 	}
 
 	@Test
@@ -409,6 +428,7 @@ public class HttpClientTest {
 		          .block(Duration.ofSeconds(5));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+		r.dispose();
 	}
 
 	@Test
@@ -421,14 +441,16 @@ public class HttpClientTest {
 				                                       .sendString(Mono.just(" ")))
 		                                 .block(Duration.ofSeconds(30));
 
-		HttpClient.create(opts -> opts.poolResources(fixed))
-		          .get("http://google.com",
-				          c -> c.header("content-length", "1")
-				                .failOnClientError(false)
-				                .sendString(Mono.just(" ")))
-		          .block(Duration.ofSeconds(30));
+		HttpClientResponse r1 = HttpClient.create(opts -> opts.poolResources(fixed))
+		                                  .get("http://google.com",
+				                                  c -> c.header("content-length", "1")
+				                                        .failOnClientError(false)
+				                                        .sendString(Mono.just(" ")))
+		                                  .block(Duration.ofSeconds(30));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.BAD_REQUEST);
+		r.dispose();
+		r1.dispose();
 	}
 
 	@Test
@@ -436,7 +458,10 @@ public class HttpClientTest {
 
 		StepVerifier.create(HttpClient.create()
 		                              .get("https://developer.chrome.com")
-		                              .flatMap(r -> Mono.just(r.status().code()))
+		                              .flatMap(r -> {
+		                                  r.dispose();
+		                                  return Mono.just(r.status().code());
+		                              })
 		)
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -444,7 +469,10 @@ public class HttpClientTest {
 
 		StepVerifier.create(HttpClient.create()
 		                              .get("https://developer.chrome.com")
-		                              .flatMap(r -> Mono.just(r.status().code()))
+		                              .flatMap(r -> {
+		                                  r.dispose();
+		                                  return Mono.just(r.status().code());
+		                              })
 		)
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -490,10 +518,15 @@ public class HttpClientTest {
 				          .flatMap(r -> r.receive().asString()
 				                         .elementAt(0)
 				                         .map(s -> s.substring(0, Math.min(s.length() -1, 100)))
-				                      .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
+				                         .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))
+				                         .zipWith(Mono.just(r)))
 		)
-		            .expectNextMatches(tuple -> !tuple.getT1().contains("<html>") && !tuple.getT1().contains("<head>")
-				            && "gzip".equals(tuple.getT2()))
+		            .expectNextMatches(tuple -> {
+		                               tuple.getT2().dispose();
+		                               String content = tuple.getT1().getT1();
+		                               return !content.contains("<html>") && !content.contains("<head>")
+		                                      && "gzip".equals(tuple.getT1().getT2());
+		                               })
 		            .expectComplete()
 		            .verify();
 
@@ -507,10 +540,15 @@ public class HttpClientTest {
 				          })
 				          .flatMap(r -> r.receive().asString().elementAt(0)
 				                         .map(s -> s.substring(0, Math.min(s.length() -1, 100)))
-				                      .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", ""))))
+				                         .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))
+				                         .zipWith(Mono.just(r)))
 		)
-		            .expectNextMatches(tuple -> tuple.getT1().contains("<html>") && tuple.getT1().contains("<head>")
-				            && "".equals(tuple.getT2()))
+		            .expectNextMatches(tuple -> {
+		                               tuple.getT2().dispose();
+		                               String content = tuple.getT1().getT1();
+		                               return content.contains("<html>") && content.contains("<head>")
+		                                      && "".equals(tuple.getT1().getT2());
+		                               })
 		            .expectComplete()
 		            .verify();
 	}
@@ -534,11 +572,19 @@ public class HttpClientTest {
 		StepVerifier.create(
 		        HttpClient.create(ops -> ops.port(server.address().getPort()).compression(gzipEnabled))
 		                  .get("/")
-		                  .flatMap(r -> r.receive().asString().elementAt(0))
+		                  .flatMap(r -> r.receive()
+		                                 .asString()
+		                                 .elementAt(0)
+		                                 .zipWith(Mono.just(r)))
 		        )
-		            .expectNextMatches(str -> expectedResponse.equals(str))
+		            .expectNextMatches(tuple -> {
+		                tuple.getT2().dispose();
+		                return expectedResponse.equals(tuple.getT1());
+		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+
+		server.dispose();
 	}
 
 	@Test
@@ -556,10 +602,11 @@ public class HttpClientTest {
 		                           })
 		                           .block();
 
-		HttpClient.create(c.address().getPort())
-		          .get("/")
-		          .block();
+		HttpClientResponse resp = HttpClient.create(c.address().getPort())
+		                                    .get("/")
+		                                    .block();
 
+		resp.dispose();
 		c.dispose();
 	}
 
@@ -720,7 +767,6 @@ public class HttpClientTest {
 				createHttpClientForContext(context)
 				          .put("/201", req -> req.sendHeaders())
 				          .block();
-		//response1.dispose();
 
 		HttpClientResponse response2 =
 				createHttpClientForContext(context)
@@ -731,7 +777,11 @@ public class HttpClientTest {
 				createHttpClientForContext(context)
 				          .get("/200", req -> req.sendHeaders())
 				          .block(Duration.ofSeconds(30));
-		//response3.dispose();
+
+		response1.dispose();
+		response2.dispose();
+		response3.dispose();
+		context.dispose();
 	}
 
 	private HttpClient createHttpClientForContext(NettyContext context) {

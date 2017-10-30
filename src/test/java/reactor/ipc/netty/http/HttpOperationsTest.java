@@ -71,14 +71,17 @@ public class HttpOperationsTest {
 		t = channel.readInbound();
 		assertThat(t, instanceOf(ByteBuf.class));
 		assertThat(((ByteBuf) t).toString(CharsetUtil.UTF_8), is("{\"some\": 1}"));
+		((ByteBuf) t).release();
 
 		t = channel.readInbound();
 		assertThat(t, instanceOf(ByteBuf.class));
 		assertThat(((ByteBuf) t).toString(CharsetUtil.UTF_8),
 				is("{\"value\": true, \"test\": 1}"));
+		((ByteBuf) t).release();
 
 		t = channel.readInbound();
 		assertThat(t, is(LastHttpContent.EMPTY_LAST_CONTENT));
+		((LastHttpContent) t).release();
 
 		t = channel.readInbound();
 		assertThat(t, nullValue());

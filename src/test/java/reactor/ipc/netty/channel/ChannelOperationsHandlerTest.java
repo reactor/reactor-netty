@@ -60,9 +60,14 @@ public class ChannelOperationsHandlerTest {
 				          .post("/", req -> req.sendString(flux));
 
 		StepVerifier.create(client)
-		            .expectNextMatches(res -> res.status().code() == 200)
+		            .expectNextMatches(res -> {
+		                res.dispose();
+		                return res.status().code() == 200;
+		            })
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+
+		server.dispose();
 	}
 
 	@Test

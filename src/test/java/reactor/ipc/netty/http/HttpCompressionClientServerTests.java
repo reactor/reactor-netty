@@ -49,13 +49,15 @@ public class HttpCompressionClientServerTests {
 
 		HttpClient client = HttpClient.create(o -> o.compression(true)
 		                                            .connectAddress(() -> address(nettyContext)));
-		client.get("/test", o -> {
-			Assert.assertTrue(o.requestHeaders()
-			                   .contains("Accept-Encoding", "gzip", true));
-			return o;
-		})
-		      .block();
+		HttpClientResponse res =
+				client.get("/test", o -> {
+				         Assert.assertTrue(o.requestHeaders()
+				               .contains("Accept-Encoding", "gzip", true));
+				         return o;
+				      })
+				      .block();
 
+		res.dispose();
 		nettyContext.dispose();
 		nettyContext.onClose()
 		            .block();
@@ -81,6 +83,7 @@ public class HttpCompressionClientServerTests {
 		                   .blockFirst();
 		Assert.assertEquals("reply", reply);
 
+		resp.dispose();
 		nettyContext.dispose();
 		nettyContext.onClose()
 		            .block();
@@ -108,6 +111,8 @@ public class HttpCompressionClientServerTests {
 		                   .asString()
 		                   .blockFirst();
 		Assert.assertEquals("reply", reply);
+
+		resp.dispose();
 		nettyContext.dispose();
 		nettyContext.onClose()
 		            .block();
@@ -180,6 +185,8 @@ public class HttpCompressionClientServerTests {
 		                   .asString()
 		                   .blockFirst();
 		Assert.assertEquals("reply", reply);
+
+		resp.dispose();
 		nettyContext.dispose();
 		nettyContext.onClose()
 		            .block();
@@ -248,6 +255,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp.responseHeaders().get("Content-Encoding")).isNull();
 		assertThat(reply).isEqualTo(serverReply);
 
+		resp.dispose();
 		nettyContext.dispose();
 		nettyContext.onClose()
 		            .block();
@@ -274,6 +282,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(resp.responseHeaders().get("Content-Encoding")).isNull();
 		assertThat(reply).isEqualTo("reply");
 
+		resp.dispose();
 		nettyContext.dispose();
 		nettyContext.onClose()
 		            .block();
@@ -290,12 +299,18 @@ public class HttpCompressionClientServerTests {
 		HttpClient client = HttpClient.create(opt -> opt.compression(true)
 		                                                .connectAddress(() -> address(nettyContext)));
 
-		client.get("/test", req -> {
-			zip.set(req.requestHeaders().get("accept-encoding"));
-			return req;
-		}).block();
+		HttpClientResponse resp =
+				client.get("/test", req -> {
+				           zip.set(req.requestHeaders().get("accept-encoding"));
+				           return req;
+				      })
+				      .block();
 
 		assertThat(zip.get()).isEqualTo("gzip");
+		resp.dispose();
+		nettyContext.dispose();
+		nettyContext.onClose()
+				.block();
 	}
 
 	private InetSocketAddress address(NettyContext nettyContext) {

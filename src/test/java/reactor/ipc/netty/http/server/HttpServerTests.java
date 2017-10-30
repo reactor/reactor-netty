@@ -105,11 +105,7 @@ public class HttpServerTests {
 		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 
 		NettyContext c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> {
-
-			return resp.status(200)
-			                               .send();
-		                           })
+		                           .newHandler((req, resp) -> resp.status(200).send())
 		                           .block();
 
 		Flux<ByteBuf> src = Flux.range(0, 3)
@@ -129,6 +125,8 @@ public class HttpServerTests {
 		                              }))
 		    .collectList()
 		    .block();
+
+		c.dispose();
 	}
 
 	@Test
@@ -254,6 +252,7 @@ public class HttpServerTests {
 		// checking the response status, OK
 		assertThat(response.status().code()).isEqualTo(200);
 		// dispose the Netty context and wait for the channel close
+		response.dispose();
 		context.dispose();
 		context.onClose().block();
 
@@ -268,6 +267,7 @@ public class HttpServerTests {
 
 		// fails, response status is 200 and debugging shows the the previous handler is called
 		assertThat(response.status().code()).isEqualTo(201);
+		response.dispose();
 		context.dispose();
 		context.onClose().block();
 	}
@@ -278,12 +278,12 @@ public class HttpServerTests {
 		                           .newHandler((req, resp) -> Mono.error(new Exception("returnError")))
 		                           .block();
 
-		assertThat(HttpClient.create(c.address()
-		                              .getPort())
-		                     .get("/return", r -> r.failOnServerError(false))
-		                     .block()
-		                     .status()
-		                     .code()).isEqualTo(500);
+		HttpClientResponse res =
+				HttpClient.create(c.address().getPort())
+				          .get("/return", r -> r.failOnServerError(false))
+				          .block();
+		assertThat(res.status().code()).isEqualTo(500);
+		res.dispose();
 
 		c.dispose();
 
@@ -294,7 +294,7 @@ public class HttpServerTests {
 
 		AtomicInteger i = new AtomicInteger();
 
-		NettyContext c = HttpServer.create(0)
+		NettyContext server = HttpServer.create(0)
 		                           .newHandler((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
 		                                                          .sendString(Mono.just(i.incrementAndGet())
 		                                                                          .flatMap(d -> Mono.delay(
@@ -309,33 +309,35 @@ public class HttpServerTests {
 
 		CountDownLatch latch = new CountDownLatch(6);
 
-		TcpClient.create(c.address()
-		                  .getPort())
-		         .newHandler((in, out) -> {
-			         in.context()
-			           .addHandlerFirst(new HttpClientCodec());
+		NettyContext client = TcpClient.create(server.address()
+		                                             .getPort())
+		                               .newHandler((in, out) -> {
+			                                   in.context()
+			                                     .addHandlerFirst(new HttpClientCodec());
 
-			         in.receiveObject()
-			           .ofType(DefaultHttpContent.class)
-			           .as(ByteBufFlux::fromInbound)
-			           .asString()
-			           .log()
-			           .map(Integer::parseInt)
-			           .subscribe(d -> {
-				           for (int x = 0; x < d; x++) {
-					           latch.countDown();
-				           }
-			           });
+			                                   in.receiveObject()
+			                                     .ofType(DefaultHttpContent.class)
+			                                     .as(ByteBufFlux::fromInbound)
+			                                     .asString()
+			                                     .log()
+			                                     .map(Integer::parseInt)
+			                                     .subscribe(d -> {
+				                                         for (int x = 0; x < d; x++) {
+					                                         latch.countDown();
+				                                         }
+			                                     });
 
-			         return out.sendObject(Flux.just(request.retain(),
-					         request.retain(),
-					         request.retain()))
-			                   .neverComplete();
-		         })
-		         .block(Duration.ofSeconds(30));
+			                                   return out.sendObject(Flux.just(request.retain(),
+					                                                           request.retain(),
+					                                                           request.retain()))
+			                                             .neverComplete();
+		                               })
+		                               .block(Duration.ofSeconds(30));
 
 		Assert.assertTrue(latch.await(45, TimeUnit.SECONDS));
 
+		server.dispose();
+		client.dispose();
 	}
 
 	@Test
@@ -360,6 +362,8 @@ public class HttpServerTests {
 		            .expectNextSequence(test.toIterable())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+
+		c.dispose();
 	}
 
 	@Test
@@ -414,6 +418,14 @@ public class HttpServerTests {
 		Assert.assertNotEquals(response0.channel(), response6.channel());
 
 		HttpResources.reset();
+		response0.dispose();
+		response1.dispose();
+		response2.dispose();
+		response3.dispose();
+		response4.dispose();
+		response5.dispose();
+		response6.dispose();
+		c.dispose();
 	}
 
 
@@ -441,17 +453,18 @@ public class HttpServerTests {
 				                                        (req, resp) -> resp.sendString(Mono.just("hello!"))));
 
 		try {
-			assertThat(HttpClient.create(facade.getPort())
-			                     .get("/hello")
-			                     .block()
-			                     .status()
-			                     .code()).isEqualTo(200);
+			HttpClientResponse res =
+					HttpClient.create(facade.getPort())
+					          .get("/hello")
+					          .block();
+			assertThat(res.status().code()).isEqualTo(200);
+			res.dispose();
 
-			assertThat(HttpClient.create(facade.getPort())
-			                     .get("/helloMan", req -> req.failOnClientError(false))
-			                     .block()
-			                     .status()
-			                     .code()).isEqualTo(404);
+			res = HttpClient.create(facade.getPort())
+			                .get("/helloMan", req -> req.failOnClientError(false))
+			                .block();
+			assertThat(res.status().code()).isEqualTo(404);
+			res.dispose();
 		}
 		finally {
 			facade.shutdown();
@@ -515,6 +528,7 @@ public class HttpServerTests {
 
 		StepVerifier.create(response)
 		            .expectNextMatches(r -> {
+		                r.dispose();
 		                int code = r.status().code();
 		                HttpHeaders h = r.responseHeaders();
 		                if (code == 204 || code == 304) {
@@ -583,6 +597,8 @@ public class HttpServerTests {
 		doTestContentLengthHeadRequest("/7", server.address(), HttpMethod.HEAD, true, false);
 		doTestContentLengthHeadRequest("/8", server.address(), HttpMethod.HEAD, false, true);
 		doTestContentLengthHeadRequest("/9", server.address(), HttpMethod.HEAD, false, false);
+
+		server.dispose();
 	}
 
 	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,

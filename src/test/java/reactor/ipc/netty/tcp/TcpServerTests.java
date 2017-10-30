@@ -255,15 +255,17 @@ public class TcpServerTests {
 		NettyContext connected = server.newHandler(serverHandler)
 		                               .block(Duration.ofSeconds(30));
 
-		client.newHandler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
-		                                            .map(b -> out.alloc()
-		                                                        .buffer()
-		                                                        .writeBytes(b.getBytes()))))
-		      .block(Duration.ofSeconds(30));
+		NettyContext clientContext =
+				client.newHandler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
+				                                            .map(b -> out.alloc()
+				                                                         .buffer()
+				                                                         .writeBytes(b.getBytes()))))
+				      .block(Duration.ofSeconds(30));
 
 		assertTrue("Latch was counted down", latch.await(10, TimeUnit.SECONDS));
 
 		connected.dispose();
+		clientContext.dispose();
 	}
 
 	@Test
@@ -675,29 +677,30 @@ public class TcpServerTests {
 				                                    .concatMap(w -> out.send(w.collectList().map(jsonEncoder))))
 				         .block(Duration.ofSeconds(30));
 
-		TcpClient.create(o -> o.port(server.address().getPort()))
-		         .newHandler((in, out) -> {
-			         in.context(c -> c.addHandler(new JsonObjectDecoder()))
-			           .receive()
-			           .asString()
-			           .log("receive")
-			           .map(jsonDecoder)
-			           .concatMap(d -> Flux.fromArray(d))
-			           .subscribe(c -> dataLatch.countDown());
+		NettyContext client = TcpClient.create(o -> o.port(server.address().getPort()))
+		                               .newHandler((in, out) -> {
+			                               in.context(c -> c.addHandler(new JsonObjectDecoder()))
+			                                 .receive()
+			                                 .asString()
+			                                 .log("receive")
+			                                 .map(jsonDecoder)
+			                                 .concatMap(d -> Flux.fromArray(d))
+			                                 .subscribe(c -> dataLatch.countDown());
 
-			         return out.send(Flux.range(1, 10)
-			                             .map(it -> new Pojo("test" + it))
-			                             .log("send")
-			                             .collectList()
-			                             .map(jsonEncoder))
-			                   .neverComplete();
-		         })
-		         .block(Duration.ofSeconds(30));
+			                               return out.send(Flux.range(1, 10)
+			                                                   .map(it -> new Pojo("test" + it))
+			                                                   .log("send")
+			                                                   .collectList()
+			                                                   .map(jsonEncoder))
+			                                         .neverComplete();
+		                               })
+		                               .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(dataLatch.await(30, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(dataLatch.getCount()).isEqualTo(0);
 
 		server.dispose();
+		client.dispose();
 	}
 
 	@Test
@@ -742,28 +745,29 @@ public class TcpServerTests {
 		                                                           .log("flatmap-retry")))
 		                 .block(Duration.ofSeconds(30));
 
-		TcpClient.create(ops -> ops.connectAddress(() -> server.address()))
-		         .newHandler((in, out) -> {
-		             in.receive()
-		               .asString()
-		               .map(jsonDecoder)
-		               .concatMap(d -> Flux.fromArray(d))
-		               .log("receive")
-		               .subscribe(c -> latch.countDown());
+		NettyContext client = TcpClient.create(ops -> ops.connectAddress(() -> server.address()))
+		                               .newHandler((in, out) -> {
+		                                   in.receive()
+		                                     .asString()
+		                                     .map(jsonDecoder)
+		                                     .concatMap(d -> Flux.fromArray(d))
+		                                     .log("receive")
+		                                     .subscribe(c -> latch.countDown());
 
-		             return out.send(Flux.range(1, elem)
-		                                 .map(i -> new Pojo("test" + i))
-		                                 .log("send")
-		                                 .collectList()
-		                                 .map(jsonEncoder))
-		                       .neverComplete();
-		         })
-		         .block(Duration.ofSeconds(30));
+		                                   return out.send(Flux.range(1, elem)
+		                                                       .map(i -> new Pojo("test" + i))
+		                                                       .log("send")
+		                                                       .collectList()
+		                                                       .map(jsonEncoder))
+		                                             .neverComplete();
+		                               })
+		                               .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(latch.getCount()).isEqualTo(0);
 
 		server.dispose();
+		client.dispose();
 	}
 
 	private static class SimpleClient extends Thread {

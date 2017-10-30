@@ -66,6 +66,9 @@ public class FluxReceiveTest {
 		                            .onErrorResume(t -> Mono.empty()))
 		    .blockLast(Duration.ofSeconds(30));
 
+		server1.dispose();
+		server2.dispose();
+
 		ResourceLeakDetector.setLevel(Level.SIMPLE);
 	}
 }

@@ -132,6 +132,8 @@ public class NettyOutboundTest {
 				.asString()
 				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. It contains accents like é. GARBAGE")
 				.endsWith("GARBAGE End of File");
+
+		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
 	@Test
@@ -209,6 +211,8 @@ public class NettyOutboundTest {
 				.asString()
 				.startsWith("<- 1024 mark here")
 				.endsWith("End of File");
+
+		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
 	@Test
@@ -269,6 +273,8 @@ public class NettyOutboundTest {
 				.asString()
 				.startsWith("<- 1024 mark here")
 				.endsWith("End of File");
+
+		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
 	private static final FileChunkedStrategy FILE_CHUNKED_STRATEGY_1024_NOPIPELINE =
