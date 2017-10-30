@@ -171,7 +171,6 @@ public class UdpResources implements LoopResources {
 	 * Safely check if existing resource exist and proceed to update/cleanup if new
 	 * resources references are passed.
 	 *
-	 * @param ref the resources atomic reference
 	 * @param loops the eventual new {@link LoopResources}
 	 * @param onNew a {@link UdpResources} factory
 	 * @param name a name for resources
