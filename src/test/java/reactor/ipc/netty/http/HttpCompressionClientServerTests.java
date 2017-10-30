@@ -318,7 +318,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(zip.get()).isEqualTo("gzip");
 		resp.dispose();
 		connection.dispose();
-		connection.onClose()
+		connection.onDispose()
 				.block();
 	}
 
