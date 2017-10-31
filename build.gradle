@@ -97,10 +97,7 @@ configure(rootProject) { project ->
 	}
   }
 
-  ext.bundleImportPackages = ['com.fasterxml.jackson.core;resolution:=optional',
-							  'com.fasterxml.jackson.databind;resolution:=optional',
-							  'com.fasterxml.jackson.module;resolution:=optional',
-							  '*']
+  ext.bundleImportPackages = [ '!javax.annotation', '*']
 
   [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
 														   "-Xlint:cast",
@@ -201,7 +198,7 @@ configure(rootProject) { project ->
   // dependencies that are common across all java projects
   dependencies {
 	// JSR-305 annotations
-	optional "com.google.code.findbugs:jsr305:3.0.2"
+	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 
 	// Logging
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
