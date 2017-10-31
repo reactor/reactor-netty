@@ -233,8 +233,9 @@ public interface HttpServerRoutes extends
 	/**
 	 * Listen for WebSocket on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available e.g.
-	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * Additional regex matching is available e.g. "/test/{param}".
+	 * Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * They are not accessible in the handler provided as parameter.
 	 *
 	 * @param path The websocket path used by clients
 	 * @param handler an handler to invoke for the given condition
@@ -250,8 +251,9 @@ public interface HttpServerRoutes extends
 	/**
 	 * Listen for WebSocket on the passed path to be used as a routing condition. Incoming
 	 * connections will query the internal registry to invoke the matching handlers. <p>
-	 * Additional regex matching is available e.g.
-	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * Additional regex matching is available e.g. "/test/{param}".
+	 * Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * They are not accessible in the handler provided as parameter.
 	 *
 	 * @param path The websocket path used by clients
 	 * @param handler an handler to invoke for the given condition
