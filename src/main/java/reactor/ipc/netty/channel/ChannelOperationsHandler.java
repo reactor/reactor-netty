@@ -73,6 +73,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	Queue<?>                            pendingWrites;
 	ChannelHandlerContext               ctx;
 	boolean                             flushOnEach;
+	boolean                             flushOnEachWithEventLoop;
 
 	long                                pendingBytes;
 	ContextHandler<?>                   lastContext;
@@ -82,6 +83,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	volatile boolean innerActive;
 	volatile boolean removed;
 	volatile int     wip;
+	volatile long    scheduledFlush;
 
 	@SuppressWarnings("unchecked")
 	ChannelOperationsHandler(ContextHandler<?> contextHandler) {
@@ -257,8 +259,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	@Override
-	public NettyPipeline.SendOptions flushOnEach() {
+	public NettyPipeline.SendOptions flushOnEach(boolean withEventLoop) {
 		flushOnEach = true;
+		flushOnEachWithEventLoop = withEventLoop;
 		return this;
 	}
 
@@ -276,7 +279,21 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				    .isWritable() //force flush if write buffer full
 				) {
 			pendingBytes = 0L;
-			return ctx.writeAndFlush(msg, promise);
+
+			ChannelFuture future = ctx.write(msg, promise);
+			if (flushOnEachWithEventLoop && ctx.channel().isWritable()) {
+				EventLoop eventLoop = ctx.channel().eventLoop();
+				if (eventLoop.inEventLoop()) {
+					scheduleFlush();
+				}
+				else {
+					eventLoop.execute(() -> scheduleFlush());
+				}
+			}
+			else {
+				ctx.flush();
+			}
+			return future;
 		}
 		else {
 			if (msg instanceof ByteBuf) {
@@ -300,6 +317,25 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				ctx.flush();
 			}
 			return future;
+		}
+	}
+
+	void scheduleFlush() {
+		if (SCHEDULED_FLUSH.getAndIncrement(this) == 0) {
+			ctx.channel()
+			   .eventLoop()
+			   .execute(() -> {
+			       long missed = scheduledFlush;
+			       for(;;) {
+			           if (hasPendingWriteBytes()) {
+			               ctx.flush();
+			           }
+			           missed = SCHEDULED_FLUSH.addAndGet(this, -missed);
+			           if (missed == 0) {
+			               break;
+			           }
+			       }
+			   });
 		}
 	}
 
@@ -785,6 +821,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@SuppressWarnings("rawtypes")
 	static final AtomicIntegerFieldUpdater<ChannelOperationsHandler> WIP =
 			AtomicIntegerFieldUpdater.newUpdater(ChannelOperationsHandler.class, "wip");
+	static final AtomicLongFieldUpdater<ChannelOperationsHandler> SCHEDULED_FLUSH =
+			AtomicLongFieldUpdater.newUpdater(ChannelOperationsHandler.class, "scheduledFlush");
 	static final Logger                                              log =
 			Loggers.getLogger(ChannelOperationsHandler.class);
 

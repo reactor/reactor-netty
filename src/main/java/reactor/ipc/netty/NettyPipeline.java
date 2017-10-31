@@ -83,10 +83,24 @@ public interface NettyPipeline {
 
 		/**
 		 * Make the underlying channel flush item by item.
+		 * Flush operation will be executed at some time in the future.
 		 *
 		 * @return this builder
 		 */
-		SendOptions flushOnEach();
+		default SendOptions flushOnEach() {
+			return flushOnEach(true);
+		}
+
+		/**
+		 * Make the underlying channel flush item by item.
+		 * Whether flush operation is executed immediately
+		 * or not is specified by <code>withEventLoop</code> parameter.
+		 *
+		 * @param withEventLoop flag specifying whether flush operation
+		 *                      will be executed immediately or at some time in the future
+		 * @return this builder
+		 */
+		SendOptions flushOnEach(boolean withEventLoop);
 
 
 	}
