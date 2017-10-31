@@ -28,6 +28,8 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.SucceededFuture;
 import org.reactivestreams.Publisher;
+import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
@@ -52,6 +54,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	final boolean               secure;
 	final ChannelPool           pool;
 	final DirectProcessor<Void> onReleaseEmitter;
+	final Disposable.Swap onCancel;
 
 	volatile Future<CHANNEL> future;
 
@@ -71,6 +74,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			ChannelPool pool) {
 		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
 		this.clientOptions = options;
+		this.onCancel = Disposables.swap();
 		this.secure = secure;
 		this.pool = pool;
 		this.onReleaseEmitter = DirectProcessor.create();
@@ -122,6 +126,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	@SuppressWarnings("unchecked")
 	protected void terminateChannel(Channel channel) {
+		onCancel.dispose();
 		release((CHANNEL) channel);
 	}
 
@@ -141,13 +146,15 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 						"asynchronous user cancellation");
 			}
 			if (future.isSuccess()) {
-				disposeOperationThenRelease(future.get());
+				onCancel.dispose();
+				release(future.get());
 			}
 			sink.success();
 			return;
 		}
 
 		if (!future.isSuccess()) {
+			onCancel.dispose();
 			if (future.cause() != null) {
 				fireContextError(future.cause());
 			}
@@ -170,6 +177,11 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
+	protected Swap disposable() {
+		return onCancel;
+	}
+
+	@Override
 	protected Publisher<Void> onCloseOrRelease(Channel channel) {
 		return onReleaseEmitter;
 	}
@@ -181,7 +193,8 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 				log.debug("Dropping acquisition {} because of {}",
 						"asynchronous user cancellation");
 			}
-			disposeOperationThenRelease(c);
+			onCancel.dispose();
+			release(c);
 			sink.success();
 			return;
 		}
@@ -214,10 +227,16 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
+	public boolean isDisposed() {
+		return onCancel.isDisposed();
+	}
+
+	@Override
 	@SuppressWarnings("unchecked")
 	public void dispose() {
-		Future<CHANNEL> f = FUTURE.getAndSet(this, DISPOSED);
-		if (f == null || f == DISPOSED) {
+		onCancel.dispose();
+		Future<CHANNEL> f = FUTURE.get(this);
+		if (f == null) {
 			return;
 		}
 		if (!f.isDone()) {
@@ -225,18 +244,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 
 		try {
-			CHANNEL c = f.get();
-
-			if (!c.eventLoop()
-			      .inEventLoop()) {
-				c.eventLoop()
-				 .execute(() -> disposeOperationThenRelease(c));
-
-			}
-			else {
-				disposeOperationThenRelease(c);
-			}
-
+			release(f.get());
 		}
 		catch (Exception e) {
 			log.error("Failed releasing channel", e);
@@ -244,36 +252,28 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 	}
 
-	final void disposeOperationThenRelease(CHANNEL c) {
-		ChannelOperations<?, ?> ops = ChannelOperations.get(c);
-		//defer to operation dispose if present
-		if (ops != null) {
-			ops.inbound.cancel();
-			return;
-		}
-
-		release(c);
-	}
-
 	final void release(CHANNEL c) {
-		if (log.isDebugEnabled()) {
-			log.debug("Releasing channel: {}", c.toString());
+		if (FUTURE.getAndSet(this, DISPOSED) != DISPOSED) {
+			if (log.isDebugEnabled()) {
+				log.debug("Releasing channel: {}", c.toString());
+			}
+
+			if (!NettyContext.isPersistent(c) && c.isActive()) {
+				c.close();
+			}
+			pool.release(c)
+			    .addListener(f -> {
+				    if (f.isSuccess()) {
+					    onReleaseEmitter.onComplete();
+				    }
+				    else {
+					    onReleaseEmitter.onError(f.cause());
+				    }
+			    });
 		}
-
-		if (!NettyContext.isPersistent(c) && c.isActive()) {
-			c.close();
+		else {
+			onReleaseEmitter.onComplete();
 		}
-
-		pool.release(c)
-		    .addListener(f -> {
-			    if (f.isSuccess()) {
-				    onReleaseEmitter.onComplete();
-			    }
-			    else {
-				    onReleaseEmitter.onError(f.cause());
-			    }
-		    });
-
 	}
 
 	@Override

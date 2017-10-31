@@ -32,6 +32,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
@@ -298,6 +299,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
 		accept(ch);
+	}
+
+	protected Disposable.Swap disposable() {
+		return Disposables.swap();
 	}
 
 	/**

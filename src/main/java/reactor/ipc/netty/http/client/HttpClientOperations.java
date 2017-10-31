@@ -252,7 +252,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void onInboundCancel() {
+	protected void afterInboundCancel() {
 		channel().close();
 	}
 
