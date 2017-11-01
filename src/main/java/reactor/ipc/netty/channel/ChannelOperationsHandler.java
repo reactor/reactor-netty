@@ -276,13 +276,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				    .isWritable() //force flush if write buffer full
 				) {
 			pendingBytes = 0L;
-
-			ChannelFuture future = ctx.writeAndFlush(msg, promise);
-			
-			if (inner != null && !hasPendingWriteBytes()) {
-				inner.justFlushed = true;
-			}
-			return future;
+			return ctx.writeAndFlush(msg, promise);
 		}
 		else {
 			if (msg instanceof ByteBuf) {
@@ -300,16 +294,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (log.isTraceEnabled()) {
 				log.trace("{} Pending write size = {}", ctx.channel(), pendingBytes);
 			}
-			if (inner != null && inner.justFlushed) {
-				inner.justFlushed = false;
-			}
 			ChannelFuture future = ctx.write(msg, promise);
 			if (!ctx.channel().isWritable()) {
 				pendingBytes = 0L;
 				ctx.flush();
-				if (inner != null && !hasPendingWriteBytes()) {
-					inner.justFlushed = true;
-				}
 			}
 			return future;
 		}
@@ -461,7 +449,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		volatile int          wip;
 
 		boolean        inactive;
-		boolean        justFlushed;
 		/**
 		 * The current outstanding request amount.
 		 */
@@ -501,13 +488,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (p != 0L) {
 				produced = 0L;
 				produced(p);
-				if (!justFlushed) {
+				if (parent.hasPendingWriteBytes()) {
 					if (parent.ctx.channel()
 					              .isActive()) {
 						parent.ctx.flush();
-						if (!parent.hasPendingWriteBytes()) {
-						    justFlushed = true;
-						}
 					}
 					else {
 						promise.setFailure(new AbortedException("Connection has been closed"));
@@ -546,9 +530,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				if (parent.ctx.channel()
 				              .isActive()) {
 					parent.ctx.flush();
-					if (!parent.hasPendingWriteBytes()) {
-					    justFlushed = true;
-					}
 				}
 				else {
 					promise.setFailure(new AbortedException("Connection has been closed"));
