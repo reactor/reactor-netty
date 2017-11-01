@@ -378,36 +378,43 @@ public class HttpServerTests {
 		HttpClientResponse response0 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/index.html")
+		                                         .doOnNext(r -> r.receive().subscribe())
 		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response1 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test.css")
+		                                         .doOnNext(r -> r.receive().subscribe())
 		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response2 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test1.css")
+		                                         .doOnNext(r -> r.receive().subscribe())
 		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response3 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test2.css")
+		                                         .doOnNext(r -> r.receive().subscribe())
 		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response4 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test3.css")
+		                                         .doOnNext(r -> r.receive().subscribe())
 		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response5 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test4.css")
+		                                         .doOnNext(r -> r.receive().subscribe())
 		                                         .block(Duration.ofSeconds(30));
 
 		HttpClientResponse response6 = HttpClient.create(opts -> opts.port(c.address().getPort())
 		                                                             .disablePool())
 		                                         .get("/test/test5.css")
+		                                         .doOnNext(r -> r.receive().subscribe())
 		                                         .block(Duration.ofSeconds(30));
 
 		Assert.assertEquals(response0.channel(), response1.channel());

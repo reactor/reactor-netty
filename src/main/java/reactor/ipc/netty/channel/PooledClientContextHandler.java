@@ -126,7 +126,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	@Override
 	@SuppressWarnings("unchecked")
 	protected void terminateChannel(Channel channel) {
-		onCancel.dispose();
 		release((CHANNEL) channel);
 	}
 

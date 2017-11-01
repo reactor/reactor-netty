@@ -94,7 +94,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	final HttpHeaders requestHeaders;
 
 	volatile ResponseState responseState;
-	int inboundPrefetch;
 
 	boolean started;
 
@@ -110,7 +109,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.nettyRequest = replaced.nettyRequest;
 		this.responseState = replaced.responseState;
 		this.redirectable = replaced.redirectable;
-		this.inboundPrefetch = replaced.inboundPrefetch;
 		this.requestHeaders = replaced.requestHeaders;
 		this.clientError = replaced.clientError;
 		this.serverError = replaced.serverError;
@@ -129,7 +127,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
 		this.requestHeaders.set(HttpHeaderNames.USER_AGENT, HttpClient.USER_AGENT);
-		this.inboundPrefetch = 16;
 		chunkedTransfer(true);
 	}
 
@@ -547,7 +544,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 
 			if (checkResponseCode(response)) {
-				prefetchMore(ctx);
 				parentContext().fireContextActive(this);
 			}
 			if (msg instanceof FullHttpResponse) {
@@ -588,7 +584,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		super.onInboundNext(ctx, msg);
-		prefetchMore(ctx);
 	}
 
 	@Override
@@ -656,14 +651,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	final HttpRequest getNettyRequest() {
 		return nettyRequest;
-	}
-
-	final void prefetchMore(ChannelHandlerContext ctx) {
-		int inboundPrefetch = this.inboundPrefetch - 1;
-		if (inboundPrefetch >= 0) {
-			this.inboundPrefetch = inboundPrefetch;
-			ctx.read();
-		}
 	}
 
 	final void setNettyResponse(HttpResponse nettyResponse) {
