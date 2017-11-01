@@ -37,6 +37,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
@@ -517,7 +518,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 			if (f != null) {
 				if (!f.isDone() && parent.hasPendingWriteBytes()) {
-					parent.pendingWriteOffer.test(f, PENDING_WRITES);
+					EventLoop eventLoop = parent.ctx.channel().eventLoop();
+					if (eventLoop.inEventLoop()) {
+						parent.pendingWriteOffer.test(f, PENDING_WRITES);
+					}
+					else {
+						eventLoop.execute(() -> parent.pendingWriteOffer.test(f, PENDING_WRITES));
+					}
 				}
 				f.addListener(this);
 			}
@@ -551,7 +558,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 			if (f != null) {
 				if (!f.isDone() && parent.hasPendingWriteBytes()) {
-					parent.pendingWriteOffer.test(f, PENDING_WRITES);
+					EventLoop eventLoop = parent.ctx.channel().eventLoop();
+					if (eventLoop.inEventLoop()) {
+						parent.pendingWriteOffer.test(f, PENDING_WRITES);
+					}
+					else {
+						eventLoop.execute(() -> parent.pendingWriteOffer.test(f, PENDING_WRITES));
+					}
 				}
 				f.addListener(this);
 			}

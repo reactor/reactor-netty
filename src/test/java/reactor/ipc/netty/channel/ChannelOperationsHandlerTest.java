@@ -31,6 +31,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.SocketUtils;
@@ -44,7 +45,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ChannelOperationsHandlerTest {
 
 	@Test
-	public void publisherSenderOnCompleteFlushInProgress() {
+	public void publisherSenderOnCompleteFlushInProgress_1() {
+		doTestPublisherSenderOnCompleteFlushInProgress(false);
+	}
+
+	@Test
+	public void publisherSenderOnCompleteFlushInProgress_2() {
+		doTestPublisherSenderOnCompleteFlushInProgress(true);
+	}
+
+	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler) {
 		NettyContext server =
 				HttpServer.create(0)
 				          .newHandler((req, res) ->
@@ -55,6 +65,9 @@ public class ChannelOperationsHandlerTest {
 				          .block(Duration.ofSeconds(30));
 
 		Flux<String> flux = Flux.range(1, 257).map(count -> count + "");
+		if (useScheduler) {
+			flux.publishOn(Schedulers.single());
+		}
 		Mono<HttpClientResponse> client =
 				HttpClient.create(server.address().getPort())
 				          .post("/", req -> req.sendString(flux));
