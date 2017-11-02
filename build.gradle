@@ -250,6 +250,7 @@ configure(rootProject) { project ->
 
   jar {
 	manifest {
+	  bundleImportPackages = [ '!javax.annotation', *bundleImportPackages]
 	  instruction 'Import-Package', bundleImportPackages.join(',')
 	  attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
 			  "Implementation-Title": project.name,
