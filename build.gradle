@@ -97,10 +97,7 @@ configure(rootProject) { project ->
 	}
   }
 
-  ext.bundleImportPackages = ['com.fasterxml.jackson.core;resolution:=optional',
-							  'com.fasterxml.jackson.databind;resolution:=optional',
-							  'com.fasterxml.jackson.module;resolution:=optional',
-							  '*']
+  ext.bundleImportPackages = [ '!javax.annotation', '*']
 
   [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
 														   "-Xlint:cast",
@@ -250,7 +247,6 @@ configure(rootProject) { project ->
 
   jar {
 	manifest {
-	  bundleImportPackages = [ '!javax.annotation', *bundleImportPackages]
 	  instruction 'Import-Package', bundleImportPackages.join(',')
 	  attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
 			  "Implementation-Title": project.name,
