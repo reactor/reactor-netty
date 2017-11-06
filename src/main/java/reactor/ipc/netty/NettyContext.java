@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOutboundHandler;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import reactor.core.Disposable;
@@ -184,6 +185,10 @@ public interface NettyContext extends Disposable {
 		}
 		if (c instanceof ServerSocketChannel) {
 			return ((ServerSocketChannel) c).localAddress();
+		}
+		if (c instanceof DatagramChannel) {
+			InetSocketAddress a = ((DatagramChannel) c).remoteAddress();
+			return a != null ? a : ((DatagramChannel)c ).localAddress();
 		}
 		throw new IllegalStateException("Does not have an InetSocketAddress");
 	}

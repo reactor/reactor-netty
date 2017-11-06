@@ -72,17 +72,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	public InetSocketAddress address() {
-		Channel c = f.channel();
-		if (c instanceof SocketChannel) {
-			return ((SocketChannel) c).remoteAddress();
-		}
-		if (c instanceof ServerSocketChannel) {
-			return ((ServerSocketChannel) c).localAddress();
-		}
-		if (c instanceof DatagramChannel) {
-			return ((DatagramChannel) c).localAddress();
-		}
-		throw new IllegalStateException("Does not have an InetSocketAddress");
+		return ((ServerSocketChannel) f.channel()).localAddress();
 	}
 
 	@Override
