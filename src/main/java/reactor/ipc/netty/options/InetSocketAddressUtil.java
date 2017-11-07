@@ -29,7 +29,7 @@ import io.netty.util.NetUtil;
  * initially. This removes the need to do unnecessary reverse DNS lookups.
  *
  */
-class InetSocketAddressUtil {
+public class InetSocketAddressUtil {
 
 	/**
 	 * Creates unresolved InetSocketAddress. Numeric IP addresses will be detected and

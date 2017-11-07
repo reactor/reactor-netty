@@ -16,266 +16,558 @@
 
 package reactor.ipc.netty.tcp;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.NettyConnector;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
-import reactor.ipc.netty.options.NettyOptions;
-import reactor.ipc.netty.options.ServerOptions;
+import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import javax.annotation.Nullable;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.Scanner;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
 /**
- * * A TCP server connector.
+ * A TcpServer allows to build in a safe immutable way a TCP server that is materialized
+ * and connecting when {@link #bind(ServerBootstrap)} is ultimately called.
+ * <p>
+ * <p> Internally, materialization happens in two phases, first {@link #configure()} is
+ * called to retrieve a ready to use {@link ServerBootstrap} then {@link #bind(ServerBootstrap)}
+ * is called.
+ * <p>
+ * <p> Example:
+ * <pre>
+ * {@code TcpServer.create()
+ * .doOnBind(startMetrics)
+ * .doOnBound(startedMetrics)
+ * .doOnUnbound(stopMetrics)
+ * .host("127.0.0.1")
+ * .port(1234)
+ * .secure()
+ * .send(ByteBufFlux.fromByteArrays(pub))
+ * .block() }
  *
  * @author Stephane Maldini
- * @author Violeta Georgieva
  */
-public class TcpServer implements NettyConnector<NettyInbound, NettyOutbound> {
+public abstract class TcpServer {
 
-	private static final int DEFAULT_PORT_FOR_CREATE = 0;
+	static final int DEFAULT_PORT = 0;
 
 	/**
-	 * Bind a new TCP server to "localhost" on a randomly assigned port.
-	 * <p> The assigned port can be found once a handler has been bound, using
-	 * {@link Connection#address()} and its {@code getPort()} method.
-	 * <p> Handlers will run on the same thread they have been receiving IO events.
-	 * The type of emitted data or received data is {@link ByteBuf}
+	 * Prepare a {@link TcpServer}
 	 *
-	 * @return a new {@link TcpServer}
+	 * @return a {@link TcpServer}
 	 */
 	public static TcpServer create() {
-		return builder().listenAddress(new InetSocketAddress(NetUtil.LOCALHOST, DEFAULT_PORT_FOR_CREATE)).build();
+		return TcpServerBind.INSTANCE;
 	}
 
 	/**
-	 * Bind a new TCP server to the bind address and port provided through the options.
-	 * Use {@literal 0} to let the system assign a random port, or
-	 * {@link NettyOptions#DEFAULT_PORT} once to use a global default port.
-	 * <p> Handlers will run on the same thread they have been receiving IO events.
-	 * The type of emitted data or received data is {@link ByteBuf}
+	 * The address to which this server should bind on subscribe.
 	 *
-	 * @param options {@link ServerOptions} configuration input
+	 * @param bindingAddressSupplier A supplier of the address to bind to.
+	 *
 	 * @return a new {@link TcpServer}
 	 */
-	public static TcpServer create(Consumer<? super ServerOptions.Builder<?>> options) {
-		return builder().options(options).build();
+	public final TcpServer addressSupplier(Supplier<? extends SocketAddress> bindingAddressSupplier) {
+		Objects.requireNonNull(bindingAddressSupplier, "bindingAddressSupplier");
+		return bootstrap(b -> b.localAddress(bindingAddressSupplier.get()));
 	}
 
 	/**
-	 * Bind a new TCP server to "localhost" on the given port. Use {@literal 0} to let
-	 * the system assign a random port, or {@link NettyOptions#DEFAULT_PORT} once to use
-	 * a global default port.
-	 * <p> Handlers will run on the same thread they have been receiving IO events.
-	 * The type of emitted data or received data is {@link ByteBuf}
+	 * Inject default attribute to the future child {@link Channel} connections. They
+	 * will be available via {@link Channel#attr(AttributeKey)}.
 	 *
-	 * @param port the port to listen on loopback
+	 * @param key the attribute key
+	 * @param value the attribute value
+	 * @param <T> the attribute type
+	 *
+	 * @return a new {@link TcpServer}
+	 *
+	 * @see ServerBootstrap#childAttr(AttributeKey, Object)
+	 */
+	public final <T> TcpServer attr(AttributeKey<T> key, T value) {
+		Objects.requireNonNull(key, "key");
+		Objects.requireNonNull(value, "value");
+		return bootstrap(b -> b.childAttr(key, value));
+	}
+
+	/**
+	 * Apply {@link ServerBootstrap} configuration given mapper taking currently configured one
+	 * and returning a new one to be ultimately used for socket binding. <p> Configuration
+	 * will apply during {@link #configure()} phase.
+	 *
+	 * @param bootstrapMapper A bootstrap mapping function to update configuration and return an
+	 * enriched bootstrap.
+	 *
 	 * @return a new {@link TcpServer}
 	 */
-	public static TcpServer create(int port) {
-		return builder().listenAddress(new InetSocketAddress(port)).build();
+	public final TcpServer bootstrap(Function<? super ServerBootstrap, ? extends ServerBootstrap> bootstrapMapper) {
+		return new TcpServerBootstrap(this, bootstrapMapper);
 	}
 
 	/**
-	 * Bind a new TCP server to the given bind address on a randomly assigned port.
-	 * <p> The assigned port can be found once a handler has been bound, using
-	 * {@link Connection#address()} and its {@code getPort()} method.
-	 * <p> Handlers will run on the same thread they have been receiving IO events.
-	 * The type of emitted data or received data is {@link ByteBuf}
+	 * Bind the {@link TcpServer} and return a {@link Mono} of {@link Connection}. If
+	 * {@link Mono} is cancelled, the underlying binding will be aborted. Once the {@link
+	 * Connection} has been emitted and is not necessary anymore, disposing main server
+	 * loop must be done by the user via {@link Connection#dispose()}.
 	 *
-	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
-	 * default port
-	 * @return a new {@link TcpServer}
-	 */
-	public static TcpServer create(String bindAddress) {
-		return create(bindAddress, DEFAULT_PORT_FOR_CREATE);
-	}
-
-	/**
-	 * Bind a new TCP server to the given bind address and port. Use {@literal 0} to let
-	 * the system assign a random port, or {@link NettyOptions#DEFAULT_PORT} once to use
-	 * a global default port.
-	 * <p> Handlers will run on the same thread they have been receiving IO events.
-	 * The type of emitted data or received data is {@link ByteBuf}
+	 * If updateConfiguration phase fails, a {@link Mono#error(Throwable)} will be returned;
 	 *
-	 * @param bindAddress bind address (e.g. "127.0.0.1") to create the server on the
-	 * passed port
-	 * @param port the port to listen on the passed bind address
-	 * @return a new {@link TcpServer}
+	 * @return a {@link Mono} of {@link Connection}
 	 */
-	public static TcpServer create(String bindAddress, int port) {
-		return builder().bindAddress(bindAddress).port(port).build();
-	}
-
-	/**
-	 * Creates a builder for {@link TcpServer TcpServer}
-	 *
-	 * @return a new TcpServer builder
-	 */
-	public static TcpServer.Builder builder() {
-		return new TcpServer.Builder();
-	}
-
-	final ServerOptions options;
-
-	protected TcpServer(TcpServer.Builder builder) {
-		ServerOptions.Builder<?> serverOptionsBuilder = ServerOptions.builder();
-		if (Objects.isNull(builder.options)) {
-			if (Objects.isNull(builder.bindAddress)) {
-				serverOptionsBuilder.listenAddress(builder.listenAddress.get());
-			}
-			else {
-				serverOptionsBuilder.host(builder.bindAddress).port(builder.port);
-			}
+	public final Mono<? extends Connection> bind() {
+		ServerBootstrap b;
+		try{
+			b = configure();
 		}
-		else {
-			builder.options.accept(serverOptionsBuilder);
+		catch (Throwable t){
+			Exceptions.throwIfFatal(t);
+			return Mono.error(t);
 		}
-		if (!serverOptionsBuilder.isLoopAvailable()) {
-			serverOptionsBuilder.loopResources(TcpResources.get());
-		}
-		this.options = serverOptionsBuilder.build();
+		return bind(b);
 	}
 
 	/**
-	 * @param options server options
+	 * Bind the {@link TcpServer} and return a {@link Mono} of {@link Connection}
+	 *
+	 * @param b the {@link ServerBootstrap} to bind
+	 *
+	 * @return a {@link Mono} of {@link Connection}
 	 */
-	protected TcpServer(ServerOptions options) {
-		this.options = Objects.requireNonNull(options, "options");
+	public abstract Mono<? extends Connection> bind(ServerBootstrap b);
+
+	/**
+	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
+	 * returned {@link Connection} offers simple server API, including to {@link
+	 * Connection#disposeNow()} shut it down in a blocking fashion. The max startup
+	 * timeout is 45 seconds.
+	 *
+	 * @return a {@link Connection}
+	 */
+	public final Connection bindNow() {
+		return bindNow(Duration.ofSeconds(45));
 	}
 
-	@Override
-	public final Mono<? extends Connection> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+	/**
+	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
+	 * returned {@link Connection} offers simple server API, including to {@link
+	 * Connection#disposeNow()} shut it down in a blocking fashion.
+	 *
+	 * @param timeout max startup timeout
+	 *
+	 * @return a {@link Connection}
+	 */
+	public final Connection bindNow(Duration timeout) {
+		Objects.requireNonNull(timeout, "timeout");
+		return Objects.requireNonNull(bind().block(timeout), "aborted");
+	}
+
+	/**
+	 * Start a Server in a fully blocking fashion, not only waiting for it to initialize
+	 * but also blocking during the full lifecycle of the client/server. Since most
+	 * servers will be long-lived, this is more adapted to running a server out of a main
+	 * method, only allowing shutdown of the servers through sigkill.
+	 * <p>
+	 * Note that a {@link Runtime#addShutdownHook(Thread) JVM shutdown hook} is added by
+	 * this method in order to properly disconnect the client/server upon receiving a
+	 * sigkill signal.
+	 *
+	 * @param timeout a timeout for server shutdown
+	 * @param onStart an optional callback on server start
+	 */
+	public final void bindUntilJavaShutdown(Duration timeout, @Nullable Consumer<Connection> onStart) {
+
+		Objects.requireNonNull(timeout, "timeout");
+		Connection facade = bindNow();
+
+		Objects.requireNonNull(facade, "facade");
+
+		if (onStart != null) {
+			onStart.accept(facade);
+		}
+
+		Runtime.getRuntime()
+				.addShutdownHook(new Thread(() -> facade.disposeNow(timeout)));
+
+		facade.onDispose()
+				.block();
+	}
+
+
+	/**
+	 * Materialize a ServerBootstrap from the parent {@link TcpServer} chain to use with {@link
+	 * #bind(ServerBootstrap)} or separately
+	 *
+	 * @return a configured {@link ServerBootstrap}
+	 */
+	public ServerBootstrap configure() {
+		return DEFAULT_BOOTSTRAP.clone();
+	}
+
+	/**
+	 * Setup a callback called when {@link io.netty.channel.ServerChannel} is about to
+	 * bind.
+	 *
+	 * @param doOnBind a consumer observing server start event
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer doOnBind(Consumer<? super ServerBootstrap> doOnBind) {
+		Objects.requireNonNull(doOnBind, "doOnBind");
+		return new TcpServerLifecycle(this, doOnBind, null, null);
+
+	}
+
+	/**
+	 * Setup a callback called when {@link io.netty.channel.ServerChannel} is
+	 * bound.
+	 *
+	 * @param doOnBound a consumer observing server started event
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer doOnBound(Consumer<? super Connection> doOnBound) {
+		Objects.requireNonNull(doOnBound, "doOnBound");
+		return new TcpServerLifecycle(this, null, doOnBound, null);
+	}
+
+	/**
+	 * Setup a callback called when a remote client is connected
+	 *
+	 * @param doOnConnection a consumer observing connected clients
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer doOnConnection(Consumer<? super Connection> doOnConnection) {
+		Objects.requireNonNull(doOnConnection, "doOnConnection");
+		return doOnBound(s -> ((DisposableServer)s).connections().subscribe(doOnConnection));
+	}
+
+	/**
+	 * Setup a callback called when {@link io.netty.channel.ServerChannel} is
+	 * unbound.
+	 *
+	 * @param doOnUnbind a consumer observing server stop event
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer doOnUnbound(Consumer<? super Connection> doOnUnbind) {
+		Objects.requireNonNull(doOnUnbind, "doOnUnbound");
+		return new TcpServerLifecycle(this, null, null, doOnUnbind);
+	}
+
+	/**
+	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
+	 * has been bound and after it has been unbound.
+	 *
+	 * @param onBind a consumer observing server start event
+	 * @param onBound a consumer observing server started event
+	 * @param onUnbound a consumer observing server stop event
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer doOnLifecycle(Consumer<? super ServerBootstrap> onBind,
+										 Consumer<? super Connection> onBound,
+										 Consumer<? super Connection> onUnbound) {
+		Objects.requireNonNull(onBind, "onBind");
+		Objects.requireNonNull(onBound, "onBound");
+		Objects.requireNonNull(onUnbound, "onUnbound");
+		return new TcpServerLifecycle(this, onBind, onBound, onUnbound);
+	}
+
+	/**
+	 * Attach an IO handler to react on connected client
+	 *
+	 * @param handler an IO handler that can dispose underlying connection when {@link
+	 * Publisher} terminates.
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	@SuppressWarnings("unchecked")
+	public final TcpServer handler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
-		return Mono.create(sink -> {
-			ServerBootstrap b = options.get();
-			SocketAddress local = options.getAddress();
-			b.localAddress(local);
-			ContextHandler<Channel> contextHandler = doHandler(handler, sink);
-			b.childHandler(contextHandler);
-			if(log.isDebugEnabled()){
-				b.handler(loggingHandler());
+		return doOnConnection(c -> {
+			if (log.isDebugEnabled()) {
+				log.debug("{} handler is being applied: {}", c.channel(), handler);
 			}
-			contextHandler.setFuture(b.bind());
+
+			Mono.fromDirect(handler.apply((NettyInbound) c, (NettyOutbound) c))
+			                       .subscribe(c.disposeSubscriber());
 		});
 	}
 
 	/**
-	 * Get a copy of the {@link ServerOptions} currently in effect.
+	 * The host to which this server should bind.
 	 *
-	 * @return the server options
+	 * @param host The host to bind to.
+	 *
+	 * @return a new {@link TcpServer}
 	 */
-	public ServerOptions options() {
-		return this.options.duplicate();
-	}
-
-	@Override
-	public String toString() {
-		return "TcpServer: " + options.asSimpleString();
+	public final TcpServer host(String host) {
+		Objects.requireNonNull(host, "host");
+		return bootstrap(b -> b.localAddress(host, getPort(b)));
 	}
 
 	/**
-	 * Return the current logging handler for the server
-	 * @return the current logging handler for the server
+	 * Return true if that {@link TcpServer} secured via SSL transport
+	 *
+	 * @return true if that {@link TcpServer} secured via SSL transport
 	 */
-	protected LoggingHandler loggingHandler(){
-		return loggingHandler;
+	public final boolean isSecure(){
+		return sslContext() != null;
 	}
 
 	/**
-	 * Create a {@link ContextHandler} for {@link ServerBootstrap#childHandler()}
+	 * Remove any previously applied SSL configuration customization
 	 *
-	 * @param handler user provided in/out handler
-	 * @param sink user provided bind handler
-	 *
-	 * @return a new {@link ContextHandler}
+	 * @return a new {@link TcpServer}
 	 */
-	protected ContextHandler<Channel> doHandler(
-			BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
-			MonoSink<Connection> sink) {
-		return ContextHandler.newServerContext(sink,
-				options,
-				loggingHandler(),
-				(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
+	public final TcpServer noSSL() {
+		return new TcpServerUnsecure(this);
 	}
 
-	static final LoggingHandler loggingHandler = new LoggingHandler(TcpServer.class);
-
-	static final Logger log = Loggers.getLogger(TcpServer.class);
-
-	public static final class Builder {
-		private String bindAddress = null;
-		private int port = 80;
-		private Supplier<InetSocketAddress> listenAddress = () -> new InetSocketAddress(NetUtil.LOCALHOST, port);
-		private Consumer<? super ServerOptions.Builder<?>> options;
-
-		private Builder() {
-		}
-
-		/**
-		 * The address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
-		 *
-		 * @param bindAddress address to listen for (e.g. 0.0.0.0 or 127.0.0.1)
-		 * @return {@code this}
-		 */
-		public final Builder bindAddress(String bindAddress) {
-			this.bindAddress = Objects.requireNonNull(bindAddress, "bindAddress");
-			return this;
-		}
-
-		/**
-		 * The {@link InetSocketAddress} to listen on.
-		 *
-		 * @param listenAddress the listen address
-		 * @return {@code this}
-		 */
-		public final Builder listenAddress(InetSocketAddress listenAddress) {
-			Objects.requireNonNull(listenAddress, "listenAddress");
-			this.listenAddress = () -> listenAddress;
-			return this;
-		}
-
-		/**
-		 * The port to listen to, or 0 to dynamically attribute one.
-		 *
-		 * @param port the port to listen to, or 0 to dynamically attribute one.
-		 * @return {@code this}
-		 */
-		public final Builder port(int port) {
-			this.port = port;
-			return this;
-		}
-
-		/**
-		 * The options for the server, including bind address and port.
-		 *
-		 * @param options the options for the server, including bind address and port.
-		 * @return {@code this}
-		 */
-		public final Builder options(Consumer<? super ServerOptions.Builder<?>> options) {
-			this.options = Objects.requireNonNull(options, "options");
-			return this;
-		}
-
-		public TcpServer build() {
-			return new TcpServer(this);
-		}
+	/**
+	 * Set a {@link ChannelOption} value for low level connection settings like SO_TIMEOUT
+	 * or SO_KEEPALIVE. This will apply to each new channel from remote peer.
+	 *
+	 * @param key the option key
+	 * @param value the option value
+	 * @param <T> the option type
+	 *
+	 * @return new {@link TcpServer}
+	 *
+	 * @see ServerBootstrap#childOption(ChannelOption, Object)
+	 */
+	public final <T> TcpServer option(ChannelOption<T> key, T value) {
+		Objects.requireNonNull(key, "key");
+		Objects.requireNonNull(value, "value");
+		return bootstrap(b -> b.childOption(key, value));
 	}
+
+	/**
+	 * The port to which this server should bind.
+	 *
+	 * @param port The port to bind to.
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer port(int port) {
+		return bootstrap(b -> b.localAddress(getHost(b), port));
+	}
+
+	/**
+	 * Run IO loops on the given {@link EventLoopGroup}.
+	 *
+	 * @param eventLoopGroup an eventLoopGroup to share
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer runOn(EventLoopGroup eventLoopGroup) {
+		Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
+		return runOn(preferNative -> eventLoopGroup);
+	}
+
+	/**
+	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
+	 * container. Will prefer native (epoll) implementation if available unless the
+	 * environment property {@literal reactor.ipc.netty.epoll} is set to {@literal
+	 * false}.
+	 *
+	 * @param channelResources a {@link LoopResources} accepting native runtime
+	 * expectation and returning an eventLoopGroup
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer runOn(LoopResources channelResources) {
+		return runOn(channelResources, LoopResources.DEFAULT_NATIVE);
+	}
+
+	/**
+	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
+	 * container.
+	 *
+	 * @param channelResources a {@link LoopResources} accepting native runtime
+	 * expectation and returning an eventLoopGroup.
+	 * @param preferNative Should the connector prefer native (epoll) if available.
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer runOn(LoopResources channelResources, boolean preferNative) {
+		return new TcpServerRunOn(this, channelResources, preferNative);
+	}
+
+	/**
+	 * Enable default sslContext support. The default {@link SslContext} will be assigned
+	 * to with a default value of {@literal 10} seconds handshake timeout unless the
+	 * environment property {@literal reactor.ipc.netty.sslHandshakeTimeout} is set.
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer secure() {
+		return secure(TcpUtils.SSL_DEFAULT_SPEC);
+	}
+
+	/**
+	 * Apply an SSL configuration customization via the passed {@link SslContext}. with a
+	 * default value of {@literal 10} seconds handshake timeout unless the environment
+	 * property {@literal reactor.ipc.netty.sslHandshakeTimeout} is set.
+	 *
+	 * @param sslContext The context to set when configuring SSL
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer secure(SslContext sslContext) {
+		return secure(sslProviderBuilder -> sslProviderBuilder.sslContext(sslContext));
+	}
+
+	/**
+	 * Apply an SSL configuration customization via the passed builder. The builder
+	 * will produce the {@link SslContext} to be passed to with a default value of
+	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
+	 * reactor.ipc.netty.sslHandshakeTimeout} is set.
+	 *
+	 * @param sslProviderBuilder builder callback for further customization of SslContext.
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+		return new TcpServerSecure(this, sslProviderBuilder);
+	}
+
+	/**
+	 * Inject default attribute to the future {@link io.netty.channel.ServerChannel}
+	 * selector connection.
+	 *
+	 * @param key the attribute key
+	 * @param value the attribute value
+	 * @param <T> the attribute type
+	 *
+	 * @return a new {@link TcpServer}
+	 *
+	 * @see ServerBootstrap#childAttr(AttributeKey, Object)
+	 */
+	public final <T> TcpServer selectorAttr(AttributeKey<T> key, T value) {
+		return attr(key, value);
+	}
+
+	/**
+	 * Set a {@link ChannelOption} value for low level connection settings like SO_TIMEOUT
+	 * or SO_KEEPALIVE. This will apply to parent selector channel.
+	 *
+	 * @param key the option key
+	 * @param value the option value
+	 * @param <T> the option type
+	 *
+	 * @return new {@link TcpServer}
+	 *
+	 * @see ServerBootstrap#childOption(ChannelOption, Object)
+	 */
+	public final <T> TcpServer selectorOption(ChannelOption<T> key, T value) {
+		return option(key, value);
+	}
+
+	/**
+	 * Return the current {@link SslContext} if that {@link TcpServer} secured via SSL
+	 * transport or null
+	 *
+	 * @return he current {@link SslContext} if that {@link TcpServer} secured via SSL
+	 * transport or null
+	 */
+	@Nullable
+	public SslContext sslContext() {
+		return null;
+	}
+
+	/**
+	 * Apply a wire logger configuration using {@link TcpServer} category
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer wiretap() {
+		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
+	}
+
+	/**
+	 * Apply a wire logger configuration
+	 *
+	 * @param category the logger category
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer wiretap(String category) {
+		return wiretap(category, LogLevel.DEBUG);
+	}
+
+	/**
+	 * Apply a wire logger configuration
+	 *
+	 * @param category the logger category
+	 * @param level the logger level
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer wiretap(String category, LogLevel level) {
+		Objects.requireNonNull(category, "category");
+		Objects.requireNonNull(level, "level");
+		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b,
+				new LoggingHandler(category, level)));
+	}
+
+
+	static final ServerBootstrap DEFAULT_BOOTSTRAP =
+			new ServerBootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+					.option(ChannelOption.SO_REUSEADDR, true)
+					.option(ChannelOption.SO_BACKLOG, 1000)
+					.childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
+					.childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
+					.childOption(ChannelOption.AUTO_READ, false)
+					.childOption(ChannelOption.SO_KEEPALIVE, true)
+					.childOption(ChannelOption.TCP_NODELAY, true)
+					.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+					.localAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
+
+	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpServer.class);
+	static final Logger         log             = Loggers.getLogger(TcpServer.class);
+
+	static String getHost(ServerBootstrap b) {
+		if (b.config()
+				.localAddress() instanceof InetSocketAddress) {
+			return ((InetSocketAddress) b.config()
+					.localAddress()).getHostString();
+		}
+		return NetUtil.LOCALHOST.getHostAddress();
+	}
+
+	static int getPort(ServerBootstrap b) {
+		if (b.config()
+				.localAddress() instanceof InetSocketAddress) {
+			return ((InetSocketAddress) b.config()
+					.localAddress()).getPort();
+		}
+		return DEFAULT_PORT;
+	}
+
 }

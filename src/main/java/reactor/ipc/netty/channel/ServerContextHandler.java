@@ -20,13 +20,14 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
-import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.core.Disposable;
+import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.options.ServerOptions;
 
 /**
@@ -34,9 +35,10 @@ import reactor.ipc.netty.options.ServerOptions;
  * @author Stephane Maldini
  */
 final class ServerContextHandler extends CloseableContextHandler<Channel>
-		implements Connection {
+		implements Connection, DisposableServer {
 
 	final ServerOptions serverOptions;
+	final DirectProcessor<Connection> connections;
 
 	ServerContextHandler(ChannelOperations.OnNew<Channel> channelOpFactory,
 			ServerOptions options,
@@ -45,6 +47,12 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 			SocketAddress providedAddress) {
 		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
 		this.serverOptions = options;
+		this.connections = DirectProcessor.create();
+	}
+
+	@Override
+	public Flux<Connection> connections() {
+		return connections;
 	}
 
 	@Override
@@ -104,6 +112,8 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	protected void doPipeline(Channel ch) {
-		addSslAndLogHandlers(options, this, loggingHandler, true, getSNI(), ch.pipeline());
+		if (options != null) {
+			addSslAndLogHandlers(options, this, loggingHandler, true, getSNI(), ch.pipeline());
+		}
 	}
 }

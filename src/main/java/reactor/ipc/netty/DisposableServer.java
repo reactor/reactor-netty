@@ -47,7 +47,7 @@ public interface DisposableServer extends DisposableChannel {
 	 * @see InetSocketAddress#getHostString()
 	 */
 	default String host() {
-		return address().getHostName();
+		return address().getHostString();
 	}
 
 	/**

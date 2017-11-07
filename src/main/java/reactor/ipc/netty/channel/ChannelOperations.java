@@ -381,6 +381,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
 					.subscribe(this);
 		}
+		else if (parentContext() instanceof ServerContextHandler){
+			((ServerContextHandler) parentContext()).connections.onNext(this);
+		}
 	}
 
 	/**
