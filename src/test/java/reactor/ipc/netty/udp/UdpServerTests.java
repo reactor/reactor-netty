@@ -81,8 +81,9 @@ public class UdpServerTests {
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(4);
 
-		final Connection server = UdpServer.create(port)
-		                                   .newHandler((in, out) -> {
+		final Connection server = UdpServer.create()
+		                                   .port(port)
+		                                   .handler((in, out) -> {
 			                                   in.receive()
 			                                     .asByteArray()
 			                                     .log()
@@ -93,6 +94,7 @@ public class UdpServerTests {
 			                                     });
 			                                   return Flux.never();
 		                                   })
+		                                   .bind()
 		                                   .doOnSuccess(v -> {
 			                                   try {
 				                                   DatagramChannel udp =
@@ -134,11 +136,11 @@ public class UdpServerTests {
 		LoopResources resources = LoopResources.create("test");
 		for (int i = 0; i < 4; i++) {
 			Connection server =
-					UdpServer.create(opts -> opts.option(ChannelOption.SO_REUSEADDR, true)
-					                             .connectAddress(() -> new InetSocketAddress(port))
-					                             .protocolFamily(InternetProtocolFamily.IPv4)
-					                             .loopResources(resources))
-					         .newHandler((in, out) -> {
+					UdpServer.create()
+					         .option(ChannelOption.SO_REUSEADDR, true)
+					         .addressSupplier(() -> new InetSocketAddress(port))
+					         .runOn(resources, InternetProtocolFamily.IPv4)
+					         .handler((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
 					                             if (ifaces.hasMoreElements()) {
 						                             s.next(ifaces.nextElement());
@@ -163,6 +165,7 @@ public class UdpServerTests {
 				                               });
 				                             return Flux.never();
 			                             })
+			                 .bind()
 					         .block(Duration.ofSeconds(30));
 
 			servers.add(server);
