@@ -17,12 +17,14 @@
 package reactor.ipc.netty.http.server;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -39,9 +41,9 @@ import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
-import reactor.ipc.netty.options.ServerOptions;
 import reactor.ipc.netty.tcp.BlockingNettyContext;
-import reactor.ipc.netty.tcp.TcpServer;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * Base functionality needed by all servers that communicate with clients over HTTP.
@@ -137,7 +139,7 @@ public final class HttpServer
 			serverOptionsBuilder.loopResources(HttpResources.get());
 		}
 		this.options = serverOptionsBuilder.build();
-		this.server = new TcpBridgeServer(this.options);
+		this.server = new TcpBridgeServer();
 	}
 
 	/**
@@ -233,14 +235,26 @@ public final class HttpServer
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
 
-	final class TcpBridgeServer extends TcpServer
-			implements BiConsumer<ChannelPipeline, ContextHandler<Channel>> {
+	final class TcpBridgeServer implements BiConsumer<ChannelPipeline, ContextHandler<Channel>> {
 
-		TcpBridgeServer(ServerOptions options) {
-			super(options);
+		TcpBridgeServer() {
 		}
 
-		@Override
+		public final Mono<? extends Connection> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+			Objects.requireNonNull(handler, "handler");
+			return Mono.create(sink -> {
+				ServerBootstrap b = options.get();
+				SocketAddress local = options.getAddress();
+				b.localAddress(local);
+				ContextHandler<Channel> contextHandler = doHandler(handler, sink);
+				b.childHandler(contextHandler);
+				if(log.isDebugEnabled()){
+					b.handler(loggingHandler());
+				}
+				contextHandler.setFuture(b.bind());
+			});
+		}
+
 		protected ContextHandler<Channel> doHandler(
 				BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 				MonoSink<Connection> sink) {
@@ -263,10 +277,10 @@ public final class HttpServer
             p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(c));
         }
 
-		@Override
 		protected LoggingHandler loggingHandler() {
 			return loggingHandler;
 		}
+		final Logger log = Loggers.getLogger(TcpBridgeServer.class);
 	}
 
 	public static final class Builder {
