@@ -71,9 +71,9 @@ public class BlockingConnectionTest {
 
 	@Test
 	public void simpleServerFromAsyncServer() throws InterruptedException {
-		BlockingNettyContext simpleServer =
+		Connection simpleServer =
 				TcpServer.create()
-				         .start((in, out) -> out
+				         .handler((in, out) -> out
 						         .options(NettyPipeline.SendOptions::flushOnEach)
 						         .sendString(
 								         in.receive()
@@ -83,17 +83,19 @@ public class BlockingConnectionTest {
 								           .concatWith(Mono.just("DONE"))
 						         )
 						         .neverComplete()
-				         );
+				         )
+				         .wiretap()
+				         .bindNow();
 
-		System.out.println(simpleServer.getHost());
-		System.out.println(simpleServer.getPort());
+		System.out.println(simpleServer.address().getHostString());
+		System.out.println(simpleServer.address().getPort());
 
 		AtomicReference<List<String>> data1 = new AtomicReference<>();
 		AtomicReference<List<String>> data2 = new AtomicReference<>();
 
-		BlockingNettyContext simpleClient1 =
-				TcpClient.create(simpleServer.getPort())
-				         .start((in, out) -> out.options(NettyPipeline.SendOptions::flushOnEach)
+		Connection simpleClient1 =
+				TcpClient.create().port(simpleServer.address().getPort())
+				         .handler((in, out) -> out.options(NettyPipeline.SendOptions::flushOnEach)
 				                                .sendString(Flux.just("Hello", "World", "CONTROL"))
 				                                .then(in.receive()
 				                                        .asString()
@@ -103,11 +105,13 @@ public class BlockingConnectionTest {
 				                                        .collectList()
 				                                        .doOnNext(data1::set)
 				                                        .doOnNext(System.err::println)
-				                                        .then()));
+				                                        .then()))
+				         .wiretap()
+				         .connectNow();
 
-		BlockingNettyContext simpleClient2 =
-				TcpClient.create(simpleServer.getPort())
-				         .start((in, out) -> out.options(NettyPipeline.SendOptions::flushOnEach)
+		Connection simpleClient2 =
+				TcpClient.create().port(simpleServer.address().getPort())
+				         .handler((in, out) -> out.options(NettyPipeline.SendOptions::flushOnEach)
 				                                .sendString(Flux.just("How", "Are", "You?", "CONTROL"))
 				                                .then(in.receive()
 				                                        .asString()
@@ -117,17 +121,19 @@ public class BlockingConnectionTest {
 				                                        .collectList()
 				                                        .doOnNext(data2::set)
 				                                        .doOnNext(System.err::println)
-				                                        .then()));
+				                                        .then()))
+				         .wiretap()
+				         .connectNow();
 
 		Thread.sleep(100);
 		System.err.println("STOPPING 1");
-		simpleClient1.shutdown();
+		simpleClient1.disposeNow();
 
 		System.err.println("STOPPING 2");
-		simpleClient2.shutdown();
+		simpleClient2.disposeNow();
 
 		System.err.println("STOPPING SERVER");
-		simpleServer.shutdown();
+		simpleServer.disposeNow();
 
 		assertThat(data1.get())
 				.allSatisfy(s -> assertThat(s).startsWith("ECHO: "));
@@ -229,26 +235,5 @@ public class BlockingConnectionTest {
 		assertThat(Runtime.getRuntime().removeShutdownHook(hook1))
 				.withFailMessage("hook1 wasn't deregistered by shutdown")
 				.isFalse();
-	}
-
-	@Test
-	public void smokeTestShutdownHook() {
-		BlockingNettyContext simpleServer =
-				TcpServer.create()
-				         .start((in, out) -> out
-						         .options(NettyPipeline.SendOptions::flushOnEach)
-						         .sendString(
-								         in.receive()
-								           .asString()
-								           .takeUntil(s -> s.endsWith("CONTROL"))
-								           .map(s -> "ECHO: " + s.replaceAll("CONTROL", ""))
-								           .concatWith(Mono.just("DONE"))
-						         )
-						         .neverComplete()
-				         );
-
-		simpleServer.installShutdownHook();
-		simpleServer.getShutdownHook().setName("BlockingConnectionTest.smokeTestShutdownHook");
-		//this test doesn't assert anything, but look out for JVM shutdown hook messages
 	}
 }

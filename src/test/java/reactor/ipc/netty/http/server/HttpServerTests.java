@@ -436,9 +436,9 @@ public class HttpServerTests {
 
 		CountDownLatch latch = new CountDownLatch(6);
 
-		Connection client =TcpClient.create(server.address()
-		                  .getPort())
-		         .newHandler((in, out) -> {
+		Connection client =TcpClient.create()
+		                            .port(server.address().getPort())
+		         .handler((in, out) -> {
 			         in.withConnection(x -> x
 			           .addHandlerFirst(new HttpClientCodec()))
 
@@ -459,7 +459,8 @@ public class HttpServerTests {
 					                                                           request.retain()))
 			                                             .neverComplete();
 		                               })
-		                               .block(Duration.ofSeconds(30));
+		                               .wiretap()
+		                               .connectNow();
 
 		Assert.assertTrue(latch.await(45, TimeUnit.SECONDS));
 
