@@ -120,12 +120,11 @@ public class TcpServerTests {
 		                                            .trustManager(
 				                                            InsecureTrustManagerFactory.INSTANCE)
 		                                            .build();
-		final TcpServer server = TcpServer.create(opts -> opts.host("localhost")
-		                                                      .sslSelfSigned());
+		final TcpServer server = TcpServer.create().host("localhost").secure();
 
 		ObjectMapper m = new ObjectMapper();
 
-		Connection connectedServer = server.newHandler((in, out) -> {
+		Connection connectedServer = server.handler((in, out) -> {
 			in.receive()
 			  .asByteArray()
 			  .map(bb -> {
@@ -146,13 +145,15 @@ public class TcpServerTests {
 			return out.sendString(Mono.just("Hi"))
 			          .neverComplete();
 		})
-		                                   .block(Duration.ofSeconds(30));
+		                                   .wiretap()
+		                                   .bindNow();
 
-		final TcpClient client = TcpClient.create(opts -> opts.host("localhost")
-		                                                      .port(connectedServer.address().getPort())
-		                                                      .sslContext(clientOptions));
+		final TcpClient client = TcpClient.create()
+		                                  .host("localhost")
+		                                  .port(connectedServer.address().getPort())
+		                                  .secure(clientOptions);
 
-		Connection connectedClient = client.newHandler((in, out) -> {
+		Connection connectedClient = client.handler((in, out) -> {
 			//in
 			in.receive()
 			  .asString()
@@ -179,7 +180,8 @@ public class TcpServerTests {
 			          .neverComplete();
 //			return Mono.empty();
 		})
-		                                   .block(Duration.ofSeconds(30));
+		                                   .wiretap()
+		                                   .connectNow();
 
 		assertTrue("Latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
@@ -202,8 +204,8 @@ public class TcpServerTests {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		Connection server = TcpServer.create(port)
-		                             .newHandler((in, out) -> {
+		Connection server = TcpServer.create().port(port)
+		                             .handler((in, out) -> {
 
 			in.withConnection(c -> {
 				InetSocketAddress addr = c.address();
@@ -213,12 +215,14 @@ public class TcpServerTests {
 
 			                             return Flux.never();
 		                             })
-		                             .block(Duration.ofSeconds(30));
+		                             .wiretap()
+		                             .bindNow();
 
-		Connection client = TcpClient.create(port)
-		                             .newHandler((in, out) -> out.sendString(Flux.just(
+		Connection client = TcpClient.create().port(port)
+		                             .handler((in, out) -> out.sendString(Flux.just(
 				                             "Hello World!")))
-		                             .block(Duration.ofSeconds(30));
+		                             .wiretap()
+		                             .connectNow();
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
@@ -231,7 +235,7 @@ public class TcpServerTests {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(2);
 
-		final TcpClient client = TcpClient.create(port);
+		final TcpClient client = TcpClient.create().port(port);
 
 		BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>>
 				serverHandler = (in, out) -> {
@@ -244,24 +248,22 @@ public class TcpServerTests {
 			return Flux.never();
 		};
 
-		TcpServer server = TcpServer.create(opts -> opts
-		                                                 .afterChannelInit(c -> c.pipeline()
-		                                                                         .addBefore(
-				                                                 NettyPipeline.ReactiveBridge,
-				                                                 "codec",
-				                                                 new LineBasedFrameDecoder(
-						                                                 8 * 1024)))
-		                                                 .port(port));
+		TcpServer server = TcpServer.create()
+		                            .doOnConnection(c -> c.addHandlerLast("codec",
+				                                                new LineBasedFrameDecoder(8 * 1024)))
+		                            .port(port);
 
-		Connection connected = server.newHandler(serverHandler)
-		                             .block(Duration.ofSeconds(30));
+		Connection connected = server.handler(serverHandler)
+		                             .wiretap()
+		                             .bindNow();
 
 		Connection clientContext =
-				client.newHandler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
+				client.handler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
 				                                            .map(b -> out.alloc()
 				                                                         .buffer()
 				                                                         .writeBytes(b.getBytes()))))
-				      .block(Duration.ofSeconds(30));
+				      .wiretap()
+				      .connectNow();
 
 		assertTrue("Latch was counted down", latch.await(10, TimeUnit.SECONDS));
 
@@ -319,8 +321,8 @@ public class TcpServerTests {
 
 		final CountDownLatch countDownLatch = new CountDownLatch(1);
 
-		Connection server = TcpServer.create(0)
-		                             .newHandler((in, out) -> {
+		Connection server = TcpServer.create().port(0)
+		                             .handler((in, out) -> {
 			                             in.receive()
 			                               .log("channel")
 			                               .subscribe(trip -> {
@@ -328,16 +330,18 @@ public class TcpServerTests {
 			                               });
 			                             return Flux.never();
 		                             })
-		                             .block(Duration.ofSeconds(30));
+		                             .wiretap()
+		                             .bindNow();
 
 		System.out.println("PORT +" + server.address()
 		                                    .getPort());
 
-		Connection client = TcpClient.create(server.address()
+		Connection client = TcpClient.create().port(server.address()
 		                                           .getPort())
-		                             .newHandler((in, out) -> out.sendString(Flux.just(
+		                             .handler((in, out) -> out.sendString(Flux.just(
 				                             "test")))
-		                             .block(Duration.ofSeconds(30));
+		                             .wiretap()
+		                             .connectNow();
 
 		client.dispose();
 		server.dispose();
@@ -377,18 +381,11 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void toStringShowsOptions() {
-		TcpServer server = TcpServer.create(opt -> opt.host("foo").port(123));
-
-		Assertions.assertThat(server.toString()).isEqualTo("TcpServer: listening on foo:123");
-	}
-
-	@Test
 	public void gettingOptionsDuplicates() {
-		TcpServer server = TcpServer.create(opt -> opt.host("foo").port(123));
-		Assertions.assertThat(server.options())
-		          .isNotSameAs(server.options)
-		          .isNotSameAs(server.options());
+		TcpServer server = TcpServer.create().host("foo").port(123);
+		Assertions.assertThat(server.configure())
+		          .isNotSameAs(TcpServer.DEFAULT_BOOTSTRAP)
+		          .isNotSameAs(server.configure());
 	}
 
 	@Test
@@ -400,8 +397,8 @@ public class TcpServerTests {
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
 
 		Connection context =
-				TcpServer.create(opt -> opt.sslContext(sslServer))
-				         .newHandler((in, out) ->
+				TcpServer.create().secure(sslServer)
+				         .handler((in, out) ->
 						         in.receive()
 						           .asString()
 						           .flatMap(word -> "GOGOGO".equals(word) ?
@@ -409,15 +406,17 @@ public class TcpServerTests {
 								           out.sendString(Mono.just("NOPE"))
 						           )
 				         )
-				         .block();
+				         .wiretap()
+				         .bindNow();
 
 		MonoProcessor<String> m1 = MonoProcessor.create();
 		MonoProcessor<String> m2 = MonoProcessor.create();
 
 		Connection client1 =
-				TcpClient.create(opt -> opt.port(context.address().getPort())
-				                           .sslContext(sslClient))
-				         .newHandler((in, out) -> {
+				TcpClient.create()
+				         .port(context.address().getPort())
+				         .secure(sslClient)
+				         .handler((in, out) -> {
 					         in.receive()
 					           .asString()
 					           .log("-----------------CLIENT1")
@@ -426,12 +425,14 @@ public class TcpServerTests {
 					         return out.sendString(Mono.just("gogogo"))
 							         .neverComplete();
 				         })
-				         .block();
+				         .wiretap()
+				         .connectNow();
 
 		Connection client2 =
-				TcpClient.create(opt -> opt.port(context.address().getPort())
-				                           .sslContext(sslClient))
-				         .newHandler((in, out) -> {
+				TcpClient.create()
+				         .port(context.address().getPort())
+				         .secure(sslClient)
+				         .handler((in, out) -> {
 					         in.receive()
 					           .asString(StandardCharsets.UTF_8)
 					           .take(2)
@@ -442,7 +443,8 @@ public class TcpServerTests {
 					         return out.sendString(Mono.just("GOGOGO"))
 					                   .neverComplete();
 				         })
-				         .block();
+				         .wiretap()
+				         .connectNow();
 
 		String client1Response = m1.block();
 		String client2Response = m2.block();
@@ -508,7 +510,7 @@ public class TcpServerTests {
 
 		Connection context =
 				TcpServer.create()
-				         .newHandler((in, out) ->
+				         .handler((in, out) ->
 						         in.receive()
 						           .asString()
 						           .flatMap(word -> "GOGOGO".equals(word) ?
@@ -516,14 +518,15 @@ public class TcpServerTests {
 								           out.sendString(Mono.just("NOPE"))
 						           )
 				         )
-				         .block();
+				         .wiretap()
+				         .bindNow();
 
 		MonoProcessor<String> m1 = MonoProcessor.create();
 		MonoProcessor<String> m2 = MonoProcessor.create();
 
 		Connection client1 =
-				TcpClient.create(opt -> opt.port(context.address().getPort()))
-				         .newHandler((in, out) -> {
+				TcpClient.create().port(context.address().getPort())
+				         .handler((in, out) -> {
 					         in.receive()
 					           .asString()
 					           .log("-----------------CLIENT1")
@@ -532,11 +535,12 @@ public class TcpServerTests {
 					         return out.sendString(Mono.just("gogogo"))
 					                   .neverComplete();
 				         })
-				         .block();
+				         .wiretap()
+				         .connectNow();
 
 		Connection client2 =
-				TcpClient.create(opt -> opt.port(context.address().getPort()))
-				         .newHandler((in, out) -> {
+				TcpClient.create().port(context.address().getPort())
+				         .handler((in, out) -> {
 					         in.receive()
 					           .asString(StandardCharsets.UTF_8)
 					           .take(2)
@@ -547,7 +551,8 @@ public class TcpServerTests {
 					         return out.sendString(Mono.just("GOGOGO"))
 					                   .neverComplete();
 				         })
-				         .block();
+				         .wiretap()
+				         .connectNow();
 
 		String client1Response = m1.block();
 		String client2Response = m2.block();
@@ -572,14 +577,16 @@ public class TcpServerTests {
 
 	@Test(timeout = 2000)
 	public void startAndAwait() throws InterruptedException {
-		AtomicReference<BlockingNettyContext> bnc = new AtomicReference<>();
+		AtomicReference<Connection> conn = new AtomicReference<>();
 		CountDownLatch startLatch = new CountDownLatch(1);
 
 		Thread t = new Thread(() -> TcpServer.create()
-		                                     .startAndAwait((in, out) -> out.sendString(Mono.just("foo")),
-				v -> {bnc.set(v);
-					                                     startLatch.countDown();
-				                                     }));
+		                                     .handler((in, out) -> out.sendString(Mono.just("foo")))
+		                                     .bindUntilJavaShutdown(Duration.ofMillis(200),
+		                                                            c -> {
+		                                                                  conn.set(c);
+		                                                                  startLatch.countDown();
+		                                                            }));
 		t.start();
 		//let the server initialize
 		startLatch.await();
@@ -589,7 +596,7 @@ public class TcpServerTests {
 		Assertions.assertThat(t.isAlive()).isTrue();
 
 		//check that stopping the bnc stops the server
-		bnc.get().shutdown();
+		conn.get().disposeNow();
 		t.join();
 		Assertions.assertThat(t.isAlive()).isFalse();
 	}
@@ -618,7 +625,7 @@ public class TcpServerTests {
 
 		Connection server =
 		        TcpServer.create()
-		                 .newHandler((in, out) -> out.send(in.receive()
+		                 .handler((in, out) -> out.send(in.receive()
 		                                                     .asString()
 		                                                     .map(jsonDecoder)
 		                                                     .log()
@@ -628,7 +635,8 @@ public class TcpServerTests {
 		                                                         return new Pojo("Jane Doe");
 		                                                     })
 		                                                     .map(jsonEncoder)))
-		                 .block(Duration.ofSeconds(30));
+		                 .wiretap()
+		                 .bindNow();
 
 		SimpleClient client = new SimpleClient(server.address().getPort(), dataLatch, "{\"name\":\"John Doe\"}");
 		client.start();
@@ -668,24 +676,25 @@ public class TcpServerTests {
 
 		Connection server =
 				TcpServer.create()
-				         .newHandler((in, out) -> in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
+				         .handler((in, out) -> in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
 				                                    .receive()
 				                                    .asString()
 				                                    .log("serve")
 				                                    .map(jsonDecoder)
-				                                    .concatMap(d -> Flux.fromArray(d))
+				                                    .concatMap(Flux::fromArray)
 				                                    .window(5)
 				                                    .concatMap(w -> out.send(w.collectList().map(jsonEncoder))))
-				         .block(Duration.ofSeconds(30));
+				         .wiretap()
+				         .bindNow();
 
-		Connection client = TcpClient.create(o -> o.port(server.address().getPort()))
-		                               .newHandler((in, out) -> {
+		Connection client = TcpClient.create().port(server.address().getPort())
+		                               .handler((in, out) -> {
 			                               in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
 			                                 .receive()
 			                                 .asString()
 			                                 .log("receive")
 			                                 .map(jsonDecoder)
-			                                 .concatMap(d -> Flux.fromArray(d))
+			                                 .concatMap(Flux::fromArray)
 			                                 .subscribe(c -> dataLatch.countDown());
 
 			                               return out.send(Flux.range(1, 10)
@@ -695,7 +704,8 @@ public class TcpServerTests {
 			                                                   .map(jsonEncoder))
 			                                         .neverComplete();
 		                               })
-		                               .block(Duration.ofSeconds(30));
+		                               .wiretap()
+		                               .connectNow();
 
 		Assertions.assertThat(dataLatch.await(30, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(dataLatch.getCount()).isEqualTo(0);
@@ -729,8 +739,8 @@ public class TcpServerTests {
 
 		final AtomicInteger j = new AtomicInteger();
 		Connection server =
-		        TcpServer.create("localhost")
-		                 .newHandler((in, out) -> out.sendGroups(in.receive()
+		        TcpServer.create().host("localhost")
+		                 .handler((in, out) -> out.sendGroups(in.receive()
 		                                                           .asString()
 		                                                           .map(jsonDecoder)
 		                                                           .map(d -> Flux.fromArray(d)
@@ -744,14 +754,15 @@ public class TcpServerTests {
 		                                                                         .map(jsonEncoder))
 		                                                           .doOnComplete(() -> System.out.println("wow"))
 		                                                           .log("flatmap-retry")))
-		                 .block(Duration.ofSeconds(30));
+		                 .wiretap()
+		                 .bindNow();
 
-		Connection client = TcpClient.create(ops -> ops.connectAddress(() -> server.address()))
-		                               .newHandler((in, out) -> {
+		Connection client = TcpClient.create().addressSupplier(server::address)
+		                               .handler((in, out) -> {
 		                                   in.receive()
 		                                     .asString()
 		                                     .map(jsonDecoder)
-		                                     .concatMap(d -> Flux.fromArray(d))
+		                                     .concatMap(Flux::fromArray)
 		                                     .log("receive")
 		                                     .subscribe(c -> latch.countDown());
 
@@ -762,7 +773,8 @@ public class TcpServerTests {
 		                                                       .map(jsonEncoder))
 		                                             .neverComplete();
 		                               })
-		                               .block(Duration.ofSeconds(30));
+		                               .wiretap()
+		                               .connectNow();
 
 		Assertions.assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(latch.getCount()).isEqualTo(0);

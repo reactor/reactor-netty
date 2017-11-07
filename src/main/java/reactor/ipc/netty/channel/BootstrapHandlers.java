@@ -40,6 +40,26 @@ import java.util.function.Consumer;
 public abstract class BootstrapHandlers {
 
 	/**
+	 * Finalize a server bootstrap pipeline configuration by turning it into a
+	 * {@link ChannelInitializer} to safely initialize each child channel.
+	 *
+	 * @param b a server bootstrap
+	 * @param ctx a context handler
+	 */
+	public static void finalize(ServerBootstrap b, ContextHandler ctx) {
+		Objects.requireNonNull(b, "bootstrap");
+		Objects.requireNonNull(ctx, "ctx");
+
+		BootstrapPipelineHandler pipeline = null;
+		ChannelHandler handler = b.config().childHandler();
+		if (handler instanceof BootstrapPipelineHandler) {
+			pipeline = (BootstrapPipelineHandler) handler;
+		}
+
+		b.childHandler(new BootstrapInitializerHandler(pipeline, ctx));
+	}
+
+	/**
 	 * Finalize a bootstrap pipeline configuration by turning it into a
 	 * {@link ChannelInitializer} to safely initialize each child channel.
 	 *
@@ -57,6 +77,82 @@ public abstract class BootstrapHandlers {
 		}
 
 		b.handler(new BootstrapInitializerHandler(pipeline, ctx));
+	}
+
+	/**
+	 * Find the given typed configuration consumer or return null;
+	 *
+	 * @param clazz the type of configuration to find
+	 * @param handler optional handler to scan
+	 * @param <C> configuration consumer type
+	 *
+	 * @return a typed configuration or null
+	 */
+	@Nullable
+	@SuppressWarnings("unchecked")
+	public static <C> C findConfiguration(Class<C> clazz,
+										  @Nullable ChannelHandler handler) {
+		Objects.requireNonNull(clazz, "configuration type");
+		if (handler instanceof BootstrapPipelineHandler) {
+			BootstrapPipelineHandler rph =
+					(BootstrapPipelineHandler) handler;
+			for (PipelineConfiguration aRph : rph) {
+				if (clazz.isInstance(aRph.consumer)) {
+					return (C) aRph.consumer;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Find the given typed configuration consumer or return null;
+	 *
+	 * @param name the name of configuration to find
+	 * @param handler optional handler to scan
+	 *
+	 * @return a configuration or null
+	 */
+	@Nullable
+	public static Consumer<? super Channel> findConfiguration(String name,
+															  @Nullable ChannelHandler handler) {
+		Objects.requireNonNull(name, "configuration type");
+		if (handler instanceof BootstrapPipelineHandler) {
+			BootstrapPipelineHandler rph =
+					(BootstrapPipelineHandler) handler;
+			for (PipelineConfiguration aRph : rph) {
+				if (name.equalsIgnoreCase(aRph.name)) {
+					return aRph.consumer;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Remove a configuration given its unique name from the given {@link
+	 * ServerBootstrap}
+	 *
+	 * @param b a server bootstrap
+	 * @param name a configuration name
+	 */
+	public static void removeConfiguration(ServerBootstrap b, String name) {
+		Objects.requireNonNull(b, "bootstrap");
+		Objects.requireNonNull(name, "name");
+		b.childHandler(removeConfiguration(b.config().childHandler(), name));
+	}
+
+	/**
+	 * Remove a configuration given its unique name from the given {@link
+	 * Bootstrap}
+	 *
+	 * @param b a bootstrap
+	 * @param name a configuration name
+	 */
+	public static void removeConfiguration(Bootstrap b, String name) {
+		Objects.requireNonNull(b, "bootstrap");
+		Objects.requireNonNull(name, "name");
+		b.handler(removeConfiguration(b.config().handler(), name));
 	}
 
 	/**
@@ -79,6 +175,25 @@ public abstract class BootstrapHandlers {
 	}
 
 	/**
+	 * Add the configuration consumer to this {@link ServerBootstrap} given a unique
+	 * configuration name. Configuration will be run on child channel init.
+	 *
+	 * @param b a server bootstrap
+	 * @param name a configuration name
+	 * @param c a configuration consumer
+	 * @return the mutated bootstrap
+	 */
+	public static ServerBootstrap updateConfiguration(ServerBootstrap b,
+													  String name,
+													  Consumer<? super Channel> c) {
+		Objects.requireNonNull(b, "bootstrap");
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(c, "configuration");
+		b.childHandler(updateConfiguration(b.config().childHandler(), name, c));
+		return b;
+	}
+
+	/**
 	 * Configure log support for a {@link Bootstrap}
 	 *
 	 * @param b the bootstrap to setup
@@ -89,6 +204,35 @@ public abstract class BootstrapHandlers {
 	public static Bootstrap updateLogSupport(Bootstrap b, LoggingHandler handler) {
 		updateConfiguration(b, NettyPipeline.LoggingHandler, logConfiguration(handler));
 		return b;
+	}
+
+	/**
+	 * Configure log support for a {@link ServerBootstrap}
+	 *
+	 * @param b the bootstrap to setup
+	 * @param handler the logging handler to setup
+	 *
+	 * @return a mutated {@link ServerBootstrap#childHandler}
+	 */
+	public static ServerBootstrap updateLogSupport(ServerBootstrap b,
+												   LoggingHandler handler) {
+		updateConfiguration(b, NettyPipeline.LoggingHandler, logConfiguration(handler));
+		return b;
+	}
+
+	static ChannelHandler removeConfiguration(ChannelHandler handler, String name) {
+		if (handler instanceof BootstrapPipelineHandler) {
+			BootstrapPipelineHandler rph =
+					new BootstrapPipelineHandler((BootstrapPipelineHandler) handler);
+
+			for (int i = 0; i < rph.size(); i++) {
+				if (rph.get(i).name.equals(name)) {
+					rph.remove(i);
+					return rph;
+				}
+			}
+		}
+		return handler;
 	}
 
 	static ChannelHandler updateConfiguration(@Nullable ChannelHandler handler,
@@ -116,8 +260,24 @@ public abstract class BootstrapHandlers {
 
 	static Consumer<? super Channel> logConfiguration(LoggingHandler handler) {
 		Objects.requireNonNull(handler, "loggingHandler");
-		return channel -> channel.pipeline()
-				.addFirst(NettyPipeline.LoggingHandler, handler);
+		return channel -> {
+			if (channel.pipeline().get(NettyPipeline.SslHandler) != null) {
+				if (log.isTraceEnabled()) {
+					channel.pipeline()
+							.addBefore(NettyPipeline.SslHandler,
+									NettyPipeline.SslLoggingHandler,
+									new LoggingHandler("reactor.ipc.netty.tcp.ssl"));
+				}
+				channel.pipeline()
+						.addAfter(NettyPipeline.SslHandler,
+						          NettyPipeline.LoggingHandler,
+						          handler);
+			}
+			else {
+				channel.pipeline()
+						.addFirst(NettyPipeline.LoggingHandler, handler);
+			}
+		};
 	}
 
 	@ChannelHandler.Sharable

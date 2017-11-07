@@ -26,6 +26,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
@@ -46,13 +47,13 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServerResponse;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
-import reactor.ipc.netty.options.ClientOptions;
-import reactor.ipc.netty.tcp.TcpClient;
+import reactor.ipc.netty.resources.PoolResources;
 
 /**
  * The base class for a Netty-based Http client.
@@ -142,7 +143,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 			clientOptionsBuilder.poolResources(HttpResources.get());
 		}
 		this.options = clientOptionsBuilder.build();
-		this.client = new TcpBridgeClient(options);
+		this.client = new TcpBridgeClient();
 	}
 
 	/**
@@ -371,22 +372,61 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	final static LoggingHandler loggingHandler = new LoggingHandler(HttpClient.class);
 
 	@SuppressWarnings("unchecked")
-	final class TcpBridgeClient extends TcpClient implements
-	                                              BiConsumer<ChannelPipeline, ContextHandler<Channel>> {
+	final class TcpBridgeClient implements BiConsumer<ChannelPipeline, ContextHandler<Channel>> {
 
-		TcpBridgeClient(ClientOptions options) {
-			super(options);
+		TcpBridgeClient() {
 		}
 
-		@Override
+		public final Mono<? extends Connection> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+			Objects.requireNonNull(handler, "handler");
+			return newHandler(handler, null, true, null);
+		}
+
+		/**
+		 * @param handler
+		 * @param address
+		 * @param secure
+		 * @param onSetup
+		 *
+		 * @return a new Mono to connect on subscribe
+		 */
 		protected Mono<Connection> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
-				InetSocketAddress address,
-				boolean secure,
-				Consumer<? super Channel> onSetup) {
-			return super.newHandler(handler, address, secure, onSetup);
+											  InetSocketAddress address,
+											  boolean secure,
+											  Consumer<? super Channel> onSetup) {
+
+			final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>>
+					targetHandler =
+					null == handler ? ChannelOperations.noopHandler() : handler;
+
+			return Mono.create(sink -> {
+				SocketAddress remote = address != null ? address : options.getAddress();
+
+				ChannelPool pool = null;
+
+				PoolResources poolResources = options.getPoolResources();
+				if (poolResources != null) {
+					pool = poolResources.selectOrCreate(remote, options,
+							doHandler(null, sink, secure, remote, null, null),
+							options.getLoopResources().onClient(options.preferNative()));
+				}
+
+				ContextHandler<SocketChannel> contextHandler =
+						doHandler(targetHandler, sink, secure, remote, pool, onSetup);
+				sink.onCancel(contextHandler);
+
+				if (pool == null) {
+					Bootstrap b = options.get();
+					b.remoteAddress(remote);
+					b.handler(contextHandler);
+					contextHandler.setFuture(b.connect());
+				}
+				else {
+					contextHandler.setFuture(pool.acquire());
+				}
+			});
 		}
 
-		@Override
 		protected ContextHandler<SocketChannel> doHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 				MonoSink<Connection> sink,
 				boolean secure,
@@ -406,6 +446,8 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 						return HttpClientOperations.bindHttp(ch, handler, c);
 					} : EMPTY).onPipeline(this);
 		}
+
+		protected final ChannelOperations.OnNew EMPTY = (a,b,c) -> null;
 
 		@Override
 		public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {

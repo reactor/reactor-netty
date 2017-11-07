@@ -86,8 +86,10 @@ final class ClientContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void doPipeline(Channel ch) {
-		addSslAndLogHandlers(clientOptions, this, loggingHandler, secure, getSNI(), ch.pipeline());
-		addProxyHandler(clientOptions, ch.pipeline(), providedAddress);
+		if (clientOptions != null) {
+			addSslAndLogHandlers(clientOptions, this, loggingHandler, secure, getSNI(), ch.pipeline());
+			addProxyHandler(clientOptions, ch.pipeline(), providedAddress);
+		}
 	}
 
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline, SocketAddress providedAddress) {

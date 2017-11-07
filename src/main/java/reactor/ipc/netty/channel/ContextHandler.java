@@ -139,6 +139,25 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, options.getAddress());
 	}
 
+	/**
+	 * Create a new server context
+	 *
+	 * @param sink
+	 * @param options
+	 * @param loggingHandler
+	 * @param channelOpFactory
+	 * @param address
+	 *
+	 * @return a new {@link ContextHandler} for servers
+	 */
+	public static ContextHandler<Channel> newServerContext(MonoSink<Connection> sink,
+														   ServerOptions options,
+														   LoggingHandler loggingHandler,
+														   ChannelOperations.OnNew<Channel> channelOpFactory,
+														   SocketAddress address) {
+		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, address);
+	}
+
 	final MonoSink<Connection>             sink;
 	final NettyOptions<?, ?>               options;
 	final LoggingHandler                   loggingHandler;
