@@ -145,7 +145,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected ChannelOperations(Channel channel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context, DirectProcessor<Void> processor) {
-		this.handler = Objects.requireNonNull(handler, "handler");
+		this.handler = handler;
 		this.channel = Objects.requireNonNull(channel, "channel");
 		this.context = Objects.requireNonNull(context, "context");
 		this.inbound = new FluxReceive(this);
@@ -378,14 +378,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	@SuppressWarnings("unchecked")
 	protected final void applyHandler() {
+		if (handler != null) {
 //		channel.pipeline()
 //		       .fireUserEventTriggered(NettyPipeline.handlerStartedEvent());
-		if (log.isDebugEnabled()) {
-			log.debug("[{}] {} handler is being applied: {}", formatName(), channel
-					(), handler);
+			if (log.isDebugEnabled()) {
+				log.debug("[{}] {} handler is being applied: {}", formatName(), channel
+						(), handler);
+			}
+			Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
+					.subscribe(this);
 		}
-		Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
-		       .subscribe(this);
 	}
 
 	/**

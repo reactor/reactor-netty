@@ -51,6 +51,10 @@ public interface LoopResources extends Disposable {
 			"reactor.ipc.netty.selectCount",
 			"" + -1));
 
+	boolean DEFAULT_NATIVE = Boolean.parseBoolean(System.getProperty(
+			"reactor.ipc.netty.native",
+			"true"));
+
 	/**
 	 * Create a delegating {@link EventLoopGroup} which reuse local event loop if already
 	 * working
