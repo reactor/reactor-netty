@@ -38,8 +38,9 @@ public class UdpClientTest {
 	public void smokeTest() throws Exception {
 		CountDownLatch latch = new CountDownLatch(4);
 		Connection server =
-				UdpServer.create(0)
-				         .newHandler((in, out) -> in.receiveObject()
+				UdpServer.create()
+				         .port(0)
+				         .handler((in, out) -> in.receiveObject()
 				                                    .map(o -> {
 				                                            if (o instanceof DatagramPacket) {
 				                                                DatagramPacket received = (DatagramPacket) o;
@@ -52,12 +53,15 @@ public class UdpClientTest {
 				                                                return Mono.error(new Exception());
 				                                            }
 				                                    })
-				                                    .flatMap(p -> out.sendObject(p)))
+				                                    .flatMap(out::sendObject))
+				         .wiretap()
+				         .bind()
 				         .block(Duration.ofSeconds(30));
 
 		Connection client1 =
-				UdpClient.create(server.address().getPort())
-				         .newHandler((in, out) -> {
+				UdpClient.create()
+				         .port(server.address().getPort())
+				         .handler((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
 				                                        System.out.println("Client1 received " + b.toString(CharsetUtil.UTF_8));
@@ -67,11 +71,14 @@ public class UdpClientTest {
 				                                            .then(out.sendString(Mono.just("ping2")))
 				                                            .neverComplete();
 				         })
+				         .wiretap()
+				         .connect()
 				         .block(Duration.ofSeconds(30));
 
 		Connection client2 =
-				UdpClient.create(server.address().getPort())
-				         .newHandler((in, out) -> {
+				UdpClient.create()
+				         .port(server.address().getPort())
+				         .handler((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
 				                                        System.out.println("Client2 received " + b.toString(CharsetUtil.UTF_8));
@@ -81,6 +88,8 @@ public class UdpClientTest {
 				                                            .then(out.sendString(Mono.just("ping4")))
 				                                            .neverComplete();
 				         })
+				         .wiretap()
+				         .connect()
 				         .block(Duration.ofSeconds(30));
 
 		assertTrue(latch.await(30, TimeUnit.SECONDS));
