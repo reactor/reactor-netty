@@ -16,7 +16,6 @@
 package reactor.ipc.netty.tcp;
 
 import java.net.SocketAddress;
-import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -133,8 +132,9 @@ public class TcpResourcesTest {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(2);
 
-		Connection server = TcpServer.create(port)
-		                               .newHandler((in, out) -> {
+		Connection server = TcpServer.create()
+		                             .port(port)
+		                             .handler((in, out) -> {
 		                               	try {
 			                                in.receive()
 			                                  .blockFirst();
@@ -146,10 +146,11 @@ public class TcpResourcesTest {
 
 			                               return Flux.never();
 		                               })
-		                               .block(Duration.ofSeconds(30));
+		                               .bindNow();
 
-		Connection client = TcpClient.create(port)
-		                               .newHandler((in, out) -> {
+		Connection client = TcpClient.create()
+		                             .port(port)
+		                             .handler((in, out) -> {
 		                               	try {
 			                                out.sendString(Flux.just("Hello World!"))
 			                                   .then()
@@ -161,7 +162,7 @@ public class TcpResourcesTest {
 		                                }
 		                               	    return Mono.empty();
 		                               })
-		                               .block(Duration.ofSeconds(30));
+		                               .connectNow();
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 

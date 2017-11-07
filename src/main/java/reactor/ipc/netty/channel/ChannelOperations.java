@@ -390,11 +390,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			}
 			try {
 				Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
-						.subscribe(this);
+				    .subscribe(this);
 			} catch (Throwable t) {
 				log.error("", t);
 				channel.close();
 			}
+		}
+		else if (parentContext() instanceof ServerContextHandler){
+			((ServerContextHandler) parentContext()).connections.onNext(this);
 		}
 	}
 

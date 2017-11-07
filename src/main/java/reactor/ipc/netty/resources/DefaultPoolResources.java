@@ -36,7 +36,8 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -92,6 +93,8 @@ final class DefaultPoolResources implements PoolResources {
 		final Consumer<? super Channel> onChannelCreate;
 		final EventLoopGroup            defaultGroup;
 
+		final Bootstrap bootstrap;
+
 		final AtomicInteger activeConnections = new AtomicInteger();
 
 		final Future<Boolean> HEALTHY;
@@ -102,6 +105,7 @@ final class DefaultPoolResources implements PoolResources {
 				PoolFactory provider,
 				Consumer<? super Channel> onChannelCreate,
 				EventLoopGroup group) {
+			this.bootstrap = bootstrap;
 			this.pool = provider.newPool(bootstrap, this, this);
 			this.onChannelCreate = onChannelCreate;
 			this.defaultGroup = group;
@@ -200,7 +204,13 @@ final class DefaultPoolResources implements PoolResources {
 						activeConnections);
 			}
 			if (onChannelCreate != null) {
-				onChannelCreate.accept(ch);
+				if (Boolean.valueOf((String) bootstrap.config().attrs().get(AttributeKey.valueOf("finalizer")))) {
+					BootstrapHandlers.finalize(bootstrap, (ContextHandler) onChannelCreate);
+					ch.pipeline().addFirst(bootstrap.config().handler());
+				}
+				else {
+					onChannelCreate.accept(ch);
+				}
 			}
 		}
 

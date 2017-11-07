@@ -71,8 +71,10 @@ public class HttpClientTest {
 
 	@Test
 	public void abort() throws Exception {
-		Connection x = TcpServer.create("localhost", 0)
-		                        .newHandler((in, out) -> in.receive()
+		Connection x = TcpServer.create()
+		                        .host("localhost")
+		                        .port(0)
+		                        .handler((in, out) -> in.receive()
 		                                                     .take(1)
 		                                                     .thenMany(Flux.defer(() ->
 						                                                     out.withConnection(c ->
@@ -81,7 +83,8 @@ public class HttpClientTest {
 						                                                        .then(Mono.delay(Duration.ofSeconds(2)).then()))
 		                                                     )
 		                          )
-		                        .block(Duration.ofSeconds(30));
+		                        .wiretap()
+		                        .bindNow();
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -166,14 +169,17 @@ public class HttpClientTest {
 	@Test
 	@Ignore
 	public void pipelined() throws Exception {
-		Connection x = TcpServer.create("localhost", 0)
-		                        .newHandler((in, out) -> out.withConnection(c -> c.addHandlerFirst(new
+		Connection x = TcpServer.create()
+		                        .host("localhost")
+		                        .port(0)
+		                        .handler((in, out) -> out.withConnection(c -> c.addHandlerFirst(new
 				                          HttpResponseEncoder()))
 		                                                      .sendObject(Flux.just(
 				                                                      response(),
 				                                                      response()))
 		                                                      .neverComplete())
-		                        .block(Duration.ofSeconds(30));
+		                        .wiretap()
+		                        .bindNow();
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -525,8 +531,10 @@ public class HttpClientTest {
 	@Test
 	public void prematureCancel() throws Exception {
 		DirectProcessor<Void> signal = DirectProcessor.create();
-		Connection x = TcpServer.create("localhost", 0)
-		                        .newHandler((in, out) -> {
+		Connection x = TcpServer.create()
+		                        .host("localhost")
+		                        .port(0)
+		                        .handler((in, out) -> {
 										signal.onComplete();
 										return out.withConnection(c -> c.addHandlerFirst(
 												new HttpResponseEncoder()))
@@ -539,7 +547,8 @@ public class HttpClientTest {
 																          .PROCESSING)))
 												.neverComplete();
 		                          })
-		                        .block(Duration.ofSeconds(30));
+		                        .wiretap()
+		                        .bindNow();
 
 		StepVerifier.create(createHttpClientForContext(x)
 		                              .get("/")
