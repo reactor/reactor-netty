@@ -19,7 +19,6 @@ package reactor.ipc.netty.udp;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.util.function.BiFunction;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannel;
@@ -37,18 +36,16 @@ import reactor.util.Loggers;
 final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		implements UdpInbound, UdpOutbound {
 
-	static UdpOperations bind(DatagramChannel channel,
-			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
+	static UdpOperations bindUdp(DatagramChannel channel,
 			ContextHandler<?> context) {
-		return new UdpOperations(channel, handler, context);
+		return new UdpOperations(channel, context);
 	}
 
 	final DatagramChannel  datagramChannel;
 
 	UdpOperations(DatagramChannel channel,
-			BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
-		super(channel, handler, context);
+		super(channel, null, context);
 		this.datagramChannel = channel;
 	}
 

@@ -232,7 +232,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					return null;
 				}
 
-				if (this.options.afterNettyContextInit() != null) {
+				if (this.options != null && this.options.afterNettyContextInit() != null) {
 					try {
 						this.options.afterNettyContextInit().accept(op);
 					}
