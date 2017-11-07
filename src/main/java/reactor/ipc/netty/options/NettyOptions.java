@@ -282,12 +282,9 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 			SO extends NettyOptions<BOOTSTRAP, SO>, BUILDER extends Builder<BOOTSTRAP, SO, BUILDER>>
 			implements Supplier<BUILDER>{
 
-		private static final boolean DEFAULT_NATIVE =
-				Boolean.parseBoolean(System.getProperty("reactor.ipc.netty.epoll", "true"));
-
 		protected BOOTSTRAP bootstrapTemplate;
-		private boolean                        preferNative                     = DEFAULT_NATIVE;
-		private LoopResources                  loopResources                    = null;
+		private boolean                        preferNative                   = LoopResources.DEFAULT_NATIVE;
+		private LoopResources                  loopResources                  = null;
 		private ChannelGroup                 channelGroup                     = null;
 		private SslContext                   sslContext                       = null;
 		private long                         sslHandshakeTimeoutMillis        = 10000L;
