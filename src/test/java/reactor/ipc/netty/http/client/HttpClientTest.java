@@ -132,7 +132,7 @@ public class HttpClientTest {
 		CountDownLatch latch = new CountDownLatch(3);
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
 		Connection serverContext = HttpServer.create(8080)
-		                                       .newRouter(r -> r.post("/",
+		                                     .newRouter(r -> r.post("/",
 				                                       (req, resp) -> req.receive()
 				                                                         .asString()
 				                                                         .flatMap(data -> {
@@ -141,7 +141,7 @@ public class HttpClientTest {
 							                                                         200)
 					                                                                    .send();
 				                                                         })))
-		                                       .block();
+		                                     .block();
 
 		final HttpClient client = HttpClient.create(options -> {
 			options.poolResources(pool);
