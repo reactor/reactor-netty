@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.CharsetUtil;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.time.Duration;
@@ -31,14 +32,16 @@ import org.junit.Test;
 
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.resources.LoopResources;
 
 public class UdpClientTest {
 
 	@Test
 	public void smokeTest() throws Exception {
+		LoopResources resources = LoopResources.create("test");
 		CountDownLatch latch = new CountDownLatch(4);
 		NettyContext server =
-				UdpServer.create(0)
+				UdpServer.create(ops -> ops.port(0).loopResources(resources))
 				         .newHandler((in, out) -> in.receiveObject()
 				                                    .map(o -> {
 				                                            if (o instanceof DatagramPacket) {
@@ -56,7 +59,7 @@ public class UdpClientTest {
 				         .block(Duration.ofSeconds(30));
 
 		NettyContext client1 =
-				UdpClient.create(server.address().getPort())
+				UdpClient.create(ops -> ops.port(server.address().getPort()).loopResources(resources))
 				         .newHandler((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
@@ -70,7 +73,7 @@ public class UdpClientTest {
 				         .block(Duration.ofSeconds(30));
 
 		NettyContext client2 =
-				UdpClient.create(server.address().getPort())
+				UdpClient.create(ops -> ops.port(server.address().getPort()).loopResources(resources))
 				         .newHandler((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
@@ -87,5 +90,15 @@ public class UdpClientTest {
 		server.dispose();
 		client1.dispose();
 		client2.dispose();
+	}
+
+	@Test
+	public void testIssue192() {
+		UdpServer.Builder serverBuilder = UdpServer.builder();
+		UdpClient.Builder clientBuilder = UdpClient.builder();
+		assertThat(Thread.getAllStackTraces().keySet().stream().allMatch(t -> !t.getName().startsWith("udp"))).isTrue();
+		serverBuilder.build();
+		clientBuilder.build();
+		assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("udp"))).isTrue();
 	}
 }

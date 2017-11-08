@@ -47,6 +47,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.SocketUtils;
+import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -130,11 +131,13 @@ public class UdpServerTests {
 		log.info("Using network interface '{}' for multicast", multicastInterface);
 		final Collection<NettyContext> servers = new ArrayList<>();
 
+		LoopResources resources = LoopResources.create("test");
 		for (int i = 0; i < 4; i++) {
 			NettyContext server =
 					UdpServer.create(opts -> opts.option(ChannelOption.SO_REUSEADDR, true)
 					                             .connectAddress(() -> new InetSocketAddress(port))
-					                             .protocolFamily(InternetProtocolFamily.IPv4))
+					                             .protocolFamily(InternetProtocolFamily.IPv4)
+					                             .loopResources(resources))
 					         .newHandler((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
 					                             if (ifaces.hasMoreElements()) {
