@@ -17,12 +17,15 @@
 package reactor.ipc.netty.http.client;
 
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,7 +51,6 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.AbortedException;
-import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 import reactor.ipc.netty.resources.PoolResources;
@@ -116,6 +118,43 @@ public class HttpClientTest {
 		r.headers()
 		 .set(HttpHeaderNames.CONTENT_LENGTH, 0);
 		return r;
+	}
+
+	@Test
+	public void userIssue() throws Exception {
+		final PoolResources pool = PoolResources.fixed("local", 1);
+		CountDownLatch latch = new CountDownLatch(3);
+		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
+		NettyContext serverContext = HttpServer.create(8080)
+		                                       .newRouter(r -> r.post("/",
+				                                       (req, resp) -> req.receive()
+				                                                         .asString()
+				                                                         .flatMap(data -> {
+					                                                         latch.countDown();
+					                                                         return resp.status(
+							                                                         200)
+					                                                                    .send();
+				                                                         })))
+		                                       .block();
+
+		final HttpClient client = HttpClient.create(options -> {
+			options.poolResources(pool);
+			options.connectAddress(() -> new InetSocketAddress(8080));
+		});
+		Flux.just("1", "2", "3")
+		    .concatMap(data -> client.post("/", req -> req.sendString(Flux.just(data)))
+		                           .doOnNext(r -> r.receive()
+		                                           .subscribe()))
+		    .subscribe(response -> {
+			    localAddresses.add(response.channel()
+			                               .localAddress()
+			                               .toString());
+		    });
+
+		latch.await();
+		pool.dispose();
+		serverContext.dispose();
+		System.out.println("Local Addresses used: " + localAddresses);
 	}
 
 	@Test

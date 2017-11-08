@@ -117,7 +117,12 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				HttpServerOperations.log.debug("Dropped HTTP content, " +
 								"Since response has been sent already:{}", msg);
 			}
-			ReferenceCountUtil.release(msg);
+			if (msg instanceof LastHttpContent) {
+				ctx.fireChannelRead(msg);
+			}
+			else {
+				ReferenceCountUtil.release(msg);
+			}
 			ctx.read();
 			return;
 		}
@@ -130,9 +135,6 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			}
 			doPipeline(ctx, msg);
 			return;
-		}
-		else if (persistentConnection && msg instanceof LastHttpContent) {
-			ctx.read();
 		}
 		ctx.fireChannelRead(msg);
 	}
