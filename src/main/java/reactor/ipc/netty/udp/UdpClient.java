@@ -230,8 +230,7 @@ public abstract class UdpClient {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnected(c -> {
 			if (log.isDebugEnabled()) {
-				log.debug("[{}] {} handler is being applied: {}", UdpClient.class, c.channel(),
-						handler);
+				log.debug("[UdpClient] {} handler is being applied: {}", c.channel(), handler);
 			}
 
 			Mono.fromDirect(handler.apply((UdpInbound) c,

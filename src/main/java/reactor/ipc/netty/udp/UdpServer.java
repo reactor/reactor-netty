@@ -218,8 +218,7 @@ public abstract class UdpServer {
 		Objects.requireNonNull(handler, "handler");
 		return doOnBound(c -> {
 			if (log.isDebugEnabled()) {
-				log.debug("[{}] {} handler is being applied: {}", UdpServer.class, c.channel(),
-						handler);
+				log.debug("[UdpServer] {} handler is being applied: {}", c.channel(), handler);
 			}
 
 			Mono.fromDirect(handler.apply((UdpInbound) c,
