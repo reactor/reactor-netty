@@ -131,6 +131,7 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 			ByteBuf buf = allocator.buffer();
 			try {
 				if (buf.writeBytes(fc, maxChunkSize) < 0) {
+					buf.release();
 					sink.complete();
 				}
 				else {
@@ -138,10 +139,8 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 				}
 			}
 			catch (IOException e) {
-				sink.error(e);
-			}
-			finally {
 				buf.release();
+				sink.error(e);
 			}
 			return fc;
 		}), allocator);

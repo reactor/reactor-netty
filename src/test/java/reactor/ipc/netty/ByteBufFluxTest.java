@@ -19,13 +19,26 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.http.client.HttpClientOptions;
+import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.http.server.HttpServerOptions;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for {@link ByteBufFlux}
@@ -102,4 +115,45 @@ public class ByteBufFluxTest {
         file.delete();
     }
 
+    @Test
+    public void testByteBufFluxFromPathWithoutSecurity() throws Exception {
+        doTestByteBufFluxFromPath(false);
+    }
+
+    @Test
+    public void testByteBufFluxFromPathWithSecurity() throws Exception {
+        doTestByteBufFluxFromPath(true);
+    }
+
+    private void doTestByteBufFluxFromPath(boolean withSecurity) throws Exception {
+        Consumer<HttpServerOptions.Builder> serverOptions;
+        Consumer<HttpClientOptions.Builder> clientOptions;
+        final int serverPort = SocketUtils.findAvailableTcpPort();
+        if (withSecurity) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+            SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
+            serverOptions = ops -> ops.port(serverPort).sslContext(sslServer);
+            clientOptions = ops -> ops.port(serverPort).sslContext(sslClient);
+        }
+        else {
+            serverOptions = ops -> ops.port(serverPort);
+            clientOptions = ops -> ops.port(serverPort);
+        }
+
+        Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+        HttpServer.create(serverOptions)
+                  .newHandler((req, res) ->
+                              res.send(ByteBufFlux.fromPath(path))
+                                 .then())
+                  .block(Duration.ofSeconds(30));
+
+        AtomicLong counter = new AtomicLong(0);
+        HttpClient.create(clientOptions)
+                  .get("/download")
+                  .flatMapMany(NettyInbound::receive)
+                  .doOnNext(b -> counter.addAndGet(b.readableBytes()))
+                  .blockLast(Duration.ofSeconds(30));
+        assertTrue(counter.get() == 1245);
+    }
 }
