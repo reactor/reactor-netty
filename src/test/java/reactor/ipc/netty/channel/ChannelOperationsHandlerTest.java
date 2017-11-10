@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -38,6 +39,7 @@ import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -180,6 +182,92 @@ public class ChannelOperationsHandlerTest {
 				}
 			}
 			catch (IOException e) {
+			}
+		}
+
+		public void close() throws IOException {
+			Thread thread = this.thread;
+			if (thread != null) {
+				thread.interrupt();
+			}
+			ServerSocketChannel server = this.server;
+			if (server != null) {
+				server.close();
+			}
+		}
+	}
+
+	@Test
+	@Ignore
+	public void testIssue196() throws Exception {
+		ExecutorService threadPool = Executors.newCachedThreadPool();
+
+		int testServerPort = SocketUtils.findAvailableTcpPort();
+		TestServer testServer = new TestServer(testServerPort);
+
+		threadPool.submit(testServer);
+
+		if(!testServer.await(10, TimeUnit.SECONDS)){
+			throw new IOException("Fail to start test server");
+		}
+
+		HttpClient client =
+		        HttpClient.create(opt -> opt.port(testServerPort)
+		                                    .poolResources(PoolResources.fixed("test", 1)));
+
+		Flux.range(0, 2)
+		    .flatMap(i -> client.get("/205")
+		                        .flatMap(res -> res.receive()
+		                                           .aggregate()
+		                                           .asString()))
+		    .blockLast(Duration.ofSeconds(100));
+
+		testServer.close();
+	}
+
+	private static final class TestServer extends CountDownLatch implements Runnable {
+
+		private final    int                 port;
+		private final    ServerSocketChannel server;
+		private volatile Thread              thread;
+
+		private TestServer(int port) {
+			super(1);
+			this.port = port;
+			try {
+				server = ServerSocketChannel.open();
+			}
+			catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public void run() {
+			try {
+				server.configureBlocking(true);
+				server.socket()
+				      .bind(new InetSocketAddress(port));
+				countDown();
+				thread = Thread.currentThread();
+				while (true) {
+					SocketChannel ch = server.accept();
+
+					byte[] buffer =
+							("HTTP/1.1 205 Reset Content\r\n" +
+							"Transfer-Encoding: chunked\r\n" +
+							"\r\n" +
+							"0\r\n" +
+							"\r\n").getBytes();
+
+					int written = ch.write(ByteBuffer.wrap(buffer));
+					if (written < 0) {
+						throw new IOException("Cannot write to client");
+					}
+				}
+			}
+			catch (IOException e) {
+				// Server closed
 			}
 		}
 

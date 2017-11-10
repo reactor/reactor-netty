@@ -39,6 +39,8 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
+import io.netty.handler.codec.DecoderResult;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
@@ -134,6 +136,12 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			else {
 				if (log.isDebugEnabled()) {
 					String loggingMsg = msg.toString();
+					if (msg instanceof HttpResponse) {
+						DecoderResult decoderResult = ((HttpResponse) msg).decoderResult();
+						if (decoderResult.isFailure()) {
+							log.debug("Decoding failed: " + msg + " : ", decoderResult.cause());
+						}
+					}
 					if (msg instanceof ByteBufHolder) {
 						loggingMsg = ((ByteBufHolder) msg).content()
 						                                  .toString(Charset.defaultCharset());
