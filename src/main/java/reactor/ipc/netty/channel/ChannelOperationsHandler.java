@@ -488,9 +488,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (p != 0L) {
 				produced = 0L;
 				produced(p);
-				if (parent.hasPendingWriteBytes()) {
+				if (parent.pendingBytes > 0L || parent.hasPendingWriteBytes()) {
 					if (parent.ctx.channel()
 					              .isActive()) {
+						parent.pendingBytes = 0L;
 						parent.ctx.flush();
 					}
 					else {
