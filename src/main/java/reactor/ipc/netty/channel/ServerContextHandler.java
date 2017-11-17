@@ -40,7 +40,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	final ServerOptions serverOptions;
 	final DirectProcessor<Connection> connections;
 
-	ServerContextHandler(ChannelOperations.OnNew<Channel> channelOpFactory,
+	ServerContextHandler(ChannelOperations.OnSetup<Channel> channelOpFactory,
 			ServerOptions options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,

@@ -548,6 +548,10 @@ public abstract class TcpServer {
 					.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
 					.localAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
 
+	static {
+		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
+	}
+
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpServer.class);
 	static final Logger         log             = Loggers.getLogger(TcpServer.class);
 

@@ -42,7 +42,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	final boolean       secure;
 
 
-	ClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
+	ClientContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			ClientOptions options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,

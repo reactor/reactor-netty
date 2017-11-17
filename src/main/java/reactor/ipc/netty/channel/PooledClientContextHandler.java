@@ -62,7 +62,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	static final Future DISPOSED = new SucceededFuture<>(null, null);
 
-	PooledClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
+	PooledClientContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			ClientOptions options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,

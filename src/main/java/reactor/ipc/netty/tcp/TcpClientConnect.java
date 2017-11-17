@@ -34,6 +34,8 @@ final class TcpClientConnect extends TcpClient {
 
 	@Override
 	public Mono<? extends Connection> connect(Bootstrap b) {
+		ChannelOperations.OnSetup<Channel> ops = BootstrapHandlers.channelOperationFactory(b);
+
 		if (b.config()
 		     .group() == null) {
 
@@ -52,7 +54,7 @@ final class TcpClientConnect extends TcpClient {
 							isSecure(),
 							b.config().remoteAddress(),
 							null,
-							(ch, c, msg) -> ChannelOperations.bind(ch, null, c));
+							ops);
 			sink.onCancel(ctx);
 
 			BootstrapHandlers.finalize(b, ctx);
