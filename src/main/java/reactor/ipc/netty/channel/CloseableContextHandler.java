@@ -45,7 +45,7 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 
 	ChannelFuture f;
 
-	CloseableContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
+	CloseableContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			NettyOptions<?, ?> options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,

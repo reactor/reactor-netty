@@ -15,12 +15,14 @@
  */
 package reactor.ipc.netty.channel;
 
+import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.NettyPipeline;
@@ -153,6 +155,38 @@ public abstract class BootstrapHandlers {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(name, "name");
 		b.handler(removeConfiguration(b.config().handler(), name));
+	}
+
+	/**
+	 * Set a {@link ChannelOperations.OnSetup} to the passed bootstrap.
+	 *
+	 * @param b the bootstrap to scan
+	 * @param opsFactory a new {@link ChannelOperations.OnSetup} factory
+	 */
+	public static <CHANNEL extends Channel> void channelOperationFactory(AbstractBootstrap<?, ?> b,
+	                                                                     ChannelOperations.OnSetup<CHANNEL> opsFactory) {
+		Objects.requireNonNull(b, "bootstrap");
+		Objects.requireNonNull(opsFactory, "opsFactory");
+		b.option(OPS_OPTION, opsFactory);
+	}
+
+	/**
+	 * Obtain and remove the current {@link ChannelOperations.OnSetup} from the bootstrap.
+	 *
+	 * @param b the bootstrap to scan
+	 *
+	 * @return current {@link ChannelOperations.OnSetup} factory or null
+	 *
+	 */
+	@SuppressWarnings("unchecked")
+	public static <CHANNEL extends Channel> ChannelOperations.OnSetup<CHANNEL> channelOperationFactory(AbstractBootstrap<?, ?> b) {
+		Objects.requireNonNull(b, "bootstrap");
+		ChannelOperations.OnSetup ops =
+				(ChannelOperations.OnSetup) b.config()
+				                             .options()
+				                             .get(OPS_OPTION);
+		b.option(OPS_OPTION, null);
+		return ops;
 	}
 
 	/**
@@ -367,4 +401,7 @@ public abstract class BootstrapHandlers {
 
 	BootstrapHandlers() {
 	}
+
+	final static ChannelOption<ChannelOperations.OnSetup<? extends Channel>> OPS_OPTION =
+			ChannelOption.newInstance("ops_factory");
 }
