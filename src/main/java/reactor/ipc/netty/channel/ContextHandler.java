@@ -166,7 +166,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	BiConsumer<ChannelPipeline, ContextHandler<Channel>> pipelineConfigurator;
 	boolean                                              fired;
-	boolean                                              autoCreateOperations;
 
 	/**
 	 * @param channelOpFactory
@@ -187,7 +186,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		this.options = options;
 		this.sink = sink;
 		this.loggingHandler = loggingHandler;
-		this.autoCreateOperations = true;
 		this.providedAddress = providedAddress;
 
 	}
@@ -208,22 +206,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	}
 
 	/**
-	 * Allow the {@link ChannelOperations} to be created automatically on pipeline setup
-	 *
-	 * @param autoCreateOperations should auto create {@link ChannelOperations}
-	 *
-	 * @return this context
-	 */
-	public final ContextHandler<CHANNEL> autoCreateOperations(boolean autoCreateOperations) {
-		this.autoCreateOperations = autoCreateOperations;
-		return this;
-	}
-
-	/**
 	 * Return a new {@link ChannelOperations} or null if one of the two
 	 * following conditions are not met:
 	 * <ul>
-	 * <li>{@link #autoCreateOperations(boolean)} is true
+	 * <li>{@link ChannelOperations.OnSetup#createOnConnected()} is true
 	 * </li>
 	 * <li>The passed message is not null</li>
 	 * </ul>
@@ -237,7 +223,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	@SuppressWarnings("unchecked")
 	public final ChannelOperations<?, ?> createOperations(Channel channel, @Nullable Object msg) {
 
-		if (autoCreateOperations || msg != null) {
+		if (channelOpFactory.createOnConnected() || msg != null) {
 			ChannelOperations<?, ?> op =
 					channelOpFactory.create((CHANNEL) channel, this, msg);
 
