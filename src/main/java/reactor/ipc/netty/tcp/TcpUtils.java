@@ -29,6 +29,7 @@ import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -236,6 +237,9 @@ final class TcpUtils {
 	}
 
 	static final Logger log = Loggers.getLogger(TcpUtils.class);
+
+	static final ChannelOperations.OnSetup<Channel> TCP_OPS =
+			(ch, c, msg) -> ChannelOperations.bind(ch, null, c);
 
 	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC =
 			sslProviderBuilder -> sslProviderBuilder.sslContext(TcpServerSecure.DEFAULT_SSL_CONTEXT);

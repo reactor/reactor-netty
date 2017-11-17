@@ -447,7 +447,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 					} : EMPTY).onPipeline(this);
 		}
 
-		protected final ChannelOperations.OnNew EMPTY = (a,b,c) -> null;
+		protected final ChannelOperations.OnSetup EMPTY = (a, b, c) -> null;
 
 		@Override
 		public void accept(ChannelPipeline pipeline, ContextHandler<Channel> c) {

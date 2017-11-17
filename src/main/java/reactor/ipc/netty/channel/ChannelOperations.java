@@ -489,7 +489,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * A {@link ChannelOperations} factory
 	 */
 	@FunctionalInterface
-	public interface OnNew<CHANNEL extends Channel> {
+	public interface OnSetup<CHANNEL extends Channel> {
 
 		/**
 		 * Create a new {@link ChannelOperations} given a netty channel, a parent
@@ -503,7 +503,19 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		 */
 		@Nullable ChannelOperations<?, ?> create(CHANNEL c, ContextHandler<?> contextHandler,
 				Object msg);
+
+		/**
+		 * True if {@link ChannelOperations} should be created by {@link
+		 * ChannelOperationsHandler} on channelActive event
+		 *
+		 * @return true if {@link ChannelOperations} should be created by {@link
+		 * ChannelOperationsHandler} on channelActive event
+		 */
+		default boolean createOnConnected() {
+			return true;
+		}
 	}
+
 	/**
 	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}
 	 */

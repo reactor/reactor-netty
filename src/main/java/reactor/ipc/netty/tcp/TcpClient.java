@@ -547,6 +547,10 @@ public abstract class TcpClient {
 					.option(ChannelOption.SO_SNDBUF, 1024 * 1024)
 					.remoteAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
 
+	static {
+		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
+	}
+
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpClient.class);
 	static final Logger         log             = Loggers.getLogger(TcpClient.class);
 
