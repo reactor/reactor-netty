@@ -21,6 +21,7 @@ import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.resources.LoopResources;
 
@@ -33,6 +34,8 @@ final class UdpServerBind extends UdpServer {
 
 	@Override
 	protected Mono<? extends Connection> bind(Bootstrap b) {
+		ChannelOperations.OnSetup<DatagramChannel> ops = BootstrapHandlers.channelOperationFactory(b);
+
 		//Default group and channel
 		if (b.config()
 		     .group() == null) {
@@ -50,7 +53,7 @@ final class UdpServerBind extends UdpServer {
 					UdpServer.LOGGING_HANDLER,
 					false,
 					b.config().localAddress(),
-					(ch, c, msg) -> UdpOperations.bindUdp(ch, c));
+					ops);
 			BootstrapHandlers.finalize(b, ctx);
 			ctx.setFuture(b.bind());
 		});
