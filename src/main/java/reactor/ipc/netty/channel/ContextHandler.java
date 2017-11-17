@@ -74,7 +74,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
-			ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
+			ChannelOperations.OnSetup<CHANNEL> channelOpFactory) {
 		return newClientContext(sink,
 				options,
 				loggingHandler,
@@ -104,7 +104,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
-			ChannelPool pool, ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
+			ChannelPool pool, ChannelOperations.OnSetup<CHANNEL> channelOpFactory) {
 		if (pool != null) {
 			return new PooledClientContextHandler<>(channelOpFactory,
 					options,
@@ -135,7 +135,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	public static ContextHandler<Channel> newServerContext(MonoSink<Connection> sink,
 			ServerOptions options,
 			LoggingHandler loggingHandler,
-			ChannelOperations.OnNew<Channel> channelOpFactory) {
+			ChannelOperations.OnSetup<Channel> channelOpFactory) {
 		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, options.getAddress());
 	}
 
@@ -153,7 +153,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	public static ContextHandler<Channel> newServerContext(MonoSink<Connection> sink,
 														   ServerOptions options,
 														   LoggingHandler loggingHandler,
-														   ChannelOperations.OnNew<Channel> channelOpFactory,
+														   ChannelOperations.OnSetup<Channel> channelOpFactory,
 														   SocketAddress address) {
 		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, address);
 	}
@@ -162,7 +162,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	final NettyOptions<?, ?>               options;
 	final LoggingHandler                   loggingHandler;
 	final SocketAddress                    providedAddress;
-	final ChannelOperations.OnNew<CHANNEL> channelOpFactory;
+	final ChannelOperations.OnSetup<CHANNEL> channelOpFactory;
 
 	BiConsumer<ChannelPipeline, ContextHandler<Channel>> pipelineConfigurator;
 	boolean                                              fired;
@@ -177,7 +177,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * associated with that handler (useable eg. for SNI), or null if unavailable.
 	 */
 	@SuppressWarnings("unchecked")
-	protected ContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
+	protected ContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			NettyOptions<?, ?> options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,

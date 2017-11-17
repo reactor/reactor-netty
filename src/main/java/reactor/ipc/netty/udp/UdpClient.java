@@ -20,6 +20,7 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -30,6 +31,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -384,6 +386,11 @@ public abstract class UdpClient {
 					.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
 					.option(ChannelOption.SO_SNDBUF, 1024 * 1024)
 					.remoteAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
+
+	static {
+		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP,
+				(ChannelOperations.OnSetup<DatagramChannel>) (ch, c, msg) -> UdpOperations.bindUdp(ch, c));
+	}
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(UdpClient.class);
 	static final Logger         log             = Loggers.getLogger(UdpClient.class);

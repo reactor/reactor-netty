@@ -34,6 +34,8 @@ final class TcpServerBind extends TcpServer {
 
 	@Override
 	public Mono<? extends Connection> bind(ServerBootstrap b) {
+		ChannelOperations.OnSetup<Channel> ops = BootstrapHandlers.channelOperationFactory(b);
+
 		if (b.config()
 		     .group() == null) {
 
@@ -47,7 +49,7 @@ final class TcpServerBind extends TcpServer {
 			ContextHandler<Channel> ctx = ContextHandler.newServerContext(sink,
 					null,
 					null,
-					(ch, c, msg) -> ChannelOperations.bind(ch, null, c),
+					ops,
 					b.config().localAddress());
 			BootstrapHandlers.finalize(b, ctx);
 			ctx.setFuture(b.bind());
