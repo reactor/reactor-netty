@@ -127,8 +127,10 @@ public abstract class TcpClient {
 	}
 
 	/**
-	 * Attribute default attribute to the future {@link Channel} connection. They will be
+	 * Inject default attribute to the future {@link Channel} connection. They will be
 	 * available via {@link Channel#attr(AttributeKey)}.
+	 * If the {@code value} is {@code null}, the attribute of the specified {@code key}
+	 * is removed.
 	 *
 	 * @param key the attribute key
 	 * @param value the attribute value
@@ -350,6 +352,7 @@ public abstract class TcpClient {
 	/**
 	 * Set a {@link ChannelOption} value for low level connection settings like SO_TIMEOUT
 	 * or SO_KEEPALIVE. This will apply to each new channel from remote peer.
+	 * Use a value of {@code null} to remove a previous set {@link ChannelOption}.
 	 *
 	 * @param key the option key
 	 * @param value the option value
@@ -359,9 +362,8 @@ public abstract class TcpClient {
 	 *
 	 * @see Bootstrap#option(ChannelOption, Object)
 	 */
-	public final <T> TcpClient option(ChannelOption<T> key, T value) {
+	public final <T> TcpClient option(ChannelOption<T> key, @Nullable T value) {
 		Objects.requireNonNull(key, "key");
-		Objects.requireNonNull(value, "value");
 		return bootstrap(b -> b.option(key, value));
 	}
 

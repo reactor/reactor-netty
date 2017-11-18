@@ -43,7 +43,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.Scanner;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -99,6 +98,8 @@ public abstract class TcpServer {
 	/**
 	 * Inject default attribute to the future child {@link Channel} connections. They
 	 * will be available via {@link Channel#attr(AttributeKey)}.
+	 * If the {@code value} is {@code null}, the attribute of the specified {@code key}
+	 * is removed.
 	 *
 	 * @param key the attribute key
 	 * @param value the attribute value
@@ -108,9 +109,8 @@ public abstract class TcpServer {
 	 *
 	 * @see ServerBootstrap#childAttr(AttributeKey, Object)
 	 */
-	public final <T> TcpServer attr(AttributeKey<T> key, T value) {
+	public final <T> TcpServer attr(AttributeKey<T> key, @Nullable T value) {
 		Objects.requireNonNull(key, "key");
-		Objects.requireNonNull(value, "value");
 		return bootstrap(b -> b.childAttr(key, value));
 	}
 
@@ -306,7 +306,6 @@ public abstract class TcpServer {
 	 *
 	 * @return a new {@link TcpServer}
 	 */
-	@SuppressWarnings("unchecked")
 	public final TcpServer handler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnection(c -> {
@@ -352,6 +351,7 @@ public abstract class TcpServer {
 	/**
 	 * Set a {@link ChannelOption} value for low level connection settings like SO_TIMEOUT
 	 * or SO_KEEPALIVE. This will apply to each new channel from remote peer.
+	 * Use a value of {@code null} to remove a previous set {@link ChannelOption}.
 	 *
 	 * @param key the option key
 	 * @param value the option value
@@ -361,9 +361,8 @@ public abstract class TcpServer {
 	 *
 	 * @see ServerBootstrap#childOption(ChannelOption, Object)
 	 */
-	public final <T> TcpServer option(ChannelOption<T> key, T value) {
+	public final <T> TcpServer option(ChannelOption<T> key, @Nullable T value) {
 		Objects.requireNonNull(key, "key");
-		Objects.requireNonNull(value, "value");
 		return bootstrap(b -> b.childOption(key, value));
 	}
 
