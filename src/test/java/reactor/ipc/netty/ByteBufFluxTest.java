@@ -37,7 +37,6 @@ import org.junit.Test;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientOptions;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.http.server.HttpServerOptions;
 
 import static org.junit.Assert.assertTrue;
 
@@ -127,7 +126,7 @@ public class ByteBufFluxTest {
     }
 
     private void doTestByteBufFluxFromPath(boolean withSecurity) throws Exception {
-        Consumer<HttpServerOptions.Builder> serverOptions;
+        HttpServer server;
         Consumer<HttpClientOptions.Builder> clientOptions;
         final int serverPort = SocketUtils.findAvailableTcpPort();
         if (withSecurity) {
@@ -135,20 +134,23 @@ public class ByteBufFluxTest {
             SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
             SslContext sslClient = SslContextBuilder.forClient()
 					.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-            serverOptions = ops -> ops.port(serverPort).sslContext(sslServer);
+            server = HttpServer.create()
+                               .port(serverPort)
+                               .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer));
             clientOptions = ops -> ops.port(serverPort).sslContext(sslClient);
         }
         else {
-            serverOptions = ops -> ops.port(serverPort);
+            server = HttpServer.create()
+                    .port(serverPort);
             clientOptions = ops -> ops.port(serverPort);
         }
 
         Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-        HttpServer.create(serverOptions)
-                  .newHandler((req, res) ->
+        server.handler((req, res) ->
                               res.send(ByteBufFlux.fromPath(path))
                                  .then())
-                  .block(Duration.ofSeconds(30));
+                  .wiretap()
+                  .bindNow();
 
         AtomicLong counter = new AtomicLong(0);
         HttpClient.create(clientOptions)

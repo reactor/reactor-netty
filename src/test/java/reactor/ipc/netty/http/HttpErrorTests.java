@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -25,13 +24,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.DisposableServer;
-import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.tcp.TcpClient;
-import reactor.test.StepVerifier;
 
 /**
  * @author tokuhirom
@@ -40,7 +36,7 @@ public class HttpErrorTests {
 
 	@Test
 	public void test() {
-		DisposableServer server = HttpServer.create()
+		Connection server = HttpServer.create()
 		                                    .port(0)
 		                                    .router(httpServerRoutes -> httpServerRoutes.get(
 				                                "/",

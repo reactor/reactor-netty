@@ -31,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -624,9 +623,10 @@ public class HttpServerTests {
 	public void contextShouldBeTransferredFromDownStreamToUpsream() {
 		AtomicReference<Context> context = new AtomicReference<>();
 		Connection server =
-				HttpServer.create(0)
-				          .newHandler((req, res) -> res.status(200).send())
-				          .block(Duration.ofSeconds(30));
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) -> res.status(200).send())
+				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create(ops -> ops.connectAddress(() -> server.address())

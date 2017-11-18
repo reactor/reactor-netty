@@ -50,6 +50,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
+import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -538,4 +539,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.CONTINUE,
 					EMPTY_BUFFER);
+
+	static final AttributeKey<Integer> PRODUCE_GZIP = AttributeKey.newInstance("produceGzip");
+	static final AttributeKey<BiPredicate<HttpServerRequest, HttpServerResponse>> PRODUCE_GZIP_PREDICATE =
+			AttributeKey.newInstance("produceGzipPredicate");
 }

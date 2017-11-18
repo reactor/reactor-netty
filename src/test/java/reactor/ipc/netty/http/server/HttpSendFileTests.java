@@ -53,8 +53,8 @@ public class HttpSendFileTests {
 
 	}
 
-	protected void customizeServerOptions(HttpServerOptions.Builder options) {
-
+	protected HttpServer customizeServerOptions(HttpServer httpServer) {
+		return null;
 	}
 
 	@Test
@@ -130,9 +130,10 @@ public class HttpSendFileTests {
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression, Consumer<String> bodyAssertion) {
 		Connection context =
-				HttpServer.create(opt -> customizeServerOptions(opt.host("localhost")))
-				          .newHandler((req, resp) -> fn.apply(resp))
-				          .block();
+				customizeServerOptions(HttpServer.create()
+				                                 .tcpConfiguration(tcpServer -> tcpServer.host("localhost")))
+				          .handler((req, resp) -> fn.apply(resp))
+				          .bindNow();
 
 
 		HttpClientResponse response =
@@ -188,11 +189,12 @@ public class HttpSendFileTests {
 		});
 
 		Connection context =
-				HttpServer.create(opt -> customizeServerOptions(opt.host("localhost")))
-				          .newHandler((req, resp) -> resp.sendByteArray(req.receive()
+				customizeServerOptions(HttpServer.create()
+				                                 .tcpConfiguration(tcpServer -> tcpServer.host("localhost")))
+				          .handler((req, resp) -> resp.sendByteArray(req.receive()
 				                                                           .aggregate()
 				                                                           .asByteArray()))
-				          .block();
+				          .bindNow();
 		byte[] response =
 				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(() -> context.address())))
 				          .request(HttpMethod.POST, "/", req -> req.send(content).then())

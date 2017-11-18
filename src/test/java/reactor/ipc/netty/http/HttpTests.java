@@ -31,7 +31,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -44,10 +43,12 @@ public class HttpTests {
 	@Test
 	public void httpRespondsEmpty() {
 		Connection server =
-				HttpServer.create(0)
-				          .newRouter(r ->
+				HttpServer.create()
+				          .port(0)
+				          .router(r ->
 				              r.post("/test/{param}", (req, res) -> Mono.empty()))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create("localhost", server.address().getPort());
@@ -71,15 +72,17 @@ public class HttpTests {
 	@Test
 	public void httpRespondsToRequestsFromClients() {
 		Connection server =
-				HttpServer.create(0)
-				          .newRouter(r ->
+				HttpServer.create()
+				          .port(0)
+				          .router(r ->
 				              r.post("/test/{param}", (req, res) ->
 				                  res.sendString(req.receive()
 				                                    .asString()
 				                                    .log("server-received")
 				                                    .map(it -> it + ' ' + req.param("param") + '!')
 				                                    .log("server-reply"))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create("localhost", server.address().getPort());
@@ -125,7 +128,7 @@ public class HttpTests {
 		                             }
 		                             return Mono.just(Unpooled.copyInt(i));
 		                         });
-		DisposableServer server =
+		Connection server =
 				HttpServer.create()
 				          .port(0)
 				          .router(r -> r.get("/test", (req, res) -> {throw new
@@ -238,8 +241,9 @@ public class HttpTests {
 		AtomicInteger serverRes = new AtomicInteger();
 
 		Connection server =
-				HttpServer.create(0)
-				          .newRouter(r -> r.get("/test/{param}", (req, res) -> {
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.get("/test/{param}", (req, res) -> {
 				              System.out.println(req.requestHeaders().get("test"));
 				              return res.header("content-type", "text/plain")
 				                        .sendWebsocket((in, out) ->
@@ -251,7 +255,8 @@ public class HttpTests {
 				                                             .map(it -> it + ' ' + req.param("param") + '!')
 				                                             .log("server-reply")));
 				          }))
-				          .block(Duration.ofSeconds(5));
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client = HttpClient.create("localhost", server.address().getPort());
 
@@ -290,8 +295,9 @@ public class HttpTests {
 	public void test100Continue() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		Connection server =
-				HttpServer.create(0)
-				          .newHandler((req, res) -> req.receive()
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) -> req.receive()
 				                                       .aggregate()
 				                                       .asString()
 				                                       .flatMap(s -> {
@@ -299,7 +305,8 @@ public class HttpTests {
 					                                       return res.sendString(Mono.just(s))
 					                                                 .then();
 				                                       }))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		String content =
 				HttpClient.create(server.address().getPort())
@@ -322,8 +329,9 @@ public class HttpTests {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
 		Connection server =
-				HttpServer.create(opts -> opts.port(0))
-				          .newRouter(r -> r.post("/hi", (req, res) -> req.receive()
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.post("/hi", (req, res) -> req.receive()
 				                                                       .aggregate()
 				                                                       .asString()
 				                                                       .log()
@@ -333,7 +341,8 @@ public class HttpTests {
 						                              .then(res.compression(true)
 						                                       .options(op -> op.flushOnEach())
 						                                       .sendString(ep.log()).then())))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 
 		String content =
@@ -386,8 +395,10 @@ public class HttpTests {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
 		Connection server =
-				HttpServer.create(opts -> opts.port(0).compression(true))
-				          .newRouter(r -> r.post("/hi", (req, res) -> req.receive()
+				HttpServer.create()
+				          .port(0)
+				          .compress()
+				          .router(r -> r.post("/hi", (req, res) -> req.receive()
 				                                                         .aggregate()
 				                                                         .asString()
 				                                                         .log()
@@ -397,7 +408,8 @@ public class HttpTests {
 						                           req.receive()
 						                              .then(res.options(op -> op.flushOnEach())
 						                                       .sendString(ep.log()).then())))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 
 		String content =

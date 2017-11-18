@@ -16,12 +16,11 @@
 
 package reactor.ipc.netty.http.server;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.security.cert.CertificateException;
 
 import javax.net.ssl.SSLException;
 
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -32,14 +31,15 @@ public class HttpsSendFileTests extends HttpSendFileTests {
 	static SelfSignedCertificate ssc;
 
 	@BeforeClass
-	public static void createSelfSignedCertificate() throws CertificateException, SSLException {
+	public static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
 	}
 
 	@Override
-	protected void customizeServerOptions(HttpServerOptions.Builder options) {
+	protected HttpServer customizeServerOptions(HttpServer server) {
 		try {
-			options.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build());
+			SslContext ctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+			return server.tcpConfiguration(tcpServer -> tcpServer.secure(ctx));
 		}
 		catch (SSLException e) {
 			throw new RuntimeException(e);
