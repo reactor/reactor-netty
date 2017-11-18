@@ -28,7 +28,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.DisposableServer;
-import reactor.ipc.netty.options.ServerOptions;
 
 /**
  *
@@ -37,16 +36,13 @@ import reactor.ipc.netty.options.ServerOptions;
 final class ServerContextHandler extends CloseableContextHandler<Channel>
 		implements Connection, DisposableServer {
 
-	final ServerOptions serverOptions;
 	final DirectProcessor<Connection> connections;
 
 	ServerContextHandler(ChannelOperations.OnSetup<Channel> channelOpFactory,
-			ServerOptions options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
-		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
-		this.serverOptions = options;
+		super(channelOpFactory, null, sink, loggingHandler, providedAddress);
 		this.connections = DirectProcessor.create();
 	}
 
