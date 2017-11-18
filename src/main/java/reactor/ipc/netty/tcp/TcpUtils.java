@@ -30,12 +30,14 @@ import io.netty.resolver.NoopAddressResolverGroup;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -44,7 +46,7 @@ import java.util.function.Consumer;
 final class TcpUtils {
 
 	static Bootstrap updateProxySupport(Bootstrap b, ProxyProvider proxyOptions) {
-		BootstrapHandlers.updateConfiguration(b, NettyPipeline.ProxyHandler, channel -> {
+		BootstrapHandlers.updateConfiguration(b, NettyPipeline.ProxyHandler, (ctx, channel) -> {
 			if (proxyOptions.shouldProxy(b.config()
 					.remoteAddress())) {
 
@@ -118,7 +120,7 @@ final class TcpUtils {
 		return b;
 	}
 
-	static final class SslSupportConsumer implements Consumer<Channel> {
+	static final class SslSupportConsumer implements BiConsumer<ContextHandler, Channel> {
 
 		final SslProvider sslProvider;
 		final InetSocketAddress sniInfo;
@@ -144,7 +146,7 @@ final class TcpUtils {
 		}
 
 		@Override
-		public void accept(Channel channel) {
+		public void accept(ContextHandler ctx, Channel channel) {
 			SslHandler sslHandler;
 
 			if (sniInfo != null) {

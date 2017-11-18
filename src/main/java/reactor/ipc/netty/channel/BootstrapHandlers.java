@@ -31,7 +31,7 @@ import reactor.util.Loggers;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 /**
  * Helper to update configuration the main {@link Bootstrap} and
@@ -56,6 +56,7 @@ public abstract class BootstrapHandlers {
 		ChannelHandler handler = b.config().childHandler();
 		if (handler instanceof BootstrapPipelineHandler) {
 			pipeline = (BootstrapPipelineHandler) handler;
+			pipeline.contextHandler = ctx;
 		}
 
 		b.childHandler(new BootstrapInitializerHandler(pipeline, ctx));
@@ -76,6 +77,7 @@ public abstract class BootstrapHandlers {
 		ChannelHandler handler = b.config().handler();
 		if (handler instanceof BootstrapPipelineHandler){
 			pipeline = (BootstrapPipelineHandler) handler;
+			pipeline.contextHandler = ctx;
 		}
 
 		b.handler(new BootstrapInitializerHandler(pipeline, ctx));
@@ -116,7 +118,7 @@ public abstract class BootstrapHandlers {
 	 * @return a configuration or null
 	 */
 	@Nullable
-	public static Consumer<? super Channel> findConfiguration(String name,
+	public static BiConsumer<ContextHandler, ? super Channel> findConfiguration(String name,
 															  @Nullable ChannelHandler handler) {
 		Objects.requireNonNull(name, "configuration type");
 		if (handler instanceof BootstrapPipelineHandler) {
@@ -200,7 +202,7 @@ public abstract class BootstrapHandlers {
 	 */
 	public static Bootstrap updateConfiguration(Bootstrap b,
 												String name,
-												Consumer<? super Channel> c) {
+												BiConsumer<ContextHandler, ? super Channel> c) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(c, "configuration");
@@ -219,7 +221,7 @@ public abstract class BootstrapHandlers {
 	 */
 	public static ServerBootstrap updateConfiguration(ServerBootstrap b,
 													  String name,
-													  Consumer<? super Channel> c) {
+													  BiConsumer<ContextHandler, ? super Channel> c) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(c, "configuration");
@@ -271,7 +273,7 @@ public abstract class BootstrapHandlers {
 
 	static ChannelHandler updateConfiguration(@Nullable ChannelHandler handler,
 											  String name,
-											  Consumer<? super Channel> c) {
+											  BiConsumer<ContextHandler, ? super Channel> c) {
 
 		BootstrapPipelineHandler p;
 
@@ -282,7 +284,7 @@ public abstract class BootstrapHandlers {
 			p = new BootstrapPipelineHandler(Collections.emptyList());
 
 			if (handler != null) {
-				p.add(new PipelineConfiguration(consumer -> consumer.pipeline()
+				p.add(new PipelineConfiguration((ctx, ch) -> ch.pipeline()
 						.addFirst(handler),
 						"user"));
 			}
@@ -292,9 +294,9 @@ public abstract class BootstrapHandlers {
 		return p;
 	}
 
-	static Consumer<? super Channel> logConfiguration(LoggingHandler handler) {
+	static BiConsumer<ContextHandler, ? super Channel> logConfiguration(LoggingHandler handler) {
 		Objects.requireNonNull(handler, "loggingHandler");
-		return channel -> {
+		return (ctx, channel) -> {
 			if (channel.pipeline().get(NettyPipeline.SslHandler) != null) {
 				if (log.isTraceEnabled()) {
 					channel.pipeline()
@@ -343,10 +345,10 @@ public abstract class BootstrapHandlers {
 
 	static final class PipelineConfiguration {
 
-		final Consumer<? super Channel> consumer;
+		final BiConsumer<ContextHandler, ? super Channel> consumer;
 		final String                    name;
 
-		PipelineConfiguration(Consumer<? super Channel> consumer, String name) {
+		PipelineConfiguration(BiConsumer<ContextHandler, ? super Channel> consumer, String name) {
 			this.consumer = consumer;
 			this.name = name;
 		}
@@ -357,6 +359,7 @@ public abstract class BootstrapHandlers {
 			implements ChannelHandler {
 
 		boolean removed;
+		ContextHandler contextHandler;
 
 		BootstrapPipelineHandler(Collection<? extends PipelineConfiguration> c) {
 			super(c);
@@ -381,7 +384,7 @@ public abstract class BootstrapHandlers {
 			removed = true;
 
 			for (PipelineConfiguration pipelineConfiguration : this) {
-				pipelineConfiguration.consumer.accept(ctx.channel());
+				pipelineConfiguration.consumer.accept(contextHandler, ctx.channel());
 			}
 
 			ctx.pipeline().remove(this);
