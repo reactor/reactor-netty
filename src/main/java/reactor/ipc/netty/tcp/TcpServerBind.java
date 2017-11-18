@@ -63,7 +63,6 @@ final class TcpServerBind extends TcpServer {
 		return Mono.create(sink -> {
 			ContextHandler<Channel> ctx = ContextHandler.newServerContext(sink,
 					null,
-					null,
 					ops,
 					b.config().localAddress());
 			BootstrapHandlers.finalize(b, ctx, ops.createOnConnected());
