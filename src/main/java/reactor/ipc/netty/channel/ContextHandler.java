@@ -40,7 +40,6 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
-import reactor.ipc.netty.options.ServerOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
@@ -126,24 +125,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * Create a new server context
 	 *
 	 * @param sink
-	 * @param options
-	 * @param loggingHandler
-	 * @param channelOpFactory
-	 *
-	 * @return a new {@link ContextHandler} for servers
-	 */
-	public static ContextHandler<Channel> newServerContext(MonoSink<Connection> sink,
-			ServerOptions options,
-			LoggingHandler loggingHandler,
-			ChannelOperations.OnSetup<Channel> channelOpFactory) {
-		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, options.getAddress());
-	}
-
-	/**
-	 * Create a new server context
-	 *
-	 * @param sink
-	 * @param options
 	 * @param loggingHandler
 	 * @param channelOpFactory
 	 * @param address
@@ -151,11 +132,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @return a new {@link ContextHandler} for servers
 	 */
 	public static ContextHandler<Channel> newServerContext(MonoSink<Connection> sink,
-														   ServerOptions options,
 														   LoggingHandler loggingHandler,
 														   ChannelOperations.OnSetup<Channel> channelOpFactory,
 														   SocketAddress address) {
-		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, address);
+		return new ServerContextHandler(channelOpFactory, sink, loggingHandler, address);
 	}
 
 	final MonoSink<Connection>             sink;
