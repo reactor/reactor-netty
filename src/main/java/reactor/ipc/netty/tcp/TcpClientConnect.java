@@ -48,7 +48,7 @@ final class TcpClientConnect extends TcpClient {
 			ContextHandler<Channel> ctx =
 					ContextHandler.newClientContext(sink,
 							null,
-							TcpClient.LOGGING_HANDLER,
+							null,
 							isSecure(),
 							b.config().remoteAddress(),
 							null,
