@@ -15,11 +15,6 @@
  */
 package reactor.ipc.netty.http;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import reactor.core.publisher.Flux;
@@ -37,10 +32,12 @@ public class HttpResponseStatusCodesHandlingTests {
 	@Test
 	public void httpStatusCode404IsHandledByTheClient() {
 		Connection server =
-				HttpServer.create(0)
-				          .newRouter(r -> r.post("/test", (req, res) -> res.send(req.receive()
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.post("/test", (req, res) -> res.send(req.receive()
 				                                                                    .log("server-received"))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client = HttpClient.create("localhost", server.address().getPort());
 

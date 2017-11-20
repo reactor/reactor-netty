@@ -44,10 +44,12 @@ public class HttpTests {
 	@Test
 	public void httpRespondsEmpty() {
 		Connection server =
-				HttpServer.create(0)
-				          .newRouter(r ->
+				HttpServer.create()
+				          .port(0)
+				          .router(r ->
 				              r.post("/test/{param}", (req, res) -> Mono.empty()))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create("localhost", server.address().getPort());
@@ -71,15 +73,17 @@ public class HttpTests {
 	@Test
 	public void httpRespondsToRequestsFromClients() {
 		Connection server =
-				HttpServer.create(0)
-				          .newRouter(r ->
+				HttpServer.create()
+				          .port(0)
+				          .router(r ->
 				              r.post("/test/{param}", (req, res) ->
 				                  res.sendString(req.receive()
 				                                    .asString()
 				                                    .log("server-received")
 				                                    .map(it -> it + ' ' + req.param("param") + '!')
 				                                    .log("server-reply"))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create("localhost", server.address().getPort());
@@ -238,8 +242,9 @@ public class HttpTests {
 		AtomicInteger serverRes = new AtomicInteger();
 
 		Connection server =
-				HttpServer.create(0)
-				          .newRouter(r -> r.get("/test/{param}", (req, res) -> {
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.get("/test/{param}", (req, res) -> {
 				              System.out.println(req.requestHeaders().get("test"));
 				              return res.header("content-type", "text/plain")
 				                        .sendWebsocket((in, out) ->
@@ -251,7 +256,8 @@ public class HttpTests {
 				                                             .map(it -> it + ' ' + req.param("param") + '!')
 				                                             .log("server-reply")));
 				          }))
-				          .block(Duration.ofSeconds(5));
+				          .wiretap()
+				          .bindNow(Duration.ofSeconds(5));
 
 		HttpClient client = HttpClient.create("localhost", server.address().getPort());
 
