@@ -54,6 +54,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ResourceLeakDetector;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
@@ -66,7 +67,6 @@ import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.resources.PoolResources;
-import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
@@ -80,34 +80,41 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class HttpServerTests {
 
 	@Test
+	@Ignore
 	public void defaultHttpPort() {
-		BlockingNettyContext blockingFacade = HttpServer.create()
-		                                                .start((req, resp) -> resp.sendNotFound());
-		blockingFacade.shutdown();
+		Connection blockingFacade = HttpServer.create()
+		                                      .handler((req, resp) -> resp.sendNotFound())
+		                                      .wiretap()
+		                                      .bindNow();
+		blockingFacade.disposeNow();
 
-		assertThat(blockingFacade.getPort())
-				.isEqualTo(8080)
-				.isEqualTo(blockingFacade.getContext().address().getPort());
+		assertThat(blockingFacade.address().getPort())
+				.isEqualTo(8080);
 	}
 
 	@Test
+	@Ignore
 	public void defaultHttpPortWithAddress() {
-		BlockingNettyContext blockingFacade = HttpServer.create("localhost")
-		                                                .start((req, resp) -> resp.sendNotFound());
-		blockingFacade.shutdown();
+		Connection blockingFacade = HttpServer.create()
+		                                      .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+		                                      .handler((req, resp) -> resp.sendNotFound())
+		                                      .wiretap()
+		                                      .bindNow();
+		blockingFacade.disposeNow();
 
-		assertThat(blockingFacade.getPort())
-				.isEqualTo(8080)
-				.isEqualTo(blockingFacade.getContext().address().getPort());
+		assertThat(blockingFacade.address().getPort())
+				.isEqualTo(8080);
 	}
 
 	@Test
 	public void releaseInboundChannelOnNonKeepAliveRequest() throws Exception {
 		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 
-		Connection c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> resp.status(200).send())
-		                           .block();
+		Connection c = HttpServer.create()
+		                         .port(0)
+		                         .handler((req, resp) -> resp.status(200).send())
+		                         .wiretap()
+		                         .bindNow();
 
 		Flux<ByteBuf> src = Flux.range(0, 3)
 		                        .map(n -> Unpooled.wrappedBuffer(Integer.toString(n)
@@ -131,27 +138,6 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void httpPortOptionTakesPrecedenceOverBuilderField() {
-		HttpServer.Builder builder = HttpServer.builder()
-		                                       .options(o -> o.port(9081))
-		                                       .port(9080);
-		HttpServer binding = builder.build();
-		BlockingNettyContext blockingFacade = binding.start((req, resp) -> resp.sendNotFound());
-		blockingFacade.shutdown();
-
-		assertThat(builder).hasFieldOrPropertyWithValue("port", 9080);
-
-		assertThat(blockingFacade.getPort())
-				.isEqualTo(9081)
-				.isEqualTo(blockingFacade.getContext().address().getPort());
-
-
-		assertThat(binding.options().getAddress())
-				.isInstanceOf(InetSocketAddress.class)
-				.hasFieldOrPropertyWithValue("port", 9081);
-	}
-
-	@Test
 	public void sendFileSecure()
 			throws CertificateException, SSLException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
@@ -160,9 +146,11 @@ public class HttpServerTests {
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
 
 		Connection context =
-				HttpServer.create(opt -> opt.sslContext(sslServer))
-				          .newHandler((req, resp) -> resp.sendFile(largeFile))
-				          .block();
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
+				          .handler((req, resp) -> resp.sendFile(largeFile))
+				          .wiretap()
+				          .bindNow();
 
 
 		HttpClientResponse response =
@@ -218,9 +206,11 @@ public class HttpServerTests {
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn) {
 		Connection context =
-				HttpServer.create(opt -> opt.host("localhost"))
-				          .newHandler((req, resp) -> fn.apply(resp))
-				          .block();
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .handler((req, resp) -> fn.apply(resp))
+				          .wiretap()
+				          .bindNow();
 
 
 		HttpClientResponse response =
@@ -243,10 +233,12 @@ public class HttpServerTests {
 	@Test
 	public void testRestart() {
 		// start a first server with a handler that answers HTTP 200 OK
-		Connection context = HttpServer.create(8080)
-		                               .newHandler((req, resp) -> resp.status(200)
+		Connection context = HttpServer.create()
+		                               .port(8080)
+		                               .handler((req, resp) -> resp.status(200)
 		                                                                .send().log())
-		                               .block();
+		                               .wiretap()
+		                               .bindNow();
 
 		HttpClientResponse response = HttpClient.create(8080).get("/").block();
 
@@ -261,8 +253,11 @@ public class HttpServerTests {
 		HttpResources.reset();
 
 		// create a totally new server instance, with a different handler that answers HTTP 201
-		context = HttpServer.create(8080)
-		                    .newHandler((req, resp) -> resp.status(201).send()).block();
+		context = HttpServer.create()
+		                    .port(8080)
+		                    .handler((req, resp) -> resp.status(201).send())
+		                    .wiretap()
+		                    .bindNow();
 
 		response = HttpClient.create(8080).get("/").block();
 
@@ -275,9 +270,11 @@ public class HttpServerTests {
 
 	@Test
 	public void errorResponseAndReturn() throws Exception {
-		Connection c = HttpServer.create(0)
-		                         .newHandler((req, resp) -> Mono.error(new Exception("returnError")))
-		                         .block();
+		Connection c = HttpServer.create()
+		                         .port(0)
+		                         .handler((req, resp) -> Mono.error(new Exception("returnError")))
+		                         .wiretap()
+		                         .bindNow();
 
 		HttpClientResponse res =
 				HttpClient.create(c.address().getPort())
@@ -295,14 +292,16 @@ public class HttpServerTests {
 
 		AtomicInteger i = new AtomicInteger();
 
-		Connection server = HttpServer.create(0)
-		                           .newHandler((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
+		Connection server = HttpServer.create()
+		                              .port(0)
+		                              .handler((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
 		                                                          .sendString(Mono.just(i.incrementAndGet())
 		                                                                          .flatMap(d -> Mono.delay(
 				                                                                          Duration.ofSeconds(
 						                                                                          4 - d))
 		                                                                                         .map(x -> d + "\n"))))
-		                         .block(Duration.ofSeconds(30));
+		                              .wiretap()
+		                              .bindNow();
 
 		DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
 				HttpMethod.GET,
@@ -348,9 +347,11 @@ public class HttpServerTests {
 		Flux<String> test = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
 
-		Connection c = HttpServer.create(0)
-		                         .newHandler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
-		                         .block(Duration.ofSeconds(30));
+		Connection c = HttpServer.create()
+		                         .port(0)
+		                         .handler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
+		                         .wiretap()
+		                         .bindNow();
 
 		Flux<String> client = HttpClient.create(c.address()
 		                                         .getPort())
@@ -371,9 +372,11 @@ public class HttpServerTests {
 	@Test
 	public void keepAlive() throws URISyntaxException {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
-		Connection c = HttpServer.create(0)
-		                         .newRouter(routes -> routes.directory("/test", resource))
-		                         .block(Duration.ofSeconds(30));
+		Connection c = HttpServer.create()
+		                         .port(0)
+		                         .router(routes -> routes.directory("/test", resource))
+		                         .wiretap()
+		                         .bindNow();
 
 		HttpResources.set(PoolResources.fixed("http", 1));
 
@@ -430,46 +433,42 @@ public class HttpServerTests {
 		c.dispose();
 	}
 
-
-	@Test
-	public void toStringShowsOptions() {
-		HttpServer server = HttpServer.create(opt -> opt.host("foo")
-		                                                .port(123)
-		                                                .compression(987));
-
-		assertThat(server.toString()).isEqualTo("HttpServer: listening on foo:123, gzip over 987 bytes");
-	}
-
 	@Test
 	public void gettingOptionsDuplicates() {
-		HttpServer server = HttpServer.create(opt -> opt.host("foo").port(123).compression(true));
-		assertThat(server.options())
-		          .isNotSameAs(server.options)
-		          .isNotSameAs(server.options());
+		HttpServer server = HttpServer.create()
+		                              .port(123)
+		                              .tcpConfiguration(tcpServer -> tcpServer.host("foo"))
+		                              .compress();
+		assertThat(server.tcpConfiguration().configure())
+		          .isNotSameAs(HttpServer.DEFAULT_TCP_SERVER)
+		          .isNotSameAs(server.tcpConfiguration().configure());
 	}
 
 	@Test
 	public void startRouter() {
-		BlockingNettyContext facade = HttpServer.create(0)
-		                                        .startRouter(routes -> routes.get("/hello",
-				                                        (req, resp) -> resp.sendString(Mono.just("hello!"))));
+		Connection facade = HttpServer.create()
+		                              .port(0)
+		                              .router(routes -> routes.get("/hello",
+				                                        (req, resp) -> resp.sendString(Mono.just("hello!"))))
+		                              .wiretap()
+		                              .bindNow();
 
 		try {
 			HttpClientResponse res =
-					HttpClient.create(facade.getPort())
+					HttpClient.create(facade.address().getPort())
 					          .get("/hello")
 					          .block();
 			assertThat(res.status().code()).isEqualTo(200);
 			res.dispose();
 
-			res = HttpClient.create(facade.getPort())
+			res = HttpClient.create(facade.address().getPort())
 			                .get("/helloMan")
 			                .block();
 			assertThat(res.status().code()).isEqualTo(404);
 			res.dispose();
 		}
 		finally {
-			facade.shutdown();
+			facade.disposeNow();
 		}
 	}
 
@@ -477,11 +476,14 @@ public class HttpServerTests {
 	public void startRouterAndAwait()
 			throws InterruptedException {
 		ExecutorService ex = Executors.newSingleThreadExecutor();
-		AtomicReference<BlockingNettyContext> ref = new AtomicReference<>();
+		AtomicReference<Connection> ref = new AtomicReference<>();
 
-		Future<?> f = ex.submit(() -> HttpServer.create(0)
-		                                        .startRouterAndAwait(routes -> routes.get("/hello", (req, resp) -> resp.sendString(Mono.just("hello!"))),
-				                                        ref::set)
+		Future<?> f = ex.submit(() ->
+			    HttpServer.create()
+			              .port(0)
+			              .router(routes -> routes.get("/hello", (req, resp) -> resp.sendString(Mono.just("hello!"))))
+			              .wiretap()
+			              .bindUntilJavaShutdown(Duration.ofSeconds(2), c -> ref.set(c))
 		);
 
 		//if the server cannot be started, a ExecutionException will be thrown instead
@@ -493,7 +495,7 @@ public class HttpServerTests {
 		assertThat(ref.get()).isNotNull().withFailMessage("Server is not initialized after 1s");
 
 		//shutdown the router to unblock the thread
-		ref.get().shutdown();
+		ref.get().disposeNow();
 		Thread.sleep(100);
 		assertThat(f.isDone()).isTrue();
 	}
@@ -501,17 +503,19 @@ public class HttpServerTests {
 	@Test
 	public void nonContentStatusCodes() {
 		Connection server =
-				HttpServer.create(ops -> ops.host("localhost"))
-				          .newRouter(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
-				                                                           .sendHeaders())
-				                           .get("/204-2", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT))
-				                           .get("/205-1", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
-				                                                           .sendHeaders())
-				                           .get("/205-2", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT))
-				                           .get("/304-1", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
-				                                                           .sendHeaders())
-				                           .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
-				          .block(Duration.ofSeconds(30));
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .router(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
+				                                                        .sendHeaders())
+				                        .get("/204-2", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT))
+				                        .get("/205-1", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
+				                                                        .sendHeaders())
+				                        .get("/205-2", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT))
+				                        .get("/304-1", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
+				                                                        .sendHeaders())
+				                        .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
+				          .wiretap()
+				          .bindNow();
 
 		checkResponse("/204-1", server.address());
 		checkResponse("/204-2", server.address());
@@ -553,39 +557,41 @@ public class HttpServerTests {
 	@Test
 	public void testContentLengthHeadRequest() {
 		Connection server =
-				HttpServer.create(ops -> ops.host("localhost"))
-				          .newRouter(r -> r.route(req -> req.uri().startsWith("/1"),
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .router(r -> r.route(req -> req.uri().startsWith("/1"),
 				                                  (req, res) -> res.sendString(Mono.just("OK")))
-				                           .route(req -> req.uri().startsWith("/2"),
+				                        .route(req -> req.uri().startsWith("/2"),
 				                                  (req, res) -> res.chunkedTransfer(false)
 				                                                   .sendString(Mono.just("OK")))
-				                           .route(req -> req.uri().startsWith("/3"),
+				                        .route(req -> req.uri().startsWith("/3"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set("Content-Length", 2);
 				                                                return res.sendString(Mono.just("OK"));
 				                                                })
-				                           .route(req -> req.uri().startsWith("/4"),
+				                        .route(req -> req.uri().startsWith("/4"),
 				                                  (req, res) -> res.sendHeaders())
-				                           .route(req -> req.uri().startsWith("/5"),
+				                        .route(req -> req.uri().startsWith("/5"),
 				                                  (req, res) -> res.chunkedTransfer(false)
 				                                                   .sendHeaders())
-				                           .route(req -> req.uri().startsWith("/6"),
+				                        .route(req -> req.uri().startsWith("/6"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set("Content-Length", 2);
 				                                                return res.sendHeaders();
 				                                                })
-				                           .route(req -> req.uri().startsWith("/7"),
+				                        .route(req -> req.uri().startsWith("/7"),
 				                                  (req, res) -> res.send())
-				                           .route(req -> req.uri().startsWith("/8"),
+				                        .route(req -> req.uri().startsWith("/8"),
 				                                  (req, res) -> res.chunkedTransfer(false)
 				                                                   .send())
-				                           .route(req -> req.uri().startsWith("/9"),
+				                        .route(req -> req.uri().startsWith("/9"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set("Content-Length", 2);
 				                                                return res.send();
 				                                                })
-				                           )
-				          .block(Duration.ofSeconds(30));
+				                        )
+				          .wiretap()
+				          .bindNow();
 
 		doTestContentLengthHeadRequest("/1", server.address(), HttpMethod.GET, true, false);
 		doTestContentLengthHeadRequest("/1", server.address(), HttpMethod.HEAD, true, false);
@@ -651,9 +657,11 @@ public class HttpServerTests {
 	@Test
 	public void testIssue186() {
 		DisposableChannel server =
-				HttpServer.create(0)
-				          .newHandler((req, res) -> res.status(200).send())
-				          .block(Duration.ofSeconds(300));
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) -> res.status(200).send())
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create(ops -> ops.connectAddress(() -> server.address())

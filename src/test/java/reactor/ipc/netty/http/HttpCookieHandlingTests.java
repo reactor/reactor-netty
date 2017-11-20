@@ -37,12 +37,14 @@ public class HttpCookieHandlingTests {
 	@Test
 	public void clientWithoutCookieGetsANewOneFromServer() {
 		Connection server =
-				HttpServer.create(0)
-				          .newRouter(r -> r.get("/test", (req, resp) ->
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.get("/test", (req, resp) ->
 				                            resp.addCookie(new DefaultCookie("cookie1", "test_value"))
 				                                .send(req.receive()
 				                                         .log("server received"))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
 				HttpClient.create("localhost", server.address().getPort())

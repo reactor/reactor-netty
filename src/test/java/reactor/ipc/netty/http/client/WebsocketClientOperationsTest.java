@@ -17,7 +17,6 @@ package reactor.ipc.netty.http.client;
 
 import java.time.Duration;
 
-import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
@@ -50,7 +49,9 @@ public class WebsocketClientOperationsTest {
 
 	private void failOnClientServerError(
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
-		Connection httpServer = HttpServer.create(0).newRouter(
+		Connection httpServer = HttpServer.create()
+		                                  .port(0)
+		                                  .router(
 			routes -> routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
 					.get("/ws", (req, res) -> {
 						int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
@@ -60,7 +61,8 @@ public class WebsocketClientOperationsTest {
 						return res.sendWebsocket(serverSubprotocol, (i, o) -> o.sendString(Mono.just("test")));
 					})
 			)
-		                                  .block(Duration.ofSeconds(30));
+		                                  .wiretap()
+		                                  .bindNow();
 
 		Mono<HttpClientResponse> response =
 			HttpClient.create(httpServer.address().getPort())

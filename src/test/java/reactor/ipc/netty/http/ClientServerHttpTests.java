@@ -257,8 +257,9 @@ public class ClientServerHttpTests {
 		    .buffer(5)
 		    .subscribe(processor);
 
-		httpServer = HttpServer.create(0)
-		                       .newRouter(r -> r.get("/data",
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .router(r -> r.get("/data",
 				                       (req, resp) -> resp.options(NettyPipeline.SendOptions::flushOnEach)
 				                                          .send(Flux.from(processor)
 				                                                    .log("server")
@@ -270,7 +271,8 @@ public class ClientServerHttpTests {
 				                                                    .map(new DummyListEncoder(
 						                                                    resp.alloc()
 				                                                    )))))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 	}
 
 	private List<String> getClientData() throws Exception {
