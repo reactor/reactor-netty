@@ -381,7 +381,7 @@ final class ReactorNetty {
 		@Override
 		protected void hookFinally(SignalType type) {
 			if (type != SignalType.CANCEL) {
-				dispose();
+				channelDisposable.dispose();
 			}
 		}
 
