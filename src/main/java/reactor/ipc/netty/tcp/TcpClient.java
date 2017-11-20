@@ -40,7 +40,6 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import javax.annotation.Nullable;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
@@ -75,14 +74,6 @@ import java.util.function.Supplier;
  * @author Stephane Maldini
  */
 public abstract class TcpClient {
-
-	/**
-	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
-	 * the {@code PORT} <b>environment variable</b>.
-	 */
-	static final int DEFAULT_PORT =
-			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
-					12012;
 
 	/**
 	 * Prepare a pooled {@link TcpClient}
@@ -289,7 +280,7 @@ public abstract class TcpClient {
 	 */
 	public final TcpClient host(String host) {
 		Objects.requireNonNull(host, "host");
-		return bootstrap(b -> b.remoteAddress(host, getPort(b)));
+		return attr(HOST, host);
 	}
 
 	/**
@@ -375,7 +366,7 @@ public abstract class TcpClient {
 	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient port(int port) {
-		return bootstrap(b -> b.remoteAddress(getHost(b), port));
+		return attr(PORT, port);
 	}
 
 	/**
@@ -539,36 +530,31 @@ public abstract class TcpClient {
 				new LoggingHandler(category, level)));
 	}
 
+	/**
+	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
+	 * the {@code PORT} <b>environment variable</b>.
+	 */
+	static final int DEFAULT_PORT =
+			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
+					12012;
+	static final AttributeKey<Integer> DEFAULT_PORT_ATTR = AttributeKey.newInstance("defaultClientPort");
+	static final AttributeKey<String> DEFAULT_HOST_ATTR = AttributeKey.newInstance("defaultClientHost");
+
 	static final Bootstrap DEFAULT_BOOTSTRAP =
 			new Bootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
 					.option(ChannelOption.AUTO_READ, false)
 					.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
 					.option(ChannelOption.SO_SNDBUF, 1024 * 1024)
-					.remoteAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
+					.attr(DEFAULT_PORT_ATTR, DEFAULT_PORT)
+					.attr(DEFAULT_HOST_ATTR, NetUtil.LOCALHOST.getHostAddress());
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
 	}
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpClient.class);
-	static final Logger         log             = Loggers.getLogger(TcpClient.class);
-
-	static String getHost(Bootstrap b) {
-		if (b.config()
-				.remoteAddress() instanceof InetSocketAddress) {
-			return ((InetSocketAddress) b.config()
-					.remoteAddress()).getHostString();
-		}
-		return NetUtil.LOCALHOST.getHostAddress();
-	}
-
-	static int getPort(Bootstrap b) {
-		if (b.config()
-				.remoteAddress() instanceof InetSocketAddress) {
-			return ((InetSocketAddress) b.config()
-					.remoteAddress()).getPort();
-		}
-		return DEFAULT_PORT;
-	}
+	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("clienthost");
+	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("clientport");
+	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpClient.class);
+	static final Logger                log               = Loggers.getLogger(TcpClient.class);
 }

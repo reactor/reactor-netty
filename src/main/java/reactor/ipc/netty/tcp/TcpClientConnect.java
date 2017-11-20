@@ -18,12 +18,16 @@ package reactor.ipc.netty.tcp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.util.NetUtil;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
+import reactor.ipc.netty.options.InetSocketAddressUtil;
 import reactor.ipc.netty.resources.LoopResources;
+
+import java.net.InetSocketAddress;
 
 /**
  * @author Stephane Maldini
@@ -43,6 +47,18 @@ final class TcpClientConnect extends TcpClient {
 					LoopResources.DEFAULT_NATIVE,
 					TcpResources.get(),
 					TcpUtils.findSslContext(b));
+		}
+
+		if (b.config().remoteAddress() == null) {
+			String host = (String) b.config().attrs().get(HOST);
+			Integer port = (Integer) b.config().attrs().get(PORT);
+			String defaultHost = (String) b.config().attrs().get(DEFAULT_HOST_ATTR);
+			Integer defaultPort = (Integer) b.config().attrs().get(DEFAULT_PORT_ATTR);
+			if (host == null) {
+				b.remoteAddress(new InetSocketAddress(defaultHost, port != null ? port : defaultPort));
+			} else {
+				b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port != null ? port : defaultPort));
+			}
 		}
 
 		return Mono.create(sink -> {

@@ -27,6 +27,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
+import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
@@ -71,8 +72,6 @@ import java.util.function.Supplier;
  * @author Stephane Maldini
  */
 public abstract class TcpServer {
-
-	static final int DEFAULT_PORT = 0;
 
 	/**
 	 * Prepare a {@link TcpServer}
@@ -306,6 +305,7 @@ public abstract class TcpServer {
 	 *
 	 * @return a new {@link TcpServer}
 	 */
+	@SuppressWarnings("unchecked")
 	public final TcpServer handler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnection(c -> {
@@ -327,7 +327,7 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer host(String host) {
 		Objects.requireNonNull(host, "host");
-		return bootstrap(b -> b.localAddress(host, getPort(b)));
+		return attr(HOST, host);
 	}
 
 	/**
@@ -374,7 +374,7 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer port(int port) {
-		return bootstrap(b -> b.localAddress(getHost(b), port));
+		return attr(PORT, port);
 	}
 
 	/**
@@ -535,42 +535,29 @@ public abstract class TcpServer {
 				new LoggingHandler(category, level)));
 	}
 
+	static final int                   DEFAULT_PORT      = 0;
+	static final AttributeKey<Integer> DEFAULT_PORT_ATTR = AttributeKey.newInstance("defaultServerPort");
 
 	static final ServerBootstrap DEFAULT_BOOTSTRAP =
 			new ServerBootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 					.option(ChannelOption.SO_REUSEADDR, true)
 					.option(ChannelOption.SO_BACKLOG, 1000)
+					.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 					.childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
 					.childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
 					.childOption(ChannelOption.AUTO_READ, false)
 					.childOption(ChannelOption.SO_KEEPALIVE, true)
 					.childOption(ChannelOption.TCP_NODELAY, true)
 					.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-					.localAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
+					.attr(DEFAULT_PORT_ATTR, DEFAULT_PORT);
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
 	}
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpServer.class);
-	static final Logger         log             = Loggers.getLogger(TcpServer.class);
-
-	static String getHost(ServerBootstrap b) {
-		if (b.config()
-				.localAddress() instanceof InetSocketAddress) {
-			return ((InetSocketAddress) b.config()
-					.localAddress()).getHostString();
-		}
-		return NetUtil.LOCALHOST.getHostAddress();
-	}
-
-	static int getPort(ServerBootstrap b) {
-		if (b.config()
-				.localAddress() instanceof InetSocketAddress) {
-			return ((InetSocketAddress) b.config()
-					.localAddress()).getPort();
-		}
-		return DEFAULT_PORT;
-	}
+	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("serverhost");
+	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("serverport");
+	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpServer.class);
+	static final Logger                log               = Loggers.getLogger(TcpServer.class);
 
 }
