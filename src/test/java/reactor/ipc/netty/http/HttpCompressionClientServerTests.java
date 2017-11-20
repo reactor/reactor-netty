@@ -42,14 +42,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class HttpCompressionClientServerTests {
 
 	@Test
-	public void trueEnabledIncludeContentEncoding() throws Exception {
+	public void trueEnabledIncludeContentEncoding() {
 
-		HttpServer server = HttpServer.create(o -> o.port(0)
-		                                            .compression(true));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .compress();
 
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create(o -> o.compression(true)
 		                                            .connectAddress(() -> address(
@@ -70,11 +72,13 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void serverCompressionDefault() throws Exception {
-		HttpServer server = HttpServer.create(0);
+		HttpServer server = HttpServer.create()
+		                              .port(0);
 
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
 				connection)));
@@ -97,12 +101,14 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void serverCompressionDisabled() throws Exception {
-		HttpServer server = HttpServer.create(o -> o.port(0)
-		                                            .compression(false));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .noCompression();
 
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
@@ -127,12 +133,14 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void serverCompressionAlwaysEnabled() throws Exception {
-		HttpServer server = HttpServer.create(o -> o.port(0)
-		                                            .compression(true));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .compress();
 
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
@@ -171,13 +179,14 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void serverCompressionEnabledSmallResponse() throws Exception {
-		HttpServer server = HttpServer.create(o -> o.port(0)
-		                                            .compression(25));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .compress(25);
 
 		Connection connection =
-				server.newHandler((in, out) -> out.header("content-length", "5")
+				server.handler((in, out) -> out.header("content-length", "5")
 				                                  .sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				      .bindNow();
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(connection)));
@@ -204,12 +213,13 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void serverCompressionPredicateTrue() throws Exception {
-		HttpServer server = HttpServer.create(o -> o.port(0)
-		                                            .compression((req, res) -> true));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .compress((req, res) -> true);
 
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .bindNow();
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(connection)));
@@ -245,12 +255,14 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void serverCompressionPredicateFalse() throws Exception {
-		HttpServer server = HttpServer.create(o -> o.port(0)
-		                                            .compression((req, res) -> false));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .compress((req, res) -> false);
 
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
@@ -279,12 +291,14 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void serverCompressionEnabledBigResponse() throws Exception {
-		HttpServer server = HttpServer.create(o -> o.port(0)
-		                                            .compression(4));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .compress(4);
 
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
@@ -321,13 +335,15 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void compressionServerEnabledClientDisabledIsNone() throws Exception {
-		HttpServer server = HttpServer.create(o -> o.port(0)
-		                                            .compression(true));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .compress();
 
 		String serverReply = "reply";
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just(serverReply)))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just(serverReply)))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create(o -> o.compression(false)
 		                                            .connectAddress(() -> address(
@@ -351,11 +367,13 @@ public class HttpCompressionClientServerTests {
 
 	@Test
 	public void compressionServerDefaultClientDefaultIsNone() throws Exception {
-		HttpServer server = HttpServer.create(o -> o.port(0));
+		HttpServer server = HttpServer.create()
+		                              .port(0);
 
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(
 				connection)));
@@ -380,10 +398,13 @@ public class HttpCompressionClientServerTests {
 	public void compressionActivatedOnClientAddsHeader() {
 		AtomicReference<String> zip = new AtomicReference<>("fail");
 
-		HttpServer server = HttpServer.create(o -> o.port(0).compression(true));
+		HttpServer server = HttpServer.create()
+		                              .port(0)
+		                              .compress();
 		Connection connection =
-				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofSeconds(10));
+				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				      .wiretap()
+				      .bindNow(Duration.ofSeconds(10));
 		HttpClient client = HttpClient.create(opt -> opt.compression(true)
 		                                                .connectAddress(() -> address(
 				                                                connection)));
@@ -409,10 +430,11 @@ public class HttpCompressionClientServerTests {
 	@Test
 	public void testIssue282() {
 		Connection server =
-				HttpServer.create(options -> options.compression(2048)
-				                                    .port(0))
-				          .newHandler((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
-				          .block(Duration.ofSeconds(30));
+				HttpServer.create()
+				          .compress(2048)
+				          .port(0)
+				          .handler((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
+				          .bindNow();
 
 		Mono<String> response =
 				HttpClient.create(server.address().getPort())
@@ -430,11 +452,12 @@ public class HttpCompressionClientServerTests {
 	@Test
 	public void testIssue292() {
 		Connection server =
-				HttpServer.create(options -> options.compression(10)
-				                                    .port(0))
-				          .newHandler((req, res) ->
+				HttpServer.create()
+				          .compress(10)
+				          .port(0)
+				          .handler((req, res) ->
 				                  res.sendHeaders().sendString(Flux.just("test", "test", "test", "test")))
-				          .block(Duration.ofSeconds(30));
+				          .bindNow();
 
 		Mono<String> response =
 				HttpClient.create(options -> options.port(server.address().getPort())

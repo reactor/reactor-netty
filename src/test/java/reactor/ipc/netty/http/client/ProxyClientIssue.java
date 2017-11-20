@@ -26,7 +26,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -76,16 +75,19 @@ public class ProxyClientIssue {
 		byte[] content = new byte[1024 * 10];
 		random.nextBytes(content);
 
-		HttpServer server = HttpServer.create(options -> options.host("0.0.0.0")
-		                                                        .port(CONTENT_SERVER_PORT)
-		                                                        .option(ChannelOption.SO_LINGER,
+		HttpServer server = HttpServer.create()
+		                              .port(CONTENT_SERVER_PORT)
+		                              .tcpConfiguration(tcpServer -> tcpServer.host("0.0.0.0")
+		                                                                      .option(ChannelOption.SO_LINGER,
 				                                                        -1));
 
-		server.startRouterAndAwait(routes -> routes.get("/**",
+		server.router(routes -> routes.get("/**",
 				(req, res) -> res.header("Content-length", String.valueOf(content.length))
 				                 .header("Content-type", "application/octet-stream")
 				                 .header("Connection", "Close")
-				                 .sendByteArray(Flux.just(content))));
+				                 .sendByteArray(Flux.just(content))))
+				.wiretap()
+				.bindNow();
 
 	}
 
@@ -130,10 +132,13 @@ public class ProxyClientIssue {
 	@Test
 	@Ignore
 	public void startProxyServer() throws Exception {
-		HttpServer server = HttpServer.create(options -> options.host("0.0.0.0")
-		                                                        .port(PROXY_PORT));
+		HttpServer server = HttpServer.create()
+		                              .port(PROXY_PORT)
+		                              .tcpConfiguration(tcpServer -> tcpServer.host("0.0.0.0"));
 
-		server.startRouterAndAwait(routes -> routes.get("/0/**", this::proxy));
+		server.router(routes -> routes.get("/0/**", this::proxy))
+		      .wiretap()
+		      .bindNow();
 	}
 
 	private Mono<Void> proxy(HttpServerRequest request, HttpServerResponse response) {

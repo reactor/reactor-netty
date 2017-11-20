@@ -126,9 +126,9 @@ public class ByteBufFluxTest {
     }
 
     private void doTestByteBufFluxFromPath(boolean withSecurity) throws Exception {
-        HttpServer server;
         Consumer<HttpClientOptions.Builder> clientOptions;
         final int serverPort = SocketUtils.findAvailableTcpPort();
+        final HttpServer server;
         if (withSecurity) {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -141,16 +141,16 @@ public class ByteBufFluxTest {
         }
         else {
             server = HttpServer.create()
-                    .port(serverPort);
+                               .port(serverPort);
             clientOptions = ops -> ops.port(serverPort);
         }
 
         Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-        server.handler((req, res) ->
-                              res.send(ByteBufFlux.fromPath(path))
-                                 .then())
-                  .wiretap()
-                  .bindNow();
+        Connection c = server.handler((req, res) ->
+                                       res.send(ByteBufFlux.fromPath(path))
+                                          .then())
+                             .wiretap()
+                             .bindNow();
 
         AtomicLong counter = new AtomicLong(0);
         HttpClient.create(clientOptions)
@@ -159,5 +159,6 @@ public class ByteBufFluxTest {
                   .doOnNext(b -> counter.addAndGet(b.readableBytes()))
                   .blockLast(Duration.ofSeconds(30));
         assertTrue(counter.get() == 1245);
+        c.disposeNow();
     }
 }

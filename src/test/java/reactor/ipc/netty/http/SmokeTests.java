@@ -262,8 +262,9 @@ public class SmokeTests {
 		                                 //.log("log", LogOperator.REQUEST)
 		                                 .subscribeWith(workProcessor);
 
-		httpServer = HttpServer.create(opts -> opts.port(port))
-		                       .newHandler((request, response) -> {
+		httpServer = HttpServer.create()
+		                       .port(port)
+		                       .handler((request, response) -> {
 			                       response.chunkedTransfer(false);
 
 			                       return response.addHeader("Content-type", "text/plain")
@@ -294,7 +295,8 @@ public class SmokeTests {
 							                                                        response
 							                                                               .alloc())));
 		                       })
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 	}
 

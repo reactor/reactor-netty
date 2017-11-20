@@ -64,10 +64,12 @@ public class WebsocketTest {
 
 	@Test
 	public void simpleTest() {
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
 				                       Mono.just("test"))))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		String res = HttpClient.create(httpServer.address()
 		                                  .getPort())
@@ -87,8 +89,9 @@ public class WebsocketTest {
 	@Test
 	public void serverWebSocketFailed() {
 		httpServer =
-				HttpServer.create(0)
-				          .newHandler((in, out) -> {
+				HttpServer.create()
+				          .port(0)
+				          .handler((in, out) -> {
 				                  if (!in.requestHeaders().contains("Authorization")) {
 				                      return out.status(401);
 				                  }
@@ -96,7 +99,8 @@ public class WebsocketTest {
 				                      return out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")));
 				                  }
 				          })
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Mono<String> res =
 				HttpClient.create(httpServer.address().getPort())
@@ -144,14 +148,16 @@ public class WebsocketTest {
 	@Test
 	public void unidirectional() {
 		int c = 10;
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket(
 				                       (i, o) -> o.options(opt -> opt.flushOnEach())
 				                                  .sendString(
 						                                  Mono.just("test")
 						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		Flux<String> ws = HttpClient.create(httpServer.address()
 		                                              .getPort())
@@ -174,14 +180,16 @@ public class WebsocketTest {
 	@Test
 	public void unidirectionalBinary() {
 		int c = 10;
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket(
 				                       (i, o) -> o.options(opt -> opt.flushOnEach())
 				                                  .sendByteArray(
 						                                  Mono.just("test".getBytes(Charset.defaultCharset()))
 						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		Flux<String> ws = HttpClient.create(httpServer.address()
 		                                              .getPort())
@@ -217,13 +225,15 @@ public class WebsocketTest {
 		client.log("client")
 		      .subscribe(v -> clientLatch.countDown());
 
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
 				                       i.receive()
 				                        .asString()
 				                        .take(c)
 				                        .subscribeWith(server))))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		Flux.interval(Duration.ofMillis(200))
 		    .map(Object::toString)
@@ -245,10 +255,12 @@ public class WebsocketTest {
 
 	@Test
 	public void simpleSubprotocolServerNoSubprotocol() throws Exception {
-		httpServer = HttpServer.create(0)
-		                                    .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
 				                                    Mono.just("test"))))
-		                                    .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		StepVerifier.create(
 				HttpClient.create(
@@ -263,13 +275,15 @@ public class WebsocketTest {
 
 	@Test
 	public void simpleSubprotocolServerNotSupported() throws Exception {
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket(
 				                       "protoA,protoB",
 				                       (i, o) -> {
 				                       	return o.sendString(Mono.just("test"));
 				                       }))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		StepVerifier.create(
 				HttpClient.create(
@@ -285,12 +299,14 @@ public class WebsocketTest {
 
 	@Test
 	public void simpleSubprotocolServerSupported() throws Exception {
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket(
 				                       "SUBPROTOCOL",
 				                       (i, o) -> o.sendString(
 						                       Mono.just("test"))))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		String res = HttpClient.create(httpServer.address().getPort())
 		                       .get("/test",
@@ -303,12 +319,14 @@ public class WebsocketTest {
 
 	@Test
 	public void simpleSubprotocolSelected() throws Exception {
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket(
 				                       "NOT, Common",
 				                       (i, o) -> o.sendString(
 						                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		String res = HttpClient.create(httpServer.address().getPort())
 		                       .get("/test",
@@ -324,10 +342,12 @@ public class WebsocketTest {
 
 	@Test
 	public void noSubprotocolSelected() {
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
 				                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		String res = HttpClient.create(httpServer.address()
 		                                         .getPort())
@@ -348,10 +368,12 @@ public class WebsocketTest {
 
 	@Test
 	public void anySubprotocolSelectsFirstClientProvided() {
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket("proto2,*", (i, o) -> o.sendString(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket("proto2,*", (i, o) -> o.sendString(
 				                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		String res = HttpClient.create(httpServer.address()
 		                                         .getPort())
@@ -377,8 +399,9 @@ public class WebsocketTest {
 		AtomicReference<String> clientSelectedProtocolWhenSimplyUpgrading = new AtomicReference<>();
 		CountDownLatch latch = new CountDownLatch(1);
 
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket(
 		                       		"not,proto1", (i, o) -> {
 					                       serverSelectedProtocol.set(i.selectedSubprotocol());
 					                       latch.countDown();
@@ -388,7 +411,8 @@ public class WebsocketTest {
 					                               .then();
 				                       })
 		                       )
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		HttpClient.create(httpServer.address()
 		                            .getPort())
@@ -412,14 +436,16 @@ public class WebsocketTest {
 	@Test
 	public void closePool() {
 		PoolResources pr = PoolResources.fixed("wstest", 1);
-		httpServer = HttpServer.create(0)
-		                       .newHandler((in, out) -> out.sendWebsocket(
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handler((in, out) -> out.sendWebsocket(
 				                       (i, o) -> o.options(opt -> opt.flushOnEach())
 				                                  .sendString(
 						                                  Mono.just("test")
 						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 
 		Flux<String> ws = HttpClient.create(opts -> opts.port(httpServer.address()
 		                                                                .getPort())
@@ -447,11 +473,13 @@ public class WebsocketTest {
 	@Test
 	public void testCloseWebSocketFrameSentByServer() {
 		httpServer =
-				HttpServer.create(0)
-				          .newHandler((req, res) ->
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) ->
 				                  res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
 				                                                                  .doOnNext(WebSocketFrame::retain))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Flux<WebSocketFrame> response =
 				HttpClient.create(httpServer.address().getPort())
@@ -472,11 +500,13 @@ public class WebsocketTest {
 	@Test
 	public void testCloseWebSocketFrameSentByClient() {
 		httpServer =
-				HttpServer.create(0)
-				          .newHandler((req, res) ->
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) ->
 				                  res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
 				                                                    .sendObject(new CloseWebSocketFrame())))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Mono<Void> response =
 				HttpClient.create(httpServer.address().getPort())
@@ -526,9 +556,11 @@ public class WebsocketTest {
 	private void doTestConnectionAliveWhenTransformationErrors(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			Flux<String> expectation, int count) {
 		httpServer =
-				HttpServer.create(0)
-				          .newHandler((req, res) -> res.sendWebsocket(handler))
-				          .block(Duration.ofSeconds(30));
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) -> res.sendWebsocket(handler))
+				          .wiretap()
+				          .bindNow();
 
 		ReplayProcessor<String> output = ReplayProcessor.create();
 		HttpClient.create(httpServer.address().getPort())
@@ -552,13 +584,14 @@ public class WebsocketTest {
 	@Test
 	public void testClientOnCloseIsInvokedClientDisposed() throws Exception {
 		httpServer =
-				HttpServer.create(0)
-				          .newHandler((req, res) ->
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) ->
 				              res.options(sendOptions -> sendOptions.flushOnEach())
 				                 .sendWebsocket((in, out) ->
 				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
 				                                        .map(l -> l + ""))))
-				          .block(Duration.ofSeconds(30));
+				          .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(3);
 		AtomicBoolean error = new AtomicBoolean();
@@ -612,11 +645,13 @@ public class WebsocketTest {
 	@Test
 	public void testClientOnCloseIsInvokedServerInitiatedClose() throws Exception {
 		httpServer =
-				HttpServer.create(0)
-				          .newHandler((req, res) ->
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) ->
 				              res.sendWebsocket((in, out) ->
 				                  out.sendString(Mono.just("test"))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(2);
 		AtomicBoolean error = new AtomicBoolean();

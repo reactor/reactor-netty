@@ -153,7 +153,7 @@ public class TcpClientTests {
 			   .neverComplete();
 		})
 		                     .wiretap()
-		                     .connectNow();
+		                     .connectNow(Duration.ofSeconds(5));
 
 		latch.await(5, TimeUnit.SECONDS);
 
@@ -188,7 +188,7 @@ public class TcpClientTests {
 					                     }).then())
 				         )
 				         .wiretap()
-				         .connectNow();
+				         .connectNow(Duration.ofSeconds(15));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
 				latch.await(15, TimeUnit.SECONDS));

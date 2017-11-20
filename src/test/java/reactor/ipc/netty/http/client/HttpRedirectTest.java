@@ -47,8 +47,9 @@ public class HttpRedirectTest {
 	private void redirectTests(String url) {
 		AtomicInteger counter = new AtomicInteger(1);
 		Connection server =
-				HttpServer.create(0)
-				          .newHandler((req, res) -> {
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) -> {
 				              if (req.uri().contains("/login") &&
 				                      req.method().equals(HttpMethod.POST) &&
 				                      counter.getAndDecrement() > 0) {
@@ -59,7 +60,8 @@ public class HttpRedirectTest {
 				                            .send();
 				              }
 				          })
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -83,8 +85,9 @@ public class HttpRedirectTest {
 	@Test
 	public void testIssue253() {
 		Connection server =
-				HttpServer.create(9991)
-				          .newRouter(r -> r.get("/1",
+				HttpServer.create()
+				          .port(9991)
+				          .router(r -> r.get("/1",
 				                                   (req, res) -> res.sendRedirect("http://localhost:9991/3"))
 				                           .get("/2",
 				                                   (req, res) -> res.status(301)
@@ -93,7 +96,8 @@ public class HttpRedirectTest {
 				                           .get("/3",
 				                                   (req, res) -> res.status(200)
 				                                                    .sendString(Mono.just("OK"))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create(ops -> ops.connectAddress(() -> server.address()));
@@ -125,17 +129,21 @@ public class HttpRedirectTest {
 	@Test
 	public void testIssue278() {
 		Connection server1 =
-				HttpServer.create(8888)
-				          .newRouter(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+				HttpServer.create()
+				          .port(8888)
+				          .router(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
 				                           .get("/2", (req, res) -> res.sendRedirect("http://localhost:8888/3"))
 				                           .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
 				                           .get("/4", (req, res) -> res.sendRedirect("http://localhost:8889/1")))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Connection server2 =
-				HttpServer.create(8889)
-				          .newRouter(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
-				          .block(Duration.ofSeconds(30));
+				HttpServer.create()
+				          .port(8889)
+				          .router(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client = HttpClient.create(8888);
 

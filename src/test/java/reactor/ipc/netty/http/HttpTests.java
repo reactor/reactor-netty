@@ -256,7 +256,7 @@ public class HttpTests {
 				                                             .log("server-reply")));
 				          }))
 				          .wiretap()
-				          .bindNow();
+				          .bindNow(Duration.ofSeconds(5));
 
 		HttpClient client = HttpClient.create("localhost", server.address().getPort());
 
