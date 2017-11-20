@@ -18,12 +18,16 @@ package reactor.ipc.netty.tcp;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.util.NetUtil;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
+import reactor.ipc.netty.options.InetSocketAddressUtil;
 import reactor.ipc.netty.resources.LoopResources;
+
+import java.net.InetSocketAddress;
 
 /**
  * @author Stephane Maldini
@@ -43,6 +47,17 @@ final class TcpServerBind extends TcpServer {
 					LoopResources.DEFAULT_NATIVE,
 					TcpResources.get(),
 					TcpUtils.findSslContext(b));
+		}
+
+		String host = (String) b.config().childAttrs().get(HOST);
+		Integer port = (Integer) b.config().childAttrs().get(PORT);
+		Integer defaultPort = (Integer) b.config().attrs().get(DEFAULT_PORT_ATTR);
+		if (host == null) {
+			InetSocketAddress address = port != null ? new InetSocketAddress(port) :
+					new InetSocketAddress(NetUtil.LOCALHOST, defaultPort);
+			b.localAddress(InetSocketAddressUtil.replaceWithResolved(address));
+		} else {
+			b.localAddress(InetSocketAddressUtil.createResolved(host, port != null ? port : defaultPort));
 		}
 
 		return Mono.create(sink -> {
