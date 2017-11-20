@@ -66,7 +66,7 @@ final class TcpServerBind extends TcpServer {
 					null,
 					ops,
 					b.config().localAddress());
-			BootstrapHandlers.finalize(b, ctx);
+			BootstrapHandlers.finalize(b, ctx, ops.createOnConnected());
 			ctx.setFuture(b.bind());
 		});
 	}
