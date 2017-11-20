@@ -73,6 +73,7 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -296,8 +297,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public boolean isWebsocket() {
-		return get(channel()).getClass()
-		                     .equals(WebsocketClientOperations.class);
+		ChannelOperations<?, ?> ops = get(channel());
+		if (ops != null) {
+			return ops.getClass()
+					.equals(WebsocketClientOperations.class);
+		}
+		else {
+			return false;
+		}
 	}
 
 	@Override
