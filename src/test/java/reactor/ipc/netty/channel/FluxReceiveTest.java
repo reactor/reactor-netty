@@ -39,16 +39,19 @@ public class FluxReceiveTest {
 		rndm.nextBytes(content);
 
 		Connection server1 =
-				HttpServer.create(0)
-				          .newRouter(routes ->
+				HttpServer.create()
+				          .port(0)
+				          .router(routes ->
 				                     routes.get("/target", (req, res) ->
 				                           res.sendByteArray(Flux.just(content)
 				                                                 .delayElements(Duration.ofMillis(100)))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Connection server2 =
-				HttpServer.create(0)
-				          .newRouter(routes ->
+				HttpServer.create()
+				          .port(0)
+				          .router(routes ->
 				                     routes.get("/forward", (req, res) ->
 				                           HttpClient.create(server1.address().getPort())
 				                                     .get("/target")
@@ -57,7 +60,8 @@ public class FluxReceiveTest {
 				                                     .flatMap(response -> response.receive().aggregate().asString())
 				                                     .timeout(Duration.ofMillis(50))
 				                                     .then()))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Flux.range(0, 50)
 		    .flatMap(i -> HttpClient.create(server2.address().getPort())

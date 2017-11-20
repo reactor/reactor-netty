@@ -38,7 +38,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -73,7 +72,6 @@ import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -96,9 +94,6 @@ public class TcpServerTests {
 	final int threads = 4;
 
 	CountDownLatch latch;
-	AtomicLong count = new AtomicLong();
-	AtomicLong start = new AtomicLong();
-	AtomicLong end   = new AtomicLong();
 
 	@Before
 	public void loadEnv() {
@@ -191,11 +186,15 @@ public class TcpServerTests {
 
 	@Test(timeout = 10000)
 	public void testHang() throws Exception {
-		Connection httpServer = HttpServer
-				.create(opts -> opts.host("0.0.0.0").port(0))
-				.newRouter(r -> r.get("/data", (request, response) -> {
-					return response.send(Mono.empty());
-				})).block(Duration.ofSeconds(30));
+		Connection httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .tcpConfiguration(tcpServer -> tcpServer.host("0.0.0.0"))
+				          .router(r -> r.get("/data", (request, response) -> {
+				                  return response.send(Mono.empty());
+				          }))
+				          .wiretap()
+				          .bindNow();
 		httpServer.dispose();
 	}
 
@@ -291,8 +290,9 @@ public class TcpServerTests {
 
 		//on a server dispatching data on the default shared dispatcher, and serializing/deserializing as string
 		//Listen for anything exactly hitting the root URI and route the incoming connection request to the callback
-		Connection s = HttpServer.create(0)
-		                         .newRouter(r -> r.get("/", (request, response) -> {
+		Connection s = HttpServer.create()
+		                         .port(0)
+		                         .router(r -> r.get("/", (request, response) -> {
 			                         //prepare a response header to be appended first before any reply
 			                         response.addHeader("X-CUSTOM", "12345");
 			                         //attach to the shared tail, take the most recent generated substream and merge it to the high level stream
@@ -305,7 +305,8 @@ public class TcpServerTests {
 			                                                        .concatWith(Flux.just(
 					                                                        "end\n")));
 		                         }))
-		                         .block(Duration.ofSeconds(30));
+		                         .wiretap()
+		                         .bindNow();
 
 		for (int i = 0; i < 50; i++) {
 			Thread.sleep(500);
@@ -354,12 +355,13 @@ public class TcpServerTests {
 	@Ignore
 	public void proxyTest() throws Exception {
 		HttpServer server = HttpServer.create();
-		server.newRouter(r -> r.get("/search/{search}",
+		server.router(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.create()
 				                       .get("foaas.herokuapp.com/life/" + in.param(
 						                       "search"))
 				                       .flatMapMany(repliesOut -> out.send(repliesOut.receive()))))
-		      .block(Duration.ofSeconds(30))
+		      .wiretap()
+		      .bindNow()
 		      .onDispose()
 		      .block(Duration.ofSeconds(30));
 	}
@@ -368,14 +370,15 @@ public class TcpServerTests {
 	@Ignore
 	public void wsTest() throws Exception {
 		HttpServer server = HttpServer.create();
-		server.newRouter(r -> r.get("/search/{search}",
+		server.router(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.create()
 				                       .get("ws://localhost:3000",
 						                       requestOut -> requestOut.sendWebsocket()
 						                                               .sendString(Mono.just("ping")))
 				                       .flatMapMany(repliesOut -> out.sendGroups(repliesOut.receive()
 				                                                                       .window(100)))))
-		      .block(Duration.ofSeconds(30))
+		      .wiretap()
+		      .bindNow()
 		      .onDispose()
 		      .block(Duration.ofSeconds(30));
 	}

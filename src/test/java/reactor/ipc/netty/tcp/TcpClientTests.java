@@ -43,7 +43,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
@@ -152,7 +151,7 @@ public class TcpClientTests {
 			   .neverComplete();
 		})
 		                     .wiretap()
-		                     .connectNow();
+		                     .connectNow(Duration.ofSeconds(5));
 
 		latch.await(5, TimeUnit.SECONDS);
 
@@ -187,7 +186,7 @@ public class TcpClientTests {
 					                     }).then())
 				         )
 				         .wiretap()
-				         .connectNow();
+				         .connectNow(Duration.ofSeconds(15));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
 				latch.await(15, TimeUnit.SECONDS));

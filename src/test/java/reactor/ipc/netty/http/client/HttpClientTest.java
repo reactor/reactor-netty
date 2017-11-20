@@ -128,8 +128,9 @@ public class HttpClientTest {
 		final PoolResources pool = PoolResources.fixed("local", 1);
 		CountDownLatch latch = new CountDownLatch(3);
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
-		Connection serverContext = HttpServer.create(8080)
-		                                     .newRouter(r -> r.post("/",
+		Connection serverContext = HttpServer.create()
+		                                     .port(8080)
+		                                     .router(r -> r.post("/",
 				                                       (req, resp) -> req.receive()
 				                                                         .asString()
 				                                                         .flatMap(data -> {
@@ -138,7 +139,8 @@ public class HttpClientTest {
 							                                                         200)
 					                                                                    .send();
 				                                                         })))
-		                                     .block();
+		                                     .wiretap()
+		                                     .bindNow();
 
 		final HttpClient client = HttpClient.create(options -> {
 			options.poolResources(pool);
@@ -207,9 +209,11 @@ public class HttpClientTest {
 	@Test
 	public void backpressured() throws Exception {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
-		Connection c = HttpServer.create(0)
-		                         .newRouter(routes -> routes.directory("/test", resource))
-		                         .block(Duration.ofSeconds(30));
+		Connection c = HttpServer.create()
+		                         .port(0)
+		                         .router(routes -> routes.directory("/test", resource))
+		                         .wiretap()
+		                         .bindNow();
 
 		Mono<HttpClientResponse> remote = HttpClient.create(c.address().getPort())
 		                                            .get("/test/test.css");
@@ -237,8 +241,9 @@ public class HttpClientTest {
 	public void serverInfiniteClientClose() throws Exception {
 
 		CountDownLatch latch = new CountDownLatch(1);
-		Connection c = HttpServer.create(0)
-		                         .newHandler((req, resp) -> {
+		Connection c = HttpServer.create()
+		                         .port(0)
+		                         .handler((req, resp) -> {
 			                           req.withConnection(
 			                              cn -> cn.onDispose(latch::countDown));
 
@@ -256,7 +261,8 @@ public class HttpClientTest {
 								                                                   .config()
 								                                                   .setAutoRead(false))));
 		})
-		                         .block(Duration.ofSeconds(30));
+		                         .wiretap()
+		                         .bindNow();
 
 		Mono<HttpClientResponse> remote = HttpClient.create(c.address().getPort())
 		                                            .get("/");
@@ -594,10 +600,12 @@ public class HttpClientTest {
 
 	private void doTestGzip(boolean gzipEnabled) {
 		String expectedResponse = gzipEnabled ? "gzip" : "no gzip";
-		Connection server = HttpServer.create(0)
-		                              .newHandler((req,res) -> res.sendString(
+		Connection server = HttpServer.create()
+		                         .port(0)
+		                         .handler((req,res) -> res.sendString(
 		                Mono.just(req.requestHeaders().get(HttpHeaderNames.ACCEPT_ENCODING, "no gzip"))))
-		                              .block(Duration.ofSeconds(30));
+		                         .wiretap()
+		                         .bindNow();
 		StepVerifier.create(
 		        HttpClient.create(ops -> ops.port(server.address().getPort()).compression(gzipEnabled))
 		                  .get("/")
@@ -618,8 +626,9 @@ public class HttpClientTest {
 
 	@Test
 	public void testUserAgent() {
-		Connection c = HttpServer.create(0)
-		                         .newHandler((req, resp) -> {
+		Connection c = HttpServer.create()
+		                         .port(0)
+		                         .handler((req, resp) -> {
 			                           Assert.assertTrue(""+req.requestHeaders()
 			                                                   .get(HttpHeaderNames.USER_AGENT),
 					                           req.requestHeaders()
@@ -629,7 +638,8 @@ public class HttpClientTest {
 
 			                           return resp;
 		                           })
-		                         .block();
+		                         .wiretap()
+		                         .bindNow();
 
 		HttpClientResponse resp = HttpClient.create(c.address().getPort())
 		                                    .get("/")
@@ -667,9 +677,11 @@ public class HttpClientTest {
 		                                        .build();
 
 		Connection context =
-				HttpServer.create(opt -> opt.sslContext(sslServer))
-				          .newHandler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
-				          .block();
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
+				          .handler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+				          .wiretap()
+				          .bindNow();
 
 
 		HttpClientResponse response = HttpClient.create(
@@ -692,9 +704,11 @@ public class HttpClientTest {
 		                                        .trustManager(ssc.cert()).build();
 
 		Connection context =
-				HttpServer.create(opt -> opt.sslContext(sslServer))
-				          .newHandler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
-				          .block();
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
+				          .handler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+				          .wiretap()
+				          .bindNow();
 
 		HttpClientResponse response = HttpClient.create(
 				opt -> applyHostAndPortFromContext(opt, context)
@@ -717,14 +731,16 @@ public class HttpClientTest {
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
 		Connection context =
-				HttpServer.create(opt -> opt.sslContext(sslServer))
-				          .newRouter(r -> r.post("/upload", (req, resp) ->
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
+				          .router(r -> r.post("/upload", (req, resp) ->
 						          req.receive()
 						             .aggregate()
 						             .asString(StandardCharsets.UTF_8)
 						             .doOnNext(uploaded::set)
 						             .then(resp.status(201).sendString(Mono.just("Received File")).then())))
-				          .block();
+				          .wiretap()
+				          .bindNow();
 
 		HttpClientResponse response =
 				HttpClient.create(opt -> applyHostAndPortFromContext(opt, context)
@@ -751,15 +767,17 @@ public class HttpClientTest {
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
 		Connection context =
-				HttpServer.create(opt -> opt.host("localhost"))
-				          .newRouter(r -> r.post("/upload", (req, resp) ->
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .router(r -> r.post("/upload", (req, resp) ->
 						          req
 								          .receive()
 								          .aggregate()
 								          .asString(StandardCharsets.UTF_8)
 								          .doOnNext(uploaded::set)
 								          .then(resp.status(201).sendString(Mono.just("Received File")).then())))
-				          .block();
+				          .wiretap()
+				          .bindNow();
 
 		HttpClientResponse response =
 				createHttpClientForContext(context)
@@ -782,15 +800,16 @@ public class HttpClientTest {
 	@Test
 	public void test() {
 		Connection context =
-				HttpServer.create(opt -> opt.host("localhost"))
-				          .newRouter(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .router(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                         .status(HttpResponseStatus.CREATED)
 				                                                         .sendHeaders())
 				                           .put("/204", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                         .sendHeaders())
 				                           .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                         .sendHeaders()))
-				          .block(Duration.ofSeconds(30));
+				          .bindNow();
 
 		HttpClientResponse response1 =
 				createHttpClientForContext(context)

@@ -58,13 +58,15 @@ public class ChannelOperationsHandlerTest {
 
 	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler) {
 		Connection server =
-				HttpServer.create(0)
-				          .newHandler((req, res) ->
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) ->
 				                  req.receive()
 				                     .asString()
 				                     .doOnNext(System.err::println)
 				                     .then(res.status(200).sendHeaders().then()))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Flux<String> flux = Flux.range(1, 257).map(count -> count + "");
 		if (useScheduler) {
