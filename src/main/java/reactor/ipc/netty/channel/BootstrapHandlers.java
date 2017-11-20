@@ -48,7 +48,7 @@ public abstract class BootstrapHandlers {
 	 * @param b a server bootstrap
 	 * @param ctx a context handler
 	 */
-	public static void finalize(ServerBootstrap b, ContextHandler ctx) {
+	public static void finalize(ServerBootstrap b, ContextHandler ctx, boolean removeFromPipeline) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(ctx, "ctx");
 
@@ -57,6 +57,7 @@ public abstract class BootstrapHandlers {
 		if (handler instanceof BootstrapPipelineHandler) {
 			pipeline = (BootstrapPipelineHandler) handler;
 			pipeline.contextHandler = ctx;
+			pipeline.removeFromPipeline = removeFromPipeline;
 		}
 
 		b.childHandler(new BootstrapInitializerHandler(pipeline, ctx));
@@ -359,6 +360,7 @@ public abstract class BootstrapHandlers {
 			implements ChannelHandler {
 
 		boolean removed;
+		boolean removeFromPipeline;
 		ContextHandler contextHandler;
 
 		BootstrapPipelineHandler(Collection<? extends PipelineConfiguration> c) {
@@ -378,21 +380,27 @@ public abstract class BootstrapHandlers {
 
 		@Override
 		public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-			if (removed) {
-				return;
+			if (removeFromPipeline) {
+				if (removed) {
+					return;
+				}
+				removed = true;
 			}
-			removed = true;
 
 			for (PipelineConfiguration pipelineConfiguration : this) {
 				pipelineConfiguration.consumer.accept(contextHandler, ctx.channel());
 			}
 
-			ctx.pipeline().remove(this);
+			if (removeFromPipeline) {
+				ctx.pipeline().remove(this);
+			}
 		}
 
 		@Override
 		public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-			removed = true;
+			if (removeFromPipeline) {
+				removed = true;
+			}
 		}
 
 		@Override
