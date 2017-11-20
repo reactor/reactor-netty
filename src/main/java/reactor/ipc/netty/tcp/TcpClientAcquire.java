@@ -25,9 +25,11 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
+import reactor.ipc.netty.options.InetSocketAddressUtil;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
+import java.net.InetSocketAddress;
 import java.util.Objects;
 
 /**
@@ -54,6 +56,17 @@ final class TcpClientAcquire extends TcpClient {
 					TcpUtils.findSslContext(b));
 		}
 
+		if (b.config().remoteAddress() == null) {
+			String host = (String) b.config().attrs().get(HOST);
+			Integer port = (Integer) b.config().attrs().get(PORT);
+			String defaultHost = (String) b.config().attrs().get(DEFAULT_HOST_ATTR);
+			Integer defaultPort = (Integer) b.config().attrs().get(DEFAULT_PORT_ATTR);
+			if (host == null) {
+				b.remoteAddress(new InetSocketAddress(defaultHost, port != null ? port : defaultPort));
+			} else {
+				b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port != null ? port : defaultPort));
+			}
+		}
 
 		return Mono.create(sink -> {
 			// TODO temporary workaround
