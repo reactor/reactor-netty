@@ -185,6 +185,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	public CoreSubscriber<Void> disposeSubscriber() {
+		return this;
+	}
+
+	@Override
 	public final boolean isDisposed() {
 		return get(channel()) != this;
 	}
