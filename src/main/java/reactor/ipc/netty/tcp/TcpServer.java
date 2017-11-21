@@ -314,7 +314,7 @@ public abstract class TcpServer {
 			}
 
 			Mono.fromDirect(handler.apply((NettyInbound) c, (NettyOutbound) c))
-			                       .subscribe(c.disposeSubscriber());
+			    .subscribe(c.disposeSubscriber());
 		});
 	}
 
