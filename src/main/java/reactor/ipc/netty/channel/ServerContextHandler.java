@@ -105,9 +105,4 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 			channel.close();
 		}
 	}
-
-	@Override
-	protected void doPipeline(Channel ch) {
-		// no-op
-	}
 }

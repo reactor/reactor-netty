@@ -70,9 +70,4 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	protected Tuple2<String, Integer> getSNI() {
 		return null;
 	}
-
-	@Override
-	protected void doPipeline(Channel ch) {
-		//no-op
-	}
 }
