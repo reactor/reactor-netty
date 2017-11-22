@@ -24,7 +24,6 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.ipc.netty.options.InetSocketAddressUtil;
 import reactor.ipc.netty.resources.LoopResources;
 
 import java.net.InetSocketAddress;

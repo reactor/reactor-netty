@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.options;
+package reactor.ipc.netty.tcp;
 
 import java.net.*;
 
