@@ -17,13 +17,13 @@
 package reactor.ipc.netty.http.server;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.util.Attribute;
-import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.http.HttpResources;
@@ -31,6 +31,7 @@ import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.TcpServer;
 
 import java.util.Objects;
+import java.util.function.BiPredicate;
 
 /**
  * @author Stephane Maldini
@@ -52,5 +53,97 @@ final class HttpServerBind extends HttpServer {
 	@Override
 	protected TcpServer tcpConfiguration() {
 		return tcpServer;
+	}
+
+	@Override
+	public ServerBootstrap configure(ServerBootstrap b) {
+		if (b.config()
+			 .group() == null) {
+			LoopResources loops = HttpResources.get();
+
+			boolean useNative = LoopResources.DEFAULT_NATIVE && !(tcpConfiguration().sslContext() instanceof JdkSslContext);
+
+			EventLoopGroup selector = loops.onServerSelect(useNative);
+			EventLoopGroup elg = loops.onServer(useNative);
+
+			b.group(selector, elg)
+			 .channel(loops.onServerChannel(elg));
+		}
+
+		BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer, (ctx, channel) -> {
+			ChannelPipeline p = channel.pipeline();
+
+			p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+
+			BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate =
+					compressPredicate(channel);
+
+			Attribute<Integer> minCompressionSize = channel.attr(HttpServerOperations.PRODUCE_GZIP);
+			int minResponseSize = minCompressionSize != null && minCompressionSize.get() != null ? minCompressionSize.get() : -1;
+
+			boolean alwaysCompress = compressPredicate == null && minResponseSize == 0;
+			if(alwaysCompress) {
+				p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
+			}
+
+			p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(ctx));
+		});
+
+		return b;
+	}
+
+	private BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
+			Channel channel) {
+
+		Attribute<Integer> minCompressionSize = channel.attr(HttpServerOperations.PRODUCE_GZIP);
+		final int minResponseSize;
+		if (minCompressionSize != null && minCompressionSize.get() != null) {
+			minResponseSize = minCompressionSize.get();
+		}
+		else {
+			minResponseSize = -1;
+		}
+
+		Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
+				channel.attr(HttpServerOperations.PRODUCE_GZIP_PREDICATE);
+		final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+		if (predicate != null && predicate.get() != null) {
+			compressionPredicate = predicate.get();
+		}
+		else {
+			compressionPredicate = null;
+		}
+
+		if (minResponseSize <= 0){
+			if (compressionPredicate != null) {
+				return compressionPredicate;
+			}
+			else {
+				return null;
+			}
+		}
+
+		BiPredicate<HttpServerRequest, HttpServerResponse> lengthPredicate =
+				(req, res) -> {
+					String length = res.responseHeaders()
+							.get(HttpHeaderNames.CONTENT_LENGTH);
+
+					if (length == null) {
+						return true;
+					}
+
+					try {
+						return Long.parseLong(length) >= minResponseSize;
+					}
+					catch (NumberFormatException nfe) {
+						return true;
+					}
+				};
+
+		if (compressionPredicate == null) {
+			return lengthPredicate;
+		}
+
+		return lengthPredicate.and(compressionPredicate);
 	}
 }
