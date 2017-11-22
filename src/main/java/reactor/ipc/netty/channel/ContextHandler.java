@@ -30,7 +30,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
@@ -40,7 +39,6 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.function.Tuple2;
 
 /**
  * A one time-set channel pipeline callback to emit {@link Connection} state for clean
@@ -308,10 +306,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 */
 	protected void terminateChannel(Channel channel) {
 		dispose();
-	}
-
-	protected Tuple2<String, Integer> getSNI() {
-		return null; //will ignore SNI
 	}
 
 	/**

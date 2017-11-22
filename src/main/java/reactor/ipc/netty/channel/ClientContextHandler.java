@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
-import reactor.util.function.Tuple2;
 
 /**
  * @param <CHANNEL> the channel type
@@ -64,10 +63,5 @@ final class ClientContextHandler<CHANNEL extends Channel>
 			fired = true;
 			sink.error(new AbortedException("Channel has been dropped"));
 		}
-	}
-
-	@Override
-	protected Tuple2<String, Integer> getSNI() {
-		return null;
 	}
 }
