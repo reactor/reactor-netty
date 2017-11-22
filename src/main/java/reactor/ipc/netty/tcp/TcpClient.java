@@ -553,8 +553,8 @@ public abstract class TcpClient {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
 	}
 
-	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("clienthost");
-	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("clientport");
+	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("clientHost");
+	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("clientPort");
 	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpClient.class);
 	static final Logger                log               = Loggers.getLogger(TcpClient.class);
 }
