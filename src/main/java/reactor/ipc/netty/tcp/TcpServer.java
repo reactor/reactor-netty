@@ -327,7 +327,7 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer host(String host) {
 		Objects.requireNonNull(host, "host");
-		return attr(HOST, host);
+		return bootstrap(b -> b.attr(HOST, host));
 	}
 
 	/**
@@ -374,7 +374,7 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer port(int port) {
-		return attr(PORT, port);
+		return bootstrap(b -> b.attr(PORT, port));
 	}
 
 	/**
@@ -555,8 +555,8 @@ public abstract class TcpServer {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
 	}
 
-	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("serverhost");
-	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("serverport");
+	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("serverHost");
+	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("serverPort");
 	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpServer.class);
 	static final Logger                log               = Loggers.getLogger(TcpServer.class);
 

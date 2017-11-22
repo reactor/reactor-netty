@@ -59,6 +59,8 @@ final class TcpClientConnect extends TcpClient {
 			} else {
 				b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port != null ? port : defaultPort));
 			}
+			b.attr(HOST, null)
+			 .attr(PORT, null);
 		}
 
 		return Mono.create(sink -> {
