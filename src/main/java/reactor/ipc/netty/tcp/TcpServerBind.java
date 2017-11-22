@@ -49,15 +49,19 @@ final class TcpServerBind extends TcpServer {
 					TcpUtils.findSslContext(b));
 		}
 
-		String host = (String) b.config().childAttrs().get(HOST);
-		Integer port = (Integer) b.config().childAttrs().get(PORT);
-		Integer defaultPort = (Integer) b.config().attrs().get(DEFAULT_PORT_ATTR);
-		if (host == null) {
-			InetSocketAddress address = port != null ? new InetSocketAddress(port) :
-					new InetSocketAddress(NetUtil.LOCALHOST, defaultPort);
-			b.localAddress(InetSocketAddressUtil.replaceWithResolved(address));
-		} else {
-			b.localAddress(InetSocketAddressUtil.createResolved(host, port != null ? port : defaultPort));
+		if (b.config().localAddress() == null) {
+			String host = (String) b.config().attrs().get(HOST);
+			Integer port = (Integer) b.config().attrs().get(PORT);
+			Integer defaultPort = (Integer) b.config().attrs().get(DEFAULT_PORT_ATTR);
+			if (host == null) {
+				InetSocketAddress address = port != null ? new InetSocketAddress(port) :
+						new InetSocketAddress(NetUtil.LOCALHOST, defaultPort);
+				b.localAddress(InetSocketAddressUtil.replaceWithResolved(address));
+			} else {
+				b.localAddress(InetSocketAddressUtil.createResolved(host, port != null ? port : defaultPort));
+			}
+			b.attr(HOST, null)
+			 .attr(PORT, null);
 		}
 
 		return Mono.create(sink -> {
