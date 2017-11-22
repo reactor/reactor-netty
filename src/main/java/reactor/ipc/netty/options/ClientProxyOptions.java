@@ -26,6 +26,7 @@ import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
+import reactor.ipc.netty.tcp.InetSocketAddressUtil;
 
 /**
  * Proxy configuration

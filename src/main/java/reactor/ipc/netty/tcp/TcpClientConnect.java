@@ -18,13 +18,11 @@ package reactor.ipc.netty.tcp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.util.NetUtil;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.ipc.netty.options.InetSocketAddressUtil;
 import reactor.ipc.netty.resources.LoopResources;
 
 import java.net.InetSocketAddress;

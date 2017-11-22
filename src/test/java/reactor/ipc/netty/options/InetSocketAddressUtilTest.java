@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.InetSocketAddress;
 
 import org.junit.Test;
+import reactor.ipc.netty.tcp.InetSocketAddressUtil;
 
 public class InetSocketAddressUtilTest {
 

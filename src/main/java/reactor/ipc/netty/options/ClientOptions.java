@@ -39,6 +39,7 @@ import io.netty.util.NetUtil;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.tcp.InetSocketAddressUtil;
 
 /**
  * A client connector builder with low-level connection options including connection pooling and
