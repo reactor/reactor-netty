@@ -18,23 +18,15 @@ package reactor.ipc.netty.http.server;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.ipc.netty.http.HttpResources;
-import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -98,7 +90,7 @@ public abstract class HttpServer {
 	public final Mono<? extends Connection> bind() {
 		ServerBootstrap b;
 		try{
-			b = tcpConfiguration().configure();
+			b = configure(tcpConfiguration().configure());
 		}
 		catch (Throwable t){
 			Exceptions.throwIfFatal(t);
@@ -278,35 +270,6 @@ public abstract class HttpServer {
 	 * @return a {@link Mono} of {@link Connection}
 	 */
 	protected Mono<? extends Connection> bind(ServerBootstrap b) {
-		if (b.config()
-			 .group() == null) {
-			LoopResources loops = HttpResources.get();
-
-			boolean useNative = LoopResources.DEFAULT_NATIVE && !(tcpConfiguration().sslContext() instanceof JdkSslContext);
-
-			EventLoopGroup selector = loops.onServerSelect(useNative);
-			EventLoopGroup elg = loops.onServer(useNative);
-
-			b.group(selector, elg)
-			 .channel(loops.onServerChannel(elg));
-		}
-
-		BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer, (ctx, channel) -> {
-			ChannelPipeline p = channel.pipeline();
-
-			p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
-
-			Attribute<Integer> minCompressionSize = channel.attr(HttpServerOperations.PRODUCE_GZIP);
-			if(minCompressionSize != null &&
-			        minCompressionSize.get() != null &&
-			        minCompressionSize.get() >= 0) {
-				p.addLast(NettyPipeline.CompressionHandler,
-				        new CompressionHandler(minCompressionSize.get()));
-			}
-
-			p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(ctx));
-		});
-
 		return tcpConfiguration().bind(b);
 	}
 
@@ -319,6 +282,16 @@ public abstract class HttpServer {
 	protected TcpServer tcpConfiguration() {
 		return DEFAULT_TCP_SERVER;
 	}
+
+
+	/**
+	 * Materialize a ServerBootstrap from the parent {@link TcpServer} chain to use with {@link
+	 * #bind(ServerBootstrap)}
+	 *
+	 * @return a configured {@link ServerBootstrap}
+	 */
+	abstract ServerBootstrap configure(ServerBootstrap bootstrap);
+
 
 	static final ChannelOperations.OnSetup<?> HTTP_OPS = new ChannelOperations.OnSetup() {
 		@Nullable
