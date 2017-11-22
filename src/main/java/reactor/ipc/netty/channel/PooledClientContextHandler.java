@@ -31,7 +31,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
@@ -48,7 +47,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	static final Logger log = Loggers.getLogger(PooledClientContextHandler.class);
 
-	final ClientOptions         clientOptions;
 	final boolean               secure;
 	final ChannelPool           pool;
 	final DirectProcessor<Void> onReleaseEmitter;
@@ -63,14 +61,12 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	static final Future DISPOSED = new SucceededFuture<>(null, null);
 
 	PooledClientContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
-			ClientOptions options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
 			ChannelPool pool) {
-		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
-		this.clientOptions = options;
+		super(channelOpFactory, sink, loggingHandler, providedAddress);
 		this.secure = secure;
 		this.pool = pool;
 		this.onReleaseEmitter = DirectProcessor.create();

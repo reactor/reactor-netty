@@ -16,19 +16,13 @@
 
 package reactor.ipc.netty.channel;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.proxy.ProxyHandler;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.NettyPipeline;
-import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 
 /**
  * @param <CHANNEL> the channel type
@@ -38,18 +32,15 @@ import reactor.util.function.Tuples;
 final class ClientContextHandler<CHANNEL extends Channel>
 		extends CloseableContextHandler<CHANNEL> {
 
-	final ClientOptions clientOptions;
 	final boolean       secure;
 
 
 	ClientContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
-			ClientOptions options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress) {
-		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
-		this.clientOptions = options;
+		super(channelOpFactory, sink, loggingHandler, providedAddress);
 		this.secure = secure;
 	}
 
@@ -77,28 +68,11 @@ final class ClientContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected Tuple2<String, Integer> getSNI() {
-		if (providedAddress instanceof InetSocketAddress) {
-			InetSocketAddress ipa = (InetSocketAddress) providedAddress;
-			return Tuples.of(ipa.getHostString(), ipa.getPort());
-		}
 		return null;
 	}
 
 	@Override
 	protected void doPipeline(Channel ch) {
-		if (clientOptions != null) {
-			addSslAndLogHandlers(clientOptions, this, loggingHandler, secure, getSNI(), ch.pipeline());
-			addProxyHandler(clientOptions, ch.pipeline(), providedAddress);
-		}
-	}
-
-	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline, SocketAddress providedAddress) {
-		ProxyHandler proxy = clientOptions.useProxy(providedAddress) ? clientOptions.getProxyOptions().newProxyHandler() : null;
-		if (proxy != null) {
-			pipeline.addFirst(NettyPipeline.ProxyHandler, proxy);
-			if(log.isDebugEnabled()){
-				pipeline.addFirst(new LoggingHandler("reactor.ipc.netty.proxy"));
-			}
-		}
+		//no-op
 	}
 }

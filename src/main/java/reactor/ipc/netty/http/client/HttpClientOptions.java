@@ -21,8 +21,6 @@ import java.util.function.Function;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import reactor.ipc.netty.options.ClientOptions;
-import reactor.ipc.netty.options.ClientProxyOptions;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 
 /**

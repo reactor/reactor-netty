@@ -29,7 +29,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.options.NettyOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -46,11 +45,10 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 	ChannelFuture f;
 
 	CloseableContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
-			NettyOptions<?, ?> options,
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
-		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
+		super(channelOpFactory, sink, loggingHandler, providedAddress);
 	}
 
 	@Override
