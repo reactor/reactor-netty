@@ -16,8 +16,6 @@
 package reactor.ipc.netty.http.server;
 
 import io.netty.bootstrap.ServerBootstrap;
-import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.tcp.TcpServer;
 
 import java.util.Objects;
@@ -31,6 +29,11 @@ abstract class HttpServerOperator extends HttpServer {
 
 	HttpServerOperator(HttpServer source) {
 		this.source = Objects.requireNonNull(source, "source");
+	}
+
+	@Override
+	ServerBootstrap configure(ServerBootstrap bootstrap) {
+		return source.configure(bootstrap);
 	}
 
 	@Override
