@@ -24,9 +24,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import org.junit.Ignore;
 import org.junit.Test;
-import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -39,22 +39,24 @@ public class NettyOptionsTest {
 	public void afterChannelInit() throws InterruptedException {
 		List<Channel> initializedChannels = new ArrayList<>();
 
-		NettyContext nettyContext =
-				HttpServer.create(opt -> opt.afterChannelInit(initializedChannels::add))
-				          .start((req, resp) -> resp.sendNotFound())
-				          .getContext();
+		Connection connection =
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.doOnConnection(c -> initializedChannels.add(c.channel())))
+				          .handler((req, resp) -> resp.sendNotFound())
+				          .wiretap()
+				          .bindNow();
 
 		assertThat(initializedChannels).hasSize(0);
 
-		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		                                    .get("/", req -> req.failOnClientError(false).send())
+		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
+		                                    .get("/")
 		                                    .block();
 
 		assertThat(initializedChannels)
 				.hasSize(1)
-				.doesNotContain(nettyContext.channel());
+				.doesNotContain(connection.channel());
 		resp.dispose();
-		nettyContext.dispose();
+		connection.dispose();
 	}
 
 	@Test
@@ -62,50 +64,26 @@ public class NettyOptionsTest {
 		ChannelGroup group = new DefaultChannelGroup(null);
 		List<Channel> initializedChannels = new ArrayList<>();
 
-		NettyContext nettyContext =
-				HttpServer.create(opt -> opt
-						.afterChannelInit(initializedChannels::add)
-						.channelGroup(group)
-				)
-				          .start((req, resp) -> resp.sendNotFound())
-				          .getContext();
+		Connection connection =
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.doOnConnection(c -> {
+				                  group.add(c.channel());
+				                  initializedChannels.add(c.channel());
+				          }))
+				          .handler((req, resp) -> resp.sendNotFound())
+				          .wiretap()
+				          .bindNow();
 
-		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		                                    .get("/", req -> req.failOnClientError(false).send())
+		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
+		                                    .get("/")
 		                                    .block();
 
 		assertThat((Iterable<Channel>) group)
 				.hasSize(1)
 				.hasSameElementsAs(initializedChannels)
-				.doesNotContain(nettyContext.channel());
+				.doesNotContain(connection.channel());
 		resp.dispose();
-		nettyContext.dispose();
-	}
-
-	@Test
-	public void afterChannelInitAfterChannelGroup() {
-		//this test only differs from afterChannelInitThenChannelGroup in the order of the options
-		ChannelGroup group = new DefaultChannelGroup(null);
-		List<Channel> initializedChannels = new ArrayList<>();
-
-		NettyContext nettyContext =
-				HttpServer.create(opt -> opt
-						.channelGroup(group)
-						.afterChannelInit(initializedChannels::add)
-				)
-				          .start((req, resp) -> resp.sendNotFound())
-				          .getContext();
-
-		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		                                    .get("/", req -> req.failOnClientError(false).send())
-		                                    .block();
-
-		assertThat((Iterable<Channel>) group)
-				.hasSize(1)
-				.hasSameElementsAs(initializedChannels)
-				.doesNotContain(nettyContext.channel());
-		resp.dispose();
-		nettyContext.dispose();
+		connection.dispose();
 	}
 
 	@Test
@@ -119,25 +97,28 @@ public class NettyOptionsTest {
 			}
 		};
 
-		NettyContext nettyContext =
-				HttpServer.create(opt -> opt.channelGroup(group))
-				          .start((req, resp) -> resp.sendNotFound())
-				          .getContext();
+		Connection connection =
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.doOnConnection(c -> group.add(c.channel())))
+				          .handler((req, resp) -> resp.sendNotFound())
+				          .wiretap()
+				          .bindNow();
 
-		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		                                    .get("/", req -> req.failOnClientError(false).send())
+		HttpClientResponse resp = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
+		                                    .get("/")
 		                                    .block();
 
 		assertThat((Iterable<Channel>) group)
-				//the main NettyContext channel is not impacted by pipeline options
-				.doesNotContain(nettyContext.channel())
+				//the main Connection channel is not impacted by pipeline options
+				.doesNotContain(connection.channel())
 				//the GET triggered a Channel added to the group
 				.hasSize(1);
 		resp.dispose();
-		nettyContext.dispose();
+		connection.dispose();
 	}
 
 	@Test
+	@Ignore
 	public void afterNettyContextInit() {
 		AtomicInteger readCount = new AtomicInteger();
 		ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
@@ -150,32 +131,34 @@ public class NettyOptionsTest {
 		};
 		String handlerName = "test";
 
-		NettyContext nettyContext =
-				HttpServer.create(opt -> opt.afterNettyContextInit(c -> c.addHandlerFirst(handlerName, handler)))
-				          .start((req, resp) -> resp.sendNotFound())
-				          .getContext();
+		Connection connection =
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.doOnConnection(c -> c.addHandlerFirst(handlerName, handler)))
+				          .handler((req, resp) -> resp.sendNotFound())
+				          .wiretap()
+				          .bindNow();
 
-		HttpClientResponse response1 = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		                                         .get("/", req -> req.failOnClientError(false).send())
+		HttpClientResponse response1 = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
+		                                         .get("/")
 		                                         .block();
 
 		assertThat(response1.status().code()).isEqualTo(404);
 		response1.dispose();
 
 		//the "main" context doesn't get enriched with handlers from options...
-		assertThat(nettyContext.channel().pipeline().names()).doesNotContain(handlerName);
+		assertThat(connection.channel().pipeline().names()).doesNotContain(handlerName);
 		//...but the child channels that are created for requests are
 		assertThat(readCount.get()).isEqualTo(1);
 
-		HttpClientResponse response2 = HttpClient.create(opt -> opt.connectAddress(() -> nettyContext.address()))
-		                                         .get("/", req -> req.failOnClientError(false).send())
+		HttpClientResponse response2 = HttpClient.create(opt -> opt.connectAddress(() -> connection.address()))
+		                                         .get("/")
 		                                         .block();
 
 		assertThat(response2.status().code()).isEqualTo(404); //reactor handler was applied and produced a response
 		response2.dispose();
 		assertThat(readCount.get()).isEqualTo(1); //BUT channelHandler wasn't applied a second time since not Shareable
 
-		nettyContext.dispose();
+		connection.dispose();
 	}
 
 }

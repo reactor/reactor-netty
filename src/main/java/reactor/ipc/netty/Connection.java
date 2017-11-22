@@ -15,16 +15,9 @@
  */
 package reactor.ipc.netty;
 
-import java.net.InetSocketAddress;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
-import reactor.core.Disposable;
-import reactor.core.publisher.Mono;
 
 /**
  * Hold contextual information for the underlying {@link Channel}
@@ -33,7 +26,7 @@ import reactor.core.publisher.Mono;
  * @since 0.6
  */
 @FunctionalInterface
-public interface NettyContext extends Disposable {
+public interface Connection extends DisposableChannel {
 
 	/**
 	 * Return false if it will force a close on terminal protocol events thus defeating
@@ -62,13 +55,13 @@ public interface NettyContext extends Disposable {
 	 *
 	 * @param handler handler instance
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 
 	 */
-	default NettyContext addHandler(ChannelHandler handler){
+	default Connection addHandler(ChannelHandler handler){
 		return addHandler(handler.getClass().getSimpleName(), handler);
 	}
-	
+
 	/**
 	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
 	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with
@@ -83,9 +76,9 @@ public interface NettyContext extends Disposable {
 	 * @param name handler name
 	 * @param handler handler instance
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 	 */
-	default NettyContext addHandler(String name, ChannelHandler handler){
+	default Connection addHandler(String name, ChannelHandler handler){
 		if(handler instanceof ChannelOutboundHandler){
 			addHandlerFirst(name, handler);
 		}
@@ -107,10 +100,10 @@ public interface NettyContext extends Disposable {
 	 *
 	 * @param handler handler instance
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 
 	 */
-	default NettyContext addHandlerLast(ChannelHandler handler){
+	default Connection addHandlerLast(ChannelHandler handler){
 		return addHandlerLast(handler.getClass().getSimpleName(), handler);
 	}
 
@@ -127,9 +120,9 @@ public interface NettyContext extends Disposable {
 	 * @param name handler name
 	 * @param handler handler instance
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 	 */
-	default NettyContext addHandlerLast(String name, ChannelHandler handler){
+	default Connection addHandlerLast(String name, ChannelHandler handler){
 		ReactorNetty.addHandlerBeforeReactorEndHandlers(this, name, handler);
 		return this;
 	}
@@ -146,9 +139,9 @@ public interface NettyContext extends Disposable {
 	 *
 	 * @param handler handler instance
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 	 */
-	default NettyContext addHandlerFirst(ChannelHandler handler){
+	default Connection addHandlerFirst(ChannelHandler handler){
 		return addHandlerFirst(handler.getClass().getSimpleName(), handler);
 	}
 
@@ -165,52 +158,11 @@ public interface NettyContext extends Disposable {
 	 * @param name handler name
 	 * @param handler handler instance
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 	 */
-	default NettyContext addHandlerFirst(String name, ChannelHandler handler){
+	default Connection addHandlerFirst(String name, ChannelHandler handler){
 		ReactorNetty.addHandlerAfterReactorCodecs(this, name, handler);
 		return this;
-	}
-
-	/**
-	 * Return remote address if remote channel {@link NettyContext} otherwise local
-	 * address if server selector channel.
-	 *
-	 * @return remote or local {@link InetSocketAddress}
-	 */
-	default InetSocketAddress address(){
-		Channel c = channel();
-		if (c instanceof SocketChannel) {
-			return ((SocketChannel) c).remoteAddress();
-		}
-		if (c instanceof ServerSocketChannel) {
-			return ((ServerSocketChannel) c).localAddress();
-		}
-		if (c instanceof DatagramChannel) {
-			InetSocketAddress a = ((DatagramChannel) c).remoteAddress();
-			return a != null ? a : ((DatagramChannel)c ).localAddress();
-		}
-		throw new IllegalStateException("Does not have an InetSocketAddress");
-	}
-
-	/**
-	 * Return the underlying {@link Channel}. Direct interaction might be considered
-	 * insecure if that affects the
-	 * underlying IO processing such as read, write or close or state such as pipeline
-	 * handler addition/removal.
-	 *
-	 * @return the underlying {@link Channel}
-	 */
-	Channel channel();
-
-	@Override
-	default void dispose() {
-		channel().close();
-	}
-
-	@Override
-	default boolean isDisposed() {
-		return !channel().isActive();
 	}
 
 	/**
@@ -223,9 +175,9 @@ public interface NettyContext extends Disposable {
 	 * @param persist the boolean flag to mark the {@link Channel} as fully disposable
 	 * or reusable when a user handler has terminated
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 	 */
-	default NettyContext  markPersistent(boolean persist){
+	default Connection markPersistent(boolean persist){
 		if(persist && !channel().hasAttr(ReactorNetty.PERSISTENT_CHANNEL)) {
 			return this;
 		}
@@ -237,36 +189,13 @@ public interface NettyContext extends Disposable {
 	}
 
 	/**
-	 * Return an observing {@link Mono} terminating with success when shutdown
-	 * successfully
-	 * or error.
-	 *
-	 * @return a {@link Mono} terminating with success if shutdown successfully or error
-	 */
-	default Mono<Void> onClose(){
-		return FutureMono.from(channel().closeFuture());
-	}
-
-	/**
-	 * Assign a {@link Runnable} to be invoked when the channel is closed.
-	 *
-	 * @param onClose the close event handler
-	 *
-	 * @return {@literal this}
-	 */
-	default NettyContext onClose(Runnable onClose){
-		onClose().subscribe(null, e -> onClose.run(), onClose);
-		return this;
-	}
-
-	/**
 	 * Remove a named handler if present and return this context
 	 *
 	 * @param name handler name
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 	 */
-	default NettyContext removeHandler(String name) {
+	default Connection removeHandler(String name) {
 		ReactorNetty.removeHandler(channel(), name);
 		return this;
 	}
@@ -281,9 +210,9 @@ public interface NettyContext extends Disposable {
 	 *
 	 * @param name handler name
 	 *
-	 * @return this NettyContext
+	 * @return this Connection
 	 */
-	default NettyContext replaceHandler(String name, ChannelHandler handler) {
+	default Connection replaceHandler(String name, ChannelHandler handler) {
 		ReactorNetty.replaceHandler(channel(), name, handler);
 		return this;
 	}

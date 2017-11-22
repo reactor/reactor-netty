@@ -20,32 +20,35 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
-import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
-import reactor.core.publisher.Mono;
+import reactor.core.Disposable;
+import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.options.ServerOptions;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 
 /**
  *
  * @author Stephane Maldini
  */
 final class ServerContextHandler extends CloseableContextHandler<Channel>
-		implements NettyContext {
+		implements Connection, DisposableServer {
 
-	final ServerOptions serverOptions;
+	final DirectProcessor<Connection> connections;
 
-	ServerContextHandler(ChannelOperations.OnNew<Channel> channelOpFactory,
-			ServerOptions options,
-			MonoSink<NettyContext> sink,
+	ServerContextHandler(ChannelOperations.OnSetup<Channel> channelOpFactory,
+			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
-		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
-		this.serverOptions = options;
+		super(channelOpFactory, null, sink, loggingHandler, providedAddress);
+		this.connections = DirectProcessor.create();
+	}
+
+	@Override
+	public Flux<Connection> connections() {
+		return connections;
 	}
 
 	@Override
@@ -54,7 +57,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	public final void fireContextActive(NettyContext context) {
+	public final void fireContextActive(Connection context) {
 		//Ignore, child channels cannot trigger context innerActive
 	}
 
@@ -76,8 +79,8 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 	}
 
 	@Override
-	public NettyContext onClose(Runnable onClose) {
-		onClose().subscribe(null, e -> onClose.run(), onClose);
+	public Connection onDispose(Disposable onDispose) {
+		onDispose().subscribe(null, e -> onDispose.dispose(), onDispose::dispose);
 		return this;
 	}
 
@@ -98,13 +101,15 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 		     .isActive()) {
 			return;
 		}
-		if(!NettyContext.isPersistent(channel)){
+		if(!Connection.isPersistent(channel)){
 			channel.close();
 		}
 	}
 
 	@Override
 	protected void doPipeline(Channel ch) {
-		addSslAndLogHandlers(options, this, loggingHandler, true, getSNI(), ch.pipeline());
+		if (options != null) {
+			addSslAndLogHandlers(options, this, loggingHandler, true, getSNI(), ch.pipeline());
+		}
 	}
 }

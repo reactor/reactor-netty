@@ -37,7 +37,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -51,7 +51,7 @@ import static org.junit.Assert.assertThat;
 @Ignore
 public class ClientServerHttpTests {
 
-	private NettyContext              httpServer;
+	private Connection                httpServer;
 	private Processor<String, String> broadcaster;
 
 	@Test
@@ -257,8 +257,9 @@ public class ClientServerHttpTests {
 		    .buffer(5)
 		    .subscribe(processor);
 
-		httpServer = HttpServer.create(0)
-		                       .newRouter(r -> r.get("/data",
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .router(r -> r.get("/data",
 				                       (req, resp) -> resp.options(NettyPipeline.SendOptions::flushOnEach)
 				                                          .send(Flux.from(processor)
 				                                                    .log("server")
@@ -270,7 +271,8 @@ public class ClientServerHttpTests {
 				                                                    .map(new DummyListEncoder(
 						                                                    resp.alloc()
 				                                                    )))))
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 	}
 
 	private List<String> getClientData() throws Exception {

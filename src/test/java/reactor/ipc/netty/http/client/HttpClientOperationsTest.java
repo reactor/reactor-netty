@@ -28,7 +28,7 @@ import io.netty.util.concurrent.Future;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
 
@@ -44,7 +44,7 @@ public class HttpClientOperationsTest {
 
 	ContextHandler<Channel> handler = new ContextHandler<Channel>((a, b, c) -> null, null, null, null, null) {
 		@Override
-		public void fireContextActive(NettyContext context) {
+		public void fireContextActive(Connection context) {
 
 		}
 
@@ -175,8 +175,6 @@ public class HttpClientOperationsTest {
 		HttpClientOperations ops1 = new HttpClientOperations(channel,
 				(response, request) -> null, handler);
 		ops1.followRedirect();
-		ops1.failOnClientError(false);
-		ops1.failOnServerError(false);
 
 		HttpClientOperations ops2 = new HttpClientOperations(channel, ops1);
 
@@ -189,7 +187,5 @@ public class HttpClientOperationsTest {
 		assertSame(ops1.redirectable, ops2.redirectable);
 		assertSame(ops1.inboundPrefetch, ops2.inboundPrefetch);
 		assertSame(ops1.requestHeaders, ops2.requestHeaders);
-		assertSame(ops1.clientError, ops2.clientError);
-		assertSame(ops1.serverError, ops2.serverError);
 	}
 }

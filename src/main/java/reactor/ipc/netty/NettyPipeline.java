@@ -62,6 +62,7 @@ public interface NettyPipeline {
 	String HttpCompressor     = LEFT + "compressor";
 	String HttpAggregator     = LEFT + "httpAggregator";
 	String HttpServerHandler  = LEFT + "httpServerHandler";
+	String HttpInitializer    = LEFT + "httpInitializer";
 	String OnChannelWriteIdle = LEFT + "onChannelWriteIdle";
 	String OnChannelReadIdle  = LEFT + "onChannelReadIdle";
 	String ChunkedWriter      = LEFT + "chunkedWriter";
@@ -112,12 +113,9 @@ public interface NettyPipeline {
 	final class SendOptionsChangeEvent {
 
 		final Consumer<? super SendOptions> configurator;
-		final Publisher<?>                  source;
 
-		SendOptionsChangeEvent(Consumer<? super SendOptions> configurator,
-				Publisher<?> source) {
+		SendOptionsChangeEvent(Consumer<? super SendOptions> configurator) {
 			this.configurator = Objects.requireNonNull(configurator, "configurator");
-			this.source = source;
 		}
 
 		/**

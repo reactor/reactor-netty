@@ -25,6 +25,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
@@ -32,71 +34,24 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.stream.ChunkedInput;
 import io.netty.handler.stream.ChunkedNioFile;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.channel.data.AbstractFileChunkedStrategy;
-import reactor.ipc.netty.channel.data.FileChunkedStrategy;
 
 /**
  * @author Stephane Maldini
  */
 public interface NettyOutbound extends Publisher<Void> {
 
-	FileChunkedStrategy<ByteBuf> FILE_CHUNKED_STRATEGY_BUFFER = new AbstractFileChunkedStrategy<ByteBuf>() {
-
-		@Override
-		public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel) {
-			try {
-				//TODO tune the chunk size
-				return new ChunkedNioFile(fileChannel, 1024);
-			}
-			catch (IOException e) {
-				throw Exceptions.propagate(e);
-			}
-		}
-	};
-
 	/**
 	 * Return the assigned {@link ByteBufAllocator}.
 	 *
 	 * @return the {@link ByteBufAllocator}
 	 */
-	default ByteBufAllocator alloc() {
-		return context().channel()
-		                .alloc();
-	}
-
-	/**
-	 * Return a {@link NettyContext} to operate on the underlying
-	 * {@link Channel} state.
-	 *
-	 * @return the {@link NettyContext}
-	 */
-	NettyContext context();
-
-	/**
-	 * Immediately call the passed callback with a {@link NettyContext} to operate on the
-	 * underlying
-	 * {@link Channel} state. This allows for chaining outbound API.
-	 *
-	 * @param contextCallback context callback
-	 *
-	 * @return the {@link NettyContext}
-	 */
-	default NettyOutbound context(Consumer<NettyContext> contextCallback){
-		contextCallback.accept(context());
-		return this;
-	}
-
-	default FileChunkedStrategy getFileChunkedStrategy() {
-		return FILE_CHUNKED_STRATEGY_BUFFER;
-	}
+	ByteBufAllocator alloc();
 
 	/**
 	 * Return a never completing {@link Mono} after this {@link NettyOutbound#then()} has
@@ -119,10 +74,10 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return {@literal this}
 	 */
 	default NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
-		context().removeHandler(NettyPipeline.OnChannelWriteIdle);
-		context().addHandlerFirst(NettyPipeline.OnChannelWriteIdle,
-				new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle));
-		return this;
+		return withConnection(c ->
+			c.removeHandler(NettyPipeline.OnChannelWriteIdle)
+			 .addHandlerFirst(NettyPipeline.OnChannelWriteIdle,
+					new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle)));
 	}
 
 	/**
@@ -135,10 +90,9 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return {@code this} instance
 	 */
 	default NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-		context().channel()
-		         .pipeline()
-		         .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator, null));
-		return this;
+		return withConnection(c -> c.channel()
+		                            .pipeline()
+		                            .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator)));
 	}
 
 	/**
@@ -223,48 +177,54 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * error during write
 	 */
 	default NettyOutbound sendFile(Path file, long position, long count) {
-		Objects.requireNonNull(file);
-		if (context().channel().pipeline().get(SslHandler.class) != null) {
-			return sendFileChunked(file, position, count);
-		}
+		Objects.requireNonNull(file, "filepath");
 
-		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> FutureMono.from(context().channel().writeAndFlush(new DefaultFileRegion(fc, position, count))),
-				fc -> {
-					try {
-						fc.close();
+		return sendUsing(() -> FileChannel.open(file, StandardOpenOption.READ),
+				(c, fc) -> {
+					if (ReactorNetty.hasSslHandler(c)) {
+						ReactorNetty.addChunkedWriter(c);
+						try {
+							return new ChunkedNioFile(fc, position, count, 1024);
+						}
+						catch (Exception ioe) {
+							throw Exceptions.propagate(ioe);
+						}
 					}
-					catch (IOException ioe) {/*IGNORE*/}
-				}));
+					return new DefaultFileRegion(fc, position, count);
+				},
+				ReactorNetty.fileCloser);
 	}
 
+	/**
+	 * Send content from given {@link Path} using chunked read/write. <p>It will listen
+	 * for any error on write and close on terminal signal (complete|error). If more than
+	 * one publisher is attached (multiple calls to send()) completion occurs after all
+	 * publishers complete.
+	 * <p>
+	 * Note: this will emit {@link io.netty.channel.FileRegion} in the outbound {@link
+	 * io.netty.channel.ChannelPipeline}
+	 *
+	 * @param file the file Path
+	 * @param position where to start
+	 * @param count how much to transfer
+	 *
+	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
+	 * error during write
+	 */
 	default NettyOutbound sendFileChunked(Path file, long position, long count) {
-		Objects.requireNonNull(file);
-		final FileChunkedStrategy strategy = getFileChunkedStrategy();
-		final boolean needChunkedWriteHandler = context().channel().pipeline().get(NettyPipeline.ChunkedWriter) == null;
-		if (needChunkedWriteHandler) {
-			strategy.preparePipeline(context());
-		}
+		Objects.requireNonNull(file, "filepath");
 
-		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> {
-						try {
-							ChunkedInput<?> message = strategy.chunkFile(fc);
-							return FutureMono.from(context().channel().writeAndFlush(message));
-						}
-						catch (Exception e) {
-							return Mono.error(e);
-						}
-				},
-				fc -> {
+		return sendUsing(() -> FileChannel.open(file, StandardOpenOption.READ),
+				(c, fc) -> {
+					ReactorNetty.addChunkedWriter(c);
 					try {
-						fc.close();
+						return new ChunkedNioFile(fc, position, count, 1024);
 					}
-					catch (IOException ioe) {/*IGNORE*/}
-					finally {
-						strategy.cleanupPipeline(context());
+					catch (Exception e) {
+						throw Exceptions.propagate(e);
 					}
-				}));
+				},
+				ReactorNetty.fileCloser);
 	}
 
 	/**
@@ -284,33 +244,16 @@ public interface NettyOutbound extends Publisher<Void> {
 	}
 
 	/**
-	 * Send Object to the peer, listen for any error on write and close on terminal signal
-	 * (complete|error). If more than one publisher is attached (multiple calls to send())
-	 * completion occurs after all publishers complete.
+	 * Send an object through netty pipeline. If type of Publisher, send all signals,
+	 * flushing on complete by default. Write occur in FIFO sequence.
 	 *
-	 * @param dataStream the dataStream publishing Buffer items to write on this channel
+	 * @param message the dataStream publishing items to write on this channel
+	 * or a simple pojo supported by configured netty handlers
 	 *
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default NettyOutbound sendObject(Publisher<?> dataStream) {
-		return then(FutureMono.deferFuture(() -> context().channel()
-		                                                  .writeAndFlush(dataStream)));
-	}
-
-	/**
-	 * Send data to the peer, listen for any error on write and close on terminal signal
-	 * (complete|error).
-	 *
-	 * @param msg the object to publish
-	 *
-	 * @return A {@link Mono} to signal successful sequence write (e.g. after "flush") or
-	 * any error during write
-	 */
-	default NettyOutbound sendObject(Object msg) {
-		return then(FutureMono.deferFuture(() -> context().channel()
-		                                                  .writeAndFlush(msg)));
-	}
+	NettyOutbound sendObject(Object message);
 
 	/**
 	 * Send String to the peer, listen for any error on write and close on terminal signal
@@ -337,13 +280,26 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	default NettyOutbound sendString(Publisher<? extends String> dataStream,
-			Charset charset) {
+	default NettyOutbound sendString(Publisher<? extends String> dataStream, Charset charset) {
 		return sendObject(Flux.from(dataStream)
 		                      .map(s -> alloc()
 		                                   .buffer()
 		                                   .writeBytes(s.getBytes(charset))));
 	}
+
+	/**
+	 * Bind a send to a starting/cleanup lifecycle
+	 *
+	 * @param sourceInput state generator
+	 * @param mappedInput input to send
+	 * @param sourceCleanup state cleaner
+	 * @param <S> state type
+	 *
+	 * @return a new {@link NettyOutbound}
+	 */
+	<S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+			BiFunction<? super Connection, ? super S, ?> mappedInput,
+			Consumer<? super S> sourceCleanup);
 
 	/**
 	 * Subscribe a {@code Void} subscriber to this outbound and trigger all eventual
@@ -378,4 +334,13 @@ public interface NettyOutbound extends Publisher<Void> {
 		return new ReactorNetty.OutboundThen(this, other);
 	}
 
+	/**
+	 * Call the passed callback with a {@link Connection} to operate on the underlying
+	 * {@link Channel} state.
+	 *
+	 * @param withConnection connection callback
+	 *
+	 * @return the {@link Connection}
+	 */
+	NettyOutbound withConnection(Consumer<? super Connection> withConnection);
 }

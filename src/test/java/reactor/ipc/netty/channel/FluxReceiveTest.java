@@ -24,7 +24,7 @@ import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 
@@ -38,17 +38,20 @@ public class FluxReceiveTest {
 		Random rndm = new Random();
 		rndm.nextBytes(content);
 
-		NettyContext server1 =
-				HttpServer.create(0)
-				          .newRouter(routes ->
+		Connection server1 =
+				HttpServer.create()
+				          .port(0)
+				          .router(routes ->
 				                     routes.get("/target", (req, res) ->
 				                           res.sendByteArray(Flux.just(content)
 				                                                 .delayElements(Duration.ofMillis(100)))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
-		NettyContext server2 =
-				HttpServer.create(0)
-				          .newRouter(routes ->
+		Connection server2 =
+				HttpServer.create()
+				          .port(0)
+				          .router(routes ->
 				                     routes.get("/forward", (req, res) ->
 				                           HttpClient.create(server1.address().getPort())
 				                                     .get("/target")
@@ -57,7 +60,8 @@ public class FluxReceiveTest {
 				                                     .flatMap(response -> response.receive().aggregate().asString())
 				                                     .timeout(Duration.ofMillis(50))
 				                                     .then()))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Flux.range(0, 50)
 		    .flatMap(i -> HttpClient.create(server2.address().getPort())

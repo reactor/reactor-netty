@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -29,7 +31,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
@@ -62,10 +64,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
 	@Override
-	default HttpClientRequest context(Consumer<NettyContext> contextCallback){
-		contextCallback.accept(context());
-		return this;
-	}
+	HttpClientRequest withConnection(Consumer<? super Connection> withConnection);
 
 	/**
 	 * Set transfer-encoding header
@@ -88,22 +87,6 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * @return {@literal this}
 	 */
 	HttpClientRequest followRedirect();
-
-	/**
-	 * Toggle the request to fail in case of a client-side error.
-	 *
-	 * @param shouldFail true if the request should fail in case of client errors.
-	 * @return {@literal this}
-	 */
-	HttpClientRequest failOnClientError(boolean shouldFail);
-
-	/**
-	 * Toggle the request to fail in case of a server-side error.
-	 *
-	 * @param shouldFail true if the request should fail in case of server errors.
-	 * @return {@literal this}
-	 */
-	HttpClientRequest failOnServerError(boolean shouldFail);
 
 	/**
 	 * Return  true if headers and status have been sent to the client
@@ -215,7 +198,7 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * Can be several protocols, separated by a comma, or null if no subprotocol is required.
 	 * @return a {@link WebsocketOutbound} completing when upgrade is confirmed
 	 */
-	WebsocketOutbound sendWebsocket(String subprotocols);
+	WebsocketOutbound sendWebsocket(@Nullable String subprotocols);
 
 	/**
 	 * An HTTP Form builder

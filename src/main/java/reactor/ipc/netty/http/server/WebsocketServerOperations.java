@@ -19,6 +19,8 @@ package reactor.ipc.netty.http.server;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiConsumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -32,7 +34,6 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
-import io.netty.util.ReferenceCountUtil;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -44,7 +45,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
  * @author Stephane Maldini
  * @author Simon Baslé
  */
-final class HttpServerWSOperations extends HttpServerOperations
+final class WebsocketServerOperations extends HttpServerOperations
 		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
 
 	final WebSocketServerHandshaker handshaker;
@@ -52,8 +53,8 @@ final class HttpServerWSOperations extends HttpServerOperations
 
 	volatile int closeSent;
 
-	public HttpServerWSOperations(String wsUrl,
-			String protocols,
+	WebsocketServerOperations(String wsUrl,
+			@Nullable String protocols,
 			HttpServerOperations replaced) {
 		super(replaced.channel(), replaced);
 
@@ -131,7 +132,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 		}
 	}
 
-	void sendClose(CloseWebSocketFrame frame, ChannelFutureListener listener) {
+	void sendClose(@Nullable CloseWebSocketFrame frame, ChannelFutureListener listener) {
 		if (frame != null && !frame.isFinalFragment()) {
 			channel().writeAndFlush(frame);
 			return;
@@ -139,9 +140,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 			ChannelFuture f = channel().writeAndFlush(
 					frame == null ? new CloseWebSocketFrame() : frame);
-			if (listener != null) {
-				f.addListener(listener);
-			}
+			f.addListener(listener);
 		}
 	}
 
@@ -155,7 +154,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 		return handshaker.selectedSubprotocol();
 	}
 
-	static final AtomicIntegerFieldUpdater<HttpServerWSOperations> CLOSE_SENT =
-			AtomicIntegerFieldUpdater.newUpdater(HttpServerWSOperations.class,
+	static final AtomicIntegerFieldUpdater<WebsocketServerOperations> CLOSE_SENT =
+			AtomicIntegerFieldUpdater.newUpdater(WebsocketServerOperations.class,
 					"closeSent");
 }

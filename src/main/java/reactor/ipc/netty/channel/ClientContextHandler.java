@@ -24,7 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyHandler;
 import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.util.function.Tuple2;
@@ -42,9 +42,9 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	final boolean       secure;
 
 
-	ClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
+	ClientContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			ClientOptions options,
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress) {
@@ -54,7 +54,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public final void fireContextActive(NettyContext context) {
+	public final void fireContextActive(Connection context) {
 		if(!fired) {
 			fired = true;
 			if(context != null) {
@@ -86,8 +86,10 @@ final class ClientContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void doPipeline(Channel ch) {
-		addSslAndLogHandlers(clientOptions, this, loggingHandler, secure, getSNI(), ch.pipeline());
-		addProxyHandler(clientOptions, ch.pipeline(), providedAddress);
+		if (clientOptions != null) {
+			addSslAndLogHandlers(clientOptions, this, loggingHandler, secure, getSNI(), ch.pipeline());
+			addProxyHandler(clientOptions, ch.pipeline(), providedAddress);
+		}
 	}
 
 	static void addProxyHandler(ClientOptions clientOptions, ChannelPipeline pipeline, SocketAddress providedAddress) {

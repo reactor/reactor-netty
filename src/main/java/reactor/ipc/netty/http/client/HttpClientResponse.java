@@ -23,10 +23,10 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.reactivestreams.Publisher;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.ByteBufFlux;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.http.HttpInfos;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -42,11 +42,11 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
  * @author Stephane Maldini
  * @since 0.5
  */
-public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContext {
+public interface HttpClientResponse extends NettyInbound, HttpInfos, Connection {
 
 	@Override
 	default HttpClientResponse addHandlerFirst(ChannelHandler handler) {
-		NettyContext.super.addHandlerFirst(handler);
+		Connection.super.addHandlerFirst(handler);
 		return this;
 	}
 
@@ -76,7 +76,7 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, NettyContex
 	HttpClientResponse replaceHandler(String name, ChannelHandler handler);
 
 	@Override
-	HttpClientResponse onClose(Runnable onClose);
+	HttpClientResponse onDispose(Disposable onDispose);
 
 	@Override
 	default HttpClientResponse onReadIdle(long idleTimeout, Runnable onReadIdle) {

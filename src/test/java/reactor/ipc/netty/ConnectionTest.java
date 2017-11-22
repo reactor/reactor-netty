@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
 import org.junit.Before;
 import org.junit.Test;
+import reactor.core.Disposable;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -40,9 +41,9 @@ import static org.junit.Assert.assertThat;
 /**
  * @author Simon Baslé
  */
-public class NettyContextTest {
+public class ConnectionTest {
 
-	NettyContext    testContext;
+	Connection      testContext;
 	EmbeddedChannel channel;
 
 	static final BiConsumer<? super ChannelHandlerContext, Object> ADD_EXTRACTOR =
@@ -401,20 +402,20 @@ public class NettyContextTest {
 	@Test
 	public void encoderSupportSkipsOnCloseIfAttributeClosedChannel() {
 		AtomicLong closeCount = new AtomicLong();
-		NettyContext c = new NettyContext() {
+		Connection c = new Connection() {
 			@Override
 			public Channel channel() {
 				return channel;
 			}
 
 			@Override
-			public NettyContext onClose(Runnable onClose) {
+			public Connection onDispose(Disposable onClose) {
 				closeCount.incrementAndGet();
 				return this;
 			}
 
 			@Override
-			public NettyContext removeHandler(String name) {
+			public Connection removeHandler(String name) {
 				return this;
 			}
 		};
@@ -424,27 +425,27 @@ public class NettyContextTest {
 		 .addHandlerFirst("encoder", new ChannelHandlerAdapter() {
 		 });
 
-		assertThat(NettyContext.isPersistent(channel), is(false));
+		assertThat(Connection.isPersistent(channel), is(false));
 		assertThat(closeCount.intValue(), is(0));
 	}
 
 	@Test
 	public void decoderSupportSkipsOnCloseIfAttributeClosedChannel() {
 		AtomicLong closeCount = new AtomicLong();
-		NettyContext c = new NettyContext() {
+		Connection c = new Connection() {
 			@Override
 			public Channel channel() {
 				return channel;
 			}
 
 			@Override
-			public NettyContext onClose(Runnable onClose) {
+			public Connection onDispose(Disposable onClose) {
 				closeCount.incrementAndGet();
 				return this;
 			}
 
 			@Override
-			public NettyContext removeHandler(String name) {
+			public Connection removeHandler(String name) {
 				return this;
 			}
 		};
@@ -454,7 +455,7 @@ public class NettyContextTest {
 		 .addHandlerLast("decoder", new ChannelHandlerAdapter() {
 		 });
 
-		assertThat(NettyContext.isPersistent(channel), is(false));
+		assertThat(Connection.isPersistent(channel), is(false));
 		assertThat(closeCount.intValue(), is(0));
 	}
 

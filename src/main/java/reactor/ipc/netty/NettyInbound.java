@@ -16,12 +16,9 @@
 
 package reactor.ipc.netty;
 
-import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
 import io.netty.channel.Channel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Flux;
 
 /**
@@ -33,40 +30,6 @@ import reactor.core.publisher.Flux;
 public interface NettyInbound {
 
 	/**
-	 * Return a pre-configured attribute stored in every inbound channel
-	 * @param key attribute key
-	 * @param <T> a channel attribute type
-	 * @return a {@link Channel} attribute
-	 * @see Channel#attr(AttributeKey)
-	 */
-	default <T> Attribute<T> attr(AttributeKey<T> key) {
-		return context().channel()
-		                .attr(key);
-	}
-
-	/**
-	 * Return a {@link NettyContext} to operate on the underlying
-	 * {@link Channel} state.
-	 *
-	 * @return the {@link NettyContext}
-	 */
-	NettyContext context();
-
-	/**
-	 * Immediately call the passed callback with a {@link NettyContext} to operate on the
-	 * underlying
-	 * {@link Channel} state. This allows for chaining inbound API.
-	 *
-	 * @param contextCallback context callback
-	 *
-	 * @return the {@link NettyContext}
-	 */
-	default NettyInbound context(Consumer<NettyContext> contextCallback){
-		contextCallback.accept(context());
-		return this;
-	}
-
-	/**
 	 * Assign a {@link Runnable} to be invoked when reads have become idle for the given
 	 * timeout. This replaces any previously set idle callback.
 	 *
@@ -76,21 +39,17 @@ public interface NettyInbound {
 	 * @return {@literal this}
 	 */
 	default NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		context().removeHandler(NettyPipeline.OnChannelReadIdle);
-		context().addHandlerFirst(NettyPipeline.OnChannelReadIdle,
-				new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle));
-		return this;
+		return withConnection(c ->
+			c.removeHandler(NettyPipeline.OnChannelReadIdle)
+			 .addHandlerFirst(NettyPipeline.OnChannelReadIdle,
+					 new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle)));
 	}
 
 	/**
 	 * A {@link Flux} extension that allows for extra decoding operators
 	 * @return a new {@link ByteBufFlux}
 	 */
-	default ByteBufFlux receive() {
-		return ByteBufFlux.fromInbound(receiveObject(),
-				context().channel()
-				         .alloc());
-	}
+	ByteBufFlux receive();
 
 
 	/**
@@ -101,12 +60,13 @@ public interface NettyInbound {
 	Flux<?> receiveObject();
 
 	/**
-	 * Get the address of the remote peer.
+	 * Call the passed callback with a {@link Connection} to operate on the
+	 * underlying
+	 * {@link Channel} state. This allows for chaining inbound API.
 	 *
-	 * @return the peer's address
+	 * @param withConnection connection callback
+	 *
+	 * @return the {@link Connection}
 	 */
-	default InetSocketAddress remoteAddress() {
-		return context().address();
-	}
-
+	NettyInbound withConnection(Consumer<? super Connection> withConnection);
 }

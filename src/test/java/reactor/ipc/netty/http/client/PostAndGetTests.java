@@ -21,7 +21,6 @@ import java.net.SocketAddress;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.time.Duration;
 import java.util.function.BiFunction;
 
 import org.apache.http.HttpException;
@@ -31,7 +30,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.http.server.HttpServerRequest;
 import reactor.ipc.netty.http.server.HttpServerResponse;
@@ -44,7 +43,7 @@ import reactor.util.Loggers;
 @Ignore
 public class PostAndGetTests {
 
-	private NettyContext httpServer;
+	private Connection httpServer;
 
 	@Before
 	public void setup() throws InterruptedException {
@@ -52,12 +51,14 @@ public class PostAndGetTests {
 	}
 
 	private void setupServer() throws InterruptedException {
-		httpServer = HttpServer.create(0)
-		                       .newRouter(routes -> {
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .router(routes -> {
 			                       routes.get("/get/{name}", getHandler())
 			                             .post("/post", postHandler());
 		                       })
-		                       .block(Duration.ofSeconds(30));
+		                       .wiretap()
+		                       .bindNow();
 	}
 
 	BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> getHandler() {

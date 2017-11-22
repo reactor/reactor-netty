@@ -15,16 +15,11 @@
  */
 package reactor.ipc.netty.http;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -36,33 +31,27 @@ public class HttpResponseStatusCodesHandlingTests {
 
 	@Test
 	public void httpStatusCode404IsHandledByTheClient() {
-		NettyContext server =
-				HttpServer.create(0)
-				          .newRouter(r -> r.post("/test", (req, res) -> res.send(req.receive()
+		Connection server =
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.post("/test", (req, res) -> res.send(req.receive()
 				                                                                    .log("server-received"))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		HttpClient client = HttpClient.create("localhost", server.address().getPort());
 
-		List<String> replyReceived = new ArrayList<>();
-		Mono<String> content = client.get("/unsupportedURI", req ->
+		Mono<Integer> content = client.get("/unsupportedURI", req ->
 				                         req.addHeader("Content-Type", "text/plain")
 				                            .sendString(Flux.just("Hello")
 				                                            .log("client-send"))
 				                     )
-				                     .flatMapMany(res -> res.receive()
-				                                            .asString()
-				                                            .log("client-received")
-				                                            .doOnNext(s -> replyReceived.add(s)))
-				                     .next()
+				                     .flatMap(res -> Mono.just(res.status().code()))
 				                     .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
 
 		StepVerifier.create(content)
-				    .expectErrorMatches(t -> t.getMessage().equals("HTTP request failed with code: 404.\nFailing URI: " +
-						"/unsupportedURI"))
-				    .verify(Duration.ofSeconds(30));
-
-		Assertions.assertThat(replyReceived).isEmpty();
+				    .expectNext(404)
+				    .verifyComplete();
 
 		server.dispose();
 	}

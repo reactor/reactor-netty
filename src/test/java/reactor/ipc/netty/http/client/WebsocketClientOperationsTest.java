@@ -15,56 +15,43 @@
  */
 package reactor.ipc.netty.http.client;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.time.Duration;
 
+import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.Test;
-
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.test.StepVerifier;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * @author Violeta Georgieva
  */
-public class HttpClientWSOperationsTest {
+public class WebsocketClientOperationsTest {
 
 	@Test
-	public void failOnClientErrorDisabled() {
-		failOnClientServerError(false, false, 401, "", "");
+	public void requestError() {
+		failOnClientServerError(401, "", "");
 	}
 
 	@Test
-	public void failOnClientErrorEnabled() {
-		failOnClientServerError(true, false, 401, "", "");
+	public void serverError() {
+		failOnClientServerError(500, "", "");
 	}
 
 	@Test
-	public void failOnServerErrorDisabled() {
-		failOnClientServerError(false, false, 500, "", "");
+	public void failedNegotiation() {
+		failOnClientServerError(200, "Server-Protocol", "Client-Protocol");
 	}
 
-	@Test
-	public void failOnServerErrorEnabled() {
-		failOnClientServerError(false, true, 500, "", "");
-	}
-
-	@Test
-	public void failOnServerErrorDisabledFailedNegotiation() {
-		failOnClientServerError(false, false, 200, "Server-Protocol", "Client-Protocol");
-	}
-
-	@Test
-	public void failOnServerErrorEnabledFailedNegotiation() {
-		failOnClientServerError(false, true, 200, "Server-Protocol", "Client-Protocol");
-	}
-
-	private void failOnClientServerError(boolean clientError, boolean serverError,
+	private void failOnClientServerError(
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
-		NettyContext httpServer = HttpServer.create(0).newRouter(
+		Connection httpServer = HttpServer.create()
+		                                  .port(0)
+		                                  .router(
 			routes -> routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
 					.get("/ws", (req, res) -> {
 						int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
@@ -74,26 +61,24 @@ public class HttpClientWSOperationsTest {
 						return res.sendWebsocket(serverSubprotocol, (i, o) -> o.sendString(Mono.just("test")));
 					})
 			)
-			.block(Duration.ofSeconds(30));
+		                                  .wiretap()
+		                                  .bindNow();
 
 		Mono<HttpClientResponse> response =
 			HttpClient.create(httpServer.address().getPort())
-			          .get("/ws", request -> Mono.just(request.failOnClientError(clientError)
-			                                                  .failOnServerError(serverError))
+			          .get("/ws", request -> Mono.just(request)
 			                                     .transform(req -> doLoginFirst(req, httpServer.address().getPort()))
 			                                     .flatMapMany(req -> ws(req, clientSubprotocol)))
 			          .switchIfEmpty(Mono.error(new Exception()));
 
-
-		if (clientError || serverError) {
+		if(!serverSubprotocol.equals(clientSubprotocol)) {
 			StepVerifier.create(response)
-			            .expectError()
-			            .verify(Duration.ofSeconds(30));
+			            .verifyError(WebSocketHandshakeException.class);
 		}
 		else {
 			StepVerifier.create(response)
-			            .assertNext(res -> {
-			                assertThat(res.status().code()).isEqualTo(serverStatus == 200 ? 101 : serverStatus);
+			            .assertNext(res ->
+			               { assertThat(res.status().code()).isEqualTo(serverStatus == 200 ? 101 : serverStatus);
 			                res.dispose();
 			            })
 			            .expectComplete()
@@ -114,8 +99,7 @@ public class HttpClientWSOperationsTest {
 
 	private Mono<String> login(int port) {
 		return HttpClient.create(port)
-		                 .post("/login", req -> req.failOnClientError(false)
-		                                           .failOnServerError(false))
+		                 .post("/login", r -> r)
 		                 .map(res -> {
 		                     res.dispose();
 		                     return res.status().code() + "";

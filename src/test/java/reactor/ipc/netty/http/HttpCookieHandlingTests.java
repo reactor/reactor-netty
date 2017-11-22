@@ -24,7 +24,7 @@ import org.junit.Test;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -36,13 +36,15 @@ public class HttpCookieHandlingTests {
 
 	@Test
 	public void clientWithoutCookieGetsANewOneFromServer() {
-		NettyContext server =
-				HttpServer.create(0)
-				          .newRouter(r -> r.get("/test", (req, resp) ->
+		Connection server =
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.get("/test", (req, resp) ->
 				                            resp.addCookie(new DefaultCookie("cookie1", "test_value"))
 				                                .send(req.receive()
 				                                         .log("server received"))))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
 				HttpClient.create("localhost", server.address().getPort())

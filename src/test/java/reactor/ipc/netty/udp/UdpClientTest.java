@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.resources.LoopResources;
 
 public class UdpClientTest {
@@ -40,9 +40,11 @@ public class UdpClientTest {
 	public void smokeTest() throws Exception {
 		LoopResources resources = LoopResources.create("test");
 		CountDownLatch latch = new CountDownLatch(4);
-		NettyContext server =
-				UdpServer.create(ops -> ops.port(0).loopResources(resources))
-				         .newHandler((in, out) -> in.receiveObject()
+		Connection server =
+				UdpServer.create()
+				         .port(0)
+				         .runOn(resources)
+				         .handler((in, out) -> in.receiveObject()
 				                                    .map(o -> {
 				                                            if (o instanceof DatagramPacket) {
 				                                                DatagramPacket received = (DatagramPacket) o;
@@ -55,12 +57,16 @@ public class UdpClientTest {
 				                                                return Mono.error(new Exception());
 				                                            }
 				                                    })
-				                                    .flatMap(p -> out.sendObject(p)))
+				                                    .flatMap(out::sendObject))
+				         .wiretap()
+				         .bind()
 				         .block(Duration.ofSeconds(30));
 
-		NettyContext client1 =
-				UdpClient.create(ops -> ops.port(server.address().getPort()).loopResources(resources))
-				         .newHandler((in, out) -> {
+		Connection client1 =
+				UdpClient.create()
+				         .port(server.address().getPort())
+				         .runOn(resources)
+				         .handler((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
 				                                        System.out.println("Client1 received " + b.toString(CharsetUtil.UTF_8));
@@ -70,11 +76,15 @@ public class UdpClientTest {
 				                                            .then(out.sendString(Mono.just("ping2")))
 				                                            .neverComplete();
 				         })
+				         .wiretap()
+				         .connect()
 				         .block(Duration.ofSeconds(30));
 
-		NettyContext client2 =
-				UdpClient.create(ops -> ops.port(server.address().getPort()).loopResources(resources))
-				         .newHandler((in, out) -> {
+		Connection client2 =
+				UdpClient.create()
+				         .port(server.address().getPort())
+				         .runOn(resources)
+				         .handler((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
 				                                        System.out.println("Client2 received " + b.toString(CharsetUtil.UTF_8));
@@ -84,6 +94,8 @@ public class UdpClientTest {
 				                                            .then(out.sendString(Mono.just("ping4")))
 				                                            .neverComplete();
 				         })
+				         .wiretap()
+				         .connect()
 				         .block(Duration.ofSeconds(30));
 
 		assertTrue(latch.await(30, TimeUnit.SECONDS));
@@ -94,11 +106,11 @@ public class UdpClientTest {
 
 	@Test
 	public void testIssue192() {
-		UdpServer.Builder serverBuilder = UdpServer.builder();
-		UdpClient.Builder clientBuilder = UdpClient.builder();
+		UdpServer server = UdpServer.create();
+		UdpClient client = UdpClient.create();
 		assertThat(Thread.getAllStackTraces().keySet().stream().allMatch(t -> !t.getName().startsWith("udp"))).isTrue();
-		serverBuilder.build();
-		clientBuilder.build();
+		server.bind();
+		client.connect();
 		assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("udp"))).isTrue();
 	}
 }

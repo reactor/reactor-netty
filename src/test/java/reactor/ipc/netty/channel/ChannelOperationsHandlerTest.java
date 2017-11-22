@@ -33,7 +33,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
@@ -55,14 +55,16 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	private void doTestPublisherSenderOnCompleteFlushInProgress(boolean useScheduler) {
-		NettyContext server =
-				HttpServer.create(0)
-				          .newHandler((req, res) ->
+		Connection server =
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) ->
 				                  req.receive()
 				                     .asString()
 				                     .doOnNext(System.err::println)
 				                     .then(res.status(200).sendHeaders().then()))
-				          .block(Duration.ofSeconds(30));
+				          .wiretap()
+				          .bindNow();
 
 		Flux<String> flux = Flux.range(1, 257).map(count -> count + "");
 		if (useScheduler) {

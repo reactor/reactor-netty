@@ -21,12 +21,12 @@ import java.time.Duration;
 import java.util.concurrent.TimeoutException;
 
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
- * Wrap a {@link NettyContext} obtained from a {@link Mono} and offer methods to manage
+ * Wrap a {@link Connection} obtained from a {@link Mono} and offer methods to manage
  * its lifecycle in a blocking fashion.
  *
  * @author Simon Baslé
@@ -35,18 +35,18 @@ public class BlockingNettyContext {
 
 	private static final Logger LOG = Loggers.getLogger(BlockingNettyContext.class);
 
-	private final NettyContext context;
-	private final String description;
+	private final Connection context;
+	private final String     description;
 
 	private Duration lifecycleTimeout;
 	private Thread shutdownHook;
 
-	public BlockingNettyContext(Mono<? extends NettyContext> contextAsync,
+	public BlockingNettyContext(Mono<? extends Connection> contextAsync,
 			String description) {
 		this(contextAsync, description, Duration.ofSeconds(45));
 	}
 
-	public BlockingNettyContext(Mono<? extends NettyContext> contextAsync,
+	public BlockingNettyContext(Mono<? extends Connection> contextAsync,
 			String description, Duration lifecycleTimeout) {
 		this.description = description;
 		this.lifecycleTimeout = lifecycleTimeout;
@@ -58,7 +58,7 @@ public class BlockingNettyContext {
 
 	/**
 	 * Change the lifecycle timeout applied to the {@link #shutdown()} operation (as this can
-	 * only be called AFTER the {@link NettyContext} has been "started").
+	 * only be called AFTER the {@link Connection} has been "started").
 	 *
 	 * @param timeout the new timeout to apply on shutdown.
 	 */
@@ -67,10 +67,10 @@ public class BlockingNettyContext {
 	}
 
 	/**
-	 * Get the {@link NettyContext} wrapped by this facade.
-	 * @return the original NettyContext.
+	 * Get the {@link Connection} wrapped by this facade.
+	 * @return the original Connection.
 	 */
-	public NettyContext getContext() {
+	public Connection getContext() {
 		return context;
 	}
 
@@ -88,7 +88,7 @@ public class BlockingNettyContext {
 	 * lookup).
 	 *
 	 * @return the host string, without reverse DNS lookup
-	 * @see NettyContext#address()
+	 * @see Connection#address()
 	 * @see InetSocketAddress#getHostString()
 	 */
 	public String getHost() {
@@ -134,7 +134,7 @@ public class BlockingNettyContext {
 	}
 
 	/**
-	 * Shut down the {@link NettyContext} and wait for its termination, up to the
+	 * Shut down the {@link Connection} and wait for its termination, up to the
 	 * {@link #setLifecycleTimeout(Duration) lifecycle timeout}.
 	 */
 	public void shutdown() {
@@ -145,7 +145,7 @@ public class BlockingNettyContext {
 		removeShutdownHook(); //only applies if not called from the hook's thread
 
 		context.dispose();
-		context.onClose()
+		context.onDispose()
 		       .doOnError(e -> LOG.error("Stopped {} on {} with an error {}", description, context.address(), e))
 		       .doOnTerminate(() -> LOG.info("Stopped {} on {}", description, context.address()))
 		       .timeout(lifecycleTimeout, Mono.error(new TimeoutException(description + " couldn't be stopped within " + lifecycleTimeout.toMillis() + "ms")))
@@ -160,7 +160,7 @@ public class BlockingNettyContext {
 		final String hookDesc = Thread.currentThread().toString();
 
 		context.dispose();
-		context.onClose()
+		context.onDispose()
 		       .doOnError(e -> LOG.error("Stopped {} on {} with an error {} from JVM hook {}",
 				       description, context.address(), e, hookDesc))
 		       .doOnTerminate(() -> LOG.info("Stopped {} on {} from JVM hook {}",

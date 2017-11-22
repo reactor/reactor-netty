@@ -15,22 +15,33 @@
  */
 package reactor.ipc.netty;
 
+import java.nio.channels.FileChannel;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
+import reactor.core.Disposable;
+import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -41,22 +52,28 @@ import reactor.util.Loggers;
  */
 final class ReactorNetty {
 
-	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");
+	static void addChunkedWriter(Connection c){
+		if (c.channel()
+		     .pipeline()
+		     .get(ChunkedWriteHandler.class) == null) {
+			c.addHandlerLast(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
+		}
+	}
 
 	/**
-	 * A common implementation for the {@link NettyContext#addHandlerLast(String, ChannelHandler)}
+	 * A common implementation for the {@link Connection#addHandlerLast(String, ChannelHandler)}
 	 * method that can be reused by other implementors.
 	 * <p>
 	 * This implementation will look for reactor added handlers on the right hand side of
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#RIGHT}
 	 * prefix, and add the handler just before the first of these.
 	 *
-	 * @param context the {@link NettyContext} on which to add the decoder.
+	 * @param context the {@link Connection} on which to add the decoder.
 	 * @param name the name of the decoder.
 	 * @param handler the decoder to add before the final reactor-specific handlers.
-	 * @see NettyContext#addHandlerLast(String, ChannelHandler).
+	 * @see Connection#addHandlerLast(String, ChannelHandler).
 	 */
-	static void addHandlerBeforeReactorEndHandlers(NettyContext context, String
+	static void addHandlerBeforeReactorEndHandlers(Connection context, String
 			name,	ChannelHandler handler) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(handler, "handler");
@@ -97,19 +114,19 @@ final class ReactorNetty {
 	}
 
 	/**
-	 * A common implementation for the {@link NettyContext#addHandlerFirst(String, ChannelHandler)}
+	 * A common implementation for the {@link Connection#addHandlerFirst(String, ChannelHandler)}
 	 * method that can be reused by other implementors.
 	 * <p>
 	 * This implementation will look for reactor added handlers on the left hand side of
 	 * the pipeline, provided they are identified with the {@link NettyPipeline#LEFT}
 	 * prefix, and add the handler just after the last of these.
 	 *
-	 * @param context the {@link NettyContext} on which to add the decoder.
+	 * @param context the {@link Connection} on which to add the decoder.
 	 * @param name the name of the encoder.
 	 * @param handler the encoder to add after the initial reactor-specific handlers.
-	 * @see NettyContext#addHandlerFirst(String, ChannelHandler)
+	 * @see Connection#addHandlerFirst(String, ChannelHandler)
 	 */
-	static void addHandlerAfterReactorCodecs(NettyContext context, String
+	static void addHandlerAfterReactorCodecs(Connection context, String
 			name,
 			ChannelHandler handler) {
 		Objects.requireNonNull(name, "name");
@@ -149,11 +166,15 @@ final class ReactorNetty {
 		}
 	}
 
+	static boolean hasSslHandler(Connection c){
+		return c.channel().pipeline().get(SslHandler.class) != null;
+	}
+
 	static void registerForClose(boolean shouldCleanupOnClose,
 			String name,
-			NettyContext context) {
+			Connection context) {
 		if (!shouldCleanupOnClose) return;
-		context.onClose(() -> context.removeHandler(name));
+		context.onDispose(() -> context.removeHandler(name));
 	}
 
 	static void removeHandler(Channel channel, String name){
@@ -202,14 +223,15 @@ final class ReactorNetty {
 
 	/**
 	 * Determines if user-provided handlers registered on the given channel should
-	 * automatically be registered for removal through a {@link NettyContext#onClose(Runnable)}
+	 * automatically be registered for removal through a
+	 * {@link Connection#onDispose(Disposable)}}
 	 * (or similar on close hook). This depends on the
-	 * {@link NettyContext#isPersistent(Channel)} ()}
+	 * {@link Connection#isPersistent(Channel)} ()}
 	 * attribute.
 	 */
 	static boolean shouldCleanupOnClose(Channel channel) {
 		boolean registerForClose = true;
-		if (!NettyContext.isPersistent(channel)) {
+		if (!Connection.isPersistent(channel)) {
 			registerForClose = false;
 		}
 		return registerForClose;
@@ -238,11 +260,11 @@ final class ReactorNetty {
 	 */
 	static final class OutboundThen implements NettyOutbound {
 
-		final NettyContext sourceContext;
-		final Mono<Void>   thenMono;
+		final NettyOutbound source;
+		final Mono<Void> thenMono;
 
 		OutboundThen(NettyOutbound source, Publisher<Void> thenPublisher) {
-			this.sourceContext = source.context();
+			this.source = source;
 
 			Mono<Void> parentMono = source.then();
 
@@ -255,8 +277,25 @@ final class ReactorNetty {
 		}
 
 		@Override
-		public NettyContext context() {
-			return sourceContext;
+		public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+				BiFunction<? super Connection, ? super S, ?> mappedInput,
+				Consumer<? super S> sourceCleanup) {
+			return then(source.sendUsing(sourceInput, mappedInput, sourceCleanup));
+		}
+
+		@Override
+		public ByteBufAllocator alloc() {
+			return source.alloc();
+		}
+
+		@Override
+		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+			return source.withConnection(withConnection);
+		}
+
+		@Override
+		public NettyOutbound sendObject(Object message) {
+			return then(source.sendObject(message));
 		}
 
 		@Override
@@ -303,10 +342,6 @@ final class ReactorNetty {
 		}
 	}
 
-	static final Object TERMINATED                 = new TerminatedHandlerEvent();
-	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
-	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
-
 	/**
 	 * A handler that can be used to extract {@link ByteBuf} out of {@link ByteBufHolder},
 	 * optionally also outputting additional messages
@@ -317,8 +352,8 @@ final class ReactorNetty {
 	@ChannelHandler.Sharable
 	static final class ExtractorHandler extends ChannelInboundHandlerAdapter {
 
-		final BiConsumer<? super ChannelHandlerContext, Object> extractor;
 
+		final BiConsumer<? super ChannelHandlerContext, Object> extractor;
 		ExtractorHandler(BiConsumer<? super ChannelHandlerContext, Object> extractor) {
 			this.extractor = Objects.requireNonNull(extractor, "extractor");
 		}
@@ -327,5 +362,43 @@ final class ReactorNetty {
 		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 			extractor.accept(ctx, msg);
 		}
+
 	}
+	static final class ChannelDisposer extends BaseSubscriber<Void> {
+
+
+		final DisposableChannel channelDisposable;
+		ChannelDisposer(DisposableChannel channelDisposable) {
+			this.channelDisposable = channelDisposable;
+		}
+
+		@Override
+		protected void hookOnSubscribe(Subscription subscription) {
+			request(Long.MAX_VALUE);
+			channelDisposable.onDispose(this);
+		}
+
+		@Override
+		protected void hookFinally(SignalType type) {
+			if (type != SignalType.CANCEL) {
+				channelDisposable.dispose();
+			}
+		}
+
+	}
+
+	static final Object TERMINATED                 = new TerminatedHandlerEvent();
+	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
+	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
+
+	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");
+
+	static final Consumer<? super FileChannel> fileCloser = fc -> {
+		try {
+			fc.close();
+		}
+		catch (Throwable e) {
+			log.trace("", e);
+		}
+	};
 }

@@ -23,6 +23,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -34,17 +36,16 @@ import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.NettyOptions;
-import reactor.ipc.netty.options.ServerOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 
 /**
- * A one time-set channel pipeline callback to emit {@link NettyContext} state for clean
+ * A one time-set channel pipeline callback to emit {@link Connection} state for clean
  * disposing. A {@link ContextHandler} is bound to a user-facing {@link MonoSink}
  *
  * @param <CHANNEL> the channel type
@@ -67,12 +68,12 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @return a new {@link ContextHandler} for clients
 	 */
 	public static <CHANNEL extends Channel> ContextHandler<CHANNEL> newClientContext(
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			ClientOptions options,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
-			ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
+			ChannelOperations.OnSetup<CHANNEL> channelOpFactory) {
 		return newClientContext(sink,
 				options,
 				loggingHandler,
@@ -97,12 +98,12 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @return a new {@link ContextHandler} for clients
 	 */
 	public static <CHANNEL extends Channel> ContextHandler<CHANNEL> newClientContext(
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			ClientOptions options,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
-			ChannelPool pool, ChannelOperations.OnNew<CHANNEL> channelOpFactory) {
+			ChannelPool pool, ChannelOperations.OnSetup<CHANNEL> channelOpFactory) {
 		if (pool != null) {
 			return new PooledClientContextHandler<>(channelOpFactory,
 					options,
@@ -124,28 +125,27 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * Create a new server context
 	 *
 	 * @param sink
-	 * @param options
 	 * @param loggingHandler
 	 * @param channelOpFactory
+	 * @param address
 	 *
 	 * @return a new {@link ContextHandler} for servers
 	 */
-	public static ContextHandler<Channel> newServerContext(MonoSink<NettyContext> sink,
-			ServerOptions options,
-			LoggingHandler loggingHandler,
-			ChannelOperations.OnNew<Channel> channelOpFactory) {
-		return new ServerContextHandler(channelOpFactory, options, sink, loggingHandler, options.getAddress());
+	public static ContextHandler<Channel> newServerContext(MonoSink<Connection> sink,
+														   LoggingHandler loggingHandler,
+														   ChannelOperations.OnSetup<Channel> channelOpFactory,
+														   SocketAddress address) {
+		return new ServerContextHandler(channelOpFactory, sink, loggingHandler, address);
 	}
 
-	final MonoSink<NettyContext>           sink;
+	final MonoSink<Connection>             sink;
 	final NettyOptions<?, ?>               options;
 	final LoggingHandler                   loggingHandler;
 	final SocketAddress                    providedAddress;
-	final ChannelOperations.OnNew<CHANNEL> channelOpFactory;
+	final ChannelOperations.OnSetup<CHANNEL> channelOpFactory;
 
 	BiConsumer<ChannelPipeline, ContextHandler<Channel>> pipelineConfigurator;
 	boolean                                              fired;
-	boolean                                              autoCreateOperations;
 
 	/**
 	 * @param channelOpFactory
@@ -156,9 +156,9 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * associated with that handler (useable eg. for SNI), or null if unavailable.
 	 */
 	@SuppressWarnings("unchecked")
-	protected ContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
+	protected ContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			NettyOptions<?, ?> options,
-			MonoSink<NettyContext> sink,
+			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
 		this.channelOpFactory =
@@ -166,7 +166,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		this.options = options;
 		this.sink = sink;
 		this.loggingHandler = loggingHandler;
-		this.autoCreateOperations = true;
 		this.providedAddress = providedAddress;
 
 	}
@@ -187,22 +186,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	}
 
 	/**
-	 * Allow the {@link ChannelOperations} to be created automatically on pipeline setup
-	 *
-	 * @param autoCreateOperations should auto create {@link ChannelOperations}
-	 *
-	 * @return this context
-	 */
-	public final ContextHandler<CHANNEL> autoCreateOperations(boolean autoCreateOperations) {
-		this.autoCreateOperations = autoCreateOperations;
-		return this;
-	}
-
-	/**
 	 * Return a new {@link ChannelOperations} or null if one of the two
 	 * following conditions are not met:
 	 * <ul>
-	 * <li>{@link #autoCreateOperations(boolean)} is true
+	 * <li>{@link ChannelOperations.OnSetup#createOnConnected()} is true
 	 * </li>
 	 * <li>The passed message is not null</li>
 	 * </ul>
@@ -214,9 +201,9 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * @return a new {@link ChannelOperations}
 	 */
 	@SuppressWarnings("unchecked")
-	public final ChannelOperations<?, ?> createOperations(Channel channel, Object msg) {
+	public final ChannelOperations<?, ?> createOperations(Channel channel, @Nullable Object msg) {
 
-		if (autoCreateOperations || msg != null) {
+		if (channelOpFactory.createOnConnected() || msg != null) {
 			ChannelOperations<?, ?> op =
 					channelOpFactory.create((CHANNEL) channel, this, msg);
 
@@ -230,9 +217,9 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					return null;
 				}
 
-				if (this.options.afterNettyContextInit() != null) {
+				if (this.options != null && this.options.afterNettyContextInit() != null) {
 					try {
-						this.options.afterNettyContextInit().accept(op.context());
+						this.options.afterNettyContextInit().accept(op);
 					}
 					catch (Throwable t) {
 						log.error("Could not apply afterNettyContextInit callback {}", t.toString());
@@ -257,7 +244,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 *
 	 * @param context optional context to succeed the associated {@link MonoSink}
 	 */
-	public abstract void fireContextActive(NettyContext context);
+	public abstract void fireContextActive(Connection context);
 
 	/**
 	 * Trigger {@link MonoSink#error(Throwable)} that will signal

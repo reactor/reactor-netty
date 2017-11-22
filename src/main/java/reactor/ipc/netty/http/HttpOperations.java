@@ -16,9 +16,9 @@
 
 package reactor.ipc.netty.http;
 
-import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
@@ -32,27 +32,23 @@ import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.ByteToMessageCodec;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.FullHttpMessage;
-import io.netty.handler.codec.http.HttpChunkedInput;
-import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.stream.ChunkedInput;
 import io.netty.handler.stream.ChunkedNioFile;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
-import reactor.ipc.netty.channel.data.AbstractFileChunkedStrategy;
-import reactor.ipc.netty.channel.data.FileChunkedStrategy;
 
 /**
  * An HTTP ready {@link ChannelOperations} with state management for status and headers
@@ -182,30 +178,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return super.sendFile(file, position, count);
 	}
 
-	FileChunkedStrategy<HttpContent> FILE_CHUNKED_STRATEGY_HTTP_CONTENT = new AbstractFileChunkedStrategy<HttpContent>() {
-
-		@Override
-		public ChunkedInput<HttpContent> chunkFile(FileChannel fileChannel) {
-			try {
-				//TODO tune the chunk size
-				return new HttpChunkedInput(new ChunkedNioFile(fileChannel, 1024));
-			}
-			catch (IOException e) {
-				throw Exceptions.propagate(e);
-			}
-		}
-
-		@Override
-		public void afterWrite(NettyContext context) {
-			markSentBody();
-		}
-	};
-
-	@Override
-	public FileChunkedStrategy getFileChunkedStrategy() {
-		return FILE_CHUNKED_STRATEGY_HTTP_CONTENT;
-	}
-
 	@Override
 	public String toString() {
 		if (isWebsocket()) {
@@ -227,7 +199,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return this;
 	}
 
-	static void autoAddHttpExtractor(NettyContext c, String name, ChannelHandler
+	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler
 			handler){
 
 		if (handler instanceof ByteToMessageDecoder
@@ -241,8 +213,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 			c.channel().pipeline().addBefore(name, extractorName, HTTP_EXTRACTOR);
 
-			if(NettyContext.isPersistent(c.channel())){
-				c.onClose(() -> c.removeHandler(extractorName));
+			if(Connection.isPersistent(c.channel())){
+				c.onDispose(() -> c.removeHandler(extractorName));
 			}
 
 		}

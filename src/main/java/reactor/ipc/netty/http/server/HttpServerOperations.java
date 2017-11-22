@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -48,11 +49,12 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
+import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
@@ -111,8 +113,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerOperations context(Consumer<NettyContext> contextCallback) {
-		contextCallback.accept(context());
+	public HttpServerOperations withConnection(Consumer<? super Connection> withConnection) {
+		Objects.requireNonNull(withConnection, "withConnection");
+		withConnection.accept(this);
 		return this;
 	}
 
@@ -229,6 +232,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@Nullable
 	public Map<String, String> params() {
 		return null != paramsResolver ? paramsResolver.apply(uri()) : null;
 	}
@@ -333,7 +337,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Mono<Void> sendWebsocket(String protocols,
+	public Mono<Void> sendWebsocket(@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return withWebsocketSupport(uri(), protocols, websocketHandler);
 	}
@@ -455,15 +459,22 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,
-			String protocols,
+			@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
-			HttpServerWSOperations ops = new HttpServerWSOperations(url, protocols, this);
+			WebsocketServerOperations
+					ops = new WebsocketServerOperations(url, protocols, this);
 
 			if (replace(ops)) {
 				return FutureMono.from(ops.handshakerResult)
-				                 .then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops))))
+				                 .then(Mono.defer(() -> {
+				                 	//skip handler if no matching subprotocol
+					                 if (protocols != null && ops.selectedSubprotocol() == null) {
+						                 return Mono.empty();
+					                 }
+					                 return Mono.from(websocketHandler.apply(ops, ops));
+				                 }))
 				                 .doAfterSuccessOrError(ops);
 			}
 		}
@@ -490,4 +501,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			             .set(HttpHeaderNames.CONTENT_LENGTH, 0);
 		}
 	}
+
+	static final AttributeKey<Integer> PRODUCE_GZIP = AttributeKey.newInstance("produceGzip");
 }

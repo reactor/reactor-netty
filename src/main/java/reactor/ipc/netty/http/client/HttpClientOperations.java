@@ -20,11 +20,16 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -59,14 +64,16 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
+import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -88,7 +95,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return new HttpClientOperations(channel, handler, context);
 	}
 
-	final String[]    redirectedFrom;
+	final Supplier<String>[]    redirectedFrom;
 	final boolean     isSecure;
 	final HttpRequest nettyRequest;
 	final HttpHeaders requestHeaders;
@@ -98,8 +105,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	boolean started;
 
-	boolean clientError = true;
-	boolean serverError = true;
 	boolean redirectable;
 
 	HttpClientOperations(Channel channel, HttpClientOperations replaced) {
@@ -112,8 +117,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.redirectable = replaced.redirectable;
 		this.inboundPrefetch = replaced.inboundPrefetch;
 		this.requestHeaders = replaced.requestHeaders;
-		this.clientError = replaced.clientError;
-		this.serverError = replaced.serverError;
 	}
 
 	HttpClientOperations(Channel channel,
@@ -122,7 +125,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		super(channel, handler, context);
 		this.isSecure = channel.pipeline()
 		                       .get(NettyPipeline.SslHandler) != null;
-		String[] redirects = channel.attr(REDIRECT_ATTR_KEY)
+		Supplier<String>[] redirects = channel.attr(REDIRECT_ATTR_KEY)
 		                            .get();
 		this.redirectedFrom = redirects == null ? EMPTY_REDIRECTIONS : redirects;
 		this.nettyRequest =
@@ -219,8 +222,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public HttpClientOperations context(Consumer<NettyContext> contextCallback) {
-		contextCallback.accept(context());
+	public HttpClientOperations withConnection(Consumer<? super Connection> withConnection) {
+		Objects.requireNonNull(withConnection, "withConnection");
+		withConnection.accept(this);
 		return this;
 	}
 
@@ -230,24 +234,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (responseState != null) {
 			return responseState.cookieHolder.getCachedCookies();
 		}
-		return null;
+		return Collections.emptyMap();
 	}
 
 	@Override
 	public HttpClientRequest followRedirect() {
 		redirectable = true;
-		return this;
-	}
-
-	@Override
-	public HttpClientRequest failOnClientError(boolean shouldFail) {
-		clientError = shouldFail;
-		return this;
-	}
-
-	@Override
-	public HttpClientRequest failOnServerError(boolean shouldFail) {
-		serverError = shouldFail;
 		return this;
 	}
 
@@ -305,8 +297,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public boolean isWebsocket() {
-		return get(channel()).getClass()
-		                     .equals(HttpClientWSOperations.class);
+		ChannelOperations<?, ?> ops = get(channel());
+		if (ops != null) {
+			return ops.getClass()
+					.equals(WebsocketClientOperations.class);
+		}
+		else {
+			return false;
+		}
 	}
 
 	@Override
@@ -321,16 +319,18 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public final HttpClientOperations onClose(Runnable onClose) {
-		super.onClose(onClose);
+	public final HttpClientOperations onDispose(Disposable onDispose) {
+		super.onDispose(onDispose);
 		return this;
 	}
 
 	@Override
 	public String[] redirectedFrom() {
-		String[] redirectedFrom = this.redirectedFrom;
+		Supplier<String>[] redirectedFrom = this.redirectedFrom;
 		String[] dest = new String[redirectedFrom.length];
-		System.arraycopy(redirectedFrom, 0, dest, 0, redirectedFrom.length);
+		for (int i = 0; i < redirectedFrom.length; i++) {
+			dest[i] = redirectedFrom[i].get();
+		}
 		return dest;
 	}
 
@@ -339,6 +339,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return nettyRequest.headers();
 	}
 
+	@Override
 	public HttpHeaders responseHeaders() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
@@ -398,18 +399,42 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return new WebsocketOutbound() {
 
 			@Override
+			public ByteBufAllocator alloc() {
+				return HttpClientOperations.this.alloc();
+			}
+
+			@Override
 			public String selectedSubprotocol() {
+				if (isWebsocket()) {
+					WebsocketClientOperations ops =
+							(WebsocketClientOperations) get(channel());
+
+					assert ops != null;
+					return ops.selectedSubprotocol();
+				}
 				return null;
 			}
 
 			@Override
-			public NettyContext context() {
-				return HttpClientOperations.this;
+			public NettyOutbound sendObject(Object message) {
+				return then(HttpClientOperations.this.sendObject(message));
+			}
+
+			@Override
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return then(HttpClientOperations.this.sendUsing(sourceInput, mappedInput, sourceCleanup));
 			}
 
 			@Override
 			public Mono<Void> then() {
 				return m;
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				return HttpClientOperations.this.withConnection(withConnection);
 			}
 		};
 	}
@@ -498,7 +523,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onOutboundError(Throwable err) {
-		if(NettyContext.isPersistent(channel()) && responseState == null){
+		if(Connection.isPersistent(channel()) && responseState == null){
 			parentContext().fireContextError(err);
 			onHandlerTerminate();
 			return;
@@ -599,35 +624,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	final boolean checkResponseCode(HttpResponse response) {
 		int code = response.status()
 		                   .code();
-		if (code >= 500) {
-			if (serverError){
-				if (log.isDebugEnabled()) {
-					log.debug("{} Received Server Error, stop reading: {}", channel(),
-							response
-									.toString());
-				}
-				Exception ex = new HttpClientException(uri(), response);
-				parentContext().fireContextError(ex);
-				receive().subscribe();
-				return false;
-			}
-			return true;
-		}
-
-		if (code >= 400) {
-			if (clientError) {
-				if (log.isDebugEnabled()) {
-					log.debug("{} Received Request Error, stop reading: {}",
-							channel(),
-							response.toString());
-				}
-				Exception ex = new HttpClientException(uri(), response);
-				parentContext().fireContextError(ex);
-				receive().subscribe();
-				return false;
-			}
-			return true;
-		}
 		if (code == 301 || code == 302 && isFollowRedirect()) {
 			if (log.isDebugEnabled()) {
 				log.debug("{} Received Redirect location: {}",
@@ -636,7 +632,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						        .entries()
 						        .toString());
 			}
-			Exception ex = new RedirectClientException(uri(), response);
+			Exception ex = new RedirectClientException(response);
 			parentContext().fireContextError(ex);
 			receive().subscribe();
 			return false;
@@ -675,14 +671,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	final Mono<Void> withWebsocketSupport(URI url,
-			String protocols,
+			@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
+			WebsocketClientOperations
+					ops = new WebsocketClientOperations(url, protocols, this);
 
 			if (replace(ops)) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
@@ -696,8 +693,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 		}
 		else if (isWebsocket()) {
-			HttpClientWSOperations ops =
-					(HttpClientWSOperations) get(channel());
+			WebsocketClientOperations ops =
+					(WebsocketClientOperations) get(channel());
 			if(ops != null) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
 
@@ -825,9 +822,10 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	static final int                    MAX_REDIRECTS      = 50;
-	static final String[]               EMPTY_REDIRECTIONS = new String[0];
+	@SuppressWarnings("unchecked")
+	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];
 	static final Logger                 log                =
 			Loggers.getLogger(HttpClientOperations.class);
-	static final AttributeKey<String[]> REDIRECT_ATTR_KEY  =
+	static final AttributeKey<Supplier<String>[]> REDIRECT_ATTR_KEY  =
 			AttributeKey.newInstance("httpRedirects");
 }

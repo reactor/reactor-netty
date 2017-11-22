@@ -18,13 +18,15 @@ package reactor.ipc.netty.http.server;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cookie.Cookie;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
@@ -68,10 +70,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse chunkedTransfer(boolean chunked);
 
 	@Override
-	default HttpServerResponse context(Consumer<NettyContext> contextCallback){
-		contextCallback.accept(context());
-		return this;
-	}
+	HttpServerResponse withConnection(Consumer<? super Connection> withConnection);
 
 	/**
 	 * Return  true if headers and status have been sent to the client
@@ -166,7 +165,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
 	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(uri(), websocketHandler);
+		return sendWebsocket(null, websocketHandler);
 	}
 
 	/**
@@ -178,7 +177,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	Mono<Void> sendWebsocket(String protocols,
+	Mono<Void> sendWebsocket(@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
 
 

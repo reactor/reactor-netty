@@ -16,27 +16,30 @@
 
 package reactor.ipc.netty.channel;
 
-import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
+import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
+import reactor.ipc.netty.ByteBufFlux;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyConnector;
-import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
@@ -53,7 +56,7 @@ import reactor.util.context.Context;
  * @since 0.6
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
-		implements NettyInbound, NettyOutbound, NettyContext, CoreSubscriber<Void> {
+		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void> {
 
 	/**
 	 * Create a new {@link ChannelOperations} attached to the {@link Channel} attribute
@@ -100,6 +103,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return the current {@link Channel} bound
 	 * {@link ChannelOperations} or null if none
 	 */
+	@Nullable
 	public static ChannelOperations<?, ?> get(Channel ch) {
 		return ch.attr(OPERATIONS_KEY)
 		          .get();
@@ -141,7 +145,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected ChannelOperations(Channel channel,
 			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context, DirectProcessor<Void> processor) {
-		this.handler = Objects.requireNonNull(handler, "handler");
+		this.handler = handler;
 		this.channel = Objects.requireNonNull(channel, "channel");
 		this.context = Objects.requireNonNull(context, "context");
 		this.inbound = new FluxReceive(this);
@@ -159,16 +163,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public InetSocketAddress address() {
-		Channel c = channel();
-		if (c instanceof SocketChannel) {
-			return ((SocketChannel) c).remoteAddress();
-		}
-		if (c instanceof DatagramChannel) {
-			InetSocketAddress a = ((DatagramChannel) c).remoteAddress();
-			return a != null ? a : ((DatagramChannel)c ).localAddress();
-		}
-		throw new IllegalStateException("Does not have an InetSocketAddress");
+	public ByteBufAllocator alloc() {
+		return channel.alloc();
 	}
 
 	@Override
@@ -177,13 +173,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final NettyContext context() {
-		return this;
-	}
-
-	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> context(Consumer<NettyContext> contextCallback) {
-		contextCallback.accept(context());
+	public ChannelOperations<INBOUND, OUTBOUND> withConnection(Consumer<? super Connection> withConnection) {
+		withConnection.accept(this);
 		return this;
 	}
 
@@ -194,18 +185,23 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	public CoreSubscriber<Void> disposeSubscriber() {
+		return this;
+	}
+
+	@Override
 	public final boolean isDisposed() {
 		return get(channel()) != this;
 	}
 
 	@Override
-	public final Mono<Void> onClose() {
+	public final Mono<Void> onDispose() {
 		return Mono.fromDirect(onInactive);
 	}
 
 	@Override
-	public NettyContext onClose(final Runnable onClose) {
-		onInactive.subscribe(null, e -> onClose.run(), onClose);
+	public Connection onDispose(Disposable onDispose) {
+		onInactive.subscribe(null, e -> onDispose.dispose(), onDispose::dispose);
 		return this;
 	}
 
@@ -249,22 +245,33 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public final InetSocketAddress remoteAddress() {
-		return (InetSocketAddress) channel.remoteAddress();
+	public ByteBufFlux receive() {
+		return ByteBufFlux.fromInbound(receiveObject(), channel.alloc());
+	}
+
+	@Override
+	public NettyOutbound sendObject(Object message) {
+		return then(FutureMono.deferFuture(() -> channel.writeAndFlush(message)));
+	}
+
+	@Override
+	public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+			BiFunction<? super Connection, ? super S, ?> mappedInput,
+			Consumer<? super S> sourceCleanup) {
+		Objects.requireNonNull(sourceInput, "sourceInput");
+		Objects.requireNonNull(mappedInput, "mappedInput");
+		Objects.requireNonNull(sourceCleanup, "sourceCleanup");
+
+		return then(Mono.using(
+				sourceInput,
+				s -> FutureMono.from(channel.writeAndFlush(mappedInput.apply(this, s))),
+				sourceCleanup)
+		);
 	}
 
 	@Override
 	public String toString() {
 		return channel.toString();
-	}
-
-	/**
-	 * Return true if inbound traffic is not expected anymore
-	 *
-	 * @return true if inbound traffic is not expected anymore
-	 */
-	protected final boolean isInboundDone() {
-		return inbound.inboundDone || !channel.isActive();
 	}
 
 	/**
@@ -312,10 +319,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param msg the read payload
 	 */
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg == null) {
-			onInboundError(new NullPointerException("msg is null"));
-			return;
-		}
 		inbound.onInboundNext(msg);
 	}
 
@@ -373,14 +376,19 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	@SuppressWarnings("unchecked")
 	protected final void applyHandler() {
+		if (handler != null) {
 //		channel.pipeline()
 //		       .fireUserEventTriggered(NettyPipeline.handlerStartedEvent());
-		if (log.isDebugEnabled()) {
-			log.debug("[{}] {} handler is being applied: {}", formatName(), channel
-					(), handler);
+			if (log.isDebugEnabled()) {
+				log.debug("[{}] {} handler is being applied: {}", formatName(), channel
+						(), handler);
+			}
+			Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
+					.subscribe(this);
 		}
-		Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
-		       .subscribe(this);
+		else if (parentContext() instanceof ServerContextHandler){
+			((ServerContextHandler) parentContext()).connections.onNext(this);
+		}
 	}
 
 	/**
@@ -476,7 +484,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * A {@link ChannelOperations} factory
 	 */
 	@FunctionalInterface
-	public interface OnNew<CHANNEL extends Channel> {
+	public interface OnSetup<CHANNEL extends Channel> {
 
 		/**
 		 * Create a new {@link ChannelOperations} given a netty channel, a parent
@@ -488,8 +496,21 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		 *
 		 * @return a new {@link ChannelOperations}
 		 */
-		ChannelOperations<?, ?> create(CHANNEL c, ContextHandler<?> contextHandler, Object msg);
+		@Nullable ChannelOperations<?, ?> create(CHANNEL c, ContextHandler<?> contextHandler,
+				Object msg);
+
+		/**
+		 * True if {@link ChannelOperations} should be created by {@link
+		 * ChannelOperationsHandler} on channelActive event
+		 *
+		 * @return true if {@link ChannelOperations} should be created by {@link
+		 * ChannelOperationsHandler} on channelActive event
+		 */
+		default boolean createOnConnected() {
+			return true;
+		}
 	}
+
 	/**
 	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}
 	 */

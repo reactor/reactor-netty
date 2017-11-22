@@ -20,7 +20,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -30,7 +29,10 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
@@ -44,14 +46,12 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.handler.stream.ChunkedInput;
 import io.netty.handler.stream.ChunkedNioFile;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
-import reactor.core.Exceptions;
-import reactor.ipc.netty.channel.data.FileChunkedStrategy;
+import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -60,8 +60,32 @@ public class NettyOutboundTest {
 	@Test
 	public void onWriteIdleReplaces() throws Exception {
 		EmbeddedChannel channel = new EmbeddedChannel();
-		NettyContext mockContext = () -> channel;
-		NettyOutbound outbound = () -> mockContext;
+		Connection mockContext = () -> channel;
+		NettyOutbound outbound = new NettyOutbound() {
+
+			@Override
+			public NettyOutbound sendObject(Object message) {
+				return this;
+			}
+
+			@Override
+			public ByteBufAllocator alloc() {
+				return ByteBufAllocator.DEFAULT;
+			}
+
+			@Override
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return this;
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
+			}
+		};
 
 		AtomicLong idle1 = new AtomicLong();
 		AtomicLong idle2 = new AtomicLong();
@@ -106,16 +130,30 @@ public class NettyOutboundTest {
 						out.add(msg);
 					}
 				});
-		NettyContext mockContext = () -> channel;
+		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
-			public NettyContext context() {
-				return mockContext;
+			public NettyOutbound sendObject(Object message) {
+				return this;
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
-				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
+			public ByteBufAllocator alloc() {
+				return ByteBufAllocator.DEFAULT;
+			}
+
+
+			@Override
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return then(mockSendUsing(mockContext, sourceInput, mappedInput, sourceCleanup));
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
 			}
 		};
 		channel.writeOneOutbound(1);
@@ -174,16 +212,30 @@ public class NettyOutboundTest {
 					}
 				});
 
-		NettyContext mockContext = () -> channel;
+		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
+
 			@Override
-			public NettyContext context() {
-				return mockContext;
+			public NettyOutbound sendObject(Object message) {
+				return this;
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
-				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
+			public ByteBufAllocator alloc() {
+				return ByteBufAllocator.DEFAULT;
+			}
+
+			@Override
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return then(mockSendUsing(mockContext, sourceInput, mappedInput, sourceCleanup));
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
 			}
 		};
 		channel.writeOneOutbound(1);
@@ -240,16 +292,29 @@ public class NettyOutboundTest {
 						out.add(msg);
 					}
 				});
-		NettyContext mockContext = () -> channel;
+		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
-			public NettyContext context() {
-				return mockContext;
+			public NettyOutbound sendObject(Object message) {
+				return this;
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
-				return FILE_CHUNKED_STRATEGY_1024_NOPIPELINE;
+			public ByteBufAllocator alloc() {
+				return ByteBufAllocator.DEFAULT;
+			}
+
+			@Override
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return then(mockSendUsing(mockContext, sourceInput, mappedInput, sourceCleanup));
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(mockContext);
+				return this;
 			}
 		};
 		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
@@ -277,26 +342,14 @@ public class NettyOutboundTest {
 		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
-	private static final FileChunkedStrategy FILE_CHUNKED_STRATEGY_1024_NOPIPELINE =
-			new FileChunkedStrategy<ByteBuf>() {
-				@Override
-				public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel) {
-					try {
-						return new ChunkedNioFile(fileChannel, 1024);
-					}
-					catch (IOException e) {
-						throw Exceptions.propagate(e);
-					}
-				}
-
-				@Override
-				public void preparePipeline(NettyContext context) {
-					//NO-OP
-				}
-
-				@Override
-				public void cleanupPipeline(NettyContext context) {
-					//NO-OP
-				}
-			};
+	static<S> Mono<Void> mockSendUsing(Connection c, Callable<? extends S> sourceInput,
+			BiFunction<? super Connection, ? super S, ?> mappedInput,
+			Consumer<? super S> sourceCleanup) {
+		return Mono.using(
+				sourceInput,
+				s -> FutureMono.from(c.channel()
+				                      .writeAndFlush(mappedInput.apply(c, s))),
+				sourceCleanup
+		);
+	}
 }
