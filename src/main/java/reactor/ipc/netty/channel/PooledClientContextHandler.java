@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.channel;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -33,8 +32,6 @@ import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 
 /**
  * @param <CHANNEL> the channel type
@@ -276,14 +273,5 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	protected void doDropped(Channel channel) {
 		dispose();
 		fireContextError(new AbortedException("Channel has been dropped"));
-	}
-
-	@Override
-	protected Tuple2<String, Integer> getSNI() {
-		if (providedAddress instanceof InetSocketAddress) {
-			InetSocketAddress ipa = (InetSocketAddress) providedAddress;
-			return Tuples.of(ipa.getHostString(), ipa.getPort());
-		}
-		return null;
 	}
 }
