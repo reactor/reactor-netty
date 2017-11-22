@@ -279,11 +279,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void doPipeline(Channel ch) {
-		//do not add in channelCreated pool
-	}
-
-	@Override
 	protected Tuple2<String, Integer> getSNI() {
 		if (providedAddress instanceof InetSocketAddress) {
 			InetSocketAddress ipa = (InetSocketAddress) providedAddress;

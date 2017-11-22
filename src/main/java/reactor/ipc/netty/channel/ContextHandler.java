@@ -266,18 +266,9 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		accept(ch);
 	}
 
-	/**
-	 * Initialize pipeline
-	 *
-	 * @param ch channel to initialize
-	 */
-	protected abstract void doPipeline(Channel ch);
-
 	@Override
 	@SuppressWarnings("unchecked")
 	public void accept(Channel channel) {
-		doPipeline(channel);
-
 		try {
 			if (pipelineConfigurator != null) {
 				pipelineConfigurator.accept(channel.pipeline(),
