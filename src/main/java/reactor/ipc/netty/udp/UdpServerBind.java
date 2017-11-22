@@ -49,7 +49,6 @@ final class UdpServerBind extends UdpServer {
 
 		return Mono.create(sink -> {
 			ContextHandler<DatagramChannel> ctx = ContextHandler.newClientContext(sink,
-					null,
 					UdpServer.LOGGING_HANDLER,
 					false,
 					b.config().localAddress(),

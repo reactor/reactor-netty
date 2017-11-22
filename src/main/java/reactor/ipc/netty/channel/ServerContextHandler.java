@@ -42,7 +42,7 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 			MonoSink<Connection> sink,
 			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
-		super(channelOpFactory, null, sink, loggingHandler, providedAddress);
+		super(channelOpFactory, sink, loggingHandler, providedAddress);
 		this.connections = DirectProcessor.create();
 	}
 
@@ -108,8 +108,6 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	@Override
 	protected void doPipeline(Channel ch) {
-		if (options != null) {
-			addSslAndLogHandlers(options, this, loggingHandler, true, getSNI(), ch.pipeline());
-		}
+		// no-op
 	}
 }
