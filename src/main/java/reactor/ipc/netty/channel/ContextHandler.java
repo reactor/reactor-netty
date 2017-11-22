@@ -133,7 +133,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	final SocketAddress                    providedAddress;
 	final ChannelOperations.OnSetup<CHANNEL> channelOpFactory;
 
-	BiConsumer<ChannelPipeline, ContextHandler<Channel>> pipelineConfigurator;
 	boolean                                              fired;
 
 	/**
@@ -154,21 +153,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		this.loggingHandler = loggingHandler;
 		this.providedAddress = providedAddress;
 
-	}
-
-	/**
-	 * Setup protocol specific handlers such as HTTP codec. Should be called before
-	 * binding the context to any channel or bootstrap.
-	 *
-	 * @param pipelineConfigurator a configurator for extra codecs in the {@link
-	 * ChannelPipeline}
-	 *
-	 * @return this context
-	 */
-	public final ContextHandler<CHANNEL> onPipeline(BiConsumer<ChannelPipeline, ContextHandler<Channel>> pipelineConfigurator) {
-		this.pipelineConfigurator =
-				Objects.requireNonNull(pipelineConfigurator, "pipelineConfigurator");
-		return this;
 	}
 
 	/**
@@ -268,10 +252,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	@SuppressWarnings("unchecked")
 	public void accept(Channel channel) {
 		try {
-			if (pipelineConfigurator != null) {
-				pipelineConfigurator.accept(channel.pipeline(),
-						(ContextHandler<Channel>) this);
-			}
 			channel.pipeline()
 			       .addLast(NettyPipeline.ReactiveBridge,
 					       new ChannelOperationsHandler(this));
