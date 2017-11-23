@@ -74,7 +74,6 @@ final class TcpClientAcquire extends TcpClient {
 			b.attr(AttributeKey.valueOf("finalizer"), "true");
 			ChannelPool pool = poolResources.selectOrCreate(b.config().remoteAddress(), () -> b,
 					ContextHandler.newClientContext(sink,
-							null,
 							isSecure(),
 							b.config().remoteAddress(),
 							null,
@@ -83,7 +82,6 @@ final class TcpClientAcquire extends TcpClient {
 
 			ContextHandler<Channel> ctx =
 					ContextHandler.newClientContext(sink,
-							null,
 							isSecure(),
 							b.config().remoteAddress(),
 							pool,

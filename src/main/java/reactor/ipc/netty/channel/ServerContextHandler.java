@@ -21,7 +21,6 @@ import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.handler.logging.LoggingHandler;
 import reactor.core.Disposable;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
@@ -40,9 +39,8 @@ final class ServerContextHandler extends CloseableContextHandler<Channel>
 
 	ServerContextHandler(ChannelOperations.OnSetup<Channel> channelOpFactory,
 			MonoSink<Connection> sink,
-			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
-		super(channelOpFactory, sink, loggingHandler, providedAddress);
+		super(channelOpFactory, sink, providedAddress);
 		this.connections = DirectProcessor.create();
 	}
 
