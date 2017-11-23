@@ -19,7 +19,6 @@ package reactor.ipc.netty.channel;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -27,7 +26,6 @@ import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
@@ -36,7 +34,6 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -245,29 +242,12 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
-		accept(ch);
+		// no-op
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public void accept(Channel channel) {
-		try {
-			channel.pipeline()
-			       .addLast(NettyPipeline.ReactiveBridge,
-					       new ChannelOperationsHandler(this));
-		}
-		catch (Exception t) {
-			if (log.isErrorEnabled()) {
-				log.error("Error while binding a channelOperation with: " + channel
-								.toString() + " on " + channel.pipeline(),
-						t);
-			}
-		}
-		if (log.isDebugEnabled()) {
-			log.debug("After pipeline {}",
-					channel.pipeline()
-					       .toString());
-		}
+		// no-op
 	}
 
 	/**
