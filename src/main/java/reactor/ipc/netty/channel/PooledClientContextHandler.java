@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.SucceededFuture;
@@ -59,11 +58,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	PooledClientContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			MonoSink<Connection> sink,
-			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
 			ChannelPool pool) {
-		super(channelOpFactory, sink, loggingHandler, providedAddress);
+		super(channelOpFactory, sink, providedAddress);
 		this.secure = secure;
 		this.pool = pool;
 		this.onReleaseEmitter = DirectProcessor.create();

@@ -23,7 +23,6 @@ import java.util.Objects;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.MonoSink;
@@ -46,9 +45,8 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 
 	CloseableContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			MonoSink<Connection> sink,
-			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
-		super(channelOpFactory, sink, loggingHandler, providedAddress);
+		super(channelOpFactory, sink, providedAddress);
 	}
 
 	@Override

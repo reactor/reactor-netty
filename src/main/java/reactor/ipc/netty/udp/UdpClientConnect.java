@@ -49,7 +49,6 @@ final class UdpClientConnect extends UdpClient {
 
 		return Mono.create(sink -> {
 			ContextHandler<DatagramChannel> ctx = ContextHandler.newClientContext(sink,
-					UdpClient.LOGGING_HANDLER,
 					false,
 					b.config().remoteAddress(),
 					ops);

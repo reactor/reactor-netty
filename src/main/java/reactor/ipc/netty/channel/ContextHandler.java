@@ -27,7 +27,6 @@ import javax.annotation.Nullable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.Future;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
@@ -53,7 +52,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 *
 	 * @param sink
 	 *
-	 * @param loggingHandler
 	 * @param secure
 	 * @param channelOpFactory
 	 * @param <CHANNEL>
@@ -62,12 +60,10 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 */
 	public static <CHANNEL extends Channel> ContextHandler<CHANNEL> newClientContext(
 			MonoSink<Connection> sink,
-			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
 			ChannelOperations.OnSetup<CHANNEL> channelOpFactory) {
 		return newClientContext(sink,
-				loggingHandler,
 				secure,
 				providedAddress,
 				null,
@@ -78,7 +74,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * Create a new client context with optional pool support
 	 *
 	 * @param sink
-	 * @param loggingHandler
 	 * @param secure
 	 * @param providedAddress
 	 * @param channelOpFactory
@@ -89,21 +84,18 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 */
 	public static <CHANNEL extends Channel> ContextHandler<CHANNEL> newClientContext(
 			MonoSink<Connection> sink,
-			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress,
 			ChannelPool pool, ChannelOperations.OnSetup<CHANNEL> channelOpFactory) {
 		if (pool != null) {
 			return new PooledClientContextHandler<>(channelOpFactory,
 					sink,
-					loggingHandler,
 					secure,
 					providedAddress,
 					pool);
 		}
 		return new ClientContextHandler<>(channelOpFactory,
 				sink,
-				loggingHandler,
 				secure,
 				providedAddress);
 	}
@@ -112,21 +104,18 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	 * Create a new server context
 	 *
 	 * @param sink
-	 * @param loggingHandler
 	 * @param channelOpFactory
 	 * @param address
 	 *
 	 * @return a new {@link ContextHandler} for servers
 	 */
 	public static ContextHandler<Channel> newServerContext(MonoSink<Connection> sink,
-														   LoggingHandler loggingHandler,
 														   ChannelOperations.OnSetup<Channel> channelOpFactory,
 														   SocketAddress address) {
-		return new ServerContextHandler(channelOpFactory, sink, loggingHandler, address);
+		return new ServerContextHandler(channelOpFactory, sink, address);
 	}
 
 	final MonoSink<Connection>             sink;
-	final LoggingHandler                   loggingHandler;
 	final SocketAddress                    providedAddress;
 	final ChannelOperations.OnSetup<CHANNEL> channelOpFactory;
 
@@ -135,19 +124,16 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	/**
 	 * @param channelOpFactory
 	 * @param sink
-	 * @param loggingHandler
 	 * @param providedAddress the {@link InetSocketAddress} targeted by the operation
 	 * associated with that handler (useable eg. for SNI), or null if unavailable.
 	 */
 	@SuppressWarnings("unchecked")
 	protected ContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			MonoSink<Connection> sink,
-			LoggingHandler loggingHandler,
 			SocketAddress providedAddress) {
 		this.channelOpFactory =
 				Objects.requireNonNull(channelOpFactory, "channelOpFactory");
 		this.sink = sink;
-		this.loggingHandler = loggingHandler;
 		this.providedAddress = providedAddress;
 
 	}

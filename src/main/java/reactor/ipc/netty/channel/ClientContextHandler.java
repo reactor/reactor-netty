@@ -19,7 +19,6 @@ package reactor.ipc.netty.channel;
 import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
-import io.netty.handler.logging.LoggingHandler;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
 
@@ -36,10 +35,9 @@ final class ClientContextHandler<CHANNEL extends Channel>
 
 	ClientContextHandler(ChannelOperations.OnSetup<CHANNEL> channelOpFactory,
 			MonoSink<Connection> sink,
-			LoggingHandler loggingHandler,
 			boolean secure,
 			SocketAddress providedAddress) {
-		super(channelOpFactory, sink, loggingHandler, providedAddress);
+		super(channelOpFactory, sink, providedAddress);
 		this.secure = secure;
 	}
 
