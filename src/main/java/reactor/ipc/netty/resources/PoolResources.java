@@ -17,17 +17,16 @@
 package reactor.ipc.netty.resources;
 
 import java.net.SocketAddress;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.channel.ContextHandler;
 
 /**
  * A {@link io.netty.channel.pool.ChannelPool} selector with associated factories.
@@ -150,12 +149,12 @@ public interface PoolResources extends Disposable {
 	 * new {@link ChannelPool}
 	 * @param bootstrap the {@link Bootstrap} supplier if a {@link ChannelPool} must be
 	 * created
-	 * @param onChannelCreate callback only when new connection is made
+	 * @param ctx callback only when new connection is made
 	 * @return an existing or new {@link ChannelPool}
 	 */
 	ChannelPool selectOrCreate(SocketAddress address,
 			Supplier<? extends Bootstrap> bootstrap,
-			Consumer<? super Channel> onChannelCreate,
+			ContextHandler ctx,
 			EventLoopGroup group);
 
 	@Override
