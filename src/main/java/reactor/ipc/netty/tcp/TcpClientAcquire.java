@@ -19,7 +19,6 @@ package reactor.ipc.netty.tcp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
@@ -70,8 +69,6 @@ final class TcpClientAcquire extends TcpClient {
 		}
 
 		return Mono.create(sink -> {
-			// TODO temporary workaround
-			b.attr(AttributeKey.valueOf("finalizer"), "true");
 			ChannelPool pool = poolResources.selectOrCreate(b.config().remoteAddress(), () -> b,
 					ContextHandler.newClientContext(sink,
 							isSecure(),
