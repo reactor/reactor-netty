@@ -45,7 +45,7 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 public abstract class ContextHandler<CHANNEL extends Channel>
-		extends ChannelInitializer<CHANNEL> implements Disposable, Consumer<Channel> {
+		extends ChannelInitializer<CHANNEL> implements Disposable {
 
 	/**
 	 * Create a new client context
@@ -228,11 +228,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	@Override
 	protected void initChannel(CHANNEL ch) throws Exception {
-		// no-op
-	}
-
-	@Override
-	public void accept(Channel channel) {
 		// no-op
 	}
 

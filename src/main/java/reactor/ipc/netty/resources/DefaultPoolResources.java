@@ -21,7 +21,6 @@ import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
@@ -66,7 +65,7 @@ final class DefaultPoolResources implements PoolResources {
 	@Override
 	public ChannelPool selectOrCreate(SocketAddress remote,
 			Supplier<? extends Bootstrap> bootstrap,
-			Consumer<? super Channel> onChannelCreate,
+			ContextHandler ctx,
 			EventLoopGroup group) {
 		SocketAddressHolder holder = new SocketAddressHolder(remote);
 		for (; ; ) {
@@ -77,7 +76,7 @@ final class DefaultPoolResources implements PoolResources {
 			if (log.isDebugEnabled()) {
 				log.debug("New {} client pool for {}", name, remote);
 			}
-			pool = new Pool(bootstrap.get().remoteAddress(remote), provider, onChannelCreate, group);
+			pool = new Pool(bootstrap.get(), provider, ctx, group);
 			if (channelPools.putIfAbsent(holder, pool) == null) {
 				return pool;
 			}
@@ -90,7 +89,7 @@ final class DefaultPoolResources implements PoolResources {
 			           GenericFutureListener<Future<Channel>> {
 
 		final ChannelPool               pool;
-		final Consumer<? super Channel> onChannelCreate;
+		final ContextHandler            ctx;
 		final EventLoopGroup            defaultGroup;
 
 		final Bootstrap bootstrap;
@@ -103,11 +102,11 @@ final class DefaultPoolResources implements PoolResources {
 		@SuppressWarnings("unchecked")
 		Pool(Bootstrap bootstrap,
 				PoolFactory provider,
-				Consumer<? super Channel> onChannelCreate,
+				ContextHandler ctx,
 				EventLoopGroup group) {
 			this.bootstrap = bootstrap;
 			this.pool = provider.newPool(bootstrap, this, this);
-			this.onChannelCreate = onChannelCreate;
+			this.ctx = ctx;
 			this.defaultGroup = group;
 			HEALTHY = group.next()
 			               .newSucceededFuture(true);
@@ -203,14 +202,9 @@ final class DefaultPoolResources implements PoolResources {
 						ch.toString(),
 						activeConnections);
 			}
-			if (onChannelCreate != null) {
-				if (Boolean.valueOf((String) bootstrap.config().attrs().get(AttributeKey.valueOf("finalizer")))) {
-					BootstrapHandlers.finalize(bootstrap, (ContextHandler) onChannelCreate);
-					ch.pipeline().addFirst(bootstrap.config().handler());
-				}
-				else {
-					onChannelCreate.accept(ch);
-				}
+			if (ctx != null) {
+				BootstrapHandlers.finalize(bootstrap, ctx);
+				ch.pipeline().addFirst(bootstrap.config().handler());
 			}
 		}
 
