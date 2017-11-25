@@ -68,6 +68,18 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		                           .map(bytebufExtractor), allocator);
 	}
 
+	public static ByteBufFlux fromString(Publisher<? extends String> source) {
+		return fromString(source, Charset.defaultCharset(), ByteBufAllocator.DEFAULT);
+	}
+
+	public static ByteBufFlux fromString(Publisher<? extends String> source, Charset charset, ByteBufAllocator allocator) {
+		Objects.requireNonNull(allocator, "allocator");
+		return new ByteBufFlux(Flux.from(source)
+		                           .map(s -> allocator.buffer()
+		                                              .writeBytes(s.getBytes(charset))),
+		                       allocator);
+	}
+
 	/**
 	 * Open a {@link java.nio.channels.FileChannel} from a path and stream
 	 * {@link ByteBuf} chunks with a default maximum size of 500K into
