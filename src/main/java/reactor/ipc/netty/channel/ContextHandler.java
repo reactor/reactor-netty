@@ -20,7 +20,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
