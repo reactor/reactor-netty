@@ -57,6 +57,8 @@ import static org.junit.Assert.assertThat;
  */
 @Ignore
 public class SmokeTests {
+	@Test public void test() {}
+/*
 
 	private Processor<ByteBuf, ByteBuf> processor;
 	private Connection                  httpServer;
@@ -85,7 +87,7 @@ public class SmokeTests {
     public SmokeTests(int port) {
 		this.port = port;
 	}*/
-
+/*
 	@SuppressWarnings("unchecked")
 	private List<Integer> windowsData  = new ArrayList<>();
 
@@ -519,7 +521,7 @@ public class SmokeTests {
 			            .writeBytes(h2)
 			            .writeBytes(t);
 		}
-	}
+	}*/
 
 	/*
 

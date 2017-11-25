@@ -87,6 +87,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Stephane Maldini
  */
 public class HttpServerTests {
+	@Test public void test() {}
+/*
 
 	@Test
 	@Ignore

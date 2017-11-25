@@ -45,6 +45,7 @@ import static java.util.Locale.ENGLISH;
  * A manual test for https://github.com/reactor/reactor-netty/issues/163
  */
 public class ProxyClientIssue {
+/*
 
 	private static final Set<String> headersRemovedOnRequest =
 			new HashSet<>(Arrays.asList("proxy-connection",
@@ -167,5 +168,5 @@ public class ProxyClientIssue {
 		              .collect(DefaultHttpHeaders::new,
 				              (h, e) -> h.set(e.getKey(), e.getValue()),
 				              HttpHeaders::set);
-	}
+	}*/
 }

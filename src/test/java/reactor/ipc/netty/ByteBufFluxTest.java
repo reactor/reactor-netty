@@ -23,7 +23,6 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.SslContext;
@@ -34,7 +33,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.http.client.HttpClientOptions;
 import reactor.ipc.netty.http.server.HttpServer;
 
 import static org.junit.Assert.assertTrue;
@@ -113,7 +111,7 @@ public class ByteBufFluxTest {
         }
         file.delete();
     }
-
+/*
     @Test
     public void testByteBufFluxFromPathWithoutSecurity() throws Exception {
         doTestByteBufFluxFromPath(false);
@@ -158,5 +156,5 @@ public class ByteBufFluxTest {
                   .blockLast(Duration.ofSeconds(30));
         assertTrue(counter.get() == 1245);
         c.disposeNow();
-    }
+    }*/
 }
