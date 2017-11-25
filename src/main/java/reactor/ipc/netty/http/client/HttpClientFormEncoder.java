@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.multipart.DiskAttribute;
@@ -39,6 +38,8 @@ import io.netty.handler.stream.ChunkedInput;
 import reactor.core.Exceptions;
 import reactor.core.publisher.DirectProcessor;
 
+import javax.annotation.Nullable;
+
 /**
  * Modified {@link io.netty.handler.codec.http.multipart.HttpPostRequestEncoder} for
  * optional filename and builder support
@@ -46,7 +47,7 @@ import reactor.core.publisher.DirectProcessor;
  * This encoder will help to encode Request for a FORM as POST.
  */
 final class HttpClientFormEncoder extends HttpPostRequestEncoder
-		implements ChunkedInput<HttpContent>, Runnable, HttpClientRequest.Form {
+		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
 
 	final DirectProcessor<Long> progressFlux;
 	final HttpRequest request;
@@ -102,7 +103,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form attr(String name, String value) {
+	public HttpClientForm attr(String name, String value) {
 		try {
 			addBodyAttribute(name, value);
 		}
@@ -113,20 +114,20 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form charset(Charset charset) {
+	public HttpClientForm charset(Charset charset) {
 		this.newCharset = Objects.requireNonNull(charset, "charset");
 		this.needNewEncoder = true;
 		return this;
 	}
 
 	@Override
-	public HttpClientRequest.Form cleanOnTerminate(boolean clean) {
+	public HttpClientForm cleanOnTerminate(boolean clean) {
 		this.cleanOnTerminate = clean;
 		return this;
 	}
 
 	@Override
-	public HttpClientRequest.Form factory(HttpDataFactory factory) {
+	public HttpClientForm factory(HttpDataFactory factory) {
 		if(!getBodyListAttributes().isEmpty()){
 			throw new IllegalStateException("Cannot set a new HttpDataFactory after " +
 					"starting appending Parts, call factory(f) at the earliest occasion" +
@@ -138,22 +139,22 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form file(String name, File file) {
+	public HttpClientForm file(String name, File file) {
 		file(name, file, null);
 		return this;
 	}
 
 	@Override
-	public HttpClientRequest.Form file(String name, InputStream inputStream) {
+	public HttpClientForm file(String name, InputStream inputStream) {
 		file(name, inputStream, null);
 		return this;
 	}
 
 	@Override
-	public HttpClientRequest.Form file(String name,
+	public HttpClientForm file(String name,
 			String filename,
 			File file,
-			String contentType) {
+			@Nullable String contentType) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(file, "file");
 		Objects.requireNonNull(filename, "filename");
@@ -182,10 +183,10 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form file(String name,
+	public HttpClientForm file(String name,
 			String filename,
 			InputStream stream,
-			String contentType) {
+			@Nullable String contentType) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(stream, "stream");
 		try {
@@ -213,7 +214,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form files(String name,
+	public HttpClientForm files(String name,
 			File[] files,
 			String[] contentTypes) {
 		for (int i = 0; i < files.length; i++) {
@@ -223,7 +224,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form files(String name,
+	public HttpClientForm files(String name,
 			File[] files,
 			String[] contentTypes,
 			boolean[] textFiles) {
@@ -237,27 +238,27 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form encoding(EncoderMode mode) {
+	public HttpClientForm encoding(EncoderMode mode) {
 		this.newMode = Objects.requireNonNull(mode, "mode");
 		this.needNewEncoder = true;
 		return this;
 	}
 
 	@Override
-	public HttpClientRequest.Form multipart(boolean isMultipart) {
+	public HttpClientForm multipart(boolean isMultipart) {
 		this.needNewEncoder = isChunked() != isMultipart;
 		this.newMultipart = isMultipart;
 		return this;
 	}
 
 	@Override
-	public HttpClientRequest.Form textFile(String name, File file) {
+	public HttpClientForm textFile(String name, File file) {
 		textFile(name, file, null);
 		return this;
 	}
 
 	@Override
-	public HttpClientRequest.Form textFile(String name, File file, String contentType) {
+	public HttpClientForm textFile(String name, File file, @Nullable String contentType) {
 		try {
 			addBodyFileUpload(name, file, contentType, true);
 		}
@@ -268,15 +269,15 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	}
 
 	@Override
-	public HttpClientRequest.Form textFile(String name, InputStream stream) {
+	public HttpClientForm textFile(String name, InputStream stream) {
 		textFile(name, stream, null);
 		return this;
 	}
 
 	@Override
-	public HttpClientRequest.Form textFile(String name,
+	public HttpClientForm textFile(String name,
 			InputStream stream,
-			String contentType) {
+			@Nullable String contentType) {
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(stream, "stream");
 		try {

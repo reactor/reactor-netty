@@ -17,57 +17,130 @@
 package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 import java.util.function.*;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
+import io.netty.util.Attribute;
 import org.reactivestreams.Publisher;
-import reactor.core.CoreSubscriber;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.ByteBufFlux;
+import reactor.ipc.netty.ByteBufMono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.AbortedException;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini
  */
-final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
+final class MonoHttpClientResponse implements HttpClient.RequestSender {
 
-	final HttpClient                                                     parent;
-	final UriEndpoint                                                    startURI;
-	final HttpMethod                                                     method;
-	final Function<? super HttpClientRequest, ? extends Publisher<Void>> handler;
+	final HttpClient                                               parent;
+	final HttpMethod                                               method;
+	String                                                         uri;
+	Function<? super HttpClientRequest, ? extends Publisher<Void>> handler;
 
 	static final AsciiString ALL = new AsciiString("*/*");
 
-	MonoHttpClientResponse(HttpClient parent, String url,
-			HttpMethod method,
-			Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
-		this.parent = parent;
-		boolean isWs = method == HttpClient.WS;
-		this.startURI = parent.options.createUriEndpoint(url, isWs);
-		this.method = isWs ? HttpMethod.GET : method;
-		this.handler = handler;
+	MonoHttpClientResponse(HttpClient parent, HttpMethod method) {
+		this.parent = Objects.requireNonNull(parent, "parent");
+		Objects.requireNonNull(method, "method");
+		this.method = method == HttpClient.WS ? HttpMethod.GET : method;
+	}
 
+	// UriConfiguration methods
+
+	@Override
+	public HttpClient.RequestSender uri(String uri) {
+		this.uri = Objects.requireNonNull(uri, "uri");
+		return this;
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public void subscribe(final CoreSubscriber<? super HttpClientResponse> subscriber) {
-		ReconnectableBridge bridge = new ReconnectableBridge(parent);
-		bridge.activeURI = startURI;
-
-		Mono.defer(() -> parent.client.newHandler(new HttpClientHandler(this, bridge),
-				bridge.activeURI.getRemoteAddress(),
-				bridge.activeURI.isSecure(),
-				bridge))
-		    .retry(bridge)
-		    .cast(HttpClientResponse.class)
-		    .subscribe(subscriber);
+	public HttpClient.RequestSender uri(Mono<String> uri) {
+		// TODO
+		return this;
 	}
+
+
+	// ResponseReceiver methods
+
+	@Override
+	public Mono<HttpClientResponse> response() {
+		ReconnectableBridge bridge = new ReconnectableBridge(parent);
+
+		return Mono.defer(() ->
+				parent.connect()
+				        .doOnNext(c -> {
+				            Attribute<Boolean> acceptGzip = c.channel().attr(HttpClientOperations.ACCEPT_GZIP);
+				              /*if (acceptGzip != null && acceptGzip.get()) {
+				                  if (requestHandler != null) {
+				                      requestHandler = req -> requestHandler.apply(req.header(HttpHeaderNames.ACCEPT_ENCODING,
+				                                                                              HttpHeaderValues.GZIP));
+				                  }
+				                  else {
+				                      requestHandler = req -> req.header(HttpHeaderNames.ACCEPT_ENCODING,
+				                                                         HttpHeaderValues.GZIP);
+				                  }
+			                  }*/
+				            HttpClientHandler handler = new HttpClientHandler(this, bridge);
+				            bridge.activeURI = parent.uriEndpointFactory().createUriEndpoint(uri, method == HttpClient.WS);
+				            bridge.accept(c.channel());
+				            if (log.isDebugEnabled()) {
+				                log.debug("{} handler is being applied: {}", c.channel(), handler);
+				            }
+
+				            Mono.fromDirect(handler.apply((NettyInbound) c, (NettyOutbound) c))
+				                .subscribe(c.disposeSubscriber());
+				        }))
+				.retry(bridge)
+				.cast(HttpClientResponse.class);
+	}
+
+	@Override
+	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<? extends V>> receiver) {
+		// TODO
+		return null;
+	}
+
+	@Override
+	public ByteBufFlux responseContent() {
+		// TODO
+		return null;
+	}
+
+	@Override
+	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<? extends V>> receiver) {
+		// TODO
+		return null;
+	}
+
+
+	// RequestSender methods
+
+	@Override
+	public HttpClient.ResponseReceiver<?> send(Publisher<? extends ByteBuf> requestBody) {
+		Objects.requireNonNull(requestBody, "requestBody");
+		this.handler = req -> req.sendObject(requestBody);
+		return this;
+	}
+
+	@Override
+	public HttpClient.ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound> sender) {
+		// TODO
+		return this;
+	}
+
+	static final Logger log = Loggers.getLogger(MonoHttpClientResponse.class);
 
 	static final class HttpClientHandler
 			implements BiFunction<NettyInbound, NettyOutbound, Publisher<Void>> {
@@ -146,7 +219,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 		void redirect(String to) {
 			Supplier<String>[] redirectedFrom = this.redirectedFrom;
 			UriEndpoint from = activeURI;
-			activeURI = parent.options.createUriEndpoint(to, activeURI.isWs());
+			activeURI = parent.uriEndpointFactory().createUriEndpoint(to, activeURI.isWs());
 			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
 		}
 
