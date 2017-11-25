@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http.server;
 
-import org.hamcrest.Matchers;
 import org.junit.Test;
 import reactor.ipc.netty.http.server.HttpPredicate.UriPathTemplate;
 

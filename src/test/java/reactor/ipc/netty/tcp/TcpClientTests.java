@@ -382,7 +382,7 @@ public class TcpClientTests {
 		assertThat(duration, is(greaterThanOrEqualTo(500L)));
 		client.dispose();
 	}
-
+/*
 	@Test
 	public void nettyNetChannelAcceptsNettyChannelHandlers() throws InterruptedException {
 		HttpClient client = HttpClient.create();
@@ -397,7 +397,7 @@ public class TcpClientTests {
 
 		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
 	}
-
+*/
 	@Test
 	public void gettingOptionsDuplicates() {
 		TcpClient client = TcpClient.create().host("foo").port(123);
