@@ -53,6 +53,8 @@ import static org.junit.Assert.assertThat;
  */
 @Ignore
 public class ClientServerHttpTests {
+	@Test public void test() {}
+/*
 
 	static final Logger log = Loggers.getLogger(ClientServerHttpTests.class);
 
@@ -376,5 +378,5 @@ public class ClientServerHttpTests {
 			String data = buf.toString();
 			return alloc.buffer().writeBytes(data.getBytes(Charset.defaultCharset()));
 		}
-	}
+	}*/
 }

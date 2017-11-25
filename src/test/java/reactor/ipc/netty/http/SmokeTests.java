@@ -59,6 +59,8 @@ import static org.junit.Assert.assertThat;
  */
 @Ignore
 public class SmokeTests {
+	@Test public void test() {}
+/*
 
 	static final Logger log = Loggers.getLogger(SmokeTests.class);
 
@@ -89,7 +91,7 @@ public class SmokeTests {
     public SmokeTests(int port) {
 		this.port = port;
 	}*/
-
+/*
 	@SuppressWarnings("unchecked")
 	private List<Integer> windowsData  = new ArrayList<>();
 
@@ -525,7 +527,7 @@ public class SmokeTests {
 			            .writeBytes(h2)
 			            .writeBytes(t);
 		}
-	}
+	}*/
 
 	/*
 

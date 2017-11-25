@@ -42,7 +42,7 @@ import static org.junit.Assert.*;
  */
 public class HttpClientOperationsTest {
 
-	ContextHandler<Channel> handler = new ContextHandler<Channel>((a, b, c) -> null, null, null, null, null) {
+	ContextHandler<Channel> handler = new ContextHandler<Channel>((a, b, c) ->  null, null, null) {
 		@Override
 		public void fireContextActive(Connection context) {
 
@@ -54,18 +54,8 @@ public class HttpClientOperationsTest {
 		}
 
 		@Override
-		protected void doPipeline(Channel channel) {
-
-		}
-
-		@Override
 		protected Publisher<Void> onCloseOrRelease(Channel channel) {
 			return Mono.never();
-		}
-
-		@Override
-		public void accept(Channel channel) {
-
 		}
 
 		@Override
@@ -78,8 +68,7 @@ public class HttpClientOperationsTest {
 	public void addDecoderReplaysLastHttp() throws Exception {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(channel,
-				(response, request) -> null, handler);
+		HttpClientOperations ops = new HttpClientOperations(channel, handler);
 
 		ops.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -101,8 +90,7 @@ public class HttpClientOperationsTest {
 	public void addNamedDecoderReplaysLastHttp() throws Exception {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(channel,
-				(response, request) -> null, handler);
+		HttpClientOperations ops = new HttpClientOperations(channel, handler);
 
 		ops.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -124,8 +112,7 @@ public class HttpClientOperationsTest {
 	public void addEncoderReplaysLastHttp() throws Exception {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(channel,
-				(response, request) -> null, handler);
+		HttpClientOperations ops = new HttpClientOperations(channel, handler);
 
 		ops.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -147,8 +134,7 @@ public class HttpClientOperationsTest {
 	public void addNamedEncoderReplaysLastHttp() throws Exception {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(channel,
-				(response, request) -> null, handler);
+		HttpClientOperations ops = new HttpClientOperations(channel, handler);
 
 		ops.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -172,8 +158,7 @@ public class HttpClientOperationsTest {
 		channel.pipeline().addFirst(NettyPipeline.SslHandler, new ChannelHandlerAdapter() {
 		});
 
-		HttpClientOperations ops1 = new HttpClientOperations(channel,
-				(response, request) -> null, handler);
+		HttpClientOperations ops1 = new HttpClientOperations(channel, handler);
 		ops1.followRedirect();
 
 		HttpClientOperations ops2 = new HttpClientOperations(channel, ops1);

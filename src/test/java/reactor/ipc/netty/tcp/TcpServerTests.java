@@ -350,7 +350,7 @@ public class TcpServerTests {
 		assertThat("countDownLatch counted down",
 				countDownLatch.await(5, TimeUnit.SECONDS));
 	}
-
+/*
 	@Test
 	@Ignore
 	public void proxyTest() throws Exception {
@@ -382,7 +382,7 @@ public class TcpServerTests {
 		      .onDispose()
 		      .block(Duration.ofSeconds(30));
 	}
-
+*/
 	@Test
 	public void gettingOptionsDuplicates() {
 		TcpServer server = TcpServer.create().host("foo").port(123);
