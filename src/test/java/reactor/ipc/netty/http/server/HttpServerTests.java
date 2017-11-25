@@ -736,13 +736,11 @@ public class HttpServerTests {
 				          .bindNow();
 
 		Mono<HttpResponseStatus> status =
-				HttpClient.create(server.address().getPort())
-				          .get(path)
-				          .flatMap(res -> {
-				              res.dispose();
-				              HttpResponseStatus code = res.status();
-				              return Mono.just(code);
-				          });
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .get()
+				          .uri(path)
+				          .responseSingle((res, byteBufMono) -> Mono.just(res.status()));
 
 		StepVerifier.create(status)
 		            .expectNextMatches(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE::equals)

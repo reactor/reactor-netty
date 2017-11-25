@@ -89,10 +89,9 @@ import reactor.util.Loggers;
 class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClientRequest>
 		implements HttpClientResponse, HttpClientRequest {
 
-	static HttpClientOperations bindHttp(Channel channel,
-			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
+	static HttpOperations bindHttp(Channel channel,
 			ContextHandler<?> context) {
-		return new HttpClientOperations(channel, handler, context);
+		return new HttpClientOperations(channel, context);
 	}
 
 	final Supplier<String>[]    redirectedFrom;
@@ -120,9 +119,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	HttpClientOperations(Channel channel,
-			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
-		super(channel, handler, context);
+		super(channel, context);
 		this.isSecure = channel.pipeline()
 		                       .get(NettyPipeline.SslHandler) != null;
 		Supplier<String>[] redirects = channel.attr(REDIRECT_ATTR_KEY)
@@ -394,7 +392,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public Flux<Long> sendForm(Consumer<Form> formCallback) {
+	public Flux<Long> sendForm(Consumer<HttpClientForm> formCallback) {
 		return new FluxSendForm(this, formCallback);
 	}
 
@@ -754,10 +752,10 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		static final HttpDataFactory DEFAULT_FACTORY = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 
 		final HttpClientOperations parent;
-		final Consumer<Form>       formCallback;
+		final Consumer<HttpClientForm>       formCallback;
 
 		FluxSendForm(HttpClientOperations parent,
-				Consumer<Form> formCallback) {
+				Consumer<HttpClientForm> formCallback) {
 			this.parent = parent;
 			this.formCallback = formCallback;
 		}
@@ -852,4 +850,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			Loggers.getLogger(HttpClientOperations.class);
 	static final AttributeKey<Supplier<String>[]> REDIRECT_ATTR_KEY  =
 			AttributeKey.newInstance("httpRedirects");
+
+	static final AttributeKey<Boolean> ACCEPT_GZIP =
+			AttributeKey.newInstance("acceptGzip");
 }
