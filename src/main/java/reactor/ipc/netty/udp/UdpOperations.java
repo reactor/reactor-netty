@@ -45,7 +45,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 
 	UdpOperations(DatagramChannel channel,
 			ContextHandler<?> context) {
-		super(channel, null, context);
+		super(channel, context);
 		this.datagramChannel = channel;
 	}
 

@@ -79,11 +79,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@SuppressWarnings("unchecked")
 	static HttpServerOperations bindHttp(Channel channel,
-			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			Object msg) {
-		return new HttpServerOperations(channel, handler, context, compressionPredicate,(HttpRequest) msg);
+		return new HttpServerOperations(channel, context, compressionPredicate, (HttpRequest) msg);
 	}
 
 	final HttpResponse nettyResponse;
@@ -106,11 +105,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	HttpServerOperations(Channel ch,
-			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			HttpRequest nettyRequest) {
-		super(ch, handler, context);
+		super(ch, context);
 		this.nettyRequest = Objects.requireNonNull(nettyRequest, "nettyRequest");
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();

@@ -240,9 +240,13 @@ public abstract class HttpServer {
 			if (log.isDebugEnabled()) {
 				log.debug("{} handler is being applied: {}", c.channel(), handler);
 			}
-
-			Mono.fromDirect(handler.apply((HttpServerRequest) c, (HttpServerResponse) c))
-			    .subscribe(c.disposeSubscriber());
+			try {
+				Mono.fromDirect(handler.apply((HttpServerRequest) c, (HttpServerResponse) c))
+				    .subscribe(c.disposeSubscriber());
+			} catch (Throwable t) {
+				log.error("", t);
+				c.channel().close();
+			}
 		}));
 	}
 
@@ -326,7 +330,7 @@ public abstract class HttpServer {
 			else {
 				compressionPredicate = null;
 			}
-			return HttpServerOperations.bindHttp(c, null, ch, compressionPredicate, msg);
+			return HttpServerOperations.bindHttp(c, ch, compressionPredicate, msg);
 		}
 
 		@Override

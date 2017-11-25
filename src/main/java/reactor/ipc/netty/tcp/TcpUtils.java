@@ -241,7 +241,7 @@ final class TcpUtils {
 	static final Logger log = Loggers.getLogger(TcpUtils.class);
 
 	static final ChannelOperations.OnSetup<Channel> TCP_OPS =
-			(ch, c, msg) -> ChannelOperations.bind(ch, null, c);
+			(ch, c, msg) -> ChannelOperations.bind(ch, c);
 
 	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC =
 			sslProviderBuilder -> sslProviderBuilder.sslContext(TcpServerSecure.DEFAULT_SSL_CONTEXT);
