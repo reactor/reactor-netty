@@ -43,6 +43,7 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.http.HttpOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
@@ -64,7 +65,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * Attach the {@link NettyPipeline#ReactiveBridge} handle.
 	 *
 	 * @param channel the new {@link Channel} connection
-	 * @param handler the user-provided {@link BiFunction} i/o handler
 	 * @param context the dispose callback
 	 * @param <INBOUND> the {@link NettyInbound} type
 	 * @param <OUTBOUND> the {@link NettyOutbound} type
@@ -73,10 +73,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> ChannelOperations<INBOUND, OUTBOUND> bind(
 			Channel channel,
-			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
 		@SuppressWarnings("unchecked") ChannelOperations<INBOUND, OUTBOUND> ops =
-				new ChannelOperations<>(channel, handler, context);
+				new ChannelOperations<>(channel, context);
 
 		return ops;
 	}
@@ -123,8 +122,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		}
 	}
 
-	final    BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>>
-			                       handler;
 	final    Channel               channel;
 	final    FluxReceive           inbound;
 	final    DirectProcessor<Void> onInactive;
@@ -133,19 +130,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	volatile Subscription          outboundSubscription;
 	protected ChannelOperations(Channel channel,
 			ChannelOperations<INBOUND, OUTBOUND> replaced) {
-		this(channel, replaced.handler, replaced.context, replaced.onInactive);
+		this(channel, replaced.context, replaced.onInactive);
 	}
 
 	protected ChannelOperations(Channel channel,
-			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
-		this(channel, handler, context, DirectProcessor.create());
+		this(channel, context, DirectProcessor.create());
 	}
 
 	protected ChannelOperations(Channel channel,
-			BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context, DirectProcessor<Void> processor) {
-		this.handler = handler;
 		this.channel = Objects.requireNonNull(channel, "channel");
 		this.context = Objects.requireNonNull(context, "context");
 		this.inbound = new FluxReceive(this);
@@ -294,15 +288,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Connector handler provided by user
-	 *
-	 * @return Connector handler provided by user
-	 */
-	protected final BiFunction<? super INBOUND, ? super OUTBOUND, ? extends Publisher<Void>> handler() {
-		return handler;
-	}
-
-	/**
 	 * React on input initialization
 	 *
 	 */
@@ -383,17 +368,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	@SuppressWarnings("unchecked")
 	protected final void applyHandler() {
-		if (handler != null) {
-//		channel.pipeline()
-//		       .fireUserEventTriggered(NettyPipeline.handlerStartedEvent());
-			if (log.isDebugEnabled()) {
-				log.debug("[{}] {} handler is being applied: {}", formatName(), channel
-						(), handler);
-			}
-			Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
-					.subscribe(this);
-		}
-		else if (parentContext() instanceof ServerContextHandler){
+		if (parentContext() instanceof ServerContextHandler){
 			((ServerContextHandler) parentContext()).connections.onNext(this);
 		}
 	}

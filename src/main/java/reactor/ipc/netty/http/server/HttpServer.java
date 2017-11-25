@@ -297,7 +297,7 @@ public abstract class HttpServer {
 		@Nullable
 		@Override
 		public ChannelOperations<?, ?> create(Channel c, ContextHandler ch, Object msg) {
-			return HttpServerOperations.bindHttp(c, null, ch, msg);
+			return HttpServerOperations.bindHttp(c, ch, msg);
 		}
 
 		@Override
