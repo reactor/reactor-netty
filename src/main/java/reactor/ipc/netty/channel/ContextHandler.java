@@ -182,7 +182,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	/**
 	 * Trigger {@link MonoSink#success(Object)} that will signal
-	 * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)} returned
 	 * {@link Mono} subscriber.
 	 *
 	 * @param context optional context to succeed the associated {@link MonoSink}
@@ -191,7 +190,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 	/**
 	 * Trigger {@link MonoSink#error(Throwable)} that will signal
-	 * {@link reactor.ipc.netty.NettyConnector#newHandler(BiFunction)} returned
 	 * {@link Mono} subscriber.
 	 *
 	 * @param t error to fail the associated {@link MonoSink}

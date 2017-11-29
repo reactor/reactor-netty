@@ -537,8 +537,8 @@ public abstract class TcpClient {
 	static final int DEFAULT_PORT =
 			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
 					12012;
-	static final AttributeKey<Integer> DEFAULT_PORT_ATTR = AttributeKey.newInstance("defaultClientPort");
-	static final AttributeKey<String> DEFAULT_HOST_ATTR = AttributeKey.newInstance("defaultClientHost");
+	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("clientHost");
+	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("clientPort");
 
 	static final Bootstrap DEFAULT_BOOTSTRAP =
 			new Bootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -546,15 +546,12 @@ public abstract class TcpClient {
 					.option(ChannelOption.AUTO_READ, false)
 					.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
 					.option(ChannelOption.SO_SNDBUF, 1024 * 1024)
-					.attr(DEFAULT_PORT_ATTR, DEFAULT_PORT)
-					.attr(DEFAULT_HOST_ATTR, NetUtil.LOCALHOST.getHostAddress());
+					.attr(PORT, DEFAULT_PORT)
+					.attr(HOST, NetUtil.LOCALHOST.getHostAddress());
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
 	}
-
-	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("clientHost");
-	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("clientPort");
 	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpClient.class);
 	static final Logger                log               = Loggers.getLogger(TcpClient.class);
 }

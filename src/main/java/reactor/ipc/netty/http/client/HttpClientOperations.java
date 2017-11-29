@@ -827,6 +827,4 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	static final AttributeKey<Supplier<String>[]> REDIRECT_ATTR_KEY  =
 			AttributeKey.newInstance("httpRedirects");
 
-	static final AttributeKey<Boolean> ACCEPT_GZIP =
-			AttributeKey.newInstance("acceptGzip");
 }

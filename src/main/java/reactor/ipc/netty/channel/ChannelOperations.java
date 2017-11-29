@@ -39,11 +39,9 @@ import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
-import reactor.ipc.netty.http.HttpOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
@@ -51,7 +49,6 @@ import reactor.util.context.Context;
 /**
  * A bridge between an immutable {@link Channel} and {@link NettyInbound} /
  * {@link NettyOutbound} semantics exposed to user
- * {@link NettyConnector#newHandler(BiFunction)}
  *
  * @author Stephane Maldini
  * @since 0.6
@@ -364,12 +361,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Apply the user-provided {@link NettyConnector} handler
 	 */
 	@SuppressWarnings("unchecked")
 	protected final void applyHandler() {
-		if (parentContext() instanceof ServerContextHandler){
-			((ServerContextHandler) parentContext()).connections.onNext(this);
+		if (context instanceof ServerContextHandler){
+			((ServerContextHandler) context).connections.onNext(this);
 		}
 	}
 

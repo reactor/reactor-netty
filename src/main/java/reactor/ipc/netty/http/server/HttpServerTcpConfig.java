@@ -26,18 +26,17 @@ import java.util.function.Function;
  */
 final class HttpServerTcpConfig extends HttpServerOperator {
 
-	final TcpServer tcpServer;
+	final Function<? super TcpServer, ? extends TcpServer> tcpServerMapper;
 
 	HttpServerTcpConfig(HttpServer server,
 			Function<? super TcpServer, ? extends TcpServer> tcpServerMapper) {
 		super(server);
-		Objects.requireNonNull(tcpServerMapper, "tcpServerMapper");
-		this.tcpServer = Objects.requireNonNull(tcpServerMapper.apply(source.tcpConfiguration()),
-				"tcpServerMapper");
+		this.tcpServerMapper = Objects.requireNonNull(tcpServerMapper, "tcpServerMapper");
 	}
 
 	@Override
 	protected TcpServer tcpConfiguration() {
-		return tcpServer;
+		return Objects.requireNonNull(tcpServerMapper.apply(source.tcpConfiguration()),
+				"tcpServerMapper");
 	}
 }

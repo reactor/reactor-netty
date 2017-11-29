@@ -19,6 +19,8 @@ package reactor.ipc.netty.tcp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
+import io.netty.util.AttributeKey;
+import io.netty.util.NetUtil;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
@@ -28,6 +30,7 @@ import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -55,18 +58,16 @@ final class TcpClientAcquire extends TcpClient {
 		}
 
 		if (b.config().remoteAddress() == null) {
-			String host = (String) b.config().attrs().get(HOST);
-			Integer port = (Integer) b.config().attrs().get(PORT);
-			String defaultHost = (String) b.config().attrs().get(DEFAULT_HOST_ATTR);
-			Integer defaultPort = (Integer) b.config().attrs().get(DEFAULT_PORT_ATTR);
-			if (host == null) {
-				b.remoteAddress(new InetSocketAddress(defaultHost, port != null ? port : defaultPort));
-			} else {
-				b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port != null ? port : defaultPort));
-			}
-			b.attr(HOST, null)
-			 .attr(PORT, null);
+			Map<AttributeKey<?>, Object> attrs = b.config().attrs();
+			String host = (String) attrs.get(HOST);
+			Integer port = (Integer) attrs.get(PORT);
+			Objects.requireNonNull(host, "Host has not been set");
+			Objects.requireNonNull(port, "Port has not been set");
+			b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port));
 		}
+
+		b.attr(HOST, null)
+		 .attr(PORT, null);
 
 		return Mono.create(sink -> {
 			ChannelPool pool = poolResources.selectOrCreate(b.config().remoteAddress(), () -> b,

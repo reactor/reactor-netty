@@ -18,6 +18,7 @@ package reactor.ipc.netty.tcp;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
@@ -27,6 +28,8 @@ import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.resources.LoopResources;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author Stephane Maldini
@@ -49,16 +52,12 @@ final class TcpServerBind extends TcpServer {
 		}
 
 		if (b.config().localAddress() == null) {
-			String host = (String) b.config().attrs().get(HOST);
-			Integer port = (Integer) b.config().attrs().get(PORT);
-			Integer defaultPort = (Integer) b.config().attrs().get(DEFAULT_PORT_ATTR);
-			if (host == null) {
-				InetSocketAddress address = port != null ? new InetSocketAddress(port) :
-						new InetSocketAddress(NetUtil.LOCALHOST, defaultPort);
-				b.localAddress(InetSocketAddressUtil.replaceWithResolved(address));
-			} else {
-				b.localAddress(InetSocketAddressUtil.createResolved(host, port != null ? port : defaultPort));
-			}
+			Map<AttributeKey<?>, Object> attrs = b.config().attrs();
+			String host = (String) attrs.get(HOST);
+			Integer port = (Integer) attrs.get(PORT);
+			Objects.requireNonNull(host, "Host has not been set");
+			Objects.requireNonNull(port, "Port has not been set");
+			b.localAddress(InetSocketAddressUtil.createResolved(host, port));
 			b.attr(HOST, null)
 			 .attr(PORT, null);
 		}
