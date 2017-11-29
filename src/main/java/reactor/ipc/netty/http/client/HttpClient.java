@@ -23,7 +23,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
@@ -83,6 +82,7 @@ import java.util.function.Supplier;
  * }
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 public abstract class HttpClient {
 
@@ -223,6 +223,18 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient baseUrl(String baseUrl) {
 		return new HttpClientBaseUrl(this, baseUrl);
+	}
+
+	/**
+	 * The address to which this client should connect for each subscribe.
+	 *
+	 * @param connectAddressSupplier A supplier of the address to connect to.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient addressSupplier(Supplier<? extends SocketAddress> connectAddressSupplier) {
+		Objects.requireNonNull(connectAddressSupplier, "connectAddressSupplier");
+		return tcpConfiguration(tcpClient -> tcpClient.addressSupplier(connectAddressSupplier));
 	}
 
 	/**
@@ -371,7 +383,8 @@ public abstract class HttpClient {
 	 * @return a {@link RequestSender} ready to consume for response
 	 */
 	public RequestSender request(HttpMethod method) {
-		return new MonoHttpClientResponse(this, method);
+		Objects.requireNonNull(method, "method");
+		return new HttpClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.METHOD, method)));
 	}
 
 	/**
@@ -417,18 +430,6 @@ public abstract class HttpClient {
 	}*/ //TODO
 
 	/**
-	 * The address to which this client should connect for each subscribe.
-	 *
-	 * @param connectAddressSupplier A supplier of the address to connect to.
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient addressSupplier(Supplier<? extends SocketAddress> connectAddressSupplier) {
-		Objects.requireNonNull(connectAddressSupplier, "connectAddressSupplier");
-		return tcpConfiguration(tcpClient -> tcpClient.addressSupplier(connectAddressSupplier));
-	}
-
-	/**
 	 * The port to which this client should connect.
 	 *
 	 * @param port The port to connect to.
@@ -449,41 +450,25 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Bind the {@link TcpClient} and return a {@link Mono} of {@link Connection}. If
-	 * {@link Mono} is cancelled, the underlying connection will be aborted. Once the
-	 * {@link Connection} has been emitted and is not necessary anymore, disposing must be
-	 * done by the user via {@link Connection#dispose()}.
 	 *
-	 * If updateConfiguration phase fails, a {@link Mono#error(Throwable)} will be returned;
-	 *
-	 * @return a {@link Mono} of {@link Connection}
+	 * @return
 	 */
-	public final Mono<? extends Connection> connect() {
-		Bootstrap b;
-		try {
-			b = configure(tcpConfiguration().configure());
-		}
-		catch (Throwable t) {
-			Exceptions.throwIfFatal(t);
-			return Mono.error(t);
-		}
-		return connect(b);
+	protected String baseUri() {
+		return null;
 	}
 
 	/**
 	 * Bind the {@link HttpClient} and return a {@link Mono} of {@link Connection}
 	 *
-	 * @param b the {@link Bootstrap} to bind
+	 * @param delegate the {@link TcpClient} to connect on
 	 *
 	 * @return a {@link Mono} of {@link Connection}
 	 */
-	protected Mono<? extends Connection> connect(Bootstrap b) {
-		return tcpConfiguration().connect(b);
-	}
+	protected abstract Mono<? extends Connection> connect(TcpClient delegate);
 
 	/**
 	 * Materialize a TcpClient from the parent {@link HttpClient} chain to use with {@link
-	 * #connect(Bootstrap)} or separately
+	 * #connect(TcpClient)} or separately
 	 *
 	 * @return a configured {@link TcpClient}
 	 */
@@ -491,49 +476,41 @@ public abstract class HttpClient {
 		return DEFAULT_TCP_CLIENT;
 	}
 
-	protected String baseUri() {
-		return null;
-	}
-
-	protected UriEndpointFactory uriEndpointFactory() {
-		return null;
-	}
-
-
-	abstract Bootstrap configure(Bootstrap bootstrap);
-
 
 	static final ChannelOperations.OnSetup<Channel> HTTP_OPS =
 			(ch, c, msg) -> HttpClientOperations.bindHttp(ch, c);
 
 	static final Function<Bootstrap, Bootstrap> HTTP_OPS_CONF = b -> {
 		BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
-		b.attr(AttributeKey.valueOf("defaultHost"), "localhost");
-		b.attr(AttributeKey.valueOf("defaultPort"), "80");
 		return b;
 	};
+
+	static String reactorNettyVersion() {
+		return Optional.ofNullable(HttpClient.class.getPackage()
+		                                           .getImplementationVersion())
+		               .orElse("dev");
+	}
 
 	final static HttpMethod                WS           = new HttpMethod("WS");
 	final static String                    WS_SCHEME    = "ws";
 	final static String                    WSS_SCHEME   = "wss";
 	final static String                    HTTP_SCHEME  = "http";
+
 	final static String                    HTTPS_SCHEME = "https";
 
 	static final TcpClient DEFAULT_TCP_CLIENT = TcpClient.create(HttpResources.get())
 	                                                     .secure()
-	                                                     .bootstrap(HTTP_OPS_CONF);
-
-	static String reactorNettyVersion() {
-		return Optional.ofNullable(HttpClient.class.getPackage()
-				.getImplementationVersion())
-				.orElse("dev");
-	}
+	                                                     .bootstrap(HTTP_OPS_CONF)
+	                                                     .port(80);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);
 
+	static final AttributeKey<Boolean>          ACCEPT_GZIP          =
+			AttributeKey.newInstance("acceptGzip");
+
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG =
-			tcp -> tcp.attr(HttpClientOperations.ACCEPT_GZIP, true);
+			tcp -> tcp.attr(ACCEPT_GZIP, true);
 
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE =
-			tcp -> tcp.attr(HttpClientOperations.ACCEPT_GZIP, null);
+			tcp -> tcp.attr(ACCEPT_GZIP, null);
 }

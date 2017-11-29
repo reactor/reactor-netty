@@ -16,12 +16,17 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.time.Duration;
+import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import javax.annotation.Nullable;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
@@ -31,20 +36,13 @@ import reactor.ipc.netty.tcp.TcpServer;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import javax.annotation.Nullable;
-import java.time.Duration;
-import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
 /**
  * An HttpServer allows to build in a safe immutable way an HTTP server that is
- * materialized and connecting when {@link #bind(ServerBootstrap)} is ultimately called.
+ * materialized and connecting when {@link #bind(TcpServer)} is ultimately called.
  * <p> Internally, materialization happens in three phases, first {@link
  * #tcpConfiguration()} is called to retrieve a ready to use {@link TcpServer}, then
- * {@link TcpServer#configure()} retrieve a usable {@link ServerBootstrap} for the final
- * {@link #bind(ServerBootstrap)} is called. <p> Examples:
+ * {@link HttpServer#tcpConfiguration()} ()} retrieve a usable {@link TcpServer} for the final
+ * {@link #bind(TcpServer)} is called. <p> Examples:
  * <pre>
  * {@code
  * HttpServer.create()
@@ -88,15 +86,7 @@ public abstract class HttpServer {
 	 * @return a {@link Mono} of {@link Connection}
 	 */
 	public final Mono<? extends Connection> bind() {
-		ServerBootstrap b;
-		try{
-			b = configure(tcpConfiguration().configure());
-		}
-		catch (Throwable t){
-			Exceptions.throwIfFatal(t);
-			return Mono.error(t);
-		}
-		return bind(b);
+		return bind(tcpConfiguration());
 	}
 
 	/**
@@ -201,7 +191,7 @@ public abstract class HttpServer {
 		if (minResponseSize < 0) {
 			throw new IllegalArgumentException("minResponseSize must be positive");
 		}
-		return tcpConfiguration(tcp -> tcp.attr(HttpServerOperations.PRODUCE_GZIP, minResponseSize));
+		return tcpConfiguration(tcp -> tcp.attr(HttpServerBind.PRODUCE_GZIP, minResponseSize));
 	}
 
 	/**
@@ -265,17 +255,15 @@ public abstract class HttpServer {
 	/**
 	 * Bind the {@link HttpServer} and return a {@link Mono} of {@link Connection}
 	 *
-	 * @param b the {@link ServerBootstrap} to bind
+	 * @param b the {@link TcpServer} to bind
 	 *
 	 * @return a {@link Mono} of {@link Connection}
 	 */
-	protected Mono<? extends Connection> bind(ServerBootstrap b) {
-		return tcpConfiguration().bind(b);
-	}
+	protected abstract Mono<? extends Connection> bind(TcpServer b);
 
 	/**
 	 * Materialize a TcpServer from the parent {@link HttpServer} chain to use with
-	 * {@link #bind(ServerBootstrap)} or separately
+	 * {@link #bind(TcpServer)} or separately
 	 *
 	 * @return a configured {@link TcpServer}
 	 */
@@ -283,14 +271,6 @@ public abstract class HttpServer {
 		return DEFAULT_TCP_SERVER;
 	}
 
-
-	/**
-	 * Materialize a ServerBootstrap from the parent {@link TcpServer} chain to use with {@link
-	 * #bind(ServerBootstrap)}
-	 *
-	 * @return a configured {@link ServerBootstrap}
-	 */
-	abstract ServerBootstrap configure(ServerBootstrap bootstrap);
 
 
 	static final ChannelOperations.OnSetup<?> HTTP_OPS = new ChannelOperations.OnSetup() {
@@ -311,19 +291,19 @@ public abstract class HttpServer {
 
 	static final Function<ServerBootstrap, ServerBootstrap> HTTP_OPS_CONF = b -> {
 		BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
-		b.attr(AttributeKey.valueOf("defaultPort"), DEFAULT_PORT);
 		return b;
 	};
 
 	static final TcpServer DEFAULT_TCP_SERVER = TcpServer.create()
-			                                             .bootstrap(HTTP_OPS_CONF);
+			                                             .bootstrap(HTTP_OPS_CONF)
+			                                             .port(DEFAULT_PORT);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpServer.class);
 	static final Logger         log             = Loggers.getLogger(HttpServer.class);
 
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_CONFIG =
-			tcp -> tcp.attr(HttpServerOperations.PRODUCE_GZIP, 0);
+			tcp -> tcp.attr(HttpServerBind.PRODUCE_GZIP, 0);
 
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_DISABLE =
-			tcp -> tcp.attr(HttpServerOperations.PRODUCE_GZIP, null);
+			tcp -> tcp.attr(HttpServerBind.PRODUCE_GZIP, null);
 }

@@ -16,19 +16,22 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.util.Objects;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.JdkSslContext;
-import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
+import reactor.core.Exceptions;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.TcpServer;
-
-import java.util.Objects;
 
 /**
  * @author Stephane Maldini
@@ -53,12 +56,23 @@ final class HttpServerBind extends HttpServer {
 	}
 
 	@Override
-	public ServerBootstrap configure(ServerBootstrap b) {
+	@SuppressWarnings("unchecked")
+	public Mono<? extends Connection> bind(TcpServer delegate) {
+		ServerBootstrap b;
+		try {
+			b = delegate.configure();
+		}
+		catch (Throwable t) {
+			Exceptions.throwIfFatal(t);
+			return Mono.error(t);
+		}
+
 		if (b.config()
-			 .group() == null) {
+		     .group() == null) {
 			LoopResources loops = HttpResources.get();
 
-			boolean useNative = LoopResources.DEFAULT_NATIVE && !(tcpConfiguration().sslContext() instanceof JdkSslContext);
+			boolean useNative =
+					LoopResources.DEFAULT_NATIVE && !(tcpConfiguration().sslContext() instanceof JdkSslContext);
 
 			EventLoopGroup selector = loops.onServerSelect(useNative);
 			EventLoopGroup elg = loops.onServer(useNative);
@@ -67,22 +81,31 @@ final class HttpServerBind extends HttpServer {
 			 .channel(loops.onServerChannel(elg));
 		}
 
-		BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer, (ctx, channel) -> {
-			ChannelPipeline p = channel.pipeline();
+		Integer minCompressionSize = (Integer) b.config()
+		                                        .attrs()
+		                                        .get(PRODUCE_GZIP);
 
-			p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+		b.attr(PRODUCE_GZIP, null);
 
-			Attribute<Integer> minCompressionSize = channel.attr(HttpServerOperations.PRODUCE_GZIP);
-			if(minCompressionSize != null &&
-			        minCompressionSize.get() != null &&
-			        minCompressionSize.get() >= 0) {
-				p.addLast(NettyPipeline.CompressionHandler,
-				        new CompressionHandler(minCompressionSize.get()));
-			}
+		BootstrapHandlers.updateConfiguration(b,
+				NettyPipeline.HttpInitializer,
+				(ctx, channel) -> {
+					ChannelPipeline p = channel.pipeline();
 
-			p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(ctx));
-		});
+					p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
 
-		return b;
+					if (minCompressionSize != null && minCompressionSize >= 0) {
+						p.addLast(NettyPipeline.CompressionHandler,
+								new CompressionHandler(minCompressionSize));
+					}
+
+					p.addLast(NettyPipeline.HttpServerHandler,
+							new HttpServerHandler(ctx));
+				});
+
+		return delegate.bind(b);
 	}
+
+	static final AttributeKey<Integer> PRODUCE_GZIP =
+			AttributeKey.newInstance("produceGzip");
 }
