@@ -417,7 +417,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			try {
 				Operators.terminate(OUTBOUND_CLOSE, this);
 				onInactive.onComplete(); //signal senders and other interests
-				inbound.onInboundComplete();
+				// Do not call directly inbound.onInboundComplete()
+				// HttpClientOperations need to notify with error
+				// when there is no response state
+				onInboundComplete();
 			}
 			finally {
 				channel.pipeline()
