@@ -16,6 +16,8 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.util.Objects;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -24,13 +26,16 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
+import reactor.core.Exceptions;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.TcpServer;
 
-import java.util.Objects;
 import java.util.function.BiPredicate;
 
 /**
@@ -56,12 +61,23 @@ final class HttpServerBind extends HttpServer {
 	}
 
 	@Override
-	public ServerBootstrap configure(ServerBootstrap b) {
+	@SuppressWarnings("unchecked")
+	public Mono<? extends Connection> bind(TcpServer delegate) {
+		ServerBootstrap b;
+		try {
+			b = delegate.configure();
+		}
+		catch (Throwable t) {
+			Exceptions.throwIfFatal(t);
+			return Mono.error(t);
+		}
+
 		if (b.config()
-			 .group() == null) {
+		     .group() == null) {
 			LoopResources loops = HttpResources.get();
 
-			boolean useNative = LoopResources.DEFAULT_NATIVE && !(tcpConfiguration().sslContext() instanceof JdkSslContext);
+			boolean useNative =
+					LoopResources.DEFAULT_NATIVE && !(tcpConfiguration().sslContext() instanceof JdkSslContext);
 
 			EventLoopGroup selector = loops.onServerSelect(useNative);
 			EventLoopGroup elg = loops.onServer(useNative);
@@ -70,32 +86,40 @@ final class HttpServerBind extends HttpServer {
 			 .channel(loops.onServerChannel(elg));
 		}
 
-		BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer, (ctx, channel) -> {
-			ChannelPipeline p = channel.pipeline();
+		Integer minCompressionSize = (Integer) b.config()
+		                                        .attrs()
+		                                        .get(PRODUCE_GZIP);
 
-			p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+		b.attr(PRODUCE_GZIP, null);
 
-			BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate =
-					compressPredicate(channel);
+		BootstrapHandlers.updateConfiguration(b,
+				NettyPipeline.HttpInitializer,
+				(ctx, channel) -> {
+					ChannelPipeline p = channel.pipeline();
 
-			Attribute<Integer> minCompressionSize = channel.attr(HttpServerOperations.PRODUCE_GZIP);
-			int minResponseSize = minCompressionSize != null && minCompressionSize.get() != null ? minCompressionSize.get() : -1;
+					p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
 
-			boolean alwaysCompress = compressPredicate == null && minResponseSize == 0;
-			if(alwaysCompress) {
-				p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
-			}
+					BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate =
+							compressPredicate(channel);
 
-			p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(ctx));
-		});
+					int minResponseSize = minCompressionSize != null ? minCompressionSize.intValue() : -1;
 
-		return b;
+					boolean alwaysCompress = compressPredicate == null && minResponseSize == 0;
+					if(alwaysCompress) {
+						p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
+					}
+
+					p.addLast(NettyPipeline.HttpServerHandler,
+							new HttpServerHandler(ctx));
+				});
+
+		return delegate.bind(b);
 	}
 
 	private BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
 			Channel channel) {
 
-		Attribute<Integer> minCompressionSize = channel.attr(HttpServerOperations.PRODUCE_GZIP);
+		Attribute<Integer> minCompressionSize = channel.attr(HttpServerBind.PRODUCE_GZIP);
 		final int minResponseSize;
 		if (minCompressionSize != null && minCompressionSize.get() != null) {
 			minResponseSize = minCompressionSize.get();
@@ -105,7 +129,7 @@ final class HttpServerBind extends HttpServer {
 		}
 
 		Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
-				channel.attr(HttpServerOperations.PRODUCE_GZIP_PREDICATE);
+				channel.attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 		if (predicate != null && predicate.get() != null) {
 			compressionPredicate = predicate.get();
@@ -146,4 +170,8 @@ final class HttpServerBind extends HttpServer {
 
 		return lengthPredicate.and(compressionPredicate);
 	}
+	static final AttributeKey<Integer> PRODUCE_GZIP =
+			AttributeKey.newInstance("produceGzip");
+	static final AttributeKey<BiPredicate<HttpServerRequest, HttpServerResponse>> PRODUCE_GZIP_PREDICATE =
+			AttributeKey.newInstance("produceGzipPredicate");
 }

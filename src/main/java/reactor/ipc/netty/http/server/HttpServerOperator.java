@@ -15,10 +15,11 @@
  */
 package reactor.ipc.netty.http.server;
 
-import io.netty.bootstrap.ServerBootstrap;
-import reactor.ipc.netty.tcp.TcpServer;
-
 import java.util.Objects;
+
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.tcp.TcpServer;
 
 /**
  * @author Stephane Maldini
@@ -32,12 +33,12 @@ abstract class HttpServerOperator extends HttpServer {
 	}
 
 	@Override
-	ServerBootstrap configure(ServerBootstrap bootstrap) {
-		return source.configure(bootstrap);
+	protected TcpServer tcpConfiguration() {
+		return source.tcpConfiguration();
 	}
 
 	@Override
-	protected TcpServer tcpConfiguration() {
-		return source.tcpConfiguration();
+	protected Mono<? extends Connection> bind(TcpServer b) {
+		return source.bind(b);
 	}
 }

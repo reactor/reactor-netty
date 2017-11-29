@@ -16,6 +16,8 @@
 package reactor.ipc.netty.http.client;
 
 import io.netty.bootstrap.Bootstrap;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.tcp.TcpClient;
 
 import java.util.Objects;
@@ -37,17 +39,12 @@ abstract class HttpClientOperator extends HttpClient {
 	}
 
 	@Override
-	protected UriEndpointFactory uriEndpointFactory() {
-		return source.uriEndpointFactory();
-	}
-
-	@Override
 	protected TcpClient tcpConfiguration() {
 		return source.tcpConfiguration();
 	}
 
 	@Override
-	Bootstrap configure(Bootstrap bootstrap) {
-		return source.configure(bootstrap);
+	protected Mono<? extends Connection> connect(TcpClient delegate) {
+		return source.connect(delegate);
 	}
 }

@@ -536,28 +536,26 @@ public abstract class TcpServer {
 	}
 
 	static final int                   DEFAULT_PORT      = 0;
-	static final AttributeKey<Integer> DEFAULT_PORT_ATTR = AttributeKey.newInstance("defaultServerPort");
-
-	static final ServerBootstrap DEFAULT_BOOTSTRAP =
-			new ServerBootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-					.option(ChannelOption.SO_REUSEADDR, true)
-					.option(ChannelOption.SO_BACKLOG, 1000)
-					.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-					.childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
-					.childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
-					.childOption(ChannelOption.AUTO_READ, false)
-					.childOption(ChannelOption.SO_KEEPALIVE, true)
-					.childOption(ChannelOption.TCP_NODELAY, true)
-					.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-					.attr(DEFAULT_PORT_ATTR, DEFAULT_PORT);
-
-	static {
-		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
-	}
-
 	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("serverHost");
 	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("serverPort");
 	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpServer.class);
 	static final Logger                log               = Loggers.getLogger(TcpServer.class);
 
+	static final ServerBootstrap DEFAULT_BOOTSTRAP =
+			new ServerBootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+			                     .option(ChannelOption.SO_REUSEADDR, true)
+			                     .option(ChannelOption.SO_BACKLOG, 1000)
+			                     .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+			                     .childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
+			                     .childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
+			                     .childOption(ChannelOption.AUTO_READ, false)
+			                     .childOption(ChannelOption.SO_KEEPALIVE, true)
+			                     .childOption(ChannelOption.TCP_NODELAY, true)
+			                     .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+			                     .attr(HOST, NetUtil.LOCALHOST.getHostAddress())
+			                     .attr(PORT, DEFAULT_PORT);
+
+	static {
+		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
+	}
 }

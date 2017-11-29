@@ -25,18 +25,17 @@ import java.util.function.Function;
  */
 final class HttpClientTcpConfig extends HttpClientOperator {
 
-	final TcpClient tcpClient;
+	final Function<? super TcpClient, ? extends TcpClient> tcpClientMapper;
 
 	HttpClientTcpConfig(HttpClient client,
 			Function<? super TcpClient, ? extends TcpClient> tcpClientMapper) {
 		super(client);
-		Objects.requireNonNull(tcpClientMapper, "tcpClientMapper");
-		this.tcpClient = Objects.requireNonNull(tcpClientMapper.apply(source.tcpConfiguration()),
-				"tcpClientMapper");
+		this.tcpClientMapper = Objects.requireNonNull(tcpClientMapper, "tcpClientMapper");
 	}
 
 	@Override
 	protected TcpClient tcpConfiguration() {
-		return tcpClient;
+		return Objects.requireNonNull(tcpClientMapper.apply(source.tcpConfiguration()),
+				"tcpClientMapper");
 	}
 }

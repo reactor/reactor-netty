@@ -84,7 +84,7 @@ final class MonoHttpClientResponse implements HttpClient.RequestSender {
 		return Mono.defer(() ->
 				parent.connect()
 				        .doOnNext(c -> {
-				            Attribute<Boolean> acceptGzip = c.channel().attr(HttpClientOperations.ACCEPT_GZIP);
+				            Attribute<Boolean> acceptGzip = c.channel().attr(HttpClient.ACCEPT_GZIP);
 				              /*if (acceptGzip != null && acceptGzip.get()) {
 				                  if (requestHandler != null) {
 				                      requestHandler = req -> requestHandler.apply(req.header(HttpHeaderNames.ACCEPT_ENCODING,
