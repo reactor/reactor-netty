@@ -477,7 +477,7 @@ public abstract class HttpClient {
 	}
 
 
-	static final ChannelOperations.OnSetup<Channel> HTTP_OPS =
+	static final ChannelOperations.OnSetup HTTP_OPS =
 			(ch, c, msg) -> HttpClientOperations.bindHttp(ch, c);
 
 	static final Function<Bootstrap, Bootstrap> HTTP_OPS_CONF = b -> {

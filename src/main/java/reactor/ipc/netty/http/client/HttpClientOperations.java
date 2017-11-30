@@ -28,13 +28,11 @@ import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -69,12 +67,12 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
-import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -89,9 +87,10 @@ import reactor.util.Loggers;
 class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClientRequest>
 		implements HttpClientResponse, HttpClientRequest {
 
-	static HttpOperations bindHttp(Channel channel,
-			ContextHandler<?> context) {
-		return new HttpClientOperations(channel, context);
+	static HttpOperations bindHttp(Connection connection, ConnectionEvents listener) {
+		HttpClientOperations ops = new HttpClientOperations(connection, listener);
+		listener.onStart(ops);
+		return ops;
 	}
 
 	final Supplier<String>[]    redirectedFrom;
@@ -106,8 +105,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	boolean redirectable;
 
-	HttpClientOperations(Channel channel, HttpClientOperations replaced) {
-		super(channel, replaced);
+	HttpClientOperations(HttpClientOperations replaced) {
+		super(replaced);
 		this.started = replaced.started;
 		this.redirectedFrom = replaced.redirectedFrom;
 		this.isSecure = replaced.isSecure;
@@ -118,13 +117,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.requestHeaders = replaced.requestHeaders;
 	}
 
-	HttpClientOperations(Channel channel,
-			ContextHandler<?> context) {
-		super(channel, context);
-		this.isSecure = channel.pipeline()
-		                       .get(NettyPipeline.SslHandler) != null;
-		Supplier<String>[] redirects = channel.attr(REDIRECT_ATTR_KEY)
-		                            .get();
+	HttpClientOperations(Connection c, ConnectionEvents listener) {
+		super(c, listener);
+		this.isSecure = c.channel()
+		                 .pipeline()
+		                 .get(NettyPipeline.SslHandler) != null;
+		Supplier<String>[] redirects = c.channel()
+		                                .attr(REDIRECT_ATTR_KEY)
+		                                .get();
 		this.redirectedFrom = redirects == null ? EMPTY_REDIRECTIONS : redirects;
 		this.nettyRequest =
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
@@ -249,7 +249,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	protected void onInboundClose() {
 		if (responseState == null) {
-			parentContext().fireContextError(new IOException("Connection closed prematurely"));
+			listener().onReceiveError(channel(), new IOException("Connection closed prematurely"));
 			return;
 		}
 		super.onInboundError(new IOException("Connection closed prematurely"));
@@ -392,7 +392,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public WebsocketOutbound sendWebsocket(String subprotocols) {
-		Mono<Void> m = withWebsocketSupport(websocketUri(), subprotocols, noopHandler());
+		Mono<Void> m = withWebsocketSupport(websocketUri(), subprotocols, EMPTY);
 
 		return new WebsocketOutbound() {
 
@@ -498,11 +498,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	protected void onHandlerStart() {
-		applyHandler();
-	}
-
-	@Override
 	protected void onOutboundComplete() {
 		if (isWebsocket() || isInboundCancelled()) {
 			return;
@@ -522,7 +517,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if(Connection.isPersistent(channel()) && responseState == null){
-			parentContext().fireContextError(err);
+			listener().onReceiveError(channel(), err);
 			onHandlerTerminate();
 			return;
 		}
@@ -571,7 +566,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 			if (checkResponseCode(response)) {
 				prefetchMore(ctx);
-				parentContext().fireContextActive(this);
+				listener().onProtocolEvent(this, NettyPipeline.httpClientResponseEvent());
 			}
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
@@ -631,7 +626,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						        .toString());
 			}
 			Exception ex = new RedirectClientException(response);
-			parentContext().fireContextError(ex);
+			listener().onReceiveError(channel(), ex);
 			receive().subscribe();
 			return false;
 		}
@@ -684,7 +679,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				                                 .then(Mono.defer(() -> Mono.from(websocketHandler.apply(
 						                                 ops,
 						                                 ops))));
-				if (websocketHandler != noopHandler()) {
+				if (websocketHandler != EMPTY) {
 					handshake = handshake.doAfterSuccessOrError(ops);
 				}
 				return handshake;
@@ -696,7 +691,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if(ops != null) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
 
-				if (websocketHandler != noopHandler()) {
+				if (websocketHandler != EMPTY) {
 					handshake =
 							handshake.then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops)))
 							         .doAfterSuccessOrError(ops));
@@ -819,6 +814,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 	}
 
+	static final BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> EMPTY = (x1, x2) -> Mono.empty();
 	static final int                    MAX_REDIRECTS      = 50;
 	@SuppressWarnings("unchecked")
 	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];

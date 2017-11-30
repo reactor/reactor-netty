@@ -70,6 +70,7 @@ import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.SocketUtils;
@@ -119,7 +120,7 @@ public class TcpServerTests {
 
 		ObjectMapper m = new ObjectMapper();
 
-		Connection connectedServer = server.handler((in, out) -> {
+		DisposableServer connectedServer = server.handler((in, out) -> {
 			in.receive()
 			  .asByteArray()
 			  .map(bb -> {
@@ -186,7 +187,7 @@ public class TcpServerTests {
 
 	@Test(timeout = 10000)
 	public void testHang() throws Exception {
-		Connection httpServer =
+		DisposableServer httpServer =
 				HttpServer.create()
 				          .port(0)
 				          .tcpConfiguration(tcpServer -> tcpServer.host("0.0.0.0"))
@@ -203,7 +204,7 @@ public class TcpServerTests {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		Connection server = TcpServer.create().port(port)
+		DisposableServer server = TcpServer.create().port(port)
 		                             .handler((in, out) -> {
 
 			in.withConnection(c -> {
@@ -221,9 +222,9 @@ public class TcpServerTests {
 		                             .handler((in, out) -> out.sendString(Flux.just(
 				                             "Hello World!")))
 		                             .wiretap()
-		                             .connectNow();
+		                             .connectNow(Duration.ofDays(10));
 
-		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
+		assertTrue("latch was counted down", latch.await(5, TimeUnit.DAYS));
 
 		client.dispose();
 		server.dispose();
@@ -252,7 +253,7 @@ public class TcpServerTests {
 				                                                new LineBasedFrameDecoder(8 * 1024)))
 		                            .port(port);
 
-		Connection connected = server.handler(serverHandler)
+		DisposableServer connected = server.handler(serverHandler)
 		                             .wiretap()
 		                             .bindNow();
 
@@ -290,7 +291,7 @@ public class TcpServerTests {
 
 		//on a server dispatching data on the default shared dispatcher, and serializing/deserializing as string
 		//Listen for anything exactly hitting the root URI and route the incoming connection request to the callback
-		Connection s = HttpServer.create()
+		DisposableServer s = HttpServer.create()
 		                         .port(0)
 		                         .router(r -> r.get("/", (request, response) -> {
 			                         //prepare a response header to be appended first before any reply
@@ -322,7 +323,7 @@ public class TcpServerTests {
 
 		final CountDownLatch countDownLatch = new CountDownLatch(1);
 
-		Connection server = TcpServer.create().port(0)
+		DisposableServer server = TcpServer.create().port(0)
 		                             .handler((in, out) -> {
 			                             in.receive()
 			                               .log("channel")
@@ -399,7 +400,7 @@ public class TcpServerTests {
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
 
-		Connection context =
+		DisposableServer context =
 				TcpServer.create().secure(sslServer)
 				         .handler((in, out) ->
 						         in.receive()
@@ -511,7 +512,7 @@ public class TcpServerTests {
 
 
 
-		Connection context =
+		DisposableServer context =
 				TcpServer.create()
 				         .handler((in, out) ->
 						         in.receive()
@@ -580,7 +581,7 @@ public class TcpServerTests {
 
 	@Test(timeout = 2000)
 	public void startAndAwait() throws InterruptedException {
-		AtomicReference<Connection> conn = new AtomicReference<>();
+		AtomicReference<DisposableServer> conn = new AtomicReference<>();
 		CountDownLatch startLatch = new CountDownLatch(1);
 
 		Thread t = new Thread(() -> TcpServer.create()
@@ -626,7 +627,7 @@ public class TcpServerTests {
 
 		CountDownLatch dataLatch = new CountDownLatch(1);
 
-		Connection server =
+		DisposableServer server =
 		        TcpServer.create()
 		                 .handler((in, out) -> out.send(in.receive()
 		                                                     .asString()
@@ -677,7 +678,7 @@ public class TcpServerTests {
 
 		CountDownLatch dataLatch = new CountDownLatch(10);
 
-		Connection server =
+		DisposableServer server =
 				TcpServer.create()
 				         .handler((in, out) -> in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
 				                                    .receive()
@@ -741,7 +742,7 @@ public class TcpServerTests {
 		CountDownLatch latch = new CountDownLatch(elem);
 
 		final AtomicInteger j = new AtomicInteger();
-		Connection server =
+		DisposableServer server =
 		        TcpServer.create().host("localhost")
 		                 .handler((in, out) -> out.sendGroups(in.receive()
 		                                                           .asString()

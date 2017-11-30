@@ -15,12 +15,19 @@
  */
 package reactor.ipc.netty.udp;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
@@ -31,18 +38,9 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * A UdpServer allows to build in a safe immutable way a UDP server that is materialized
@@ -388,8 +386,7 @@ public abstract class UdpServer {
 					.localAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
 
 	static {
-		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP,
-				(ChannelOperations.OnSetup< DatagramChannel>) (ch, c, msg) -> UdpOperations.bindUdp(ch, c));
+		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, (ch, c, msg) -> UdpOperations.bindUdp(ch, c));
 	}
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(UdpServer.class);

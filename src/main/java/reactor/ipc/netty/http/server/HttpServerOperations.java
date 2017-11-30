@@ -27,7 +27,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -49,14 +48,13 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
-import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionEvents;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -75,10 +73,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		implements HttpServerRequest, HttpServerResponse {
 
 	@SuppressWarnings("unchecked")
-	static HttpServerOperations bindHttp(Channel channel,
-			ContextHandler<?> context,
+	static HttpServerOperations bindHttp(Connection connection, ConnectionEvents listener,
 			Object msg) {
-		return new HttpServerOperations(channel, context, (HttpRequest) msg);
+		return new HttpServerOperations(connection, listener, (HttpRequest) msg);
 	}
 
 	final HttpResponse nettyResponse;
@@ -88,8 +85,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	Function<? super String, Map<String, String>> paramsResolver;
 
-	HttpServerOperations(Channel ch, HttpServerOperations replaced) {
-		super(ch, replaced);
+	HttpServerOperations(HttpServerOperations replaced) {
+		super(replaced);
 		this.cookieHolder = replaced.cookieHolder;
 		this.responseHeaders = replaced.responseHeaders;
 		this.nettyResponse = replaced.nettyResponse;
@@ -97,10 +94,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyRequest = replaced.nettyRequest;
 	}
 
-	HttpServerOperations(Channel ch,
-			ContextHandler<?> context,
+	HttpServerOperations(Connection c,
+			ConnectionEvents listener,
 			HttpRequest nettyRequest) {
-		super(ch, context);
+		super(c, listener);
 		this.nettyRequest = Objects.requireNonNull(nettyRequest, "nettyRequest");
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
@@ -354,11 +351,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return nettyRequest.protocolVersion();
 		}
 		throw new IllegalStateException("request not parsed");
-	}
-
-	@Override
-	protected void onHandlerStart() {
-		applyHandler();
 	}
 
 	@Override

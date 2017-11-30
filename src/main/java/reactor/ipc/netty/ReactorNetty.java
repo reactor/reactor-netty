@@ -23,6 +23,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
@@ -254,6 +256,13 @@ final class ReactorNetty {
 		}
 	}
 
+	static final class HttpClientResponseEvent {
+		@Override
+		public String toString() {
+			return "[Http Client Response Received]";
+		}
+	}
+
 	/**
 	 * An appending write that delegates to its origin context and append the passed
 	 * publisher after the origin success if any.
@@ -387,8 +396,36 @@ final class ReactorNetty {
 
 	}
 
+	static final ConnectionEvents NOOP_LISTENER = new ConnectionEvents() {
+		@Override
+		public void onStart(Connection connection) {
+
+		}
+
+		@Override
+		public void onDispose(Channel channel) {
+
+		}
+
+		@Override
+		public void onReceiveError(Channel channel, Throwable error) {
+
+		}
+
+		@Override
+		public void onSetup(Channel channel, @Nullable Object msg) {
+
+		}
+
+		@Override
+		public void onProtocolEvent(Connection connection, Object evt) {
+
+		}
+	};
+
 	static final Object TERMINATED                 = new TerminatedHandlerEvent();
 	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
+	static final Object HTTP_CLIENT_RESPONSE_EVENT = new HttpClientResponseEvent();
 	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
 
 	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");

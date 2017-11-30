@@ -16,10 +16,8 @@
 
 package reactor.ipc.netty.tcp;
 
-import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -28,7 +26,6 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
@@ -149,11 +146,8 @@ public class TcpResources implements PoolResources, LoopResources {
 	}
 
 	@Override
-	public ChannelPool selectOrCreate(SocketAddress address,
-			Supplier<? extends Bootstrap> bootstrap,
-			ContextHandler ctx,
-			EventLoopGroup group) {
-		return defaultPools.selectOrCreate(address, bootstrap, ctx, group);
+	public ChannelPool selectOrCreate(Bootstrap bootstrap) {
+		return defaultPools.selectOrCreate(bootstrap);
 	}
 
 	@Override

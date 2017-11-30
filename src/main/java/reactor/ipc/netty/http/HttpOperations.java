@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.CombinedChannelDuplexHandler;
@@ -35,13 +34,13 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionEvents;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 
 /**
  * An HTTP ready {@link ChannelOperations} with state management for status and headers
@@ -58,17 +57,17 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	static final int HEADERS_SENT = 1;
 	static final int BODY_SENT    = 2;
 
-	protected HttpOperations(Channel ioChannel,
-			HttpOperations<INBOUND, OUTBOUND> replaced) {
-		super(ioChannel, replaced);
+	protected HttpOperations(HttpOperations<INBOUND, OUTBOUND> replaced) {
+		super(replaced);
 		this.statusAndHeadersSent = replaced.statusAndHeadersSent;
 	}
 
-	protected HttpOperations(Channel ioChannel,
-			ContextHandler<?> context) {
-		super(ioChannel, context);
+	protected HttpOperations(Connection connection, ConnectionEvents listener) {
+		super(connection, listener);
 		//reset channel to manual read if re-used
-		ioChannel.config().setAutoRead(false);
+		connection.channel()
+		          .config()
+		          .setAutoRead(false);
 	}
 
 	/**

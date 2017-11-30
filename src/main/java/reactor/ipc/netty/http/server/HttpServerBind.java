@@ -26,7 +26,7 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.util.AttributeKey;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.http.HttpResources;
@@ -57,7 +57,7 @@ final class HttpServerBind extends HttpServer {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public Mono<? extends Connection> bind(TcpServer delegate) {
+	public Mono<? extends DisposableServer> bind(TcpServer delegate) {
 		ServerBootstrap b;
 		try {
 			b = delegate.configure();
@@ -89,7 +89,7 @@ final class HttpServerBind extends HttpServer {
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.HttpInitializer,
-				(ctx, channel) -> {
+				(listener, channel) -> {
 					ChannelPipeline p = channel.pipeline();
 
 					p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
@@ -100,7 +100,7 @@ final class HttpServerBind extends HttpServer {
 					}
 
 					p.addLast(NettyPipeline.HttpServerHandler,
-							new HttpServerHandler(ctx));
+							new HttpServerHandler(listener));
 				});
 
 		return delegate.bind(b);

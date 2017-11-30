@@ -280,7 +280,7 @@ public abstract class TcpClient {
 	 */
 	public final TcpClient host(String host) {
 		Objects.requireNonNull(host, "host");
-		return attr(HOST, host);
+		return attr(TcpUtils.HOST, host);
 	}
 
 	/**
@@ -366,7 +366,7 @@ public abstract class TcpClient {
 	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient port(int port) {
-		return attr(PORT, port);
+		return attr(TcpUtils.PORT, port);
 	}
 
 	/**
@@ -537,8 +537,6 @@ public abstract class TcpClient {
 	static final int DEFAULT_PORT =
 			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
 					12012;
-	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("clientHost");
-	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("clientPort");
 
 	static final Bootstrap DEFAULT_BOOTSTRAP =
 			new Bootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -546,8 +544,8 @@ public abstract class TcpClient {
 					.option(ChannelOption.AUTO_READ, false)
 					.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
 					.option(ChannelOption.SO_SNDBUF, 1024 * 1024)
-					.attr(PORT, DEFAULT_PORT)
-					.attr(HOST, NetUtil.LOCALHOST.getHostAddress());
+					.attr(TcpUtils.PORT, DEFAULT_PORT)
+					.attr(TcpUtils.HOST, NetUtil.LOCALHOST.getHostAddress());
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);

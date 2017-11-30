@@ -28,6 +28,7 @@ import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -71,7 +72,7 @@ public class BlockingConnectionTest {
 
 	@Test
 	public void simpleServerFromAsyncServer() throws InterruptedException {
-		Connection simpleServer =
+		DisposableServer simpleServer =
 				TcpServer.create()
 				         .handler((in, out) -> out
 						         .options(NettyPipeline.SendOptions::flushOnEach)

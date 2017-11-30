@@ -70,8 +70,7 @@ public class DefaultPoolResourcesTest {
 	public void disposeLaterDefers() {
 		DefaultPoolResources.Pool pool = new DefaultPoolResources.Pool(
 				new Bootstrap(),
-				(b, handler, checker) -> channelPool,
-				null, new DefaultEventLoopGroup());
+				(b, handler, checker) -> channelPool, new DefaultEventLoopGroup());
 
 		DefaultPoolResources poolResources = new DefaultPoolResources("test",
 				(b, handler, checker) -> channelPool);
@@ -92,7 +91,7 @@ public class DefaultPoolResourcesTest {
 		DefaultPoolResources.Pool pool = new DefaultPoolResources.Pool(
 				new Bootstrap(),
 				(b, handler, checker) -> channelPool,
-				null, new DefaultEventLoopGroup());
+				new DefaultEventLoopGroup());
 
 		DefaultPoolResources poolResources = new DefaultPoolResources("test",
 				(b, handler, checker) -> channelPool);
