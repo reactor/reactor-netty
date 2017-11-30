@@ -24,9 +24,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramChannel;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionEvents;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -36,17 +37,18 @@ import reactor.util.Loggers;
 final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		implements UdpInbound, UdpOutbound {
 
-	static UdpOperations bindUdp(DatagramChannel channel,
-			ContextHandler<?> context) {
-		return new UdpOperations(channel, context);
+	static UdpOperations bindUdp(Connection c, ConnectionEvents listener) {
+		UdpOperations ops = new UdpOperations(c, listener);
+		listener.onStart(ops);
+		return ops;
 	}
 
 	final DatagramChannel  datagramChannel;
 
-	UdpOperations(DatagramChannel channel,
-			ContextHandler<?> context) {
-		super(channel, context);
-		this.datagramChannel = channel;
+	@SuppressWarnings("unchecked")
+	UdpOperations(Connection c, ConnectionEvents listener) {
+		super(c, listener);
+		this.datagramChannel = (DatagramChannel)c.channel();
 	}
 
 	/**

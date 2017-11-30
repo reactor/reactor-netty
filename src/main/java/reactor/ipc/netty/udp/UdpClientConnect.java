@@ -17,12 +17,10 @@ package reactor.ipc.netty.udp;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.resources.LoopResources;
 
 /**
@@ -34,7 +32,7 @@ final class UdpClientConnect extends UdpClient {
 
 	@Override
 	protected Mono<? extends Connection> connect(Bootstrap b) {
-		ChannelOperations.OnSetup<DatagramChannel> ops = BootstrapHandlers.channelOperationFactory(b);
+		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
 
 		//Default group and channel
 		if (b.config()
@@ -44,16 +42,13 @@ final class UdpClientConnect extends UdpClient {
 			EventLoopGroup elg = loopResources.onClient(LoopResources.DEFAULT_NATIVE);
 
 			b.group(elg)
-					.channel(loopResources.onDatagramChannel(elg));
+			 .channel(loopResources.onDatagramChannel(elg));
 		}
 
 		return Mono.create(sink -> {
-			ContextHandler<DatagramChannel> ctx = ContextHandler.newClientContext(sink,
-					false,
-					b.config().remoteAddress(),
-					ops);
-			BootstrapHandlers.finalize(b, ctx);
-			ctx.setFuture(b.connect());
+			Bootstrap bootstrap = b.clone();
+			BootstrapHandlers.finalize(bootstrap, ops, sink)
+			                 .accept(bootstrap.connect());
 		});
 	}
 }

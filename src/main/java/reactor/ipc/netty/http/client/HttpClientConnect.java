@@ -139,7 +139,9 @@ final class HttpClientConnect extends HttpClient {
 
 		endpoint.activeURI = endpoint.uriEndpointFactory.createUriEndpoint(uri, handler.method == HttpClient.WS);
 
-		BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer, (ctx, channel) -> {
+		BootstrapHandlers.updateConfiguration(b,
+				NettyPipeline.HttpInitializer,
+				(listener, channel) -> {
 			channel.pipeline().addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
 
 			if (compress) {
@@ -148,19 +150,20 @@ final class HttpClientConnect extends HttpClient {
 						new HttpContentDecompressor());
 			}
 
-			//FIXME not working http binding
-			endpoint.accept(channel);
-			if (log.isDebugEnabled()) {
-				log.debug("{} handler is being applied: {}", channel, handler);
-			}
-
-			ChannelOperations<?, ?> c = ChannelOperations.get(channel);
-			Mono.fromDirect(handler.apply(c, c))
-			    .subscribe(c.disposeSubscriber());
 		});
 
+		return Mono.defer(() -> delegate.doOnConnected(c -> {
+			endpoint.accept(c.channel());
+			if (log.isDebugEnabled()) {
+				log.debug("{} handler is being applied: {}", c.channel(), handler);
+			}
 
-		return Mono.defer(() -> delegate.connect(bootstrap.remoteAddress(endpoint.activeURI.getRemoteAddress())))
+			ChannelOperations<?, ?> ops = ChannelOperations.get(c.channel());
+			Mono.fromDirect(handler.apply(ops, ops))
+			    .subscribe(c.disposeSubscriber());
+		})
+		                                //todo add secure handling
+		                                .connect(bootstrap.remoteAddress(endpoint.activeURI.getRemoteAddress())))
 		           .retry(endpoint);
 	}
 

@@ -25,22 +25,23 @@ import org.junit.Test;
 import io.netty.channel.embedded.EmbeddedChannel;
 import reactor.ipc.netty.NettyPipeline;
 
-public class ClientContextHandlerTest {
+public class DisposableConnectTest {
 	@Test public void test() {}
+
 /*
 	@Test
 	public void addProxyHandler() {
 		ClientOptions.Builder<?> builder = ClientOptions.builder();
 		EmbeddedChannel channel = new EmbeddedChannel();
 
-		ClientContextHandler.addProxyHandler(builder.build(), channel.pipeline(),
+		DisposableConnect.addProxyHandler(builder.build(), channel.pipeline(),
 				new InetSocketAddress("localhost", 8080));
 		assertThat(channel.pipeline().get(NettyPipeline.ProxyHandler)).isNull();
 
 		builder.proxy(ops -> ops.type(Proxy.HTTP)
 		                        .host("proxy")
 		                        .port(8080));
-		ClientContextHandler.addProxyHandler(builder.build(), channel.pipeline(),
+		DisposableConnect.addProxyHandler(builder.build(), channel.pipeline(),
 				new InetSocketAddress("localhost", 8080));
 		assertThat(channel.pipeline().get(NettyPipeline.ProxyHandler)).isNull();
 	}*/

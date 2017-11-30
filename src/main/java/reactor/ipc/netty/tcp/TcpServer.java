@@ -16,9 +16,18 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
+
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.LogLevel;
@@ -27,7 +36,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
-import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
@@ -38,16 +46,6 @@ import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import javax.annotation.Nullable;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * A TcpServer allows to build in a safe immutable way a TCP server that is materialized
@@ -137,7 +135,7 @@ public abstract class TcpServer {
 	 *
 	 * @return a {@link Mono} of {@link Connection}
 	 */
-	public final Mono<? extends Connection> bind() {
+	public final Mono<? extends DisposableServer> bind() {
 		ServerBootstrap b;
 		try{
 			b = configure();
@@ -154,9 +152,9 @@ public abstract class TcpServer {
 	 *
 	 * @param b the {@link ServerBootstrap} to bind
 	 *
-	 * @return a {@link Mono} of {@link Connection}
+	 * @return a {@link Mono} of {@link DisposableServer}
 	 */
-	public abstract Mono<? extends Connection> bind(ServerBootstrap b);
+	public abstract Mono<? extends DisposableServer> bind(ServerBootstrap b);
 
 	/**
 	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
@@ -166,7 +164,7 @@ public abstract class TcpServer {
 	 *
 	 * @return a {@link Connection}
 	 */
-	public final Connection bindNow() {
+	public final DisposableServer bindNow() {
 		return bindNow(Duration.ofSeconds(45));
 	}
 
@@ -179,7 +177,7 @@ public abstract class TcpServer {
 	 *
 	 * @return a {@link Connection}
 	 */
-	public final Connection bindNow(Duration timeout) {
+	public final DisposableServer bindNow(Duration timeout) {
 		Objects.requireNonNull(timeout, "timeout");
 		return Objects.requireNonNull(bind().block(timeout), "aborted");
 	}
@@ -197,10 +195,10 @@ public abstract class TcpServer {
 	 * @param timeout a timeout for server shutdown
 	 * @param onStart an optional callback on server start
 	 */
-	public final void bindUntilJavaShutdown(Duration timeout, @Nullable Consumer<Connection> onStart) {
+	public final void bindUntilJavaShutdown(Duration timeout, @Nullable Consumer<DisposableServer> onStart) {
 
 		Objects.requireNonNull(timeout, "timeout");
-		Connection facade = bindNow();
+		DisposableServer facade = bindNow();
 
 		Objects.requireNonNull(facade, "facade");
 
@@ -248,7 +246,7 @@ public abstract class TcpServer {
 	 *
 	 * @return a new {@link TcpServer}
 	 */
-	public final TcpServer doOnBound(Consumer<? super Connection> doOnBound) {
+	public final TcpServer doOnBound(Consumer<? super DisposableServer> doOnBound) {
 		Objects.requireNonNull(doOnBound, "doOnBound");
 		return new TcpServerLifecycle(this, null, doOnBound, null);
 	}
@@ -262,7 +260,7 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer doOnConnection(Consumer<? super Connection> doOnConnection) {
 		Objects.requireNonNull(doOnConnection, "doOnConnection");
-		return doOnBound(s -> ((DisposableServer)s).connections().subscribe(doOnConnection));
+		return doOnBound(s -> s.connections().subscribe(doOnConnection));
 	}
 
 	/**
@@ -273,7 +271,7 @@ public abstract class TcpServer {
 	 *
 	 * @return a new {@link TcpServer}
 	 */
-	public final TcpServer doOnUnbound(Consumer<? super Connection> doOnUnbind) {
+	public final TcpServer doOnUnbound(Consumer<? super DisposableServer> doOnUnbind) {
 		Objects.requireNonNull(doOnUnbind, "doOnUnbound");
 		return new TcpServerLifecycle(this, null, null, doOnUnbind);
 	}
@@ -289,8 +287,8 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer doOnLifecycle(Consumer<? super ServerBootstrap> onBind,
-										 Consumer<? super Connection> onBound,
-										 Consumer<? super Connection> onUnbound) {
+										 Consumer<? super DisposableServer> onBound,
+										 Consumer<? super DisposableServer> onUnbound) {
 		Objects.requireNonNull(onBind, "onBind");
 		Objects.requireNonNull(onBound, "onBound");
 		Objects.requireNonNull(onUnbound, "onUnbound");
@@ -327,7 +325,7 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer host(String host) {
 		Objects.requireNonNull(host, "host");
-		return bootstrap(b -> b.attr(HOST, host));
+		return bootstrap(b -> b.attr(TcpUtils.HOST, host));
 	}
 
 	/**
@@ -374,7 +372,7 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer port(int port) {
-		return bootstrap(b -> b.attr(PORT, port));
+		return bootstrap(b -> b.attr(TcpUtils.PORT, port));
 	}
 
 	/**
@@ -536,8 +534,6 @@ public abstract class TcpServer {
 	}
 
 	static final int                   DEFAULT_PORT      = 0;
-	static final AttributeKey<String>  HOST              = AttributeKey.newInstance("serverHost");
-	static final AttributeKey<Integer> PORT              = AttributeKey.newInstance("serverPort");
 	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpServer.class);
 	static final Logger                log               = Loggers.getLogger(TcpServer.class);
 
@@ -552,8 +548,8 @@ public abstract class TcpServer {
 			                     .childOption(ChannelOption.SO_KEEPALIVE, true)
 			                     .childOption(ChannelOption.TCP_NODELAY, true)
 			                     .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-			                     .attr(HOST, NetUtil.LOCALHOST.getHostAddress())
-			                     .attr(PORT, DEFAULT_PORT);
+			                     .attr(TcpUtils.HOST, NetUtil.LOCALHOST.getHostAddress())
+			                     .attr(TcpUtils.PORT, DEFAULT_PORT);
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);

@@ -17,10 +17,10 @@
 package reactor.ipc.netty.resources;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -32,8 +32,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.channel.BootstrapHandlers;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -60,29 +58,20 @@ final class DefaultPoolResources implements PoolResources {
 	}
 
 	@Override
-	public ChannelPool selectOrCreate(SocketAddress remote,
-			Supplier<? extends Bootstrap> bootstrap,
-			ContextHandler ctx,
-			EventLoopGroup group) {
-		SocketAddress address = remote;
+	public ChannelPool selectOrCreate(Bootstrap bootstrap) {
+		SocketAddress remote = Objects.requireNonNull(bootstrap.config()
+		                                         .remoteAddress(), "No remote address " +
+				"configured in bootstrap");
 		for (; ; ) {
 			Pool pool = channelPools.get(remote);
 			if (pool != null) {
 				return pool;
 			}
-			Bootstrap b = bootstrap.get();
-			if (remote != null) {
-				b = b.remoteAddress(remote);
-			}
-			else {
-				address = b.config()
-				          .remoteAddress();
-			}
 			if (log.isDebugEnabled()) {
-				log.debug("New {} client pool for {}", name, address);
+				log.debug("New {} client pool for {}", name, remote);
 			}
-			pool = new Pool(b, provider, ctx, group);
-			if (channelPools.putIfAbsent(address, pool) == null) {
+			pool = new Pool(bootstrap, provider, bootstrap.config().group());
+			if (channelPools.putIfAbsent(remote, pool) == null) {
 				return pool;
 			}
 			pool.close();
@@ -92,9 +81,8 @@ final class DefaultPoolResources implements PoolResources {
 	final static class Pool extends AtomicBoolean
 			implements ChannelPoolHandler, ChannelPool, ChannelHealthChecker {
 
-		final ChannelPool               pool;
-		final ContextHandler            ctx;
-		final EventLoopGroup            defaultGroup;
+		final ChannelPool      pool;
+		final EventLoopGroup   defaultGroup;
 
 		final Bootstrap bootstrap;
 
@@ -106,11 +94,9 @@ final class DefaultPoolResources implements PoolResources {
 		@SuppressWarnings("unchecked")
 		Pool(Bootstrap bootstrap,
 				PoolFactory provider,
-				ContextHandler ctx,
 				EventLoopGroup group) {
 			this.bootstrap = bootstrap;
 			this.pool = provider.newPool(bootstrap, this, this);
-			this.ctx = ctx;
 			this.defaultGroup = group;
 			HEALTHY = group.next()
 			               .newSucceededFuture(true);
@@ -178,10 +164,7 @@ final class DefaultPoolResources implements PoolResources {
 						ch.toString(),
 						activeConnections);
 			}
-			if (ctx != null) {
-				BootstrapHandlers.finalize(bootstrap, ctx);
-				ch.pipeline().addFirst(bootstrap.config().handler());
-			}
+			ch.pipeline().addFirst(bootstrap.config().handler());
 		}
 
 		@Override
