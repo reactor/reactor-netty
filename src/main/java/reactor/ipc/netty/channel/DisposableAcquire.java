@@ -158,6 +158,9 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 	public void run() {
 		Channel c = channel;
 		if (currentOwner == DISPOSED) {
+			log.debug("Asynchronously cancelled pooled channel: {}",
+					c.toString());
+			sink.success();
 			return;
 		}
 		if (!c.isActive()) {
@@ -181,7 +184,6 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 		else if (log.isDebugEnabled()) {
 			log.debug("Acquired active channel: " + c.toString());
 		}
-		onSetup(c, null);
 	}
 
 	@Override
