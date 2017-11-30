@@ -25,15 +25,15 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.Attribute;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -87,7 +87,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a {@link Mono} of {@link Connection}
 	 */
-	public final Mono<? extends Connection> bind() {
+	public final Mono<? extends DisposableServer> bind() {
 		return bind(tcpConfiguration());
 	}
 
@@ -98,7 +98,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a {@link Connection}
 	 */
-	public final Connection bindNow() {
+	public final DisposableServer bindNow() {
 		return bindNow(Duration.ofSeconds(45));
 	}
 
@@ -112,7 +112,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a {@link Connection}
 	 */
-	public final Connection bindNow(Duration timeout) {
+	public final DisposableServer bindNow(Duration timeout) {
 		Objects.requireNonNull(timeout, "timeout");
 		return Objects.requireNonNull(bind().block(timeout), "aborted");
 	}
@@ -131,10 +131,10 @@ public abstract class HttpServer {
 	 * @param onStart an optional callback on server start
 	 */
 	public final void bindUntilJavaShutdown(Duration timeout,
-	                                        @Nullable Consumer<Connection> onStart) {
+	                                        @Nullable Consumer<DisposableServer> onStart) {
 
 		Objects.requireNonNull(timeout, "timeout");
-		Connection facade = bindNow();
+		DisposableServer facade = bindNow();
 
 		Objects.requireNonNull(facade, "facade");
 
@@ -282,7 +282,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a {@link Mono} of {@link Connection}
 	 */
-	protected abstract Mono<? extends Connection> bind(TcpServer b);
+	protected abstract Mono<? extends DisposableServer> bind(TcpServer b);
 
 	/**
 	 * Materialize a TcpServer from the parent {@link HttpServer} chain to use with
@@ -296,20 +296,20 @@ public abstract class HttpServer {
 
 
 
-	static final ChannelOperations.OnSetup<?> HTTP_OPS = new ChannelOperations.OnSetup() {
+	static final ChannelOperations.OnSetup HTTP_OPS = new ChannelOperations.OnSetup() {
 		@Nullable
 		@Override
-		public ChannelOperations<?, ?> create(Channel c, ContextHandler ch, Object msg) {
-			Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
-					c.attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
-			final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-			if (predicate != null && predicate.get() != null) {
-				compressionPredicate = predicate.get();
-			}
-			else {
-				compressionPredicate = null;
-			}
-			return HttpServerOperations.bindHttp(c, ch, compressionPredicate, msg);
+		public ChannelOperations<?, ?> create(Connection c, ConnectionEvents listener, Object msg) {
+				Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
+						c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
+				final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+				if (predicate != null && predicate.get() != null) {
+					compressionPredicate = predicate.get();
+				}
+				else {
+					compressionPredicate = null;
+				}
+			return HttpServerOperations.bindHttp(c, listener, compressionPredicate, msg);
 		}
 
 		@Override

@@ -17,18 +17,11 @@
 package reactor.ipc.netty.tcp;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.resources.LoopResources;
-
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * @author Stephane Maldini
@@ -39,7 +32,7 @@ final class TcpClientConnect extends TcpClient {
 
 	@Override
 	public Mono<? extends Connection> connect(Bootstrap b) {
-		ChannelOperations.OnSetup<Channel> ops = BootstrapHandlers.channelOperationFactory(b);
+		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
 
 		if (b.config()
 		     .group() == null) {
@@ -50,31 +43,13 @@ final class TcpClientConnect extends TcpClient {
 					TcpUtils.findSslContext(b));
 		}
 
-		if (b.config().remoteAddress() == null) {
-			Map<AttributeKey<?>, Object> attrs = b.config().attrs();
-			String host = (String) attrs.get(HOST);
-			Integer port = (Integer) attrs.get(PORT);
-			Objects.requireNonNull(host, "Host has not been set");
-			Objects.requireNonNull(port, "Port has not been set");
-			b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port));
-		}
 
-		b.attr(HOST, null)
-		 .attr(PORT, null);
+		TcpUtils.fromHostPortAttrsToRemote(b);
 
 		return Mono.create(sink -> {
-
-			ContextHandler<Channel> ctx =
-					ContextHandler.newClientContext(sink,
-							isSecure(),
-							b.config().remoteAddress(),
-							null,
-							ops);
-			sink.onCancel(ctx);
-
-			BootstrapHandlers.finalize(b, ctx);
-
-			ctx.setFuture(b.connect());
+			Bootstrap bootstrap = b.clone();
+			BootstrapHandlers.finalize(bootstrap, ops, sink)
+			                 .accept(bootstrap.connect());
 		});
 
 	}

@@ -56,7 +56,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	WebsocketServerOperations(String wsUrl,
 			@Nullable String protocols,
 			HttpServerOperations replaced) {
-		super(replaced.channel(), replaced);
+		super(replaced);
 
 		Channel channel = replaced.channel();
 

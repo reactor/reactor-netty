@@ -15,6 +15,14 @@
  */
 package reactor.ipc.netty.tcp;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import javax.annotation.Nullable;
+
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -27,18 +35,13 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
+import io.netty.util.AttributeKey;
+import reactor.ipc.netty.ConnectionEvents;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import javax.annotation.Nullable;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * @author Stephane Maldini
@@ -46,7 +49,9 @@ import java.util.function.Consumer;
 final class TcpUtils {
 
 	static Bootstrap updateProxySupport(Bootstrap b, ProxyProvider proxyOptions) {
-		BootstrapHandlers.updateConfiguration(b, NettyPipeline.ProxyHandler, (ctx, channel) -> {
+		BootstrapHandlers.updateConfiguration(b,
+				NettyPipeline.ProxyHandler,
+				(listener, channel) -> {
 			if (proxyOptions.shouldProxy(b.config()
 					.remoteAddress())) {
 
@@ -65,6 +70,36 @@ final class TcpUtils {
 			return b.resolver(NoopAddressResolverGroup.INSTANCE);
 		}
 		return b;
+	}
+
+	static void fromHostPortAttrsToRemote(Bootstrap b) {
+		if (b.config()
+		     .remoteAddress() == null) {
+			Map<AttributeKey<?>, Object> attrs = b.config()
+			                                      .attrs();
+			String host = (String) attrs.get(HOST);
+			Integer port = (Integer) attrs.get(PORT);
+			Objects.requireNonNull(host, "Host has not been set");
+			Objects.requireNonNull(port, "Port has not been set");
+			b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port));
+		}
+
+		b.attr(HOST, null)
+		 .attr(PORT, null);
+	}
+
+	static void fromHostPortAttrsToLocal(ServerBootstrap b) {
+		if (b.config().localAddress() == null) {
+			Map<AttributeKey<?>, Object> attrs = b.config().attrs();
+			String host = (String) attrs.get(HOST);
+			Integer port = (Integer) attrs.get(PORT);
+			Objects.requireNonNull(host, "Host has not been set");
+			Objects.requireNonNull(port, "Port has not been set");
+			b.localAddress(InetSocketAddressUtil.createResolved(host, port));
+		}
+
+		b.attr(HOST, null)
+		 .attr(PORT, null);
 	}
 
 	static ServerBootstrap updateSslSupport(ServerBootstrap b,
@@ -120,7 +155,8 @@ final class TcpUtils {
 		return b;
 	}
 
-	static final class SslSupportConsumer implements BiConsumer<ContextHandler, Channel> {
+	static final class SslSupportConsumer
+			implements BiConsumer<ConnectionEvents, Channel> {
 
 		final SslProvider sslProvider;
 		final InetSocketAddress sniInfo;
@@ -146,7 +182,7 @@ final class TcpUtils {
 		}
 
 		@Override
-		public void accept(ContextHandler ctx, Channel channel) {
+		public void accept(ConnectionEvents listener, Channel channel) {
 			SslHandler sslHandler;
 
 			if (sniInfo != null) {
@@ -240,9 +276,12 @@ final class TcpUtils {
 
 	static final Logger log = Loggers.getLogger(TcpUtils.class);
 
-	static final ChannelOperations.OnSetup<Channel> TCP_OPS =
+	static final ChannelOperations.OnSetup TCP_OPS =
 			(ch, c, msg) -> ChannelOperations.bind(ch, c);
 
 	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC =
 			sslProviderBuilder -> sslProviderBuilder.sslContext(TcpServerSecure.DEFAULT_SSL_CONTEXT);
+
+	static final AttributeKey<String>  HOST = AttributeKey.newInstance("r_host");
+	static final AttributeKey<Integer> PORT = AttributeKey.newInstance("r_port");
 }

@@ -30,7 +30,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.http.server.HttpServerRequest;
 import reactor.ipc.netty.http.server.HttpServerResponse;
@@ -46,7 +46,7 @@ public class PostAndGetTests {
 
 	static final Logger log = Loggers.getLogger(PostAndGetTests.class);
 
-	private Connection httpServer;
+	private DisposableServer httpServer;
 
 	@Before
 	public void setup() throws InterruptedException {

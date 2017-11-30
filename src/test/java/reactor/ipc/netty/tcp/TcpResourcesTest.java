@@ -15,11 +15,9 @@
  */
 package reactor.ipc.netty.tcp;
 
-import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
@@ -30,7 +28,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.SocketUtils;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
@@ -69,9 +66,7 @@ public class TcpResourcesTest {
 
 		poolResources = new PoolResources() {
 			@Override
-			public ChannelPool selectOrCreate(SocketAddress address,
-											  Supplier<? extends Bootstrap> bootstrap,
-											  ContextHandler ctx, EventLoopGroup group) {
+			public ChannelPool selectOrCreate(Bootstrap bootstrap) {
 				return null;
 			}
 

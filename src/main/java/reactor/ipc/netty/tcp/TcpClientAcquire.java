@@ -16,22 +16,19 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.util.Objects;
+import java.util.function.BiConsumer;
+
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.util.AttributeKey;
-import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
-
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * @author Stephane Maldini
@@ -46,7 +43,7 @@ final class TcpClientAcquire extends TcpClient {
 
 	@Override
 	public Mono<? extends Connection> connect(Bootstrap b) {
-		ChannelOperations.OnSetup<Channel> ops = BootstrapHandlers.channelOperationFactory(b);
+		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
 
 		if (b.config()
 		     .group() == null) {
@@ -57,37 +54,15 @@ final class TcpClientAcquire extends TcpClient {
 					TcpUtils.findSslContext(b));
 		}
 
-		if (b.config().remoteAddress() == null) {
-			Map<AttributeKey<?>, Object> attrs = b.config().attrs();
-			String host = (String) attrs.get(HOST);
-			Integer port = (Integer) attrs.get(PORT);
-			Objects.requireNonNull(host, "Host has not been set");
-			Objects.requireNonNull(port, "Port has not been set");
-			b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port));
-		}
-
-		b.attr(HOST, null)
-		 .attr(PORT, null);
+		TcpUtils.fromHostPortAttrsToRemote(b);
 
 		return Mono.create(sink -> {
-			ChannelPool pool = poolResources.selectOrCreate(b.config().remoteAddress(), () -> b,
-					ContextHandler.newClientContext(sink,
-							isSecure(),
-							b.config().remoteAddress(),
-							null,
-							(ch, c, msg) -> null),
-					b.config().group());
-
-			ContextHandler<Channel> ctx =
-					ContextHandler.newClientContext(sink,
-							isSecure(),
-							b.config().remoteAddress(),
-							pool,
-							ops);
-
-			sink.onCancel(ctx);
-
-			ctx.setFuture(pool.acquire());
+			Bootstrap bootstrap = b.clone();
+			ChannelPool pool = poolResources.selectOrCreate(bootstrap);
+			//bootstrap will be mutated so pool.onChannelCreate will see finalized handler
+			//todo re-implement pool
+			BootstrapHandlers.finalize(bootstrap, ops, sink, pool)
+			                 .accept(pool.acquire());
 		});
 	}
 }

@@ -18,7 +18,7 @@ package reactor.ipc.netty.http.server;
 import java.util.Objects;
 
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.tcp.TcpServer;
 
 /**
@@ -38,7 +38,7 @@ abstract class HttpServerOperator extends HttpServer {
 	}
 
 	@Override
-	protected Mono<? extends Connection> bind(TcpServer b) {
+	protected Mono<? extends DisposableServer> bind(TcpServer b) {
 		return source.bind(b);
 	}
 }

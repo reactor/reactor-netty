@@ -19,6 +19,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.ssl.SslContext;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -40,7 +41,7 @@ abstract class TcpServerOperator extends TcpServer {
 	}
 
 	@Override
-	public Mono<? extends Connection> bind(ServerBootstrap b) {
+	public Mono<? extends DisposableServer> bind(ServerBootstrap b) {
 		return source.bind(b);
 	}
 

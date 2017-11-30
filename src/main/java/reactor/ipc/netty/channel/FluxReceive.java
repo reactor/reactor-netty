@@ -19,6 +19,7 @@ package reactor.ipc.netty.channel;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -60,7 +61,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	FluxReceive(ChannelOperations<?, ?> parent) {
 		this.parent = parent;
-		this.channel = parent.channel;
+		this.channel = parent.channel();
 		this.eventLoop = channel.eventLoop();
 		CANCEL.lazySet(this, () -> {
 			if (eventLoop.inEventLoop()) {
@@ -140,7 +141,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return false;
 	}
 
-	final void cleanQueue(Queue<Object> q){
+	final void cleanQueue(@Nullable Queue<Object> q){
 		if (q != null) {
 			Object o;
 			while ((o = q.poll()) != null) {
@@ -170,10 +171,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if (d && getPending() == 0) {
 					Throwable ex = inboundError;
 					if (ex != null) {
-						parent.context.fireContextError(ex);
-					}
-					else {
-						parent.context.fireContextActive(parent);
+						parent.listener.onReceiveError(channel, ex);
 					}
 					return;
 				}
@@ -356,7 +354,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			channel.close();
 		}
 		if (receiverFastpath && receiver != null) {
-			parent.context.fireContextError(err);
+			parent.listener.onReceiveError(channel, err);
 			receiver.onError(err);
 		}
 		else {
@@ -364,13 +362,13 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 	}
 
-	final void terminateReceiver(Queue<?> q, CoreSubscriber<?> a) {
+	final void terminateReceiver(@Nullable Queue<?> q, CoreSubscriber<?> a) {
 		if (q != null) {
 			q.clear();
 		}
 		Throwable ex = inboundError;
 		if (ex != null) {
-			parent.context.fireContextError(ex);
+			parent.listener.onReceiveError(channel, ex);
 			a.onError(ex);
 		}
 		else {

@@ -54,11 +54,11 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionEvents;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -77,11 +77,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		implements HttpServerRequest, HttpServerResponse {
 
 	@SuppressWarnings("unchecked")
-	static HttpServerOperations bindHttp(Channel channel,
-			ContextHandler<?> context,
+	static HttpServerOperations bindHttp(Connection connection, ConnectionEvents listener,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			Object msg) {
-		return new HttpServerOperations(channel, context, compressionPredicate, (HttpRequest) msg);
+		return new HttpServerOperations(connection, listener, compressionPredicate, (HttpRequest) msg);
 	}
 
 	final HttpResponse nettyResponse;
@@ -93,8 +92,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	Function<? super String, Map<String, String>> paramsResolver;
 
-	HttpServerOperations(Channel ch, HttpServerOperations replaced) {
-		super(ch, replaced);
+	HttpServerOperations(HttpServerOperations replaced) {
+		super(replaced);
 		this.cookieHolder = replaced.cookieHolder;
 		this.responseHeaders = replaced.responseHeaders;
 		this.nettyResponse = replaced.nettyResponse;
@@ -103,11 +102,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.compressionPredicate = replaced.compressionPredicate;
 	}
 
-	HttpServerOperations(Channel ch,
-			ContextHandler<?> context,
+	HttpServerOperations(Connection c,
+			ConnectionEvents listener,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			HttpRequest nettyRequest) {
-		super(ch, context);
+		super(c, listener);
 		this.nettyRequest = Objects.requireNonNull(nettyRequest, "nettyRequest");
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
@@ -393,12 +392,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		return this;
 	}
-
-	@Override
-	protected void onHandlerStart() {
-		applyHandler();
-	}
-
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpContent) {

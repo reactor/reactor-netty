@@ -21,7 +21,6 @@ import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -35,8 +34,6 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.channel.BootstrapHandlers;
-import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -63,10 +60,8 @@ final class DefaultPoolResources implements PoolResources {
 	}
 
 	@Override
-	public ChannelPool selectOrCreate(SocketAddress remote,
-			Supplier<? extends Bootstrap> bootstrap,
-			ContextHandler ctx,
-			EventLoopGroup group) {
+	public ChannelPool selectOrCreate(Bootstrap bootstrap) {
+		SocketAddress remote = bootstrap.config().remoteAddress();
 		SocketAddressHolder holder = new SocketAddressHolder(remote);
 		for (; ; ) {
 			Pool pool = channelPools.get(holder);
@@ -76,7 +71,7 @@ final class DefaultPoolResources implements PoolResources {
 			if (log.isDebugEnabled()) {
 				log.debug("New {} client pool for {}", name, remote);
 			}
-			pool = new Pool(bootstrap.get(), provider, ctx, group);
+			pool = new Pool(bootstrap, provider, bootstrap.config().group());
 			if (channelPools.putIfAbsent(holder, pool) == null) {
 				return pool;
 			}
@@ -88,9 +83,8 @@ final class DefaultPoolResources implements PoolResources {
 			implements ChannelPoolHandler, ChannelPool, ChannelHealthChecker,
 			           GenericFutureListener<Future<Channel>> {
 
-		final ChannelPool               pool;
-		final ContextHandler            ctx;
-		final EventLoopGroup            defaultGroup;
+		final ChannelPool      pool;
+		final EventLoopGroup   defaultGroup;
 
 		final Bootstrap bootstrap;
 
@@ -102,11 +96,9 @@ final class DefaultPoolResources implements PoolResources {
 		@SuppressWarnings("unchecked")
 		Pool(Bootstrap bootstrap,
 				PoolFactory provider,
-				ContextHandler ctx,
 				EventLoopGroup group) {
 			this.bootstrap = bootstrap;
 			this.pool = provider.newPool(bootstrap, this, this);
-			this.ctx = ctx;
 			this.defaultGroup = group;
 			HEALTHY = group.next()
 			               .newSucceededFuture(true);
@@ -202,10 +194,7 @@ final class DefaultPoolResources implements PoolResources {
 						ch.toString(),
 						activeConnections);
 			}
-			if (ctx != null) {
-				BootstrapHandlers.finalize(bootstrap, ctx);
-				ch.pipeline().addFirst(bootstrap.config().handler());
-			}
+			ch.pipeline().addFirst(bootstrap.config().handler());
 		}
 
 		@Override
