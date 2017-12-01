@@ -137,13 +137,10 @@ public class DefaultPoolResourcesTest {
 		try {
 			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
 			ChannelPool pool = PoolResources.fixed("fixedPoolTwoAcquire", 2)
-			                                .selectOrCreate(address,
-					                                () -> new Bootstrap()
+			                                .selectOrCreate(new Bootstrap()
 							                                .remoteAddress(address)
 							                                .channelFactory(NioSocketChannel::new)
-							                                .group(new NioEventLoopGroup(2)),
-					                                createdChannels::add,
-					                                new NioEventLoopGroup(2));
+							                                .group(new NioEventLoopGroup(2)));
 
 			//fail a couple
 			assertThatExceptionOfType(Throwable.class)

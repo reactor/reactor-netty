@@ -25,7 +25,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.BeforeClass;
-import reactor.ipc.netty.http.client.HttpClientOptions;
+import reactor.ipc.netty.http.client.HttpClient;
 
 public class HttpsSendFileTests extends HttpSendFileTests {
 	static SelfSignedCertificate ssc;
@@ -47,10 +47,11 @@ public class HttpsSendFileTests extends HttpSendFileTests {
 	}
 
 	@Override
-	protected void customizeClientOptions(HttpClientOptions.Builder options) {
+	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		try {
-			options.sslContext(SslContextBuilder.forClient()
-			                                    .trustManager(InsecureTrustManagerFactory.INSTANCE).build());
+			SslContext ctx = SslContextBuilder.forClient()
+			                                  .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+			return httpClient.tcpConfiguration(tcpClient -> tcpClient.secure(ctx));
 		}
 		catch (SSLException e) {
 			throw new RuntimeException(e);

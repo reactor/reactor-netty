@@ -24,13 +24,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpMethod;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ByteBufFlux;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -39,12 +41,10 @@ import reactor.test.StepVerifier;
  * @author Violeta Georgieva
  */
 public class HttpTests {
-	@Test public void test() {}
-/*
 
 	@Test
 	public void httpRespondsEmpty() {
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .router(r ->
@@ -55,18 +55,20 @@ public class HttpTests {
 		HttpClient client =
 				HttpClient.prepare()
 				          .port(server.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"));
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
+				                                                  .noSSL())
+				          .wiretap();
 
-		Mono<ByteBuf> content = client
-				            .post()
-				            .uri("/test/World")
-				            , req -> req.header("Content-Type", "text/plain")
-				                                           .sendString(Mono.just("Hello")
-				                                           .log("client-send")))
-				            .flatMap(res -> res.receive()
-				                               .log("client-received")
-				                               .next())
-				            .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
+		Mono<ByteBuf> content =
+				client.headers(h -> h.add("Content-Type", "text/plain"))
+				      .post()
+				      .uri("/test/World")
+				      .send(ByteBufFlux.fromString(Mono.just("Hello")
+				                                       .log("client-send")))
+				      .responseContent()
+				      .log("client-received")
+				      .next()
+				      .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
 
 		StepVerifier.create(content)
 				    .expectComplete()
@@ -77,7 +79,7 @@ public class HttpTests {
 
 	@Test
 	public void httpRespondsToRequestsFromClients() {
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .router(r ->
@@ -91,16 +93,22 @@ public class HttpTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.create("localhost", server.address().getPort());
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
+				                                                  .noSSL())
+				          .wiretap();
 
 		Mono<String> content =
-				client.post("/test/World", req -> req.header("Content-Type", "text/plain")
-				                                     .sendString(Flux.just("Hello")
-				                                     .log("client-send")))
-				      .flatMap(res -> res.receive()
-				                         .aggregate()
-				                         .asString()
-				                         .log("client-received"))
+				client.headers(h -> h.add("Content-Type", "text/plain"))
+				      .post()
+				      .uri("/test/World")
+				      .send(ByteBufFlux.fromString(Flux.just("Hello")
+				                                       .log("client-send")))
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .log("client-received")
 				      .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
 
 		StepVerifier.create(content)
@@ -134,7 +142,7 @@ public class HttpTests {
 		                             }
 		                             return Mono.just(Unpooled.copyInt(i));
 		                         });
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .router(r -> r.get("/test", (req, res) -> {throw new
@@ -163,51 +171,45 @@ public class HttpTests {
 				          .bindNow(Duration.ofSeconds(30));
 
 		HttpClient client =
-				HttpClient.create("localhost", server.address().getPort());
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
+				                                                  .noSSL())
+				          .wiretap();
 
 		Mono<Integer> code =
-				client.get("/test")
-				      .flatMap(res -> {
-				          res.dispose();
-				          return Mono.just(res.status().code());
-				      })
+				client.get()
+				      .uri("/test")
+				      .responseSingle((res, buf) -> Mono.just(res.status().code()))
 				      .log("received-status-1");
 
 		StepVerifier.create(code)
 				    .expectNext(500)
 				    .verifyComplete();
 
-		Mono<ByteBuf> content =
-				client.get("/test2")
-				      .flatMapMany(res -> res.receive()
-				                             .log("received-status-2"))
-				      .next();
-
-		StepVerifier.create(content)
-		            .expectError(IOException.class)
-		            .verify(Duration.ofSeconds(30));
-
-		Assertions.assertThat(errored1.await(30, TimeUnit.SECONDS)).isTrue();
-
-		ByteBuf content1 = client.get("/issue231_1")
-		                .flatMapMany(res -> res.receive()
-		                                       .log("received-status-4"))
-		                .next()
-		                .block(Duration.ofSeconds(30));
+		ByteBuf content =
+				client.get()
+				      .uri("/test2")
+				      .responseContent()
+				      .log("received-status-2")
+				      .next()
+				      .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored2.await(30, TimeUnit.SECONDS)).isTrue();
 
-		content1 = client.get("/issue231_2")
-		                .flatMapMany(res -> res.receive()
-		                                       .log("received-status-4"))
+		ByteBuf content1 = client.get()
+		                 .uri("/issue231_2")
+		                .responseContent()
+		                .log("received-status-4")
 		                .next()
 		                .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).isTrue();
 
-		Flux<ByteBuf> content2 = client.get("/issue237_1")
-		                .flatMapMany(res -> res.receive()
-		                                       .log("received-status-5"));
+		Flux<ByteBuf> content2 = client.get()
+		                               .uri("/issue237_1")
+		                               .responseContent()
+		                               .log("received-status-5");
 
 		StepVerifier.create(content2)
 		            .expectNextCount(4)
@@ -216,9 +218,10 @@ public class HttpTests {
 
 		Assertions.assertThat(errored4.await(30, TimeUnit.SECONDS)).isTrue();
 
-		content2 = client.get("/issue237_2")
-		                .flatMapMany(res -> res.receive()
-		                                       .log("received-status-6"));
+		content2 = client.get()
+		                 .uri("/issue237_2")
+		                 .responseContent()
+		                 .log("received-status-6");
 
 		StepVerifier.create(content2)
 		            .expectNextCount(4)
@@ -227,12 +230,10 @@ public class HttpTests {
 
 		Assertions.assertThat(errored5.await(30, TimeUnit.SECONDS)).isTrue();
 
-		code = client.get("/test3")
-				     .flatMap(res -> {
-				         res.dispose();
-				         return Mono.just(res.status().code())
-				                    .log("received-status-3");
-				     });
+		code = client.get()
+				     .uri("/test3")
+				     .responseSingle((res, buf) -> Mono.just(res.status().code())
+				                                       .log("received-status-3"));
 
 		StepVerifier.create(code)
 		            .expectNext(500)
@@ -246,7 +247,7 @@ public class HttpTests {
 		AtomicInteger clientRes = new AtomicInteger();
 		AtomicInteger serverRes = new AtomicInteger();
 
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .router(r -> r.get("/test/{param}", (req, res) -> {
@@ -264,10 +265,16 @@ public class HttpTests {
 				          .wiretap()
 				          .bindNow(Duration.ofSeconds(5));
 
-		HttpClient client = HttpClient.create("localhost", server.address().getPort());
+		HttpClient client = HttpClient.prepare()
+				                      .port(server.address().getPort())
+				                      .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
+				                                                              .noSSL())
+				                      .wiretap();
 
 		Mono<List<String>> response =
-		    client.get("/test/World", req ->
+		    client.request(HttpMethod.GET)
+		          .uri("/test/World")
+		          .send((req, out) ->
 		              req.header("Content-Type", "text/plain")
 		                 .header("test", "test")
 		                 .options(c -> c.flushOnEach())
@@ -275,11 +282,11 @@ public class HttpTests {
 		                 .sendString(Flux.range(1, 1000)
 		                                 .log("client-send")
 		                                 .map(i -> "" + i)))
-		          .flatMapMany(res -> res.receive()
-		                                 .asString()
-		                                 .log("client-received")
-		                                 .publishOn(Schedulers.parallel())
-		                                 .doOnNext(s -> clientRes.incrementAndGet()))
+		          .responseContent()
+		          .asString()
+		          .log("client-received")
+		          .publishOn(Schedulers.parallel())
+		          .doOnNext(s -> clientRes.incrementAndGet())
 		          .take(1000)
 		          .collectList()
 		          .cache()
@@ -300,7 +307,7 @@ public class HttpTests {
 	@Test
 	public void test100Continue() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .handler((req, res) -> req.receive()
@@ -315,12 +322,15 @@ public class HttpTests {
 				          .bindNow();
 
 		String content =
-				HttpClient.create(server.address().getPort())
-				          .post("/", req -> req.header("Expect", "100-continue")
-				                               .sendString(Flux.just("1", "2", "3", "4", "5")))
-				          .flatMap(res -> res.receive()
-				                             .aggregate()
-				                             .asString())
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .headers(h -> h.add("Expect", "100-continue"))
+				          .post()
+				          .uri("/")
+				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
 				          .block();
 
 		System.out.println(content);
@@ -334,7 +344,7 @@ public class HttpTests {
 	public void streamAndPoolExplicitCompression() throws Exception {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .router(r -> r.post("/hi", (req, res) -> req.receive()
@@ -352,20 +362,25 @@ public class HttpTests {
 
 
 		String content =
-				HttpClient.create(opts -> opts.port(server.address().getPort())
-				                              .compression(true))
-				          .post("/hi", req -> req.sendString(Flux.just("1", "2", "3", "4", "5")))
-				          .flatMap(res -> res.receive()
-				                             .aggregate()
-				                             .asString()
-				                             .log()
-				          ).block();
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .compress()
+				          .post()
+				          .uri("/hi")
+				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .log()
+				          .block();
 
-		Flux<String> f = HttpClient.create(opts -> opts.port(server.address().getPort())
-		                              .compression(true))
-		          .get("/stream")
-		          .flatMapMany(res -> res.receive()
-		                                 .asString());
+		Flux<String> f = HttpClient.prepare()
+		                           .port(server.address().getPort())
+		                           .compress()
+		                           .get()
+		                           .uri("/stream")
+		                           .responseContent()
+		                           .asString();
 		System.out.println(content);
 
 		StepVerifier.create(f)
@@ -382,14 +397,17 @@ public class HttpTests {
 
 
 		content =
-				HttpClient.create(opts -> opts.port(server.address().getPort())
-				                              .compression(true))
-				          .post("/hi", req -> req.sendString(Flux.just("1", "2", "3", "4", "5")))
-				          .flatMap(res -> res.receive()
-				                             .aggregate()
-				                             .asString()
-				                             .log()
-				          ).block();
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .compress()
+				          .post()
+				          .uri("/hi")
+				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .log()
+				          .block();
 
 
 		server.dispose();
@@ -400,7 +418,7 @@ public class HttpTests {
 	public void streamAndPoolDefaultCompression() throws Exception {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .compress()
@@ -419,20 +437,25 @@ public class HttpTests {
 
 
 		String content =
-				HttpClient.create(opts -> opts.port(server.address().getPort())
-				                              .compression(true))
-				          .post("/hi", req -> req.sendString(Flux.just("1", "2", "3", "4", "5")))
-				          .flatMap(res -> res.receive()
-				                             .aggregate()
-				                             .asString()
-				                             .log()
-				          ).block();
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .compress()
+				          .post()
+				          .uri("/hi")
+				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .log()
+				          .block();
 
-		Flux<String> f = HttpClient.create(opts -> opts.port(server.address().getPort())
-		                                               .compression(true))
-		                           .get("/stream")
-		                           .flatMapMany(res -> res.receive()
-		                                                  .asString());
+		Flux<String> f = HttpClient.prepare()
+		                           .port(server.address().getPort())
+		                           .compress()
+		                           .get()
+		                           .uri("/stream")
+		                           .responseContent()
+		                           .asString();
 		System.out.println(content);
 
 		StepVerifier.create(f)
@@ -449,16 +472,19 @@ public class HttpTests {
 
 
 		content =
-				HttpClient.create(opts -> opts.port(server.address().getPort())
-				                              .compression(true))
-				          .post("/hi", req -> req.sendString(Flux.just("1", "2", "3", "4", "5")))
-				          .flatMap(res -> res.receive()
-				                             .aggregate()
-				                             .asString()
-				                             .log()
-				          ).block();
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .compress()
+				          .post()
+				          .uri("/hi")
+				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .log()
+				          .block();
 
 
 		server.dispose();
-	}*/
+	}
 }

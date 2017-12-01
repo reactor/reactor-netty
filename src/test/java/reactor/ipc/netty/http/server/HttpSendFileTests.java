@@ -40,17 +40,16 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.http.client.HttpClientOptions;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class HttpSendFileTests {
-	protected void customizeClientOptions(HttpClientOptions.Builder options) {
-
+	protected HttpClient customizeClientOptions(HttpClient httpClient) {
+		return null;
 	}
 
 	protected HttpServer customizeServerOptions(HttpServer httpServer) {
@@ -129,17 +128,27 @@ public class HttpSendFileTests {
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression, Consumer<String> bodyAssertion) {
-		Connection context =
+		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
 				                                 .tcpConfiguration(tcpServer -> tcpServer.host("localhost")))
 				          .handler((req, resp) -> fn.apply(resp))
 				          .bindNow();
 
-
+		HttpClient client;
+		if (compression) {
+			client = HttpClient.prepare()
+			                   .addressSupplier(() -> context.address())
+			                   .compress();
+		}
+		else {
+			client = HttpClient.prepare()
+			                   .addressSupplier(() -> context.address());
+		}
 		HttpClientResponse response =
-				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(() -> context.address())
-				                                                   .compression(compression)))
-				          .get("/foo")
+				customizeClientOptions(client)
+				          .get()
+				          .uri("/foo")
+				          .response()
 				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
@@ -188,7 +197,7 @@ public class HttpSendFileTests {
 			channel.read(buf, 0, buf, new TestCompletionHandler(channel, fluxSink, allocator, chunk));
 		});
 
-		Connection context =
+		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
 				                                 .tcpConfiguration(tcpServer -> tcpServer.host("localhost")))
 				          .handler((req, resp) -> resp.sendByteArray(req.receive()
@@ -196,11 +205,14 @@ public class HttpSendFileTests {
 				                                                           .asByteArray()))
 				          .bindNow();
 		byte[] response =
-				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(() -> context.address())))
-				          .request(HttpMethod.POST, "/", req -> req.send(content).then())
-				          .flatMap(res -> res.receive()
-				                             .aggregate()
-				                             .asByteArray())
+				customizeClientOptions(HttpClient.prepare()
+				                                 .addressSupplier(() -> context.address()))
+				          .request(HttpMethod.POST)
+				          .uri("/")
+				          .send(content)
+				          .responseContent()
+				          .aggregate()
+				          .asByteArray()
 				          .block();
 
 		assertThat(response).isEqualTo(Files.readAllBytes(tempFile));

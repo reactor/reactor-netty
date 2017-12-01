@@ -48,6 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -351,16 +352,17 @@ public class TcpServerTests {
 		assertThat("countDownLatch counted down",
 				countDownLatch.await(5, TimeUnit.SECONDS));
 	}
-/*
+
 	@Test
 	@Ignore
 	public void proxyTest() throws Exception {
 		HttpServer server = HttpServer.create();
 		server.router(r -> r.get("/search/{search}",
-				(in, out) -> HttpClient.create()
-				                       .get("foaas.herokuapp.com/life/" + in.param(
-						                       "search"))
-				                       .flatMapMany(repliesOut -> out.send(repliesOut.receive()))))
+				(in, out) -> HttpClient.prepare()
+				                       .wiretap()
+				                       .get()
+				                       .uri("foaas.herokuapp.com/life/" + in.param("search"))
+				                       .response((repliesOut, buf) -> out.send(buf))))
 		      .wiretap()
 		      .bindNow()
 		      .onDispose()
@@ -372,18 +374,19 @@ public class TcpServerTests {
 	public void wsTest() throws Exception {
 		HttpServer server = HttpServer.create();
 		server.router(r -> r.get("/search/{search}",
-				(in, out) -> HttpClient.create()
-				                       .get("ws://localhost:3000",
-						                       requestOut -> requestOut.sendWebsocket()
-						                                               .sendString(Mono.just("ping")))
-				                       .flatMapMany(repliesOut -> out.sendGroups(repliesOut.receive()
-				                                                                       .window(100)))))
+				(in, out) -> HttpClient.prepare()
+				                       .wiretap()
+				                       .request(HttpMethod.GET)
+				                       .uri("ws://localhost:3000")
+				                       .send((requestOut, o) -> requestOut.sendWebsocket()
+				                                                          .sendString(Mono.just("ping")))
+				                       .response((repliesOut, buf) ->  out.sendGroups(buf.window(100)))))
 		      .wiretap()
 		      .bindNow()
 		      .onDispose()
 		      .block(Duration.ofSeconds(30));
 	}
-*/
+
 	@Test
 	public void gettingOptionsDuplicates() {
 		TcpServer server = TcpServer.create().host("foo").port(123);

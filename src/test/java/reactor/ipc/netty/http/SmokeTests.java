@@ -43,7 +43,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -59,13 +59,11 @@ import static org.junit.Assert.assertThat;
  */
 @Ignore
 public class SmokeTests {
-	@Test public void test() {}
-/*
 
 	static final Logger log = Loggers.getLogger(SmokeTests.class);
 
 	private Processor<ByteBuf, ByteBuf> processor;
-	private Connection                  httpServer;
+	private DisposableServer            httpServer;
 
 	private final AtomicInteger postReduce         = new AtomicInteger();
 	private final AtomicInteger windows            = new AtomicInteger();
@@ -91,7 +89,7 @@ public class SmokeTests {
     public SmokeTests(int port) {
 		this.port = port;
 	}*/
-/*
+
 	@SuppressWarnings("unchecked")
 	private List<Integer> windowsData  = new ArrayList<>();
 
@@ -304,13 +302,17 @@ public class SmokeTests {
 
 	private List<String> getClientDataPromise() throws Exception {
 		HttpClient httpClient =
-				HttpClient.create(opts -> opts.host("localhost")
-						              .port(httpServer.address().getPort()));
+				HttpClient.prepare()
+				          .port(httpServer.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
+				                                                  .noSSL())
+				          .wiretap();
 
-		Mono<List<String>> content = httpClient.get("/data")
-		                                       .flatMap(f -> f.receive()
-		                                                   .asString()
-		                                                   .collectList())
+		Mono<List<String>> content = httpClient.get()
+		                                       .uri("/data")
+		                                       .responseContent()
+                                               .asString()
+		                                       .collectList()
 		                                       .cache();
 
 		List<String> res = content.block(Duration.ofSeconds(30));
@@ -527,7 +529,7 @@ public class SmokeTests {
 			            .writeBytes(h2)
 			            .writeBytes(t);
 		}
-	}*/
+	}
 
 	/*
 

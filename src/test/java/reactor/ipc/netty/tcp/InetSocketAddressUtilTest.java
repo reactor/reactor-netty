@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.options;
+package reactor.ipc.netty.tcp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

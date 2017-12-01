@@ -22,7 +22,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
@@ -46,7 +46,7 @@ public class HttpRedirectTest {
 
 	private void redirectTests(String url) {
 		AtomicInteger counter = new AtomicInteger(1);
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .handler((req, res) -> {
@@ -66,14 +66,15 @@ public class HttpRedirectTest {
 		PoolResources pool = PoolResources.fixed("test", 1);
 
 		HttpClient client =
-				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
-				                            .poolResources(pool));
+				HttpClient.prepare(pool)
+				          .addressSupplier(() -> server.address());
 
 		try {
 			Flux.range(0, this.numberOfTests)
-			    .concatMap(i -> client.post("/login", r -> r.followRedirect())
-			                          .flatMap(r -> r.receive()
-			                                         .then()))
+			    .concatMap(i -> client.post()
+			                          .uri("/login")
+			                          .send((r, o) -> r.followRedirect())
+			                          .responseContent())
 			    .blockLast(Duration.ofSeconds(30));
 		}
 		finally {
@@ -84,7 +85,7 @@ public class HttpRedirectTest {
 
 	@Test
 	public void testIssue253() {
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(9991)
 				          .router(r -> r.get("/1",
@@ -100,26 +101,39 @@ public class HttpRedirectTest {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.create(ops -> ops.connectAddress(() -> server.address()));
+				HttpClient.prepare()
+				          .addressSupplier(() -> server.address());
 
 		String value =
-				client.get("/1", req -> req.followRedirect().send())
-				      .flatMap(res -> res.receive().aggregate().asString())
+				client.request(HttpMethod.GET)
+				      .uri("/1")
+				      .send((req, out) -> {
+				          req.followRedirect().send();
+				          return out;
+				      })
+				      .responseContent().aggregate().asString()
 				      .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isEqualTo("OK");
 
-		value = client.get("/1")
-		              .flatMap(res -> res.receive().aggregate().asString())
+		value = client.get()
+		              .uri("/1")
+		              .responseContent().aggregate().asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 
-		value = client.get("/2", req -> req.followRedirect().send())
-		              .flatMap(res -> res.receive().aggregate().asString())
+		value = client.request(HttpMethod.GET)
+		              .uri("/2")
+		              .send((req, out) -> {
+		                  req.followRedirect().send();
+		                  return out;
+		              })
+		              .responseContent().aggregate().asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isEqualTo("OK");
 
-		value = client.get("/2")
-		              .flatMap(res -> res.receive().aggregate().asString())
+		value = client.get()
+		              .uri("/2")
+		              .responseContent().aggregate().asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 
@@ -128,7 +142,7 @@ public class HttpRedirectTest {
 
 	@Test
 	public void testIssue278() {
-		Connection server1 =
+		DisposableServer server1 =
 				HttpServer.create()
 				          .port(8888)
 				          .router(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
@@ -138,40 +152,46 @@ public class HttpRedirectTest {
 				          .wiretap()
 				          .bindNow();
 
-		Connection server2 =
+		DisposableServer server2 =
 				HttpServer.create()
 				          .port(8889)
 				          .router(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
 				          .wiretap()
 				          .bindNow();
 
-		HttpClient client = HttpClient.create(8888);
+		HttpClient client = HttpClient.prepare().port(8888);
 
 		Mono<String> response =
-				client.get("/1", req -> req.followRedirect())
-				      .flatMap(res -> res.receive()
-				                         .aggregate()
-				                         .asString());
+				client.request(HttpMethod.GET)
+				      .uri("/1")
+				      .send((req, out) -> req.followRedirect())
+				      .responseContent()
+				      .aggregate()
+				      .asString();
 
 		StepVerifier.create(response)
 		            .expectNextMatches(s -> "OK".equals(s))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		response = client.get("/2", req -> req.followRedirect())
-		                 .flatMap(res -> res.receive()
-		                                    .aggregate()
-		                                    .asString());
+		response = client.request(HttpMethod.GET)
+		                 .uri("/2")
+		                 .send((req, out) -> req.followRedirect())
+		                 .responseContent()
+		                 .aggregate()
+		                 .asString();
 
 		StepVerifier.create(response)
 		            .expectNextMatches(s -> "OK".equals(s))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		response = client.get("/4", req -> req.followRedirect())
-		                 .flatMap(res -> res.receive()
-		                                    .aggregate()
-		                                    .asString());
+		response = client.request(HttpMethod.GET)
+		                 .uri("/4")
+		                 .send((req, out) -> req.followRedirect())
+		                 .responseContent()
+		                 .aggregate()
+		                 .asString();
 
 		StepVerifier.create(response)
 		            .expectNextMatches(s -> "Other".equals(s))

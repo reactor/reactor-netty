@@ -23,7 +23,7 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -33,14 +33,12 @@ import reactor.ipc.netty.tcp.TcpClient;
  * @author tokuhirom
  */
 public class HttpErrorTests {
-	@Test public void test() {}
-/*
 
 	@Test
 	public void test() {
-		Connection server = HttpServer.create()
-		                                    .port(0)
-		                                    .router(httpServerRoutes -> httpServerRoutes.get(
+		DisposableServer server = HttpServer.create()
+		                              .port(0)
+		                              .router(httpServerRoutes -> httpServerRoutes.get(
 				                                "/",
 				                                (httpServerRequest, httpServerResponse) -> {
 					                                return httpServerResponse.sendString(
@@ -66,5 +64,5 @@ public class HttpErrorTests {
 		Assert.assertTrue(result.isEmpty());
 		Assert.assertTrue(r.isDisposed());
 		server.dispose();
-	}*/
+	}
 }

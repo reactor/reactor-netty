@@ -27,6 +27,7 @@ import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
@@ -126,7 +127,7 @@ public class TcpResourcesTest {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(2);
 
-		Connection server = TcpServer.create()
+		DisposableServer server = TcpServer.create()
 		                             .port(port)
 		                             .handler((in, out) -> {
 		                               	try {

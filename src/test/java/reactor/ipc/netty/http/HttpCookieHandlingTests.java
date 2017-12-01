@@ -24,7 +24,7 @@ import org.junit.Test;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -33,12 +33,10 @@ import reactor.test.StepVerifier;
  * @author Violeta Georgieva
  */
 public class HttpCookieHandlingTests {
-	@Test public void test() {}
-/*
 
 	@Test
 	public void clientWithoutCookieGetsANewOneFromServer() {
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .router(r -> r.get("/test", (req, resp) ->
@@ -49,9 +47,14 @@ public class HttpCookieHandlingTests {
 				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
-				HttpClient.create("localhost", server.address().getPort())
-				          .get("/test")
-				          .flatMap(res -> Mono.just(res.cookies()))
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
+				                                                  .noSSL())
+				          .wiretap()
+				          .get()
+				          .uri("/test")
+				          .responseSingle((res, buf) -> Mono.just(res.cookies()))
 				          .doOnSuccess(m -> System.out.println(m))
 				          .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
 
@@ -64,5 +67,5 @@ public class HttpCookieHandlingTests {
 				    .verify(Duration.ofSeconds(30));
 
 		server.dispose();
-	}*/
+	}
 }
