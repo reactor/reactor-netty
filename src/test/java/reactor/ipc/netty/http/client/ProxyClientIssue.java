@@ -45,7 +45,6 @@ import static java.util.Locale.ENGLISH;
  * A manual test for https://github.com/reactor/reactor-netty/issues/163
  */
 public class ProxyClientIssue {
-/*
 
 	private static final Set<String> headersRemovedOnRequest =
 			new HashSet<>(Arrays.asList("proxy-connection",
@@ -102,12 +101,13 @@ public class ProxyClientIssue {
 		for (int i = 0; i < concurrencyLevel; i++) {
 			Mono<Void> currentRequestFlow = Mono.empty();
 			for (int j = 0; j < requestCount; j++) {
-				currentRequestFlow = currentRequestFlow.then(HttpClient.create()
-				                                                       .get("http://localhost:" + PROXY_PORT + "/0/content/" + ThreadLocalRandom.current()
+				currentRequestFlow = currentRequestFlow.then(HttpClient.prepare()
+				                                                       .wiretap()
+				                                                       .get()
+				                                                       .uri("http://localhost:" + PROXY_PORT + "/0/content/" + ThreadLocalRandom.current()
 				                                                                                                                                .nextInt(
-						                                                                                                                                1000))
-				                                                       .flatMapMany(
-						                                                       clientResponse -> {
+				                                                                                                                                        1000))
+				                                                       .response((clientResponse, buf) -> {
 							                                                       HttpResponseStatus
 									                                                       statusCode =
 									                                                       clientResponse.status();
@@ -119,7 +119,7 @@ public class ProxyClientIssue {
 								                                                       System.out.println(
 										                                                       ".");
 							                                                       }
-							                                                       return clientResponse.receive();
+							                                                       return buf;
 						                                                       })
 				                                                       .then());
 			}
@@ -142,15 +142,18 @@ public class ProxyClientIssue {
 	}
 
 	private Mono<Void> proxy(HttpServerRequest request, HttpServerResponse response) {
-		return HttpClient.create()
-		                 .get(URI.create("http://localhost:" + CONTENT_SERVER_PORT +
+		return HttpClient.prepare()
+		                 .wiretap()
+		                 .headers(h -> h.add(filterRequestHeaders(request.requestHeaders())))
+		                 .get()
+		                 .uri(URI.create("http://localhost:" + CONTENT_SERVER_PORT +
 						                 "/" + request.path())
-		                         .toString(),
-				                 req -> req.headers(filterRequestHeaders(request.requestHeaders())))
+		                         .toString())
 
-		                 .flatMap(targetResponse -> response.headers(filterResponseHeaders(targetResponse.responseHeaders()))
-		                                                    .send(targetResponse.receive().retain())
-		                                                    .then());
+		                 .response((targetResponse, buf) -> response.headers(filterResponseHeaders(targetResponse.responseHeaders()))
+		                                                    .send(buf.retain())
+		                                                    .then())
+		                 .then();
 	}
 
 	private HttpHeaders filterRequestHeaders(HttpHeaders httpHeaders) {
@@ -168,5 +171,5 @@ public class ProxyClientIssue {
 		              .collect(DefaultHttpHeaders::new,
 				              (h, e) -> h.set(e.getKey(), e.getValue()),
 				              HttpHeaders::set);
-	}*/
+	}
 }

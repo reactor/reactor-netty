@@ -33,14 +33,12 @@ import reactor.ipc.netty.tcp.TcpClient;
  * @author tokuhirom
  */
 public class HttpErrorTests {
-	@Test public void test() {}
-/*
 
 	@Test
 	public void test() {
 		DisposableServer server = HttpServer.create()
-		                                    .port(0)
-		                                    .router(httpServerRoutes -> httpServerRoutes.get(
+		                              .port(0)
+		                              .router(httpServerRoutes -> httpServerRoutes.get(
 				                                "/",
 				                                (httpServerRequest, httpServerResponse) -> {
 					                                return httpServerResponse.sendString(
@@ -66,5 +64,5 @@ public class HttpErrorTests {
 		Assert.assertTrue(result.isEmpty());
 		Assert.assertTrue(r.isDisposed());
 		server.dispose();
-	}*/
+	*/}
 }

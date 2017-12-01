@@ -21,6 +21,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -28,7 +29,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
 
@@ -39,12 +40,10 @@ import static org.hamcrest.CoreMatchers.is;
  * @author smaldini
  */
 public class WebsocketTest {
-	@Test public void test() {}
-/*
 
 	static final String auth = "bearer abc";
 
-	Connection httpServer = null;
+	DisposableServer httpServer = null;
 
 	@After
 	public void disposeHttpServer() {
@@ -61,17 +60,21 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.create(httpServer.address()
-		                                  .getPort())
-		                .get("/test",
-				                out -> out.addHeader("Authorization", auth)
-				                          .sendWebsocket())
-		                .flatMapMany(in -> in.receive()
-		                                 .asString())
-		                .log()
-		                .collectList()
-		                .block(Duration.ofSeconds(30))
-		                .get(0);
+		String res =
+				HttpClient.prepare()
+				          .port(httpServer.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+				          .wiretap()
+				          .request(HttpMethod.GET)
+				          .uri("/test")
+				          .send((req, out) -> req.addHeader("Authorization", auth)
+				                                 .sendWebsocket())
+				          .responseContent()
+				          .asString()
+				          .log()
+				          .collectList()
+				          .block(Duration.ofSeconds(30))
+				          .get(0);
 
 		Assert.assertThat(res, is("test"));
 	}
@@ -109,6 +112,7 @@ public class WebsocketTest {
 //		Thread.sleep(200000);
 //	}
 
+	/* TODO ws?
 	@Test
 	public void unidirectional() {
 		int c = 10;
@@ -123,9 +127,12 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		Flux<String> ws = HttpClient.create(httpServer.address()
-		                                              .getPort())
-		                            .ws("/")
+		Flux<String> ws = HttpClient.prepare()
+		                            .port(httpServer.address().getPort())
+		                            .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                            .wiretap()
+		                            .ws()
+		                            .uri("/")
 		                            .flatMapMany(in -> in.receiveWebsocket()
 		                                             .aggregateFrames()
 		                                             .receive()
@@ -260,7 +267,7 @@ public class WebsocketTest {
 		            //the SERVER returned null which means that it couldn't select a protocol
 		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
 	}
-
+*/
 	@Test
 	public void simpleSubprotocolServerSupported() throws Exception {
 		httpServer = HttpServer.create()
@@ -272,15 +279,23 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.create(httpServer.address().getPort())
-		                       .get("/test",
-				                out -> out.addHeader("Authorization", auth)
-				                          .sendWebsocket("SUBPROTOCOL,OTHER"))
-		                .flatMapMany(in -> in.receive().asString()).log().collectList().block(Duration.ofSeconds(30)).get(0);
+		String res = HttpClient.prepare()
+		                       .port(httpServer.address().getPort())
+		                       .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                       .wiretap()
+		                       .request(HttpMethod.GET)
+		                       .uri("/test")
+		                       .send((req, out) -> req.addHeader("Authorization", auth)
+		                                              .sendWebsocket("SUBPROTOCOL,OTHER"))
+		                       .responseContent()
+		                       .asString()
+		                       .log()
+		                       .collectList()
+		                       .block(Duration.ofSeconds(30)).get(0);
 
 		Assert.assertThat(res, is("test"));
 	}
-
+/*
 	@Test
 	public void simpleSubprotocolSelected() throws Exception {
 		httpServer = HttpServer.create()
@@ -292,10 +307,14 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.create(httpServer.address().getPort())
-		                       .get("/test",
-				                out -> out.addHeader("Authorization", auth)
-				                          .sendWebsocket("Common,OTHER"))
+		String res = HttpClient.prepare()
+		                       .port(httpServer.address().getPort())
+		                       .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                       .wiretap()
+		                       .request(HttpMethod.GET)
+		                       .uri("/test")
+		                       .send((req, out) -> req.addHeader("Authorization", auth)
+		                                              .sendWebsocket("Common,OTHER"))
 		                       .map(HttpClientResponse::receiveWebsocket)
 		                       .flatMapMany(in -> in.receive().asString()
 				                       .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))

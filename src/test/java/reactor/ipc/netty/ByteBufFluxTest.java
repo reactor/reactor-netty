@@ -111,7 +111,7 @@ public class ByteBufFluxTest {
         }
         file.delete();
     }
-/*
+
     @Test
     public void testByteBufFluxFromPathWithoutSecurity() throws Exception {
         doTestByteBufFluxFromPath(false);
@@ -123,9 +123,9 @@ public class ByteBufFluxTest {
     }
 
     private void doTestByteBufFluxFromPath(boolean withSecurity) throws Exception {
-        Consumer<HttpClientOptions.Builder> clientOptions;
         final int serverPort = SocketUtils.findAvailableTcpPort();
         final HttpServer server;
+        final HttpClient client;
         if (withSecurity) {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -133,28 +133,33 @@ public class ByteBufFluxTest {
             server = HttpServer.create()
                                .port(serverPort)
                                .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer));
-            clientOptions = ops -> ops.port(serverPort).sslContext(sslClient);
+            client = HttpClient.prepare()
+                               .port(serverPort)
+                               .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient));
         }
         else {
             server = HttpServer.create()
                                .port(serverPort);
-            clientOptions = ops -> ops.port(serverPort);
+            client = HttpClient.prepare()
+                               .port(serverPort)
+                               .tcpConfiguration(tcpClient -> tcpClient.noSSL());
         }
 
         Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-        Connection c = server.handler((req, res) ->
+        DisposableServer c = server.handler((req, res) ->
                                        res.send(ByteBufFlux.fromPath(path))
                                           .then())
-                             .wiretap()
-                             .bindNow();
+                                   .wiretap()
+                                   .bindNow();
 
         AtomicLong counter = new AtomicLong(0);
-        HttpClient.create(clientOptions)
-                  .get("/download")
-                  .flatMapMany(NettyInbound::receive)
-                  .doOnNext(b -> counter.addAndGet(b.readableBytes()))
-                  .blockLast(Duration.ofSeconds(30));
+        client.wiretap()
+              .get()
+              .uri("/download")
+              .responseContent()
+              .doOnNext(b -> counter.addAndGet(b.readableBytes()))
+              .blockLast(Duration.ofSeconds(30));
         assertTrue(counter.get() == 1245);
         c.disposeNow();
-    }*/
+    }
 }

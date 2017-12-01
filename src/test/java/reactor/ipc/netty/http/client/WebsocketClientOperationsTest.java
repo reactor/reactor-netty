@@ -17,13 +17,17 @@ package reactor.ipc.netty.http.client;
 
 import java.time.Duration;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,8 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Violeta Georgieva
  */
 public class WebsocketClientOperationsTest {
-	@Test public void test() {}
-/*
 
 	@Test
 	public void requestError() {
@@ -51,7 +53,7 @@ public class WebsocketClientOperationsTest {
 
 	private void failOnClientServerError(
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
-		Connection httpServer = HttpServer.create()
+		DisposableServer httpServer = HttpServer.create()
 		                                  .port(0)
 		                                  .router(
 			routes -> routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
@@ -66,11 +68,20 @@ public class WebsocketClientOperationsTest {
 		                                  .wiretap()
 		                                  .bindNow();
 
-		Mono<HttpClientResponse> response =
-			HttpClient.create(httpServer.address().getPort())
-			          .get("/ws", request -> Mono.just(request)
-			                                     .transform(req -> doLoginFirst(req, httpServer.address().getPort()))
-			                                     .flatMapMany(req -> ws(req, clientSubprotocol)))
+		Flux<Tuple2<ByteBuf, Integer>> response =
+			HttpClient.prepare()
+			          .port(httpServer.address().getPort())
+			          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+			          .wiretap()
+			          .request(HttpMethod.GET)
+			          .uri("/ws")
+			          .send((request, out) -> {
+			              Mono.just(request)
+			                  .transform(req -> doLoginFirst(req, httpServer.address().getPort()))
+			                  .flatMapMany(req -> ws(req, clientSubprotocol));
+			              return out;
+			          })
+			          .response((res, buf) -> buf.zipWith(Mono.just(res.status().code())))
 			          .switchIfEmpty(Mono.error(new Exception()));
 
 		if(!serverSubprotocol.equals(clientSubprotocol)) {
@@ -79,10 +90,7 @@ public class WebsocketClientOperationsTest {
 		}
 		else {
 			StepVerifier.create(response)
-			            .assertNext(res ->
-			               { assertThat(res.status().code()).isEqualTo(serverStatus == 200 ? 101 : serverStatus);
-			                res.dispose();
-			            })
+			            .assertNext(t -> assertThat(t.getT2()).isEqualTo(serverStatus == 200 ? 101 : serverStatus))
 			            .expectComplete()
 			            .verify(Duration.ofSeconds(30));
 		}
@@ -100,15 +108,16 @@ public class WebsocketClientOperationsTest {
 	}
 
 	private Mono<String> login(int port) {
-		return HttpClient.create(port)
-		                 .post("/login", r -> r)
-		                 .map(res -> {
-		                     res.dispose();
-		                     return res.status().code() + "";
-		                 });
+		return HttpClient.prepare()
+		                 .port(port)
+		                 .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                 .wiretap()
+		                 .post()
+		                 .uri("/login")
+		                 .responseSingle((res, buf) -> Mono.just(res.status().code() + ""));
 	}
 
 	private WebsocketOutbound ws(HttpClientRequest request, String clientSubprotocol) {
 		return request.sendWebsocket(clientSubprotocol);
-	}*/
+	}
 }

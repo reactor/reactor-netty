@@ -382,22 +382,24 @@ public class TcpClientTests {
 		assertThat(duration, is(greaterThanOrEqualTo(500L)));
 		client.dispose();
 	}
-/*
+
 	@Test
 	public void nettyNetChannelAcceptsNettyChannelHandlers() throws InterruptedException {
-		HttpClient client = HttpClient.create();
+		HttpClient client = HttpClient.prepare()
+		                              .wiretap();
 
 		final CountDownLatch latch = new CountDownLatch(1);
-		System.out.println(client.get("http://www.google.com/?q=test%20d%20dq")
-		                         .flatMap(r -> r.receive()
-		                                     .asString()
-		                                     .collectList())
+		System.out.println(client.get()
+		                         .uri("http://www.google.com/?q=test%20d%20dq")
+		                         .responseContent()
+		                         .asString()
+		                         .collectList()
 		                         .doOnSuccess(v -> latch.countDown())
 		                         .block(Duration.ofSeconds(30)));
 
 		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
 	}
-*/
+
 	@Test
 	public void gettingOptionsDuplicates() {
 		TcpClient client = TcpClient.create().host("foo").port(123);

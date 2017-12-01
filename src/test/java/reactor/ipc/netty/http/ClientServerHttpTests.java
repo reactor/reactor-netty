@@ -37,7 +37,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.TopicProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -50,10 +50,8 @@ import static org.junit.Assert.assertThat;
  */
 @Ignore
 public class ClientServerHttpTests {
-	@Test public void test() {}
-/*
 
-	private Connection                httpServer;
+	private DisposableServer          httpServer;
 	private Processor<String, String> broadcaster;
 
 	@Test
@@ -282,14 +280,18 @@ public class ClientServerHttpTests {
 	}
 
 	private Mono<List<String>> getClientDataPromise() throws Exception {
-		HttpClient httpClient = HttpClient.create("localhost", httpServer.address()
-		                                                                 .getPort());
+		HttpClient httpClient =
+				HttpClient.prepare()
+				          .port(httpServer.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
+				                                                  .noSSL())
+				          .wiretap();
 
-		return httpClient.get("/data")
-		                 .flatMapMany(s -> s.receive()
-		                                .asString()
-		                                .log("client")
-		                                .next())
+		return httpClient.get()
+		                 .uri("/data")
+		                 .responseContent()
+		                 .asString()
+		                 .log("client")
 		                 .collectList()
 		                 .cache()
 		                 .toProcessor();
@@ -371,5 +373,5 @@ public class ClientServerHttpTests {
 			String data = buf.toString();
 			return alloc.buffer().writeBytes(data.getBytes());
 		}
-	}*/
+	}
 }
