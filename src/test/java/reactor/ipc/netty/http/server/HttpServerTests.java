@@ -47,6 +47,7 @@ import javax.net.ssl.SSLException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -70,6 +71,7 @@ import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.DisposableChannel;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
@@ -87,13 +89,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Stephane Maldini
  */
 public class HttpServerTests {
-	@Test public void test() {}
-/*
 
 	@Test
 	@Ignore
 	public void defaultHttpPort() {
-		Connection blockingFacade = HttpServer.create()
+		DisposableServer blockingFacade = HttpServer.create()
 		                                      .handler((req, resp) -> resp.sendNotFound())
 		                                      .wiretap()
 		                                      .bindNow();
@@ -106,7 +106,7 @@ public class HttpServerTests {
 	@Test
 	@Ignore
 	public void defaultHttpPortWithAddress() {
-		Connection blockingFacade = HttpServer.create()
+		DisposableServer blockingFacade = HttpServer.create()
 		                                      .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
 		                                      .handler((req, resp) -> resp.sendNotFound())
 		                                      .wiretap()
@@ -121,7 +121,7 @@ public class HttpServerTests {
 	public void releaseInboundChannelOnNonKeepAliveRequest() throws Exception {
 		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 
-		Connection c = HttpServer.create()
+		DisposableServer c = HttpServer.create()
 		                         .port(0)
 		                         .handler((req, resp) -> resp.status(200).send())
 		                         .wiretap()
@@ -132,16 +132,15 @@ public class HttpServerTests {
 		                                                                .getBytes()));
 
 		Flux.range(0, 100)
-		    .concatMap(n -> HttpClient.create(c.address()
-		                                       .getPort())
-		                              .post("/return",
-				                              r -> r.keepAlive(false)
-				                                    .send(src))
-		                              .map(resp -> {
-			                              resp.dispose();
-			                              return resp.status()
-			                                         .code();
-		                              }))
+		    .concatMap(n -> HttpClient.prepare()
+		                              .port(c.address().getPort())
+		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                              .wiretap()
+		                              .post()
+		                              .uri("/return")
+		                              .send((r, out) -> r.keepAlive(false)
+		                                                 .send(src))
+		                              .responseSingle((res, buf) -> Mono.just(res.status().code())))
 		    .collectList()
 		    .block();
 
@@ -156,7 +155,7 @@ public class HttpServerTests {
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
 
-		Connection context =
+		DisposableServer context =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
 				          .handler((req, resp) -> resp.sendFile(largeFile))
@@ -164,16 +163,18 @@ public class HttpServerTests {
 				          .bindNow();
 
 
-		HttpClientResponse response =
-				HttpClient.create(opt -> opt.port(context.address().getPort())
-				                            .sslContext(sslClient))
-				          .get("/foo")
+		String body =
+				HttpClient.prepare()
+				          .port(context.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
+				          .wiretap()
+				          .get()
+				          .uri("/foo")
+				          .responseSingle((res, buf) -> buf.asString(StandardCharsets.UTF_8))
 				          .block(Duration.ofSeconds(120));
 
 		context.dispose();
 		context.onDispose().block();
-
-		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 
 		assertThat(body)
 				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
@@ -216,7 +217,7 @@ public class HttpServerTests {
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn) {
-		Connection context =
+		DisposableServer context =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
 				          .handler((req, resp) -> fn.apply(resp))
@@ -224,15 +225,18 @@ public class HttpServerTests {
 				          .bindNow();
 
 
-		HttpClientResponse response =
-				HttpClient.create(opt -> opt.connectAddress(() -> context.address()))
-				          .get("/foo")
+		String body =
+				HttpClient.prepare()
+				          .addressSupplier(() -> context.address())
+				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+				          .wiretap()
+				          .get()
+				          .uri("/foo")
+				          .responseSingle((res, buf) -> buf.asString(StandardCharsets.UTF_8))
 				          .block(Duration.ofSeconds(120));
 
 		context.dispose();
 		context.onDispose().block();
-
-		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
 
 		assertThat(body)
 				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
@@ -361,19 +365,25 @@ public class HttpServerTests {
 	@Test
 	public void testRestart() {
 		// start a first server with a handler that answers HTTP 200 OK
-		Connection context = HttpServer.create()
+		DisposableServer context = HttpServer.create()
 		                               .port(8080)
 		                               .handler((req, resp) -> resp.status(200)
 		                                                                .send().log())
 		                               .wiretap()
 		                               .bindNow();
 
-		HttpClientResponse response = HttpClient.create(8080).get("/").block();
+		int code = HttpClient.prepare()
+		                     .port(8080)
+		                     .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                     .wiretap()
+		                     .get()
+		                     .uri("/")
+		                     .responseSingle((res, buf) -> Mono.just(res.status().code()))
+		                     .block();
 
 		// checking the response status, OK
-		assertThat(response.status().code()).isEqualTo(200);
+		assertThat(code).isEqualTo(200);
 		// dispose the Netty context and wait for the channel close
-		response.dispose();
 		context.dispose();
 		context.onDispose().block();
 
@@ -387,29 +397,39 @@ public class HttpServerTests {
 		                    .wiretap()
 		                    .bindNow();
 
-		response = HttpClient.create(8080).get("/").block();
+		code = HttpClient.prepare()
+		                     .port(8080)
+		                     .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                     .wiretap()
+		                     .get()
+		                     .uri("/")
+		                     .responseSingle((res, buf) -> Mono.just(res.status().code()))
+		                     .block();
 
 		// fails, response status is 200 and debugging shows the the previous handler is called
-		assertThat(response.status().code()).isEqualTo(201);
-		response.dispose();
+		assertThat(code).isEqualTo(201);
 		context.dispose();
 		context.onDispose().block();
 	}
 
 	@Test
 	public void errorResponseAndReturn() throws Exception {
-		Connection c = HttpServer.create()
+		DisposableServer c = HttpServer.create()
 		                         .port(0)
 		                         .handler((req, resp) -> Mono.error(new Exception("returnError")))
 		                         .wiretap()
 		                         .bindNow();
 
-		HttpClientResponse res =
-				HttpClient.create(c.address().getPort())
-				          .get("/return")
+		int code =
+				HttpClient.prepare()
+				          .port(c.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+				          .wiretap()
+				          .get()
+				          .uri("/return")
+				          .responseSingle((res, buf) -> Mono.just(res.status().code()))
 				          .block();
-		assertThat(res.status().code()).isEqualTo(500);
-		res.dispose();
+		assertThat(code).isEqualTo(500);
 
 		c.dispose();
 
@@ -420,7 +440,7 @@ public class HttpServerTests {
 
 		AtomicInteger i = new AtomicInteger();
 
-		Connection server = HttpServer.create()
+		DisposableServer server = HttpServer.create()
 		                              .port(0)
 		                              .handler((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
 		                                                          .sendString(Mono.just(i.incrementAndGet())
@@ -475,18 +495,20 @@ public class HttpServerTests {
 		Flux<String> test = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
 
-		Connection c = HttpServer.create()
+		DisposableServer c = HttpServer.create()
 		                         .port(0)
 		                         .handler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
 		                         .wiretap()
 		                         .bindNow();
 
-		Flux<String> client = HttpClient.create(c.address()
-		                                         .getPort())
-		                                .get("/")
-		                                .block(Duration.ofSeconds(30))
-		                                .addHandler(new LineBasedFrameDecoder(10))
-		                                .receive()
+		Flux<String> client = HttpClient.prepare()
+		                                .port(c.address().getPort())
+		                                .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                                .wiretap()
+		                                .doOnResponse(res -> res.addHandler(new LineBasedFrameDecoder(10)))
+		                                .get()
+		                                .uri("/")
+		                                .responseContent()
 		                                .asString();
 
 		StepVerifier.create(client)
@@ -500,7 +522,7 @@ public class HttpServerTests {
 	@Test
 	public void keepAlive() throws URISyntaxException {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
-		Connection c = HttpServer.create()
+		DisposableServer c = HttpServer.create()
 		                         .port(0)
 		                         .router(routes -> routes.directory("/test", resource))
 		                         .wiretap()
@@ -508,56 +530,74 @@ public class HttpServerTests {
 
 		HttpResources.set(PoolResources.fixed("http", 1));
 
-		HttpClientResponse response0 = HttpClient.create(c.address()
-		                                                  .getPort())
-		                                         .get("/test/index.html")
-		                                         .block(Duration.ofSeconds(30));
+		Channel response0 = HttpClient.prepare()
+		                              .port(c.address().getPort())
+		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                              .wiretap()
+		                              .get()
+		                              .uri("/test/index.html")
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .block(Duration.ofSeconds(30));
 
-		HttpClientResponse response1 = HttpClient.create(c.address()
-		                                                  .getPort())
-		                                         .get("/test/test.css")
-		                                         .block(Duration.ofSeconds(30));
+		Channel response1 = HttpClient.prepare()
+		                              .port(c.address().getPort())
+		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                              .wiretap()
+		                              .get()
+		                              .uri("/test/test.css")
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .block(Duration.ofSeconds(30));
 
-		HttpClientResponse response2 = HttpClient.create(c.address()
-		                                                  .getPort())
-		                                         .get("/test/test1.css")
-		                                         .block(Duration.ofSeconds(30));
+		Channel response2 = HttpClient.prepare()
+		                              .port(c.address().getPort())
+		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                              .wiretap()
+		                              .get()
+		                              .uri("/test/test1.css")
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .block(Duration.ofSeconds(30));
 
-		HttpClientResponse response3 = HttpClient.create(c.address()
-		                                                  .getPort())
-		                                         .get("/test/test2.css")
-		                                         .block(Duration.ofSeconds(30));
+		Channel response3 = HttpClient.prepare()
+		                              .port(c.address().getPort())
+		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                              .wiretap()
+		                              .get()
+		                              .uri("/test/test2.css")
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .block(Duration.ofSeconds(30));
 
-		HttpClientResponse response4 = HttpClient.create(c.address()
-		                                                  .getPort())
-		                                         .get("/test/test3.css")
-		                                         .block(Duration.ofSeconds(30));
+		Channel response4 = HttpClient.prepare()
+		                              .port(c.address().getPort())
+		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                              .wiretap()
+		                              .get()
+		                              .uri("/test/test3.css")
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .block(Duration.ofSeconds(30));
 
-		HttpClientResponse response5 = HttpClient.create(c.address()
-		                                                  .getPort())
-		                                         .get("/test/test4.css")
-		                                         .block(Duration.ofSeconds(30));
-
+		Channel response5 = HttpClient.prepare()
+		                              .port(c.address().getPort())
+		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                              .wiretap()
+		                              .get()
+		                              .uri("/test/test4.css")
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .block(Duration.ofSeconds(30));
+/* TODO disable pool?
 		HttpClientResponse response6 = HttpClient.create(opts -> opts.port(c.address().getPort())
 		                                                             .disablePool())
 		                                         .get("/test/test5.css")
 		                                         .block(Duration.ofSeconds(30));
-
-		Assert.assertEquals(response0.channel(), response1.channel());
-		Assert.assertEquals(response0.channel(), response2.channel());
-		Assert.assertEquals(response0.channel(), response3.channel());
-		Assert.assertEquals(response0.channel(), response4.channel());
-		Assert.assertEquals(response0.channel(), response5.channel());
-		Assert.assertNotEquals(response0.channel(), response6.channel());
+*/
+		Assert.assertEquals(response0, response1);
+		Assert.assertEquals(response0, response2);
+		Assert.assertEquals(response0, response3);
+		Assert.assertEquals(response0, response4);
+		Assert.assertEquals(response0, response5);
+		//TODO
+		//Assert.assertNotEquals(response0, response6);
 
 		HttpResources.reset();
-		response0.dispose();
-		response1.dispose();
-		response2.dispose();
-		response3.dispose();
-		response4.dispose();
-		response5.dispose();
-		response6.dispose();
 		c.dispose();
 	}
 
@@ -574,7 +614,7 @@ public class HttpServerTests {
 
 	@Test
 	public void startRouter() {
-		Connection facade = HttpServer.create()
+		DisposableServer facade = HttpServer.create()
 		                              .port(0)
 		                              .router(routes -> routes.get("/hello",
 				                                        (req, resp) -> resp.sendString(Mono.just("hello!"))))
@@ -582,18 +622,26 @@ public class HttpServerTests {
 		                              .bindNow();
 
 		try {
-			HttpClientResponse res =
-					HttpClient.create(facade.address().getPort())
-					          .get("/hello")
+			int code =
+					HttpClient.prepare()
+					          .port(facade.address().getPort())
+					          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+					          .wiretap()
+					          .get()
+					          .uri("/hello")
+					          .responseSingle((res, buf) -> Mono.just(res.status().code()))
 					          .block();
-			assertThat(res.status().code()).isEqualTo(200);
-			res.dispose();
+			assertThat(code).isEqualTo(200);
 
-			res = HttpClient.create(facade.address().getPort())
-			                .get("/helloMan")
-			                .block();
-			assertThat(res.status().code()).isEqualTo(404);
-			res.dispose();
+			code = HttpClient.prepare()
+			                 .port(facade.address().getPort())
+			                 .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+			                 .wiretap()
+			                 .get()
+			                 .uri("/helloMan")
+			                 .responseSingle((res, buf) -> Mono.just(res.status().code()))
+			                 .block();
+			assertThat(code).isEqualTo(404);
 		}
 		finally {
 			facade.disposeNow();
@@ -604,7 +652,7 @@ public class HttpServerTests {
 	public void startRouterAndAwait()
 			throws InterruptedException {
 		ExecutorService ex = Executors.newSingleThreadExecutor();
-		AtomicReference<Connection> ref = new AtomicReference<>();
+		AtomicReference<DisposableServer> ref = new AtomicReference<>();
 
 		Future<?> f = ex.submit(() ->
 			    HttpServer.create()
@@ -630,7 +678,7 @@ public class HttpServerTests {
 
 	@Test
 	public void nonContentStatusCodes() {
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
 				          .router(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
@@ -656,39 +704,33 @@ public class HttpServerTests {
 	}
 
 	private void checkResponse(String url, InetSocketAddress address) {
-		Mono<Tuple3<Integer, HttpHeaders, String>> response =
-				HttpClient.create(ops -> ops.connectAddress(() -> address))
-				          .get(url)
-				          .flatMap(res ->
-				              Mono.zip(Mono.just(res.status().code()),
-				                       Mono.just(res.responseHeaders()),
-				                       res.receive().aggregate().asString().defaultIfEmpty("NO BODY"))
-				              );
+		Tuple2<Integer, HttpHeaders> response =
+				HttpClient.prepare()
+				          .addressSupplier(() -> address)
+				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+				          .wiretap()
+				          .get()
+				          .uri(url)
+				          .responseSingle((r, buf) -> Mono.just(r.status().code())
+				                                          .zipWith(Mono.just(r.responseHeaders())))
+				          .block(Duration.ofSeconds(30));
 
-		StepVerifier.create(response)
-		            .expectNextMatches(t -> {
-		                int code = t.getT1();
-		                HttpHeaders h = t.getT2();
-		                if (code == 204 || code == 304) {
-		                    return !h.contains("Transfer-Encoding") &&
-		                           !h.contains("Content-Length") &&
-		                           "NO BODY".equals(t.getT3());
-		                }
-		                else if (code == 205) {
-		                    return h.contains("Transfer-Encoding") &&
-		                           !h.contains("Content-Length") &&
-		                           "NO BODY".equals(t.getT3());
-		                }else {
-		                    return false;
-		                }
-		            })
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		int code = response.getT1();
+		HttpHeaders h = response.getT2();
+		if (code == 204 || code == 304) {
+			assertThat(!h.contains("Transfer-Encoding") &&
+			           !h.contains("Content-Length")).isTrue();
+		}
+		else if (code == 205) {
+			assertThat(!h.contains("Transfer-Encoding") &&
+			           h.contains("Content-Length") &&
+			           Integer.parseInt(h.get("Content-Length")) == 0).isTrue();
+		}
 	}
 
 	@Test
 	public void testContentLengthHeadRequest() {
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
 				          .router(r -> r.route(req -> req.uri().startsWith("/1"),
@@ -744,13 +786,18 @@ public class HttpServerTests {
 	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
 			HttpMethod method, boolean chunk, boolean close) {
 		Mono<Tuple2<HttpHeaders, String>> response =
-				HttpClient.create(ops -> ops.connectAddress(() -> address))
-				          .request(method, url, req -> req.send())
-				          .flatMap(res -> Mono.zip(Mono.just(res.responseHeaders()),
-				                                   res.receive()
-				                                      .aggregate()
-				                                      .asString()
-				                                      .defaultIfEmpty("NO BODY")));
+				HttpClient.prepare()
+				          .addressSupplier(() -> address)
+				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+				          .wiretap()
+				          .request(method)
+				          .send((req, out) -> {
+				                 req.send();
+				                 return out;
+				          })
+				          .responseSingle((res, buf) -> Mono.zip(Mono.just(res.responseHeaders()),
+				                                                 buf.asString()
+				                                                    .defaultIfEmpty("NO BODY")));
 
 		StepVerifier.create(response)
 				    .expectNextMatches(t -> {
@@ -796,8 +843,10 @@ public class HttpServerTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
-						                    .poolResources(PoolResources.fixed("test", 1)));
+				HttpClient.prepare(PoolResources.fixed("test", 1))
+				          .addressSupplier(() -> server.address())
+				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+				          .wiretap();
 
 		try {
 			doTestIssue186(client);
@@ -810,16 +859,16 @@ public class HttpServerTests {
 	}
 
 	private void doTestIssue186(HttpClient client) {
-		Mono<String> content = client.post("/", req -> req.sendString(Mono.just("bodysample")))
-				                      .flatMap(res -> res.receive()
-				                                         .aggregate()
-				                                         .asString());
+		Mono<String> content = client.post()
+				                     .uri("/")
+				                     .send(ByteBufFlux.fromString(Mono.just("bodysample")))
+				                     .responseSingle((res, buf) -> buf.asString());
 
 		StepVerifier.create(content)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(300));
 	}
-
+/*
 	@Test
 	public void testConnectionCloseOnServerError() throws Exception {
 		Flux<String> content =
@@ -853,7 +902,7 @@ public class HttpServerTests {
 		r.dispose();
 		server.dispose();
 	}
-/*
+
 	final int numberOfTests = 1000;
 
 	@Test

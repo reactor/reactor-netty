@@ -24,13 +24,11 @@ import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 
 public class FluxReceiveTest {
-	@Test public void test() {}
-/*
 
 	@Test
 	public void testByteBufsReleasedWhenTimeout() {
@@ -40,7 +38,7 @@ public class FluxReceiveTest {
 		Random rndm = new Random();
 		rndm.nextBytes(content);
 
-		Connection server1 =
+		DisposableServer server1 =
 				HttpServer.create()
 				          .port(0)
 				          .router(routes ->
@@ -50,24 +48,35 @@ public class FluxReceiveTest {
 				          .wiretap()
 				          .bindNow();
 
-		Connection server2 =
+		DisposableServer server2 =
 				HttpServer.create()
 				          .port(0)
 				          .router(routes ->
 				                     routes.get("/forward", (req, res) ->
-				                           HttpClient.create(server1.address().getPort())
-				                                     .get("/target")
+				                           HttpClient.prepare()
+				                                     .port(server1.address().getPort())
+				                                     .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+				                                     .wiretap()
+				                                     .get()
+				                                     .uri("/target")
+				                                     .responseContent()
+				                                     .aggregate()
+				                                     .asString()
 				                                     .log()
 				                                     .delayElement(Duration.ofMillis(50))
-				                                     .flatMap(response -> response.receive().aggregate().asString())
 				                                     .timeout(Duration.ofMillis(50))
 				                                     .then()))
 				          .wiretap()
 				          .bindNow();
 
 		Flux.range(0, 50)
-		    .flatMap(i -> HttpClient.create(server2.address().getPort())
-		                            .get("/forward")
+		    .flatMap(i -> HttpClient.prepare()
+		                            .port(server2.address().getPort())
+		                            .tcpConfiguration(tcpClient -> tcpClient.noSSL())
+		                            .wiretap()
+		                            .get()
+		                            .uri("/forward")
+		                            .responseContent()
 		                            .log()
 		                            .onErrorResume(t -> Mono.empty()))
 		    .blockLast(Duration.ofSeconds(30));
@@ -76,5 +85,5 @@ public class FluxReceiveTest {
 		server2.dispose();
 
 		ResourceLeakDetector.setLevel(Level.SIMPLE);
-	}*/
+	}
 }

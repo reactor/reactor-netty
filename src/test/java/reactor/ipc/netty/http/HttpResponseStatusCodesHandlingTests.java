@@ -15,11 +15,13 @@
  */
 package reactor.ipc.netty.http;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ByteBufFlux;
+import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -28,12 +30,10 @@ import reactor.test.StepVerifier;
  * @author Violeta Georgieva
  */
 public class HttpResponseStatusCodesHandlingTests {
-	@Test public void test() {}
-/*
 
 	@Test
 	public void httpStatusCode404IsHandledByTheClient() {
-		Connection server =
+		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
 				          .router(r -> r.post("/test", (req, res) -> res.send(req.receive()
@@ -41,14 +41,19 @@ public class HttpResponseStatusCodesHandlingTests {
 				          .wiretap()
 				          .bindNow();
 
-		HttpClient client = HttpClient.create("localhost", server.address().getPort());
+		HttpClient client =
+				HttpClient.prepare()
+				          .port(server.address().getPort())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
+				                                                  .noSSL())
+				          .wiretap();
 
-		Mono<Integer> content = client.get("/unsupportedURI", req ->
-				                         req.addHeader("Content-Type", "text/plain")
-				                            .sendString(Flux.just("Hello")
-				                                            .log("client-send"))
-				                     )
-				                     .flatMap(res -> Mono.just(res.status().code()))
+		Mono<Integer> content = client.headers(h -> h.add("Content-Type", "text/plain"))
+				                      .request(HttpMethod.GET)
+				                      .uri("/unsupportedURI")
+				                      .send(ByteBufFlux.fromString(Flux.just("Hello")
+				                                                       .log("client-send")))
+				                      .responseSingle((res, buf) -> Mono.just(res.status().code()))
 				                     .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
 
 		StepVerifier.create(content)
@@ -56,5 +61,5 @@ public class HttpResponseStatusCodesHandlingTests {
 				    .verifyComplete();
 
 		server.dispose();
-	}*/
+	}
 }
