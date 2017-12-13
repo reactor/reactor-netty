@@ -408,10 +408,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 		f.addListener(s -> {
-			if (isOutboundDone()) {
-				discard();
-				onHandlerTerminate();
-			}
+			discard();
+			onHandlerTerminate();
 			if (!s.isSuccess() && log.isDebugEnabled()) {
 				log.error("Failed flushing last frame", s.cause());
 			}
