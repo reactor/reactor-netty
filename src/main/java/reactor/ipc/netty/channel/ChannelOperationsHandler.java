@@ -592,7 +592,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						eventLoop.execute(() -> parent.pendingWriteOffer.test(f, PENDING_WRITES));
 					}
 				}
-				f.addListener(this);
+				f.addListener(future -> {
+					if (!future.isSuccess()) {
+						promise.setFailure(Exceptions.addSuppressed(future.cause(), t));
+						return;
+					}
+					promise.setFailure(t);
+				});
 			}
 			else {
 				promise.setFailure(t);
