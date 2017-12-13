@@ -21,6 +21,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.netty.buffer.Unpooled;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -102,17 +103,42 @@ public class HttpTests {
 
 	@Test
 	public void httpErrorWithRequestsFromClients() throws Exception {
-		CountDownLatch errored = new CountDownLatch(1);
+		CountDownLatch errored1 = new CountDownLatch(1);
+		CountDownLatch errored2 = new CountDownLatch(1);
+		CountDownLatch errored3 = new CountDownLatch(1);
 
+		Flux<ByteBuf> flux1 = Flux.range(0, 257)
+		                         .flatMap(i -> {
+		                             if (i == 4) {
+		                                 throw new RuntimeException("test");
+		                             }
+		                             return Mono.just(Unpooled.copyInt(i));
+		                         });
+
+		Flux<ByteBuf> flux2 = Flux.range(0, 257)
+		                         .flatMap(i -> {
+		                             if (i == 4) {
+		                                 return Mono.error(new Exception("test"));
+		                             }
+		                             return Mono.just(Unpooled.copyInt(i));
+		                         });
 		NettyContext server =
 				HttpServer.create(0)
-						  .newRouter(r -> r.get("/test", (req, res) -> {throw new RuntimeException();})
-						                   .get("/test2", (req, res) -> res.send(Flux.error(new Exception()))
-						                                                   .then()
-						                                                   .log("send")
-						                                                   .doOnError(t -> errored.countDown()))
-						                .get("/test3", (req, res) -> Flux.error(new Exception())))
-						  .block(Duration.ofSeconds(30));
+				          .newRouter(r -> r.get("/test", (req, res) -> {throw new RuntimeException();})
+				                           .get("/test2", (req, res) -> res.send(Flux.error(new Exception()))
+				                                                           .then()
+				                                                           .log("send-1")
+				                                                           .doOnError(t -> errored1.countDown()))
+				                           .get("/test3", (req, res) -> Flux.error(new Exception()))
+				                           .get("/issue231_1", (req, res) -> res.send(flux1)
+				                                                              .then()
+				                                                              .log("send-2")
+				                                                              .doOnError(t -> errored2.countDown()))
+				                           .get("/issue231_2", (req, res) -> res.send(flux2)
+				                                                              .then()
+				                                                              .log("send-3")
+				                                                              .doOnError(t -> errored3.countDown())))
+				          .block(Duration.ofSeconds(30));
 
 		HttpClient client =
 				HttpClient.create("localhost", server.address().getPort());
@@ -136,8 +162,24 @@ public class HttpTests {
 				      .next()
 				      .block(Duration.ofSeconds(30));
 
-		Assertions.assertThat(errored.await(30, TimeUnit.SECONDS)).isTrue();
+		Assertions.assertThat(errored1.await(30, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(content).isNull();
+
+		content = client.get("/issue231_1")
+		                .flatMapMany(res -> res.receive()
+		                                       .log("received-status-4"))
+		                .next()
+		                .block(Duration.ofSeconds(30));
+
+		Assertions.assertThat(errored2.await(30, TimeUnit.SECONDS)).isTrue();
+
+		content = client.get("/issue231_2")
+		                .flatMapMany(res -> res.receive()
+		                                       .log("received-status-4"))
+		                .next()
+		                .block(Duration.ofSeconds(30));
+
+		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).isTrue();
 
 		code = client.get("/test3")
 				     .flatMapMany(res -> {
