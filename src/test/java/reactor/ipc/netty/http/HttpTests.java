@@ -106,6 +106,8 @@ public class HttpTests {
 		CountDownLatch errored1 = new CountDownLatch(1);
 		CountDownLatch errored2 = new CountDownLatch(1);
 		CountDownLatch errored3 = new CountDownLatch(1);
+		CountDownLatch errored4 = new CountDownLatch(1);
+		CountDownLatch errored5 = new CountDownLatch(1);
 
 		Flux<ByteBuf> flux1 = Flux.range(0, 257)
 		                         .flatMap(i -> {
@@ -137,7 +139,15 @@ public class HttpTests {
 				                           .get("/issue231_2", (req, res) -> res.send(flux2)
 				                                                              .then()
 				                                                              .log("send-3")
-				                                                              .doOnError(t -> errored3.countDown())))
+				                                                              .doOnError(t -> errored3.countDown()))
+				                           .get("/issue237_1", (req, res) -> res.send(flux1)
+				                                                              .then()
+				                                                              .log("send-4")
+				                                                              .doOnError(t -> errored4.countDown()))
+				                           .get("/issue237_2", (req, res) -> res.send(flux2)
+				                                                              .then()
+				                                                              .log("send-5")
+				                                                              .doOnError(t -> errored5.countDown())))
 				          .block(Duration.ofSeconds(30));
 
 		HttpClient client =
@@ -180,6 +190,20 @@ public class HttpTests {
 		                .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).isTrue();
+
+		content = client.get("/issue237_1")
+		                .flatMapMany(res -> res.receive()
+		                                       .log("received-status-5"))
+		                .blockLast(Duration.ofSeconds(30));
+
+		Assertions.assertThat(errored4.await(30, TimeUnit.SECONDS)).isTrue();
+
+		content = client.get("/issue237_2")
+		                .flatMapMany(res -> res.receive()
+		                                       .log("received-status-6"))
+		                .blockLast(Duration.ofSeconds(30));
+
+		Assertions.assertThat(errored5.await(30, TimeUnit.SECONDS)).isTrue();
 
 		code = client.get("/test3")
 				     .flatMapMany(res -> {
