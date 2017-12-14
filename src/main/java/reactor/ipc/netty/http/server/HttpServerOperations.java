@@ -438,11 +438,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 
-		if (markSentBody()) {
-			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
-			         .addListener(ChannelFutureListener.CLOSE);
-			return;
-		}
+		markSentBody();
 		channel().writeAndFlush(EMPTY_BUFFER)
 		         .addListener(ChannelFutureListener.CLOSE);
 	}
