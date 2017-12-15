@@ -19,6 +19,9 @@ package reactor.ipc.netty.http.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.CompletionHandler;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -26,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -35,11 +39,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -57,6 +63,7 @@ import io.netty.util.ResourceLeakDetector;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.FutureMono;
@@ -238,6 +245,111 @@ public class HttpServerTests {
 				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
 				.contains("1024 mark here -><- 1024 mark here")
 				.endsWith("End of File");
+	}
+
+	@Test
+	public void sendFileAsync() throws IOException, URISyntaxException {
+		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+		Path tempFile = Files.createTempFile(largeFile.getParent(),"temp", ".txt");
+		tempFile.toFile().deleteOnExit();
+
+		byte[] fileBytes = Files.readAllBytes(largeFile);
+		for (int i = 0; i < 1000; i++) {
+			Files.write(tempFile, fileBytes, StandardOpenOption.APPEND);
+		};
+
+		ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
+		AsynchronousFileChannel channel =
+				AsynchronousFileChannel.open(tempFile, StandardOpenOption.READ);
+
+		Flux<ByteBuf> content =  Flux.create(fluxSink -> {
+			fluxSink.onDispose(() -> {
+			    try {
+			        if (channel != null) {
+			            channel.close();
+			        }
+			    }
+			    catch (IOException ignored) {
+			    }
+			});
+
+			ByteBuffer buf = ByteBuffer.allocate(4096);
+			channel.read(buf, 0, buf, new TestCompletionHandler(channel, fluxSink, allocator));
+		});
+
+		NettyContext context =
+				HttpServer.create(opt -> opt.host("localhost"))
+				          .newHandler((req, resp) -> resp.sendByteArray(req.receive()
+				                                                           .aggregate()
+				                                                           .asByteArray()))
+				          .block(Duration.ofSeconds(30));
+		byte[] response =
+				HttpClient.create(opt -> opt.connectAddress(() -> context.address()))
+				          .request(HttpMethod.POST, "/", req -> req.send(content)
+				                                                       .then())
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asByteArray())
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
+		context.dispose();
+	}
+
+	private static final class TestCompletionHandler implements CompletionHandler<Integer, ByteBuffer> {
+
+		private final AsynchronousFileChannel channel;
+
+		private final FluxSink<ByteBuf> sink;
+
+		private final ByteBufAllocator allocator;
+
+		private AtomicLong position;
+
+		TestCompletionHandler(AsynchronousFileChannel channel, FluxSink<ByteBuf> sink,
+							  ByteBufAllocator allocator) {
+			this.channel = channel;
+			this.sink = sink;
+			this.allocator = allocator;
+			this.position = new AtomicLong(0);
+		}
+
+		@Override
+		public void completed(Integer read, ByteBuffer dataBuffer) {
+			if (read != -1) {
+				long pos = this.position.addAndGet(read);
+				dataBuffer.flip();
+				ByteBuf buf = allocator.buffer().writeBytes(dataBuffer);
+				this.sink.next(buf);
+
+				if (!this.sink.isCancelled()) {
+					ByteBuffer newByteBuffer = ByteBuffer.allocate(4096);
+					this.channel.read(newByteBuffer, pos, newByteBuffer, this);
+				}
+			}
+			else {
+				try {
+					if (channel != null) {
+						channel.close();
+					}
+				}
+				catch (IOException ignored) {
+				}
+				this.sink.complete();
+			}
+		}
+
+		@Override
+		public void failed(Throwable exc, ByteBuffer dataBuffer) {
+			try {
+				if (channel != null) {
+					channel.close();
+				}
+			}
+			catch (IOException ignored) {
+			}
+			this.sink.error(exc);
+		}
 	}
 
 	//from https://github.com/reactor/reactor-netty/issues/90

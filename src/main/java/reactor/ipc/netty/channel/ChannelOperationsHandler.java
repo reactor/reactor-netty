@@ -505,6 +505,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		long           produced;
 		ChannelPromise promise;
 		ChannelFuture  lastWrite;
+		boolean        lastThreadInEventLoop;
 
 		PublisherSender(ChannelOperationsHandler parent) {
 			this.parent = parent;
@@ -610,7 +611,17 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		public void onNext(Object t) {
 			produced++;
 
-			lastWrite = parent.doWrite(t, parent.ctx.newPromise(), this);
+			lastThreadInEventLoop = parent.ctx.channel().eventLoop().inEventLoop();
+			ChannelPromise newPromise = parent.ctx.newPromise();
+			if (lastWrite == null || lastThreadInEventLoop || lastWrite.isDone()) {
+				lastWrite = parent.doWrite(t, newPromise, this);
+			}
+			else {
+				parent.ctx.channel()
+				          .eventLoop()
+				          .execute(() -> parent.doWrite(t, newPromise, this));
+				lastWrite = newPromise;
+			}
 			if (parent.ctx.channel()
 			              .isWritable()) {
 				request(1L);
