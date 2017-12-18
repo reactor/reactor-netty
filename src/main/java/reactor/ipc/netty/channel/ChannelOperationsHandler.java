@@ -107,7 +107,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		try {
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops != null) {
-				ops.onHandlerTerminate();
+				ops.onInboundClose();
 			}
 			else {
 				if (lastContext != null) {

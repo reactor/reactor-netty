@@ -347,6 +347,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
+	 * React on inbound close (channel closed prematurely)
+	 */
+	protected void onInboundClose() {
+		onHandlerTerminate();
+	}
+
+	/**
 	 * React on inbound/outbound completion (last packet)
 	 */
 	protected void onOutboundComplete() {

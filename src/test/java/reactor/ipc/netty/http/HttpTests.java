@@ -15,6 +15,7 @@
  */
 package reactor.ipc.netty.http;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -165,17 +166,19 @@ public class HttpTests {
 				    .expectError(HttpClientException.class)
 				    .verify(Duration.ofSeconds(30));
 
-		ByteBuf content =
+		Mono<ByteBuf> content =
 				client.get("/test2")
 				      .flatMapMany(res -> res.receive()
 				                             .log("received-status-2"))
-				      .next()
-				      .block(Duration.ofSeconds(30));
+				      .next();
+
+		StepVerifier.create(content)
+		            .expectError(IOException.class)
+		            .verify(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored1.await(30, TimeUnit.SECONDS)).isTrue();
-		Assertions.assertThat(content).isNull();
 
-		content = client.get("/issue231_1")
+		ByteBuf content1 = client.get("/issue231_1")
 		                .flatMapMany(res -> res.receive()
 		                                       .log("received-status-4"))
 		                .next()
@@ -183,7 +186,7 @@ public class HttpTests {
 
 		Assertions.assertThat(errored2.await(30, TimeUnit.SECONDS)).isTrue();
 
-		content = client.get("/issue231_2")
+		content1 = client.get("/issue231_2")
 		                .flatMapMany(res -> res.receive()
 		                                       .log("received-status-4"))
 		                .next()
@@ -191,17 +194,25 @@ public class HttpTests {
 
 		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).isTrue();
 
-		content = client.get("/issue237_1")
+		Flux<ByteBuf> content2 = client.get("/issue237_1")
 		                .flatMapMany(res -> res.receive()
-		                                       .log("received-status-5"))
-		                .blockLast(Duration.ofSeconds(30));
+		                                       .log("received-status-5"));
+
+		StepVerifier.create(content2)
+		            .expectNextCount(4)
+		            .expectError(IOException.class)
+		            .verify(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored4.await(30, TimeUnit.SECONDS)).isTrue();
 
-		content = client.get("/issue237_2")
+		content2 = client.get("/issue237_2")
 		                .flatMapMany(res -> res.receive()
-		                                       .log("received-status-6"))
-		                .blockLast(Duration.ofSeconds(30));
+		                                       .log("received-status-6"));
+
+		StepVerifier.create(content2)
+		            .expectNextCount(4)
+		            .expectError(IOException.class)
+		            .verify(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored5.await(30, TimeUnit.SECONDS)).isTrue();
 
