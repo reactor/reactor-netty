@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -28,6 +29,7 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.test.StepVerifier;
 
 /**
  * @author tokuhirom
@@ -52,17 +54,19 @@ public class HttpErrorTests {
 		HttpClientResponse r = client.get("/")
 		                             .block(Duration.ofSeconds(30));
 
-		List<String> result = r.receive()
+		Mono<List<String>> result = r.receive()
 		                    .asString(StandardCharsets.UTF_8)
-		                    .collectList()
-		                    .block(Duration.ofSeconds(30));
+		                    .collectList();
+
+		StepVerifier.create(result)
+		            .expectError(IOException.class)
+		            .verify(Duration.ofSeconds(30));
 
 		System.out.println("END");
 
 		FutureMono.from(r.context().channel().closeFuture()).block(Duration.ofSeconds(30));
 
-		Assert.assertTrue(result.isEmpty());
-		Assert.assertTrue(r.isDisposed());
+		r.dispose();
 		server.dispose();
 	}
 }

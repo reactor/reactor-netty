@@ -192,6 +192,11 @@ final class HttpClientWSOperations extends HttpClientOperations
 	}
 
 	@Override
+	protected void onInboundClose() {
+		super.onInboundComplete();
+	}
+
+	@Override
 	protected void onOutboundComplete() {
 	}
 
