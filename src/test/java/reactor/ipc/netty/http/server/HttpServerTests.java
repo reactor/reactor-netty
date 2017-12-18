@@ -59,6 +59,7 @@ import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpResources;
@@ -682,5 +683,39 @@ public class HttpServerTests {
 		StepVerifier.create(content)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(300));
+	}
+
+	@Test
+	public void testConnectionCloseOnServerError() throws Exception {
+		Flux<String> content =
+				Flux.range(1, 3)
+				    .doOnNext(i -> {
+				        if (i == 3) {
+				            throw new RuntimeException("test");
+				        }
+				    })
+				    .map(i -> "foo " + i);
+
+		NettyContext server =
+				HttpServer.create(0)
+				          .newHandler((req, res) -> res.sendString(content))
+				          .block(Duration.ofSeconds(30));
+
+		HttpClientResponse r =
+				HttpClient.create(ops -> ops.port(server.address().getPort()))
+				          .get("/")
+				          .block(Duration.ofSeconds(30));
+
+		ByteBufFlux response = r.receive();
+
+		StepVerifier.create(response)
+		            .expectNextCount(2)
+		            .expectError(IOException.class)
+		            .verify(Duration.ofSeconds(30));
+
+		FutureMono.from(r.context().channel().closeFuture()).block(Duration.ofSeconds(30));
+
+		r.dispose();
+		server.dispose();
 	}
 }
