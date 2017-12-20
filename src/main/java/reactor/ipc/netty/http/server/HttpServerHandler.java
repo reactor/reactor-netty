@@ -166,6 +166,11 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			if (!shouldKeepAlive()) {
 				setKeepAlive(response, false);
 			}
+
+			if (isInformational(response)) {
+				ctx.write(msg, promise);
+				return;
+			}
 		}
 		if (msg instanceof LastHttpContent) {
 			if (!shouldKeepAlive()) {

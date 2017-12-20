@@ -22,11 +22,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-
-import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -281,6 +280,37 @@ public class HttpTests {
 		            .verify(Duration.ofSeconds(30));
 
 		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
+
+		server.dispose();
+	}
+
+	@Test
+	public void test100Continue() throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
+		NettyContext server =
+				HttpServer.create(0)
+				          .newHandler((req, res) -> req.receive()
+				                                       .aggregate()
+				                                       .asString()
+				                                       .flatMap(s -> {
+					                                       latch.countDown();
+					                                       return res.sendString(Mono.just(s))
+					                                                 .then();
+				                                       }))
+				          .block(Duration.ofSeconds(30));
+
+		String content =
+				HttpClient.create(server.address().getPort())
+				          .post("/", req -> req.header("Expect", "100-continue")
+				                               .sendString(Flux.just("1", "2", "3", "4", "5")))
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asString())
+				          .block();
+
+		System.out.println(content);
+
+		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
 		server.dispose();
 	}
