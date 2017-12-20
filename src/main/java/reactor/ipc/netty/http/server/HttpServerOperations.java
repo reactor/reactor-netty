@@ -250,7 +250,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		//       No need to notify the upstream handlers - just log.
 		//       If decoding a response, just throw an error.
 		if (HttpUtil.is100ContinueExpected(nettyRequest)) {
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(CONTINUE))
+			return FutureMono.deferFuture(() -> {
+						if(!hasSentHeaders()) {
+							return channel().writeAndFlush(CONTINUE);
+						}
+						return channel().newSucceededFuture();
+					})
+
 			                 .thenMany(super.receiveObject());
 		}
 		else {

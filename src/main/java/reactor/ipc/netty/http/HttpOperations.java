@@ -100,57 +100,63 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	//@Override
 	//TODO document this
 	public NettyOutbound sendHeaders() {
-		if (markSentHeaders()) {
-			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-				outboundHttpMessage().headers()
-				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
-			}
-
-			HttpMessage message;
-			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())
-					&& (!HttpUtil.isContentLengthSet(outboundHttpMessage()) ||
-			HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0)) {
-				if(isKeepAlive() && markSentBody()){
-					message = newFullEmptyBodyMessage();
-				}
-				else {
-					markPersistent(false);
-					message = outboundHttpMessage();
-				}
-			}
-			else {
-				message = outboundHttpMessage();
-			}
-			return then(FutureMono.deferFuture(() -> {
-				if(!channel().isActive()){
-					throw new AbortedException();
-				}
-				return channel().writeAndFlush(message);
-			}));
-		}
-		else {
+		if (hasSentHeaders()) {
 			return this;
 		}
+
+		return then(FutureMono.deferFuture(() -> {
+			if (markSentHeaders()) {
+				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+					outboundHttpMessage().headers()
+					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
+				}
+
+				HttpMessage message;
+				if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())
+						&& (!HttpUtil.isContentLengthSet(outboundHttpMessage()) ||
+						HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0)) {
+					if(isKeepAlive() && markSentBody()){
+						message = newFullEmptyBodyMessage();
+					}
+					else {
+						markPersistent(false);
+						message = outboundHttpMessage();
+					}
+				}
+				else {
+					message = outboundHttpMessage();
+				}
+				return channel().writeAndFlush(message);
+			}
+			else {
+				return channel().newSucceededFuture();
+			}
+		}));
 	}
 
 	@Override
 	public Mono<Void> then() {
-		if (markSentHeaders()) {
-			if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-				outboundHttpMessage().headers()
-				                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
-			}
-
-			if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())
-					&& !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-				markPersistent(false);
-			}
-
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(outboundHttpMessage()));
-		}
-		else {
+		if (hasSentHeaders()) {
 			return Mono.empty();
 		}
+
+		return FutureMono.deferFuture(() -> {
+			if (markSentHeaders()) {
+				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+					outboundHttpMessage().headers()
+					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
+				}
+
+				if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
+						outboundHttpMessage())) {
+					markPersistent(false);
+				}
+				return channel().writeAndFlush(outboundHttpMessage());
+			}
+			else {
+				return channel().newSucceededFuture();
+			}
+		});
 	}
 
 	protected abstract HttpMessage newFullEmptyBodyMessage();
