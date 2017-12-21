@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2018 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.server;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -25,12 +26,14 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -86,12 +89,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final HttpHeaders  responseHeaders;
 	final Cookies     cookieHolder;
 	final HttpRequest nettyRequest;
+	final ConnectionInfo connectionInfo;
 
 	Function<? super String, Map<String, String>> paramsResolver;
 
 	HttpServerOperations(Channel ch, HttpServerOperations replaced) {
 		super(ch, replaced);
 		this.cookieHolder = replaced.cookieHolder;
+		this.connectionInfo = replaced.connectionInfo;
 		this.responseHeaders = replaced.responseHeaders;
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
@@ -107,9 +112,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
+		if (ch.hasAttr(USE_FORWARDED) && ch.attr(USE_FORWARDED).get()) {
+			this.connectionInfo = ConnectionInfo.newForwardedConnectionInfo(this, (SocketChannel) channel());
+		}
+		else {
+			this.connectionInfo = ConnectionInfo.newConnectionInfo(this, (SocketChannel) channel());
+		}
 		chunkedTransfer(true);
-
-
 	}
 
 	@Override
@@ -260,11 +269,26 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public InetSocketAddress hostAddress() {
+		return this.connectionInfo.getHostAddress();
+	}
+
+	@Override
+	public InetSocketAddress remoteAddress() {
+		return this.connectionInfo.getRemoteAddress();
+	}
+
+	@Override
 	public HttpHeaders requestHeaders() {
 		if (nettyRequest != null) {
 			return nettyRequest.headers();
 		}
 		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public String scheme() {
+		return this.connectionInfo.getScheme();
 	}
 
 	@Override
@@ -503,4 +527,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	static final AttributeKey<Integer> PRODUCE_GZIP = AttributeKey.newInstance("produceGzip");
+
+	static final AttributeKey<Boolean> USE_FORWARDED = AttributeKey.newInstance("useForwarded");
 }
