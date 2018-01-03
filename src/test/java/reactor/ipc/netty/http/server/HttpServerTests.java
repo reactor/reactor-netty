@@ -65,6 +65,7 @@ import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
@@ -256,7 +257,7 @@ public class HttpServerTests {
 		byte[] fileBytes = Files.readAllBytes(largeFile);
 		for (int i = 0; i < 1000; i++) {
 			Files.write(tempFile, fileBytes, StandardOpenOption.APPEND);
-		};
+		}
 
 		ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
 		AsynchronousFileChannel channel =
@@ -829,5 +830,60 @@ public class HttpServerTests {
 
 		r.dispose();
 		server.dispose();
+	}
+
+	final int numberOfTests = 1000;
+
+	@Test
+	public void deadlockWhenRedirectsToSameUrl(){
+		redirectTests("/login");
+	}
+
+	@Test
+	public void okWhenRedirectsToOther(){
+		redirectTests("/other");
+	}
+
+	public void redirectTests(String url) {
+		NettyContext server = HttpServer.create(9999)
+		                                .newHandler((req, res) -> {
+			                                if (req.uri()
+			                                       .contains("/login") && req.method()
+			                                                                 .equals(HttpMethod.POST)) {
+				                                return Mono.<Void>fromRunnable(() -> {
+					                                res.header("Location",
+							                                "http://localhost:9999" +
+									                                url).status(HttpResponseStatus.FOUND);
+				                                })
+						                                .publishOn(Schedulers.elastic());
+			                                }
+			                                else {
+				                                return Mono.fromRunnable(() -> {
+				                                })
+				                                           .publishOn(Schedulers.elastic())
+				                                           .then(res.status(200)
+				                                                    .sendHeaders()
+				                                                    .then());
+			                                }
+		                                })
+		                                .block(Duration.ofSeconds(300));
+
+		PoolResources pool = PoolResources.fixed("test", 1);
+
+		HttpClient client =
+				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
+				                            .poolResources(pool));
+
+		try {
+			Flux.range(0, this.numberOfTests)
+			    .concatMap(i -> client.post("/login", r -> r.followRedirect())
+			                          .flatMap(r -> r.receive()
+			                                         .then()))
+			    .blockLast();
+		}
+		finally {
+			server.dispose();
+		}
+
 	}
 }
