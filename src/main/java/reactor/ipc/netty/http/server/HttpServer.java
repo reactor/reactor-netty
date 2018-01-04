@@ -254,7 +254,10 @@ public final class HttpServer
 
         @Override
         public void accept(ChannelPipeline p, ContextHandler<Channel> c) {
-            p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+            p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(
+            		options.httpCodecMaxInitialLineLength(),
+		            options.httpCodecMaxHeaderSize(),
+		            options.httpCodecMaxChunkSize()));
 
             if(options.minCompressionResponseSize() >= 0) {
                     p.addLast(NettyPipeline.CompressionHandler, new CompressionHandler(options.minCompressionResponseSize()));
