@@ -38,10 +38,16 @@ public final class HttpServerOptions extends ServerOptions {
 	}
 
 	private final int minCompressionResponseSize;
+	private final int maxInitialLineLength;
+	private final int maxHeaderSize;
+	private final int maxChunkSize;
 
 	private HttpServerOptions(HttpServerOptions.Builder builder) {
 		super(builder);
 		this.minCompressionResponseSize = builder.minCompressionResponseSize;
+		this.maxInitialLineLength = builder.maxInitialLineLength;
+		this.maxHeaderSize = builder.maxHeaderSize;
+		this.maxChunkSize = builder.maxChunkSize;
 	}
 
 	/**
@@ -52,6 +58,36 @@ public final class HttpServerOptions extends ServerOptions {
 	 */
 	public int minCompressionResponseSize() {
 		return minCompressionResponseSize;
+	}
+
+	/**
+	 * Returns the maximum length configured for the initial HTTP line.
+	 *
+	 * @return the initial HTTP line maximum length
+	 * @see io.netty.handler.codec.http.HttpServerCodec
+	 */
+	public int httpCodecMaxInitialLineLength() {
+		return maxInitialLineLength;
+	}
+
+	/**
+	 * Returns the configured HTTP header maximum size.
+	 *
+	 * @return the configured HTTP header maximum size
+	 * @see io.netty.handler.codec.http.HttpServerCodec
+	 */
+	public int httpCodecMaxHeaderSize() {
+		return maxHeaderSize;
+	}
+
+	/**
+	 * Returns the configured HTTP chunk maximum size.
+	 *
+	 * @return the configured HTTP chunk maximum size
+	 * @see io.netty.handler.codec.http.HttpServerCodec
+	 */
+	public int httpCodecMaxChunkSize() {
+		return maxChunkSize;
 	}
 
 	@Override
@@ -76,7 +112,9 @@ public final class HttpServerOptions extends ServerOptions {
 	@Override
 	public String asDetailedString() {
 		return super.asDetailedString() +
-				", minCompressionResponseSize=" + minCompressionResponseSize;
+				", minCompressionResponseSize=" + minCompressionResponseSize +
+				", httpCodecSizes={initialLine=" + this.maxInitialLineLength +
+				",header=" + this.maxHeaderSize + ",chunk="+ this.maxChunkSize + "}";
 	}
 
 	@Override
@@ -86,6 +124,9 @@ public final class HttpServerOptions extends ServerOptions {
 
 	public static final class Builder extends ServerOptions.Builder<Builder> {
 		private int minCompressionResponseSize = -1;
+		private int maxInitialLineLength = 4096;
+		private int maxHeaderSize = 8192;
+		private int maxChunkSize = 8192;
 
 		private Builder(){
 			super(new ServerBootstrap());
@@ -121,6 +162,32 @@ public final class HttpServerOptions extends ServerOptions {
 		}
 
 		/**
+		 * Configure the {@link io.netty.handler.codec.http.HttpServerCodec HTTP codec}
+		 * maximum initial HTTP line length, header size and chunk size.
+		 * <p>
+		 * Negative or zero values are not valid, but will be interpreted as "don't change
+		 * the current configuration for that field": on first call the Netty defaults of
+		 * {@code (4096,8192,8192)} will be used.
+		 *
+		 * @param maxInitialLineLength the HTTP initial line maximum length. Use 0 to ignore/keep default.
+		 * @param maxHeaderSize the HTTP header maximum size. Use 0 to ignore/keep default.
+		 * @param maxChunkSize the HTTP chunk maximum size. Use 0 to ignore/keep default.
+		 * @return {@code this}
+		 */
+		public final Builder httpCodecOptions(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
+			if (maxInitialLineLength > 0) {
+				this.maxInitialLineLength = maxInitialLineLength;
+			}
+			if (maxHeaderSize > 0) {
+				this.maxHeaderSize = maxHeaderSize;
+			}
+			if (maxChunkSize > 0) {
+				this.maxChunkSize = maxChunkSize;
+			}
+			return get();
+		}
+
+		/**
 		 * Fill the builder with attribute values from the provided options.
 		 *
 		 * @param options The instance from which to copy values
@@ -129,6 +196,9 @@ public final class HttpServerOptions extends ServerOptions {
 		public final Builder from(HttpServerOptions options) {
 			super.from(options);
 			this.minCompressionResponseSize = options.minCompressionResponseSize;
+			this.maxInitialLineLength = options.maxInitialLineLength;
+			this.maxHeaderSize = options.maxHeaderSize;
+			this.maxChunkSize = options.maxChunkSize;
 			return get();
 		}
 
