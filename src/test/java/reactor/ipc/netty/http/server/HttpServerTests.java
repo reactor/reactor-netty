@@ -831,7 +831,7 @@ public class HttpServerTests {
 		r.dispose();
 		server.dispose();
 	}
-
+/*
 	final int numberOfTests = 1000;
 
 	@Test
@@ -885,5 +885,5 @@ public class HttpServerTests {
 			server.dispose();
 		}
 
-	}
+	}*/
 }
