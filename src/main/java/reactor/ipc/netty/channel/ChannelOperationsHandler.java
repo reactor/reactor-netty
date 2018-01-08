@@ -275,7 +275,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	@Override
 	public void operationComplete(ChannelFuture future) throws Exception {
-		if (future.isSuccess()) {
+		if (future.isSuccess() && innerActive) {
 			inner.request(1L);
 		}
 	}
@@ -537,7 +537,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					if (parent.ctx.channel()
 					              .isActive()) {
 						parent.pendingBytes = 0L;
-						parent.ctx.flush();
+						if (lastThreadInEventLoop) {
+							parent.ctx.flush();
+						}
+						else {
+							parent.ctx.channel()
+							          .eventLoop()
+							          .execute(() -> parent.ctx.flush());
+						}
 					}
 					else {
 						promise.setFailure(new AbortedException("Connection has been closed"));
@@ -575,7 +582,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				produced(p);
 				if (parent.ctx.channel()
 				              .isActive()) {
-					parent.ctx.flush();
+					if (lastThreadInEventLoop) {
+						parent.ctx.flush();
+					}
+					else {
+						parent.ctx.channel()
+						          .eventLoop()
+						          .execute(() -> parent.ctx.flush());
+					}
 				}
 				else {
 					promise.setFailure(new AbortedException("Connection has been closed"));
@@ -609,25 +623,34 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 		@Override
 		public void onNext(Object t) {
-			produced++;
-
-			lastThreadInEventLoop = parent.ctx.channel().eventLoop().inEventLoop();
 			ChannelPromise newPromise = parent.ctx.newPromise();
 			if (lastWrite == null || lastThreadInEventLoop || lastWrite.isDone()) {
-				lastWrite = parent.doWrite(t, newPromise, this);
+				onNextInternal(t, newPromise);
+				lastThreadInEventLoop = parent.ctx.channel().eventLoop().inEventLoop();
 			}
 			else {
 				parent.ctx.channel()
 				          .eventLoop()
-				          .execute(() -> parent.doWrite(t, newPromise, this));
-				lastWrite = newPromise;
+				          .execute(() -> onNextInternal(t, newPromise));
+				lastThreadInEventLoop = false;
 			}
+
+			lastWrite = newPromise;
+		}
+
+		private void onNextInternal(Object t, ChannelPromise promise) {
+			produced++;
+
+			parent.doWrite(t, promise, this);
+
 			if (parent.ctx.channel()
 			              .isWritable()) {
-				request(1L);
+				if (parent.innerActive) {
+					request(1L);
+				}
 			}
 			else {
-				lastWrite.addListener(parent);
+				promise.addListener(parent);
 			}
 		}
 

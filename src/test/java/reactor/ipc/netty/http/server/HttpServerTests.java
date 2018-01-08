@@ -65,7 +65,6 @@ import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
@@ -249,7 +248,16 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void sendFileAsync() throws IOException, URISyntaxException {
+	public void sendFileAsync4096() throws IOException, URISyntaxException {
+		doTestSendFileAsync(4096);
+	}
+
+	@Test
+	public void sendFileAsync1024() throws IOException, URISyntaxException {
+		doTestSendFileAsync(1024);
+	}
+
+	private void doTestSendFileAsync(int chunk) throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		Path tempFile = Files.createTempFile(largeFile.getParent(),"temp", ".txt");
 		tempFile.toFile().deleteOnExit();
@@ -274,8 +282,8 @@ public class HttpServerTests {
 			    }
 			});
 
-			ByteBuffer buf = ByteBuffer.allocate(4096);
-			channel.read(buf, 0, buf, new TestCompletionHandler(channel, fluxSink, allocator));
+			ByteBuffer buf = ByteBuffer.allocate(chunk);
+			channel.read(buf, 0, buf, new TestCompletionHandler(channel, fluxSink, allocator, chunk));
 		});
 
 		NettyContext context =
@@ -283,7 +291,7 @@ public class HttpServerTests {
 				          .newHandler((req, resp) -> resp.sendByteArray(req.receive()
 				                                                           .aggregate()
 				                                                           .asByteArray()))
-				          .block(Duration.ofSeconds(30));
+				          .block();
 		byte[] response =
 				HttpClient.create(opt -> opt.connectAddress(() -> context.address()))
 				          .request(HttpMethod.POST, "/", req -> req.send(content)
@@ -291,7 +299,7 @@ public class HttpServerTests {
 				          .flatMap(res -> res.receive()
 				                             .aggregate()
 				                             .asByteArray())
-				          .block(Duration.ofSeconds(30));
+				          .block();
 
 		assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
 		context.dispose();
@@ -305,13 +313,16 @@ public class HttpServerTests {
 
 		private final ByteBufAllocator allocator;
 
+		private final int chunk;
+
 		private AtomicLong position;
 
 		TestCompletionHandler(AsynchronousFileChannel channel, FluxSink<ByteBuf> sink,
-							  ByteBufAllocator allocator) {
+							  ByteBufAllocator allocator, int chunk) {
 			this.channel = channel;
 			this.sink = sink;
 			this.allocator = allocator;
+			this.chunk = chunk;
 			this.position = new AtomicLong(0);
 		}
 
@@ -324,7 +335,7 @@ public class HttpServerTests {
 				this.sink.next(buf);
 
 				if (!this.sink.isCancelled()) {
-					ByteBuffer newByteBuffer = ByteBuffer.allocate(4096);
+					ByteBuffer newByteBuffer = ByteBuffer.allocate(chunk);
 					this.channel.read(newByteBuffer, pos, newByteBuffer, this);
 				}
 			}
