@@ -551,6 +551,7 @@ public class HttpClientTest {
 		StepVerifier.create(
 				HttpClient.create()
 				          .get("http://www.httpwatch.com", req -> req
+						          .followRedirect()
 						          .addHeader("Accept-Encoding", "gzip")
 						          .addHeader("Accept-Encoding", "deflate")
 				          )
@@ -574,7 +575,8 @@ public class HttpClientTest {
 				HttpClient.create()
 				          .get("http://www.httpwatch.com", req -> {
 					          req.context().addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
-					          return req.addHeader("Accept-Encoding", "gzip")
+					          return req.followRedirect()
+					                    .addHeader("Accept-Encoding", "gzip")
 					                    .addHeader("Accept-Encoding", "deflate");
 				          })
 				          .flatMap(r -> r.receive().asString().elementAt(0)

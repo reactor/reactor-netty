@@ -628,7 +628,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			return true;
 		}
-		if (code == 301 || code == 302 && isFollowRedirect()) {
+		if ((code == 301 || code == 302) && isFollowRedirect()) {
 			if (log.isDebugEnabled()) {
 				log.debug("{} Received Redirect location: {}",
 						channel(),
