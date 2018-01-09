@@ -17,6 +17,8 @@ package reactor.ipc.netty.http.server;
 
 import java.util.function.Function;
 
+import javax.imageio.stream.IIOByteBuffer;
+
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.util.Attribute;
@@ -145,30 +147,26 @@ public final class HttpRequestDecoderConfiguration {
 	 * @return a new {@link HttpServerCodec}
 	 */
 	public static HttpServerCodec serverCodecFromAttributes(Channel channel) {
-		Attribute<Integer> lineAttr = channel.attr(MAX_INITIAL_LINE_LENGTH);
-		int line;
-		if (lineAttr == null || lineAttr.get() == null) line = DEFAULT_MAX_INITIAL_LINE_LENGTH;
-		else line = lineAttr.get();
+		int line = channel.hasAttr(MAX_INITIAL_LINE_LENGTH)
+				? channel.attr(MAX_INITIAL_LINE_LENGTH).get()
+				: DEFAULT_MAX_INITIAL_LINE_LENGTH;
 
-		Attribute<Integer> headerAttr = channel.attr(MAX_HEADER_SIZE);
-		int header;
-		if (headerAttr == null || headerAttr.get() == null) header = DEFAULT_MAX_HEADER_SIZE;
-		else header = headerAttr.get();
+		int header = channel.hasAttr(MAX_HEADER_SIZE)
+				? channel.attr(MAX_HEADER_SIZE).get()
+				: DEFAULT_MAX_HEADER_SIZE;
 
-		Attribute<Integer> chunkAttr = channel.attr(MAX_CHUNK_SIZE);
-		int chunk;
-		if (chunkAttr == null || chunkAttr.get() == null) chunk = DEFAULT_MAX_CHUNK_SIZE;
-		else chunk = chunkAttr.get();
 
-		Attribute<Boolean> validateAttr = channel.attr(VALIDATE_HEADERS);
-		boolean validate;
-		if (validateAttr == null || validateAttr.get() == null) validate = DEFAULT_VALIDATE_HEADERS;
-		else validate = validateAttr.get();
+		int chunk = channel.hasAttr(MAX_CHUNK_SIZE)
+				? channel.attr(MAX_CHUNK_SIZE).get()
+				: DEFAULT_MAX_CHUNK_SIZE;
 
-		Attribute<Integer> bufferAttr = channel.attr(INITIAL_BUFFER_SIZE);
-		int buffer;
-		if (bufferAttr == null || bufferAttr.get() == null) buffer = DEFAULT_INITIAL_BUFFER_SIZE;
-		else buffer = bufferAttr.get();
+		boolean validate = channel.hasAttr(VALIDATE_HEADERS)
+				? channel.attr(VALIDATE_HEADERS).get()
+				: DEFAULT_VALIDATE_HEADERS;
+
+		int buffer = channel.hasAttr(INITIAL_BUFFER_SIZE)
+				? channel.attr(INITIAL_BUFFER_SIZE).get()
+				: DEFAULT_INITIAL_BUFFER_SIZE;
 
 		return new HttpServerCodec(line, header, chunk, validate, buffer);
 	}
