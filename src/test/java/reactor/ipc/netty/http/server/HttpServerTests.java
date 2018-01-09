@@ -41,6 +41,7 @@ import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -53,6 +54,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.Attribute;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -686,5 +688,43 @@ public class HttpServerTests {
 		StepVerifier.create(content)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(300));
+	}
+
+	@Test
+	public void httpServerRequestConfigInjectAttributes() {
+		AtomicReference<Channel> channelRef = new AtomicReference<>();
+		HttpServer server = HttpServer
+				.create()
+				.httpRequestDecoder(opt -> opt.maxInitialLineLength(123)
+				                              .maxHeaderSize(456)
+				                              .maxChunkSize(789)
+				                              .validateHeaders(false)
+				                              .initialBufferSize(10))
+				.handler((req, resp) -> resp.sendNotFound())
+				.tcpConfiguration(tcp -> tcp.doOnConnection(c -> channelRef.set(c.channel())));
+
+		Connection co = server.bindNow();
+		HttpClient.create(ops -> ops.connectAddress(co::address))
+		          .post("/", req -> req.sendString(Mono.just("bodysample")))
+		          .flatMap(res -> res.receive()
+		                             .aggregate()
+		                             .asString())
+		          .block();
+
+		assertThat(channelRef.get()).isNotNull();
+		Channel c = channelRef.get();
+		Attribute<Integer> line = c.attr(HttpRequestDecoderConfiguration.MAX_INITIAL_LINE_LENGTH);
+		Attribute<Integer> header = c.attr(HttpRequestDecoderConfiguration.MAX_HEADER_SIZE);
+		Attribute<Integer> chunk = c.attr(HttpRequestDecoderConfiguration.MAX_CHUNK_SIZE);
+		Attribute<Boolean> validate = c.attr(HttpRequestDecoderConfiguration.VALIDATE_HEADERS);
+		Attribute<Integer> bufferSize = c.attr(HttpRequestDecoderConfiguration.INITIAL_BUFFER_SIZE);
+
+		co.disposeNow();
+
+		assertThat(line.get()).as("line length").isEqualTo(123);
+		assertThat(header.get()).as("header size").isEqualTo(456);
+		assertThat(chunk.get()).as("chunk size").isEqualTo(789);
+		assertThat(bufferSize.get()).as("buffer size").isEqualTo(10);
+		assertThat(validate.get()).as("validate headers").isFalse();
 	}
 }

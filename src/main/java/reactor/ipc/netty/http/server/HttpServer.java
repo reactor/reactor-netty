@@ -236,6 +236,18 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Configure the {@link io.netty.handler.codec.http.HttpServerCodec}'s request decoding options.
+	 *
+	 * @param requestDecoderOptions a function to mutate the provided Http request decoder options
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer httpRequestDecoder(Function<HttpRequestDecoderConfiguration, HttpRequestDecoderConfiguration> requestDecoderOptions) {
+		return tcpConfiguration(
+				requestDecoderOptions.apply(new HttpRequestDecoderConfiguration())
+				                     .build());
+	}
+
+	/**
 	 * Apply {@link ServerBootstrap} configuration given mapper taking currently
 	 * configured one and returning a new one to be ultimately used for socket binding.
 	 * <p> Configuration will apply during {@link #tcpConfiguration()} phase.

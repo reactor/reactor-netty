@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.server;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -70,7 +71,8 @@ final class HttpServerBind extends HttpServer {
 		BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer, (ctx, channel) -> {
 			ChannelPipeline p = channel.pipeline();
 
-			p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+			HttpServerCodec codec = HttpRequestDecoderConfiguration.serverCodecFromAttributes(channel);
+			p.addLast(NettyPipeline.HttpCodec, codec);
 
 			Attribute<Integer> minCompressionSize = channel.attr(HttpServerOperations.PRODUCE_GZIP);
 			if(minCompressionSize != null &&
