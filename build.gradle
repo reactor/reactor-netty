@@ -97,7 +97,9 @@ configure(rootProject) { project ->
 	}
   }
 
-  ext.bundleImportPackages = [ '!javax.annotation', '*']
+  ext.bundleImportPackages = [ '!javax.annotation',
+							   'io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)"',
+							   '*']
 
   [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
 														   "-Xlint:cast",
@@ -212,6 +214,7 @@ configure(rootProject) { project ->
 	compile "io.netty:netty-handler-proxy:${nettyVersion}"
 	compile "io.netty:netty-codec-http:${nettyVersion}"
 	compile "io.netty:netty-transport-native-epoll:${nettyVersion}"
+	optional "io.netty:netty-transport-native-kqueue:${nettyVersion}"
 
 	// Testing
 	testCompile "org.apache.httpcomponents:fluent-hc:4.3.6"

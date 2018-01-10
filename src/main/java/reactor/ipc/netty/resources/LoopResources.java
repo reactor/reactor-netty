@@ -135,7 +135,7 @@ public interface LoopResources extends Disposable {
 	 * @return a {@link Class} target for the underlying {@link Channel} factory
 	 */
 	default Class<? extends Channel> onChannel(EventLoopGroup group) {
-		return preferNative() ? DefaultLoopEpollDetector.getChannel(group) :
+		return preferNative() ? DefaultLoopNativeDetector.getInstance().getChannel(group) :
 				NioSocketChannel.class;
 	}
 
@@ -159,7 +159,7 @@ public interface LoopResources extends Disposable {
 	 * @return a {@link Class} target for the underlying {@link Channel} factory
 	 */
 	default Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
-		return preferNative() ? DefaultLoopEpollDetector.getDatagramChannel(group) :
+		return preferNative() ? DefaultLoopNativeDetector.getInstance().getDatagramChannel(group) :
 				NioDatagramChannel.class;
 	}
 
@@ -181,7 +181,7 @@ public interface LoopResources extends Disposable {
 	 * @return a {@link Class} target for the underlying {@link ServerChannel} factory
 	 */
 	default Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
-		return preferNative() ? DefaultLoopEpollDetector.getServerChannel(group) :
+		return preferNative() ? DefaultLoopNativeDetector.getInstance().getServerChannel(group) :
 				NioServerSocketChannel.class;
 	}
 
@@ -198,12 +198,12 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
-	 * Rreturn true if should default to native {@link EventLoopGroup} and {@link Channel}
+	 * Return true if should default to native {@link EventLoopGroup} and {@link Channel}
 	 *
 	 * @return true if should default to native {@link EventLoopGroup} and {@link Channel}
 	 */
 	default boolean preferNative() {
-		return DefaultLoopEpollDetector.hasEpoll();
+		return DefaultLoopEpoll.hasEpoll() || DefaultLoopKQueue.hasKQueue();
 	}
 
 	/**

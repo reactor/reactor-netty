@@ -164,9 +164,10 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 		EventLoopGroup eventLoopGroup = cacheNativeSelectLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = DefaultLoopEpollDetector.newEventLoopGroup(
+			DefaultLoop defaultLoop = DefaultLoopNativeDetector.getInstance();
+			EventLoopGroup newEventLoopGroup = defaultLoop.newEventLoopGroup(
 					selectCount,
-					threadFactory(this, "select-epoll"));
+					threadFactory(this, "select-" + defaultLoop.getName()));
 			if (!cacheNativeSelectLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}
@@ -178,9 +179,10 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	EventLoopGroup cacheNativeServerLoops() {
 		EventLoopGroup eventLoopGroup = cacheNativeServerLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = DefaultLoopEpollDetector.newEventLoopGroup(
+			DefaultLoop defaultLoop = DefaultLoopNativeDetector.getInstance();
+			EventLoopGroup newEventLoopGroup = defaultLoop.newEventLoopGroup(
 					workerCount,
-					threadFactory(this, "server-epoll"));
+					threadFactory(this, "server-" + defaultLoop.getName()));
 			if (!cacheNativeServerLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}
@@ -192,9 +194,10 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	EventLoopGroup cacheNativeClientLoops() {
 		EventLoopGroup eventLoopGroup = cacheNativeClientLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = DefaultLoopEpollDetector.newEventLoopGroup(
+			DefaultLoop defaultLoop = DefaultLoopNativeDetector.getInstance();
+			EventLoopGroup newEventLoopGroup = defaultLoop.newEventLoopGroup(
 					workerCount,
-					threadFactory(this, "client-epoll"));
+					threadFactory(this, "client-" + defaultLoop.getName()));
 			newEventLoopGroup = LoopResources.colocate(newEventLoopGroup);
 			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();

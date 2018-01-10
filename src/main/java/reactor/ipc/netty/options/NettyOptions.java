@@ -204,9 +204,9 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 	}
 
 	/**
-	 * Is this option preferring native loops (epoll)
+	 * Is this option preferring native loops (epoll/kqueue)
 	 *
-	 * @return true if this option is preferring native loops (epoll)
+	 * @return true if this option is preferring native loops (epoll/kqueue)
 	 */
 	public final boolean preferNative() {
 		return this.preferNative;
@@ -280,10 +280,28 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 
 	public static abstract class Builder<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP, ?>,
 			SO extends NettyOptions<BOOTSTRAP, SO>, BUILDER extends Builder<BOOTSTRAP, SO, BUILDER>>
-			implements Supplier<BUILDER>{
+			implements Supplier<BUILDER> {
 
-		private static final boolean DEFAULT_NATIVE =
-				Boolean.parseBoolean(System.getProperty("reactor.ipc.netty.epoll", "true"));
+		private static final boolean DEFAULT_NATIVE;
+
+		static {
+			// reactor.ipc.netty.epoll should be deprecated in favor of reactor.ipc.netty.native
+			String defaultNativeEpoll =
+				System.getProperty("reactor.ipc.netty.epoll");
+
+			String defaultNative =
+				System.getProperty("reactor.ipc.netty.native");
+
+			if (defaultNative != null) {
+				DEFAULT_NATIVE = Boolean.parseBoolean(defaultNative);
+			}
+			else if (defaultNativeEpoll != null) {
+				DEFAULT_NATIVE = Boolean.parseBoolean(defaultNativeEpoll);
+			}
+			else {
+				DEFAULT_NATIVE = true;
+			}
+		}
 
 		protected BOOTSTRAP bootstrapTemplate;
 		private boolean                        preferNative                     = DEFAULT_NATIVE;
@@ -338,9 +356,9 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 		}
 
 		/**
-		 * Set the preferred native option. Determine if epoll should be used if available.
+		 * Set the preferred native option. Determine if epoll/kqueue should be used if available.
 		 *
-		 * @param preferNative Should the connector prefer native (epoll) if available
+		 * @param preferNative Should the connector prefer native (epoll/kqueue) if available
 		 * @return {@code this}
 		 */
 		public final BUILDER preferNative(boolean preferNative) {

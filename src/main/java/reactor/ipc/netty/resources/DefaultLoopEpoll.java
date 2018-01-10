@@ -35,9 +35,9 @@ import reactor.util.Loggers;
 /**
  * @author Stephane Maldini
  */
-final class DefaultLoopEpollDetector {
+final class DefaultLoopEpoll implements DefaultLoop {
 
-	static final Logger log = Loggers.getLogger(DefaultLoopEpollDetector.class);
+	static final Logger log = Loggers.getLogger(DefaultLoopEpoll.class);
 
 	private static final boolean epoll;
 
@@ -51,37 +51,40 @@ final class DefaultLoopEpollDetector {
 		}
 		epoll = epollCheck;
 		if (log.isDebugEnabled()) {
-			log.debug("Default epoll " + "support : " + epoll);
+			log.debug("Default Epoll support : " + epoll);
 		}
-	}
-
-	public static EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		if(epoll){
-			return new EpollEventLoopGroup(threads, factory);
-		}
-		throw new IllegalStateException("Missing EPoll on current system");
-	}
-
-	public static Class<? extends ServerChannel> getServerChannel(EventLoopGroup group) {
-		return useEpoll(group) ? EpollServerSocketChannel.class : NioServerSocketChannel.class;
-	}
-
-	public static Class<? extends Channel> getChannel(EventLoopGroup group) {
-		return useEpoll(group) ? EpollSocketChannel.class : NioSocketChannel.class;
-	}
-
-	public static Class<? extends DatagramChannel> getDatagramChannel(EventLoopGroup group) {
-		return useEpoll(group) ? EpollDatagramChannel.class : NioDatagramChannel.class;
 	}
 
 	public static boolean hasEpoll() {
 		return epoll;
 	}
 
-	private static boolean useEpoll(EventLoopGroup group) {
-		if (!epoll) {
-			return false;
-		}
+	@Override
+	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
+		return new EpollEventLoopGroup(threads, factory);
+	}
+
+	@Override
+	public Class<? extends ServerChannel> getServerChannel(EventLoopGroup group) {
+		return useEpoll(group) ? EpollServerSocketChannel.class : NioServerSocketChannel.class;
+	}
+
+	@Override
+	public Class<? extends Channel> getChannel(EventLoopGroup group) {
+		return useEpoll(group) ? EpollSocketChannel.class : NioSocketChannel.class;
+	}
+
+	@Override
+	public Class<? extends DatagramChannel> getDatagramChannel(EventLoopGroup group) {
+		return useEpoll(group) ? EpollDatagramChannel.class : NioDatagramChannel.class;
+	}
+
+	@Override
+	public String getName() {
+		return "epoll";
+	}
+
+	private boolean useEpoll(EventLoopGroup group) {
 		if (group instanceof ColocatedEventLoopGroup) {
 			group = ((ColocatedEventLoopGroup) group).get();
 		}
