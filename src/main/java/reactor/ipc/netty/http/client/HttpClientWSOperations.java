@@ -184,7 +184,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 	}
 
 	@Override
-	protected void onInboundCancel() {
+	protected void afterInboundCancel() {
 		if (log.isDebugEnabled()) {
 			log.debug("Cancelling Websocket inbound. Closing Websocket");
 		}

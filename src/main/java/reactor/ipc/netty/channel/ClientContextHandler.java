@@ -23,6 +23,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyHandler;
+import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
@@ -40,6 +42,7 @@ final class ClientContextHandler<CHANNEL extends Channel>
 
 	final ClientOptions clientOptions;
 	final boolean       secure;
+	final Disposable.Swap onCancel;
 
 
 	ClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
@@ -51,6 +54,24 @@ final class ClientContextHandler<CHANNEL extends Channel>
 		super(channelOpFactory, options, sink, loggingHandler, providedAddress);
 		this.clientOptions = options;
 		this.secure = secure;
+		this.onCancel = Disposables.swap();
+	}
+
+	@Override
+	protected Swap disposable() {
+		return onCancel;
+	}
+
+	@Override
+	public boolean isDisposed() {
+		return onCancel.isDisposed();
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void dispose() {
+		onCancel.dispose();
+		super.dispose();
 	}
 
 	@Override

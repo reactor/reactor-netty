@@ -334,7 +334,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	/**
 	 * React on inbound cancel (receive() subscriber cancelled)
 	 */
-	protected void onInboundCancel() {
+	protected void afterInboundCancel() {
 
 	}
 

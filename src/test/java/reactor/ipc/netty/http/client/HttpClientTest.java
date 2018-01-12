@@ -400,6 +400,7 @@ public class HttpClientTest {
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false)
 				                                       .sendString(Flux.just("hello")))
+		                                 .doOnNext(x -> x.receive().subscribe())
 		                                 .block(Duration.ofSeconds(30));
 
 		FutureMono.from(r.context()
@@ -418,6 +419,7 @@ public class HttpClientTest {
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false)
 				                                       .keepAlive(false))
+		                                 .doOnNext(x -> x.receive().subscribe())
 		                                 .block(Duration.ofSeconds(30));
 
 		FutureMono.from(r.context()
@@ -437,13 +439,16 @@ public class HttpClientTest {
 		                                 .get("http://google.com/unsupportedURI",
 				                                 c -> c.failOnClientError(false)
 				                                       .sendHeaders())
+		                                 .doOnNext(x -> x.receive().subscribe())
 		                                 .block(Duration.ofSeconds(30));
 
 		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
 		                                  .get("http://google.com/unsupportedURI",
 				                                  c -> c.failOnClientError(false)
 				                                        .sendHeaders())
+		                                  .doOnNext(x -> x.receive().subscribe())
 		                                  .block(Duration.ofSeconds(30));
+
 		Assert.assertTrue(r.context()
 		                   .channel() == r2.context()
 		                                   .channel());
@@ -459,6 +464,7 @@ public class HttpClientTest {
 		                                 .get("/unsupportedURI",
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false))
+		                                 .doOnNext(x -> x.receive().subscribe())
 		                                 .block(Duration.ofSeconds(30));
 
 		FutureMono.from(r.context()
@@ -478,6 +484,7 @@ public class HttpClientTest {
 				                                 c -> c.header("content-length", "1")
 				                                       .failOnClientError(false)
 				                                       .sendString(Mono.just(" ")))
+		                                 .doOnNext(x -> x.receive().subscribe())
 		                                 .block(Duration.ofSeconds(30));
 
 		HttpClientResponse r1 = HttpClient.create(opts -> opts.poolResources(fixed))
@@ -485,6 +492,7 @@ public class HttpClientTest {
 				                                  c -> c.header("content-length", "1")
 				                                        .failOnClientError(false)
 				                                        .sendString(Mono.just(" ")))
+		                                  .doOnNext(x -> x.receive().subscribe())
 		                                  .block(Duration.ofSeconds(30));
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.BAD_REQUEST);

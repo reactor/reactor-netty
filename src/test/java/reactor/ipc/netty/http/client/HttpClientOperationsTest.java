@@ -187,7 +187,6 @@ public class HttpClientOperationsTest {
 		assertSame(ops1.nettyRequest, ops2.nettyRequest);
 		assertSame(ops1.responseState, ops2.responseState);
 		assertSame(ops1.redirectable, ops2.redirectable);
-		assertSame(ops1.inboundPrefetch, ops2.inboundPrefetch);
 		assertSame(ops1.requestHeaders, ops2.requestHeaders);
 		assertSame(ops1.clientError, ops2.clientError);
 		assertSame(ops1.serverError, ops2.serverError);

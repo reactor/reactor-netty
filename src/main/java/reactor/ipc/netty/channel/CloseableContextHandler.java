@@ -104,7 +104,7 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	public final void dispose() {
+	public void dispose() {
 		if (f == null){
 			return;
 		}
