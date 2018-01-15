@@ -18,9 +18,11 @@ package reactor.ipc.netty.http.client;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
@@ -85,40 +87,59 @@ public class HttpRedirectTest {
 
 	@Test
 	public void testIssue253() {
-		NettyContext server =
-				HttpServer.create(9991)
-				          .newRouter(r -> r.get("/1",
+		DisposableServer server =
+				HttpServer.create()
+				          .port(9991)
+				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .wiretap()
+				          .router(r -> r.get("/1",
 				                                   (req, res) -> res.sendRedirect("http://localhost:9991/3"))
-				                           .get("/2",
+				                        .get("/2",
 				                                   (req, res) -> res.status(301)
 				                                                    .header(HttpHeaderNames.LOCATION, "http://localhost:9991/3")
 				                                                    .send())
-				                           .get("/3",
+				                        .get("/3",
 				                                   (req, res) -> res.status(200)
 				                                                    .sendString(Mono.just("OK"))))
-				          .block(Duration.ofSeconds(30));
+				          .bindNow();
 
 		HttpClient client =
-				HttpClient.create(ops -> ops.connectAddress(() -> server.address()));
+				HttpClient.prepare()
+				          .addressSupplier(server::address)
+				          .wiretap();
 
 		String value =
-				client.get("/1", req -> req.followRedirect().send())
-				      .flatMap(res -> res.receive().aggregate().asString())
+				client.request(HttpMethod.GET)
+				      .uri("/1")
+				      .send((req, out) -> req.followRedirect().sendHeaders())
+				      .responseContent()
+				      .aggregate()
+				      .asString()
 				      .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isEqualTo("OK");
 
-		value = client.get("/1")
-		              .flatMap(res -> res.receive().aggregate().asString())
+		value = client.get()
+		              .uri("/1")
+		              .responseContent()
+		              .aggregate()
+		              .asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 
-		value = client.get("/2", req -> req.followRedirect().send())
-		              .flatMap(res -> res.receive().aggregate().asString())
+		value = client.request(HttpMethod.GET)
+		              .uri("/2")
+		              .send((req, out) -> req.followRedirect().sendHeaders())
+		              .responseContent()
+		              .aggregate()
+		              .asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isEqualTo("OK");
 
-		value = client.get("/2")
-		              .flatMap(res -> res.receive().aggregate().asString())
+		value = client.get()
+		              .uri("/2")
+		              .responseContent()
+		              .aggregate()
+		              .asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 
