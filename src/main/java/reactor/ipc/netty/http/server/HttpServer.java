@@ -188,6 +188,16 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Enable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers for deriving information about the connection.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer forwarded() {
+		return tcpConfiguration(tcp -> tcp.attr(HttpServerOperations.USE_FORWARDED, true));
+	}
+
+	/**
 	 * Enable GZip response compression if the client request presents accept encoding
 	 * headers
 	 * AND the response reaches a minimum threshold
@@ -233,6 +243,16 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer noCompression() {
 		return tcpConfiguration(COMPRESS_ATTR_DISABLE);
+	}
+
+	/**
+	 * Disable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer noForwarded() {
+		return tcpConfiguration(tcp -> tcp.attr(HttpServerOperations.USE_FORWARDED, false));
 	}
 
 	/**

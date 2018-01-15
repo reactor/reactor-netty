@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -78,10 +79,31 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	}
 
 	/**
+	 * Return the address of the host peer.
+	 *
+	 * @return the host's address
+	 */
+	InetSocketAddress hostAddress();
+
+	/**
+	 * Return the address of the remote peer.
+	 *
+	 * @return the peer's address
+	 */
+	InetSocketAddress remoteAddress();
+
+	/**
 	 * Return inbound {@link HttpHeaders}
 	 *
 	 * @return inbound {@link HttpHeaders}
 	 */
 	HttpHeaders requestHeaders();
+
+	/**
+	 * Return the current scheme
+	 *
+	 * @return the protocol scheme
+	 */
+	String scheme();
 
 }
