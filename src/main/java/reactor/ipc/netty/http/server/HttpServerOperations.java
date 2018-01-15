@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.server;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -25,11 +26,13 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
 import javax.annotation.Nullable;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -48,6 +51,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
+import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -74,9 +78,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@SuppressWarnings("unchecked")
 	static HttpServerOperations bindHttp(Connection connection, ConnectionEvents listener,
-			Object msg) {
+			Object msg, boolean forwarded) {
 		HttpServerOperations ops =
-				new HttpServerOperations(connection, listener, (HttpRequest) msg);
+				new HttpServerOperations(connection, listener, (HttpRequest) msg, forwarded);
 
 		listener.onStart(ops);
 
@@ -87,12 +91,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final HttpHeaders  responseHeaders;
 	final Cookies     cookieHolder;
 	final HttpRequest nettyRequest;
+	final ConnectionInfo connectionInfo;
 
 	Function<? super String, Map<String, String>> paramsResolver;
 
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
 		this.cookieHolder = replaced.cookieHolder;
+		this.connectionInfo = replaced.connectionInfo;
 		this.responseHeaders = replaced.responseHeaders;
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
@@ -101,15 +107,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(Connection c,
 			ConnectionEvents listener,
-			HttpRequest nettyRequest) {
+			HttpRequest nettyRequest,
+			boolean forwarded) {
 		super(c, listener);
 		this.nettyRequest = Objects.requireNonNull(nettyRequest, "nettyRequest");
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
+		if (forwarded) {
+			this.connectionInfo = ConnectionInfo.newForwardedConnectionInfo(this, (SocketChannel) channel());
+		}
+		else {
+			this.connectionInfo = ConnectionInfo.newConnectionInfo(this, (SocketChannel) channel());
+		}
 		chunkedTransfer(true);
-
-
 	}
 
 	@Override
@@ -260,11 +271,26 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public InetSocketAddress hostAddress() {
+		return this.connectionInfo.getHostAddress();
+	}
+
+	@Override
+	public InetSocketAddress remoteAddress() {
+		return this.connectionInfo.getRemoteAddress();
+	}
+
+	@Override
 	public HttpHeaders requestHeaders() {
 		if (nettyRequest != null) {
 			return nettyRequest.headers();
 		}
 		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public String scheme() {
+		return this.connectionInfo.getScheme();
 	}
 
 	@Override

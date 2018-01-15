@@ -178,6 +178,16 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Enable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers for deriving information about the connection.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer forwarded() {
+		return tcpConfiguration(FORWARDED_ATTR_CONFIG);
+	}
+
+	/**
 	 * Enable GZip response compression if the client request presents accept encoding
 	 * headers
 	 * AND the response reaches a minimum threshold
@@ -223,6 +233,16 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer noCompression() {
 		return tcpConfiguration(COMPRESS_ATTR_DISABLE);
+	}
+
+	/**
+	 * Disable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer noForwarded() {
+		return tcpConfiguration(FORWARDED_ATTR_DISABLE);
 	}
 
 	/**
@@ -277,7 +297,20 @@ public abstract class HttpServer {
 		@Nullable
 		@Override
 		public ChannelOperations<?, ?> create(Connection c, ConnectionEvents listener, Object msg) {
-			return HttpServerOperations.bindHttp(c, listener, msg);
+			return HttpServerOperations.bindHttp(c, listener, msg, false);
+		}
+
+		@Override
+		public boolean createOnConnected() {
+			return false;
+		}
+	};
+
+	static final ChannelOperations.OnSetup HTTP_OPS_FORWARDED = new ChannelOperations.OnSetup() {
+		@Nullable
+		@Override
+		public ChannelOperations<?, ?> create(Connection c, ConnectionEvents listener, Object msg) {
+			return HttpServerOperations.bindHttp(c, listener, msg, true);
 		}
 
 		@Override
@@ -294,6 +327,11 @@ public abstract class HttpServer {
 		return b;
 	};
 
+	static final Function<ServerBootstrap, ServerBootstrap> HTTP_OPS_FORWARDED_CONF = b -> {
+		BootstrapHandlers.channelOperationFactory(b, HTTP_OPS_FORWARDED);
+		return b;
+	};
+
 	static final TcpServer DEFAULT_TCP_SERVER = TcpServer.create()
 			                                             .bootstrap(HTTP_OPS_CONF)
 			                                             .port(DEFAULT_PORT);
@@ -306,4 +344,10 @@ public abstract class HttpServer {
 
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_DISABLE =
 			tcp -> tcp.selectorAttr(HttpServerBind.PRODUCE_GZIP, null);
+
+	static final Function<TcpServer, TcpServer> FORWARDED_ATTR_CONFIG =
+			tcp -> tcp.bootstrap(HTTP_OPS_FORWARDED_CONF);
+
+	static final Function<TcpServer, TcpServer> FORWARDED_ATTR_DISABLE =
+			tcp -> tcp.bootstrap(HTTP_OPS_CONF);
 }
