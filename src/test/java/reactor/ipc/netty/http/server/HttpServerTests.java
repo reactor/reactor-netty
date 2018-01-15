@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.server;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -55,7 +56,9 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -965,5 +968,66 @@ public class HttpServerTests {
 			server.dispose();
 		}
 
+	}
+
+	@Test
+	public void httpServerRequestConfigInjectAttributes() {
+		AtomicReference<Channel> channelRef = new AtomicReference<>();
+		HttpServer server =
+				HttpServer.create()
+				          .httpRequestDecoder(opt -> opt.maxInitialLineLength(123)
+				                                        .maxHeaderSize(456)
+				                                        .maxChunkSize(789)
+				                                        .validateHeaders(false)
+				                                        .initialBufferSize(10))
+				          .handler((req, resp) -> resp.sendNotFound())
+				          .tcpConfiguration(tcp -> tcp.doOnConnection(c -> channelRef.set(c.channel())))
+				          .wiretap();
+
+		DisposableServer ds = server.bindNow();
+
+		HttpClient.prepare()
+		          .addressSupplier(ds::address)
+		          .post()
+		          .uri("/")
+		          .send(ByteBufFlux.fromString(Mono.just("bodysample")))
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .block();
+
+		assertThat(channelRef.get()).isNotNull();
+		Channel c = channelRef.get();
+		HttpServerCodec codec = c.pipeline().get(HttpServerCodec.class);
+		HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
+		int chunkSize = (Integer) getValueReflection(decoder, "maxChunkSize", 2);
+		boolean validate = (Boolean) getValueReflection(decoder, "validateHeaders", 2);
+
+		ds.disposeNow();
+
+		assertThat(chunkSize).as("line length").isEqualTo(789);
+		assertThat(validate).as("validate headers").isFalse();
+	}
+
+	private Object getValueReflection(Object obj, String fieldName, int superLevel) {
+		try {
+			Field field;
+			if (superLevel == 1) {
+				field = obj.getClass()
+				           .getSuperclass()
+				           .getDeclaredField(fieldName);
+			}
+			else {
+				field = obj.getClass()
+				           .getSuperclass()
+				           .getSuperclass()
+				           .getDeclaredField(fieldName);
+			}
+			field.setAccessible(true);
+			return field.get(obj);
+		}
+		catch(NoSuchFieldException | IllegalAccessException e) {
+			return null;
+		}
 	}
 }

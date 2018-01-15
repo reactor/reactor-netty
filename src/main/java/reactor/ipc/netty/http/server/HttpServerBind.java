@@ -33,6 +33,17 @@ import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.TcpServer;
 
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_INITIAL_BUFFER_SIZE;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_MAX_CHUNK_SIZE;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_MAX_HEADER_SIZE;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_MAX_INITIAL_LINE_LENGTH;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_VALIDATE_HEADERS;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.INITIAL_BUFFER_SIZE;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.MAX_CHUNK_SIZE;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.MAX_HEADER_SIZE;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.MAX_INITIAL_LINE_LENGTH;
+import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.VALIDATE_HEADERS;
+
 /**
  * @author Stephane Maldini
  */
@@ -81,18 +92,24 @@ final class HttpServerBind extends HttpServer {
 			 .channel(loops.onServerChannel(elg));
 		}
 
-		Integer minCompressionSize = (Integer) b.config()
-		                                        .attrs()
-		                                        .get(PRODUCE_GZIP);
+		Integer minCompressionSize = getAttributeValue(b, PRODUCE_GZIP, null);
 
-		b.attr(PRODUCE_GZIP, null);
+		Integer line = getAttributeValue(b, MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_INITIAL_LINE_LENGTH);
+
+		Integer header = getAttributeValue(b, MAX_HEADER_SIZE, DEFAULT_MAX_HEADER_SIZE);
+
+		Integer chunk = getAttributeValue(b, MAX_CHUNK_SIZE, DEFAULT_MAX_CHUNK_SIZE);
+
+		Boolean validate = getAttributeValue(b, VALIDATE_HEADERS, DEFAULT_VALIDATE_HEADERS);
+
+		Integer buffer = getAttributeValue(b, INITIAL_BUFFER_SIZE, DEFAULT_INITIAL_BUFFER_SIZE);
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.HttpInitializer,
 				(listener, channel) -> {
 					ChannelPipeline p = channel.pipeline();
 
-					p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec());
+					p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(line, header, chunk, validate, buffer));
 
 					if (minCompressionSize != null && minCompressionSize >= 0) {
 						p.addLast(NettyPipeline.CompressionHandler,
@@ -108,4 +125,12 @@ final class HttpServerBind extends HttpServer {
 
 	static final AttributeKey<Integer> PRODUCE_GZIP =
 			AttributeKey.newInstance("produceGzip");
+
+	private <T> T getAttributeValue(ServerBootstrap bootstrap, AttributeKey<T> attributeKey, T defaultValue) {
+		T result = bootstrap.config().attrs().get(attributeKey) != null
+				? (T) bootstrap.config().attrs().get(attributeKey)
+				: defaultValue;
+		bootstrap.attr(attributeKey, null);
+		return result;
+	}
 }
