@@ -130,6 +130,8 @@ final class HttpClientConnect extends HttpClient {
 
 		boolean compress = attrs.get(ACCEPT_GZIP) != null && (Boolean) attrs.get(ACCEPT_GZIP);
 
+		boolean followRedirect = attrs.get(FOLLOW_REDIRECT) != null && (Boolean) attrs.get(FOLLOW_REDIRECT);
+
 
 		String uri = (String)attrs.get(URI);
 
@@ -141,11 +143,12 @@ final class HttpClientConnect extends HttpClient {
 						delegate.isSecure());
 
 		HttpClientHandler handler =
-				new HttpClientHandler(attrs, reconnectableUriEndpoint, compress);
+				new HttpClientHandler(attrs, reconnectableUriEndpoint, compress, followRedirect);
 
 		reconnectableUriEndpoint.init(uri, handler.method);
 
 		b.attr(ACCEPT_GZIP, null)
+		 .attr(FOLLOW_REDIRECT, null)
 		 .attr(BODY, null)
 		 .attr(HEADERS, null)
 		 .attr(URI, null)
@@ -206,9 +209,11 @@ final class HttpClientConnect extends HttpClient {
 		final HttpHeaders
 		                                                                                           defaultHeaders;
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>handler;
+		final boolean                                                                              followRedirect;
 
 		@SuppressWarnings("unchecked")
-		HttpClientHandler(Map<AttributeKey<?>, Object> attrs, ReconnectableUriEndpoint bridge, boolean compress) {
+		HttpClientHandler(Map<AttributeKey<?>, Object> attrs, ReconnectableUriEndpoint bridge,
+						  boolean compress, boolean followRedirect) {
 			this.method = (HttpMethod) attrs.get(METHOD);
 			HttpHeaders defaultHeaders = (HttpHeaders) attrs.get(HttpClientConnect.HEADERS);
 
@@ -227,6 +232,7 @@ final class HttpClientConnect extends HttpClient {
 			this.defaultHeaders = defaultHeaders;
 			this.handler = requestHandler;
 			this.bridge = bridge;
+			this.followRedirect = followRedirect;
 		}
 
 		@Override
@@ -242,6 +248,7 @@ final class HttpClientConnect extends HttpClient {
 				                        .set(HttpHeaderNames.HOST,
 						                        resolveHostHeaderValue(ch.address()))
 				                        .set(HttpHeaderNames.ACCEPT, ALL);
+				ch.followRedirect(followRedirect);
 
 				if (method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.DELETE) {
 					ch.chunkedTransfer(false);

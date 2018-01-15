@@ -74,10 +74,11 @@ public class HttpRedirectTest {
 
 		try {
 			Flux.range(0, this.numberOfTests)
-			    .concatMap(i -> client.post()
+			    .concatMap(i -> client.followRedirect()
+			                          .post()
 			                          .uri("/login")
-			                          .send((r, o) -> r.followRedirect())
-			                          .responseContent())
+			                          .responseContent()
+			                          .then())
 			    .blockLast(Duration.ofSeconds(30));
 		}
 		finally {
@@ -111,9 +112,9 @@ public class HttpRedirectTest {
 				          .wiretap();
 
 		String value =
-				client.request(HttpMethod.GET)
+				client.followRedirect()
+				      .get()
 				      .uri("/1")
-				      .send((req, out) -> req.followRedirect().sendHeaders())
 				      .responseContent()
 				      .aggregate()
 				      .asString()
@@ -128,9 +129,9 @@ public class HttpRedirectTest {
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 
-		value = client.request(HttpMethod.GET)
+		value = client.followRedirect()
+		              .get()
 		              .uri("/2")
-		              .send((req, out) -> req.followRedirect().sendHeaders())
 		              .responseContent()
 		              .aggregate()
 		              .asString()
@@ -170,9 +171,9 @@ public class HttpRedirectTest {
 		HttpClient client = HttpClient.prepare().port(8888);
 
 		Mono<String> response =
-				client.request(HttpMethod.GET)
+				client.followRedirect()
+				      .get()
 				      .uri("/1")
-				      .send((req, out) -> req.followRedirect())
 				      .responseContent()
 				      .aggregate()
 				      .asString();
@@ -182,9 +183,9 @@ public class HttpRedirectTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		response = client.request(HttpMethod.GET)
+		response = client.followRedirect()
+		                 .get()
 		                 .uri("/2")
-		                 .send((req, out) -> req.followRedirect())
 		                 .responseContent()
 		                 .aggregate()
 		                 .asString();
@@ -194,9 +195,9 @@ public class HttpRedirectTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		response = client.request(HttpMethod.GET)
+		response = client.followRedirect()
+		                 .get()
 		                 .uri("/4")
-		                 .send((req, out) -> req.followRedirect())
 		                 .responseContent()
 		                 .aggregate()
 		                 .asString();

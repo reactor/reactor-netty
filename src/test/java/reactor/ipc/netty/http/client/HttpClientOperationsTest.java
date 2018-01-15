@@ -138,7 +138,7 @@ public class HttpClientOperationsTest {
 
 		HttpClientOperations ops1 = new HttpClientOperations(() -> channel,
 				ConnectionEvents.emptyListener());
-		ops1.followRedirect();
+		ops1.followRedirect(true);
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
 
