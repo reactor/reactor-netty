@@ -650,7 +650,7 @@ public class HttpClientTest {
 		                                      && "gzip".equals(tuple.getT1().getT2());
 		                               })
 		            .expectComplete()
-		            .verify();
+		            .verify(Duration.ofSeconds(30));
 
 		//verify decoder does its job and removes the header
 		StepVerifier.create(
@@ -678,8 +678,7 @@ public class HttpClientTest {
 		                                      && "".equals(tuple.getT1().getT2());
 		                               })
 		            .expectComplete()
-		            .verify();
-
+		            .verify(Duration.ofSeconds(30));
 		c.dispose();
 	}
 
