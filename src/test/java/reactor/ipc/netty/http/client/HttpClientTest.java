@@ -296,10 +296,9 @@ public class HttpClientTest {
 				                                                                   .host("127.0.0.1")
 				                                                                   .port(8888)))
 				          .wiretap()
-				          .request(HttpMethod.GET)
+				          .followRedirect()
+				          .get()
 				          .uri("https://projectreactor.io")
-				          .send((req, out) -> req.followRedirect()
-				                                 .sendHeaders())
 				          .responseContent()
 				          .retain()
 				          .asString()
@@ -318,19 +317,17 @@ public class HttpClientTest {
 				                                                                   .port(8888)
 				                                                                   .nonProxyHosts("spring.io")))
 				          .wiretap();
-		Mono<String> remote1 = client.request(HttpMethod.GET)
+		Mono<String> remote1 = client.followRedirect()
+		                             .get()
 		                             .uri("https://projectreactor.io")
-		                             .send((c, out) -> c.followRedirect()
-		                                                .sendHeaders())
 		                             .responseContent()
 		                             .retain()
 		                             .asString()
 		                             .limitRate(1)
 		                             .reduce(String::concat);
-		Mono<String> remote2 = client.request(HttpMethod.GET)
+		Mono<String> remote2 = client.followRedirect()
+		                             .get()
 		                             .uri("https://spring.io")
-		                             .send((c, out) -> c.followRedirect()
-		                             .sendHeaders())
 		                             .responseContent()
 		                             .retain()
 		                             .asString()
@@ -371,10 +368,9 @@ public class HttpClientTest {
 		res = HttpClient.prepare()
 		                .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 		                .wiretap()
-		                .request(HttpMethod.GET)
+		                .followRedirect()
+		                .get()
 		                .uri("/search")
-		                .send((c, out) -> c.followRedirect()
-		                                   .sendHeaders())
 		                .responseSingle((r, out) -> Mono.just(r.status().code()))
 		                .log()
 		                .block(Duration.ofSeconds(30));
@@ -401,10 +397,9 @@ public class HttpClientTest {
 	}
 
 	private void doSimpleTest404(HttpClient client) {
-		int res = client.request(HttpMethod.GET)
+		int res = client.followRedirect()
+				        .get()
 				        .uri("/unsupportedURI")
-				        .send((c, out) -> c.followRedirect()
-				                           .sendHeaders())
 				        .responseSingle((r, buf) -> Mono.just(r.status().code()))
 				        .log()
 				        .block(Duration.ofSeconds(30));
@@ -586,9 +581,9 @@ public class HttpClientTest {
 		                  .wiretap()
 		                  .headers(h -> h.add("Accept-Encoding", "gzip")
 		                                 .add("Accept-Encoding", "deflate"))
-		                  .request(HttpMethod.GET)
+		                  .followRedirect()
+		                  .get()
 		                  .uri("http://www.httpwatch.com")
-		                  .send((req, out) -> req.followRedirect().sendHeaders())
 		                  .response((r, buf) -> buf.asString()
 		                                           .elementAt(0)
 		                                           .map(s -> s.substring(0, Math.min(s.length() -1, 100)))
@@ -607,13 +602,13 @@ public class HttpClientTest {
 		StepVerifier.create(
 				HttpClient.prepare()
 				          .wiretap()
+				          .followRedirect()
 				          .request(HttpMethod.GET)
 				          .uri("http://www.httpwatch.com")
 				          .send((req, out) ->
 					          req.withConnection(c -> c.addHandlerFirst
 							          ("gzipDecompressor", new
 							          HttpContentDecompressor()))
-					             .followRedirect()
 					             .addHeader
 							          ("Accept-Encoding", "gzip")
 					                    .addHeader("Accept-Encoding", "deflate")

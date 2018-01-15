@@ -242,10 +242,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return Collections.emptyMap();
 	}
 
-	@Override
-	public HttpClientRequest followRedirect() {
-		redirectable = true;
-		return this;
+	public void followRedirect(boolean redirectable) {
+		this.redirectable = redirectable;
 	}
 
 	@Override
