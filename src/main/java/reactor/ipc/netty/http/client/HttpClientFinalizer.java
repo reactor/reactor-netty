@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.client;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -35,10 +36,12 @@ final class HttpClientFinalizer extends HttpClientOperator
 		implements HttpClient.RequestSender {
 
 	final TcpClient cachedConfiguration;
+	final String    baseUri;
 
 	HttpClientFinalizer(HttpClient parent) {
 		super(parent);
 		this.cachedConfiguration = parent.tcpConfiguration();
+		this.baseUri = baseUri();
 	}
 
 	// UriConfiguration methods
@@ -58,27 +61,30 @@ final class HttpClientFinalizer extends HttpClientOperator
 	// ResponseReceiver methods
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public Mono<HttpClientResponse> response() {
 		return this.connect(cachedConfiguration)
 		           .cast(HttpClientResponse.class);
 	}
 
 	@Override
-	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<? extends V>> receiver) {
-		// TODO
-		return null;
+	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver) {
+		return response().flatMapMany(resp -> Flux.from(receiver.apply(resp,
+				resp.receive()))
+		                                          .doFinally(s -> resp.dispose()));
 	}
 
 	@Override
 	public ByteBufFlux responseContent() {
-		// TODO
-		return null;
+		// TODO assign allocator
+		return ByteBufFlux.fromInbound(response().flatMapMany((HttpClientResponse::receive)));
 	}
 
 	@Override
-	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<? extends V>> receiver) {
-		// TODO
-		return null;
+	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver) {
+		return response().flatMap(resp -> receiver.apply(resp,
+				resp.receive()
+				    .aggregate()).doFinally(s -> resp.dispose()));
 	}
 
 	// RequestSender methods

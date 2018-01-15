@@ -67,7 +67,7 @@ public abstract class BootstrapHandlers {
 		Objects.requireNonNull(ops, "ops");
 		Objects.requireNonNull(sink, "sink");
 
-		DisposableBind disposableServer = new DisposableBind(sink, ops, null);
+		DisposableBind disposableServer = new DisposableBind(sink, ops);
 
 		BootstrapPipelineHandler pipeline = null;
 		ChannelHandler handler = b.config().childHandler();
@@ -98,7 +98,7 @@ public abstract class BootstrapHandlers {
 		Objects.requireNonNull(sink, "sink");
 
 		DisposableConnect disposableConnect =
-				new DisposableConnect(sink, ops, null);
+				new DisposableConnect(sink, ops);
 
 		BootstrapPipelineHandler pipeline = null;
 		ChannelHandler handler = b.config().handler();
@@ -130,7 +130,7 @@ public abstract class BootstrapHandlers {
 		Objects.requireNonNull(pool, "pool");
 
 		DisposableAcquire disposableAcquire =
-				new DisposableAcquire(sink, ops, pool, null);
+				new DisposableAcquire(sink, ops, pool);
 
 		BootstrapPipelineHandler pipeline = null;
 		ChannelHandler handler = b.config()
@@ -193,6 +193,9 @@ public abstract class BootstrapHandlers {
 	public static void removeConfiguration(Bootstrap b, String name) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(name, "name");
+		if (b.config().handler() == null) {
+			return;
+		}
 		b.handler(removeConfiguration(b.config().handler(), name));
 	}
 

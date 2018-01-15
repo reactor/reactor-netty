@@ -16,14 +16,18 @@
 
 package reactor.ipc.netty.http.client;
 
-import javax.annotation.Nullable;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
+
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.tcp.TcpClient;
 
 /**
  * @author Stephane Maldini
  */
 final class HttpClientLifecycle extends HttpClientOperator
-		implements Consumer<HttpClientRequest> {
+		implements Consumer<Connection> {
 
 	final Consumer<? super HttpClientRequest>  onRequest;
 	final Consumer<? super HttpClientRequest>  afterRequest;
@@ -42,11 +46,35 @@ final class HttpClientLifecycle extends HttpClientOperator
 		this.afterResponse = afterResponse;
 	}
 
+	static final Consumer<? super Throwable> EMPTY_ERROR = e -> {};
 
 	@Override
-	public void accept(HttpClientRequest o) {
+	@SuppressWarnings("unchecked")
+	public void accept(Connection o) {
 		if (onRequest != null) {
-			onRequest.accept(o);
+			onRequest.accept((HttpClientRequest) o);
 		}
+		HttpClientOperations ops = (HttpClientOperations)o;
+		onHttpEvent(afterRequest, HttpClientOperations.HttpClientEvent.afterRequest, ops);
+		onHttpEvent(onResponse, HttpClientOperations.HttpClientEvent.onResponse, ops);
+
+		if (afterResponse != null) {
+			ops.httpClientEvents.doOnComplete(() -> afterResponse.accept(ops));
+		}
+	}
+
+	void onHttpEvent(@Nullable Consumer<? super HttpClientOperations> consumer,
+			HttpClientOperations.HttpClientEvent event,
+			HttpClientOperations ops) {
+		if (consumer != null) {
+			ops.httpClientEvents.filter(event::equals)
+			                    .next()
+			                    .subscribe(evt -> consumer.accept(ops), EMPTY_ERROR);
+		}
+	}
+
+	@Override
+	protected Mono<? extends Connection> connect(TcpClient delegate) {
+		return super.connect(delegate.doOnConnected(this));
 	}
 }

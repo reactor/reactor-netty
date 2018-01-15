@@ -17,21 +17,26 @@
 package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.JdkSslContext;
@@ -62,8 +67,9 @@ final class HttpClientConnect extends HttpClient {
 	static final HttpClientConnect INSTANCE = new HttpClientConnect();
 	static final AsciiString       ALL      = new AsciiString("*/*");
 
-	static final AttributeKey<String>     URI    = AttributeKey.newInstance("uri");
-	static final AttributeKey<HttpMethod> METHOD = AttributeKey.newInstance("method");
+	static final AttributeKey<String>      URI     = AttributeKey.newInstance("uri");
+	static final AttributeKey<HttpHeaders> HEADERS = AttributeKey.newInstance("headers");
+	static final AttributeKey<HttpMethod>  METHOD  = AttributeKey.newInstance("method");
 
 	static final AttributeKey<BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>>
 			BODY = AttributeKey.newInstance("body");
@@ -106,6 +112,7 @@ final class HttpClientConnect extends HttpClient {
 
 		if (b.config()
 		     .group() == null) {
+
 			LoopResources loops = HttpResources.get();
 
 			boolean useNative =
@@ -117,6 +124,7 @@ final class HttpClientConnect extends HttpClient {
 			 .channel(loops.onChannel(elg));
 		}
 
+
 		Map<AttributeKey<?>, Object> attrs = bootstrap.config()
 		                                              .attrs();
 
@@ -124,60 +132,85 @@ final class HttpClientConnect extends HttpClient {
 
 
 		String uri = (String)attrs.get(URI);
+
 		//Todo handle Mono<String> uri
-		//Todo handle baseUri
 
-		ReconnectableUriEndpoint endpoint = new ReconnectableUriEndpoint(bootstrap, delegate.isSecure());
-		HttpClientHandler handler = new HttpClientHandler(attrs, endpoint, compress);
+		ReconnectableUriEndpoint reconnectableUriEndpoint =
+				new ReconnectableUriEndpoint(bootstrap.config()
+				                                      .remoteAddress(),
+						delegate.isSecure());
 
+		HttpClientHandler handler =
+				new HttpClientHandler(attrs, reconnectableUriEndpoint, compress);
+
+		reconnectableUriEndpoint.init(uri, handler.method);
 
 		b.attr(ACCEPT_GZIP, null)
 		 .attr(BODY, null)
+		 .attr(HEADERS, null)
 		 .attr(URI, null)
 		 .attr(MONO_URI, null)
 		 .attr(METHOD, null);
 
-		endpoint.activeURI = endpoint.uriEndpointFactory.createUriEndpoint(uri, handler.method == HttpClient.WS);
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.HttpInitializer,
 				(listener, channel) -> {
-			channel.pipeline().addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
+			channel.pipeline()
+			       .addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
 
 			if (compress) {
-				channel.pipeline().addAfter(NettyPipeline.HttpCodec,
+				channel.pipeline()
+				       .addAfter(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpDecompressor,
 						new HttpContentDecompressor());
 			}
 
 		});
 
-		return Mono.defer(() -> delegate.doOnConnected(c -> {
-			endpoint.accept(c.channel());
-			if (log.isDebugEnabled()) {
-				log.debug("{} handler is being applied: {}", c.channel(), handler);
-			}
+		return Mono.defer(() -> {
+			UriEndpoint currentUri = reconnectableUriEndpoint.activeURI;
 
-			ChannelOperations<?, ?> ops = ChannelOperations.get(c.channel());
-			Mono.fromDirect(handler.apply(ops, ops))
-			    .subscribe(c.disposeSubscriber());
+			//append secure handler if needed
+			TcpClient finalDelegate = currentUri.isSecure() && !delegate.isSecure() ? delegate.secure() : delegate;
+
+			//prepare the client connection
+			return finalDelegate.doOnConnected(c -> {
+				if (log.isDebugEnabled()) {
+					log.debug("{} handler is being applied: {}", c.channel(), handler);
+				}
+
+				ChannelOperations<?, ?> ops = ChannelOperations.get(c.channel());
+				reconnectableUriEndpoint.accept(c.channel());
+				Mono.fromDirect(handler.apply(ops, ops))
+				    .subscribe(c.disposeSubscriber());
+			})
+			                    .connect(bootstrap.remoteAddress(currentUri.getRemoteAddress()));
 		})
-		                                //todo add secure handling
-		                                .connect(bootstrap.remoteAddress(endpoint.activeURI.getRemoteAddress())))
-		           .retry(endpoint);
+		           .delayUntil(c -> {
+			           HttpClientOperations ops = (HttpClientOperations) c;
+			           return ops.httpClientEvents.filter(filterHttpResponse)
+			                                      .next()
+			                                      .map(evt -> ops);
+		           })
+		           .retry(reconnectableUriEndpoint);
 	}
+
+	static final Predicate<HttpClientOperations.HttpClientEvent> filterHttpResponse = HttpClientOperations.HttpClientEvent.onResponse::equals;
 
 	static final class HttpClientHandler
 			implements BiFunction<NettyInbound, NettyOutbound, Publisher<Void>> {
 
 		final ReconnectableUriEndpoint                                                             bridge;
 		final HttpMethod                                                                           method;
+		final HttpHeaders
+		                                                                                           defaultHeaders;
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>handler;
 
 		@SuppressWarnings("unchecked")
 		HttpClientHandler(Map<AttributeKey<?>, Object> attrs, ReconnectableUriEndpoint bridge, boolean compress) {
 			this.method = (HttpMethod) attrs.get(METHOD);
-
+			HttpHeaders defaultHeaders = (HttpHeaders) attrs.get(HttpClientConnect.HEADERS);
 
 			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>
 					requestHandler =
@@ -185,18 +218,14 @@ final class HttpClientConnect extends HttpClient {
 							extends NettyOutbound>) attrs.get(BODY);
 
 			if (compress) {
-				if (requestHandler != null) {
-					this.handler = (req, out) -> requestHandler.apply(req.header
-							(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP), out);
+				if (defaultHeaders == null) {
+					defaultHeaders = new DefaultHttpHeaders();
 				}
-				else {
-					this.handler = (req, out) -> req.header(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
-				}
-			}
-			else {
-				this.handler = requestHandler;
+				defaultHeaders.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
 			}
 
+			this.defaultHeaders = defaultHeaders;
+			this.handler = requestHandler;
 			this.bridge = bridge;
 		}
 
@@ -205,17 +234,26 @@ final class HttpClientConnect extends HttpClient {
 			try {
 				UriEndpoint uri = bridge.activeURI;
 				HttpClientOperations ch = (HttpClientOperations) in;
-				ch.getNettyRequest()
-				  .setUri(uri.getPathAndQuery())
-				  .setMethod(method)
-				  .setProtocolVersion(HttpVersion.HTTP_1_1)
-				  .headers()
-				  .add(HttpHeaderNames.HOST, resolveHostHeaderValue(ch.address()))
-				  .add(HttpHeaderNames.ACCEPT, ALL);
+				HttpHeaders headers = ch.getNettyRequest()
+				                        .setUri(uri.getPathAndQuery())
+				                        .setMethod(method)
+				                        .setProtocolVersion(HttpVersion.HTTP_1_1)
+				                        .headers()
+				                        .set(HttpHeaderNames.HOST,
+						                        resolveHostHeaderValue(ch.address()))
+				                        .set(HttpHeaderNames.ACCEPT, ALL);
 
 				if (method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.DELETE) {
 					ch.chunkedTransfer(false);
 				}
+				else {
+					ch.chunkedTransfer(true);
+				}
+
+				if (defaultHeaders != null) {
+					headers.setAll(defaultHeaders);
+				}
+
 
 				if (handler != null) {
 					return handler.apply(ch, out);
@@ -232,6 +270,10 @@ final class HttpClientConnect extends HttpClient {
 		private static String resolveHostHeaderValue(@Nullable InetSocketAddress remoteAddress) {
 			if (remoteAddress != null) {
 				String host = remoteAddress.getHostString();
+				if (VALID_IPV6_PATTERN.matcher(host)
+				                      .matches()) {
+					host = "[" + host + "]";
+				}
 				int port = remoteAddress.getPort();
 				if (port != 80 && port != 443) {
 					host = host + ':' + port;
@@ -249,6 +291,18 @@ final class HttpClientConnect extends HttpClient {
 		}
 	}
 
+	static final Pattern VALID_IPV6_PATTERN;
+
+	static {
+		try {
+			VALID_IPV6_PATTERN = Pattern.compile("([0-9a-f]{1,4}:){7}([0-9a-f]){1,4}",
+					Pattern.CASE_INSENSITIVE);
+		}
+		catch (PatternSyntaxException e) {
+			throw new IllegalStateException("Impossible");
+		}
+	}
+
 	static final class ReconnectableUriEndpoint
 			implements Predicate<Throwable>, Consumer<Channel> {
 
@@ -257,14 +311,16 @@ final class HttpClientConnect extends HttpClient {
 		volatile UriEndpoint        activeURI;
 		volatile Supplier<String>[] redirectedFrom;
 
-		ReconnectableUriEndpoint(Bootstrap bootstrap, boolean secure) {
-			this.uriEndpointFactory = new UriEndpointFactory(() -> bootstrap.config()
-			                                                                .remoteAddress(),
-					secure,
+		ReconnectableUriEndpoint(SocketAddress address, boolean defaultSecure) {
+			this.uriEndpointFactory = new UriEndpointFactory(() -> address, defaultSecure,
 					(hostname, port) -> InetSocketAddressUtil.createInetSocketAddress(
 							hostname,
 							port,
 							false));
+		}
+
+		void init(String uri, HttpMethod method) {
+			activeURI = uriEndpointFactory.createUriEndpoint(uri, method == HttpClient.WS);
 		}
 
 		void redirect(String to) {

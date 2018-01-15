@@ -18,6 +18,8 @@ package reactor.ipc.netty.http.client;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
@@ -46,11 +48,11 @@ import java.util.function.Supplier;
 
 /**
  * An HttpClient allows to build in a safe immutable way an http client that is
- * materialized and connecting when {@link #connect(Bootstrap)} is ultimately called.
+ * materialized and connecting when {@link #connect(TcpClient)} is ultimately called.
  * <p> Internally, materialization happens in three phases, first {@link #tcpConfiguration()}
  * is called to retrieve a ready to use {@link TcpClient}, then {@link
  * TcpClient#configure()} retrieve a usable {@link Bootstrap} for the final {@link
- * #connect(Bootstrap)} is called.
+ * #connect(TcpClient)} is called.
  * <p> Examples:
  * <pre>
  * {@code
@@ -130,7 +132,7 @@ public abstract class HttpClient {
 		 *
 		 * @return
 		 */
-		<V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<? extends V>> receiver);
+		<V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver);
 
 		/**
 		 * @return
@@ -143,7 +145,7 @@ public abstract class HttpClient {
 		 *
 		 * @return
 		 */
-		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<? extends V>> receiver);
+		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver);
 
 	}
 
@@ -200,7 +202,6 @@ public abstract class HttpClient {
 	 */
 	public static HttpClient prepare(PoolResources poolResources) {
 		return new HttpClientConnect(TcpClient.create(poolResources)
-		                                      .secure()
 		                                      .bootstrap(HTTP_OPS_CONF));
 	}
 
@@ -210,7 +211,7 @@ public abstract class HttpClient {
 	 * @return a {@link HttpClient}
 	 */
 	public static HttpClient from(TcpClient tcpClient) {
-		return new HttpClientConnect(tcpClient);
+		return new HttpClientConnect(tcpClient.bootstrap(HTTP_OPS_CONF));
 	}
 
 	/**
@@ -243,7 +244,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient compress() {
-		return tcpConfiguration(COMPRESS_ATTR_CONFIG);
+		return tcpConfiguration(COMPRESS_ATTR_CONFIG).headers(COMPRESS_HEADERS);
 	}
 
 	/**
@@ -336,7 +337,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient noCompression() {
-		return tcpConfiguration(COMPRESS_ATTR_DISABLE);
+		return tcpConfiguration(COMPRESS_ATTR_DISABLE).headers(COMPRESS_HEADERS_DISABLE);
 	}
 
 	/**
@@ -451,10 +452,10 @@ public abstract class HttpClient {
 
 	/**
 	 *
-	 * @return
+	 * @return the root uri to append to
 	 */
 	protected String baseUri() {
-		return null;
+		return "/";
 	}
 
 	/**
@@ -498,8 +499,7 @@ public abstract class HttpClient {
 
 	final static String                    HTTPS_SCHEME = "https";
 
-	static final TcpClient DEFAULT_TCP_CLIENT = TcpClient.create(HttpResources.get())
-	                                                     .secure()
+	static final TcpClient DEFAULT_TCP_CLIENT = TcpClient.newConnection()
 	                                                     .bootstrap(HTTP_OPS_CONF)
 	                                                     .port(80);
 
@@ -513,4 +513,17 @@ public abstract class HttpClient {
 
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE =
 			tcp -> tcp.attr(ACCEPT_GZIP, null);
+
+	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS = h ->
+			h.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
+
+	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS_DISABLE = h -> {
+		if (isCompressing(h)) {
+			h.remove(HttpHeaderNames.ACCEPT_ENCODING);
+		}
+	};
+
+	static boolean isCompressing(HttpHeaders h){
+		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true);
+	}
 }

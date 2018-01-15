@@ -43,7 +43,6 @@ final class TcpClientAcquire extends TcpClient {
 
 	@Override
 	public Mono<? extends Connection> connect(Bootstrap b) {
-		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
 
 		if (b.config()
 		     .group() == null) {
@@ -54,10 +53,10 @@ final class TcpClientAcquire extends TcpClient {
 					TcpUtils.findSslContext(b));
 		}
 
-		TcpUtils.fromHostPortAttrsToRemote(b);
-
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
+			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
+			TcpUtils.fromHostPortAttrsToRemote(bootstrap);
 			ChannelPool pool = poolResources.selectOrCreate(bootstrap);
 			//bootstrap will be mutated so pool.onChannelCreate will see finalized handler
 			//todo re-implement pool

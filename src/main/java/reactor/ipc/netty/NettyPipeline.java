@@ -150,15 +150,6 @@ public interface NettyPipeline {
 		return ReactorNetty.TERMINATED;
 	}
 
-	/**
-	 * Return a marking event used when a netty connector handler terminates
-	 *
-	 * @return a marking event used when a netty connector handler terminates
-	 */
-	static Object httpClientResponseEvent() {
-		return ReactorNetty.HTTP_CLIENT_RESPONSE_EVENT;
-	}
-
 	static Object responseCompressionEvent() {
 		return ReactorNetty.RESPONSE_COMPRESSION_EVENT;
 	}

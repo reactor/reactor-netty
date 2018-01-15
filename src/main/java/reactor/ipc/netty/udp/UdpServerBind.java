@@ -32,7 +32,6 @@ final class UdpServerBind extends UdpServer {
 
 	@Override
 	protected Mono<? extends Connection> bind(Bootstrap b) {
-		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
 
 		//Default group and channel
 		if (b.config()
@@ -47,6 +46,7 @@ final class UdpServerBind extends UdpServer {
 
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
+			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
 			BootstrapHandlers.finalize(bootstrap, ops, sink)
 			                 .accept(bootstrap.bind());
 		});

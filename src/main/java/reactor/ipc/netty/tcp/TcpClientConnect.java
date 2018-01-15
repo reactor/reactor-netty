@@ -32,7 +32,6 @@ final class TcpClientConnect extends TcpClient {
 
 	@Override
 	public Mono<? extends Connection> connect(Bootstrap b) {
-		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
 
 		if (b.config()
 		     .group() == null) {
@@ -43,11 +42,11 @@ final class TcpClientConnect extends TcpClient {
 					TcpUtils.findSslContext(b));
 		}
 
-
-		TcpUtils.fromHostPortAttrsToRemote(b);
-
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
+			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
+			TcpUtils.fromHostPortAttrsToRemote(bootstrap);
+
 			BootstrapHandlers.finalize(bootstrap, ops, sink)
 			                 .accept(bootstrap.connect());
 		});

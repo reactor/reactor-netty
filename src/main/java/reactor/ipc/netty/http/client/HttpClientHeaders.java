@@ -16,20 +16,47 @@
 
 package reactor.ipc.netty.http.client;
 
-import io.netty.handler.codec.http.HttpHeaders;
-
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
+import reactor.ipc.netty.tcp.TcpClient;
 
 /**
  * @author Stephane Maldini
  */
-final class HttpClientHeaders extends HttpClientOperator {
+final class HttpClientHeaders extends HttpClientOperator
+		implements Function<Bootstrap, Bootstrap> {
 
 	final Consumer<? super HttpHeaders> headers;
 
 	HttpClientHeaders(HttpClient client, Consumer<? super HttpHeaders> headers) {
 		super(client);
 		this.headers = Objects.requireNonNull(headers, "headers");
+	}
+
+	@Override
+	protected TcpClient tcpConfiguration() {
+		return super.tcpConfiguration().bootstrap(this);
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public Bootstrap apply(Bootstrap bootstrap) {
+		HttpHeaders h = (HttpHeaders) bootstrap.config()
+		                                       .attrs()
+		                                       .get(HttpClientConnect.HEADERS);
+		if (h == null) {
+			h = new DefaultHttpHeaders();
+		}
+
+		headers.accept(h);
+		if (!h.isEmpty()) {
+			bootstrap.attr(HttpClientConnect.HEADERS, h);
+		}
+		return bootstrap;
 	}
 }

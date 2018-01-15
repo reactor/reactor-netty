@@ -32,8 +32,6 @@ final class UdpClientConnect extends UdpClient {
 
 	@Override
 	protected Mono<? extends Connection> connect(Bootstrap b) {
-		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
-
 		//Default group and channel
 		if (b.config()
 				.group() == null) {
@@ -47,6 +45,7 @@ final class UdpClientConnect extends UdpClient {
 
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
+			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
 			BootstrapHandlers.finalize(bootstrap, ops, sink)
 			                 .accept(bootstrap.connect());
 		});

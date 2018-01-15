@@ -81,7 +81,7 @@ public abstract class TcpClient {
 	 * @return a {@link TcpClient}
 	 */
 	public static TcpClient create() {
-		return new TcpClientAcquire(TcpResources.get());
+		return create(TcpResources.get());
 	}
 
 	/**
@@ -93,7 +93,7 @@ public abstract class TcpClient {
 	 * @return a {@link TcpClient}
 	 */
 	public static TcpClient create(PoolResources poolResources) {
-		return new TcpClientAcquire(poolResources);
+		return newConnection();
 	}
 
 	/**

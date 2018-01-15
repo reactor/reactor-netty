@@ -354,7 +354,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			channel.close();
 		}
 		if (receiverFastpath && receiver != null) {
-			parent.listener.onReceiveError(channel, err);
+			//parent.listener.onReceiveError(channel, err);
 			receiver.onError(err);
 		}
 		else {
@@ -368,7 +368,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 		Throwable ex = inboundError;
 		if (ex != null) {
-			parent.listener.onReceiveError(channel, ex);
+			//parent.listener.onReceiveError(channel, ex);
 			a.onError(ex);
 		}
 		else {

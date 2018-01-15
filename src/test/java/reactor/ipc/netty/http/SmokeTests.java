@@ -299,8 +299,6 @@ public class SmokeTests {
 		HttpClient httpClient =
 				HttpClient.prepare()
 				          .port(httpServer.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap();
 
 		Mono<List<String>> content = httpClient.get()

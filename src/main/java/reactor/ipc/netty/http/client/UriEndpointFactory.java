@@ -23,21 +23,24 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import reactor.util.annotation.Nullable;
+
 final class UriEndpointFactory {
-	private final Supplier<SocketAddress> connectAddress;
-	private final boolean secure;
-	private final BiFunction<String, Integer, InetSocketAddress> inetSocketAddressFunction;
+	final Supplier<SocketAddress> connectAddress;
+	final boolean defaultSecure;
+	final BiFunction<String, Integer, InetSocketAddress> inetSocketAddressFunction;
+
 	static final Pattern URL_PATTERN = Pattern.compile(
 			"(?:(\\w+)://)?((?:\\[.+?])|(?<!\\[)(?:[^/]+?))(?::(\\d{2,5}))?(/.*)?");
 
-	UriEndpointFactory(Supplier<SocketAddress> connectAddress, boolean secure,
+	UriEndpointFactory(Supplier<SocketAddress> connectAddress, boolean defaultSecure,
 			BiFunction<String, Integer, InetSocketAddress> inetSocketAddressFunction) {
 		this.connectAddress = connectAddress;
-		this.secure = secure;
+		this.defaultSecure = defaultSecure;
 		this.inetSocketAddressFunction = inetSocketAddressFunction;
 	}
 
-	public UriEndpoint createUriEndpoint(String url, boolean isWs) {
+	UriEndpoint createUriEndpoint(String url, boolean isWs) {
 		if (url.startsWith("/")) {
 			return new UriEndpoint(resolveScheme(isWs), getAddress(), url);
 		}
@@ -62,7 +65,7 @@ final class UriEndpointFactory {
 		}
 	}
 
-	String cleanPathAndQuery(String pathAndQuery) {
+	String cleanPathAndQuery(@Nullable String pathAndQuery) {
 		if (pathAndQuery == null) {
 			pathAndQuery = "/";
 		}
@@ -89,10 +92,10 @@ final class UriEndpointFactory {
 
 	String resolveScheme(boolean isWs) {
 		if (isWs) {
-			return secure ? HttpClient.WSS_SCHEME : HttpClient.WS_SCHEME;
+			return defaultSecure ? HttpClient.WSS_SCHEME : HttpClient.WS_SCHEME;
 		}
 		else {
-			return secure ? HttpClient.HTTPS_SCHEME : HttpClient.HTTP_SCHEME;
+			return defaultSecure ? HttpClient.HTTPS_SCHEME : HttpClient.HTTP_SCHEME;
 		}
 	}
 

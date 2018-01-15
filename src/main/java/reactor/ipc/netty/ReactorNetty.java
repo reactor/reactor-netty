@@ -416,16 +416,10 @@ final class ReactorNetty {
 		public void onSetup(Channel channel, @Nullable Object msg) {
 
 		}
-
-		@Override
-		public void onProtocolEvent(Connection connection, Object evt) {
-
-		}
 	};
 
 	static final Object TERMINATED                 = new TerminatedHandlerEvent();
 	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
-	static final Object HTTP_CLIENT_RESPONSE_EVENT = new HttpClientResponseEvent();
 	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
 
 	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");

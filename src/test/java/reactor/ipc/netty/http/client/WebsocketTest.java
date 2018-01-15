@@ -63,7 +63,6 @@ public class WebsocketTest {
 		String res =
 				HttpClient.prepare()
 				          .port(httpServer.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .request(HttpMethod.GET)
 				          .uri("/test")
@@ -281,7 +280,6 @@ public class WebsocketTest {
 
 		String res = HttpClient.prepare()
 		                       .port(httpServer.address().getPort())
-		                       .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                       .wiretap()
 		                       .request(HttpMethod.GET)
 		                       .uri("/test")
