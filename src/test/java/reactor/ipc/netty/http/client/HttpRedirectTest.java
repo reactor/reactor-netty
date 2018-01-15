@@ -91,13 +91,15 @@ public class HttpRedirectTest {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(9991)
+				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .wiretap()
 				          .router(r -> r.get("/1",
 				                                   (req, res) -> res.sendRedirect("http://localhost:9991/3"))
-				                           .get("/2",
+				                        .get("/2",
 				                                   (req, res) -> res.status(301)
 				                                                    .header(HttpHeaderNames.LOCATION, "http://localhost:9991/3")
 				                                                    .send())
-				                           .get("/3",
+				                        .get("/3",
 				                                   (req, res) -> res.status(200)
 				                                                    .sendString(Mono.just("OK"))))
 				          .wiretap()
@@ -105,38 +107,41 @@ public class HttpRedirectTest {
 
 		HttpClient client =
 				HttpClient.prepare()
-				          .addressSupplier(() -> server.address());
+				          .addressSupplier(() -> server.address())
+				          .wiretap();
 
 		String value =
 				client.request(HttpMethod.GET)
 				      .uri("/1")
-				      .send((req, out) -> {
-				          req.followRedirect().send();
-				          return out;
-				      })
-				      .responseContent().aggregate().asString()
+				      .send((req, out) -> req.followRedirect().sendHeaders())
+				      .responseContent()
+				      .aggregate()
+				      .asString()
 				      .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isEqualTo("OK");
 
 		value = client.get()
 		              .uri("/1")
-		              .responseContent().aggregate().asString()
+		              .responseContent()
+		              .aggregate()
+		              .asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 
 		value = client.request(HttpMethod.GET)
 		              .uri("/2")
-		              .send((req, out) -> {
-		                  req.followRedirect().send();
-		                  return out;
-		              })
-		              .responseContent().aggregate().asString()
+		              .send((req, out) -> req.followRedirect().sendHeaders())
+		              .responseContent()
+		              .aggregate()
+		              .asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isEqualTo("OK");
 
 		value = client.get()
 		              .uri("/2")
-		              .responseContent().aggregate().asString()
+		              .responseContent()
+		              .aggregate()
+		              .asString()
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 

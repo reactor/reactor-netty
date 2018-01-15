@@ -52,6 +52,7 @@ import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.DisposableChannel;
