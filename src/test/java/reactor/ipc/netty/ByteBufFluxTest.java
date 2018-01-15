@@ -143,8 +143,7 @@ public class ByteBufFluxTest {
             server = HttpServer.create()
                                .port(serverPort);
             client = HttpClient.prepare()
-                               .port(serverPort)
-                               .tcpConfiguration(tcpClient -> tcpClient.noSSL());
+                               .port(serverPort);
         }
 
         Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());

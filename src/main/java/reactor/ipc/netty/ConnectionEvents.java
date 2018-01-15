@@ -63,13 +63,6 @@ public interface ConnectionEvents {
 	void onDispose(Channel channel);
 
 	/**
-	 * React on remote channel resource protocol lifecycle e.g. http response
-	 *
-	 * @param connection the remote channel
-	 */
-	void onProtocolEvent(Connection connection, Object evt);
-
-	/**
 	 * React on remote channel read fatal error
 	 *
 	 * @param channel the remote channel

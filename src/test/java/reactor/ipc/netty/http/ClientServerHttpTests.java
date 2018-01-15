@@ -290,8 +290,6 @@ public class ClientServerHttpTests {
 		HttpClient httpClient =
 				HttpClient.prepare()
 				          .port(httpServer.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap();
 
 		return httpClient.get()

@@ -47,18 +47,15 @@ final class DisposableBind
 
 	final MonoSink<DisposableServer>     sink;
 	final ChannelOperations.OnSetup      opsFactory;
-	final BiConsumer<Connection, Object> onProtocolEvents;
 	final DirectProcessor<Connection>    connections;
 
 	ChannelFuture f;
 
 	DisposableBind(MonoSink<DisposableServer> sink,
-			ChannelOperations.OnSetup opsFactory,
-			@Nullable BiConsumer<Connection, Object> protocolEvents) {
+			ChannelOperations.OnSetup opsFactory) {
 		this.sink = sink;
 		this.opsFactory = Objects.requireNonNull(opsFactory, "opsFactory");
 		this.connections = DirectProcessor.create();
-		this.onProtocolEvents = protocolEvents;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -97,6 +94,8 @@ final class DisposableBind
 
 	@Override
 	public final void dispose() {
+		f.removeListener(this);
+
 		if (f.channel()
 		     .isActive()) {
 
@@ -120,21 +119,14 @@ final class DisposableBind
 	}
 
 	@Override
-	public void onProtocolEvent(Connection connection, Object evt) {
-		if (onProtocolEvents != null) {
-			onProtocolEvents.accept(connection, evt);
-		}
-	}
-
-	@Override
 	public void onReceiveError(Channel channel, Throwable error) {
 		log.error("onConnectionReceiveError({})", channel);
 		onDispose(channel);
 	}
 
 	@Override
-	public void onSetup(Channel channel, Object msg) {
-		if (opsFactory.createOnConnected()) {
+	public void onSetup(Channel channel, @Nullable Object msg) {
+		if (opsFactory.createOnConnected() || msg != null) {
 			log.debug("onConnectionSetup({})", channel);
 			opsFactory.create(() -> channel, this, msg);
 		}

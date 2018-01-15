@@ -71,7 +71,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}.
  *
- * @author Stephane Maldini
+ * @author Stephane Maldini1
  */
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse {
@@ -80,7 +80,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	static HttpServerOperations bindHttp(Connection connection, ConnectionEvents listener,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			Object msg) {
-		return new HttpServerOperations(connection, listener, compressionPredicate, (HttpRequest) msg);
+		HttpServerOperations ops =
+				new HttpServerOperations(connection, listener, compressionPredicate, (HttpRequest) msg);
+
+		listener.onStart(ops);
+
+		return ops;
 	}
 
 	final HttpResponse nettyResponse;
@@ -504,17 +509,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			WebsocketServerOperations
 					ops = new WebsocketServerOperations(url, protocols, this);
 
-			if (replace(ops)) {
-				return FutureMono.from(ops.handshakerResult)
-				                 .then(Mono.defer(() -> {
+			return FutureMono.from(ops.handshakerResult)
+			                 .then(Mono.defer(() -> {
 				                 	//skip handler if no matching subprotocol
 					                 if (protocols != null && ops.selectedSubprotocol() == null) {
 						                 return Mono.empty();
 					                 }
 					                 return Mono.from(websocketHandler.apply(ops, ops));
 				                 }))
-				                 .doAfterSuccessOrError(ops);
-			}
+			                 .doAfterSuccessOrError(ops);
 		}
 		else {
 			log.error("Cannot enable websocket if headers have already been sent");
@@ -523,8 +526,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	static final Logger log = Loggers.getLogger(HttpServerOperations.class);
-
 	final static AsciiString      EVENT_STREAM = new AsciiString("text/event-stream");
+
 	final static FullHttpResponse CONTINUE     =
 			new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.CONTINUE,

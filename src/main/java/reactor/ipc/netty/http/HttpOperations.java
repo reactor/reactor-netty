@@ -102,10 +102,11 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return FutureMono.deferFuture(() -> {
 			if (markSentHeaders()) {
 				HttpMessage msg;
+				handleOutboundWithNoContent();
 
 				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 					outboundHttpMessage().headers()
-					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
+							.remove(HttpHeaderNames.TRANSFER_ENCODING);
 					if (HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0) {
 						msg = newFullEmptyBodyMessage();
 					}
@@ -230,7 +231,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 */
 	protected abstract HttpMessage outboundHttpMessage();
 
-	@SuppressWarnings("rawtypes")
+	protected void handleOutboundWithNoContent() {
+		// no-op
+	}
+
 	final static AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");

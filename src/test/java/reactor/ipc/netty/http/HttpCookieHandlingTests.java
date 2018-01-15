@@ -49,8 +49,6 @@ public class HttpCookieHandlingTests {
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
 				HttpClient.prepare()
 				          .port(server.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap()
 				          .get()
 				          .uri("/test")

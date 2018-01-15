@@ -42,18 +42,15 @@ final class DisposableConnect
 	static final Logger log = Loggers.getLogger(DisposableConnect.class);
 
 	final MonoSink<Connection>                            sink;
-	final BiConsumer<Connection, Object> onProtocolEvents;
 	final ChannelOperations.OnSetup opsFactory;
 
 	ChannelFuture f;
 	Channel channel;
 
 	DisposableConnect(MonoSink<Connection> sink,
-			ChannelOperations.OnSetup opsFactory,
-			@Nullable BiConsumer<Connection, Object> protocolEvents) {
+			ChannelOperations.OnSetup opsFactory) {
 		this.opsFactory = Objects.requireNonNull(opsFactory, "opsFactory");
 		this.sink = sink;
-		this.onProtocolEvents = protocolEvents;
 	}
 
 	@Override
@@ -88,6 +85,8 @@ final class DisposableConnect
 		if (f == null) {
 			return;
 		}
+		f.removeListener(this);
+
 		if (f.channel()
 		     .isActive()) {
 
@@ -100,20 +99,13 @@ final class DisposableConnect
 	}
 
 	@Override
-	public void onProtocolEvent(Connection connection, Object evt) {
-		if (onProtocolEvents != null) {
-			onProtocolEvents.accept(connection, evt);
-		}
-	}
-
-	@Override
 	public void onDispose(Channel channel) {
 		log.debug("onConnectionDispose({})", channel);
 	}
 
 	@Override
 	public void onReceiveError(Channel channel, Throwable error) {
-		log.error("onConnectionReceiveError({})", channel);
+		log.error("onConnectionError({})", channel);
 		sink.error(error);
 	}
 

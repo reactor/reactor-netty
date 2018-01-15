@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.HttpResponse;
  * An error for signalling that an error occurred during a communication over HTTP version
  *
  */
-final class RedirectClientException extends Exception {
+final class RedirectClientException extends RuntimeException {
 
 	final String location;
 

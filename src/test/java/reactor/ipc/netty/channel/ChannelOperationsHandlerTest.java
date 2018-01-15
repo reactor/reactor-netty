@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpMethod;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -78,7 +77,6 @@ public class ChannelOperationsHandlerTest {
 		}
 		Mono<Integer> code =
 				HttpClient.prepare()
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .port(server.address().getPort())
 				          .wiretap()
 				          .post()
@@ -137,13 +135,10 @@ public class ChannelOperationsHandlerTest {
 		ByteBufFlux response =
 				HttpClient.prepare()
 				          .port(abortServerPort)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap()
 				          .request(HttpMethod.GET)
 				          .uri("/")
-				          .send((req, out) -> req.sendHeaders()
-				                                 .sendString(Flux.just("a", "b", "c")))
+				          .send((req, out) -> out.sendString(Flux.just("a", "b", "c")))
 				          .responseContent();
 
 		StepVerifier.create(response.log())
@@ -155,9 +150,10 @@ public class ChannelOperationsHandlerTest {
 
 	static final Logger log = Loggers.getLogger(ChannelOperationsHandlerTest.class);
 
-	private static final class ConnectionAbortServer extends CountDownLatch implements Runnable {
+	private static final class ConnectionAbortServer extends CountDownLatch
+			implements Runnable {
 
-		private final int port;
+		private final int                 port;
 		private final ServerSocketChannel server;
 		private volatile boolean read = false;
 		private volatile Thread thread;
@@ -211,7 +207,6 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	@Test
-	@Ignore
 	public void testIssue196() throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 
@@ -230,7 +225,7 @@ public class ChannelOperationsHandlerTest {
 
 		Flux.range(0, 2)
 		    .flatMap(i -> client.get()
-			                    .uri("/205")
+		                        .uri("/205")
 		                        .responseContent()
 		                        .aggregate()
 		                        .asString())

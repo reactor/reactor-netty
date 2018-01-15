@@ -71,7 +71,6 @@ public class WebsocketClientOperationsTest {
 		Flux<Tuple2<ByteBuf, Integer>> response =
 			HttpClient.prepare()
 			          .port(httpServer.address().getPort())
-			          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 			          .wiretap()
 			          .request(HttpMethod.GET)
 			          .uri("/ws")
@@ -110,7 +109,6 @@ public class WebsocketClientOperationsTest {
 	private Mono<String> login(int port) {
 		return HttpClient.prepare()
 		                 .port(port)
-		                 .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                 .wiretap()
 		                 .post()
 		                 .uri("/login")

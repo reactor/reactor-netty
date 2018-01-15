@@ -55,8 +55,6 @@ public class HttpTests {
 		HttpClient client =
 				HttpClient.prepare()
 				          .port(server.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap();
 
 		Mono<ByteBuf> content =
@@ -95,8 +93,6 @@ public class HttpTests {
 		HttpClient client =
 				HttpClient.prepare()
 				          .port(server.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap();
 
 		Mono<String> content =
@@ -114,7 +110,7 @@ public class HttpTests {
 		StepVerifier.create(content)
 				    .expectNextMatches(s -> s.equals("Hello World!"))
 				    .expectComplete()
-				    .verify(Duration.ofSeconds(5000));
+				    .verify(Duration.ofSeconds(30));
 
 		server.dispose();
 	}
@@ -136,45 +132,44 @@ public class HttpTests {
 		                         });
 
 		Flux<ByteBuf> flux2 = Flux.range(0, 257)
-		                         .flatMap(i -> {
-		                             if (i == 4) {
-		                                 return Mono.error(new Exception("test"));
-		                             }
-		                             return Mono.just(Unpooled.copyInt(i));
-		                         });
+		                          .flatMap(i -> {
+			                          if (i == 4) {
+				                          return Mono.error(new Exception("test"));
+			                          }
+			                          return Mono.just(Unpooled.copyInt(i));
+		                          });
+
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .router(r -> r.get("/test", (req, res) -> {throw new
-						          RuntimeException();})
-				                           .get("/test2", (req, res) -> res.send(Flux.error(new Exception()))
-				                                                           .then()
-				                                                           .log("send-1")
-				                                                           .doOnError(t -> errored1.countDown()))
-				                           .get("/test3", (req, res) -> Flux.error(new Exception()))
-				                           .get("/issue231_1", (req, res) -> res.send(flux1)
-				                                                              .then()
-				                                                              .log("send-2")
-				                                                              .doOnError(t -> errored2.countDown()))
-				                           .get("/issue231_2", (req, res) -> res.send(flux2)
-				                                                              .then()
-				                                                              .log("send-3")
-				                                                              .doOnError(t -> errored3.countDown()))
-				                           .get("/issue237_1", (req, res) -> res.send(flux1)
-				                                                              .then()
-				                                                              .log("send-4")
-				                                                              .doOnError(t -> errored4.countDown()))
-				                           .get("/issue237_2", (req, res) -> res.send(flux2)
-				                                                              .then()
-				                                                              .log("send-5")
-				                                                              .doOnError(t -> errored5.countDown())))
-				          .bindNow(Duration.ofSeconds(30));
+						  .router(r -> r.get("/test", (req, res) -> {throw new RuntimeException();})
+						                 .get("/test2", (req, res) -> res.send(Flux.error(new Exception()))
+						                                                 .then()
+						                                                 .log("send-1")
+						                                                 .doOnError(t -> errored1.countDown()))
+						                 .get("/test3", (req, res) -> Flux.error(new Exception()))
+						                 .get("/issue231_1", (req, res) -> res.send(flux1)
+						                                                      .then()
+						                                                      .log("send-2")
+						                                                      .doOnError(t -> errored2.countDown()))
+						                 .get("/issue231_2", (req, res) -> res.send(flux2)
+						                                                      .then()
+						                                                      .log("send-3")
+						                                                      .doOnError(t -> errored3.countDown()))
+						                 .get("/issue237_1", (req, res) -> res.send(flux1)
+						                                                      .then()
+						                                                      .log("send-4")
+						                                                      .doOnError(t -> errored4.countDown()))
+						                 .get("/issue237_2", (req, res) -> res.send(flux2)
+						                                                      .then()
+						                                                      .log("send-5")
+						                                                      .doOnError(t -> errored5.countDown())))
+						  .wiretap()
+						  .bindNow();
 
 		HttpClient client =
 				HttpClient.prepare()
 				          .port(server.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap();
 
 		Mono<Integer> code =
@@ -187,22 +182,34 @@ public class HttpTests {
 				    .expectNext(500)
 				    .verifyComplete();
 
-		ByteBuf content =
+		Mono<ByteBuf> content =
 				client.get()
 				      .uri("/test2")
 				      .responseContent()
 				      .log("received-status-2")
-				      .next()
-				      .block(Duration.ofSeconds(30));
+				      .next();
+
+		StepVerifier.create(content)
+		            .expectError(IOException.class)
+		            .verify(Duration.ofSeconds(30));
+
+		Assertions.assertThat(errored1.await(30, TimeUnit.SECONDS)).isTrue();
+
+		ByteBuf content1 = client.get()
+		                         .uri("/issue231_1")
+		                         .responseContent()
+		                         .log("received-status-3")
+		                .next()
+		                .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored2.await(30, TimeUnit.SECONDS)).isTrue();
 
-		ByteBuf content1 = client.get()
+		content1 = client.get()
 		                 .uri("/issue231_2")
-		                .responseContent()
-		                .log("received-status-4")
-		                .next()
-		                .block(Duration.ofSeconds(30));
+		                 .responseContent()
+		                 .log("received-status-4")
+		                 .next()
+		                 .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).isTrue();
 
@@ -233,7 +240,7 @@ public class HttpTests {
 		code = client.get()
 				     .uri("/test3")
 				     .responseSingle((res, buf) -> Mono.just(res.status().code())
-				                                       .log("received-status-3"));
+				                                       .log("received-status-7"));
 
 		StepVerifier.create(code)
 		            .expectNext(500)
@@ -267,8 +274,6 @@ public class HttpTests {
 
 		HttpClient client = HttpClient.prepare()
 				                      .port(server.address().getPort())
-				                      .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                              .noSSL())
 				                      .wiretap();
 
 		Mono<List<String>> response =
@@ -297,7 +302,7 @@ public class HttpTests {
 		StepVerifier.create(response)
 		            .expectNextMatches(list -> "1000 World!".equals(list.get(999)))
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		            .verify(Duration.ofSeconds(10));
 
 		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
 

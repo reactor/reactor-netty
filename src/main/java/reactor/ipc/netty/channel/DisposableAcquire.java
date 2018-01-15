@@ -49,7 +49,6 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 
 	final ChannelPool                    pool;
 	final ChannelOperations.OnSetup      opsFactory;
-	final BiConsumer<Connection, Object> onProtocolEvents;
 	final MonoSink<Connection>           sink;
 
 	Channel channel;
@@ -63,12 +62,10 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 
 	DisposableAcquire(MonoSink<Connection> sink,
 			ChannelOperations.OnSetup opsFactory,
-			ChannelPool pool,
-			@Nullable BiConsumer<Connection, Object> protocolEvents) {
+			ChannelPool pool) {
 		this.sink = Objects.requireNonNull(sink, "sink");
 		this.opsFactory = Objects.requireNonNull(opsFactory, "opsFactory");
 		this.pool = Objects.requireNonNull(pool, "pool");
-		this.onProtocolEvents = protocolEvents;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -119,13 +116,6 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 		Acquisition current = this.currentOwner;
 		return Mono.first(Mono.fromDirect(current.onReleaseEmitter),
 				FutureMono.from(channel.closeFuture()));
-	}
-
-	@Override
-	public void onProtocolEvent(Connection connection, Object evt) {
-		if (onProtocolEvents != null) {
-			onProtocolEvents.accept(connection, evt);
-		}
 	}
 
 	@Override

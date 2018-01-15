@@ -64,6 +64,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.Exceptions;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
@@ -93,10 +94,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return ops;
 	}
 
-	final Supplier<String>[]    redirectedFrom;
-	final boolean     isSecure;
-	final HttpRequest nettyRequest;
-	final HttpHeaders requestHeaders;
+	enum HttpClientEvent {
+		afterRequest, onResponse
+	}
+
+	final DirectProcessor<HttpClientEvent> httpClientEvents;
+	final Supplier<String>[]               redirectedFrom;
+	final boolean                          isSecure;
+	final HttpRequest                      nettyRequest;
+	final HttpHeaders                      requestHeaders;
 
 	volatile ResponseState responseState;
 	int inboundPrefetch;
@@ -115,6 +121,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.redirectable = replaced.redirectable;
 		this.inboundPrefetch = replaced.inboundPrefetch;
 		this.requestHeaders = replaced.requestHeaders;
+		this.httpClientEvents = replaced.httpClientEvents;
 	}
 
 	HttpClientOperations(Connection c, ConnectionEvents listener) {
@@ -131,7 +138,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.requestHeaders = nettyRequest.headers();
 		this.requestHeaders.set(HttpHeaderNames.USER_AGENT, HttpClient.USER_AGENT);
 		this.inboundPrefetch = 16;
-		chunkedTransfer(true);
+		this.httpClientEvents = DirectProcessor.create();
 	}
 
 	@Override
@@ -251,11 +258,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onInboundClose() {
-		if (isInboundCancelled() || isInboundDisposed()) {
+		if (isDisposed() || isInboundCancelled() || isInboundDisposed()) {
 			return;
 		}
 		if (responseState == null) {
-			listener().onReceiveError(channel(), new IOException("Connection closed prematurely"));
+			httpClientEvents.onError(new IOException("Connection closed prematurely"));
 			return;
 		}
 		super.onInboundError(new IOException("Connection closed prematurely"));
@@ -354,9 +361,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (responseState != null) {
 			return responseState.headers;
 		}
-		else {
-			return null;
-		}
+		throw new IllegalStateException("Response headers cannot be accessed without " + "server response");
 	}
 
 	@Override
@@ -469,9 +474,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			else {
 				String host = requestHeaders().get(HttpHeaderNames.HOST);
-				uri = new URI((isSecure ? HttpClient.WSS_SCHEME :
-						HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ?
-						url : "/" + url));
+				uri = new URI((isSecure ? HttpClient.WSS_SCHEME : HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ? url : "/" + url));
 			}
 
 		}
@@ -480,6 +483,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 		return uri;
 	}
+
 
 	@Override
 	public WebsocketInbound receiveWebsocket() {
@@ -493,7 +497,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return HttpResponseStatus.valueOf(responseState.response.status()
 			                                                        .code());
 		}
-		return null;
+		throw new IllegalStateException("Trying to access status() while missing response");
 	}
 
 	@Override
@@ -530,6 +534,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		else if (markSentBody()) {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
+		httpClientEvents.onNext(HttpClientEvent.afterRequest);
 		channel().read();
 	}
 
@@ -583,9 +588,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						                 .toString());
 			}
 
-			if (checkResponseCode(response)) {
+			if (notRedirected(response)) {
 				prefetchMore(ctx);
-				listener().onProtocolEvent(this, NettyPipeline.httpClientResponseEvent());
+				httpClientEvents.onNext(HttpClientEvent.onResponse);
 			}
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
@@ -604,6 +609,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (log.isDebugEnabled()) {
 				log.debug("{} Received last HTTP packet", channel());
 			}
+			httpClientEvents.onComplete();
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
 			}
@@ -636,7 +642,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return nettyRequest;
 	}
 
-	final boolean checkResponseCode(HttpResponse response) {
+	final boolean notRedirected(HttpResponse response) {
 		int code = response.status()
 		                   .code();
 		if ((code == 301 || code == 302) && isFollowRedirect()) {
@@ -647,9 +653,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						        .entries()
 						        .toString());
 			}
-			Exception ex = new RedirectClientException(response);
-			listener().onReceiveError(channel(), ex);
-			receive().subscribe();
+			httpClientEvents.onError(new RedirectClientException(response));
 			return false;
 		}
 		return true;
@@ -696,16 +700,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			WebsocketClientOperations
 					ops = new WebsocketClientOperations(url, protocols, this);
 
-			if (replace(ops)) {
-				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
+			Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
 				                                 .then(Mono.defer(() -> Mono.from(websocketHandler.apply(
 						                                 ops,
 						                                 ops))));
-				if (websocketHandler != EMPTY) {
-					handshake = handshake.doAfterSuccessOrError(ops);
-				}
-				return handshake;
+			if (websocketHandler != EMPTY) {
+				handshake = handshake.doAfterSuccessOrError(ops);
 			}
+			return handshake;
 		}
 		else if (isWebsocket()) {
 			WebsocketClientOperations ops =

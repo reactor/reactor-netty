@@ -19,6 +19,7 @@ package reactor.ipc.netty.http.client;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import org.assertj.core.api.Assertions;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -35,11 +36,13 @@ public class HttpRedirectTest {
 	private final int numberOfTests = 1000;
 
 	@Test
+	@Ignore
 	public void deadlockWhenRedirectsToSameUrl(){
 		redirectTests("/login");
 	}
 
 	@Test
+	@Ignore
 	public void okWhenRedirectsToOther(){
 		redirectTests("/other");
 	}
