@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -28,6 +29,7 @@ import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.tcp.TcpClient;
+import reactor.test.StepVerifier;
 
 /**
  * @author tokuhirom
@@ -54,15 +56,11 @@ public class HttpErrorTests {
 		                             .response()
 		                             .block(Duration.ofSeconds(30));
 
-		List<String> result = r.receive()
+		StepVerifier.create(r.receive()
 		                    .asString(StandardCharsets.UTF_8)
-		                    .collectList().block(Duration.ofSeconds(30));
+		                    .collectList())
+		            .verifyError(IOException.class);
 
-		System.out.println("END");
-
-
-		Assert.assertTrue(result.isEmpty());
-		Assert.assertTrue(r.isDisposed());
 		server.dispose();
-	*/}
+	}
 }

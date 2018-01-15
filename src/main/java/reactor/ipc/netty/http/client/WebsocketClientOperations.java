@@ -37,6 +37,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
+import reactor.util.annotation.Nullable;
 
 /**
  * @author Stephane Maldini
@@ -51,7 +52,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 	volatile int closeSent;
 
 	WebsocketClientOperations(URI currentURI,
-			String protocols,
+			@Nullable String protocols,
 			HttpClientOperations replaced) {
 		super(replaced);
 
@@ -138,7 +139,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 			setNettyResponse(response);
 
-			if (checkResponseCode(response)) {
+			if (notRedirected(response)) {
 
 				try {
 					handshaker.finishHandshake(channel(), response);
@@ -150,9 +151,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 						return;
 					}
 				}
-
-				listener().onStart(this);
-
+				httpClientEvents.onNext(HttpClientEvent.onResponse);
 			}
 			return;
 		}

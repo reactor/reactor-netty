@@ -191,7 +191,7 @@ public abstract class HttpServer {
 		if (minResponseSize < 0) {
 			throw new IllegalArgumentException("minResponseSize must be positive");
 		}
-		return tcpConfiguration(tcp -> tcp.attr(HttpServerBind.PRODUCE_GZIP, minResponseSize));
+		return tcpConfiguration(tcp -> tcp.selectorAttr(HttpServerBind.PRODUCE_GZIP, minResponseSize));
 	}
 
 	/**
@@ -302,8 +302,8 @@ public abstract class HttpServer {
 	static final Logger         log             = Loggers.getLogger(HttpServer.class);
 
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_CONFIG =
-			tcp -> tcp.attr(HttpServerBind.PRODUCE_GZIP, 0);
+			tcp -> tcp.selectorAttr(HttpServerBind.PRODUCE_GZIP, 0);
 
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_DISABLE =
-			tcp -> tcp.attr(HttpServerBind.PRODUCE_GZIP, null);
+			tcp -> tcp.selectorAttr(HttpServerBind.PRODUCE_GZIP, null);
 }

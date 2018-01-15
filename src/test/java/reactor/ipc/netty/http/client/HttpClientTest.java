@@ -73,7 +73,6 @@ public class HttpClientTest {
 	@Test
 	public void abort() throws Exception {
 		DisposableServer x = TcpServer.create()
-		                        .host("localhost")
 		                        .port(0)
 		                        .handler((in, out) -> in.receive()
 		                                                     .take(1)
@@ -91,8 +90,6 @@ public class HttpClientTest {
 
 		HttpClient.prepare(pool)
 		          .port(x.address().getPort())
-		          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-		                                                  .noSSL())
 		          .wiretap()
 		          .get()
 		          .uri("/")
@@ -103,8 +100,6 @@ public class HttpClientTest {
 		ByteBuf resp =
 				HttpClient.prepare(pool)
 				          .port(x.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap()
 				          .get()
 				          .uri("/")
@@ -114,8 +109,6 @@ public class HttpClientTest {
 
 		resp = HttpClient.prepare(pool)
 		                 .port(x.address().getPort())
-		                 .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-		                                                         .noSSL())
 		                 .wiretap()
 		                 .get()
 		                 .uri("/")
@@ -135,6 +128,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@Ignore
 	public void userIssue() throws Exception {
 		final PoolResources pool = PoolResources.fixed("local", 1);
 		CountDownLatch latch = new CountDownLatch(3);
@@ -156,7 +150,6 @@ public class HttpClientTest {
 		final HttpClient client =
 				HttpClient.prepare(pool)
 				          .addressSupplier(() -> new InetSocketAddress(8080))
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap();
 		Flux.just("1", "2", "3")
 		    .concatMap(data -> client.post()
@@ -195,8 +188,7 @@ public class HttpClientTest {
 
 		HttpClient.prepare(pool)
 		          .port(x.address().getPort())
-		          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-		                                                  .noSSL())
+		          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
 		          .wiretap()
 		          .get()
 		          .uri("/")
@@ -207,8 +199,7 @@ public class HttpClientTest {
 		try {
 			HttpClient.prepare(pool)
 			          .port(x.address().getPort())
-			          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-			                                                  .noSSL())
+			          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
 			          .wiretap()
 			          .get()
 			          .uri("/")
@@ -235,7 +226,6 @@ public class HttpClientTest {
 		ByteBufFlux remote =
 				HttpClient.prepare()
 				          .port(c.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .get()
 				          .uri("/test/test.css")
@@ -257,6 +247,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@Ignore
 	public void serverInfiniteClientClose() throws Exception {
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -286,17 +277,11 @@ public class HttpClientTest {
 		Object remote =
 				HttpClient.prepare()
 				          .port(c.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .get()
 				          .uri("/")
-				          .responseSingle((r, buf) -> {
-				              while (r.channel()
-				                      .isActive()) {
-				              }
-				              return Mono.empty();
-				          })
-				          .block();
+				          .responseContent()
+				          .blockLast();
 
 		latch.await();
 		c.dispose();
@@ -309,8 +294,7 @@ public class HttpClientTest {
 				HttpClient.prepare()
 				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                                                                   .host("127.0.0.1")
-				                                                                   .port(8888))
-				                                                  .noSSL())
+				                                                                   .port(8888)))
 				          .wiretap()
 				          .request(HttpMethod.GET)
 				          .uri("https://projectreactor.io")
@@ -332,8 +316,7 @@ public class HttpClientTest {
 				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                                                                   .host("127.0.0.1")
 				                                                                   .port(8888)
-				                                                                   .nonProxyHosts("spring.io"))
-				                                                  .noSSL())
+				                                                                   .nonProxyHosts("spring.io")))
 				          .wiretap();
 		Mono<String> remote1 = client.request(HttpMethod.GET)
 		                             .uri("https://projectreactor.io")
@@ -370,8 +353,7 @@ public class HttpClientTest {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
 		//Path f = Paths.get("/Users/smaldini/Downloads/IMG_6702.mp4");
 		int res = HttpClient.prepare()
-		                    .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
-		                                                            .noSSL())
+		                    .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 		                    .wiretap()
 		                    .put()
 		                    .uri("/post")
@@ -387,8 +369,7 @@ public class HttpClientTest {
 		                    .responseSingle((r, buf) -> Mono.just(r.status().code()))
 		                    .block(Duration.ofSeconds(30));
 		res = HttpClient.prepare()
-		                .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
-		                                                        .noSSL())
+		                .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 		                .wiretap()
 		                .request(HttpMethod.GET)
 		                .uri("/search")
@@ -413,8 +394,7 @@ public class HttpClientTest {
 		HttpClient client =
 				HttpClient.prepare(PoolResources.fixed("http", 1))
 				          .port(80)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
-				                                                  .noSSL())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap();
 		doSimpleTest404(client);
 		doSimpleTest404(client);
@@ -438,8 +418,7 @@ public class HttpClientTest {
 	public void disableChunkForced() throws Exception {
 		HttpResponseStatus r =
 				HttpClient.prepare()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
-				                                                  .noSSL())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
@@ -455,8 +434,7 @@ public class HttpClientTest {
 	public void disableChunkForced2() throws Exception {
 		HttpResponseStatus r =
 				HttpClient.prepare()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
-				                                                  .noSSL())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
@@ -476,11 +454,9 @@ public class HttpClientTest {
 
 		HttpResponseStatus r =
 				HttpClient.prepare(p)
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
-				          .request(HttpMethod.GET)
+				          .get()
 				          .uri("http://google.com/unsupportedURI")
-				          .send((c, out) -> c.sendHeaders())
 				          .responseSingle((res, buf) -> {
 				              res.withConnection(c -> ch1.set(c.channel()));
 				              return Mono.just(res.status());
@@ -489,11 +465,9 @@ public class HttpClientTest {
 
 		HttpResponseStatus r2 =
 				HttpClient.prepare(p)
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
-				          .request(HttpMethod.GET)
+				          .get()
 				          .uri("http://google.com/unsupportedURI")
-				          .send((c, out) -> c.sendHeaders())
 				          .responseSingle((res, buf) -> {
 				              res.withConnection(c -> ch2.set(c.channel()));
 				              return Mono.just(res.status());
@@ -513,8 +487,7 @@ public class HttpClientTest {
 	public void disableChunkImplicitDefault() throws Exception {
 		HttpResponseStatus r =
 				HttpClient.prepare()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
-				                                                  .noSSL())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
@@ -530,7 +503,6 @@ public class HttpClientTest {
 		PoolResources fixed = PoolResources.fixed("test", 1);
 		HttpResponseStatus r =
 				HttpClient.prepare(fixed)
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .headers(h -> h.add("content-length", "1"))
 				          .request(HttpMethod.GET)
@@ -541,7 +513,6 @@ public class HttpClientTest {
 
 		HttpResponseStatus r1 =
 				HttpClient.prepare(fixed)
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .headers(h -> h.add("content-length", "1"))
 				          .request(HttpMethod.GET)
@@ -682,7 +653,6 @@ public class HttpClientTest {
 		                         .bindNow();
 		HttpClient client = HttpClient.prepare()
 		                              .port(server.address().getPort())
-		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                              .wiretap();
 		if (gzipEnabled){
 			client = client.compress();
@@ -722,7 +692,6 @@ public class HttpClientTest {
 
 		ByteBuf resp = HttpClient.prepare()
 		                         .port(c.address().getPort())
-		                         .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                         .wiretap()
 		                         .get()
 		                         .uri("/")
@@ -735,8 +704,7 @@ public class HttpClientTest {
 	@Test
 	public void gettingOptionsDuplicates() {
 		HttpClient client = HttpClient.prepare()
-		                              .tcpConfiguration(tcpClient -> tcpClient.host("foo")
-		                                                                      .noSSL())
+		                              .tcpConfiguration(tcpClient -> tcpClient.host("foo"))
 		                              .wiretap()
 		                              .port(123)
 		                              .compress();
@@ -908,7 +876,6 @@ public class HttpClientTest {
 				createHttpClientForContext(context)
 				          .put()
 				          .uri("/201")
-				          .send((req, out) -> req.sendHeaders())
 				          .responseContent()
 				          .blockLast();
 
@@ -916,15 +883,13 @@ public class HttpClientTest {
 				createHttpClientForContext(context)
 				          .put()
 				          .uri("/204")
-				          .send((req, out) -> req.sendHeaders())
 				          .responseContent()
 				          .blockLast(Duration.ofSeconds(30));
 
 		ByteBuf response3 =
 				createHttpClientForContext(context)
-				          .request(HttpMethod.GET)
+				          .get()
 				          .uri("/200")
-				          .send((req, out) -> req.sendHeaders())
 				          .responseContent()
 				          .blockLast(Duration.ofSeconds(30));
 
@@ -934,7 +899,6 @@ public class HttpClientTest {
 	private HttpClient createHttpClientForContext(DisposableServer context) {
 		return HttpClient.prepare()
 		                 .addressSupplier(() -> context.address())
-		                 .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                 .wiretap();
 	}
 }

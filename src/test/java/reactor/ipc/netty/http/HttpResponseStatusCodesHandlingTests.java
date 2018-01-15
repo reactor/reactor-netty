@@ -44,8 +44,6 @@ public class HttpResponseStatusCodesHandlingTests {
 		HttpClient client =
 				HttpClient.prepare()
 				          .port(server.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap();
 
 		Mono<Integer> content = client.headers(h -> h.add("Content-Type", "text/plain"))

@@ -228,7 +228,6 @@ public class HttpServerTests {
 		String body =
 				HttpClient.prepare()
 				          .addressSupplier(() -> context.address())
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .get()
 				          .uri("/foo")
@@ -283,20 +282,22 @@ public class HttpServerTests {
 			channel.read(buf, 0, buf, new TestCompletionHandler(channel, fluxSink, allocator, chunk));
 		});
 
-		NettyContext context =
-				HttpServer.create(opt -> opt.host("localhost"))
-				          .newHandler((req, resp) -> resp.sendByteArray(req.receive()
+		DisposableServer context =
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, resp) -> resp.sendByteArray(req.receive()
 				                                                           .aggregate()
 				                                                           .asByteArray()))
-				          .block();
+				          .bindNow();
 		byte[] response =
-				HttpClient.create(opt -> opt.connectAddress(() -> context.address()))
-				          .request(HttpMethod.POST, "/", req -> req.send(content)
-				                                                       .then())
-				          .flatMap(res -> res.receive()
-				                             .aggregate()
-				                             .asByteArray())
-				          .block();
+				HttpClient.prepare()
+				          .tcpConfiguration(tcp -> tcp.addressSupplier(context::address))
+				          .post()
+				          .send(content)
+				          .responseContent()
+				          .aggregate()
+				          .asByteArray()
+				          .block(Duration.ofSeconds(30));
 
 		assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
 		context.dispose();
@@ -374,7 +375,6 @@ public class HttpServerTests {
 
 		int code = HttpClient.prepare()
 		                     .port(8080)
-		                     .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                     .wiretap()
 		                     .get()
 		                     .uri("/")
@@ -399,7 +399,6 @@ public class HttpServerTests {
 
 		code = HttpClient.prepare()
 		                     .port(8080)
-		                     .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                     .wiretap()
 		                     .get()
 		                     .uri("/")
@@ -423,7 +422,6 @@ public class HttpServerTests {
 		int code =
 				HttpClient.prepare()
 				          .port(c.address().getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .get()
 				          .uri("/return")
@@ -503,7 +501,6 @@ public class HttpServerTests {
 
 		Flux<String> client = HttpClient.prepare()
 		                                .port(c.address().getPort())
-		                                .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                                .wiretap()
 		                                .doOnResponse(res -> res.addHandler(new LineBasedFrameDecoder(10)))
 		                                .get()
@@ -532,7 +529,6 @@ public class HttpServerTests {
 
 		Channel response0 = HttpClient.prepare()
 		                              .port(c.address().getPort())
-		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/index.html")
@@ -541,7 +537,6 @@ public class HttpServerTests {
 
 		Channel response1 = HttpClient.prepare()
 		                              .port(c.address().getPort())
-		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test.css")
@@ -550,7 +545,6 @@ public class HttpServerTests {
 
 		Channel response2 = HttpClient.prepare()
 		                              .port(c.address().getPort())
-		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test1.css")
@@ -559,7 +553,6 @@ public class HttpServerTests {
 
 		Channel response3 = HttpClient.prepare()
 		                              .port(c.address().getPort())
-		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test2.css")
@@ -568,7 +561,6 @@ public class HttpServerTests {
 
 		Channel response4 = HttpClient.prepare()
 		                              .port(c.address().getPort())
-		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test3.css")
@@ -577,7 +569,6 @@ public class HttpServerTests {
 
 		Channel response5 = HttpClient.prepare()
 		                              .port(c.address().getPort())
-		                              .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test4.css")
@@ -625,7 +616,6 @@ public class HttpServerTests {
 			int code =
 					HttpClient.prepare()
 					          .port(facade.address().getPort())
-					          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 					          .wiretap()
 					          .get()
 					          .uri("/hello")
@@ -635,7 +625,6 @@ public class HttpServerTests {
 
 			code = HttpClient.prepare()
 			                 .port(facade.address().getPort())
-			                 .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 			                 .wiretap()
 			                 .get()
 			                 .uri("/helloMan")
@@ -680,6 +669,7 @@ public class HttpServerTests {
 	public void nonContentStatusCodes() {
 		DisposableServer server =
 				HttpServer.create()
+				          .port(0)
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
 				          .router(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                        .sendHeaders())
@@ -704,28 +694,37 @@ public class HttpServerTests {
 	}
 
 	private void checkResponse(String url, InetSocketAddress address) {
-		Tuple2<Integer, HttpHeaders> response =
+		Mono<Tuple3<Integer, HttpHeaders, String>> response =
 				HttpClient.prepare()
 				          .addressSupplier(() -> address)
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .get()
 				          .uri(url)
-				          .responseSingle((r, buf) -> Mono.just(r.status().code())
-				                                          .zipWith(Mono.just(r.responseHeaders())))
-				          .block(Duration.ofSeconds(30));
+				          .responseSingle((res, buf) ->
+						          Mono.zip(
+						          		Mono.just(res.status().code()),
+								          Mono.just(res.responseHeaders()),
+								          buf.asString().defaultIfEmpty("NO BODY")));
 
-		int code = response.getT1();
-		HttpHeaders h = response.getT2();
-		if (code == 204 || code == 304) {
-			assertThat(!h.contains("Transfer-Encoding") &&
-			           !h.contains("Content-Length")).isTrue();
-		}
-		else if (code == 205) {
-			assertThat(!h.contains("Transfer-Encoding") &&
-			           h.contains("Content-Length") &&
-			           Integer.parseInt(h.get("Content-Length")) == 0).isTrue();
-		}
+		StepVerifier.create(response)
+		            .expectNextMatches(t -> {
+		                int code = t.getT1();
+		                HttpHeaders h = t.getT2();
+		                if (code == 204 || code == 304) {
+		                    return !h.contains("Transfer-Encoding") &&
+		                           !h.contains("Content-Length") &&
+		                           "NO BODY".equals(t.getT3());
+		                }
+		                else if (code == 205) {
+		                    return h.contains("Transfer-Encoding") &&
+		                           !h.contains("Content-Length") &&
+		                           "NO BODY".equals(t.getT3());
+		                }else {
+		                    return false;
+		                }
+		            })
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -788,7 +787,6 @@ public class HttpServerTests {
 		Mono<Tuple2<HttpHeaders, String>> response =
 				HttpClient.prepare()
 				          .addressSupplier(() -> address)
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap()
 				          .request(method)
 				          .send((req, out) -> {
@@ -845,7 +843,6 @@ public class HttpServerTests {
 		HttpClient client =
 				HttpClient.prepare(PoolResources.fixed("test", 1))
 				          .addressSupplier(() -> server.address())
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .wiretap();
 
 		try {
@@ -862,13 +859,15 @@ public class HttpServerTests {
 		Mono<String> content = client.post()
 				                     .uri("/")
 				                     .send(ByteBufFlux.fromString(Mono.just("bodysample")))
-				                     .responseSingle((res, buf) -> buf.asString());
+				                     .responseContent()
+				                     .aggregate()
+				                     .asString();
 
 		StepVerifier.create(content)
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(300));
+		            .verify(Duration.ofSeconds(30));
 	}
-/*
+
 	@Test
 	public void testConnectionCloseOnServerError() throws Exception {
 		Flux<String> content =
@@ -880,14 +879,18 @@ public class HttpServerTests {
 				    })
 				    .map(i -> "foo " + i);
 
-		NettyContext server =
-				HttpServer.create(0)
-				          .newHandler((req, res) -> res.sendString(content))
-				          .block(Duration.ofSeconds(30));
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handler((req, res) -> res.sendString(content))
+				          .bindNow();
 
 		HttpClientResponse r =
-				HttpClient.create(ops -> ops.port(server.address().getPort()))
-				          .get("/")
+				HttpClient.prepare()
+						  .port(server.address().getPort())
+				          .get()
+				          .uri("/")
+				          .response()
 				          .block(Duration.ofSeconds(30));
 
 		ByteBufFlux response = r.receive();
@@ -897,7 +900,7 @@ public class HttpServerTests {
 		            .expectError(IOException.class)
 		            .verify(Duration.ofSeconds(30));
 
-		FutureMono.from(r.context().channel().closeFuture()).block(Duration.ofSeconds(30));
+		FutureMono.from(r.channel().closeFuture()).block(Duration.ofSeconds(30));
 
 		r.dispose();
 		server.dispose();
@@ -906,18 +909,22 @@ public class HttpServerTests {
 	final int numberOfTests = 1000;
 
 	@Test
+	@Ignore
 	public void deadlockWhenRedirectsToSameUrl(){
 		redirectTests("/login");
 	}
 
 	@Test
+	@Ignore
 	public void okWhenRedirectsToOther(){
 		redirectTests("/other");
 	}
 
 	public void redirectTests(String url) {
-		NettyContext server = HttpServer.create(9999)
-		                                .newHandler((req, res) -> {
+		DisposableServer server = HttpServer.create()
+		                                    .tcpConfiguration(tcp -> tcp.host("localhost"))
+		                                    .port(9999)
+		                                .handler((req, res) -> {
 			                                if (req.uri()
 			                                       .contains("/login") && req.method()
 			                                                                 .equals(HttpMethod.POST)) {
@@ -937,24 +944,27 @@ public class HttpServerTests {
 				                                                    .then());
 			                                }
 		                                })
-		                                .block(Duration.ofSeconds(300));
+		                                .bindNow(Duration.ofSeconds(30));
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
 		HttpClient client =
-				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
-				                            .poolResources(pool));
+				HttpClient.prepare(pool)
+				          .addressSupplier(() -> server.address());
 
 		try {
 			Flux.range(0, this.numberOfTests)
-			    .concatMap(i -> client.post("/login", r -> r.followRedirect())
-			                          .flatMap(r -> r.receive()
-			                                         .then()))
+			    .concatMap(i -> client.post()
+					                  .uri("/login")
+					                  .send((r, out) -> r.followRedirect())
+			                          .responseContent()
+			                          .log("reactor.req."+i)
+			                          .then())
 			    .blockLast();
 		}
 		finally {
 			server.dispose();
 		}
 
-	}*/
+	}
 }

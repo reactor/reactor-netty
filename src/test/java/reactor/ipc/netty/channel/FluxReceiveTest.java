@@ -55,7 +55,6 @@ public class FluxReceiveTest {
 				                     routes.get("/forward", (req, res) ->
 				                           HttpClient.prepare()
 				                                     .port(server1.address().getPort())
-				                                     .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				                                     .wiretap()
 				                                     .get()
 				                                     .uri("/target")
@@ -72,7 +71,6 @@ public class FluxReceiveTest {
 		Flux.range(0, 50)
 		    .flatMap(i -> HttpClient.prepare()
 		                            .port(server2.address().getPort())
-		                            .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                            .wiretap()
 		                            .get()
 		                            .uri("/forward")

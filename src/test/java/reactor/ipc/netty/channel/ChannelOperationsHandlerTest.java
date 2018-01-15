@@ -16,9 +16,20 @@
 
 package reactor.ipc.netty.channel;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.HttpMethod;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -30,7 +41,10 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class ChannelOperationsHandlerTest {
 
@@ -62,7 +76,6 @@ public class ChannelOperationsHandlerTest {
 		}
 		Mono<Integer> code =
 				HttpClient.prepare()
-				          .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 				          .port(server.address().getPort())
 				          .wiretap()
 				          .post()
@@ -121,13 +134,10 @@ public class ChannelOperationsHandlerTest {
 		ByteBufFlux response =
 				HttpClient.prepare()
 				          .port(abortServerPort)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost")
-				                                                  .noSSL())
 				          .wiretap()
 				          .request(HttpMethod.GET)
 				          .uri("/")
-				          .send((req, out) -> req.sendHeaders()
-				                                 .sendString(Flux.just("a", "b", "c")))
+				          .send((req, out) -> out.sendString(Flux.just("a", "b", "c")))
 				          .responseContent();
 
 		StepVerifier.create(response)
@@ -137,9 +147,10 @@ public class ChannelOperationsHandlerTest {
 		abortServer.close();
 	}
 
-	private static final class ConnectionAbortServer extends CountDownLatch implements Runnable {
+	private static final class ConnectionAbortServer extends CountDownLatch
+			implements Runnable {
 
-		private final int port;
+		private final int                 port;
 		private final ServerSocketChannel server;
 		private volatile boolean read = false;
 		private volatile Thread thread;
@@ -197,7 +208,6 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	@Test
-	@Ignore
 	public void testIssue196() throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 
@@ -211,14 +221,15 @@ public class ChannelOperationsHandlerTest {
 		}
 
 		HttpClient client =
-		        HttpClient.create(opt -> opt.port(testServerPort)
-		                                    .poolResources(PoolResources.fixed("test", 1)));
+		        HttpClient.prepare(PoolResources.fixed("test", 1))
+		                  .port(testServerPort);
 
 		Flux.range(0, 2)
-		    .flatMap(i -> client.get("/205")
-		                        .flatMap(res -> res.receive()
-		                                           .aggregate()
-		                                           .asString()))
+		    .flatMap(i -> client.get()
+		                        .uri("/205")
+		                        .responseContent()
+		                        .aggregate()
+		                        .asString())
 		    .blockLast(Duration.ofSeconds(100));
 
 		testServer.close();

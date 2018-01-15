@@ -464,10 +464,11 @@ public abstract class TcpServer {
 	 *
 	 * @return a new {@link TcpServer}
 	 *
-	 * @see ServerBootstrap#childAttr(AttributeKey, Object)
+	 * @see ServerBootstrap#attr(AttributeKey, Object)
 	 */
 	public final <T> TcpServer selectorAttr(AttributeKey<T> key, T value) {
-		return attr(key, value);
+		Objects.requireNonNull(key, "key");
+		return bootstrap(b -> b.attr(key, value));
 	}
 
 	/**

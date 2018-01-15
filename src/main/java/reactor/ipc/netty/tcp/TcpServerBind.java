@@ -32,7 +32,6 @@ final class TcpServerBind extends TcpServer {
 
 	@Override
 	public Mono<? extends DisposableServer> bind(ServerBootstrap b) {
-		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
 
 		if (b.config()
 		     .group() == null) {
@@ -43,10 +42,10 @@ final class TcpServerBind extends TcpServer {
 					TcpUtils.findSslContext(b));
 		}
 
-		TcpUtils.fromHostPortAttrsToLocal(b);
-
 		return Mono.create(sink -> {
 			ServerBootstrap bootstrap = b.clone();
+			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
+			TcpUtils.fromHostPortAttrsToLocal(bootstrap);
 			BootstrapHandlers.finalize(bootstrap, ops, sink)
 			                 .accept(bootstrap.bind());
 		});

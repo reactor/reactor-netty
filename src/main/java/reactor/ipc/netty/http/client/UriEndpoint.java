@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.netty.util.NetUtil;
@@ -26,19 +27,19 @@ final class UriEndpoint {
 	private final Supplier<InetSocketAddress> remoteAddress;
 	private final String pathAndQuery;
 
-	public UriEndpoint(String scheme, Supplier<InetSocketAddress> remoteAddress,
+	UriEndpoint(String scheme, Supplier<InetSocketAddress> remoteAddress,
 			String pathAndQuery) {
-		this.scheme = scheme;
-		this.remoteAddress = remoteAddress;
-		this.pathAndQuery = pathAndQuery;
+		this.scheme = Objects.requireNonNull(scheme, "scheme");
+		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddressSupplier");
+		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");
 	}
 
-	public boolean isWs() {
+	boolean isWs() {
 		return HttpClient.WS_SCHEME.equals(scheme)
 				|| HttpClient.WSS_SCHEME.equals(scheme);
 	}
 
-	public boolean isSecure() {
+	boolean isSecure() {
 		return isSecureScheme(scheme);
 	}
 
@@ -47,19 +48,19 @@ final class UriEndpoint {
 				|| HttpClient.WSS_SCHEME.equals(scheme);
 	}
 
-	public String getPathAndQuery() {
+	String getPathAndQuery() {
 		return pathAndQuery;
 	}
 
-	public InetSocketAddress getRemoteAddress() {
+	InetSocketAddress getRemoteAddress() {
 		return remoteAddress.get();
 	}
 
-	public String toExternalForm() {
+	String toExternalForm() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(scheme);
 		sb.append("://");
-		InetSocketAddress address = remoteAddress != null ? remoteAddress.get() : null;
+		InetSocketAddress address = remoteAddress.get();
 		sb.append(address != null
 				? toSocketAddressStringWithoutDefaultPort(address, isSecure())
 				: "localhost");
@@ -86,9 +87,5 @@ final class UriEndpoint {
 	@Override
 	public String toString() {
 		return toExternalForm();
-	}
-
-	public String getScheme() {
-		return scheme;
 	}
 }

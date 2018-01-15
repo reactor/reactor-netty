@@ -76,7 +76,6 @@ public class UdpServerTests {
 	}
 
 	@Test
-	@Ignore
 	public void supportsReceivingDatagrams() throws InterruptedException {
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(4);
