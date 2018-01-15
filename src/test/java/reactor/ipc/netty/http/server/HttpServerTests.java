@@ -957,9 +957,9 @@ public class HttpServerTests {
 
 		try {
 			Flux.range(0, this.numberOfTests)
-			    .concatMap(i -> client.post()
+			    .concatMap(i -> client.followRedirect()
+			                          .post()
 					                  .uri("/login")
-					                  .send((r, out) -> r.followRedirect())
 			                          .responseContent()
 			                          .log("reactor.req."+i)
 			                          .then())

@@ -17,7 +17,6 @@ package reactor.ipc.netty.http.client;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -33,7 +32,6 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -248,6 +246,15 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Enable http status 301/302 auto-redirect support
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient followRedirect() {
+		return tcpConfiguration(FOLLOW_REDIRECT_ATTR_CONFIG);
+	}
+
+	/**
 	 * HTTP DELETE to connect the {@link HttpClient}.
 	 *
 	 * @return a {@link RequestSender} ready to prepare the content for response
@@ -338,6 +345,15 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient noCompression() {
 		return tcpConfiguration(COMPRESS_ATTR_DISABLE).headers(COMPRESS_HEADERS_DISABLE);
+	}
+
+	/**
+	 * Disable http status 301/302 auto-redirect support
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient noRedirection() {
+		return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
 	}
 
 	/**
@@ -505,14 +521,23 @@ public abstract class HttpClient {
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);
 
-	static final AttributeKey<Boolean>          ACCEPT_GZIP          =
+	static final AttributeKey<Boolean>          ACCEPT_GZIP                  =
 			AttributeKey.newInstance("acceptGzip");
 
-	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG =
+	static final AttributeKey<Boolean>          FOLLOW_REDIRECT              =
+			AttributeKey.newInstance("followRedirect");
+
+	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG         =
 			tcp -> tcp.attr(ACCEPT_GZIP, true);
 
-	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE =
+	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE        =
 			tcp -> tcp.attr(ACCEPT_GZIP, null);
+
+	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_CONFIG  =
+			tcp -> tcp.attr(FOLLOW_REDIRECT, true);
+
+	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_DISABLE =
+			tcp -> tcp.attr(FOLLOW_REDIRECT, null);
 
 	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS = h ->
 			h.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);

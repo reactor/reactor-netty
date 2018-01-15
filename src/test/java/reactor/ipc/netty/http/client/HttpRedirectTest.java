@@ -72,9 +72,9 @@ public class HttpRedirectTest {
 
 		try {
 			Flux.range(0, this.numberOfTests)
-			    .concatMap(i -> client.post()
+			    .concatMap(i -> client.followRedirect()
+			                          .post()
 			                          .uri("/login")
-					                  .send((r, out) -> r.followRedirect())
 			                          .responseContent()
 			                          .then())
 			    .blockLast(Duration.ofSeconds(30));
@@ -109,9 +109,9 @@ public class HttpRedirectTest {
 				          .wiretap();
 
 		String value =
-				client.request(HttpMethod.GET)
+				client.followRedirect()
+				      .get()
 				      .uri("/1")
-				      .send((req, out) -> req.followRedirect().sendHeaders())
 				      .responseContent()
 				      .aggregate()
 				      .asString()
@@ -126,9 +126,9 @@ public class HttpRedirectTest {
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 
-		value = client.request(HttpMethod.GET)
+		value = client.followRedirect()
+		              .get()
 		              .uri("/2")
-		              .send((req, out) -> req.followRedirect().sendHeaders())
 		              .responseContent()
 		              .aggregate()
 		              .asString()
