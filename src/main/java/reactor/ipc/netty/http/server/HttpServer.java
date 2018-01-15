@@ -180,6 +180,16 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Enable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers for deriving information about the connection.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer forwarded() {
+		return tcpConfiguration(FORWARDED_ATTR_CONFIG);
+	}
+
+	/**
 	 * Enable GZip response compression if the client request presents accept encoding
 	 * headers
 	 * AND the response reaches a minimum threshold
@@ -249,6 +259,16 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Disable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer noForwarded() {
+		return tcpConfiguration(FORWARDED_ATTR_DISABLE);
+	}
+
+	/**
 	 * Apply {@link ServerBootstrap} configuration given mapper taking currently
 	 * configured one and returning a new one to be ultimately used for socket binding.
 	 * <p> Configuration will apply during {@link #tcpConfiguration()} phase.
@@ -300,16 +320,38 @@ public abstract class HttpServer {
 		@Nullable
 		@Override
 		public ChannelOperations<?, ?> create(Connection c, ConnectionEvents listener, Object msg) {
-				Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
-						c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
-				final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-				if (predicate != null && predicate.get() != null) {
-					compressionPredicate = predicate.get();
-				}
-				else {
-					compressionPredicate = null;
-				}
-			return HttpServerOperations.bindHttp(c, listener, compressionPredicate, msg);
+			Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
+					c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
+			final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+			if (predicate != null && predicate.get() != null) {
+				compressionPredicate = predicate.get();
+			}
+			else {
+				compressionPredicate = null;
+			}
+			return HttpServerOperations.bindHttp(c, listener, compressionPredicate, msg, false);
+		}
+
+		@Override
+		public boolean createOnConnected() {
+			return false;
+		}
+	};
+
+	static final ChannelOperations.OnSetup HTTP_OPS_FORWARDED = new ChannelOperations.OnSetup() {
+		@Nullable
+		@Override
+		public ChannelOperations<?, ?> create(Connection c, ConnectionEvents listener, Object msg) {
+			Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
+					c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
+			final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+			if (predicate != null && predicate.get() != null) {
+				compressionPredicate = predicate.get();
+			}
+			else {
+				compressionPredicate = null;
+			}
+			return HttpServerOperations.bindHttp(c, listener, compressionPredicate, msg, true);
 		}
 
 		@Override
@@ -326,6 +368,11 @@ public abstract class HttpServer {
 		return b;
 	};
 
+	static final Function<ServerBootstrap, ServerBootstrap> HTTP_OPS_FORWARDED_CONF = b -> {
+		BootstrapHandlers.channelOperationFactory(b, HTTP_OPS_FORWARDED);
+		return b;
+	};
+
 	static final TcpServer DEFAULT_TCP_SERVER = TcpServer.create()
 			                                             .bootstrap(HTTP_OPS_CONF)
 			                                             .port(DEFAULT_PORT);
@@ -339,4 +386,10 @@ public abstract class HttpServer {
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_DISABLE =
 			tcp -> tcp.selectorAttr(HttpServerBind.PRODUCE_GZIP, null)
 			          .selectorAttr(HttpServerBind.PRODUCE_GZIP_PREDICATE, null);
+
+	static final Function<TcpServer, TcpServer> FORWARDED_ATTR_CONFIG =
+			tcp -> tcp.bootstrap(HTTP_OPS_FORWARDED_CONF);
+
+	static final Function<TcpServer, TcpServer> FORWARDED_ATTR_DISABLE =
+			tcp -> tcp.bootstrap(HTTP_OPS_CONF);
 }
