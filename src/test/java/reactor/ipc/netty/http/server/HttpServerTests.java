@@ -104,7 +104,6 @@ public class HttpServerTests {
 	}
 
 	@Test
-	@Ignore
 	public void defaultHttpPortWithAddress() {
 		DisposableServer blockingFacade = HttpServer.create()
 		                                      .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
