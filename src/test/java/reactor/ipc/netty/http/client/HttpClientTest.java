@@ -415,10 +415,10 @@ public class HttpClientTest {
 				HttpClient.prepare()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
+				          .noChunkedTransfer()
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
-				          .send((c, out) -> c.chunkedTransfer(false)
-				                             .sendString(Flux.just("hello")))
+				          .send(ByteBufFlux.fromString(Flux.just("hello")))
 				          .responseSingle((res, buf) -> Mono.just(res.status()))
 				          .block(Duration.ofSeconds(30));
 
@@ -431,10 +431,10 @@ public class HttpClientTest {
 				HttpClient.prepare()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
+				          .noChunkedTransfer()
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
-				          .send((c, out) -> c.chunkedTransfer(false)
-				                             .keepAlive(false))
+				          .send((c, out) -> c.keepAlive(false))
 				          .responseSingle((res, buf) -> Mono.just(res.status()))
 				          .block(Duration.ofSeconds(30));
 
@@ -484,9 +484,9 @@ public class HttpClientTest {
 				HttpClient.prepare()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
-				          .request(HttpMethod.GET)
+				          .noChunkedTransfer()
+				          .get()
 				          .uri("/unsupportedURI")
-				          .send((c, out) -> c.chunkedTransfer(false))
 				          .responseSingle((res, buf) -> Mono.just(res.status()))
 				          .block(Duration.ofSeconds(30));
 

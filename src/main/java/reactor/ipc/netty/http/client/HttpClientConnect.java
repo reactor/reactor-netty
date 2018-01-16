@@ -132,6 +132,8 @@ final class HttpClientConnect extends HttpClient {
 
 		boolean followRedirect = attrs.get(FOLLOW_REDIRECT) != null && (Boolean) attrs.get(FOLLOW_REDIRECT);
 
+		Object chunkedTransfer = attrs.get(CHUNKED);
+
 
 		String uri = (String)attrs.get(URI);
 
@@ -143,12 +145,13 @@ final class HttpClientConnect extends HttpClient {
 						delegate.isSecure());
 
 		HttpClientHandler handler =
-				new HttpClientHandler(attrs, reconnectableUriEndpoint, compress, followRedirect);
+				new HttpClientHandler(attrs, reconnectableUriEndpoint, compress, followRedirect, chunkedTransfer);
 
 		reconnectableUriEndpoint.init(uri, handler.method);
 
 		b.attr(ACCEPT_GZIP, null)
 		 .attr(FOLLOW_REDIRECT, null)
+		 .attr(CHUNKED, null)
 		 .attr(BODY, null)
 		 .attr(HEADERS, null)
 		 .attr(URI, null)
@@ -210,10 +213,11 @@ final class HttpClientConnect extends HttpClient {
 		                                                                                           defaultHeaders;
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>handler;
 		final boolean                                                                              followRedirect;
+		final Object                                                                               chunkedTransfer;
 
 		@SuppressWarnings("unchecked")
 		HttpClientHandler(Map<AttributeKey<?>, Object> attrs, ReconnectableUriEndpoint bridge,
-						  boolean compress, boolean followRedirect) {
+						  boolean compress, boolean followRedirect, Object chunkedTransfer) {
 			this.method = (HttpMethod) attrs.get(METHOD);
 			HttpHeaders defaultHeaders = (HttpHeaders) attrs.get(HttpClientConnect.HEADERS);
 
@@ -233,6 +237,7 @@ final class HttpClientConnect extends HttpClient {
 			this.handler = requestHandler;
 			this.bridge = bridge;
 			this.followRedirect = followRedirect;
+			this.chunkedTransfer = chunkedTransfer;
 		}
 
 		@Override
@@ -255,6 +260,10 @@ final class HttpClientConnect extends HttpClient {
 				}
 				else {
 					ch.chunkedTransfer(true);
+				}
+
+				if (chunkedTransfer != null) {
+					ch.chunkedTransfer((Boolean) chunkedTransfer);
 				}
 
 				if (defaultHeaders != null) {
