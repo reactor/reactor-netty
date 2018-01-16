@@ -422,10 +422,10 @@ public class HttpClientTest {
 				HttpClient.prepare()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
+				          .noChunkedTransfer()
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
-				          .send((c, out) -> c.chunkedTransfer(false)
-				                             .sendString(Flux.just("hello")))
+				          .send((c, out) -> c.sendString(Flux.just("hello")))
 				          .response()
 				          .block(Duration.ofSeconds(30));
 
@@ -443,10 +443,10 @@ public class HttpClientTest {
 				HttpClient.prepare()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
+				          .noChunkedTransfer()
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
-				          .send((c, out) -> c.chunkedTransfer(false)
-				                             .keepAlive(false))
+				          .send((c, out) -> c.keepAlive(false))
 				          .response()
 				          .block(Duration.ofSeconds(30));
 
@@ -505,9 +505,9 @@ public class HttpClientTest {
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
 				                                                  .noSSL())
 				          .wiretap()
-				          .request(HttpMethod.GET)
+				          .noChunkedTransfer()
+				          .get()
 				          .uri("/unsupportedURI")
-				          .send((c, out) -> c.chunkedTransfer(false))
 				          .response()
 				          .block(Duration.ofSeconds(30));
 
@@ -517,9 +517,9 @@ public class HttpClientTest {
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
 				                                                  .noSSL())
 				          .wiretap()
-				          .request(HttpMethod.GET)
+				          .noChunkedTransfer()
+				          .get()
 				          .uri("/unsupportedURI")
-				          .send((req, out) -> req.chunkedTransfer(false))
 				          .response()
 				          .block(Duration.ofSeconds(30));
 

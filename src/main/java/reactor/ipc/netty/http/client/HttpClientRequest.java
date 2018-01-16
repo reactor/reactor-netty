@@ -60,15 +60,6 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 */
 	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
-	/**
-	 * Set transfer-encoding header
-	 *
-	 * @param chunked true if transfer-encoding:chunked
-	 *
-	 * @return this outbound
-	 */
-	HttpClientRequest chunkedTransfer(boolean chunked);
-
 	@Override
 	default HttpClientRequest options(Consumer<? super NettyPipeline.SendOptions> configurator){
 		NettyOutbound.super.options(configurator);

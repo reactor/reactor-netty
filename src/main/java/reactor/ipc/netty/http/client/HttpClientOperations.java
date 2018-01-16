@@ -217,13 +217,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return ((SocketChannel) channel()).remoteAddress();
 	}
 
-	@Override
-	public HttpClientRequest chunkedTransfer(boolean chunked) {
+	public void chunkedTransfer(boolean chunked) {
 		if (!hasSentHeaders() && HttpUtil.isTransferEncodingChunked(nettyRequest) != chunked) {
 			requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyRequest, chunked);
 		}
-		return this;
 	}
 
 	@Override

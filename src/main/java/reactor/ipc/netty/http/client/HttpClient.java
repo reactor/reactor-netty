@@ -255,6 +255,15 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Enable transfer-encoding
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient chunkedTransfer() {
+		return tcpConfiguration(CHUNKED_ATTR_CONFIG);
+	}
+
+	/**
 	 * HTTP DELETE to connect the {@link HttpClient}.
 	 *
 	 * @return a {@link RequestSender} ready to prepare the content for response
@@ -354,6 +363,15 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient noRedirection() {
 		return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
+	}
+
+	/**
+	 * Disable transfer-encoding
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient noChunkedTransfer() {
+		return tcpConfiguration(CHUNKED_ATTR_DISABLE);
 	}
 
 	/**
@@ -527,11 +545,20 @@ public abstract class HttpClient {
 	static final AttributeKey<Boolean>          FOLLOW_REDIRECT              =
 			AttributeKey.newInstance("followRedirect");
 
+	static final AttributeKey<Boolean>          CHUNKED                      =
+			AttributeKey.newInstance("chunkedTransfer");
+
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG         =
 			tcp -> tcp.attr(ACCEPT_GZIP, true);
 
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE        =
 			tcp -> tcp.attr(ACCEPT_GZIP, null);
+
+	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_CONFIG          =
+			tcp -> tcp.attr(CHUNKED, true);
+
+	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_DISABLE         =
+			tcp -> tcp.attr(CHUNKED, false);
 
 	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_CONFIG  =
 			tcp -> tcp.attr(FOLLOW_REDIRECT, true);
