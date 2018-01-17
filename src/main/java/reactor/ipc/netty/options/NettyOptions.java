@@ -290,7 +290,7 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 				System.getProperty("reactor.ipc.netty.epoll");
 
 			String defaultNative =
-				System.getProperty("reactor.ipc.netty.native");
+				System.getProperty("reactor.netty.native");
 
 			if (defaultNative != null) {
 				DEFAULT_NATIVE = Boolean.parseBoolean(defaultNative);
