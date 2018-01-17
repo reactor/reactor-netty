@@ -290,13 +290,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 			ChannelFuture future = ctx.write(msg, promise);
 			if (flushOnEachWithEventLoop && ctx.channel().isWritable()) {
-				EventLoop eventLoop = ctx.channel().eventLoop();
-				if (eventLoop.inEventLoop()) {
-					scheduleFlush();
-				}
-				else {
-					eventLoop.execute(() -> scheduleFlush());
-				}
+				scheduleFlush();
 			}
 			else {
 				ctx.flush();
