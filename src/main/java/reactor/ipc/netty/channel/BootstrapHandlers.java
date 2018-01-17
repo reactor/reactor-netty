@@ -51,6 +51,14 @@ import reactor.util.Loggers;
  */
 public abstract class BootstrapHandlers {
 
+	static final boolean SSL_CLIENT_DEBUG =
+			Boolean.parseBoolean(System.getProperty("reactor.netty.tcp.ssl.client.debug",
+			                                        "false"));
+
+	static final boolean SSL_SERVER_DEBUG =
+			Boolean.parseBoolean(System.getProperty("reactor.netty.tcp.ssl.server.debug",
+			                                        "false"));
+
 	/**
 	 * Finalize a server bootstrap pipeline configuration by turning it into a {@link
 	 * ChannelInitializer} to safely initialize each child channel.
@@ -277,7 +285,7 @@ public abstract class BootstrapHandlers {
 	 * @return a mutated {@link Bootstrap#handler}
 	 */
 	public static Bootstrap updateLogSupport(Bootstrap b, LoggingHandler handler) {
-		updateConfiguration(b, NettyPipeline.LoggingHandler, logConfiguration(handler));
+		updateConfiguration(b, NettyPipeline.LoggingHandler, logConfiguration(handler, SSL_CLIENT_DEBUG));
 		return b;
 	}
 
@@ -291,7 +299,7 @@ public abstract class BootstrapHandlers {
 	 */
 	public static ServerBootstrap updateLogSupport(ServerBootstrap b,
 												   LoggingHandler handler) {
-		updateConfiguration(b, NettyPipeline.LoggingHandler, logConfiguration(handler));
+		updateConfiguration(b, NettyPipeline.LoggingHandler, logConfiguration(handler, SSL_SERVER_DEBUG));
 		return b;
 	}
 
@@ -333,11 +341,11 @@ public abstract class BootstrapHandlers {
 		return p;
 	}
 
-	static BiConsumer<ConnectionEvents, ? super Channel> logConfiguration(LoggingHandler handler) {
+	static BiConsumer<ConnectionEvents, ? super Channel> logConfiguration(LoggingHandler handler, boolean debugSsl) {
 		Objects.requireNonNull(handler, "loggingHandler");
 		return (listener, channel) -> {
 			if (channel.pipeline().get(NettyPipeline.SslHandler) != null) {
-				if (log.isTraceEnabled()) {
+				if (debugSsl) {
 					channel.pipeline()
 							.addBefore(NettyPipeline.SslHandler,
 									NettyPipeline.SslLoggingHandler,
