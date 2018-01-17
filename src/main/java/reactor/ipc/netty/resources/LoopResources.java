@@ -52,7 +52,7 @@ public interface LoopResources extends Disposable {
 			"" + -1));
 
 	boolean DEFAULT_NATIVE = Boolean.parseBoolean(System.getProperty(
-			"reactor.ipc.netty.native",
+			"reactor.netty.native",
 			"true"));
 
 	/**
