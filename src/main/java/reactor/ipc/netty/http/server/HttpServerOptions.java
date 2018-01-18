@@ -41,6 +41,8 @@ public final class HttpServerOptions extends ServerOptions {
 	private final int maxInitialLineLength;
 	private final int maxHeaderSize;
 	private final int maxChunkSize;
+	private final int initialBufferSize;
+	private final boolean validateHeaders;
 
 	private HttpServerOptions(HttpServerOptions.Builder builder) {
 		super(builder);
@@ -48,6 +50,8 @@ public final class HttpServerOptions extends ServerOptions {
 		this.maxInitialLineLength = builder.maxInitialLineLength;
 		this.maxHeaderSize = builder.maxHeaderSize;
 		this.maxChunkSize = builder.maxChunkSize;
+		this.validateHeaders = builder.validateHeaders;
+		this.initialBufferSize = builder.initialBufferSize;
 	}
 
 	/**
@@ -90,6 +94,25 @@ public final class HttpServerOptions extends ServerOptions {
 		return maxChunkSize;
 	}
 
+	/**
+	 * Returns the HTTP validate headers flag.
+	 *
+	 * @return true if the HTTP codec validates headers, false otherwise
+	 * @see io.netty.handler.codec.http.HttpServerCodec
+	 */
+	public boolean httpCodecValidateHeaders() {
+		return validateHeaders;
+	}
+	/**
+	 * Returns the configured HTTP codec initial buffer size.
+	 *
+	 * @return the configured HTTP codec initial buffer size
+	 * @see io.netty.handler.codec.http.HttpServerCodec
+	 */
+	public int httpCodecInitialBufferSize() {
+		return initialBufferSize;
+	}
+
 	@Override
 	public HttpServerOptions duplicate() {
 		return builder().from(this).build();
@@ -123,10 +146,19 @@ public final class HttpServerOptions extends ServerOptions {
 	}
 
 	public static final class Builder extends ServerOptions.Builder<Builder> {
+
+		public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
+		public static final int DEFAULT_MAX_HEADER_SIZE         = 8192;
+		public static final int DEFAULT_MAX_CHUNK_SIZE          = 8192;
+		public static final boolean DEFAULT_VALIDATE_HEADERS    = true;
+		public static final int DEFAULT_INITIAL_BUFFER_SIZE     = 128;
+
 		private int minCompressionResponseSize = -1;
-		private int maxInitialLineLength = 4096;
-		private int maxHeaderSize = 8192;
-		private int maxChunkSize = 8192;
+		private int maxInitialLineLength = DEFAULT_MAX_INITIAL_LINE_LENGTH;
+		private int maxHeaderSize = DEFAULT_MAX_HEADER_SIZE;
+		private int maxChunkSize = DEFAULT_MAX_CHUNK_SIZE;
+		private boolean validateHeaders = DEFAULT_VALIDATE_HEADERS;
+		private int initialBufferSize = DEFAULT_INITIAL_BUFFER_SIZE;
 
 		private Builder(){
 			super(new ServerBootstrap());
@@ -162,28 +194,75 @@ public final class HttpServerOptions extends ServerOptions {
 		}
 
 		/**
-		 * Configure the {@link io.netty.handler.codec.http.HttpServerCodec HTTP codec}
-		 * maximum initial HTTP line length, header size and chunk size.
-		 * <p>
-		 * Negative or zero values are not valid, but will be interpreted as "don't change
-		 * the current configuration for that field": on first call the Netty defaults of
-		 * {@code (4096,8192,8192)} will be used.
+		 * Configure the maximum length that can be decoded for the HTTP request's initial
+		 * line. Defaults to {@code #DEFAULT_MAX_INITIAL_LINE_LENGTH}.
 		 *
-		 * @param maxInitialLineLength the HTTP initial line maximum length. Use 0 to ignore/keep default.
-		 * @param maxHeaderSize the HTTP header maximum size. Use 0 to ignore/keep default.
-		 * @param maxChunkSize the HTTP chunk maximum size. Use 0 to ignore/keep default.
-		 * @return {@code this}
+		 * @param value the value for the maximum initial line length (strictly positive)
+		 * @return this option builder for further configuration
 		 */
-		public final Builder httpCodecOptions(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-			if (maxInitialLineLength > 0) {
-				this.maxInitialLineLength = maxInitialLineLength;
+		public final Builder maxInitialLineLength(int value) {
+			if (value <= 0) {
+				throw new IllegalArgumentException(
+						"maxInitialLineLength must be strictly positive");
 			}
-			if (maxHeaderSize > 0) {
-				this.maxHeaderSize = maxHeaderSize;
+			this.maxInitialLineLength = value;
+			return get();
+		}
+
+		/**
+		 * Configure the maximum header size that can be decoded for the HTTP request.
+		 * Defaults to {@link #DEFAULT_MAX_HEADER_SIZE}.
+		 *
+		 * @param value the value for the maximum header size (strictly positive)
+		 * @return this option builder for further configuration
+		 */
+		public final Builder maxHeaderSize(int value) {
+			if (value <= 0) {
+				throw new IllegalArgumentException("maxHeaderSize must be strictly positive");
 			}
-			if (maxChunkSize > 0) {
-				this.maxChunkSize = maxChunkSize;
+			this.maxHeaderSize = value;
+			return get();
+		}
+
+		/**
+		 * Configure the maximum chunk size that can be decoded for the HTTP request.
+		 * Defaults to {@link #DEFAULT_MAX_CHUNK_SIZE}.
+		 *
+		 * @param value the value for the maximum chunk size (strictly positive)
+		 * @return this option builder for further configuration
+		 */
+		public final Builder maxChunkSize(int value) {
+			if (value <= 0) {
+				throw new IllegalArgumentException("maxChunkSize must be strictly positive");
 			}
+			this.maxChunkSize = value;
+			return get();
+		}
+
+		/**
+		 * Configure whether or not to validate headers when decoding requests. Defaults to
+		 * #DEFAULT_VALIDATE_HEADERS.
+		 *
+		 * @param validate true to validate headers, false otherwise
+		 * @return this option builder for further configuration
+		 */
+		public final Builder validateHeaders(boolean validate) {
+			this.validateHeaders = validate;
+			return get();
+		}
+
+		/**
+		 * Configure the initial buffer size for HTTP request decoding. Defaults to
+		 * {@link #DEFAULT_INITIAL_BUFFER_SIZE}.
+		 *
+		 * @param value the initial buffer size to use (strictly positive)
+		 * @return
+		 */
+		public final Builder initialBufferSize(int value) {
+			if (value <= 0) {
+				throw new IllegalArgumentException("initialBufferSize must be strictly positive");
+			}
+			this.initialBufferSize = value;
 			return get();
 		}
 
@@ -199,6 +278,8 @@ public final class HttpServerOptions extends ServerOptions {
 			this.maxInitialLineLength = options.maxInitialLineLength;
 			this.maxHeaderSize = options.maxHeaderSize;
 			this.maxChunkSize = options.maxChunkSize;
+			this.validateHeaders = options.validateHeaders;
+			this.initialBufferSize = options.initialBufferSize;
 			return get();
 		}
 
