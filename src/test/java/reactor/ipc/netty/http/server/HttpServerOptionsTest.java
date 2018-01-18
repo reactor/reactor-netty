@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static reactor.ipc.netty.http.server.HttpServerOptions.Builder.*;
 
 public class HttpServerOptionsTest {
 
@@ -49,148 +50,139 @@ public class HttpServerOptionsTest {
 	}
 
 	@Test
-	public void httpCodecSizesModified() {
+	public void maxInitialLineLength() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, 789);
+		builder.maxInitialLineLength(123);
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(123);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(456);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(789);
+		HttpServerOptions conf = builder.build();
+
+		assertThat(conf.httpCodecMaxInitialLineLength()).as("initial line length").isEqualTo(123);
+
+		assertThat(conf.httpCodecMaxHeaderSize()).as("default header size").isEqualTo(DEFAULT_MAX_HEADER_SIZE);
+		assertThat(conf.httpCodecMaxChunkSize()).as("default chunk size").isEqualTo(DEFAULT_MAX_CHUNK_SIZE);
+		assertThat(conf.httpCodecValidateHeaders()).as("default validate headers").isEqualTo(DEFAULT_VALIDATE_HEADERS);
+		assertThat(conf.httpCodecInitialBufferSize()).as("default initial buffer sizez").isEqualTo(DEFAULT_INITIAL_BUFFER_SIZE);
 	}
 
 	@Test
-	public void httpCodecSizesDefaults() {
+	public void maxInitialLineLengthBadValues() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(4096);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(8192);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(8192);
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.maxInitialLineLength(0))
+				.as("rejects 0")
+				.withMessage("maxInitialLineLength must be strictly positive");
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.maxInitialLineLength(-1))
+				.as("rejects negative")
+				.withMessage("maxInitialLineLength must be strictly positive");
 	}
 
 	@Test
-	public void httpCodecSizesLineNegativeDefaults() {
+	public void maxHeaderSize() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(-1, 456, 789);
+		builder.maxHeaderSize(123);
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(4096);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(456);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(789);
+		HttpServerOptions conf = builder.build();
+
+		assertThat(conf.httpCodecMaxHeaderSize()).as("header size").isEqualTo(123);
+
+		assertThat(conf.httpCodecMaxInitialLineLength()).as("default initial line length").isEqualTo(DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		assertThat(conf.httpCodecMaxChunkSize()).as("default chunk size").isEqualTo(DEFAULT_MAX_CHUNK_SIZE);
+		assertThat(conf.httpCodecValidateHeaders()).as("default validate headers").isEqualTo(DEFAULT_VALIDATE_HEADERS);
+		assertThat(conf.httpCodecInitialBufferSize()).as("default initial buffer sizez").isEqualTo(DEFAULT_INITIAL_BUFFER_SIZE);
 	}
 
 	@Test
-	public void httpCodecSizesLineZeroDefaults() {
+	public void maxHeaderSizeBadValues() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(0, 456, 789);
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(4096);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(456);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(789);
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.maxHeaderSize(0))
+				.as("rejects 0")
+				.withMessage("maxHeaderSize must be strictly positive");
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.maxHeaderSize(-1))
+				.as("rejects negative")
+				.withMessage("maxHeaderSize must be strictly positive");
 	}
 
 	@Test
-	public void httpCodecSizesLineNegativeIgnored() {
+	public void maxChunkSize() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, 789)
-		       .httpCodecOptions(-1, 1, 2);
+		builder.maxChunkSize(123);
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(123);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(1);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(2);
+		HttpServerOptions conf = builder.build();
+
+		assertThat(conf.httpCodecMaxChunkSize()).as("chunk size").isEqualTo(123);
+
+		assertThat(conf.httpCodecMaxInitialLineLength()).as("default initial line length").isEqualTo(DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		assertThat(conf.httpCodecMaxHeaderSize()).as("default header size").isEqualTo(DEFAULT_MAX_HEADER_SIZE);
+		assertThat(conf.httpCodecValidateHeaders()).as("default validate headers").isEqualTo(DEFAULT_VALIDATE_HEADERS);
+		assertThat(conf.httpCodecInitialBufferSize()).as("default initial buffer sizez").isEqualTo(DEFAULT_INITIAL_BUFFER_SIZE);
 	}
 
 	@Test
-	public void httpCodecSizesLineZeroIgnored() {
+	public void maxChunkSizeBadValues() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, 789)
-		       .httpCodecOptions(0, 1, 2);
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(123);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(1);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(2);
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.maxChunkSize(0))
+				.as("rejects 0")
+				.withMessage("maxChunkSize must be strictly positive");
+
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.maxChunkSize(-1))
+				.as("rejects negative")
+				.withMessage("maxChunkSize must be strictly positive");
 	}
 
 	@Test
-	public void httpCodecSizesHeaderNegativeDefaults() {
+	public void validateHeaders() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, -1, 789);
+		builder.validateHeaders(false);
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(123);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(8192);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(789);
+		HttpServerOptions conf = builder.build();
+
+		assertThat(conf.httpCodecValidateHeaders()).as("validate headers").isFalse();
+
+		assertThat(conf.httpCodecMaxInitialLineLength()).as("default initial line length").isEqualTo(DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		assertThat(conf.httpCodecMaxHeaderSize()).as("default header size").isEqualTo(DEFAULT_MAX_HEADER_SIZE);
+		assertThat(conf.httpCodecMaxChunkSize()).as("default chunk size").isEqualTo(DEFAULT_MAX_CHUNK_SIZE);
+		assertThat(conf.httpCodecInitialBufferSize()).as("default initial buffer sizez").isEqualTo(DEFAULT_INITIAL_BUFFER_SIZE);
 	}
 
 	@Test
-	public void httpCodecSizesHeaderZeroDefaults() {
+	public void initialBufferSize() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 0, 789);
+		builder.initialBufferSize(123);
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(123);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(8192);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(789);
+		HttpServerOptions conf = builder.build();
+
+		assertThat(conf.httpCodecInitialBufferSize()).as("initial buffer size").isEqualTo(123);
+
+		assertThat(conf.httpCodecMaxInitialLineLength()).as("default initial line length").isEqualTo(DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		assertThat(conf.httpCodecMaxHeaderSize()).as("default header size").isEqualTo(DEFAULT_MAX_HEADER_SIZE);
+		assertThat(conf.httpCodecMaxChunkSize()).as("default chunk size").isEqualTo(DEFAULT_MAX_CHUNK_SIZE);
+		assertThat(conf.httpCodecValidateHeaders()).as("default validate headers").isEqualTo(DEFAULT_VALIDATE_HEADERS);
 	}
 
 	@Test
-	public void httpCodecSizesHeaderNegativeIgnored() {
+	public void initialBufferSizeBadValues() {
 		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, 789)
-		       .httpCodecOptions(1, -1, 2);
 
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(1);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(456);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(2);
-	}
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.initialBufferSize(0))
+				.as("rejects 0")
+				.withMessage("initialBufferSize must be strictly positive");
 
-	@Test
-	public void httpCodecSizesHeaderZeroIgnored() {
-		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, 789)
-		       .httpCodecOptions(1, 0, 2);
-
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(1);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(456);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(2);
-	}
-
-	@Test
-	public void httpCodecSizesChunkNegativeDefaults() {
-		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, -1);
-
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(123);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(456);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(8192);
-	}
-
-	@Test
-	public void httpCodecSizesChunkZeroDefaults() {
-		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, 0);
-
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(123);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(456);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(8192);
-	}
-
-	@Test
-	public void httpCodecSizesChunkNegativeIgnored() {
-		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, 789)
-		       .httpCodecOptions(1, 2, -1);
-
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(1);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(2);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(789);
-	}
-
-	@Test
-	public void httpCodecSizesChunkZeroIgnored() {
-		HttpServerOptions.Builder builder = HttpServerOptions.builder();
-		builder.httpCodecOptions(123, 456, 789)
-		       .httpCodecOptions(1, 2, 0);
-
-		assertThat(builder.build().httpCodecMaxInitialLineLength()).isEqualTo(1);
-		assertThat(builder.build().httpCodecMaxHeaderSize()).isEqualTo(2);
-		assertThat(builder.build().httpCodecMaxChunkSize()).isEqualTo(789);
+		assertThatExceptionOfType(IllegalArgumentException.class)
+				.isThrownBy(() -> builder.initialBufferSize(-1))
+				.as("rejects negative")
+				.withMessage("initialBufferSize must be strictly positive");
 	}
 
 	@Test
@@ -249,25 +241,27 @@ public class HttpServerOptionsTest {
 
 		//changed line length
 		assertThat(HttpServerOptions.builder()
-		                            .httpCodecOptions(123, 0, -1)
+		                            .maxInitialLineLength(123)
 		                            .build().asDetailedString())
 				.endsWith(", httpCodecSizes={initialLine=123,header=8192,chunk=8192}");
 
 		//changed header size
 		assertThat(HttpServerOptions.builder()
-		                            .httpCodecOptions(0, 123, -1)
+		                            .maxHeaderSize(123)
 		                            .build().asDetailedString())
 				.endsWith(", httpCodecSizes={initialLine=4096,header=123,chunk=8192}");
 
 		//changed chunk size
 		assertThat(HttpServerOptions.builder()
-		                            .httpCodecOptions(0, -1, 123)
+		                            .maxChunkSize(123)
 		                            .build().asDetailedString())
 				.endsWith(", httpCodecSizes={initialLine=4096,header=8192,chunk=123}");
 
 		//changed all sizes
 		assertThat(HttpServerOptions.builder()
-		                            .httpCodecOptions(123, 456, 789)
+		                            .maxInitialLineLength(123)
+		                            .maxHeaderSize(456)
+		                            .maxChunkSize(789)
 		                            .build().asDetailedString())
 				.endsWith(", httpCodecSizes={initialLine=123,header=456,chunk=789}");
 	}

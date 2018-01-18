@@ -257,7 +257,9 @@ public final class HttpServer
             p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(
             		options.httpCodecMaxInitialLineLength(),
 		            options.httpCodecMaxHeaderSize(),
-		            options.httpCodecMaxChunkSize()));
+		            options.httpCodecMaxChunkSize(),
+		            options.httpCodecValidateHeaders(),
+		            options.httpCodecInitialBufferSize()));
 
             if(options.minCompressionResponseSize() >= 0) {
                     p.addLast(NettyPipeline.CompressionHandler, new CompressionHandler(options.minCompressionResponseSize()));
