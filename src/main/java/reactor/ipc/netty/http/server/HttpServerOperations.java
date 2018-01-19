@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2017 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -367,13 +367,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			if (msg instanceof LastHttpContent) {
 				onInboundComplete();
-				if (isOutboundDone()) {
-					onHandlerTerminate();
-				}
-				else {
-					//force auto read to enable more accurate close selection now inbound is done
+				if (!isKeepAlive()) {
 					channel().config()
-					         .setAutoRead(true);
+					         .setAutoRead(true); //detect close
 				}
 			}
 		}
@@ -387,6 +383,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (isWebsocket()) {
 			return;
 		}
+
+		onHandlerTerminate();
 
 		final ChannelFuture f;
 		if (log.isDebugEnabled()) {
@@ -404,16 +402,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		else{
 			discard();
-			onHandlerTerminate();
 			return;
 		}
 		f.addListener(s -> {
 			discard();
-			onHandlerTerminate();
 			if (!s.isSuccess() && log.isDebugEnabled()) {
-				log.error("Failed flushing last frame", s.cause());
+				log.error(channel()+" Failed flushing last frame", s.cause());
 			}
 		});
+
 	}
 
 	@Override
