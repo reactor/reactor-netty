@@ -263,27 +263,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 *
 	 * @return true if inbound traffic is not expected anymore
 	 */
-	protected final boolean isInboundDone() {
-		return inbound.inboundDone || !channel.isActive();
-	}
-
-	/**
-	 * Return true if inbound traffic is not expected anymore
-	 *
-	 * @return true if inbound traffic is not expected anymore
-	 */
 	protected final boolean isInboundCancelled() {
 		return inbound.isCancelled() || !channel.isActive();
-	}
-
-
-	/**
-	 * Return true if inbound traffic is not expected anymore
-	 *
-	 * @return true if inbound traffic is not expected anymore
-	 */
-	protected final boolean isOutboundDone() {
-		return outboundSubscription == Operators.cancelledSubscription() || !channel.isActive();
 	}
 
 	/**

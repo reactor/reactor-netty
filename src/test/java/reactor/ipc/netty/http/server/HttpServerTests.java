@@ -114,7 +114,7 @@ public class HttpServerTests {
 		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 
 		NettyContext c = HttpServer.create(0)
-		                           .newHandler((req, resp) -> resp.status(200).send())
+		                           .newHandler((req, resp) -> req.receive().then(resp.status(200).send()))
 		                           .block();
 
 		Flux<ByteBuf> src = Flux.range(0, 3)
@@ -131,7 +131,8 @@ public class HttpServerTests {
 			                              resp.dispose();
 			                              return resp.status()
 			                                         .code();
-		                              }))
+		                              })
+		                              .log())
 		    .collectList()
 		    .block();
 

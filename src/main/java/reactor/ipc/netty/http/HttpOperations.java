@@ -178,28 +178,26 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return super.sendFile(file, position, count);
 	}
 
-	FileChunkedStrategy<HttpContent> FILE_CHUNKED_STRATEGY_HTTP_CONTENT = new AbstractFileChunkedStrategy<HttpContent>() {
-
-		@Override
-		public ChunkedInput<HttpContent> chunkFile(FileChannel fileChannel) {
-			try {
-				//TODO tune the chunk size
-				return new HttpChunkedInput(new ChunkedNioFile(fileChannel, 1024));
-			}
-			catch (IOException e) {
-				throw Exceptions.propagate(e);
-			}
-		}
-
-		@Override
-		public void afterWrite(NettyContext context) {
-			markSentBody();
-		}
-	};
-
 	@Override
 	public FileChunkedStrategy getFileChunkedStrategy() {
-		return FILE_CHUNKED_STRATEGY_HTTP_CONTENT;
+		return new AbstractFileChunkedStrategy<HttpContent>() {
+
+			@Override
+			public ChunkedInput<HttpContent> chunkFile(FileChannel fileChannel) {
+				try {
+					//TODO tune the chunk size
+					return new HttpChunkedInput(new ChunkedNioFile(fileChannel, 1024));
+				}
+				catch (IOException e) {
+					throw Exceptions.propagate(e);
+				}
+			}
+
+			@Override
+			public void afterWrite(NettyContext context) {
+				markSentBody();
+			}
+		};
 	}
 
 	@Override
