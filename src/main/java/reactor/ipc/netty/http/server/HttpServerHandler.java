@@ -177,7 +177,9 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				ctx.write(msg, promise);
 				return;
 			}
+
 			ctx.write(msg, promise);
+			HttpServerOperations.cleanHandlerTerminate(ctx.channel());
 
 			if (!persistentConnection) {
 				return;
@@ -252,7 +254,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 	}
 
 	boolean shouldKeepAlive() {
-		return pendingResponses != 0 || persistentConnection;
+		return pendingResponses != 0 && persistentConnection;
 	}
 
 	/**

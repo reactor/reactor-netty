@@ -54,6 +54,7 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
@@ -384,8 +385,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 
-		onHandlerTerminate();
-
 		final ChannelFuture f;
 		if (log.isDebugEnabled()) {
 			log.debug("Last HTTP response frame");
@@ -411,6 +410,16 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 		});
 
+	}
+
+	static void cleanHandlerTerminate(Channel ch){
+		ChannelOperations<?, ?> ops = get(ch);
+
+		if (ops == null) {
+			return;
+		}
+
+		((HttpServerOperations)ops).onHandlerTerminate();
 	}
 
 	@Override
