@@ -18,7 +18,6 @@ package reactor.ipc.netty.channel;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
@@ -242,7 +241,7 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 		final DisposableAcquire     parent;
 		final DirectProcessor<Void> onReleaseEmitter;
 
-		Acquisition(Future<Channel> future, DisposableAcquire parent) {
+		Acquisition(@Nullable Future<Channel> future, @Nullable DisposableAcquire parent) {
 			this.parent = parent;
 			this.future = future;
 			this.onReleaseEmitter = DirectProcessor.create();

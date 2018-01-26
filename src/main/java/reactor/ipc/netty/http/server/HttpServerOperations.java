@@ -243,6 +243,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@Nullable
 	public String param(CharSequence key) {
 		Objects.requireNonNull(key, "key");
 		Map<String, String> params = null;

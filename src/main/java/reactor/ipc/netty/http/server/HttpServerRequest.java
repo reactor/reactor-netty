@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import reactor.core.publisher.Flux;
@@ -53,6 +55,7 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	 *
 	 * @return the param captured value
 	 */
+	@Nullable
 	String param(CharSequence key);
 
 	/**
@@ -60,6 +63,7 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	 *
 	 * @return the param captured key/value map
 	 */
+	@Nullable
 	Map<String, String> params();
 
 	/**

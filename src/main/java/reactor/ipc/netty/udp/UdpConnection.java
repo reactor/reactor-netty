@@ -18,6 +18,8 @@ package reactor.ipc.netty.udp;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -43,7 +45,7 @@ interface UdpConnection {
 	 *
 	 * @return a {@link Publisher} that will be complete when the group has been joined
 	 */
-	Mono<Void> join(final InetAddress multicastAddress, NetworkInterface iface);
+	Mono<Void> join(final InetAddress multicastAddress, @Nullable NetworkInterface iface);
 
 	/**
 	 * Leave a multicast group.
@@ -63,5 +65,5 @@ interface UdpConnection {
 	 *
 	 * @return a {@link Publisher} that will be complete when the group has been left
 	 */
-	Mono<Void> leave(final InetAddress multicastAddress, NetworkInterface iface);
+	Mono<Void> leave(final InetAddress multicastAddress, @Nullable NetworkInterface iface);
 }

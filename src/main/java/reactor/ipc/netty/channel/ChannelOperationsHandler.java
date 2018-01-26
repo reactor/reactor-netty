@@ -28,6 +28,8 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.EmptyByteBuf;
@@ -259,7 +261,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 	}
 
-	ChannelFuture doWrite(Object msg, ChannelPromise promise, PublisherSender inner) {
+	ChannelFuture doWrite(Object msg, ChannelPromise promise, @Nullable PublisherSender inner) {
 		if (flushOnEach || //fastpath
 				(inner == null && pendingWrites.isEmpty()) || //last drained element
 				!ctx.channel()

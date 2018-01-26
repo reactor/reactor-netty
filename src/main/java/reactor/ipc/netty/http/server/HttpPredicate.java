@@ -26,6 +26,8 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 
@@ -82,7 +84,7 @@ final class HttpPredicate
 	 * @see Predicate
 	 */
 	public static Predicate<HttpServerRequest> http(String uri,
-			HttpVersion protocol,
+			@Nullable HttpVersion protocol,
 			HttpMethod method) {
 		if (null == uri) {
 			return null;
@@ -171,7 +173,9 @@ final class HttpPredicate
 		this(uri, null, null);
 	}
 
-	public HttpPredicate(String uri, HttpVersion protocol, HttpMethod method) {
+	public HttpPredicate(String uri,
+			@Nullable HttpVersion protocol,
+			@Nullable HttpMethod method) {
 		this.protocol = protocol;
 		this.uri = uri;
 		this.method = method;

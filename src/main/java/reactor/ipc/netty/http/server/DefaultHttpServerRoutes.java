@@ -27,6 +27,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
@@ -119,7 +121,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 		HttpRouteHandler(Predicate<? super HttpServerRequest> condition,
 				BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
-				Function<? super String, Map<String, String>> resolver) {
+				@Nullable Function<? super String, Map<String, String>> resolver) {
 			this.condition = Objects.requireNonNull(condition, "condition");
 			this.handler = Objects.requireNonNull(handler, "handler");
 			this.resolver = resolver;

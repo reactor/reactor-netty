@@ -18,6 +18,8 @@ package reactor.ipc.netty.tcp;
 
 import java.net.*;
 
+import javax.annotation.Nullable;
+
 import io.netty.util.NetUtil;
 
 /**
@@ -76,6 +78,7 @@ public class InetSocketAddressUtil {
 		}
 	}
 
+	@Nullable
 	private static InetSocketAddress createForIpString(String hostname, int port) {
 		InetAddress inetAddressForIpString = attemptParsingIpString(hostname);
 		if (inetAddressForIpString != null) {
@@ -128,6 +131,7 @@ public class InetSocketAddressUtil {
 		}
 	}
 
+	@Nullable
 	private static InetAddress attemptParsingIpString(String hostname) {
 		byte[] ipAddressBytes = NetUtil.createByteArrayFromIpAddressString(hostname);
 

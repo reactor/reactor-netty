@@ -18,6 +18,8 @@ package reactor.ipc.netty.http.client;
 
 import java.util.function.BiFunction;
 
+import javax.annotation.Nullable;
+
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -125,7 +127,7 @@ public interface HttpClientResponse extends NettyInbound, HttpInfos, Connection 
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed
 	 */
-	Mono<Void> receiveWebsocket(String protocols,
+	Mono<Void> receiveWebsocket(@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
 
 	/**

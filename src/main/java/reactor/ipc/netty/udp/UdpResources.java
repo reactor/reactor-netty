@@ -19,6 +19,8 @@ package reactor.ipc.netty.udp;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -177,7 +179,7 @@ public class UdpResources implements LoopResources {
 	 *
 	 * @return an existing or new {@link UdpResources}
 	 */
-	protected static UdpResources getOrCreate(LoopResources loops,
+	protected static UdpResources getOrCreate(@Nullable LoopResources loops,
 			Function<LoopResources, UdpResources> onNew, String name) {
 		UdpResources update;
 		for (; ; ) {
@@ -214,8 +216,8 @@ public class UdpResources implements LoopResources {
 		udpResources  = new AtomicReference<>();
 	}
 
-	static <T extends UdpResources> T create(T previous,
-			LoopResources loops,
+	static <T extends UdpResources> T create(@Nullable T previous,
+			@Nullable LoopResources loops,
 			String name,
 			Function<LoopResources, T> onNew) {
 		if (previous == null) {

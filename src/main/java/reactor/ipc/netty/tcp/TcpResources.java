@@ -19,6 +19,8 @@ package reactor.ipc.netty.tcp;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
+import javax.annotation.Nullable;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
@@ -203,8 +205,8 @@ public class TcpResources implements PoolResources, LoopResources {
 	 * @return an existing or new {@link TcpResources}
 	 */
 	protected static <T extends TcpResources> T getOrCreate(AtomicReference<T> ref,
-			LoopResources loops,
-			PoolResources pools,
+			@Nullable LoopResources loops,
+			@Nullable PoolResources pools,
 			BiFunction<LoopResources, PoolResources, T> onNew,
 			String name) {
 		T update;
@@ -241,9 +243,9 @@ public class TcpResources implements PoolResources, LoopResources {
 		tcpResources  = new AtomicReference<>();
 	}
 
-	static <T extends TcpResources> T create(T previous,
-			LoopResources loops,
-			PoolResources pools,
+	static <T extends TcpResources> T create(@Nullable T previous,
+			@Nullable LoopResources loops,
+			@Nullable PoolResources pools,
 			String name,
 			BiFunction<LoopResources, PoolResources, T> onNew) {
 		if (previous == null) {

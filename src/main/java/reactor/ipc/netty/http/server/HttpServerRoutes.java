@@ -99,7 +99,7 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	HttpServerRoutes directory(String uri, Path directory,
-			Function<HttpServerResponse, HttpServerResponse> interceptor);
+			@Nullable Function<HttpServerResponse, HttpServerResponse> interceptor);
 
 	/**
 	 * Listen for HTTP GET on the passed path to be used as a routing condition. The
@@ -148,7 +148,7 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes file(Predicate<HttpServerRequest> uri, Path path,
-			Function<HttpServerResponse, HttpServerResponse> interceptor) {
+			@Nullable Function<HttpServerResponse, HttpServerResponse> interceptor) {
 		Objects.requireNonNull(path, "path");
 		return route(uri, (req, resp) -> {
 			if (!Files.isReadable(path)) {
