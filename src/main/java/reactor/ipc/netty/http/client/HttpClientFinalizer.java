@@ -16,7 +16,6 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
@@ -97,11 +96,11 @@ final class HttpClientFinalizer extends HttpClientOperator
 	}
 
 	@Override
-	public HttpClient.ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound> sender) {
+	public HttpClient.ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ?
+			super NettyOutbound, ? extends Publisher<Void>> sender) {
 		Objects.requireNonNull(sender, "requestBody");
 		return new HttpClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.BODY, sender)));
 	}
-
 
 }
 

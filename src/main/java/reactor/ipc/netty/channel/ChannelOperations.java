@@ -68,12 +68,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> ChannelOperations<INBOUND, OUTBOUND> bind(
 			Connection connection,
 			ConnectionEvents context) {
-		@SuppressWarnings("unchecked") ChannelOperations<INBOUND, OUTBOUND> ops =
-				new ChannelOperations<>(connection, context);
-
-		context.onStart(ops);
-
-		return ops;
+		return new ChannelOperations<>(connection, context);
 	}
 
 	/**
@@ -116,10 +111,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 //			// onHandlerTerminate
 //			onInactive.subscribe(null, null, _s[0]::cancel);
 //		}
-
-		connection.channel()
-		          .attr(OPERATIONS_KEY)
-		          .set(this);
 	}
 
 	@Override
@@ -250,8 +241,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return true if inbound traffic is not expected anymore
 	 */
 	protected final boolean isInboundCancelled() {
-		return inbound.isCancelled() || !connection.channel()
-		                                           .isActive();
+		return inbound.isCancelled();
 	}
 
 	/**

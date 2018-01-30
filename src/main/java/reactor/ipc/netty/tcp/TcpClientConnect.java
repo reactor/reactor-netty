@@ -45,7 +45,7 @@ final class TcpClientConnect extends TcpClient {
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
 			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
-			TcpUtils.fromHostPortAttrsToRemote(bootstrap);
+			TcpUtils.fromLazyRemoteAddress(bootstrap);
 
 			BootstrapHandlers.finalize(bootstrap, ops, sink)
 			                 .accept(bootstrap.connect());

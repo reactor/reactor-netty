@@ -45,7 +45,7 @@ final class TcpServerBind extends TcpServer {
 		return Mono.create(sink -> {
 			ServerBootstrap bootstrap = b.clone();
 			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
-			TcpUtils.fromHostPortAttrsToLocal(bootstrap);
+			TcpUtils.fromLazyLocalAddress(bootstrap);
 			BootstrapHandlers.finalize(bootstrap, ops, sink)
 			                 .accept(bootstrap.bind());
 		});

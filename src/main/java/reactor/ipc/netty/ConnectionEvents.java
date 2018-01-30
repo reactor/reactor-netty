@@ -27,7 +27,6 @@ import reactor.util.context.Context;
  * A normal event cycle is as follow :
  * <ol>
  *     <li>onSetup</li>
- *     <li>onStart?</li>
  *     <li>onReceiveError?</li>
  *     <li>onDispose</li>
  * </ol>
@@ -78,11 +77,4 @@ public interface ConnectionEvents {
 	 * @param msg an optional initial decoded message
 	 */
 	void onSetup(Channel channel, @Nullable Object msg);
-
-	/**
-	 * React after remote channel connection setup when promoted to {@link Connection}
-	 *
-	 * @param connection the active {@link Connection}
-	 */
-	void onStart(Connection connection);
 }

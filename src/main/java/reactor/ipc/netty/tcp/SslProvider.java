@@ -16,11 +16,15 @@
 
 package reactor.ipc.netty.tcp;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.core.Exceptions;
+import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.BootstrapHandlers;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -34,6 +38,19 @@ import java.util.function.Consumer;
 public final class SslProvider {
 
 	/**
+	 * Provide a default SSL support for client bootstrap
+	 * @param b a given bootstrap to enrich
+	 * @return an enriched bootstrap
+	 */
+	public static Bootstrap addDefaultSslSupport(Bootstrap b) {
+		BootstrapHandlers.updateConfiguration(b,
+				NettyPipeline.SslHandler,
+				new TcpUtils.SslSupportConsumer(DEFAULT_CLIENT_PROVIDER, b));
+
+		return b;
+	}
+
+	/**
 	 * Creates a builder for {@link SslProvider SslProvider}
 	 *
 	 * @return a new SslProvider builder
@@ -41,6 +58,7 @@ public final class SslProvider {
 	public static SslProvider.SslContextSpec builder() {
 		return new SslProvider.Build();
 	}
+
 
 
 	final SslContext sslContext;
@@ -302,5 +320,38 @@ public final class SslProvider {
 		 * @return {@literal this}
 		 */
 		Builder forServer();
+	}
+
+	static final SslContext DEFAULT_CLIENT_CONTEXT;
+	static final SslContext DEFAULT_SERVER_CONTEXT;
+	static final SslProvider DEFAULT_CLIENT_PROVIDER;
+
+
+	static {
+		SslContext sslContext;
+		try {
+			sslContext = SslContextBuilder.forClient()
+			                              .build();
+		}
+		catch (Exception e) {
+			sslContext = null;
+		}
+		DEFAULT_CLIENT_CONTEXT = sslContext;
+
+		SslProvider.Build builder = (SslProvider.Build) SslProvider.builder();
+		DEFAULT_CLIENT_PROVIDER = builder.sslContext(DEFAULT_CLIENT_CONTEXT)
+		                                 .build();
+
+		SelfSignedCertificate cert;
+		try {
+			cert = new SelfSignedCertificate();
+			sslContext =
+					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+					                 .build();
+		}
+		catch (Exception e) {
+			sslContext = null;
+		}
+		DEFAULT_SERVER_CONTEXT = sslContext;
 	}
 }

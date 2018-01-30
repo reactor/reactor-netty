@@ -89,9 +89,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		implements HttpClientResponse, HttpClientRequest {
 
 	static HttpOperations bindHttp(Connection connection, ConnectionEvents listener) {
-		HttpClientOperations ops = new HttpClientOperations(connection, listener);
-		listener.onStart(ops);
-		return ops;
+		return new HttpClientOperations(connection, listener);
 	}
 
 	enum HttpClientEvent {
@@ -136,7 +134,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.nettyRequest =
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
-		this.requestHeaders.set(HttpHeaderNames.USER_AGENT, HttpClient.USER_AGENT);
 		this.inboundPrefetch = 16;
 		this.httpClientEvents = DirectProcessor.create();
 	}
@@ -254,7 +251,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onInboundClose() {
-		if (isDisposed() || isInboundCancelled() || isInboundDisposed()) {
+		if (isInboundCancelled() || isInboundDisposed()) {
 			return;
 		}
 		if (responseState == null) {
@@ -697,14 +694,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			WebsocketClientOperations
 					ops = new WebsocketClientOperations(url, protocols, this);
 
-			Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
-				                                 .then(Mono.defer(() -> Mono.from(websocketHandler.apply(
-						                                 ops,
-						                                 ops))));
-			if (websocketHandler != EMPTY) {
-				handshake = handshake.doAfterSuccessOrError(ops);
+			if (replace(ops)) {
+				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
+				                                 .then(Mono.defer(() -> Mono.from(
+						                                 websocketHandler.apply(ops, ops))));
+				if (websocketHandler != EMPTY) {
+					handshake = handshake.doAfterSuccessOrError(ops);
+				}
+				return handshake;
 			}
-			return handshake;
 		}
 		else if (isWebsocket()) {
 			WebsocketClientOperations ops =

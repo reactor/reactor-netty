@@ -33,6 +33,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
+import static reactor.ipc.netty.channel.ChannelOperations.OPERATIONS_KEY;
+
 /**
  * A {@link DisposableConnect} is bound to a user-facing {@link MonoSink}
  */
@@ -113,13 +115,12 @@ final class DisposableConnect
 	public void onSetup(Channel channel, @Nullable Object msg) {
 		this.channel = channel;
 		log.debug("onConnectionSetup({})", channel);
-		opsFactory.create(this, this, msg);
-	}
+		ChannelOperations<?, ?> ops = opsFactory.create(this, this, msg);
 
-	@Override
-	public void onStart(Connection connection) {
-		log.debug("onConnectionStart({})", connection.channel());
-		sink.success(connection);
+		channel.attr(OPERATIONS_KEY)
+		       .set(ops);
+
+		sink.success(ops);
 	}
 
 	@Override

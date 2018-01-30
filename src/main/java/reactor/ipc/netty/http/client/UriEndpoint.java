@@ -17,17 +17,18 @@
 package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.netty.util.NetUtil;
 
 final class UriEndpoint {
-	private final String scheme;
-	private final Supplier<InetSocketAddress> remoteAddress;
-	private final String pathAndQuery;
+	final String scheme;
+	final Supplier<SocketAddress> remoteAddress;
+	final String pathAndQuery;
 
-	UriEndpoint(String scheme, Supplier<InetSocketAddress> remoteAddress,
+	UriEndpoint(String scheme, Supplier<SocketAddress> remoteAddress,
 			String pathAndQuery) {
 		this.scheme = Objects.requireNonNull(scheme, "scheme");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddressSupplier");
@@ -52,7 +53,7 @@ final class UriEndpoint {
 		return pathAndQuery;
 	}
 
-	InetSocketAddress getRemoteAddress() {
+	SocketAddress getRemoteAddress() {
 		return remoteAddress.get();
 	}
 
@@ -60,7 +61,7 @@ final class UriEndpoint {
 		StringBuilder sb = new StringBuilder();
 		sb.append(scheme);
 		sb.append("://");
-		InetSocketAddress address = remoteAddress.get();
+		SocketAddress address = remoteAddress.get();
 		sb.append(address != null
 				? toSocketAddressStringWithoutDefaultPort(address, isSecure())
 				: "localhost");
@@ -68,9 +69,13 @@ final class UriEndpoint {
 		return sb.toString();
 	}
 
+	@SuppressWarnings("unchecked")
 	static String toSocketAddressStringWithoutDefaultPort(
-			InetSocketAddress address, boolean secure) {
-		String addressString = NetUtil.toSocketAddressString(address);
+			SocketAddress address, boolean secure) {
+		if (!(address instanceof InetSocketAddress)) {
+			throw new IllegalStateException("Only support InetSocketAddress representation");
+		}
+		String addressString = NetUtil.toSocketAddressString((InetSocketAddress)address);
 		if (secure) {
 			if (addressString.endsWith(":443")) {
 				addressString = addressString.substring(0, addressString.length() - 4);

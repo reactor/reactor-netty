@@ -325,7 +325,7 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer host(String host) {
 		Objects.requireNonNull(host, "host");
-		return bootstrap(b -> b.attr(TcpUtils.HOST, host));
+		return bootstrap(b -> TcpUtils.updateHost(b, host));
 	}
 
 	/**
@@ -372,7 +372,7 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer port(int port) {
-		return bootstrap(b -> b.attr(TcpUtils.PORT, port));
+		return bootstrap(b -> TcpUtils.updatePort(b, port));
 	}
 
 	/**
@@ -549,8 +549,7 @@ public abstract class TcpServer {
 			                     .childOption(ChannelOption.SO_KEEPALIVE, true)
 			                     .childOption(ChannelOption.TCP_NODELAY, true)
 			                     .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-			                     .attr(TcpUtils.HOST, NetUtil.LOCALHOST.getHostAddress())
-			                     .attr(TcpUtils.PORT, DEFAULT_PORT);
+			                     .localAddress(InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT));
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);

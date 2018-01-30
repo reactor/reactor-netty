@@ -15,12 +15,14 @@
  */
 package reactor.ipc.netty.tcp;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.AbstractBootstrap;
@@ -36,6 +38,7 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.AttributeKey;
+import io.netty.util.NetUtil;
 import reactor.ipc.netty.ConnectionEvents;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
@@ -72,34 +75,41 @@ final class TcpUtils {
 		return b;
 	}
 
-	static void fromHostPortAttrsToRemote(Bootstrap b) {
-		if (b.config()
-		     .remoteAddress() == null) {
-			Map<AttributeKey<?>, Object> attrs = b.config()
-			                                      .attrs();
-			String host = (String) attrs.get(HOST);
-			Integer port = (Integer) attrs.get(PORT);
-			Objects.requireNonNull(host, "Host has not been set");
-			Objects.requireNonNull(port, "Port has not been set");
-			b.remoteAddress(InetSocketAddressUtil.createUnresolved(host, port));
-		}
+	@SuppressWarnings("unchecked")
+	static void fromLazyRemoteAddress(Bootstrap b) {
+		SocketAddress remote = b.config().remoteAddress();
 
-		b.attr(HOST, null)
-		 .attr(PORT, null);
+		Objects.requireNonNull(remote, "Remote Address not configured");
+
+		if (remote instanceof Supplier) {
+			Supplier<? extends SocketAddress> lazyRemote =
+					(Supplier<? extends SocketAddress>) remote;
+
+			b.remoteAddress(Objects.requireNonNull(lazyRemote.get(), "address supplier returned null"));
+		}
 	}
 
-	static void fromHostPortAttrsToLocal(ServerBootstrap b) {
-		if (b.config().localAddress() == null) {
-			Map<AttributeKey<?>, Object> attrs = b.config().attrs();
-			String host = (String) attrs.get(HOST);
-			Integer port = (Integer) attrs.get(PORT);
-			Objects.requireNonNull(host, "Host has not been set");
-			Objects.requireNonNull(port, "Port has not been set");
-			b.localAddress(InetSocketAddressUtil.createResolved(host, port));
+	@SuppressWarnings("unchecked")
+	static void fromLazyLocalAddress(ServerBootstrap b) {
+		SocketAddress local = b.config().localAddress();
+
+		Objects.requireNonNull(local, "Remote Address not configured");
+
+		if (local instanceof Supplier) {
+			Supplier<? extends SocketAddress> lazyLocal =
+					(Supplier<? extends SocketAddress>) local;
+
+			b.localAddress(Objects.requireNonNull(lazyLocal.get(), "address supplier returned  null"));
 		}
 
-		b.attr(HOST, null)
-		 .attr(PORT, null);
+		if (local instanceof InetSocketAddress) {
+			InetSocketAddress localInet = (InetSocketAddress)local;
+
+			if (localInet.isUnresolved()){
+				b.localAddress(InetSocketAddressUtil.createResolved(localInet.getHostName(), localInet.getPort()));
+			}
+
+		}
 	}
 
 	static ServerBootstrap updateSslSupport(ServerBootstrap b,
@@ -155,10 +165,54 @@ final class TcpUtils {
 		return b;
 	}
 
+	static Bootstrap updateHost(Bootstrap b, String host) {
+		return b.remoteAddress(_updateHost(b.config().remoteAddress(), host));
+	}
+
+	static ServerBootstrap updateHost(ServerBootstrap b, String host) {
+		return b.localAddress(_updateHost(b.config().localAddress(), host));
+	}
+
+	static SocketAddress _updateHost(@Nullable SocketAddress address, String host) {
+		if(address == null || !(address instanceof InetSocketAddress)) {
+			return InetSocketAddressUtil.createUnresolved(host, 0);
+		}
+
+		InetSocketAddress inet = (InetSocketAddress)address;
+
+		return InetSocketAddressUtil.createUnresolved(host, inet.getPort());
+	}
+
+	static Bootstrap updatePort(Bootstrap b, int port) {
+		return b.remoteAddress(_updatePort(b.config().remoteAddress(), port));
+	}
+
+	static ServerBootstrap updatePort(ServerBootstrap b, int port) {
+		return b.localAddress(_updatePort(b.config().localAddress(), port));
+	}
+
+	static SocketAddress _updatePort(@Nullable SocketAddress address, int port) {
+		if(address == null || !(address instanceof InetSocketAddress)) {
+			return InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), port);
+		}
+
+		InetSocketAddress inet = (InetSocketAddress)address;
+
+		InetAddress addr = inet.getAddress();
+
+		String host = addr == null ? inet.getHostName() : addr.getHostAddress();
+
+		return InetSocketAddressUtil.createUnresolved(host, port);
+	}
+
+	static SocketAddressSupplier lazyAddress(Supplier<? extends SocketAddress> supplier) {
+		return new SocketAddressSupplier(supplier);
+	}
+
 	static final class SslSupportConsumer
 			implements BiConsumer<ConnectionEvents, Channel> {
-
 		final SslProvider sslProvider;
+
 		final InetSocketAddress sniInfo;
 
 		SslSupportConsumer(SslProvider sslProvider,
@@ -180,7 +234,6 @@ final class TcpUtils {
 				sniInfo = null;
 			}
 		}
-
 		@Override
 		public void accept(ConnectionEvents listener, Channel channel) {
 			SslHandler sslHandler;
@@ -233,6 +286,7 @@ final class TcpUtils {
 								new SslReadHandler());
 			}
 		}
+
 	}
 
 	static final class SslReadHandler extends ChannelInboundHandlerAdapter {
@@ -251,7 +305,6 @@ final class TcpUtils {
 			}
 			super.channelReadComplete(ctx);
 		}
-
 		@Override
 		public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
 				throws Exception {
@@ -272,6 +325,21 @@ final class TcpUtils {
 			}
 			super.userEventTriggered(ctx, evt);
 		}
+
+	}
+
+	static final class SocketAddressSupplier extends SocketAddress implements
+	                                                               Supplier<SocketAddress> {
+		final Supplier<? extends SocketAddress> supplier;
+
+		SocketAddressSupplier(Supplier<? extends SocketAddress> supplier) {
+			this.supplier = Objects.requireNonNull(supplier, "Lazy address supplier must not be null");
+		}
+
+		@Override
+		public SocketAddress get() {
+			return supplier.get();
+		}
 	}
 
 	static final Logger log = Loggers.getLogger(TcpUtils.class);
@@ -280,8 +348,5 @@ final class TcpUtils {
 			(ch, c, msg) -> ChannelOperations.bind(ch, c);
 
 	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC =
-			sslProviderBuilder -> sslProviderBuilder.sslContext(TcpServerSecure.DEFAULT_SSL_CONTEXT);
-
-	static final AttributeKey<String>  HOST = AttributeKey.newInstance("r_host");
-	static final AttributeKey<Integer> PORT = AttributeKey.newInstance("r_port");
+			sslProviderBuilder -> sslProviderBuilder.sslContext(SslProvider.DEFAULT_SERVER_CONTEXT);
 }

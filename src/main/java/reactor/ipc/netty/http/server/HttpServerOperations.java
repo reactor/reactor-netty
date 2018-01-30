@@ -83,12 +83,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	static HttpServerOperations bindHttp(Connection connection, ConnectionEvents listener,
 		BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			Object msg, boolean forwarded) {
-		HttpServerOperations ops =
-				new HttpServerOperations(connection, listener, compressionPredicate, (HttpRequest) msg, forwarded);
-
-		listener.onStart(ops);
-
-		return ops;
+		return new HttpServerOperations(connection, listener, compressionPredicate, (HttpRequest) msg, forwarded);
 	}
 
 	final HttpResponse nettyResponse;
@@ -535,15 +530,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			WebsocketServerOperations
 					ops = new WebsocketServerOperations(url, protocols, this);
 
-			return FutureMono.from(ops.handshakerResult)
-			                 .then(Mono.defer(() -> {
-				                 	//skip handler if no matching subprotocol
+			if (replace(ops)) {
+				return FutureMono.from(ops.handshakerResult)
+				                 .then(Mono.defer(() -> {
+					                 //skip handler if no matching subprotocol
 					                 if (protocols != null && ops.selectedSubprotocol() == null) {
 						                 return Mono.empty();
 					                 }
 					                 return Mono.from(websocketHandler.apply(ops, ops));
 				                 }))
-			                 .doAfterSuccessOrError(ops);
+				                 .doAfterSuccessOrError(ops);
+			}
 		}
 		else {
 			log.error("Cannot enable websocket if headers have already been sent");

@@ -46,7 +46,7 @@ final class UdpClientLifecycle extends UdpClientOperator implements Consumer<Con
 		Mono<? extends Connection> m = source.connect(b);
 
 		if (onConnect != null) {
-			m = m.doOnSubscribe(s -> onConnect.accept(b));
+			m = m.doOnSubscribe(s -> onConnect.accept(b.clone()));
 		}
 
 		if (onConnected != null) {

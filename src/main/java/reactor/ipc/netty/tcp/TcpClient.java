@@ -93,7 +93,7 @@ public abstract class TcpClient {
 	 * @return a {@link TcpClient}
 	 */
 	public static TcpClient create(PoolResources poolResources) {
-		return newConnection();
+		return TcpClientConnect.INSTANCE;
 	}
 
 	/**
@@ -113,8 +113,8 @@ public abstract class TcpClient {
 	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient addressSupplier(Supplier<? extends SocketAddress> connectAddressSupplier) {
-		Objects.requireNonNull(connectAddressSupplier, "connectAddressSupplier");
-		return bootstrap(b -> b.remoteAddress(connectAddressSupplier.get()));
+		SocketAddress lazy = TcpUtils.lazyAddress(connectAddressSupplier);
+		return bootstrap(b -> b.remoteAddress(lazy));
 	}
 
 	/**
@@ -280,7 +280,7 @@ public abstract class TcpClient {
 	 */
 	public final TcpClient host(String host) {
 		Objects.requireNonNull(host, "host");
-		return attr(TcpUtils.HOST, host);
+		return bootstrap(b -> TcpUtils.updateHost(b, host));
 	}
 
 	/**
@@ -366,7 +366,7 @@ public abstract class TcpClient {
 	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient port(int port) {
-		return attr(TcpUtils.PORT, port);
+		return bootstrap(b -> TcpUtils.updatePort(b, port));
 	}
 
 	/**
@@ -453,7 +453,7 @@ public abstract class TcpClient {
 	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient secure() {
-		return secure(sslProviderBuilder -> sslProviderBuilder.sslContext(TcpClientSecure.DEFAULT_SSL_CONTEXT));
+		return secure(sslProviderBuilder -> sslProviderBuilder.sslContext(SslProvider.DEFAULT_CLIENT_CONTEXT));
 	}
 
 	/**
@@ -544,8 +544,8 @@ public abstract class TcpClient {
 					.option(ChannelOption.AUTO_READ, false)
 					.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
 					.option(ChannelOption.SO_SNDBUF, 1024 * 1024)
-					.attr(TcpUtils.PORT, DEFAULT_PORT)
-					.attr(TcpUtils.HOST, NetUtil.LOCALHOST.getHostAddress());
+					.remoteAddress(InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST
+							.getHostAddress(), DEFAULT_PORT));
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);

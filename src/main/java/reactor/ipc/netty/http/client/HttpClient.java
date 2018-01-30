@@ -32,6 +32,7 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -164,7 +165,7 @@ public abstract class HttpClient {
 		 *
 		 * @return
 		 */
-		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound> sender);
+		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender);
 	}
 
 	public interface WebsocketReceiver extends ResponseReceiver<WebsocketReceiver> {
@@ -181,6 +182,17 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Prepare an unpooled {@link HttpClient}. {@link UriConfiguration#uri(String)} or
+	 * {@link #baseUrl(String)} should be invoked after a verb
+	 * {@link #request(HttpMethod)} is selected.
+	 *
+	 * @return a {@link HttpClient}
+	 */
+	public static HttpClient newConnection() {
+		return HttpClientConnect.INSTANCE;
+	}
+
+	/**
 	 * Prepare a pooled {@link HttpClient}. {@link UriConfiguration#uri(String)} or
 	 * {@link #baseUrl(String)} should be invoked before a verb
 	 * {@link #request(HttpMethod)} is selected.
@@ -188,7 +200,7 @@ public abstract class HttpClient {
 	 * @return a {@link HttpClient}
 	 */
 	public static HttpClient prepare() {
-		return HttpClientConnect.INSTANCE;
+		return prepare(HttpResources.get());
 	}
 
 	/**
@@ -200,7 +212,8 @@ public abstract class HttpClient {
 	 */
 	public static HttpClient prepare(PoolResources poolResources) {
 		return new HttpClientConnect(TcpClient.create(poolResources)
-		                                      .bootstrap(HTTP_OPS_CONF));
+		                                      .bootstrap(HTTP_OPS_CONF)
+		                                      .port(80));
 	}
 
 	/**
@@ -495,11 +508,11 @@ public abstract class HttpClient {
 	/**
 	 * Bind the {@link HttpClient} and return a {@link Mono} of {@link Connection}
 	 *
-	 * @param delegate the {@link TcpClient} to connect on
+	 * @param tcpClient the {@link Bootstrap} to connect on
 	 *
 	 * @return a {@link Mono} of {@link Connection}
 	 */
-	protected abstract Mono<? extends Connection> connect(TcpClient delegate);
+	protected abstract Mono<? extends Connection> connect(TcpClient tcpClient);
 
 	/**
 	 * Materialize a TcpClient from the parent {@link HttpClient} chain to use with {@link

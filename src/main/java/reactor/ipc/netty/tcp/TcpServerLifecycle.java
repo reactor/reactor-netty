@@ -48,7 +48,7 @@ final class TcpServerLifecycle extends TcpServerOperator implements Consumer<Dis
 		Mono<? extends DisposableServer> m = source.bind(b);
 
 		if (onBind != null) {
-			m = m.doOnSubscribe(s -> onBind.accept(b));
+			m = m.doOnSubscribe(s -> onBind.accept(b.clone()));
 		}
 
 		if (onBound != null) {

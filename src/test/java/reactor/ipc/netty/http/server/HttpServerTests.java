@@ -76,7 +76,6 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class HttpServerTests {
 
 	@Test
-	@Ignore
 	public void defaultHttpPort() {
 		DisposableServer blockingFacade = HttpServer.create()
 		                                      .handler((req, resp) -> resp.sendNotFound())
@@ -269,7 +268,7 @@ public class HttpServerTests {
 		Flux<String> client = HttpClient.prepare()
 		                                .port(c.address().getPort())
 		                                .wiretap()
-		                                .doOnResponse(res -> res.addHandler(new LineBasedFrameDecoder(10)))
+		                                .tcpConfiguration(tcp -> tcp.doOnConnected(res -> res.addHandler(new LineBasedFrameDecoder(10))))
 		                                .get()
 		                                .uri("/")
 		                                .responseContent()
@@ -299,7 +298,7 @@ public class HttpServerTests {
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/index.html")
-		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()).delayUntil(r -> res.receive()))
 		                              .block(Duration.ofSeconds(30));
 
 		Channel response1 = HttpClient.prepare()
@@ -307,7 +306,7 @@ public class HttpServerTests {
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test.css")
-		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()).delayUntil(r -> res.receive()))
 		                              .block(Duration.ofSeconds(30));
 
 		Channel response2 = HttpClient.prepare()
@@ -315,7 +314,7 @@ public class HttpServerTests {
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test1.css")
-		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()).delayUntil(r -> res.receive()))
 		                              .block(Duration.ofSeconds(30));
 
 		Channel response3 = HttpClient.prepare()
@@ -323,7 +322,7 @@ public class HttpServerTests {
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test2.css")
-		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()).delayUntil(r -> res.receive()))
 		                              .block(Duration.ofSeconds(30));
 
 		Channel response4 = HttpClient.prepare()
@@ -331,7 +330,7 @@ public class HttpServerTests {
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test3.css")
-		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()).delayUntil(r -> res.receive()))
 		                              .block(Duration.ofSeconds(30));
 
 		Channel response5 = HttpClient.prepare()
@@ -339,21 +338,14 @@ public class HttpServerTests {
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test4.css")
-		                              .responseSingle((res, buf) -> Mono.just(res.channel()))
+		                              .responseSingle((res, buf) -> Mono.just(res.channel()).delayUntil(r -> res.receive()))
 		                              .block(Duration.ofSeconds(30));
-/* TODO disable pool?
-		HttpClientResponse response6 = HttpClient.create(opts -> opts.port(c.address().getPort())
-		                                                             .disablePool())
-		                                         .get("/test/test5.css")
-		                                         .block(Duration.ofSeconds(30));
-*/
+
 		Assert.assertEquals(response0, response1);
 		Assert.assertEquals(response0, response2);
 		Assert.assertEquals(response0, response3);
 		Assert.assertEquals(response0, response4);
 		Assert.assertEquals(response0, response5);
-		//TODO
-		//Assert.assertNotEquals(response0, response6);
 
 		HttpResources.reset();
 		c.dispose();
@@ -551,10 +543,7 @@ public class HttpServerTests {
 				          .addressSupplier(() -> address)
 				          .wiretap()
 				          .request(method)
-				          .send((req, out) -> {
-				                 req.send();
-				                 return out;
-				          })
+				          .uri(url)
 				          .responseSingle((res, buf) -> Mono.zip(Mono.just(res.responseHeaders()),
 				                                                 buf.asString()
 				                                                    .defaultIfEmpty("NO BODY")));
@@ -590,7 +579,7 @@ public class HttpServerTests {
 				        }
 				    })
 				    .expectComplete()
-				    .verify();
+				    .verify(Duration.ofSeconds(30));
 	}
 
 	@Test

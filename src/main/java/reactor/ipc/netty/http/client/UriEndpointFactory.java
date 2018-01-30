@@ -99,7 +99,7 @@ final class UriEndpointFactory {
 		}
 	}
 
-	Supplier<InetSocketAddress> getAddress() {
-		return () -> (InetSocketAddress) connectAddress.get();
+	Supplier<SocketAddress> getAddress() {
+		return connectAddress;
 	}
 }

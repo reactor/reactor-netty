@@ -442,11 +442,6 @@ final class ReactorNetty {
 
 	static final ConnectionEvents NOOP_LISTENER = new ConnectionEvents() {
 		@Override
-		public void onStart(Connection connection) {
-
-		}
-
-		@Override
 		public void onDispose(Channel channel) {
 
 		}

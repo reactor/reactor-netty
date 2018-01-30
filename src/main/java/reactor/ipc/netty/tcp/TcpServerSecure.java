@@ -46,24 +46,6 @@ final class TcpServerSecure extends TcpServerOperator {
 		return TcpUtils.updateSslSupport(source.configure(), sslProvider);
 	}
 
-	static final SslContext DEFAULT_SSL_CONTEXT;
-
-	static {
-		SslContext sslContext;
-		SelfSignedCertificate cert;
-		try {
-			cert = new SelfSignedCertificate();
-			sslContext =
-					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
-					                 .build();
-		}
-		catch (Exception e) {
-			cert = null;
-			sslContext = null;
-		}
-		DEFAULT_SSL_CONTEXT = sslContext;
-	}
-
 	@Override
 	public SslContext sslContext() {
 		return this.sslProvider.getSslContext();

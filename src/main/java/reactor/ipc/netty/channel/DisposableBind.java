@@ -36,6 +36,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
+import static reactor.ipc.netty.channel.ChannelOperations.OPERATIONS_KEY;
+
 /**
  * @author Stephane Maldini
  */
@@ -128,14 +130,14 @@ final class DisposableBind
 	public void onSetup(Channel channel, @Nullable Object msg) {
 		if (opsFactory.createOnConnected() || msg != null) {
 			log.debug("onConnectionSetup({})", channel);
-			opsFactory.create(() -> channel, this, msg);
-		}
-	}
 
-	@Override
-	public void onStart(Connection connection) {
-		log.debug("onConnectionStart({})", connection.channel());
-		connections.onNext(connection);
+			ChannelOperations<?, ?> ops = opsFactory.create(() -> channel, this, msg);
+
+			channel.attr(OPERATIONS_KEY)
+			       .set(ops);
+
+			connections.onNext(ops);
+		}
 	}
 
 	@Override

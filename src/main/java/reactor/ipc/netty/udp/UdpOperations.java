@@ -38,9 +38,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		implements UdpInbound, UdpOutbound {
 
 	static UdpOperations bindUdp(Connection c, ConnectionEvents listener) {
-		UdpOperations ops = new UdpOperations(c, listener);
-		listener.onStart(ops);
-		return ops;
+		return new UdpOperations(c, listener);
 	}
 
 	final DatagramChannel  datagramChannel;

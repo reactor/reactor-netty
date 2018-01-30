@@ -46,7 +46,7 @@ final class UdpServerLifecycle extends UdpServerOperator implements Consumer<Con
 		Mono<? extends Connection> m = source.bind(b);
 
 		if (onBind != null) {
-			m = m.doOnSubscribe(s -> onBind.accept(b));
+			m = m.doOnSubscribe(s -> onBind.accept(b.clone()));
 		}
 
 		if (onBound != null) {

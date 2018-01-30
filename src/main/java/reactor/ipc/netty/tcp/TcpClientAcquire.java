@@ -17,13 +17,10 @@
 package reactor.ipc.netty.tcp;
 
 import java.util.Objects;
-import java.util.function.BiConsumer;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.util.concurrent.Future;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
@@ -56,7 +53,7 @@ final class TcpClientAcquire extends TcpClient {
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
 			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
-			TcpUtils.fromHostPortAttrsToRemote(bootstrap);
+			TcpUtils.fromLazyRemoteAddress(bootstrap);
 			ChannelPool pool = poolResources.selectOrCreate(bootstrap);
 			//bootstrap will be mutated so pool.onChannelCreate will see finalized handler
 			//todo re-implement pool

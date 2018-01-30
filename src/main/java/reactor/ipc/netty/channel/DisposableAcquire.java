@@ -38,6 +38,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
+import static reactor.ipc.netty.channel.ChannelOperations.OPERATIONS_KEY;
+
 /**
  *
  * @author Stephane Maldini
@@ -133,13 +135,12 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 	@Override
 	public void onSetup(Channel channel, @Nullable Object msg) {
 		log.debug("onConnectionSetup({})", channel);
-		opsFactory.create(this, this, msg);
-	}
+		ChannelOperations<?, ?> ops = opsFactory.create(this, this, msg);
 
-	@Override
-	public void onStart(Connection connection) {
-		log.debug("onConnectionStart({})", connection.channel());
-		sink.success(connection);
+		channel.attr(OPERATIONS_KEY)
+		       .set(ops);
+
+		sink.success(ops);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -224,12 +225,10 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 
 		pool.release(c)
 		    .addListener(f -> {
-			    if (f.isSuccess()) {
-				    currentOwner.onReleaseEmitter.onComplete();
+			    if (log.isDebugEnabled() && !f.isSuccess()){
+			    	log.debug("Failed cleaning the channel from pool" ,f.cause());
 			    }
-			    else {
-				    currentOwner.onReleaseEmitter.onError(f.cause());
-			    }
+			    currentOwner.onReleaseEmitter.onComplete();
 		    });
 
 	}

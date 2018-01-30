@@ -419,7 +419,7 @@ public class HttpClientTest {
 	@Test
 	public void disableChunkForced() throws Exception {
 		HttpClientResponse r =
-				HttpClient.prepare()
+				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
 				          .noChunkedTransfer()
@@ -440,7 +440,7 @@ public class HttpClientTest {
 	@Test
 	public void disableChunkForced2() throws Exception {
 		HttpClientResponse r =
-				HttpClient.prepare()
+				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
 				          .noChunkedTransfer()

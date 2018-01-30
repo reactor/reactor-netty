@@ -48,7 +48,7 @@ public class HttpErrorTests {
 				                                }))
 		                                    .bindNow(Duration.ofSeconds(30));
 
-		HttpClient client = HttpClient.from(TcpClient.newConnection())
+		HttpClient client = HttpClient.prepare()
 		                              .port(server.address().getPort());
 
 		HttpClientResponse r = client.get()

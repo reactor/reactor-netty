@@ -55,11 +55,13 @@ final class HttpClientLifecycle extends HttpClientOperator
 			onRequest.accept((HttpClientRequest) o);
 		}
 		HttpClientOperations ops = (HttpClientOperations)o;
+
+
 		onHttpEvent(afterRequest, HttpClientOperations.HttpClientEvent.afterRequest, ops);
 		onHttpEvent(onResponse, HttpClientOperations.HttpClientEvent.onResponse, ops);
 
 		if (afterResponse != null) {
-			ops.httpClientEvents.doOnComplete(() -> afterResponse.accept(ops));
+			ops.httpClientEvents.subscribe(null, EMPTY_ERROR, () -> afterResponse.accept(ops));
 		}
 	}
 
@@ -74,7 +76,8 @@ final class HttpClientLifecycle extends HttpClientOperator
 	}
 
 	@Override
-	protected Mono<? extends Connection> connect(TcpClient delegate) {
-		return super.connect(delegate.doOnConnected(this));
+	protected Mono<? extends Connection> connect(TcpClient tcpClient) {
+		return super.connect(tcpClient)
+		            .doOnNext(this);
 	}
 }
