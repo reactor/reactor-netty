@@ -33,6 +33,8 @@ import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpResources;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -169,6 +171,13 @@ public abstract class HttpClient {
 	}
 
 	public interface WebsocketReceiver extends ResponseReceiver<WebsocketReceiver> {
+
+		/**
+		 * @param sender
+		 *
+		 * @return
+		 */
+		WebsocketReceiver send(BiFunction<? super HttpClientRequest, ? super WebsocketOutbound, ? extends NettyOutbound> sender);
 
 	}
 
@@ -452,11 +461,11 @@ public abstract class HttpClient {
 	/**
 	 * WebSocket to connect the {@link HttpClient}.
 	 *
-	 * @return a {@link RequestSender} ready to consume for response
-
+	 * @return a {@link WebsocketReceiver} ready to consume for response
+	 */
 	public final WebsocketReceiver ws() {
-		return request(WS, HttpClientRequest::sendWebsocket);
-	}*/ //TODO
+		return ws(null);
+	}
 
 	/**
 	 * WebSocket to the passed URL, negotiating one of the passed subprotocols.
@@ -471,11 +480,13 @@ public abstract class HttpClient {
 	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if
 	 * not relevant.
 	 *
-	 * @return a {@link RequestSender} ready to consume for response
-
+	 * @return a {@link WebsocketReceiver} ready to consume for response
+	 */
 	public final WebsocketReceiver ws(String subprotocols) {
-		return request(WS, req -> req.sendWebsocket(subprotocols));
-	}*/ //TODO
+		return new HttpWsClientFinalizer(
+		        tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.METHOD, WS)
+		                                   .attr(HttpClientConnect.SUBPROTOCOLS, subprotocols)));
+	}
 
 	/**
 	 * The port to which this client should connect.

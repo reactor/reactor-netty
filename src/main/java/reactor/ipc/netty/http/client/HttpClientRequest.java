@@ -16,8 +16,6 @@
 
 package reactor.ipc.netty.http.client;
 
-import javax.annotation.Nullable;
-
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -27,7 +25,6 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
-import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 import java.util.function.Consumer;
 
@@ -155,26 +152,4 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * @return a {@link NettyOutbound} completing when headers have been sent.
 	 */
 	NettyOutbound sendHeaders();
-
-	/**
-	 * Upgrade connection to Websocket.
-	 *
-	 * @return a {@link WebsocketOutbound} completing when upgrade is confirmed
-	 */
-	WebsocketOutbound sendWebsocket();
-
-	/**
-	 * Upgrade connection to Websocket, negotiating one of the given subprotocol(s).
-	 * <p>
-	 * The negotiated subprotocol cannot be directly accessed on the returned outbound,
-	 * as the negotiation hasn't yet occurred. However, the response to this request will
-	 * usually allow access to that information (by upgrading it to a websocket outbound
-	 * via {@link HttpClientResponse#receiveWebsocket()} then calling
-	 * {@link WebsocketOutbound#selectedSubprotocol()}).
-	 *
-	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if not relevant.
-	 * Can be several protocols, separated by a comma, or null if no subprotocol is required.
-	 * @return a {@link WebsocketOutbound} completing when upgrade is confirmed
-	 */
-	WebsocketOutbound sendWebsocket(@Nullable String subprotocols);
 }

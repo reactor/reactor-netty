@@ -20,7 +20,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -28,6 +30,7 @@ import java.util.regex.PatternSyntaxException;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -53,12 +56,15 @@ import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpResources;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.InetSocketAddressUtil;
 import reactor.ipc.netty.tcp.SslProvider;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+
+import static reactor.ipc.netty.http.client.HttpClientOperations.EMPTY;
 
 /**
  * @author Stephane Maldini
@@ -72,8 +78,9 @@ final class HttpClientConnect extends HttpClient {
 
 	static final AttributeKey<HttpHeaders> HEADERS = AttributeKey.newInstance("headers");
 	static final AttributeKey<HttpMethod>  METHOD  = AttributeKey.newInstance("method");
-	static final AttributeKey<BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>>
-	                                       BODY    = AttributeKey.newInstance("body");
+
+static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("subprotocols");	static final AttributeKey<BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>>
+			BODY = AttributeKey.newInstance("body");
 
 	static final String MONO_URI_MARKER = "[deferred]";
 
@@ -115,13 +122,13 @@ final class HttpClientConnect extends HttpClient {
 		                                              .attrs();
 
 		bootstrap.attr(ACCEPT_GZIP, null)
-		         .attr(FOLLOW_REDIRECT, null)
-		         .attr(CHUNKED, null)
-		         .attr(BODY, null)
-		         .attr(HEADERS, null)
-		         .attr(URI, null)
-		         .attr(MONO_URI, null)
-		         .attr(METHOD, null);
+		 .attr(FOLLOW_REDIRECT, null)
+		 .attr(CHUNKED, null)
+		 .attr(BODY, null)
+		 .attr(HEADERS, null)
+		 .attr(URI, null)
+		 .attr(MONO_URI, null)
+		 .attr(METHOD, null).attr(SUBPROTOCOLS, null);
 
 		return new MonoHttpConnect(bootstrap, attrs, tcpClient);
 	}
@@ -269,10 +276,21 @@ final class HttpClientConnect extends HttpClient {
 			HttpHeaders defaultHeaders =
 					(HttpHeaders) attrs.get(HttpClientConnect.HEADERS);
 
+			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound> requestHandler;
 			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>
-					requestHandler =
-					(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>) attrs.get(
-							BODY);
+					body =
+					(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ?
+							extends NettyOutbound>) attrs.get(BODY);if (WS.equals(method)) {
+				if (body == null) {
+					requestHandler = (req, out) -> sendWebsocket(req, (String) attrs.get(SUBPROTOCOLS));
+				}
+				else {
+					requestHandler = (req, out) -> body.apply(req, sendWebsocket(req, (String) attrs.get(SUBPROTOCOLS)));
+				}
+			}
+			else {
+				requestHandler = body;
+			}
 
 			if (compress) {
 				if (defaultHeaders == null) {
@@ -425,5 +443,57 @@ final class HttpClientConnect extends HttpClient {
 		catch (PatternSyntaxException e) {
 			throw new IllegalStateException("Impossible");
 		}
+	}
+
+	static WebsocketOutbound sendWebsocket(HttpClientRequest req, String subprotocols) {
+		HttpClientOperations clientOps = (HttpClientOperations) req;
+		Mono<Void> m = clientOps.withWebsocketSupport(clientOps.websocketUri(), subprotocols, EMPTY);
+
+		return new WebsocketOutbound() {
+
+			@Override
+			public ByteBufAllocator alloc() {
+				return clientOps.alloc();
+			}
+
+			@Override
+			public String selectedSubprotocol() {
+				if (clientOps.isWebsocket()) {
+					WebsocketClientOperations ops =
+							(WebsocketClientOperations) clientOps.get(clientOps.channel());
+
+					assert ops != null;
+					return ops.selectedSubprotocol();
+				}
+				return null;
+			}
+
+			@Override
+			public NettyOutbound sendObject(Publisher<?> dataStream) {
+				return then(clientOps.sendObject(dataStream));
+			}
+
+			@Override
+			public NettyOutbound sendObject(Object message) {
+				return then(clientOps.sendObject(message));
+			}
+
+			@Override
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+											   BiFunction<? super Connection, ? super S, ?> mappedInput,
+											   Consumer<? super S> sourceCleanup) {
+				return then(clientOps.sendUsing(sourceInput, mappedInput, sourceCleanup));
+			}
+
+			@Override
+			public Mono<Void> then() {
+				return m;
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				return clientOps.withConnection(withConnection);
+			}
+		};
 	}
 }

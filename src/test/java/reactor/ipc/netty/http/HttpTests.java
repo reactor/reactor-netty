@@ -16,6 +16,7 @@
 package reactor.ipc.netty.http;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -249,7 +250,7 @@ public class HttpTests {
 		server.dispose();
 	}
 
-	@Test
+/*	@Test
 	public void webSocketRespondsToRequestsFromClients() {
 		AtomicInteger clientRes = new AtomicInteger();
 		AtomicInteger serverRes = new AtomicInteger();
@@ -307,7 +308,7 @@ public class HttpTests {
 		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
 
 		server.dispose();
-	}
+	}*/
 
 	@Test
 	public void test100Continue() throws Exception {

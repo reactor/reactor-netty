@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -392,63 +391,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public Flux<Long> sendForm(Consumer<HttpClientForm> formCallback) {
 		return new FluxSendForm(this, formCallback);
-	}
-
-	@Override
-	public WebsocketOutbound sendWebsocket() {
-		return sendWebsocket(null);
-	}
-
-	@Override
-	public WebsocketOutbound sendWebsocket(String subprotocols) {
-		Mono<Void> m = withWebsocketSupport(websocketUri(), subprotocols, EMPTY);
-
-		return new WebsocketOutbound() {
-
-			@Override
-			public ByteBufAllocator alloc() {
-				return HttpClientOperations.this.alloc();
-			}
-
-			@Override
-			public String selectedSubprotocol() {
-				if (isWebsocket()) {
-					WebsocketClientOperations ops =
-							(WebsocketClientOperations) get(channel());
-
-					assert ops != null;
-					return ops.selectedSubprotocol();
-				}
-				return null;
-			}
-
-			@Override
-			public NettyOutbound sendObject(Publisher<?> dataStream) {
-				return then(HttpClientOperations.this.sendObject(dataStream));
-			}
-
-			@Override
-			public NettyOutbound sendObject(Object message) {
-				return then(HttpClientOperations.this.sendObject(message));
-			}
-
-			@Override
-			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
-					BiFunction<? super Connection, ? super S, ?> mappedInput,
-					Consumer<? super S> sourceCleanup) {
-				return then(HttpClientOperations.this.sendUsing(sourceInput, mappedInput, sourceCleanup));
-			}
-
-			@Override
-			public Mono<Void> then() {
-				return m;
-			}
-
-			@Override
-			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
-				return HttpClientOperations.this.withConnection(withConnection);
-			}
-		};
 	}
 
 	@Override

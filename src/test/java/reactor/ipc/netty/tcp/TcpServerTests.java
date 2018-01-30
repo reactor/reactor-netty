@@ -48,7 +48,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -376,10 +375,9 @@ public class TcpServerTests {
 		server.router(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.prepare()
 				                       .wiretap()
-				                       .request(HttpMethod.GET)
+				                       .ws()
 				                       .uri("ws://localhost:3000")
-				                       .send((requestOut, o) -> requestOut.sendWebsocket()
-				                                                          .sendString(Mono.just("ping")))
+				                       .send((requestOut, o) -> requestOut.sendString(Mono.just("ping")))
 				                       .response((repliesOut, buf) ->  out.sendGroups(buf.window(100)))))
 		      .wiretap()
 		      .bindNow()

@@ -18,14 +18,12 @@ package reactor.ipc.netty.http.client;
 import java.time.Duration;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
@@ -72,12 +70,11 @@ public class WebsocketClientOperationsTest {
 			HttpClient.prepare()
 			          .port(httpServer.address().getPort())
 			          .wiretap()
-			          .request(HttpMethod.GET)
+			          .ws(clientSubprotocol)
 			          .uri("/ws")
 			          .send((request, out) -> {
 			              Mono.just(request)
-			                  .transform(req -> doLoginFirst(req, httpServer.address().getPort()))
-			                  .flatMapMany(req -> ws(req, clientSubprotocol));
+			                  .transform(req -> doLoginFirst(req, httpServer.address().getPort()));
 			              return out;
 			          })
 			          .response((res, buf) -> buf.zipWith(Mono.just(res.status().code())))
@@ -113,9 +110,5 @@ public class WebsocketClientOperationsTest {
 		                 .post()
 		                 .uri("/login")
 		                 .responseSingle((res, buf) -> Mono.just(res.status().code() + ""));
-	}
-
-	private WebsocketOutbound ws(HttpClientRequest request, String clientSubprotocol) {
-		return request.sendWebsocket(clientSubprotocol);
 	}
 }

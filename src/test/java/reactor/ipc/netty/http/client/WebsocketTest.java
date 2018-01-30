@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.client;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,8 +55,7 @@ public class WebsocketTest {
 	public void simpleTest() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
-				                       Mono.just("test"))))
+		                       .handler((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
 		                       .wiretap()
 		                       .bindNow();
 
@@ -63,20 +63,19 @@ public class WebsocketTest {
 				HttpClient.prepare()
 				          .port(httpServer.address().getPort())
 				          .wiretap()
-				          .request(HttpMethod.GET)
+				          .headers(h -> h.add("Authorization", auth))
+				          .ws()
 				          .uri("/test")
-				          .send((req, out) -> req.addHeader("Authorization", auth)
-				                                 .sendWebsocket())
 				          .responseContent()
 				          .asString()
-				          .log()
+				          .log("client")
 				          .collectList()
 				          .block(Duration.ofSeconds(30))
 				          .get(0);
 
 		Assert.assertThat(res, is("test"));
 	}
-
+/*
 	@Test
 	public void serverWebSocketFailed() {
 		httpServer =
@@ -105,67 +104,7 @@ public class WebsocketTest {
 		StepVerifier.create(res)
 				.expectError(WebSocketHandshakeException.class)
 				.verify(Duration.ofSeconds(30));
-	}
-
-	@Test
-	public void webSocketRespondsToRequestsFromClients() {
-		AtomicInteger clientRes = new AtomicInteger();
-		AtomicInteger serverRes = new AtomicInteger();
-
-		DisposableServer server =
-				HttpServer.create()
-				          .port(0)
-				          .router(r -> r.get("/test/{param}", (req, res) -> {
-					          System.out.println(req.requestHeaders().get("test"));
-					          return res.header("content-type", "text/plain")
-					                    .sendWebsocket((in, out) ->
-							                    out.options(c -> c.flushOnEach())
-							                       .sendString(in.receive()
-							                                     .asString()
-							                                     .publishOn(Schedulers.single())
-							                                     .doOnNext(s -> serverRes.incrementAndGet())
-							                                     .map(it -> it + ' ' + req.param("param") + '!')
-							                                     .log("server-reply")));
-				          }))
-				          .wiretap()
-				          .bindNow(Duration.ofSeconds(5));
-
-		HttpClient client = HttpClient.prepare()
-		                              .port(server.address().getPort())
-		                              .wiretap();
-
-		Mono<List<String>> response =
-				client.request(HttpMethod.GET)
-				      .uri("/test/World")
-				      .send((req, out) ->
-						      req.header("Content-Type", "text/plain")
-						         .header("test", "test")
-						         .options(c -> c.flushOnEach())
-						         .sendWebsocket()
-						         .sendString(Flux.range(1, 1000)
-						                         .log("client-send")
-						                         .map(i -> "" + i)))
-				      .responseContent()
-				      .asString()
-				      .log("client-received")
-				      .publishOn(Schedulers.parallel())
-				      .doOnNext(s -> clientRes.incrementAndGet())
-				      .take(1000)
-				      .collectList()
-				      .cache()
-				      .doOnError(i -> System.err.println("Failed requesting server: " + i));
-
-		System.out.println("STARTING: server[" + serverRes.get() + "] / client[" + clientRes.get() + "]");
-
-		StepVerifier.create(response)
-		            .expectNextMatches(list -> "1000 World!".equals(list.get(999)))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(10));
-
-		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
-
-		server.dispose();
-	}
+	}*/
 
 //	static final byte[] testData;
 //
@@ -200,7 +139,6 @@ public class WebsocketTest {
 //		Thread.sleep(200000);
 //	}
 
-	/* TODO ws?
 	@Test
 	public void unidirectional() {
 		int c = 10;
@@ -217,14 +155,16 @@ public class WebsocketTest {
 
 		Flux<String> ws = HttpClient.prepare()
 		                            .port(httpServer.address().getPort())
-		                            .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                            .wiretap()
 		                            .ws()
 		                            .uri("/")
-		                            .flatMapMany(in -> in.receiveWebsocket()
-		                                             .aggregateFrames()
-		                                             .receive()
-		                                             .asString());
+		                            .response()
+		                            .flatMapMany(in -> {
+		                            	return in.receiveWebsocket()
+												.aggregateFrames()
+												.receive()
+												.asString();
+									});
 
 		StepVerifier.create(ws.take(c)
 		                      .log())
@@ -235,7 +175,67 @@ public class WebsocketTest {
 		            .verify();
 	}
 
+	@Test
+	public void webSocketRespondsToRequestsFromClients() {
+		AtomicInteger clientRes = new AtomicInteger();
+		AtomicInteger serverRes = new AtomicInteger();
 
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .router(r -> r.get("/test/{param}", (req, res) -> {
+					          System.out.println(req.requestHeaders().get("test"));
+					          return res.header("content-type", "text/plain")
+					                    .sendWebsocket((in, out) ->
+							                    out.options(c -> c.flushOnEach())
+							                       .sendString(in.receive()
+							                                     .asString()
+							                                     .publishOn(Schedulers.single())
+							                                     .doOnNext(s -> serverRes.incrementAndGet())
+							                                     .map(it -> it + ' ' + req.param("param") + '!')
+							                                     .log("server-reply")));
+				          }))
+				          .wiretap()
+				          .bindNow(Duration.ofSeconds(5));
+
+		HttpClient client = HttpClient.prepare()
+		                              .port(server.address().getPort())
+		                              .wiretap();
+
+		Mono<List<String>> response =
+				client.headers(h -> h.add("Content-Type", "text/plain")
+				                     .add("test", "test"))
+				      .ws()
+				      .uri("/test/World")
+				      .send((req, out) -> {
+					      req.options(c -> c.flushOnEach());
+					      return out.sendString(Flux.range(1, 1000)
+					                                .log("client-send")
+					                                .map(i -> "" + i), Charset.defaultCharset());
+				      })
+				      .responseContent()
+				      .asString()
+				      .log("client-received")
+				      .publishOn(Schedulers.parallel())
+				      .doOnNext(s -> clientRes.incrementAndGet())
+				      .take(1000)
+				      .collectList()
+				      .cache()
+				      .doOnError(i -> System.err.println("Failed requesting server: " + i));
+
+		System.out.println("STARTING: server[" + serverRes.get() + "] / client[" + clientRes.get() + "]");
+
+		StepVerifier.create(response)
+		            .expectNextMatches(list -> "1000 World!".equals(list.get(999)))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(10));
+
+		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
+
+		server.dispose();
+	}
+
+	/* TODO ws?
 	@Test
 	public void unidirectionalBinary() {
 		int c = 10;
@@ -370,10 +370,9 @@ public class WebsocketTest {
 		String res = HttpClient.prepare()
 		                       .port(httpServer.address().getPort())
 		                       .wiretap()
-		                       .request(HttpMethod.GET)
+		                       .headers(h -> h.add("Authorization", auth))
+		                       .ws("SUBPROTOCOL,OTHER")
 		                       .uri("/test")
-		                       .send((req, out) -> req.addHeader("Authorization", auth)
-		                                              .sendWebsocket("SUBPROTOCOL,OTHER"))
 		                       .responseContent()
 		                       .asString()
 		                       .log()
