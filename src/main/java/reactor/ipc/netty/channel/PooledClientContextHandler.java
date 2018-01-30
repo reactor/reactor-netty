@@ -266,12 +266,10 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 		pool.release(c)
 		    .addListener(f -> {
-			    if (f.isSuccess()) {
-				    onReleaseEmitter.onComplete();
-			    }
-			    else {
-				    onReleaseEmitter.onError(f.cause());
-			    }
+		        if (log.isDebugEnabled() && !f.isSuccess()){
+		            log.debug("Failed cleaning the channel from pool", f.cause());
+		        }
+		        onReleaseEmitter.onComplete();
 		    });
 
 	}
