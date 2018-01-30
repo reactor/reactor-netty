@@ -258,6 +258,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	protected void onInboundClose() {
+		if (isInboundCancelled() || isInboundDisposed()) {
+			return;
+		}
 		if (responseState == null) {
 			parentContext().fireContextError(new IOException("Connection closed prematurely"));
 			return;
