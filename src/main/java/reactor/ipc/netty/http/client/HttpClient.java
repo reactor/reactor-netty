@@ -38,6 +38,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
+import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -177,7 +178,7 @@ public abstract class HttpClient {
 		 *
 		 * @return
 		 */
-		WebsocketReceiver send(BiFunction<? super HttpClientRequest, ? super WebsocketOutbound, ? extends NettyOutbound> sender);
+		WebsocketReceiver send(BiFunction<? super HttpClientRequest, ? super WebsocketOutbound, ? extends Publisher<Void>> sender);
 
 	}
 
@@ -482,8 +483,8 @@ public abstract class HttpClient {
 	 *
 	 * @return a {@link WebsocketReceiver} ready to consume for response
 	 */
-	public final WebsocketReceiver ws(String subprotocols) {
-		return new HttpWsClientFinalizer(
+	public final WebsocketReceiver ws(@Nullable String subprotocols) {
+		return new WebsocketClientFinalizer(
 		        tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.METHOD, WS)
 		                                   .attr(HttpClientConnect.SUBPROTOCOLS, subprotocols)));
 	}

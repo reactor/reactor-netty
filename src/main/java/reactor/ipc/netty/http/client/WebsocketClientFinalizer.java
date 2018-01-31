@@ -17,19 +17,13 @@
 package reactor.ipc.netty.http.client;
 
 import java.util.Objects;
-import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.ByteBufMono;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.tcp.TcpClient;
@@ -37,13 +31,13 @@ import reactor.ipc.netty.tcp.TcpClient;
 /**
  * @author Stephane Maldini
  */
-final class HttpWsClientFinalizer extends HttpClientOperator
+final class WebsocketClientFinalizer extends HttpClientOperator
 		implements HttpClient.WebsocketReceiver {
 
 	final TcpClient cachedConfiguration;
 	final String    baseUri;
 
-	HttpWsClientFinalizer(HttpClient parent) {
+	WebsocketClientFinalizer(HttpClient parent) {
 		super(parent);
 		this.cachedConfiguration = parent.tcpConfiguration();
 		this.baseUri = baseUri();
@@ -53,12 +47,12 @@ final class HttpWsClientFinalizer extends HttpClientOperator
 
 	@Override
 	public HttpClient.WebsocketReceiver uri(String uri) {
-		return new HttpWsClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.URI, uri)));
+		return new WebsocketClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.URI, uri)));
 	}
 
 	@Override
 	public HttpClient.WebsocketReceiver uri(Mono<String> uri) {
-		return new HttpWsClientFinalizer(tcpConfiguration(tcp ->
+		return new WebsocketClientFinalizer(tcpConfiguration(tcp ->
 				tcp.bootstrap(b -> b.attr(HttpClientConnect.URI, HttpClientConnect.MONO_URI_MARKER)
 						.attr(HttpClientConnect.MONO_URI, uri))));
 	}
@@ -74,6 +68,7 @@ final class HttpWsClientFinalizer extends HttpClientOperator
 
 	@Override
 	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver) {
+		// TODO retain ?
 		return response().flatMapMany(resp -> Flux.from(receiver.apply(resp,
 				resp.receive()))
 				.doFinally(s -> resp.dispose()));
@@ -82,23 +77,26 @@ final class HttpWsClientFinalizer extends HttpClientOperator
 	@Override
 	public ByteBufFlux responseContent() {
 		// TODO assign allocator
-		return ByteBufFlux.fromInbound(response().flatMapMany((HttpClientResponse::receive)));
+		// TODO retain
+		return ByteBufFlux.fromInbound(response().flatMapMany(res -> res
+				.receiveWebsocket().receive().log()));
 	}
 
 	@Override
 	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver) {
-		return response().flatMap(resp -> receiver.apply(resp,
-				resp.receive()
-						.aggregate()).doFinally(s -> resp.dispose()));
+		return response().flatMap(resp -> receiver.apply(resp, resp.receive().aggregate())
+		                                          .doFinally(s -> resp.dispose()));
 	}
 
 	// WebsocketReceiver methods
 
 	@Override
-	public WebsocketReceiver send(BiFunction<? super HttpClientRequest, ? super WebsocketOutbound, ? extends NettyOutbound> sender) {
+	@SuppressWarnings("unchecked")
+	public WebsocketReceiver send(BiFunction<? super HttpClientRequest, ? super
+			WebsocketOutbound, ? extends Publisher<Void>> sender) {
 		Objects.requireNonNull(sender, "requestBody");
-		return new HttpWsClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.BODY,
-				(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>) sender)));
+		return new WebsocketClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.BODY,
+				(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>) sender)));
 	}
 
 }

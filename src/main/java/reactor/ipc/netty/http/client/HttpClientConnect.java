@@ -460,7 +460,7 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 			public String selectedSubprotocol() {
 				if (clientOps.isWebsocket()) {
 					WebsocketClientOperations ops =
-							(WebsocketClientOperations) clientOps.get(clientOps.channel());
+							(WebsocketClientOperations) ChannelOperations.get(clientOps.channel());
 
 					assert ops != null;
 					return ops.selectedSubprotocol();
