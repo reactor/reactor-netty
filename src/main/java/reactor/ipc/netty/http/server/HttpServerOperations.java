@@ -42,6 +42,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -205,7 +206,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public boolean isWebsocket() {
 		return requestHeaders().contains(HttpHeaderNames.UPGRADE,
 				HttpHeaderValues.WEBSOCKET,
-				true);
+				true)
+				&& HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status());
 	}
 
 	@Override

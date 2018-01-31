@@ -21,6 +21,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -72,6 +73,31 @@ public class WebsocketTest {
 		                .get(0);
 
 		Assert.assertThat(res, is("test"));
+	}
+
+	@Test
+	public void serverWebSocketFailed() {
+		httpServer =
+				HttpServer.create(0)
+				          .newHandler((in, out) -> {
+				                  if (!in.requestHeaders().contains("Authorization")) {
+				                      return out.status(401);
+				                  }
+				                  else {
+				                      return out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")));
+				                  }
+				          })
+				          .block(Duration.ofSeconds(30));
+
+		Mono<String> res =
+				HttpClient.create(httpServer.address().getPort())
+				          .get("/test", out -> out.failOnClientError(false)
+				                                      .sendWebsocket())
+				          .flatMap(in -> in.receive().aggregate().asString());
+
+		StepVerifier.create(res)
+		            .expectError(WebSocketHandshakeException.class)
+		            .verify(Duration.ofSeconds(30));
 	}
 
 //	static final byte[] testData;
