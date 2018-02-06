@@ -139,6 +139,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 
 		volatile URI      activeURI;
 		volatile String[] redirectedFrom;
+		volatile boolean retried;
 
 		ReconnectableBridge() {
 		}
@@ -183,7 +184,8 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 				redirect(re.location);
 				return true;
 			}
-			if (AbortedException.isConnectionReset(throwable)) {
+			if (AbortedException.isConnectionReset(throwable) && !retried) {
+				retried = true;
 				redirect(activeURI.toString());
 				return true;
 			}
