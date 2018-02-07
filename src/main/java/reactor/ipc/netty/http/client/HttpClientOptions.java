@@ -22,19 +22,13 @@ import java.net.URI;
 import java.util.Objects;
 import java.util.function.Function;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
-
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.NetUtil;
 import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.options.ClientProxyOptions;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
-import reactor.util.function.Tuple2;
 
 /**
  * An http client connector builder with low-level connection options including
@@ -85,16 +79,6 @@ public final class HttpClientOptions extends ClientOptions {
 		// TODO: find out whether the remote address should be resolved using blocking operation at this point
 		boolean shouldResolveAddress = !useProxy(uri.getHost());
 		return createInetSocketAddress(uri.getHost(), port, shouldResolveAddress);
-	}
-
-	@Override
-	public SslHandler getSslHandler(ByteBufAllocator allocator, Tuple2<String, Integer> sniInfo) {
-		SslHandler handler =  super.getSslHandler(allocator, sniInfo);
-		SSLEngine sslEngine = handler.engine();
-		SSLParameters sslParameters = sslEngine.getSSLParameters();
-		sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
-		sslEngine.setSSLParameters(sslParameters);
-		return handler;
 	}
 
 	/**
