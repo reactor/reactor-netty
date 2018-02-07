@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -132,7 +133,8 @@ public class ByteBufFluxTest {
         if (withSecurity) {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
-            SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
+            SslContext sslClient = SslContextBuilder.forClient()
+					.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
             serverOptions = ops -> ops.port(serverPort).sslContext(sslServer);
             clientOptions = ops -> ops.port(serverPort).sslContext(sslClient);
         }

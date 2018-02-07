@@ -58,6 +58,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.Test;
@@ -166,7 +167,8 @@ public class HttpServerTests {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
-		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
+		SslContext sslClient = SslContextBuilder.forClient()
+				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
 		NettyContext context =
 				HttpServer.create(opt -> opt.sslContext(sslServer))
