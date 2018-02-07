@@ -168,7 +168,7 @@ public abstract class NettyOptions<BOOTSTRAP extends AbstractBootstrap<BOOTSTRAP
 	 * @param sniInfo {@link Tuple2} with hostname and port for SNI (any null will skip SNI).
 	 * @return a new eventual {@link SslHandler} with SNI activated
 	 */
-	public SslHandler getSslHandler(ByteBufAllocator allocator,
+	public final SslHandler getSslHandler(ByteBufAllocator allocator,
 			Tuple2<String, Integer> sniInfo) {
 		SslContext sslContext =
 				this.sslContext == null ? defaultSslContext() : this.sslContext;
