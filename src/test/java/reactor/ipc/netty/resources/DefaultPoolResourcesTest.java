@@ -77,7 +77,8 @@ public class DefaultPoolResourcesTest {
 				(b, handler, checker) -> channelPool);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
-				InetSocketAddress.createUnresolved("localhost", 80),
+				new DefaultPoolResources.SocketAddressHolder(
+						InetSocketAddress.createUnresolved("localhost", 80)),
 				pool);
 
 		Mono<Void> disposer = poolResources.disposeLater();
@@ -98,7 +99,8 @@ public class DefaultPoolResourcesTest {
 				(b, handler, checker) -> channelPool);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
-				InetSocketAddress.createUnresolved("localhost", 80),
+				new DefaultPoolResources.SocketAddressHolder(
+						InetSocketAddress.createUnresolved("localhost", 80)),
 				pool);
 
 		poolResources.dispose();
