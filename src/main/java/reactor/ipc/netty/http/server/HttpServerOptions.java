@@ -256,7 +256,7 @@ public final class HttpServerOptions extends ServerOptions {
 		 * {@link #DEFAULT_INITIAL_BUFFER_SIZE}.
 		 *
 		 * @param value the initial buffer size to use (strictly positive)
-		 * @return
+		 * @return {@code this}
 		 */
 		public final Builder initialBufferSize(int value) {
 			if (value <= 0) {
