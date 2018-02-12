@@ -1,3 +1,5 @@
+### Following link https://pivotal.io/security should be used to report security related issues
+
 ### Expected behavior
 
 ### Actual behavior
