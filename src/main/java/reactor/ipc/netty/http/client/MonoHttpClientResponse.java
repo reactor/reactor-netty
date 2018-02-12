@@ -148,7 +148,7 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			String[] redirectedFrom = this.redirectedFrom;
 			URI from = activeURI;
 			try {
-				activeURI = new URI(to);
+				activeURI = from.resolve(new URI(to));
 			}
 			catch (URISyntaxException e) {
 				throw Exceptions.propagate(e);

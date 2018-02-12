@@ -25,6 +25,7 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
+import reactor.test.StepVerifier;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -119,5 +120,57 @@ public class HttpRedirectTest {
 		Assertions.assertThat(value).isNull();
 
 		server.dispose();
+	}
+
+	@Test
+	public void testIssue278() {
+		NettyContext server1 =
+				HttpServer.create(8888)
+				          .newRouter(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+				                           .get("/2", (req, res) -> res.sendRedirect("http://localhost:8888/3"))
+				                           .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
+				                           .get("/4", (req, res) -> res.sendRedirect("http://localhost:8889/1")))
+				          .block(Duration.ofSeconds(30));
+
+		NettyContext server2 =
+				HttpServer.create(8889)
+				          .newRouter(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
+				          .block(Duration.ofSeconds(30));
+
+		HttpClient client = HttpClient.create(8888);
+
+		Mono<String> response =
+				client.get("/1", req -> req.followRedirect())
+				      .flatMap(res -> res.receive()
+				                         .aggregate()
+				                         .asString());
+
+		StepVerifier.create(response)
+		            .expectNextMatches(s -> "OK".equals(s))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		response = client.get("/2", req -> req.followRedirect())
+		                 .flatMap(res -> res.receive()
+		                                    .aggregate()
+		                                    .asString());
+
+		StepVerifier.create(response)
+		            .expectNextMatches(s -> "OK".equals(s))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		response = client.get("/4", req -> req.followRedirect())
+		                 .flatMap(res -> res.receive()
+		                                    .aggregate()
+		                                    .asString());
+
+		StepVerifier.create(response)
+		            .expectNextMatches(s -> "Other".equals(s))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		server1.dispose();
+		server2.dispose();
 	}
 }
