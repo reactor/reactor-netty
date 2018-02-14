@@ -167,6 +167,11 @@ final class DefaultPoolResources implements PoolResources {
 						ch.toString(),
 						activeConnections);
 			}
+			if (log.isDebugEnabled()) {
+				log.debug("Created new pooled channel: " + ch.toString());
+			}
+			ch.closeFuture()
+			  .addListener(ff -> pool.release(ch));
 			if (onChannelCreate != null) {
 				onChannelCreate.accept(ch);
 			}

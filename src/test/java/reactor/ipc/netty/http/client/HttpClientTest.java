@@ -826,6 +826,40 @@ public class HttpClientTest {
 		context.dispose();
 	}
 
+
+
+	@Test
+	public void closePool() {
+		PoolResources pr = PoolResources.fixed("wstest", 1);
+		NettyContext httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) ->  out.options(opt -> opt.flushOnEach())
+				                                  .sendString(
+						                                  Mono.just("test")
+						                                      .delayElement(Duration.ofMillis(100))
+						                                      .repeat()))
+		                       .block(Duration.ofSeconds(30));
+
+		Flux<String> ws = HttpClient.create(opts -> opts.port(httpServer.address()
+		                                                                .getPort())
+		                                                .poolResources(pr))
+		                            .get("/")
+		                            .flatMapMany(in -> in.receive()
+		                                                 .asString());
+
+		StepVerifier.create(
+				Flux.range(1, 10)
+				    .concatMap(i -> ws.take(2)
+				                      .log())
+		)
+		            .expectNextSequence(Flux.range(1, 20)
+		                                    .map(v -> "test")
+		                                    .toIterable())
+		            .expectComplete()
+		            .verify();
+
+		pr.dispose();
+	}
+
 	private HttpClient createHttpClientForContext(NettyContext context) {
 		return HttpClient.create(opt -> applyHostAndPortFromContext(opt, context));
 	}

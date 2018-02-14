@@ -194,17 +194,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			return;
 		}
 
-		ChannelOperationsHandler op = c.pipeline()
-		                               .get(ChannelOperationsHandler.class);
-
-		if (op == null) {
-			if (log.isDebugEnabled()) {
-				log.debug("Created new pooled channel: " + c.toString());
-			}
-			c.closeFuture()
-			 .addListener(ff -> release(c));
-			return;
-		}
 		if (log.isDebugEnabled()) {
 			log.debug("Acquired active channel: " + c.toString());
 		}
