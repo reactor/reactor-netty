@@ -33,6 +33,7 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -396,6 +397,42 @@ public class WebsocketTest {
 		Assert.assertThat(serverSelectedProtocol.get(), is("proto1"));
 		Assert.assertThat(clientSelectedProtocol.get(), is("proto1"));
 		Assert.assertThat(clientSelectedProtocolWhenSimplyUpgrading.get(), is("proto1"));
+	}
+
+
+	@Test
+	public void closePool() {
+		PoolResources pr = PoolResources.fixed("wstest", 1);
+		NettyContext httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket(
+				                       (i, o) -> o.options(opt -> opt.flushOnEach())
+				                                  .sendString(
+						                                  Mono.just("test")
+						                                      .delayElement(Duration.ofMillis(100))
+						                                      .repeat())))
+		                       .block(Duration.ofSeconds(30));
+
+		Flux<String> ws = HttpClient.create(opts -> opts.port(httpServer.address()
+		                                                                .getPort())
+		                                                .poolResources(pr))
+		                            .ws("/")
+		                            .flatMapMany(in -> in.receiveWebsocket()
+		                                                 .aggregateFrames()
+		                                                 .receive()
+		                                                 .asString());
+
+		StepVerifier.create(
+				Flux.range(1, 10)
+				    .concatMap(i -> ws.take(2)
+				                      .log())
+		)
+		            .expectNextSequence(Flux.range(1, 20)
+		                                    .map(v -> "test")
+		                                    .toIterable())
+		            .expectComplete()
+		            .verify();
+
+		pr.dispose();
 	}
 
 }
