@@ -479,9 +479,8 @@ public class HttpServerTests {
 
 		Flux<String> client = HttpClient.create(c.address()
 		                                         .getPort())
-		                                .get("/")
+		                                .get("/", out -> out.context(ctx -> ctx.addHandler(new LineBasedFrameDecoder(10))))
 		                                .block(Duration.ofSeconds(30))
-		                                .addHandler(new LineBasedFrameDecoder(10))
 		                                .receive()
 		                                .asString();
 
@@ -842,6 +841,25 @@ public class HttpServerTests {
 
 		r.dispose();
 		server.dispose();
+	}
+
+	@Test
+	public void testIssue282() {
+		NettyContext server =
+				HttpServer.create(options -> options.compression(2048)
+				                                    .port(0))
+				          .newHandler((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
+				          .block(Duration.ofSeconds(300));
+
+		Mono<String> response =
+				HttpClient.create(server.address().getPort())
+				          .get("/")
+				          .flatMap(res -> res.receive().aggregate().asString());
+
+		StepVerifier.create(response)
+		            .expectNextMatches(s -> "testtesttesttesttest".equals(s))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(300));
 	}
 /*
 	final int numberOfTests = 1000;
