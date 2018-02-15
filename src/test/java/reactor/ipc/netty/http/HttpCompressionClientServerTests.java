@@ -29,6 +29,7 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -315,5 +316,24 @@ public class HttpCompressionClientServerTests {
 
 	private InetSocketAddress address(NettyContext nettyContext) {
 		return nettyContext.address();
+	}
+
+	@Test
+	public void testIssue282() {
+		NettyContext server =
+				HttpServer.create(options -> options.compression(2048)
+				                                    .port(0))
+				          .newHandler((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
+				          .block(Duration.ofSeconds(30));
+
+		Mono<String> response =
+				HttpClient.create(server.address().getPort())
+				          .get("/")
+				          .flatMap(res -> res.receive().aggregate().asString());
+
+		StepVerifier.create(response)
+		            .expectNextMatches(s -> "testtesttesttesttest".equals(s))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 }

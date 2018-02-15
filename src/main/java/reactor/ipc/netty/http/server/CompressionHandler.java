@@ -62,7 +62,8 @@ final class CompressionHandler extends ChannelDuplexHandler {
 			if (bodyCompressThreshold > 0 || !messages.isEmpty()) {
 				while (!messages.isEmpty()) {
 					Object msg = messages.poll();
-					writeSkipCompress(ctx, msg);
+					ChannelPromise p = (ChannelPromise) messages.poll();
+					writeSkipCompress(ctx, msg, p);
 				}
 			}
 		}
@@ -90,6 +91,7 @@ final class CompressionHandler extends ChannelDuplexHandler {
 
 	void offerHttpMessage(Object msg, ChannelPromise p) {
 		messages.offer(msg);
+		messages.offer(p);
 		p.setSuccess();
 	}
 
@@ -97,28 +99,40 @@ final class CompressionHandler extends ChannelDuplexHandler {
 			throws Exception {
 		ByteBuf byteBuf = (ByteBuf) msg;
 		messages.offer(byteBuf);
+		messages.offer(promise);
 		if (bodyCompressThreshold > 0) {
 			bodyCompressThreshold -= byteBuf.readableBytes();
 		}
-		drain(ctx, promise);
+		drain(ctx);
 	}
 
-	void drain(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+	void drain(ChannelHandlerContext ctx) throws Exception {
 		if (bodyCompressThreshold <= 0) {
 			while (!messages.isEmpty()) {
 				Object message = messages.poll();
-				writeCompress(ctx, message, promise);
+				ChannelPromise p = (ChannelPromise) messages.poll();
+				writeCompress(ctx, message, p);
 			}
 		}
 	}
 
 	void writeCompress(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
 			throws Exception {
-		ctx.write(msg, promise);
+		if (msg instanceof HttpMessage) {
+			ctx.write(msg);
+		}
+		else {
+			ctx.write(msg, promise);
+		}
 	}
 
-	void writeSkipCompress(ChannelHandlerContext ctx, Object msg) throws Exception {
-		ctx.write(FilteringHttpContentCompressor.FilterMessage.wrap(msg));
+	void writeSkipCompress(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+		if (msg instanceof HttpMessage) {
+			ctx.write(FilteringHttpContentCompressor.FilterMessage.wrap(msg));
+		}
+		else {
+			ctx.write(FilteringHttpContentCompressor.FilterMessage.wrap(msg), promise);
+		}
 	}
 
 	void releaseMsgs() {
