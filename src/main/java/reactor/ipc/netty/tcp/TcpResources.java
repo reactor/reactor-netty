@@ -137,10 +137,9 @@ public class TcpResources implements PoolResources, LoopResources {
 	 * @return the Mono that represents the end of disposal
 	 */
 	protected Mono<Void> _disposeLater() {
-		return Mono.zip(
+		return Mono.when(
 				defaultLoops.disposeLater(),
-				defaultPools.disposeLater())
-		           .then();
+				defaultPools.disposeLater());
 	}
 
 	@Override
