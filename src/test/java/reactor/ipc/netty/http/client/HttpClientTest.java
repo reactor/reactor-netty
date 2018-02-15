@@ -688,7 +688,7 @@ public class HttpClientTest {
 				opt -> applyHostAndPortFromContext(opt, context)
 				          .sslContext(sslClient))
 		                                        .get("/foo")
-		                                        .block(Duration.ofMillis(200));
+		                                        .block();
 		context.dispose();
 		context.onClose().block();
 
@@ -857,6 +857,7 @@ public class HttpClientTest {
 		            .expectComplete()
 		            .verify();
 
+		httpServer.dispose();
 		pr.dispose();
 	}
 

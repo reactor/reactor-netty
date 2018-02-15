@@ -430,6 +430,7 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify();
 
+		httpServer.dispose();
 		pr.dispose();
 	}
 
