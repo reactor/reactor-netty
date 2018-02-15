@@ -112,8 +112,6 @@ public class HttpServerTests {
 
 	@Test
 	public void releaseInboundChannelOnNonKeepAliveRequest() throws Exception {
-		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-
 		NettyContext c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> req.receive().then(resp.status(200).send()))
 		                           .block();
