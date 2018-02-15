@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpContentCompressor;
+import io.netty.handler.codec.http.LastHttpContent;
 
 /**
  * @author mostroverkhov
@@ -35,6 +36,9 @@ final class FilteringHttpContentCompressor extends HttpContentCompressor {
 		if (msg instanceof FilterMessage) {
 			FilterMessage filterMsg = (FilterMessage) msg;
 			ctx.write(filterMsg.unwrap(), promise);
+		}
+		else if (msg instanceof LastHttpContent) {
+			ctx.write(msg, promise);
 		}
 		else {
 			if (msg instanceof ByteBuf) {
