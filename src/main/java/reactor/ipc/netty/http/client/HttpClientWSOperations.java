@@ -141,6 +141,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 			if (checkResponseCode(response)) {
 
+
 				try {
 					if (!handshaker.isHandshakeComplete()) {
 						handshaker.finishHandshake(channel(), response);
@@ -152,8 +153,12 @@ final class HttpClientWSOperations extends HttpClientOperations
 						return;
 					}
 				}
+				finally {
+					//Release unused content (101 status)
+					response.content()
+					        .release();
+				}
 
-				ReferenceCountUtil.release(msg);
 				parentContext().fireContextActive(this);
 				handshakerResult.trySuccess();
 			}
