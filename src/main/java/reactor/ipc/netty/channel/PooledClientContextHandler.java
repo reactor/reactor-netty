@@ -251,6 +251,15 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 		if (!NettyContext.isPersistent(c) && c.isActive()) {
 			c.close();
+			onReleaseEmitter.onComplete();
+			//will be released by poolResources internals
+			return;
+		}
+
+		if (!c.isActive()) {
+			onReleaseEmitter.onComplete();
+			//will be released by poolResources internals
+			return;
 		}
 
 		pool.release(c)
