@@ -47,12 +47,12 @@ public class HttpRedirectTest {
 	private void redirectTests(String url) {
 		AtomicInteger counter = new AtomicInteger(1);
 		NettyContext server =
-				HttpServer.create(9999)
+				HttpServer.create(0)
 				          .newHandler((req, res) -> {
 				              if (req.uri().contains("/login") &&
 				                      req.method().equals(HttpMethod.POST) &&
 				                      counter.getAndDecrement() > 0) {
-				                  return res.sendRedirect("http://localhost:9999" + url);
+				                  return res.sendRedirect(url);
 				              }
 				              else {
 				                  return res.status(200)
