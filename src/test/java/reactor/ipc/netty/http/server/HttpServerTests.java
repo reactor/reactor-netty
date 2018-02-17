@@ -77,6 +77,7 @@ import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.BlockingNettyContext;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
+import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuple3;
 
@@ -841,6 +842,42 @@ public class HttpServerTests {
 
 		r.dispose();
 		server.dispose();
+	}
+
+	@Test
+	public void contextShouldBeTransferredFromDownStreamToUpsream() {
+		AtomicReference<Context> context = new AtomicReference<>();
+		NettyContext server =
+				HttpServer.create(0)
+				          .newHandler((req, res) -> res.status(200).send())
+				          .block(Duration.ofSeconds(300));
+
+		HttpClient client =
+				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
+				                            .poolResources(PoolResources.fixed("test", 1)));
+
+		try {
+
+			Mono<String> content = client.post("/", req -> req.failOnClientError(false)
+			                                                  .sendString(Mono.just("bodysample")
+			                                                                  .subscriberContext(c -> {
+						                                                          context.set(c);
+				                                                                  return c;
+			                                                                  })))
+			                             .flatMap(res -> res.receive()
+			                                                .aggregate()
+			                                                .asString())
+			                             .subscriberContext(c -> c.put("Hello", "World"));
+
+			StepVerifier.create(content)
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(300));
+			assertThat(context.get().get("Hello").equals("World")).isTrue();
+		}
+		finally {
+			server.dispose();
+		}
+
 	}
 
 /*
