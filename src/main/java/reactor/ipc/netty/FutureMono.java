@@ -16,6 +16,7 @@
 package reactor.ipc.netty;
 
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.netty.util.concurrent.Future;
@@ -25,6 +26,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
+import reactor.util.context.Context;
 
 /**
  * Convert Netty Future into void {@link Mono}.
@@ -63,6 +65,32 @@ public abstract class FutureMono extends Mono<Void> {
 	 * @return A {@link Mono} forwarding {@link Future} success or failure
 	 */
 	public static <F extends Future<Void>> Mono<Void> deferFuture(Supplier<F> deferredFuture) {
+		return new DeferredFutureMono<>((context) -> deferredFuture.get());
+	}
+
+	/**
+	 * Convert a supplied {@link Future} for each subscriber into {@link Mono}.
+	 * {@link Mono#subscribe(Subscriber)}
+	 * will bridge to {@link Future#addListener(GenericFutureListener)}.
+	 *
+	 * In addition, current method allows interaction with downstream context, so it
+	 * may be transferred to implicitly connected upstream
+	 *
+	 * Example:
+	 *
+	 * <pre><code>
+	 *   Flux&lt;String&gt; dataStream = Flux.just("a", "b", "c");
+	 *   FutureMono.deferFutureWithContext((subscriberContext) ->
+     *  	context().channel()
+	 * 		 .writeAndFlush(PublisherContext.withContext(dataStream, subscriberContext)));
+	 * </code></pre>
+	 *
+	 * @param deferredFuture the future to evaluate and convert from
+	 * @param <F> the future type
+	 *
+	 * @return A {@link Mono} forwarding {@link Future} success or failure
+	 */
+	public static <F extends Future<Void>> Mono<Void> deferFutureWithContext(Function<Context, F> deferredFuture) {
 		return new DeferredFutureMono<>(deferredFuture);
 	}
 
@@ -94,16 +122,16 @@ public abstract class FutureMono extends Mono<Void> {
 
 	final static class DeferredFutureMono<F extends Future<Void>> extends FutureMono {
 
-		final Supplier<F> deferredFuture;
+		final Function<Context, F> deferredFuture;
 
-		DeferredFutureMono(Supplier<F> deferredFuture) {
+		DeferredFutureMono(Function<Context, F> deferredFuture) {
 			this.deferredFuture =
 					Objects.requireNonNull(deferredFuture, "deferredFuture");
 		}
 
 		@Override
 		public void subscribe(CoreSubscriber<? super Void> s) {
-			F f = deferredFuture.get();
+			F f = deferredFuture.apply(s.currentContext());
 
 			if (f == null) {
 				Operators.error(s,

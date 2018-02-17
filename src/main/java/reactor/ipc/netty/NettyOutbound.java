@@ -294,8 +294,10 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * error during write
 	 */
 	default NettyOutbound sendObject(Publisher<?> dataStream) {
-		return then(FutureMono.deferFuture(() -> context().channel()
-		                                                  .writeAndFlush(dataStream)));
+		return then(FutureMono.deferFutureWithContext((subscriberContext) ->
+				context().channel()
+				         .writeAndFlush(PublisherContext.withContext(dataStream, subscriberContext)))
+		);
 	}
 
 	/**
