@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.assertj.core.api.Assertions;
@@ -172,7 +173,69 @@ public class TcpClientTests {
 						                                                     NettyPipeline.ReactiveBridge,
 						                                                     "codec",
 						                                                     new LineBasedFrameDecoder(
-								                                                     8 * 1024))))
+								                                                     8 * 1024)))
+				)
+				         .newHandler((in, out) ->
+					        out.sendString(Flux.range(1, messages)
+					                            .map(i -> "Hello World!" + i + "\n")
+					                            .subscribeOn(Schedulers.parallel()))
+					            .then( in.receive()
+					                     .asString()
+					                     .take(100)
+					                     .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					                     .doOnNext(s -> {
+						                     strings.add(s);
+						                     latch.countDown();
+					                     }).then())
+				         )
+				         .block(Duration.ofSeconds(15))
+				         .onClose()
+				         .block(Duration.ofSeconds(30));
+
+		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
+				latch.await(15, TimeUnit.SECONDS));
+
+		assertEquals(messages, strings.size());
+	}
+
+	@Test
+	public void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
+		Consumer<Channel> channelInit = c -> c
+				.pipeline()
+				.addBefore(NettyPipeline.ReactiveBridge,
+						"codec",
+						new LineBasedFrameDecoder(8 * 1024));
+
+		tcpClientHandlesLineFeedData(opts -> opts
+				.host("localhost")
+				    .port(echoServerPort)
+				    .poolResources(PoolResources.fixed("tcpClientHandlesLineFeedDataFixedPool", 1))
+				    .afterChannelInit(channelInit)
+		);
+	}
+
+	@Test
+	public void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
+		Consumer<Channel> channelInit = c -> c
+				.pipeline()
+				.addBefore(NettyPipeline.ReactiveBridge,
+						"codec",
+						new LineBasedFrameDecoder(8 * 1024));
+
+		tcpClientHandlesLineFeedData(opts -> opts
+				.host("localhost")
+				    .port(echoServerPort)
+				    .poolResources(PoolResources.elastic("tcpClientHandlesLineFeedDataElasticPool"))
+				    .afterChannelInit(channelInit)
+		);
+	}
+
+	private void tcpClientHandlesLineFeedData(Consumer<? super ClientOptions.Builder> opsBuilder) throws InterruptedException {
+		final int messages = 100;
+		final CountDownLatch latch = new CountDownLatch(messages);
+		final List<String> strings = new ArrayList<>();
+
+		TcpClient.create(opsBuilder)
 				         .newHandler((in, out) ->
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
@@ -417,7 +480,7 @@ public class TcpClientTests {
 		          .isNotSameAs(client.options());
 	}
 
-	private static final class EchoServer
+	public static final class EchoServer
 			extends CountDownLatch
 			implements Runnable {
 
@@ -425,7 +488,7 @@ public class TcpClientTests {
 		private final    ServerSocketChannel server;
 		private volatile Thread              thread;
 
-		private EchoServer(int port) {
+		public EchoServer(int port) {
 			super(1);
 			this.port = port;
 			try {
