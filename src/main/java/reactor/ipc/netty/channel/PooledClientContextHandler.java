@@ -200,6 +200,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		if (createOperations(c, null) == null) {
 			setFuture(pool.acquire());
 		}
+		else {
+			c.closeFuture().addListener(ff -> pool.release(c));
+		}
 	}
 
 	@Override

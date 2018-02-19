@@ -157,8 +157,6 @@ final class DefaultPoolResources implements PoolResources {
 						ch.toString(),
 						activeConnections);
 			}
-			ch.closeFuture()
-			  .addListener(ff -> pool.release(ch).get());
 		}
 
 		@Override
@@ -170,12 +168,12 @@ final class DefaultPoolResources implements PoolResources {
 				still invoked, which can lead to double-decrement and an assertion error.
 
 				As such, it is best to only register the close handler on the channel in
-				`channelAcquired`.
+				`PooledClientContextHandler`.
 
 				see https://github.com/reactor/reactor-netty/issues/289
 			 */
 			if (log.isDebugEnabled()) {
-				log.debug("Created new pooled channel {}, pending channelAcquired, had {} active connections",
+				log.debug("Created new pooled channel {}, now {} active connections",
 						ch.toString(),
 						activeConnections);
 			}

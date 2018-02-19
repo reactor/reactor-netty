@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -46,6 +47,7 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.options.ClientOptions;
 import reactor.ipc.netty.resources.PoolResources;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -207,15 +209,12 @@ public class TcpClientTests {
 		      .block(Duration.ofSeconds(30));
 	}
 
-	@Test
-	public void connectionWillRetryConnectionAttemptWhenItFailsElastic()
+	private void connectionWillRetryConnectionAttemptWhenItFails(Consumer<ClientOptions.Builder> opsBuilder)
 			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
 
-		TcpClient.create(ops -> ops.host("localhost")
-		                           .port(abortServerPort + 3)
-		                           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100))
+		TcpClient.create(opsBuilder)
 		         .newHandler((in, out) -> Mono.never())
 		         .retryWhen(errors -> errors.zipWith(Flux.range(1, 4), (a, b) -> b)
 		                                    .flatMap(attempt -> {
@@ -244,43 +243,24 @@ public class TcpClientTests {
 		assertThat("totalDelay was >1.6s", totalDelay.get(), greaterThanOrEqualTo(1600L));
 	}
 
+	@Test
+	public void connectionWillRetryConnectionAttemptWhenItFailsElastic()
+			throws InterruptedException {
+		connectionWillRetryConnectionAttemptWhenItFails(ops -> ops
+				.host("localhost")
+				.port(abortServerPort + 3)
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));
+	}
+
 	//see https://github.com/reactor/reactor-netty/issues/289
 	@Test
 	public void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool()
 			throws InterruptedException {
-		final CountDownLatch latch = new CountDownLatch(1);
-		final AtomicLong totalDelay = new AtomicLong();
-
-		TcpClient.create(ops -> ops.host("localhost")
-		                           .port(abortServerPort + 3)
-		                           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
-		                           .poolResources(PoolResources.fixed("test", 1)))
-		         .newHandler((in, out) -> Mono.never())
-		         .retryWhen(errors -> errors.zipWith(Flux.range(1, 4), (a, b) -> b)
-		                                    .flatMap(attempt -> {
-			                                    switch (attempt) {
-				                                    case 1:
-					                                    totalDelay.addAndGet(100);
-					                                    return Mono.delay(Duration
-							                                    .ofMillis(100));
-				                                    case 2:
-					                                    totalDelay.addAndGet(500);
-					                                    return Mono.delay(Duration
-							                                    .ofMillis(500));
-				                                    case 3:
-					                                    totalDelay.addAndGet(1000);
-					                                    return Mono.delay(Duration
-							                                    .ofSeconds(1));
-				                                    default:
-					                                    latch.countDown();
-					                                    return Mono.<Long>empty();
-			                                    }
-		                                    }))
-		         .subscribe(System.out::println);
-
-		latch.await(5, TimeUnit.SECONDS);
-		assertTrue("latch was counted down:" + latch.getCount(), latch.getCount() == 0);
-		assertThat("totalDelay was >1.6s", totalDelay.get(), greaterThanOrEqualTo(1600L));
+		connectionWillRetryConnectionAttemptWhenItFails(ops -> ops
+				.host("localhost")
+				.port(abortServerPort + 3)
+				.poolResources(PoolResources.fixed("test", 1))
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));
 	}
 
 	@Test
