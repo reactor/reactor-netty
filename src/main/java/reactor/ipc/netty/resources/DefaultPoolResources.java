@@ -30,10 +30,13 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -82,7 +85,8 @@ final class DefaultPoolResources implements PoolResources {
 	}
 
 	final static class Pool extends AtomicBoolean
-			implements ChannelPoolHandler, ChannelPool, ChannelHealthChecker {
+			implements ChannelPoolHandler, ChannelPool, ChannelHealthChecker,
+			           GenericFutureListener<Future<Channel>> {
 
 		final ChannelPool               pool;
 		final Consumer<? super Channel> onChannelCreate;
@@ -114,12 +118,34 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public Future<Channel> acquire() {
-			return pool.acquire();
+			return acquire(defaultGroup.next().newPromise());
 		}
 
 		@Override
 		public Future<Channel> acquire(Promise<Channel> promise) {
-			return pool.acquire(promise);
+			return pool.acquire(promise).addListener(this);
+		}
+
+		@Override
+		public void operationComplete(Future<Channel> future) throws Exception {
+			if (future.isSuccess() ){
+				Channel c = future.get();
+				activeConnections.incrementAndGet();
+				if (log.isDebugEnabled()) {
+					log.debug("Acquired {}, now {} active connections",
+							c.toString(),
+							activeConnections);
+				}
+
+
+				if(c.attr(CLOSE_HANDLER_ADDED).setIfAbsent(true) == null) {
+					if (log.isDebugEnabled()) {
+						log.debug("Registering close event to pool release: {}", c.toString());
+					}
+					c.closeFuture()
+					 .addListener(ff -> pool.release(c));
+				}
+			}
 		}
 
 		@Override
@@ -151,17 +177,11 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public void channelAcquired(Channel ch) throws Exception {
-			activeConnections.incrementAndGet();
-			if (log.isDebugEnabled()) {
-				log.debug("Acquired {}, now {} active connections",
-						ch.toString(),
-						activeConnections);
-			}
+
 		}
 
 		@Override
 		public void channelCreated(Channel ch) throws Exception {
-			activeConnections.incrementAndGet();
 			/*
 				Sometimes the Channel can be notified as created (by FixedChannelPool) but
 				it actually fails to connect and the FixedChannelPool will decrement its
@@ -217,6 +237,9 @@ final class DefaultPoolResources implements PoolResources {
 	}
 
 	static final Logger log = Loggers.getLogger(DefaultPoolResources.class);
+
+	static final AttributeKey<Boolean> CLOSE_HANDLER_ADDED = AttributeKey.valueOf
+			("closeHandlerAdded");
 
 
 	final static class SocketAddressHolder {
