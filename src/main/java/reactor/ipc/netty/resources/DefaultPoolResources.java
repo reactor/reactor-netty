@@ -157,21 +157,28 @@ final class DefaultPoolResources implements PoolResources {
 						ch.toString(),
 						activeConnections);
 			}
+			ch.closeFuture()
+			  .addListener(ff -> pool.release(ch).get());
 		}
 
 		@Override
 		public void channelCreated(Channel ch) throws Exception {
-			activeConnections.incrementAndGet();
+			/*
+				Sometimes the Channel can be notified as created (by FixedChannelPool) but
+				it actually fails to connect and the FixedChannelPool will decrement its
+				active count, same as if it was released. The channel close promise is
+				still invoked, which can lead to double-decrement and an assertion error.
+
+				As such, it is best to only register the close handler on the channel in
+				`channelAcquired`.
+
+				see https://github.com/reactor/reactor-netty/issues/289
+			 */
 			if (log.isDebugEnabled()) {
-				log.debug("Created {}, now {} active connections",
+				log.debug("Created new pooled channel {}, pending channelAcquired, had {} active connections",
 						ch.toString(),
 						activeConnections);
 			}
-			if (log.isDebugEnabled()) {
-				log.debug("Created new pooled channel: " + ch.toString());
-			}
-			ch.closeFuture()
-			  .addListener(ff -> pool.release(ch));
 			if (onChannelCreate != null) {
 				onChannelCreate.accept(ch);
 			}
