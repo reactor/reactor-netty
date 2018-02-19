@@ -161,6 +161,7 @@ final class DefaultPoolResources implements PoolResources {
 
 		@Override
 		public void channelCreated(Channel ch) throws Exception {
+			activeConnections.incrementAndGet();
 			/*
 				Sometimes the Channel can be notified as created (by FixedChannelPool) but
 				it actually fails to connect and the FixedChannelPool will decrement its
@@ -172,6 +173,7 @@ final class DefaultPoolResources implements PoolResources {
 
 				see https://github.com/reactor/reactor-netty/issues/289
 			 */
+
 			if (log.isDebugEnabled()) {
 				log.debug("Created new pooled channel {}, now {} active connections",
 						ch.toString(),
