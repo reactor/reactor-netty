@@ -30,7 +30,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.assertj.core.api.Assertions;
@@ -46,6 +48,8 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.options.ClientOptions;
+import reactor.ipc.netty.resources.PoolResources;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -169,7 +173,69 @@ public class TcpClientTests {
 						                                                     NettyPipeline.ReactiveBridge,
 						                                                     "codec",
 						                                                     new LineBasedFrameDecoder(
-								                                                     8 * 1024))))
+								                                                     8 * 1024)))
+				)
+				         .newHandler((in, out) ->
+					        out.sendString(Flux.range(1, messages)
+					                            .map(i -> "Hello World!" + i + "\n")
+					                            .subscribeOn(Schedulers.parallel()))
+					            .then( in.receive()
+					                     .asString()
+					                     .take(100)
+					                     .flatMapIterable(s -> Arrays.asList(s.split("\\n")))
+					                     .doOnNext(s -> {
+						                     strings.add(s);
+						                     latch.countDown();
+					                     }).then())
+				         )
+				         .block(Duration.ofSeconds(15))
+				         .onClose()
+				         .block(Duration.ofSeconds(30));
+
+		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
+				latch.await(15, TimeUnit.SECONDS));
+
+		assertEquals(messages, strings.size());
+	}
+
+	@Test
+	public void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
+		Consumer<Channel> channelInit = c -> c
+				.pipeline()
+				.addBefore(NettyPipeline.ReactiveBridge,
+						"codec",
+						new LineBasedFrameDecoder(8 * 1024));
+
+		tcpClientHandlesLineFeedData(opts -> opts
+				.host("localhost")
+				    .port(echoServerPort)
+				    .poolResources(PoolResources.fixed("tcpClientHandlesLineFeedDataFixedPool", 1))
+				    .afterChannelInit(channelInit)
+		);
+	}
+
+	@Test
+	public void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
+		Consumer<Channel> channelInit = c -> c
+				.pipeline()
+				.addBefore(NettyPipeline.ReactiveBridge,
+						"codec",
+						new LineBasedFrameDecoder(8 * 1024));
+
+		tcpClientHandlesLineFeedData(opts -> opts
+				.host("localhost")
+				    .port(echoServerPort)
+				    .poolResources(PoolResources.elastic("tcpClientHandlesLineFeedDataElasticPool"))
+				    .afterChannelInit(channelInit)
+		);
+	}
+
+	private void tcpClientHandlesLineFeedData(Consumer<? super ClientOptions.Builder> opsBuilder) throws InterruptedException {
+		final int messages = 100;
+		final CountDownLatch latch = new CountDownLatch(messages);
+		final List<String> strings = new ArrayList<>();
+
+		TcpClient.create(opsBuilder)
 				         .newHandler((in, out) ->
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
@@ -206,15 +272,12 @@ public class TcpClientTests {
 		      .block(Duration.ofSeconds(30));
 	}
 
-	@Test
-	public void connectionWillRetryConnectionAttemptWhenItFails()
+	private void connectionWillRetryConnectionAttemptWhenItFails(Consumer<ClientOptions.Builder> opsBuilder)
 			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
 
-		TcpClient.create(ops -> ops.host("localhost")
-		                           .port(abortServerPort + 3)
-		                           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100))
+		TcpClient.create(opsBuilder)
 		         .newHandler((in, out) -> Mono.never())
 		         .retryWhen(errors -> errors.zipWith(Flux.range(1, 4), (a, b) -> b)
 		                                    .flatMap(attempt -> {
@@ -241,6 +304,26 @@ public class TcpClientTests {
 		latch.await(5, TimeUnit.SECONDS);
 		assertTrue("latch was counted down:" + latch.getCount(), latch.getCount() == 0);
 		assertThat("totalDelay was >1.6s", totalDelay.get(), greaterThanOrEqualTo(1600L));
+	}
+
+	@Test
+	public void connectionWillRetryConnectionAttemptWhenItFailsElastic()
+			throws InterruptedException {
+		connectionWillRetryConnectionAttemptWhenItFails(ops -> ops
+				.host("localhost")
+				.port(abortServerPort + 3)
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));
+	}
+
+	//see https://github.com/reactor/reactor-netty/issues/289
+	@Test
+	public void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool()
+			throws InterruptedException {
+		connectionWillRetryConnectionAttemptWhenItFails(ops -> ops
+				.host("localhost")
+				.port(abortServerPort + 3)
+				.poolResources(PoolResources.fixed("test", 1))
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));
 	}
 
 	@Test
@@ -397,7 +480,7 @@ public class TcpClientTests {
 		          .isNotSameAs(client.options());
 	}
 
-	private static final class EchoServer
+	public static final class EchoServer
 			extends CountDownLatch
 			implements Runnable {
 
@@ -405,7 +488,7 @@ public class TcpClientTests {
 		private final    ServerSocketChannel server;
 		private volatile Thread              thread;
 
-		private EchoServer(int port) {
+		public EchoServer(int port) {
 			super(1);
 			this.port = port;
 			try {

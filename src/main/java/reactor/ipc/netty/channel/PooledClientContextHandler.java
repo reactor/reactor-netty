@@ -189,7 +189,6 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		if (!c.isActive()) {
 			log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}",
 					c.toString());
-			release(c);
 			setFuture(pool.acquire());
 			return;
 		}
@@ -201,6 +200,8 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 			setFuture(pool.acquire());
 		}
 	}
+
+
 
 	@Override
 	@SuppressWarnings("unchecked")
