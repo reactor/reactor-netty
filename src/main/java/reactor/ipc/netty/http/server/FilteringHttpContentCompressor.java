@@ -37,9 +37,6 @@ final class FilteringHttpContentCompressor extends HttpContentCompressor {
 			FilterMessage filterMsg = (FilterMessage) msg;
 			ctx.write(filterMsg.unwrap(), promise);
 		}
-		else if (msg instanceof LastHttpContent) {
-			ctx.write(msg, promise);
-		}
 		else {
 			if (msg instanceof ByteBuf) {
 				msg = new DefaultHttpContent((ByteBuf) msg);

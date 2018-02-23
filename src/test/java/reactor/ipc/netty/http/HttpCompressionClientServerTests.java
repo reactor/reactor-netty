@@ -335,5 +335,37 @@ public class HttpCompressionClientServerTests {
 		            .expectNextMatches(s -> "testtesttesttesttest".equals(s))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+
+		server.dispose();
+	}
+
+	@Test
+	public void testIssue292() {
+		NettyContext server =
+				HttpServer.create(options -> options.compression(10)
+				                                    .port(0))
+				          .newHandler((req, res) -> res.sendHeaders().sendString(Mono.just("testtesttest")))
+				          .block(Duration.ofSeconds(30));
+
+		Mono<String> response =
+				HttpClient.create(server.address().getPort())
+				          .get("/")
+				          .flatMap(res -> res.receive().aggregate().asString());
+
+		StepVerifier.create(response)
+		            .expectNextMatches(s -> "testtesttest".equals(s))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		response = HttpClient.create(server.address().getPort())
+		                     .get("/")
+		                     .flatMap(res -> res.receive().aggregate().asString());
+
+		StepVerifier.create(response)
+		            .expectNextMatches(s -> "testtesttest".equals(s))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		server.dispose();
 	}
 }

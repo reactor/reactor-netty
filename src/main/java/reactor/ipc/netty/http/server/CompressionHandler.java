@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.LastHttpContent;
 import reactor.ipc.netty.NettyPipeline;
 
 /**
@@ -50,6 +51,9 @@ final class CompressionHandler extends ChannelDuplexHandler {
 		else if (msg instanceof HttpMessage) {
 			offerHttpMessage(msg, promise);
 		}
+		else if (bodyCompressThreshold > 0 && msg instanceof LastHttpContent) {
+			super.write(ctx, FilteringHttpContentCompressor.FilterMessage.wrap(msg), promise);
+		}
 		else {
 			super.write(ctx, msg, promise);
 		}
@@ -66,6 +70,9 @@ final class CompressionHandler extends ChannelDuplexHandler {
 					writeSkipCompress(ctx, msg, p);
 				}
 			}
+		}
+		else if (evt == NettyPipeline.handlerTerminatedEvent()) {
+			bodyCompressThreshold = minResponseSize;
 		}
 		super.userEventTriggered(ctx, evt);
 	}
