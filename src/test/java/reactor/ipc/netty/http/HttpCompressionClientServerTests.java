@@ -24,6 +24,7 @@ import java.util.zip.GZIPInputStream;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Assert;
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
@@ -344,25 +345,28 @@ public class HttpCompressionClientServerTests {
 		NettyContext server =
 				HttpServer.create(options -> options.compression(10)
 				                                    .port(0))
-				          .newHandler((req, res) -> res.sendHeaders().sendString(Mono.just("testtesttest")))
+				          .newHandler((req, res) ->
+				                  res.sendHeaders().sendString(Flux.just("test", "test", "test", "test")))
 				          .block(Duration.ofSeconds(30));
 
 		Mono<String> response =
-				HttpClient.create(server.address().getPort())
+				HttpClient.create(options -> options.port(server.address().getPort())
+				                                    .compression(true))
 				          .get("/")
 				          .flatMap(res -> res.receive().aggregate().asString());
 
 		StepVerifier.create(response)
-		            .expectNextMatches(s -> "testtesttest".equals(s))
+		            .expectNextMatches(s -> "testtesttesttest".equals(s))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		response = HttpClient.create(server.address().getPort())
+		response = HttpClient.create(options -> options.port(server.address().getPort())
+		                                               .compression(true))
 		                     .get("/")
 		                     .flatMap(res -> res.receive().aggregate().asString());
 
 		StepVerifier.create(response)
-		            .expectNextMatches(s -> "testtesttest".equals(s))
+		            .expectNextMatches(s -> "testtesttesttest".equals(s))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
