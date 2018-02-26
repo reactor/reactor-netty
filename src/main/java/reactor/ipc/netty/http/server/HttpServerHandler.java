@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
@@ -167,7 +168,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				setKeepAlive(response, false);
 			}
 
-			if (isInformational(response)) {
+			if (response.status().equals(HttpResponseStatus.CONTINUE)) {
 				ctx.write(msg, promise);
 				return;
 			}
