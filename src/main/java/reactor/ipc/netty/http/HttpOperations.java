@@ -48,7 +48,6 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
-import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.channel.data.AbstractFileChunkedStrategy;
@@ -147,16 +146,19 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
 				}
 
-				if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-						outboundHttpMessage())) {
-					markPersistent(false);
-				}
+				checkIfNotPersistent();
+
 				return channel().writeAndFlush(outboundHttpMessage());
 			}
 			else {
 				return channel().newSucceededFuture();
 			}
 		});
+	}
+
+	protected void checkIfNotPersistent(){
+		//default doesn't imply anything - only server usually implies if connection
+		// should default persist (keep-alive) when response is not self defined
 	}
 
 	protected abstract HttpMessage newFullEmptyBodyMessage();

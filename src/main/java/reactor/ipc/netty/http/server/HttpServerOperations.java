@@ -281,7 +281,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public Mono<Void> send() {
 		if (markSentHeaderAndBody()) {
 			HttpMessage response = newFullEmptyBodyMessage();
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(response));
+			return FutureMono.deferFuture(() -> {
+				markPersistent(true);
+				return channel().writeAndFlush(response);
+			});
 		}
 		else {
 			return Mono.empty();
@@ -388,6 +391,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	protected void checkIfNotPersistent(){
+		if (!HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
+				nettyResponse)) {
+			markPersistent(false);
+		}
+	}
+
+	@Override
 	protected void onOutboundComplete() {
 		if (isWebsocket()) {
 			return;
@@ -402,6 +413,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
 			}
 
+			markPersistent(true);
 			f = channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
 		else if (markSentBody()) {
