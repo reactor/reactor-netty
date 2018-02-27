@@ -317,19 +317,20 @@ public class HttpTests {
 	}
 
 	@Test
-	public void streamAndPool() throws Exception {
+	public void streamAndPoolExplicitCompression() throws Exception {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
 		NettyContext server =
-				HttpServer.create(opts -> opts.port(0).compression(true))
+				HttpServer.create(opts -> opts.port(0))
 				          .newRouter(r -> r.post("/hi", (req, res) -> req.receive()
 				                                                       .aggregate()
 				                                                       .asString()
 				                                                       .log()
-				                                                       .then())
+				                                                       .then(res.sendString(Flux.just("test")).then()))
 				                           .get("/stream", (req, res) ->
 						                           req.receive()
-						                              .then(res.options(op -> op.flushOnEach())
+						                              .then(res.compression(true)
+						                                       .options(op -> op.flushOnEach())
 						                                       .sendString(ep.log()).then())))
 				          .block(Duration.ofSeconds(30));
 
@@ -361,6 +362,82 @@ public class HttpTests {
 		            .thenAwait(Duration.ofMillis(300))
 		            .then(() -> ep.onComplete())
 		            .verifyComplete();
+
+
+
+		content =
+				HttpClient.create(opts -> opts.port(server.address().getPort())
+				                              .compression(true))
+				          .post("/hi", req -> req.sendString(Flux.just("1", "2", "3", "4", "5")))
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asString()
+				                             .log()
+				          ).block();
+
+
+		server.dispose();
+	}
+
+
+	@Test
+	public void streamAndPoolDefaultCompression() throws Exception {
+		EmitterProcessor<String> ep = EmitterProcessor.create();
+
+		NettyContext server =
+				HttpServer.create(opts -> opts.port(0).compression(true))
+				          .newRouter(r -> r.post("/hi", (req, res) -> req.receive()
+				                                                         .aggregate()
+				                                                         .asString()
+				                                                         .log()
+				                                                         .then(res.compression(false)
+				                                                                  .sendString(Flux.just("test")).then()))
+				                           .get("/stream", (req, res) ->
+						                           req.receive()
+						                              .then(res.options(op -> op.flushOnEach())
+						                                       .sendString(ep.log()).then())))
+				          .block(Duration.ofSeconds(30));
+
+
+		String content =
+				HttpClient.create(opts -> opts.port(server.address().getPort())
+				                              .compression(true))
+				          .post("/hi", req -> req.sendString(Flux.just("1", "2", "3", "4", "5")))
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asString()
+				                             .log()
+				          ).block();
+
+		Flux<String> f = HttpClient.create(opts -> opts.port(server.address().getPort())
+		                                               .compression(true))
+		                           .get("/stream")
+		                           .flatMapMany(res -> res.receive()
+		                                                  .asString());
+		System.out.println(content);
+
+		StepVerifier.create(f)
+		            .then(() -> ep.onNext("test1"))
+		            .expectNext("test1")
+		            .thenAwait(Duration.ofMillis(300))
+		            .then(() -> ep.onNext("test2"))
+		            .thenAwait(Duration.ofMillis(300))
+		            .expectNext("test2")
+		            .thenAwait(Duration.ofMillis(300))
+		            .then(() -> ep.onComplete())
+		            .verifyComplete();
+
+
+
+		content =
+				HttpClient.create(opts -> opts.port(server.address().getPort())
+				                              .compression(true))
+				          .post("/hi", req -> req.sendString(Flux.just("1", "2", "3", "4", "5")))
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asString()
+				                             .log()
+				          ).block();
 
 
 		server.dispose();

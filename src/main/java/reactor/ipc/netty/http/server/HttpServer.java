@@ -247,7 +247,16 @@ public final class HttpServer
 			return ContextHandler.newServerContext(sink,
 					options,
 					loggingHandler,
-					(ch, c, msg) -> HttpServerOperations.bindHttp(ch, handler, c, msg))
+					(ch, c, msg) -> {
+
+						HttpServerOperations ops = HttpServerOperations.bindHttp(ch, handler,	c, msg);
+
+						if(options.minCompressionResponseSize() >= 0) {
+							ops.compression(true);
+						}
+
+						return ops;
+					})
 			                     .onPipeline(this)
 			                     .autoCreateOperations(false);
 		}
@@ -260,10 +269,6 @@ public final class HttpServer
 		            options.httpCodecMaxChunkSize(),
 		            options.httpCodecValidateHeaders(),
 		            options.httpCodecInitialBufferSize()));
-
-            if(options.minCompressionResponseSize() >= 0) {
-                    p.addLast(NettyPipeline.CompressionHandler, new CompressionHandler(options.minCompressionResponseSize()));
-            }
 
             p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(c));
         }
