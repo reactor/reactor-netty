@@ -131,6 +131,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else {
 			res.headers().set(responseHeaders);
 		}
+		markPersistent(true);
 		return res;
 	}
 
@@ -162,8 +163,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);
 		}
-
-		markPersistent(chunked);
 		return this;
 	}
 
@@ -281,10 +280,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public Mono<Void> send() {
 		if (markSentHeaderAndBody()) {
 			HttpMessage response = newFullEmptyBodyMessage();
-			return FutureMono.deferFuture(() -> {
-				markPersistent(true);
-				return channel().writeAndFlush(response);
-			});
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(response));
 		}
 		else {
 			return Mono.empty();
@@ -413,7 +409,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
 			}
 
-			markPersistent(true);
 			f = channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
 		else if (markSentBody()) {

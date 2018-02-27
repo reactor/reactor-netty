@@ -52,6 +52,7 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.channel.AbortedException;
+import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 import reactor.ipc.netty.resources.PoolResources;
@@ -111,6 +112,8 @@ public class HttpClientTest {
 		resp.dispose();
 
 		x.dispose();
+
+		pool.dispose();
 	}
 
 	DefaultFullHttpResponse response() {
@@ -196,6 +199,7 @@ public class HttpClientTest {
 		}
 
 		x.dispose();
+		pool.dispose();
 		Assert.fail("Not aborted");
 	}
 
@@ -401,7 +405,7 @@ public class HttpClientTest {
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false)
 				                                       .sendString(Flux.just("hello")))
-		                                 .block(Duration.ofSeconds(30));
+		                                 .block();
 
 		FutureMono.from(r.context()
 		                 .channel()
@@ -452,23 +456,33 @@ public class HttpClientTest {
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
 		r.dispose();
 		r2.dispose();
+		p.dispose();
 	}
 
 	@Test
 	public void disableChunkImplicitDefault() throws Exception {
-		HttpClientResponse r = HttpClient.create("google.com")
-		                                 .get("/unsupportedURI",
+		PoolResources p = PoolResources.fixed("test", 1);
+
+		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(p))
+		                                 .get("http://google.com/unsupportedURI",
 				                                 c -> c.chunkedTransfer(false)
 				                                       .failOnClientError(false))
 		                                 .block(Duration.ofSeconds(30));
 
-		FutureMono.from(r.context()
-		                 .channel()
-		                 .closeFuture())
-		          .block(Duration.ofSeconds(5));
+		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
+		                                  .get("http://google.com/unsupportedURI",
+				                                 c -> c.chunkedTransfer(false)
+				                                       .failOnClientError(false))
+		                                 .block(Duration.ofSeconds(30));
+
+		Assert.assertTrue(r.context()
+		                   .channel() == r2.context()
+		                                   .channel());
 
 		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
 		r.dispose();
+		r2.dispose();
+		p.dispose();
 	}
 
 	@Test
@@ -491,6 +505,7 @@ public class HttpClientTest {
 		Assert.assertTrue(r.status() == HttpResponseStatus.BAD_REQUEST);
 		r.dispose();
 		r1.dispose();
+		fixed.dispose();
 	}
 
 	@Test
