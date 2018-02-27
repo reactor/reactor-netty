@@ -18,6 +18,7 @@ package reactor.ipc.netty;
 
 import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -33,7 +34,8 @@ import reactor.util.context.Context;
  */
 abstract class PublisherContext {
 
-	private PublisherContext() { }
+	PublisherContext() {
+	}
 
 	/**
 	 * Incorporating external {@link Context} with given {@link Publisher<T>}
@@ -44,22 +46,53 @@ abstract class PublisherContext {
 	 *
 	 * @return Publisher instance incorporated with external context
 	 */
-	public static <T> Publisher<T> withContext(Publisher<T> publisher, Context context) {
+	static <T> Publisher<T> withContext(Publisher<T> publisher, Context context) {
 		Objects.requireNonNull(publisher);
 		Objects.requireNonNull(context);
 
-		if (publisher instanceof Flux) {
+		if (publisher instanceof Callable) {
+			return publisher;
+		}
+		else if (publisher instanceof Flux) {
 			return ((Flux<T>) publisher).subscriberContext(context);
 		}
 		else if (publisher instanceof Mono) {
 			return ((Mono<T>) publisher).subscriberContext(context);
 		}
-		else if (publisher instanceof Callable) {
+		else {
 			return publisher;
 		}
-		else {
-			return Flux.from(publisher)
-			           .subscriberContext(context);
+	}
+
+	static <T, V> Publisher<V> publiserOrScalarMap(Publisher<T> publisher,
+			Function<? super T, ? extends V> mapper) {
+
+		if (publisher instanceof Callable) {
+			return Mono.fromCallable(new ScalarMap<>(publisher, mapper));
+		}
+
+		return Flux.from(publisher)
+		           .map(mapper);
+	}
+
+	static final class ScalarMap<T, V> implements Callable<V> {
+
+		final Callable<T>                      source;
+		final Function<? super T, ? extends V> mapper;
+
+		@SuppressWarnings("unchecked")
+		public ScalarMap(Publisher<T> source, Function<? super T, ? extends V> mapper) {
+			this.source = (Callable<T>) source;
+			this.mapper = mapper;
+		}
+
+		@Override
+		public V call() throws Exception {
+			T called = source.call();
+			if (called == null) {
+				return null;
+			}
+			return mapper.apply(called);
 		}
 	}
 }

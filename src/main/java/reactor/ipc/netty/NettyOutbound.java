@@ -167,8 +167,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * error during write
 	 */
 	default NettyOutbound sendByteArray(Publisher<? extends byte[]> dataStream) {
-		return send(Flux.from(dataStream)
-		                .map(Unpooled::wrappedBuffer));
+		return send(PublisherContext.publiserOrScalarMap(dataStream, Unpooled::wrappedBuffer));
 	}
 
 	/**
@@ -341,10 +340,9 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	default NettyOutbound sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
-		return sendObject(Flux.from(dataStream)
-		                      .map(s -> alloc()
-		                                   .buffer()
-		                                   .writeBytes(s.getBytes(charset))));
+		return sendObject(PublisherContext.publiserOrScalarMap(dataStream, s -> alloc()
+				.buffer()
+				.writeBytes(s.getBytes(charset))));
 	}
 
 	/**
