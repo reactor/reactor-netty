@@ -133,7 +133,7 @@ public class ChannelOperationsHandlerTest {
 						          req -> req.sendString(Flux.just("a", "b", "c")));
 
 		StepVerifier.create(response.log())
-		            .expectError()
+		            .expectErrorMessage("Connection closed prematurely")
 		            .verify();
 
 		abortServer.close();
