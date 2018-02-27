@@ -174,7 +174,7 @@ public class DefaultPoolResourcesTest {
 
 			assertThat(end - start)
 					.as("channel4 acquire blocked until channel1 released")
-					.isGreaterThan(500);
+					.isGreaterThanOrEqualTo(500);
 
 			pool.release(channel3).get();
 			pool.release(channel4).get();
