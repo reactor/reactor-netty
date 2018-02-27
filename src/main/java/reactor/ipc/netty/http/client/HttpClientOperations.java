@@ -272,6 +272,17 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public NettyOutbound sendObject(Publisher<?> dataStream) {
+		if (!HttpUtil.isTransferEncodingChunked(nettyRequest) &&
+				!HttpUtil.isContentLengthSet(nettyRequest) &&
+				!method().equals(HttpMethod.HEAD) &&
+				!hasSentHeaders()) {
+			HttpUtil.setTransferEncodingChunked(nettyRequest, true);
+		}
+		return super.sendObject(dataStream);
+	}
+
+	@Override
 	public HttpClientRequest header(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
 			this.requestHeaders.set(name, value);

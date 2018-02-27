@@ -18,7 +18,9 @@ package reactor.ipc.netty.http.server;
 
 import java.util.Queue;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -184,8 +186,8 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				return;
 			}
 
-			ctx.write(msg, promise);
-			HttpServerOperations.cleanHandlerTerminate(ctx.channel());
+			ctx.write(msg, promise)
+			   .addListener(new TerminateHttpHandler(ctx.channel()));
 
 			if (!persistentConnection) {
 				return;
@@ -292,5 +294,19 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				MULTIPART_PREFIX,
 				0,
 				MULTIPART_PREFIX.length());
+	}
+
+	static final class TerminateHttpHandler implements ChannelFutureListener {
+
+		final Channel channel;
+
+		TerminateHttpHandler(Channel channel) {
+			this.channel = channel;
+		}
+
+		@Override
+		public void operationComplete(ChannelFuture future) throws Exception {
+			HttpServerOperations.cleanHandlerTerminate(channel);
+		}
 	}
 }

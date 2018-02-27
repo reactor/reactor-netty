@@ -103,34 +103,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return this;
 		}
 
-		return then(FutureMono.deferFuture(() -> {
-			if (markSentHeaders()) {
-				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-					outboundHttpMessage().headers()
-					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
-				}
-
-				HttpMessage message;
-				if (!HttpUtil.isTransferEncodingChunked(outboundHttpMessage())
-						&& (!HttpUtil.isContentLengthSet(outboundHttpMessage()) ||
-						HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0)) {
-					if(isKeepAlive() && markSentBody()){
-						message = newFullEmptyBodyMessage();
-					}
-					else {
-						markPersistent(false);
-						message = outboundHttpMessage();
-					}
-				}
-				else {
-					message = outboundHttpMessage();
-				}
-				return channel().writeAndFlush(message);
-			}
-			else {
-				return channel().newSucceededFuture();
-			}
-		}));
+		return then(Mono.empty());
 	}
 
 	@Override
@@ -141,14 +114,26 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 		return FutureMono.deferFuture(() -> {
 			if (markSentHeaders()) {
+				HttpMessage msg;
+
 				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
 					outboundHttpMessage().headers()
 					                     .remove(HttpHeaderNames.TRANSFER_ENCODING);
+					if (HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0) {
+						msg = newFullEmptyBodyMessage();
+					}
+					else {
+						msg = outboundHttpMessage();
+					}
 				}
+				else {
+					msg = outboundHttpMessage();
+				}
+
 
 				checkIfNotPersistent();
 
-				return channel().writeAndFlush(outboundHttpMessage());
+				return channel().writeAndFlush(msg);
 			}
 			else {
 				return channel().newSucceededFuture();
