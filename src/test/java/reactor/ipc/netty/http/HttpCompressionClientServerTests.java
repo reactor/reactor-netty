@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author mostroverkhov
+ * @author smaldini
  */
 public class HttpCompressionClientServerTests {
 
@@ -162,11 +163,86 @@ public class HttpCompressionClientServerTests {
 		            .block();
 	}
 
+
+
 	@Test
-	@Ignore
 	public void serverCompressionEnabledSmallResponse() throws Exception {
 		HttpServer server = HttpServer.create(o -> o.port(0)
 		                                            .compression(25));
+
+		NettyContext nettyContext =
+				server.newHandler((in, out) -> out.header("content-length", "5")
+				                                  .sendString(Mono.just("reply")))
+				      .block(Duration.ofMillis(10_000));
+
+		//don't activate compression on the client options to avoid auto-handling (which removes the header)
+		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
+		HttpClientResponse resp =
+				//edit the header manually to attempt to trigger compression on server side
+				client.get("/test", req -> req.header("Accept-Encoding", "gzip"))
+				      .block();
+
+		//check the server didn't send the gzip header, only transfer-encoding
+		HttpHeaders headers = resp.responseHeaders();
+		assertThat(headers.get("conTENT-encoding")).isNull();
+
+		//check the server sent plain text
+		String reply = resp.receive()
+		                   .asString()
+		                   .blockFirst();
+		Assert.assertEquals("reply", reply);
+
+		resp.dispose();
+		nettyContext.dispose();
+		nettyContext.onClose()
+		            .block();
+	}
+
+	@Test
+	public void serverCompressionPredicateTrue() throws Exception {
+		HttpServer server = HttpServer.create(o -> o.port(0)
+		                                            .compression((req, res) -> true));
+
+		NettyContext nettyContext =
+				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
+				      .block(Duration.ofMillis(10_000));
+
+		//don't activate compression on the client options to avoid auto-handling (which removes the header)
+		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
+		HttpClientResponse resp =
+				//edit the header manually to attempt to trigger compression on server side
+				client.get("/test", req -> req.header("Accept-Encoding", "gzip"))
+				      .block();
+
+		assertThat(resp.responseHeaders().get("content-encoding")).isEqualTo("gzip");
+
+		byte[] replyBuffer = resp.receive()
+		                         .aggregate()
+		                         .asByteArray()
+		                         .block();
+
+		assertThat(new String(replyBuffer)).isNotEqualTo("reply");
+
+		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(replyBuffer));
+		byte deflatedBuf[] = new byte[1024];
+		int readable = gis.read(deflatedBuf);
+		gis.close();
+
+		assertThat(readable).isGreaterThan(0);
+
+		String deflated = new String(deflatedBuf, 0, readable);
+
+		assertThat(deflated).isEqualTo("reply");
+
+		nettyContext.dispose();
+		nettyContext.onClose()
+		            .block();
+	}
+
+	@Test
+	public void serverCompressionPredicateFalse() throws Exception {
+		HttpServer server = HttpServer.create(o -> o.port(0)
+		                                            .compression((req, res) -> false));
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))

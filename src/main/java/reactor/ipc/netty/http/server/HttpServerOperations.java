@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -78,14 +79,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	static HttpServerOperations bindHttp(Channel channel,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context,
+			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			Object msg) {
-		return new HttpServerOperations(channel, handler, context, (HttpRequest) msg);
+		return new HttpServerOperations(channel, handler, context, compressionPredicate,(HttpRequest) msg);
 	}
 
 	final HttpResponse nettyResponse;
 	final HttpHeaders  responseHeaders;
 	final Cookies     cookieHolder;
 	final HttpRequest nettyRequest;
+
+	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 
 	Function<? super String, Map<String, String>> paramsResolver;
 
@@ -96,16 +100,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
 		this.nettyRequest = replaced.nettyRequest;
+		this.compressionPredicate = replaced.compressionPredicate;
 	}
 
 	HttpServerOperations(Channel ch,
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context,
+			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			HttpRequest nettyRequest) {
 		super(ch, handler, context);
 		this.nettyRequest = Objects.requireNonNull(nettyRequest, "nettyRequest");
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
+		this.compressionPredicate = compressionPredicate;
 		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
 		chunkedTransfer(true);
 
@@ -363,11 +370,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void onHandlerStart() {
-		applyHandler();
-	}
-
-	@Override
 	public HttpServerResponse compression(boolean compress) {
 		if (!compress) {
 			removeHandler(NettyPipeline.CompressionHandler);
@@ -391,6 +393,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	protected void onHandlerStart() {
+		applyHandler();
+	}
+
+	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpContent) {
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
@@ -410,10 +417,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void checkIfNotPersistent(){
+	protected void preSendHeadersAndStatus(){
 		if (!HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
 				nettyResponse)) {
 			markPersistent(false);
+		}
+		if (compressionPredicate != null && compressionPredicate.test(this, this)) {
+			compression(true);
 		}
 	}
 
