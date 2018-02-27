@@ -130,8 +130,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					msg = outboundHttpMessage();
 				}
 
-
-				checkIfNotPersistent();
+				preSendHeadersAndStatus();
 
 				return channel().writeAndFlush(msg);
 			}
@@ -141,10 +140,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		});
 	}
 
-	protected void checkIfNotPersistent(){
-		//default doesn't imply anything - only server usually implies if connection
-		// should default persist (keep-alive) when response is not self defined
-	}
+	protected abstract void preSendHeadersAndStatus();
 
 	protected abstract HttpMessage newFullEmptyBodyMessage();
 

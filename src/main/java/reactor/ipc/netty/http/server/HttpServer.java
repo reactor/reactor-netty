@@ -20,15 +20,16 @@ import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.NetUtil;
-
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -233,6 +234,43 @@ public final class HttpServer
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
 
+	static BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
+			HttpServerOptions options) {
+
+		int minResponseSize = options.minCompressionResponseSize();
+
+		if (minResponseSize < 0) {
+			return null;
+		}
+
+		if (minResponseSize == 0) {
+			return options.compressionPredicate();
+		}
+
+		BiPredicate<HttpServerRequest, HttpServerResponse> lengthPredicate =
+				(req, res) -> {
+					String length = res.responseHeaders()
+					                   .get(HttpHeaderNames.CONTENT_LENGTH);
+
+					if (length == null) {
+						return true;
+					}
+
+					try {
+						return Long.parseLong(length) >= minResponseSize;
+					}
+					catch (NumberFormatException nfe) {
+						return true;
+					}
+				};
+
+		if (options.compressionPredicate() == null) {
+			return lengthPredicate;
+		}
+
+		return lengthPredicate.and(options.compressionPredicate());
+	}
+
 	final class TcpBridgeServer extends TcpServer
 			implements BiConsumer<ChannelPipeline, ContextHandler<Channel>> {
 
@@ -244,14 +282,24 @@ public final class HttpServer
 		protected ContextHandler<Channel> doHandler(
 				BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 				MonoSink<NettyContext> sink) {
+
+			BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate =
+					compressPredicate(options);
+
+			boolean alwaysCompress = compressPredicate == null && options.minCompressionResponseSize() == 0;
+
 			return ContextHandler.newServerContext(sink,
 					options,
 					loggingHandler,
 					(ch, c, msg) -> {
 
-						HttpServerOperations ops = HttpServerOperations.bindHttp(ch, handler,	c, msg);
+						HttpServerOperations ops = HttpServerOperations.bindHttp(ch,
+								handler,
+								c,
+								compressPredicate,
+								msg);
 
-						if(options.minCompressionResponseSize() >= 0) {
+						if (alwaysCompress) {
 							ops.compression(true);
 						}
 

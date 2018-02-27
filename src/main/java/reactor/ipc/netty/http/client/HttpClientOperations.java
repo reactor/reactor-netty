@@ -492,6 +492,11 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	protected void preSendHeadersAndStatus() {
+		//Noop
+	}
+
+	@Override
 	protected void onHandlerStart() {
 		applyHandler();
 	}
