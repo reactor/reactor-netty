@@ -26,6 +26,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -311,6 +312,56 @@ public class HttpTests {
 		System.out.println(content);
 
 		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		server.dispose();
+	}
+
+	@Test
+	public void streamAndPool() throws Exception {
+		EmitterProcessor<String> ep = EmitterProcessor.create();
+
+		NettyContext server =
+				HttpServer.create(opts -> opts.port(0).compression(true))
+				          .newRouter(r -> r.post("/hi", (req, res) -> req.receive()
+				                                                       .aggregate()
+				                                                       .asString()
+				                                                       .log()
+				                                                       .then())
+				                           .get("/stream", (req, res) ->
+						                           req.receive()
+						                              .then(res.options(op -> op.flushOnEach())
+						                                       .sendString(ep.log()).then())))
+				          .block(Duration.ofSeconds(30));
+
+
+		String content =
+				HttpClient.create(opts -> opts.port(server.address().getPort())
+				                              .compression(true))
+				          .post("/hi", req -> req.sendString(Flux.just("1", "2", "3", "4", "5")))
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asString()
+				                             .log()
+				          ).block();
+
+		Flux<String> f = HttpClient.create(opts -> opts.port(server.address().getPort())
+		                              .compression(true))
+		          .get("/stream")
+		          .flatMapMany(res -> res.receive()
+		                                 .asString());
+		System.out.println(content);
+
+		StepVerifier.create(f)
+		            .then(() -> ep.onNext("test1"))
+		            .expectNext("test1")
+		            .thenAwait(Duration.ofMillis(300))
+		            .then(() -> ep.onNext("test2"))
+		            .thenAwait(Duration.ofMillis(300))
+		            .expectNext("test2")
+		            .thenAwait(Duration.ofMillis(300))
+		            .then(() -> ep.onComplete())
+		            .verifyComplete();
+
 
 		server.dispose();
 	}

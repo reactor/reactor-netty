@@ -15,25 +15,29 @@
  */
 package reactor.ipc.netty.http.server;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
-
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.AbstractCoalescingBufferQueue;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.CoalescingBufferQueue;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.AbortedException;
 
 /**
  * @author mostroverkhov
+ * @author smaldini
  */
-final class CompressionHandler extends ChannelDuplexHandler {
+final class CompressionHandler extends HttpContentCompressor {
 
 	final int minResponseSize;
-	final Queue<Object> messages = new ArrayDeque<>();
+
+	AbstractCoalescingBufferQueue messages;
+
+	HttpMessage first;
 
 	int bodyCompressThreshold;
 
@@ -43,120 +47,124 @@ final class CompressionHandler extends ChannelDuplexHandler {
 	}
 
 	@Override
+	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+		super.handlerAdded(ctx);
+		messages = new CoalescingBufferQueue(ctx.channel());
+	}
+
+	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
 			throws Exception {
-		if (msg instanceof ByteBuf) {
+		if (msg instanceof HttpMessage) {
+			first = (HttpMessage) msg;
+			promise.setSuccess();
+		}
+		else if (msg instanceof ByteBuf) {
 			offerByteBuf(ctx, msg, promise);
 		}
-		else if (msg instanceof HttpMessage) {
-			offerHttpMessage(msg, promise);
-		}
 		else if (bodyCompressThreshold > 0 && msg instanceof LastHttpContent) {
-			super.write(ctx, FilteringHttpContentCompressor.FilterMessage.wrap(msg), promise);
+			ctx.write(msg, promise);
 		}
-		else {
+		else{
 			super.write(ctx, msg, promise);
+		}
+		if (msg instanceof LastHttpContent) {
+			bodyCompressThreshold = minResponseSize;
 		}
 	}
 
 	@Override
 	public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
 			throws Exception {
-		if (evt == NettyPipeline.responseCompressionEvent()) {
-			if (bodyCompressThreshold > 0 || !messages.isEmpty()) {
-				while (!messages.isEmpty()) {
-					Object msg = messages.poll();
-					ChannelPromise p = (ChannelPromise) messages.poll();
-					writeSkipCompress(ctx, msg, p);
+		if (evt == NettyPipeline.responseCompressionEvent() || evt == NettyPipeline.handlerTerminatedEvent()) {
+			if (!messages.isEmpty()) {
+				if (bodyCompressThreshold <= 0) {
+					writeMessage(ctx);
+					pollAndWrite(ctx);
+				}
+				else {
+					writeMessageWithoutCompression(ctx);
+					messages.writeAndRemoveAll(ctx);
 				}
 			}
-		}
-		else if (evt == NettyPipeline.handlerTerminatedEvent()) {
-			bodyCompressThreshold = minResponseSize;
+			else {
+				writeMessageWithoutCompression(ctx);
+			}
 		}
 		super.userEventTriggered(ctx, evt);
 	}
 
 	@Override
+	public void flush(ChannelHandlerContext ctx) throws Exception {
+		drain(ctx);
+		super.flush(ctx);
+	}
+
+	void writeMessageWithoutCompression(ChannelHandlerContext ctx){
+		if (first != null) {
+			HttpMessage first = this.first;
+			this.first = null;
+
+			bodyCompressThreshold = Integer.MAX_VALUE;
+
+			ctx.write(first, ctx.voidPromise());
+		}
+	}
+
+	void writeMessage(ChannelHandlerContext ctx) throws Exception{
+		if (first != null) {
+			HttpMessage first = this.first;
+			this.first = null;
+
+			super.write(ctx, first, ctx.voidPromise());
+		}
+	}
+
+	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
 			throws Exception {
-		releaseMsgs();
+		messages.releaseAndFailAll(ctx, cause);
 		super.exceptionCaught(ctx, cause);
 	}
+
+	static final AbortedException aborted = new AbortedException();
 
 	@Override
 	public void close(ChannelHandlerContext ctx, ChannelPromise promise)
 			throws Exception {
-		releaseMsgs();
+		messages.releaseAndFailAll(ctx, aborted);
 		super.close(ctx, promise);
-	}
-
-	@Override
-	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-		addCompressionHandlerOnce(ctx, ctx.pipeline());
-	}
-
-	void offerHttpMessage(Object msg, ChannelPromise p) {
-		messages.offer(msg);
-		messages.offer(p);
-		p.setSuccess();
 	}
 
 	void offerByteBuf(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
 			throws Exception {
 		ByteBuf byteBuf = (ByteBuf) msg;
-		messages.offer(byteBuf);
-		messages.offer(promise);
-		if (bodyCompressThreshold > 0) {
+		messages.add(byteBuf, promise);
+		int threshold = bodyCompressThreshold;
+		if (threshold > 0 && threshold != Integer.MAX_VALUE) {
 			bodyCompressThreshold -= byteBuf.readableBytes();
 		}
 		drain(ctx);
 	}
 
+	void pollAndWrite(ChannelHandlerContext ctx) throws Exception {
+		ByteBuf b;
+		for (; ; ) {
+			ChannelPromise p = ctx.newPromise();
+			b = messages.removeFirst(p);
+
+			if (b == null) {
+				break;
+			}
+
+			super.write(ctx, new DefaultHttpContent(b), p);
+		}
+	}
+
 	void drain(ChannelHandlerContext ctx) throws Exception {
-		if (bodyCompressThreshold <= 0) {
-			while (!messages.isEmpty()) {
-				Object message = messages.poll();
-				ChannelPromise p = (ChannelPromise) messages.poll();
-				writeCompress(ctx, message, p);
-			}
-		}
-	}
-
-	void writeCompress(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-			throws Exception {
-		if (msg instanceof HttpMessage) {
-			ctx.write(msg);
-		}
-		else {
-			ctx.write(msg, promise);
-		}
-	}
-
-	void writeSkipCompress(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-		if (msg instanceof HttpMessage) {
-			ctx.write(FilteringHttpContentCompressor.FilterMessage.wrap(msg));
-		}
-		else {
-			ctx.write(FilteringHttpContentCompressor.FilterMessage.wrap(msg), promise);
-		}
-	}
-
-	void releaseMsgs() {
-		while (!(messages.isEmpty())) {
-			Object msg = messages.poll();
-			if (msg instanceof ByteBuf) {
-				((ByteBuf) msg).release();
-			}
-		}
-	}
-
-	void addCompressionHandlerOnce(ChannelHandlerContext ctx, ChannelPipeline cp) {
-		if (cp.get(FilteringHttpContentCompressor.class) == null) {
-			ctx.pipeline()
-			   .addBefore(NettyPipeline.CompressionHandler,
-					   NettyPipeline.HttpCompressor,
-					   new FilteringHttpContentCompressor());
+		if (bodyCompressThreshold <= 0 && !messages.isEmpty()) {
+			writeMessage(ctx);
+			pollAndWrite(ctx);
 		}
 	}
 }

@@ -335,7 +335,7 @@ public class HttpCompressionClientServerTests {
 		StepVerifier.create(response)
 		            .expectNextMatches(s -> "testtesttesttesttest".equals(s))
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		            .verify();
 
 		server.dispose();
 	}
@@ -358,7 +358,7 @@ public class HttpCompressionClientServerTests {
 		StepVerifier.create(response)
 		            .expectNextMatches(s -> "testtesttesttest".equals(s))
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		            .verify();
 
 		response = HttpClient.create(options -> options.port(server.address().getPort())
 		                                               .compression(true))
@@ -368,7 +368,7 @@ public class HttpCompressionClientServerTests {
 		StepVerifier.create(response)
 		            .expectNextMatches(s -> "testtesttesttest".equals(s))
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		            .verify();
 
 		server.dispose();
 	}
