@@ -128,10 +128,9 @@ public class ChannelOperationsHandlerTest {
 				HttpClient.create(ops -> ops.host("localhost")
 				                            .port(abortServerPort))
 				          .get("/",
-						          req -> req.sendHeaders()
-						                    .sendString(Flux.just("a", "b", "c")));
+						          req -> req.sendString(Flux.just("a", "b", "c")));
 
-		StepVerifier.create(response)
+		StepVerifier.create(response.log())
 		            .expectError()
 		            .verify();
 
@@ -175,6 +174,7 @@ public class ChannelOperationsHandlerTest {
 							}
 							else {
 								ch.close();
+								server.socket().close();
 								return;
 							}
 						}
