@@ -74,6 +74,15 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	}
 
 	/**
+	 * Enable/Disable compression handling (gzip/deflate) for the underlying response
+	 *
+	 * @param compress should handle compression
+	 *
+	 * @return this outbound
+	 */
+	HttpServerResponse compression(boolean compress);
+
+	/**
 	 * Return  true if headers and status have been sent to the client
 	 *
 	 * @return true if headers and status have been sent to the client

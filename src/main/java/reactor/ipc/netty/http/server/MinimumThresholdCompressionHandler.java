@@ -28,10 +28,11 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 
 /**
+ * Unused for now - figure out
  * @author mostroverkhov
  * @author smaldini
  */
-final class CompressionHandler extends HttpContentCompressor {
+final class MinimumThresholdCompressionHandler extends HttpContentCompressor {
 
 	final int minResponseSize;
 
@@ -41,7 +42,7 @@ final class CompressionHandler extends HttpContentCompressor {
 
 	int bodyCompressThreshold;
 
-	CompressionHandler(int minResponseSize) {
+	MinimumThresholdCompressionHandler(int minResponseSize) {
 		this.minResponseSize = minResponseSize;
 		this.bodyCompressThreshold = minResponseSize;
 	}
@@ -162,7 +163,7 @@ final class CompressionHandler extends HttpContentCompressor {
 	}
 
 	void drain(ChannelHandlerContext ctx) throws Exception {
-		if (bodyCompressThreshold <= 0 && !messages.isEmpty()) {
+		if (!messages.isEmpty()) {
 			writeMessage(ctx);
 			pollAndWrite(ctx);
 		}

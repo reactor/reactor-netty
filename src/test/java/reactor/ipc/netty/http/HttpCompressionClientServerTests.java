@@ -23,6 +23,7 @@ import java.util.zip.GZIPInputStream;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -162,6 +163,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@Test
+	@Ignore
 	public void serverCompressionEnabledSmallResponse() throws Exception {
 		HttpServer server = HttpServer.create(o -> o.port(0)
 		                                            .compression(25));

@@ -42,7 +42,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -55,6 +54,7 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.http.Cookies;
@@ -365,6 +365,29 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onHandlerStart() {
 		applyHandler();
+	}
+
+	@Override
+	public HttpServerResponse compression(boolean compress) {
+		if (!compress) {
+			removeHandler(NettyPipeline.CompressionHandler);
+		}
+		else if (channel().pipeline()
+		                  .get(NettyPipeline.CompressionHandler) == null) {
+			SimpleCompressionHandler handler = new SimpleCompressionHandler();
+
+			try {
+				handler.channelRead(channel().pipeline()
+				                             .context(NettyPipeline.ReactiveBridge),
+						nettyRequest);
+
+				addHandlerFirst(NettyPipeline.CompressionHandler, handler);
+			}
+			catch (Throwable e) {
+				log.error("", e);
+			}
+		}
+		return this;
 	}
 
 	@Override
