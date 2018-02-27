@@ -41,6 +41,8 @@ import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -137,6 +139,8 @@ public class ChannelOperationsHandlerTest {
 		abortServer.close();
 	}
 
+	static final Logger log = Loggers.getLogger(ChannelOperationsHandlerTest.class);
+
 	private static final class ConnectionAbortServer extends CountDownLatch implements Runnable {
 
 		private final int port;
@@ -165,23 +169,18 @@ public class ChannelOperationsHandlerTest {
 				thread = Thread.currentThread();
 				while (true) {
 					SocketChannel ch = server.accept();
-
 					while (true) {
 						int bytes = ch.read(ByteBuffer.allocate(256));
 						if (bytes > 0) {
-							if (!read) {
-								read = true;
-							}
-							else {
-								ch.close();
-								server.socket().close();
-								return;
-							}
+							ch.close();
+							server.socket().close();
+							return;
 						}
 					}
 				}
 			}
 			catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 
