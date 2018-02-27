@@ -563,24 +563,28 @@ public class HttpClientTest {
 
 	@Test
 	public void gzip() {
+
+		String content = "HELLO WORLD";
+
+		NettyContext c = HttpServer.create(opts -> opts.compression(true).port(0))
+		          .newHandler((req, res) -> res.sendString(Mono.just(content)))
+		          .block();
+
+
 		//verify gzip is negotiated (when no decoder)
 		StepVerifier.create(
-				HttpClient.create()
-				          .get("http://www.httpwatch.com", req -> req
+				HttpClient.create(c.address().getPort())
+				          .get("/", req -> req
 						          .followRedirect()
 						          .addHeader("Accept-Encoding", "gzip")
 						          .addHeader("Accept-Encoding", "deflate")
 				          )
-				          .flatMap(r -> r.receive().asString()
-				                         .elementAt(0)
-				                         .map(s -> s.substring(0, Math.min(s.length() -1, 100)))
+				          .flatMap(r -> r.receive().aggregate().asString()
 				                         .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))
 				                         .zipWith(Mono.just(r)))
 		)
 		            .expectNextMatches(tuple -> {
-		                               tuple.getT2().dispose();
-		                               String content = tuple.getT1().getT1();
-		                               return !content.contains("<html>") && !content.contains("<head>")
+		                               return !tuple.getT1().getT1().equals(content)
 		                                      && "gzip".equals(tuple.getT1().getT2());
 		                               })
 		            .expectComplete()
@@ -588,26 +592,25 @@ public class HttpClientTest {
 
 		//verify decoder does its job and removes the header
 		StepVerifier.create(
-				HttpClient.create()
-				          .get("http://www.httpwatch.com", req -> {
+				HttpClient.create(c.address().getPort())
+				          .get("/", req -> {
 					          req.context().addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
 					          return req.followRedirect()
 					                    .addHeader("Accept-Encoding", "gzip")
 					                    .addHeader("Accept-Encoding", "deflate");
 				          })
-				          .flatMap(r -> r.receive().asString().elementAt(0)
-				                         .map(s -> s.substring(0, Math.min(s.length() -1, 100)))
+				          .flatMap(r -> r.receive().aggregate().asString()
 				                         .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))
 				                         .zipWith(Mono.just(r)))
 		)
 		            .expectNextMatches(tuple -> {
-		                               tuple.getT2().dispose();
-		                               String content = tuple.getT1().getT1();
-		                               return content.contains("<html>") && content.contains("<head>")
+		                               return tuple.getT1().getT1().equals(content)
 		                                      && "".equals(tuple.getT1().getT2());
 		                               })
 		            .expectComplete()
 		            .verify();
+
+		c.dispose();
 	}
 
 	@Test
