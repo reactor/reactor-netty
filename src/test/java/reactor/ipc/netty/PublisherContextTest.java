@@ -70,33 +70,4 @@ public class PublisherContextTest {
 		            .verifyComplete();
 		assertThat(context.get().get("Hello").equals("World")).isTrue();
 	}
-
-	@Test
-	public void shouldSubscribeWithContextCorrectlyToPublisherAndReturnFlux() {
-		AtomicReference<Context> context = new AtomicReference<>();
-		Publisher<String> publisher = PublisherContext.withContext(
-				s -> {
-					context.set(((CoreSubscriber)s).currentContext());
-					s.onSubscribe(new Subscription() {
-						@Override
-						public void request(long n) {
-
-						}
-
-						@Override
-						public void cancel() {
-
-						}
-					});
-					s.onComplete();
-				},
-				Context.of("Hello", "World")
-		);
-
-		assertThat(publisher instanceof Flux).isTrue();
-		StepVerifier.create(publisher)
-		            .expectSubscription()
-		            .verifyComplete();
-		assertThat(context.get().get("Hello").equals("World")).isTrue();
-	}
 }
