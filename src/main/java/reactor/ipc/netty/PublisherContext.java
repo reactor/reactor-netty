@@ -64,7 +64,7 @@ abstract class PublisherContext {
 		}
 	}
 
-	static <T, V> Publisher<V> publiserOrScalarMap(Publisher<T> publisher,
+	static <T, V> Publisher<V> publisherOrScalarMap(Publisher<T> publisher,
 			Function<? super T, ? extends V> mapper) {
 
 		if (publisher instanceof Callable) {
