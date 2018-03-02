@@ -392,7 +392,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
 							                         agg.readableBytes());
 				    }
-				    return send(Mono.just(agg)).then();
+				    return super.send(Mono.just(agg)).then();
 			    }));
 		}
 		return super.send(source);

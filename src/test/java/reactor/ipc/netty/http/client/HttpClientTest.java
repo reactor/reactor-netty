@@ -887,4 +887,24 @@ public class HttpClientTest {
 		httpClientOptions.connectAddress(() -> context.address());
 		return httpClientOptions;
 	}
+
+	@Test
+	public void testIssue303() {
+		NettyContext server =
+				HttpServer.create(0)
+				          .newHandler((req, resp) -> resp.sendString(Mono.just("OK")))
+				          .block(Duration.ofSeconds(30));
+
+		Mono<String> content =
+				HttpClient.create(server.address().getPort())
+				          .get("/", req -> req.sendByteArray(Mono.defer(() -> Mono.just("Hello".getBytes()))))
+				          .flatMap(it -> it.receive().aggregate().asString());
+
+		StepVerifier.create(content)
+		            .expectNextMatches(s -> "OK".equals(s))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		server.dispose();
+	}
 }
