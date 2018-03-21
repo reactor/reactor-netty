@@ -41,6 +41,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
@@ -60,7 +61,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.ResourceLeakDetector;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
@@ -935,4 +935,38 @@ public class HttpServerTests {
 		}
 
 	}*/
+
+	@Test
+	public void testIssue309() throws Exception {
+		doTestIssue309("/somethingtooolooong",
+				ops -> ops.port(0)
+				          .maxInitialLineLength(20));
+
+		doTestIssue309("/something",
+				ops -> ops.port(0)
+				          .maxHeaderSize(20));
+	}
+
+	private void doTestIssue309(String path, Consumer<? super HttpServerOptions.Builder> ops) {
+		NettyContext server =
+				HttpServer.create(ops)
+				          .newHandler((req, res) -> res.sendString(Mono.just("Should not be reached")))
+				          .block();
+
+		Mono<HttpResponseStatus> status =
+				HttpClient.create(server.address().getPort())
+				          .get(path, req -> req.failOnClientError(false))
+				          .flatMap(res -> {
+				              res.dispose();
+				              HttpResponseStatus code = res.status();
+				              return Mono.just(code);
+				          });
+
+		StepVerifier.create(status)
+		            .expectNextMatches(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE::equals)
+		            .expectComplete()
+		            .verify();
+
+		server.dispose();
+	}
 }

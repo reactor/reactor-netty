@@ -24,12 +24,17 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.DecoderResult;
+import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
@@ -79,6 +84,23 @@ final class HttpServerHandler extends ChannelDuplexHandler
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {
 			final HttpRequest request = (HttpRequest) msg;
+
+			DecoderResult decoderResult = request.decoderResult();
+			if (decoderResult.isFailure()) {
+				Throwable cause = decoderResult.cause();
+				HttpServerOperations.log.debug("Decoding failed: " + msg + " : ", cause);
+
+				HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
+				        cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
+				                                                 HttpResponseStatus.BAD_REQUEST);
+				response.headers()
+				        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+				        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+				ctx.writeAndFlush(response)
+				   .addListener(ChannelFutureListener.CLOSE);
+				return;
+			}
+
 			if (persistentConnection) {
 				pendingResponses += 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
