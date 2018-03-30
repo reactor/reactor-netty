@@ -15,7 +15,11 @@
  */
 package reactor.ipc.netty.tcp;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -26,11 +30,16 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import org.junit.Before;
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.NettyContext;
+import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class TcpResourcesTest {
 
@@ -120,4 +129,44 @@ public class TcpResourcesTest {
 		}
 	}
 
+	@Test
+	public void blockShouldFail() throws InterruptedException {
+		final int port = SocketUtils.findAvailableTcpPort();
+		final CountDownLatch latch = new CountDownLatch(2);
+
+		NettyContext server = TcpServer.create(port)
+		                               .newHandler((in, out) -> {
+		                               	try {
+			                                in.receive()
+			                                  .blockFirst();
+		                                }
+		                                catch (RuntimeException e) {
+		                               		latch.countDown();
+		                               		throw e;
+		                                }
+
+			                               return Flux.never();
+		                               })
+		                               .block(Duration.ofSeconds(30));
+
+		NettyContext client = TcpClient.create(port)
+		                               .newHandler((in, out) -> {
+		                               	try {
+			                                out.sendString(Flux.just("Hello World!"))
+			                                   .then()
+			                                   .block();
+		                                }
+		                                catch (RuntimeException e) {
+			                                latch.countDown();
+			                                throw e;
+		                                }
+		                               	    return Mono.empty();
+		                               })
+		                               .block(Duration.ofSeconds(30));
+
+		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
+
+		client.dispose();
+		server.dispose();
+	}
 }

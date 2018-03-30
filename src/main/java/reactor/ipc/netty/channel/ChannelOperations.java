@@ -376,8 +376,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			log.debug("[{}] {} handler is being applied: {}", formatName(), channel
 					(), handler);
 		}
-		Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
-		       .subscribe(this);
+		try {
+			Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
+			    .subscribe(this);
+		}
+		catch (Throwable t) {
+			log.error("", t);
+			channel.close();
+		}
 	}
 
 	/**
