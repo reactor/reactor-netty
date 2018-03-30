@@ -25,6 +25,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.Future;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.NonBlocking;
 import reactor.ipc.netty.FutureMono;
 
 /**
@@ -47,7 +48,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	final AtomicBoolean                   running;
 
 	static ThreadFactory threadFactory(DefaultLoopResources parent, String prefix) {
-		return new EventLoopSelectorFactory(parent.daemon,
+		return new EventLoopFactory(parent.daemon,
 				parent.prefix + "-" + prefix,
 				parent);
 	}
@@ -207,13 +208,13 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return eventLoopGroup;
 	}
 
-	final static class EventLoopSelectorFactory implements ThreadFactory {
+	final static class EventLoopFactory implements ThreadFactory {
 
 		final boolean    daemon;
 		final AtomicLong counter;
 		final String     prefix;
 
-		public EventLoopSelectorFactory(boolean daemon,
+		EventLoopFactory(boolean daemon,
 				String prefix,
 				AtomicLong counter) {
 			this.daemon = daemon;
@@ -223,10 +224,17 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 		@Override
 		public Thread newThread(Runnable r) {
-			Thread t = new Thread(r);
+			Thread t = new EventLoop(r);
 			t.setDaemon(daemon);
 			t.setName(prefix + "-" + counter.incrementAndGet());
 			return t;
+		}
+	}
+
+	final static class EventLoop extends Thread implements NonBlocking {
+
+		EventLoop(Runnable target) {
+			super(target);
 		}
 	}
 }
