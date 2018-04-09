@@ -16,8 +16,6 @@
 
 package reactor.ipc.netty.channel.data;
 
-import java.io.RandomAccessFile;
-
 import io.netty.handler.stream.ChunkedWriteHandler;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
@@ -35,8 +33,6 @@ import reactor.ipc.netty.NettyPipeline;
  */
 public abstract class AbstractFileChunkedStrategy<T> implements FileChunkedStrategy<T> {
 
-	boolean addHandler;
-
 	/**
 	 * {@inheritDoc}
 	 * <p>
@@ -49,10 +45,7 @@ public abstract class AbstractFileChunkedStrategy<T> implements FileChunkedStrat
 	 */
 	@Override
 	public final void preparePipeline(NettyContext context) {
-		this.addHandler = context.channel()
-		                         .pipeline()
-		                         .get(NettyPipeline.ChunkedWriter) == null;
-		if (addHandler) {
+		if (!hasChunkedWriter(context)) {
 			boolean hasReactiveBridge = context.channel()
 			                                   .pipeline()
 			                                   .get(NettyPipeline.ReactiveBridge) != null;
@@ -72,6 +65,12 @@ public abstract class AbstractFileChunkedStrategy<T> implements FileChunkedStrat
 		}
 	}
 
+	private boolean hasChunkedWriter(NettyContext context) {
+		return context.channel()
+				.pipeline()
+				.get(NettyPipeline.ChunkedWriter) != null;
+	}
+
 	/**
 	 * {@inheritDoc}
 	 * <p>
@@ -82,7 +81,7 @@ public abstract class AbstractFileChunkedStrategy<T> implements FileChunkedStrat
 	 */
 	@Override
 	public final void cleanupPipeline(NettyContext context) {
-		if (addHandler) {
+		if (hasChunkedWriter(context)) {
 			context.channel()
 			       .pipeline()
 			       .remove(NettyPipeline.ChunkedWriter);
