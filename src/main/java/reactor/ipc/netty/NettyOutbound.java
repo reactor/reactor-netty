@@ -240,10 +240,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	default NettyOutbound sendFileChunked(Path file, long position, long count) {
 		Objects.requireNonNull(file);
 		final FileChunkedStrategy strategy = getFileChunkedStrategy();
-		final boolean needChunkedWriteHandler = context().channel().pipeline().get(NettyPipeline.ChunkedWriter) == null;
-		if (needChunkedWriteHandler) {
-			strategy.preparePipeline(context());
-		}
+		strategy.preparePipeline(context());
 
 		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
 				fc -> {
