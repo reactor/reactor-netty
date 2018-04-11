@@ -51,8 +51,7 @@ public interface PoolResources extends Disposable {
 	/**
 	 * Default acquisition timeout before error. If -1 will never wait to
 	 * acquire before opening new
-	 * connection in an unbounded fashion. Fallback to
-	 * available number of processors.
+	 * connection in an unbounded fashion.
 	 */
 	long DEFAULT_POOL_ACQUIRE_TIMEOUT = Long.parseLong(System.getProperty(
 			"reactor.ipc.netty.pool.acquireTimeout",
