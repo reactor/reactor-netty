@@ -20,6 +20,8 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 
+import java.nio.channels.FileChannel;
+
 /**
  * A base abstract implementation of a {@link FileChunkedStrategy}. Only the
  * {@link #chunkFile(FileChannel)} method needs to be implemented, but child classes
@@ -67,8 +69,8 @@ public abstract class AbstractFileChunkedStrategy<T> implements FileChunkedStrat
 
 	private boolean hasChunkedWriter(NettyContext context) {
 		return context.channel()
-				.pipeline()
-				.get(NettyPipeline.ChunkedWriter) != null;
+		              .pipeline()
+		              .get(NettyPipeline.ChunkedWriter) != null;
 	}
 
 	/**
