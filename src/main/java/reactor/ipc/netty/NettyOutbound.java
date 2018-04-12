@@ -32,6 +32,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedInput;
 import io.netty.handler.stream.ChunkedNioFile;
@@ -51,10 +52,9 @@ public interface NettyOutbound extends Publisher<Void> {
 	FileChunkedStrategy<ByteBuf> FILE_CHUNKED_STRATEGY_BUFFER = new AbstractFileChunkedStrategy<ByteBuf>() {
 
 		@Override
-		public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel) {
+		public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel, long offset, long length, int chunkSize) {
 			try {
-				//TODO tune the chunk size
-				return new ChunkedNioFile(fileChannel, 1024);
+				return new ChunkedNioFile(fileChannel, offset, length, chunkSize);
 			}
 			catch (IOException e) {
 				throw Exceptions.propagate(e);
@@ -245,7 +245,8 @@ public interface NettyOutbound extends Publisher<Void> {
 		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
 				fc -> {
 						try {
-							ChunkedInput<?> message = strategy.chunkFile(fc);
+							// TODO: tune the chunk size
+							ChunkedInput<?> message = strategy.chunkFile(fc, position, count, 1024);
 							return FutureMono.from(context().channel().writeAndFlush(message));
 						}
 						catch (Exception e) {
