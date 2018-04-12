@@ -19,6 +19,7 @@ package reactor.ipc.netty.channel.data;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.handler.stream.ChunkedInput;
 import reactor.ipc.netty.NettyContext;
@@ -48,9 +49,13 @@ public interface FileChunkedStrategy<T> {
 	 * {@link io.netty.handler.codec.http.HttpChunkedInput} around a ChunkedFile.
 	 *
 	 * @param fileChannel the {@link FileChannel} for the file being sent
+	 * @param offset the offset of the file where the transfer begins
+	 * @param length the number of bytes to transfer
+	 * @param chunkSize the number of bytes to fetch on each
+	 *                  {@link ChunkedInput#readChunk(ByteBufAllocator)} call
 	 * @return the file, as a {@link ChunkedInput}
 	 */
-	ChunkedInput<T> chunkFile(FileChannel fileChannel);
+	ChunkedInput<T> chunkFile(FileChannel fileChannel, long offset, long length, int chunkSize);
 
 	/**
 	 * Once the file has been written, allows to clean the pipeline

@@ -24,7 +24,7 @@ import java.nio.channels.FileChannel;
 
 /**
  * A base abstract implementation of a {@link FileChunkedStrategy}. Only the
- * {@link #chunkFile(FileChannel)} method needs to be implemented, but child classes
+ * {@link #chunkFile(FileChannel, long, long, int)} method needs to be implemented, but child classes
  * can also override {@link #afterWrite(NettyContext)} to add custom cleanup.
  * The pipeline preparation and cleanup involves adding and removing the
  * {@link NettyPipeline#ChunkedWriter} handler if it was not already present. It will be
