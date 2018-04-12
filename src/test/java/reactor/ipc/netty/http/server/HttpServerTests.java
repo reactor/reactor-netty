@@ -19,18 +19,8 @@ package reactor.ipc.netty.http.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.CompletionHandler;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -39,14 +29,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -57,19 +43,13 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
-import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.client.HttpClientResponse;
@@ -158,212 +138,6 @@ public class HttpServerTests {
 		assertThat(binding.options().getAddress())
 				.isInstanceOf(InetSocketAddress.class)
 				.hasFieldOrPropertyWithValue("port", 9081);
-	}
-
-	@Test
-	public void sendFileSecure()
-			throws CertificateException, SSLException, URISyntaxException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		SelfSignedCertificate ssc = new SelfSignedCertificate();
-		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
-		SslContext sslClient = SslContextBuilder.forClient()
-				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-
-		NettyContext context =
-				HttpServer.create(opt -> opt.sslContext(sslServer))
-				          .newHandler((req, resp) -> resp.sendFile(largeFile))
-				          .block();
-
-
-		HttpClientResponse response =
-				HttpClient.create(opt -> opt.port(context.address().getPort())
-				                            .sslContext(sslClient))
-				          .get("/foo")
-				          .block(Duration.ofSeconds(120));
-
-		context.dispose();
-		context.onClose().block();
-
-		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
-
-		assertThat(body)
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
-				.contains("1024 mark here -><- 1024 mark here")
-				.endsWith("End of File");
-	}
-
-	@Test
-	public void sendFileChunked() throws IOException, URISyntaxException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		long fileSize = Files.size(largeFile);
-		assertSendFile(out -> out.sendFileChunked(largeFile, 0, fileSize));
-	}
-
-	@Test
-	public void sendZipFileChunked() throws IOException {
-		Path path = Files.createTempFile(null, ".zip");
-		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
-		path.toFile().deleteOnExit();
-
-		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
-			Path fromZipFile = zipFs.getPath("/largeFile.txt");
-			long fileSize = Files.size(fromZipFile);
-			assertSendFile(out -> out.sendFileChunked(fromZipFile, 0, fileSize));
-		}
-	}
-
-	@Test
-	public void sendZipFileDefault()
-			throws IOException {
-		Path path = Files.createTempFile(null, ".zip");
-		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
-
-		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
-			Path fromZipFile = zipFs.getPath("/largeFile.txt");
-			long fileSize = Files.size(fromZipFile);
-
-			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize));
-		}
-	}
-
-	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn) {
-		NettyContext context =
-				HttpServer.create(opt -> opt.host("localhost"))
-				          .newHandler((req, resp) -> fn.apply(resp))
-				          .block();
-
-
-		HttpClientResponse response =
-				HttpClient.create(opt -> opt.connectAddress(() -> context.address()))
-				          .get("/foo")
-				          .block(Duration.ofSeconds(120));
-
-		context.dispose();
-		context.onClose().block();
-
-		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
-
-		assertThat(body)
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
-				.contains("1024 mark here -><- 1024 mark here")
-				.endsWith("End of File");
-	}
-
-	@Test
-	public void sendFileAsync4096() throws IOException, URISyntaxException {
-		doTestSendFileAsync(4096);
-	}
-
-	@Test
-	public void sendFileAsync1024() throws IOException, URISyntaxException {
-		doTestSendFileAsync(1024);
-	}
-
-	private void doTestSendFileAsync(int chunk) throws IOException, URISyntaxException {
-		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		Path tempFile = Files.createTempFile(largeFile.getParent(),"temp", ".txt");
-		tempFile.toFile().deleteOnExit();
-
-		byte[] fileBytes = Files.readAllBytes(largeFile);
-		for (int i = 0; i < 1000; i++) {
-			Files.write(tempFile, fileBytes, StandardOpenOption.APPEND);
-		}
-
-		ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
-		AsynchronousFileChannel channel =
-				AsynchronousFileChannel.open(tempFile, StandardOpenOption.READ);
-
-		Flux<ByteBuf> content =  Flux.create(fluxSink -> {
-			fluxSink.onDispose(() -> {
-			    try {
-			        if (channel != null) {
-			            channel.close();
-			        }
-			    }
-			    catch (IOException ignored) {
-			    }
-			});
-
-			ByteBuffer buf = ByteBuffer.allocate(chunk);
-			channel.read(buf, 0, buf, new TestCompletionHandler(channel, fluxSink, allocator, chunk));
-		});
-
-		NettyContext context =
-				HttpServer.create(opt -> opt.host("localhost"))
-				          .newHandler((req, resp) -> resp.sendByteArray(req.receive()
-				                                                           .aggregate()
-				                                                           .asByteArray()))
-				          .block();
-		byte[] response =
-				HttpClient.create(opt -> opt.connectAddress(() -> context.address()))
-				          .request(HttpMethod.POST, "/", req -> req.send(content)
-				                                                       .then())
-				          .flatMap(res -> res.receive()
-				                             .aggregate()
-				                             .asByteArray())
-				          .block();
-
-		assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
-		context.dispose();
-	}
-
-	private static final class TestCompletionHandler implements CompletionHandler<Integer, ByteBuffer> {
-
-		private final AsynchronousFileChannel channel;
-
-		private final FluxSink<ByteBuf> sink;
-
-		private final ByteBufAllocator allocator;
-
-		private final int chunk;
-
-		private AtomicLong position;
-
-		TestCompletionHandler(AsynchronousFileChannel channel, FluxSink<ByteBuf> sink,
-							  ByteBufAllocator allocator, int chunk) {
-			this.channel = channel;
-			this.sink = sink;
-			this.allocator = allocator;
-			this.chunk = chunk;
-			this.position = new AtomicLong(0);
-		}
-
-		@Override
-		public void completed(Integer read, ByteBuffer dataBuffer) {
-			if (read != -1) {
-				long pos = this.position.addAndGet(read);
-				dataBuffer.flip();
-				ByteBuf buf = allocator.buffer().writeBytes(dataBuffer);
-				this.sink.next(buf);
-
-				if (!this.sink.isCancelled()) {
-					ByteBuffer newByteBuffer = ByteBuffer.allocate(chunk);
-					this.channel.read(newByteBuffer, pos, newByteBuffer, this);
-				}
-			}
-			else {
-				try {
-					if (channel != null) {
-						channel.close();
-					}
-				}
-				catch (IOException ignored) {
-				}
-				this.sink.complete();
-			}
-		}
-
-		@Override
-		public void failed(Throwable exc, ByteBuffer dataBuffer) {
-			try {
-				if (channel != null) {
-					channel.close();
-				}
-			}
-			catch (IOException ignored) {
-			}
-			this.sink.error(exc);
-		}
 	}
 
 	//from https://github.com/reactor/reactor-netty/issues/90
