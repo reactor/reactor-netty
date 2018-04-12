@@ -69,8 +69,8 @@ public class HttpSendFileTests {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 		assertSendFile(out -> out.sendFileChunked(largeFile, 1024, fileSize - 1024),
-				body -> assertThat(body).startsWith("<- 1024 mark here")
-						.endsWith("End of File"));
+		               body -> assertThat(body).startsWith("<- 1024 mark here")
+		                                       .endsWith("End of File"));
 	}
 
 	@Test
@@ -87,8 +87,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileDefault()
-			throws IOException {
+	public void sendZipFileDefault() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 
@@ -101,24 +100,25 @@ public class HttpSendFileTests {
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn) {
-		assertSendFile(fn, body -> assertThat(body)
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. "
-						+ "It contains accents like é.")
-				.contains("1024 mark here -><- 1024 mark here")
-				.endsWith("End of File"));
+		assertSendFile(fn,
+		               body ->
+		                   assertThat(body).startsWith("This is an UTF-8 file that is larger than 1024 bytes. "
+		                                               + "It contains accents like é.")
+		                                   .contains("1024 mark here -><- 1024 mark here")
+		                                   .endsWith("End of File"));
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, Consumer<String> bodyAssertion) {
 		NettyContext context =
 				HttpServer.create(opt -> customizeServerOptions(opt.host("localhost")))
-						.newHandler((req, resp) -> fn.apply(resp))
-						.block();
+				          .newHandler((req, resp) -> fn.apply(resp))
+				          .block();
 
 
 		HttpClientResponse response =
 				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(() -> context.address())))
-						.get("/foo")
-						.block(Duration.ofSeconds(120));
+				          .get("/foo")
+				          .block(Duration.ofSeconds(120));
 
 		context.dispose();
 		context.onClose().block();
@@ -151,7 +151,7 @@ public class HttpSendFileTests {
 		AsynchronousFileChannel channel =
 				AsynchronousFileChannel.open(tempFile, StandardOpenOption.READ);
 
-		Flux<ByteBuf> content =  Flux.create(fluxSink -> {
+		Flux<ByteBuf> content = Flux.create(fluxSink -> {
 			fluxSink.onDispose(() -> {
 				try {
 					if (channel != null) {
@@ -168,18 +168,17 @@ public class HttpSendFileTests {
 
 		NettyContext context =
 				HttpServer.create(opt -> customizeServerOptions(opt.host("localhost")))
-						.newHandler((req, resp) -> resp.sendByteArray(req.receive()
-								.aggregate()
-								.asByteArray()))
-						.block();
+				          .newHandler((req, resp) -> resp.sendByteArray(req.receive()
+				                                                           .aggregate()
+				                                                           .asByteArray()))
+				          .block();
 		byte[] response =
 				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(() -> context.address())))
-						.request(HttpMethod.POST, "/", req -> req.send(content)
-								.then())
-						.flatMap(res -> res.receive()
-								.aggregate()
-								.asByteArray())
-						.block();
+				          .request(HttpMethod.POST, "/", req -> req.send(content).then())
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asByteArray())
+				          .block();
 
 		assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
 		context.dispose();

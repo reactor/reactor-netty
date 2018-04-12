@@ -32,16 +32,14 @@ public class HttpsSendFileTests extends HttpSendFileTests {
 	static SelfSignedCertificate ssc;
 
 	@BeforeClass
-	public static void createSelfSignedCertificate()
-			throws CertificateException, SSLException {
+	public static void createSelfSignedCertificate() throws CertificateException, SSLException {
 		ssc = new SelfSignedCertificate();
 	}
 
 	@Override
 	protected void customizeServerOptions(HttpServerOptions.Builder options) {
 		try {
-			options.sslContext(SslContextBuilder
-					.forServer(ssc.certificate(), ssc.privateKey()).build());
+			options.sslContext(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build());
 		}
 		catch (SSLException e) {
 			throw new RuntimeException(e);
@@ -52,7 +50,7 @@ public class HttpsSendFileTests extends HttpSendFileTests {
 	protected void customizeClientOptions(HttpClientOptions.Builder options) {
 		try {
 			options.sslContext(SslContextBuilder.forClient()
-					.trustManager(InsecureTrustManagerFactory.INSTANCE).build());
+			                                    .trustManager(InsecureTrustManagerFactory.INSTANCE).build());
 		}
 		catch (SSLException e) {
 			throw new RuntimeException(e);
@@ -62,5 +60,6 @@ public class HttpsSendFileTests extends HttpSendFileTests {
 	@Override
 	protected void doTestSendFileAsync(int chunk) throws IOException, URISyntaxException {
 		// TODO: FIX THIS FOR SSL, remove this overridden method that disables the currently failing tests
+		// https://github.com/reactor/reactor-netty/issues/321
 	}
 }
