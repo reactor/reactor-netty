@@ -527,7 +527,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (p != 0L) {
 				produced = 0L;
 				produced(p);
-				if (parent.pendingBytes > 0L || parent.hasPendingWriteBytes()) {
+				if (parent.pendingBytes > 0L || parent.hasPendingWriteBytes() || !lastThreadInEventLoop) {
 					if (parent.ctx.channel()
 					              .isActive()) {
 						parent.pendingBytes = 0L;
@@ -548,7 +548,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 
 			if (f != null) {
-				if (!f.isDone() && parent.hasPendingWriteBytes()) {
+				if (!f.isDone() && (parent.hasPendingWriteBytes() || !lastThreadInEventLoop)) {
 					EventLoop eventLoop = parent.ctx.channel().eventLoop();
 					if (eventLoop.inEventLoop()) {
 						parent.pendingWriteOffer.test(f, PENDING_WRITES);
@@ -592,7 +592,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 
 			if (f != null) {
-				if (!f.isDone() && parent.hasPendingWriteBytes()) {
+				if (!f.isDone() && (parent.hasPendingWriteBytes() || !lastThreadInEventLoop)) {
 					EventLoop eventLoop = parent.ctx.channel().eventLoop();
 					if (eventLoop.inEventLoop()) {
 						parent.pendingWriteOffer.test(f, PENDING_WRITES);

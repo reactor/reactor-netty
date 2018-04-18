@@ -56,10 +56,4 @@ public class HttpsSendFileTests extends HttpSendFileTests {
 			throw new RuntimeException(e);
 		}
 	}
-
-	@Override
-	protected void doTestSendFileAsync(int chunk) throws IOException, URISyntaxException {
-		// TODO: FIX THIS FOR SSL, remove this overridden method that disables the currently failing tests
-		// https://github.com/reactor/reactor-netty/issues/321
-	}
 }
