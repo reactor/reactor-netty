@@ -275,7 +275,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	@Override
 	public void operationComplete(ChannelFuture future) throws Exception {
-		if (future.isSuccess() && innerActive) {
+		if (future.isSuccess()) {
 			inner.request(1L);
 		}
 	}
@@ -525,8 +525,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			parent.innerActive = false;
 
 			if (p != 0L) {
-				produced = 0L;
-				produced(p);
 				if (parent.pendingBytes > 0L || parent.hasPendingWriteBytes() || !lastThreadInEventLoop) {
 					if (parent.ctx.channel()
 					              .isActive()) {
@@ -560,6 +558,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				f.addListener(this);
 			}
 			else {
+				produced = 0L;
+				produced(p);
 				promise.setSuccess();
 				parent.drain();
 			}
@@ -572,8 +572,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			parent.innerActive = false;
 
 			if (p != 0L) {
-				produced = 0L;
-				produced(p);
 				if (parent.ctx.channel()
 				              .isActive()) {
 					if (lastThreadInEventLoop) {
@@ -602,6 +600,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					}
 				}
 				f.addListener(future -> {
+					produced = 0L;
+					produced(p);
 					if (!future.isSuccess()) {
 						promise.setFailure(Exceptions.addSuppressed(future.cause(), t));
 						return;
@@ -610,6 +610,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				});
 			}
 			else {
+				produced = 0L;
+				produced(p);
 				promise.setFailure(t);
 				parent.drain();
 			}
@@ -639,9 +641,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 			if (parent.ctx.channel()
 			              .isWritable()) {
-				if (parent.innerActive) {
-					request(1L);
-				}
+				request(1L);
 			}
 			else {
 				promise.addListener(parent);
@@ -679,6 +679,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 		@Override
 		public void operationComplete(ChannelFuture future) throws Exception {
+			long p = produced;
+			produced = 0L;
+			produced(p);
 			if (future.isSuccess()) {
 				promise.setSuccess();
 			}
