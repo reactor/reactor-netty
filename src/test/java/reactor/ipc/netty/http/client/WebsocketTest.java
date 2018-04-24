@@ -21,6 +21,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.After;
 import org.junit.Assert;
@@ -434,4 +437,49 @@ public class WebsocketTest {
 		pr.dispose();
 	}
 
+	@Test
+	public void testCloseWebSocketFrameSentByServer() {
+		httpServer =
+				HttpServer.create(0)
+				          .newHandler((req, res) ->
+				                  res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
+				                                                                  .doOnNext(WebSocketFrame::retain))))
+				          .block(Duration.ofSeconds(30));
+
+		Flux<WebSocketFrame> response =
+				HttpClient.create(httpServer.address().getPort())
+				          .get("/", req -> req.sendWebsocket()
+				                                  .sendString(Mono.just("echo"))
+				                                  .sendObject(new CloseWebSocketFrame()))
+				          .flatMapMany(res -> res.receiveWebsocket()
+				                                 .receiveFrames());
+
+		StepVerifier.create(response)
+		            .expectNextMatches(webSocketFrame ->
+		                    webSocketFrame instanceof TextWebSocketFrame &&
+		                    "echo".equals(((TextWebSocketFrame) webSocketFrame).text()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testCloseWebSocketFrameSentByClient() {
+		httpServer =
+				HttpServer.create(0)
+				          .newHandler((req, res) ->
+				                  res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
+				                                                    .sendObject(new CloseWebSocketFrame())))
+				          .block(Duration.ofSeconds(30));
+
+		Mono<Void> response =
+				HttpClient.create(httpServer.address().getPort())
+				          .ws("/")
+				          .flatMap(res ->
+				                  res.receiveWebsocket((in, out) -> out.sendObject(in.receiveFrames()
+				                                                                     .doOnNext(WebSocketFrame::retain))));
+
+		StepVerifier.create(response)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+	}
 }
