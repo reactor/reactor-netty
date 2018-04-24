@@ -93,6 +93,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 			if (log.isDebugEnabled()) {
 				log.debug("CloseWebSocketFrame detected. Closing Websocket");
 			}
+			onInboundComplete();
 			CloseWebSocketFrame close = (CloseWebSocketFrame) frame;
 			sendClose(new CloseWebSocketFrame(true,
 					close.rsv(),
