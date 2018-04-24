@@ -166,7 +166,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * error during write
 	 */
 	default NettyOutbound sendByteArray(Publisher<? extends byte[]> dataStream) {
-		return send(PublisherContext.publisherOrScalarMap(dataStream, Unpooled::wrappedBuffer));
+		return send(ReactorNetty.publisherOrScalarMap(dataStream, Unpooled::wrappedBuffer));
 	}
 
 	/**
@@ -290,10 +290,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * error during write
 	 */
 	default NettyOutbound sendObject(Publisher<?> dataStream) {
-		return then(FutureMono.deferFutureWithContext((subscriberContext) ->
-				context().channel()
-				         .writeAndFlush(PublisherContext.withContext(dataStream, subscriberContext)))
-		);
+		return then(FutureMono.disposableWriteAndFlush(context().channel(), dataStream));
 	}
 
 	/**
@@ -337,7 +334,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	default NettyOutbound sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
-		return sendObject(PublisherContext.publisherOrScalarMap(dataStream, s -> alloc()
+		return sendObject(ReactorNetty.publisherOrScalarMap(dataStream, s -> alloc()
 				.buffer()
 				.writeBytes(s.getBytes(charset))));
 	}

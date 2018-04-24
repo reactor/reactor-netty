@@ -260,7 +260,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void closingPromiseIsFulfilled() throws InterruptedException {
+	public void closingPromiseIsFulfilled() {
 		TcpClient client =
 				TcpClient.create(opts -> opts.host("localhost")
 				                             .port(abortServerPort)
@@ -328,7 +328,7 @@ public class TcpClientTests {
 
 	@Test
 	public void connectionWillAttemptToReconnectWhenItIsDropped()
-			throws InterruptedException, IOException {
+			throws InterruptedException {
 		final CountDownLatch connectionLatch = new CountDownLatch(1);
 		final CountDownLatch reconnectionLatch = new CountDownLatch(1);
 
@@ -361,8 +361,72 @@ public class TcpClientTests {
 	}
 
 	@Test
+	public void testCancelSend() throws InterruptedException {
+		final CountDownLatch connectionLatch = new CountDownLatch(3);
+
+		TcpClient tcpClient = TcpClient.create(opts -> opts.host("localhost")
+		                                                   .port(echoServerPort)
+		                                                   .disablePool());
+		NettyContext c;
+
+		c = tcpClient.newHandler((i, o) -> {
+			o.sendObject(Mono.never()
+			                 .doOnCancel(connectionLatch::countDown)
+			                 .log("uno"))
+			 .then()
+			 .subscribe()
+			 .dispose();
+
+			Schedulers.parallel()
+			          .schedule(() -> o.sendObject(Mono.never()
+			                                           .doOnCancel(connectionLatch::countDown)
+			                                           .log("dos"))
+			                           .then()
+			                           .subscribe()
+			                           .dispose());
+
+			o.sendObject(Mono.never()
+			                 .doOnCancel(connectionLatch::countDown)
+			                 .log("tres"))
+			 .then()
+			 .subscribe()
+			 .dispose();
+
+			return Mono.never();
+		})
+		             .block();
+
+		assertTrue("Cancel not propagated", connectionLatch.await(30, TimeUnit.SECONDS));
+		c.dispose();
+	}
+
+	@Test
+	public void testCandidSend() throws InterruptedException {
+		final CountDownLatch connectionLatch = new CountDownLatch(2);
+
+		TcpClient tcpClient = TcpClient.create(opts -> opts.host("localhost")
+		                                                   .port(echoServerPort)
+		                                                   .disablePool());
+		NettyContext c;
+
+		c = tcpClient.newHandler((i, o) -> {
+			o.sendString(Mono.just("test")
+			                 .subscribeOn(Schedulers.elastic())
+			                 .doOnCancel(connectionLatch::countDown))
+			 .then()
+			 .subscribe();
+
+			return Mono.never();
+		})
+		             .block();
+
+		assertTrue("Cancel not propagated", connectionLatch.await(30, TimeUnit.SECONDS));
+		c.dispose();
+	}
+
+	@Test
 	public void consumerSpecAssignsEventHandlers()
-			throws InterruptedException, IOException {
+			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(2);
 		final CountDownLatch close = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
@@ -421,7 +485,7 @@ public class TcpClientTests {
 
 	@Test
 	public void writeIdleDoesNotFireWhileDataIsBeingSent()
-			throws InterruptedException, IOException {
+			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		long start = System.currentTimeMillis();
 
