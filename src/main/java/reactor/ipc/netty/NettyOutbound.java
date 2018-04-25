@@ -32,6 +32,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.nio.NioEventLoop;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedInput;
 import io.netty.handler.stream.ChunkedNioFile;
@@ -222,7 +223,9 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	default NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file);
-		if (context().channel().pipeline().get(SslHandler.class) != null) {
+		if ((context().channel().pipeline().get(SslHandler.class) != null) ||
+				(!(context().channel().eventLoop() instanceof NioEventLoop) &&
+						!"file".equals(file.toUri().getScheme()))) {
 			return sendFileChunked(file, position, count);
 		}
 
