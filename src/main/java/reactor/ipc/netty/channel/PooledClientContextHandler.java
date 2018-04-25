@@ -178,8 +178,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	final void connectOrAcquire(CHANNEL c) {
 		if (DISPOSED == this.future) {
 			if (log.isDebugEnabled()) {
-				log.debug("Dropping acquisition {} because of {}",
-						"asynchronous user cancellation");
+				log.debug("Dropping acquisition because of asynchronous user cancellation");
 			}
 			disposeOperationThenRelease(c);
 			sink.success();
@@ -187,7 +186,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 
 		if (!c.isActive()) {
-			log.debug("Immediately aborted pooled channel, re-acquiring new " + "channel: {}",
+			log.debug("Immediately aborted pooled channel, re-acquiring new channel: {}",
 					c.toString());
 			setFuture(pool.acquire());
 			return;

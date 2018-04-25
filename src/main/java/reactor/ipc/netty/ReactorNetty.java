@@ -169,7 +169,7 @@ final class ReactorNetty {
 			}
 		}
 		else if (log.isDebugEnabled()) {
-			log.debug(" Non Removed handler: {}, context: {}, pipeline: {}",
+			log.debug("{} Non Removed handler: {}, context: {}, pipeline: {}",
 					channel,
 					name,
 					channel.pipeline()
@@ -191,7 +191,7 @@ final class ReactorNetty {
 			}
 		}
 		else if (log.isDebugEnabled()) {
-			log.debug(" Non Replaced handler: {}, context: {}, pipeline: {}",
+			log.debug("{} Non Replaced handler: {}, context: {}, pipeline: {}",
 					channel,
 					name,
 					channel.pipeline()

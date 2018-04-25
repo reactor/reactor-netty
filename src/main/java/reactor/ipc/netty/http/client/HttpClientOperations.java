@@ -540,8 +540,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			if (started) {
 				if (log.isDebugEnabled()) {
-					log.debug("{} An HttpClientOperations cannot proceed more than one "
-									+ "Response", channel(),
+					log.debug("{} An HttpClientOperations cannot proceed more than one response {}",
+							channel(),
 							response.headers()
 							        .toString());
 				}
@@ -603,7 +603,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				if (msg instanceof ByteBufHolder) {
 					msg = ((ByteBufHolder) msg).content();
 				}
-				log.debug("{} HttpClientOperations received an incorrect chunk " + "" +
+				log.debug("{} HttpClientOperations received an incorrect chunk {} " +
 								"(previously used connection?)",
 						channel(), msg);
 			}
