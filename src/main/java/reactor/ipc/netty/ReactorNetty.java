@@ -16,8 +16,10 @@
 package reactor.ipc.netty;
 
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -30,6 +32,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -215,7 +218,44 @@ final class ReactorNetty {
 		return registerForClose;
 	}
 
+
+
+	static <T, V> Publisher<V> publisherOrScalarMap(Publisher<T> publisher,
+			Function<? super T, ? extends V> mapper) {
+
+		if (publisher instanceof Callable) {
+			return Mono.fromCallable(new ScalarMap<>(publisher, mapper));
+		}
+		else if (publisher instanceof Mono) {
+			return ((Mono<T>)publisher).map(mapper);
+		}
+
+		return Flux.from(publisher)
+		           .map(mapper);
+	}
+
 	ReactorNetty(){
+	}
+
+	static final class ScalarMap<T, V> implements Callable<V> {
+
+		final Callable<T>                      source;
+		final Function<? super T, ? extends V> mapper;
+
+		@SuppressWarnings("unchecked")
+		ScalarMap(Publisher<T> source, Function<? super T, ? extends V> mapper) {
+			this.source = (Callable<T>) source;
+			this.mapper = mapper;
+		}
+
+		@Override
+		public V call() throws Exception {
+			T called = source.call();
+			if (called == null) {
+				return null;
+			}
+			return mapper.apply(called);
+		}
 	}
 
 	static final class TerminatedHandlerEvent {
@@ -324,7 +364,7 @@ final class ReactorNetty {
 		}
 
 		@Override
-		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		public void channelRead(ChannelHandlerContext ctx, Object msg) {
 			extractor.accept(ctx, msg);
 		}
 	}
