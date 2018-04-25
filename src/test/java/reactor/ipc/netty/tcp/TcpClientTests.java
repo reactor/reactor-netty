@@ -401,30 +401,6 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testCandidSend() throws InterruptedException {
-		final CountDownLatch connectionLatch = new CountDownLatch(2);
-
-		TcpClient tcpClient = TcpClient.create(opts -> opts.host("localhost")
-		                                                   .port(echoServerPort)
-		                                                   .disablePool());
-		NettyContext c;
-
-		c = tcpClient.newHandler((i, o) -> {
-			o.sendString(Mono.just("test")
-			                 .subscribeOn(Schedulers.elastic())
-			                 .doOnCancel(connectionLatch::countDown))
-			 .then()
-			 .subscribe();
-
-			return Mono.never();
-		})
-		             .block();
-
-		assertTrue("Cancel not propagated", connectionLatch.await(30, TimeUnit.SECONDS));
-		c.dispose();
-	}
-
-	@Test
 	public void consumerSpecAssignsEventHandlers()
 			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(2);

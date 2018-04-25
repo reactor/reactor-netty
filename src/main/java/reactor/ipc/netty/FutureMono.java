@@ -281,7 +281,6 @@ public abstract class FutureMono extends Mono<Void> {
 		@Override
 		public void cancel() {
 			future.removeListener(this);
-			future.cancel(true);
 		}
 
 		@Override
@@ -318,7 +317,7 @@ public abstract class FutureMono extends Mono<Void> {
 	}
 
 	final static class ChannelFutureSubscription extends DefaultChannelPromise
-			implements Subscription {
+			implements Subscription, Function<Void, Context> {
 
 		final CoreSubscriber<? super Void> actual;
 		CoreSubscriber<?> ioActual;
@@ -334,6 +333,11 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
+		public Context apply(Void aVoid) {
+			return actual.currentContext();
+		}
+
+		@Override
 		@SuppressWarnings("unchecked")
 		public void cancel() {
 			if (!executor().inEventLoop()) {
@@ -346,7 +350,6 @@ public abstract class FutureMono extends Mono<Void> {
 			if (ioActual instanceof Consumer) {
 				((Consumer<ChannelFuture>)ioActual).accept(this);
 			}
-			cancel(true);
 		}
 
 		@Override

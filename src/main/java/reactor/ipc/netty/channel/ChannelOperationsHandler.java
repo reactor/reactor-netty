@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -106,7 +106,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	@Override
-	final public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+	final public void channelInactive(ChannelHandlerContext ctx) {
 		try {
 			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops != null) {
@@ -126,8 +126,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	@Override
-	final public void channelRead(ChannelHandlerContext ctx, Object msg)
-			throws Exception {
+	final public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg == null || msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
 			return;
 		}
@@ -519,8 +518,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		@SuppressWarnings("unchecked")
 		public Context currentContext() {
 			ChannelPromise p = promise;
-			if (p instanceof Supplier) {
-				return ((Supplier<Context>)p).get();
+			if (p instanceof Function) {
+				return ((Function<?, Context>)p).apply(null);
 			}
 			return Context.empty();
 		}
