@@ -360,7 +360,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param err the {@link Throwable} cause
 	 */
 	protected void onOutboundError(Throwable err) {
-		discreteRemoteClose(err);
 		markPersistent(false);
 		onHandlerTerminate();
 	}
@@ -384,28 +383,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			log.error("", t);
 			channel.close();
 		}
-	}
-
-	/**
-	 * Try filtering out remote close unless traced, return true if filtered
-	 *
-	 * @param err the error to check
-	 *
-	 * @return true if filtered
-	 */
-	protected final boolean discreteRemoteClose(Throwable err) {
-		if (AbortedException.isConnectionReset(err)) {
-			if (log.isDebugEnabled()) {
-				log.debug("{} [{}] Connection closed remotely", channel.toString(),
-						formatName(),
-						err);
-			}
-			return true;
-		}
-
-		log.error("[" + formatName() + "] Error processing connection. Requesting close the channel",
-				err);
-		return false;
 	}
 
 	/**
@@ -448,7 +425,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param err the {@link Throwable} cause
 	 */
 	protected final void onInboundError(Throwable err) {
-		discreteRemoteClose(err);
 		inbound.onInboundError(err);
 	}
 

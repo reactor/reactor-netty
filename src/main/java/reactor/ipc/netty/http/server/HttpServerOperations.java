@@ -478,7 +478,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 
-		discreteRemoteClose(err);
 		if (markSentHeaders()) {
 			log.error("Error starting response. Replying error status", err);
 
