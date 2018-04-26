@@ -404,7 +404,7 @@ public class WebsocketTest {
 	@Test
 	public void closePool() {
 		PoolResources pr = PoolResources.fixed("wstest", 1);
-		NettyContext httpServer = HttpServer.create(0)
+		httpServer = HttpServer.create(0)
 		                       .newHandler((in, out) -> out.sendWebsocket(
 				                       (i, o) -> o.options(opt -> opt.flushOnEach())
 				                                  .sendString(
@@ -433,7 +433,6 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify();
 
-		httpServer.dispose();
 		pr.dispose();
 	}
 
