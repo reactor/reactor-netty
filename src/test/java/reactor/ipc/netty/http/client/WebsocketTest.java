@@ -16,24 +16,30 @@
 
 package reactor.ipc.netty.http.client;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
 
@@ -480,5 +486,64 @@ public class WebsocketTest {
 		StepVerifier.create(response)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testConnectionAliveWhenTransformationErrors_1() {
+		doTestConnectionAliveWhenTransformationErrors((in, out) ->
+		        out.options(sendOptions -> sendOptions.flushOnEach())
+		           .sendObject(in.aggregateFrames()
+		                         .receiveFrames()
+		                         .map(WebSocketFrame::content)
+		                         //.share()
+		                         .publish()
+		                         .autoConnect()
+		                         .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+		                         .map(Integer::parseInt)
+		                         .map(i -> new TextWebSocketFrame(i + ""))
+		                         .retry()),
+		       Flux.just("1", "2"), 2);
+	}
+
+	@Test
+	public void testConnectionAliveWhenTransformationErrors_2() {
+		doTestConnectionAliveWhenTransformationErrors((in, out) ->
+		        out.options(sendOptions -> sendOptions.flushOnEach())
+		           .sendObject(in.aggregateFrames()
+		                         .receiveFrames()
+		                         .map(WebSocketFrame::content)
+		                         .concatMap(content ->
+		                             Mono.just(content)
+		                                 .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+		                                 .map(Integer::parseInt)
+		                                 .map(i -> new TextWebSocketFrame(i + ""))
+		                                 .onErrorResume(t -> Mono.just(new TextWebSocketFrame("error"))))),
+				Flux.just("1", "error", "2"), 3);
+	}
+
+	private void doTestConnectionAliveWhenTransformationErrors(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+			Flux<String> expectation, int count) {
+		httpServer =
+				HttpServer.create(0)
+				          .newHandler((req, res) -> res.sendWebsocket(handler))
+				          .block(Duration.ofSeconds(30));
+
+		ReplayProcessor<String> output = ReplayProcessor.create();
+		HttpClient.create(httpServer.address().getPort())
+		          .ws("/")
+		          .flatMap(res ->
+		                  res.receiveWebsocket((in, out) -> out.sendString(Flux.just("1", "text", "2"))
+		                                                       .then(in.aggregateFrames()
+		                                                               .receiveFrames()
+		                                                               .map(WebSocketFrame::content)
+		                                                               .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+		                                                               .take(count)
+		                                                               .subscribeWith(output)
+		                                                               .then())))
+		          .block(Duration.ofSeconds(30));
+
+		Assertions.assertThat(output.collectList().block(Duration.ofSeconds(30)))
+		          .isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
+
 	}
 }
