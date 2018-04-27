@@ -224,6 +224,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	default NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file);
 		if ((context().channel().pipeline().get(SslHandler.class) != null) ||
+				context().channel().pipeline().get(NettyPipeline.CompressionHandler) != null ||
 				(!(context().channel().eventLoop() instanceof NioEventLoop) &&
 						!"file".equals(file.toUri().getScheme()))) {
 			return sendFileChunked(file, position, count);
