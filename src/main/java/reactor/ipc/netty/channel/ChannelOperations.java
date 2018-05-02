@@ -195,7 +195,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final boolean isDisposed() {
-		return get(channel()) != this;
+		return !channel().isActive() || get(channel()) != this;
 	}
 
 	@Override
