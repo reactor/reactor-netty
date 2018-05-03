@@ -35,7 +35,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
-import io.netty.util.ReferenceCountUtil;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
@@ -200,7 +199,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 	@Override
 	protected void onInboundClose() {
-		super.onInboundComplete();
+		onHandlerTerminate();
 	}
 
 	@Override

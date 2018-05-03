@@ -20,6 +20,7 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
@@ -545,5 +546,107 @@ public class WebsocketTest {
 		Assertions.assertThat(output.collectList().block(Duration.ofSeconds(30)))
 		          .isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
 
+	}
+
+	@Test
+	public void testClientOnCloseIsInvokedClientDisposed() throws Exception {
+		httpServer =
+				HttpServer.create(0)
+				          .newHandler((req, res) ->
+				              res.options(sendOptions -> sendOptions.flushOnEach())
+				                 .sendWebsocket((in, out) ->
+				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
+				                                        .map(l -> l + ""))))
+				          .block(Duration.ofSeconds(30));
+
+		CountDownLatch latch = new CountDownLatch(3);
+		AtomicBoolean error = new AtomicBoolean();
+		HttpClient.create(httpServer.address().getPort())
+		          .ws("/test")
+		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
+		                  NettyContext context = in.context();
+		                  Mono.delay(Duration.ofSeconds(3))
+		                      .subscribe(c -> {
+		                              System.out.println("context.dispose()");
+		                              context.dispose();
+		                              latch.countDown();
+		                      });
+		                  context.onClose()
+		                         .subscribe(
+		                                 c -> { // no-op
+		                                 },
+		                                 t -> {
+		                                     t.printStackTrace();
+		                                     error.set(true);
+		                                 },
+		                                 () -> {
+		                                     System.out.println("context.onClose() completed");
+		                                     latch.countDown();
+		                                 });
+		                  Mono.delay(Duration.ofSeconds(3))
+		                      .repeat(() -> {
+		                          System.out.println("context.isDisposed() " + context.isDisposed());
+		                          if (context.isDisposed()) {
+		                              latch.countDown();
+		                              return false;
+		                          }
+		                          return true;
+		                      })
+		                      .subscribe();
+		                  return Mono.delay(Duration.ofSeconds(7))
+		                             .then();
+		          }))
+		          .block(Duration.ofSeconds(30));
+
+		latch.await(30, TimeUnit.SECONDS);
+
+		Assertions.assertThat(error.get()).isFalse();
+	}
+
+	@Test
+	public void testClientOnCloseIsInvokedServerInitiatedClose() throws Exception {
+		httpServer =
+				HttpServer.create(0)
+				          .newHandler((req, res) ->
+				              res.sendWebsocket((in, out) ->
+				                  out.sendString(Mono.just("test"))))
+				          .block(Duration.ofSeconds(30));
+
+		CountDownLatch latch = new CountDownLatch(2);
+		AtomicBoolean error = new AtomicBoolean();
+		HttpClient.create(httpServer.address().getPort())
+		          .ws("/test")
+		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
+		              NettyContext context = in.context();
+		              context.onClose()
+		                     .subscribe(
+		                             c -> { // no-op
+		                             },
+		                             t -> {
+		                                 t.printStackTrace();
+		                                 error.set(true);
+		                             },
+		                             () -> {
+		                                 System.out.println("context.onClose() completed");
+		                                 latch.countDown();
+		                             });
+		              Mono.delay(Duration.ofSeconds(3))
+		                  .repeat(() -> {
+		                      System.out.println("context.isDisposed() " + context.isDisposed());
+		                      if (context.isDisposed()) {
+		                          latch.countDown();
+		                          return false;
+		                      }
+		                      return true;
+		                  })
+		                  .subscribe();
+		              return Mono.delay(Duration.ofSeconds(7))
+		                         .then();
+		          }))
+		          .block(Duration.ofSeconds(30));
+
+		latch.await(30, TimeUnit.SECONDS);
+
+		Assertions.assertThat(error.get()).isFalse();
 	}
 }
