@@ -200,7 +200,7 @@ public class TcpClientTests {
 
 	@Test
 	public void tcpClientHandlesLineFeedDataFixedPool() throws InterruptedException {
-		Consumer<Channel> channelInit = c -> c
+		Consumer<? super Channel> channelInit = c -> c
 				.pipeline()
 				.addBefore(NettyPipeline.ReactiveBridge,
 						"codec",
@@ -216,7 +216,7 @@ public class TcpClientTests {
 
 	@Test
 	public void tcpClientHandlesLineFeedDataElasticPool() throws InterruptedException {
-		Consumer<Channel> channelInit = c -> c
+		Consumer<? super Channel> channelInit = c -> c
 				.pipeline()
 				.addBefore(NettyPipeline.ReactiveBridge,
 						"codec",
@@ -230,7 +230,7 @@ public class TcpClientTests {
 		);
 	}
 
-	private void tcpClientHandlesLineFeedData(Consumer<? super ClientOptions.Builder> opsBuilder) throws InterruptedException {
+	private void tcpClientHandlesLineFeedData(Consumer<? super ClientOptions.Builder<?>> opsBuilder) throws InterruptedException {
 		final int messages = 100;
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<>();
@@ -272,7 +272,7 @@ public class TcpClientTests {
 		      .block(Duration.ofSeconds(30));
 	}
 
-	private void connectionWillRetryConnectionAttemptWhenItFails(Consumer<ClientOptions.Builder> opsBuilder)
+	private void connectionWillRetryConnectionAttemptWhenItFails(Consumer<ClientOptions.Builder<?>> opsBuilder)
 			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();

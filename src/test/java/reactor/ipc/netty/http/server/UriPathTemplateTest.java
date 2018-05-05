@@ -20,6 +20,8 @@ import org.hamcrest.Matchers;
 import org.junit.Test;
 import reactor.ipc.netty.http.server.HttpPredicate.UriPathTemplate;
 
+import java.util.Arrays;
+
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -59,7 +61,7 @@ public class UriPathTemplateTest {
     public void parametrizedPathWithMultipleParametersShouldBeMatched() {
         UriPathTemplate template = new UriPathTemplate("/{collection}/{id}");
         assertThat(template.matches("/comments/1"), is(true));
-        assertThat(template.match("/comments/1"), allOf(hasEntry("id", "1"), hasEntry("collection", "comments")));
+        assertThat(template.match("/comments/1"), allOf(Arrays.asList(hasEntry("id", "1"), hasEntry("collection", "comments"))));
     }
 
     @Test
