@@ -22,13 +22,11 @@ buildscript {
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
 			'io.spring.gradle:spring-io-plugin:0.0.4.RELEASE',
-			'com.github.jengelman.gradle.plugins:shadow:1.2.0',
-			'org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.8'
+			'com.github.jengelman.gradle.plugins:shadow:1.2.0'
   }
 }
 
 plugins {
-  id 'org.asciidoctor.convert' version '1.5.2'
   id "com.github.hierynomus.license" version "0.14.0"
 }
 
