@@ -92,6 +92,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return !running.get();
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Mono<Void> disposeLater() {
 		return Mono.defer(() -> {
