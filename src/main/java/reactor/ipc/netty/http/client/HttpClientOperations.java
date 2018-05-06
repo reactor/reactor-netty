@@ -83,7 +83,7 @@ import reactor.util.Loggers;
 class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClientRequest>
 		implements HttpClientResponse, HttpClientRequest {
 
-	static HttpOperations bindHttp(Channel channel,
+	static HttpClientOperations bindHttp(Channel channel,
 			BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> handler,
 			ContextHandler<?> context) {
 		return new HttpClientOperations(channel, handler, context);

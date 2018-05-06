@@ -114,7 +114,7 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
+			public FileChunkedStrategy<?> getFileChunkedStrategy() {
 				return FILE_CHUNKED_STRATEGY_NOPIPELINE;
 			}
 		};
@@ -182,7 +182,7 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
+			public FileChunkedStrategy<?> getFileChunkedStrategy() {
 				return FILE_CHUNKED_STRATEGY_NOPIPELINE;
 			}
 		};
@@ -248,7 +248,7 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public FileChunkedStrategy getFileChunkedStrategy() {
+			public FileChunkedStrategy<?> getFileChunkedStrategy() {
 				return FILE_CHUNKED_STRATEGY_NOPIPELINE;
 			}
 		};
@@ -277,7 +277,7 @@ public class NettyOutboundTest {
 		assertThat(channel.finishAndReleaseAll()).isTrue();
 	}
 
-	private static final FileChunkedStrategy FILE_CHUNKED_STRATEGY_NOPIPELINE =
+	private static final FileChunkedStrategy<ByteBuf> FILE_CHUNKED_STRATEGY_NOPIPELINE =
 			new FileChunkedStrategy<ByteBuf>() {
 				@Override
 				public ChunkedInput<ByteBuf> chunkFile(FileChannel fileChannel, long offset, long length, int chunkSize) {

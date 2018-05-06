@@ -168,7 +168,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
-	public FileChunkedStrategy getFileChunkedStrategy() {
+	public FileChunkedStrategy<?> getFileChunkedStrategy() {
 		return new AbstractFileChunkedStrategy<HttpContent>() {
 			@Override
 			public ChunkedInput<HttpContent> chunkFile(FileChannel fileChannel, long offset, long length, int chunkSize) {
@@ -263,6 +263,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 */
 	protected abstract HttpMessage outboundHttpMessage();
 
+	@SuppressWarnings("rawtypes")
 	final static AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");

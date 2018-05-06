@@ -106,7 +106,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	static ChannelOperations<?, ?> tryGetAndSet(Channel ch, ChannelOperations<?, ?> ops) {
-		Attribute<ChannelOperations> attr = ch.attr(ChannelOperations.OPERATIONS_KEY);
+		Attribute<ChannelOperations<?, ?>> attr = ch.attr(ChannelOperations.OPERATIONS_KEY);
 		for (; ; ) {
 			ChannelOperations<?, ?> op = attr.get();
 			if (op != null) {
@@ -475,10 +475,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	/**
 	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}
 	 */
-	protected static final AttributeKey<ChannelOperations> OPERATIONS_KEY = AttributeKey.newInstance("nettyOperations");
+	protected static final AttributeKey<ChannelOperations<?, ?>> OPERATIONS_KEY = AttributeKey.newInstance("nettyOperations");
 	static final Logger     log  = Loggers.getLogger(ChannelOperations.class);
-	static final BiFunction PING = (i, o) -> Flux.empty();
+	static final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> PING = (i, o) -> Flux.empty();
 
+	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<ChannelOperations, Subscription>
 			OUTBOUND_CLOSE = AtomicReferenceFieldUpdater.newUpdater(ChannelOperations.class,
 			Subscription.class,
