@@ -55,12 +55,13 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	volatile Future<CHANNEL> future;
 
+	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<PooledClientContextHandler, Future> FUTURE =
 			AtomicReferenceFieldUpdater.newUpdater(PooledClientContextHandler.class,
 					Future.class,
 					"future");
 
-	static final Future DISPOSED = new SucceededFuture<>(null, null);
+	static final Future<?> DISPOSED = new SucceededFuture<>(null, null);
 
 	PooledClientContextHandler(ChannelOperations.OnNew<CHANNEL> channelOpFactory,
 			ClientOptions options,

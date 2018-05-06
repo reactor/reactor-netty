@@ -94,7 +94,7 @@ public interface NettyOutbound extends Publisher<Void> {
 		return this;
 	}
 
-	default FileChunkedStrategy getFileChunkedStrategy() {
+	default FileChunkedStrategy<?> getFileChunkedStrategy() {
 		return FILE_CHUNKED_STRATEGY_BUFFER;
 	}
 
@@ -242,7 +242,7 @@ public interface NettyOutbound extends Publisher<Void> {
 
 	default NettyOutbound sendFileChunked(Path file, long position, long count) {
 		Objects.requireNonNull(file);
-		final FileChunkedStrategy strategy = getFileChunkedStrategy();
+		final FileChunkedStrategy<?> strategy = getFileChunkedStrategy();
 		strategy.preparePipeline(context());
 
 		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),

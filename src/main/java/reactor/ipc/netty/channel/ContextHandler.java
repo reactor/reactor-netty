@@ -221,7 +221,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					channelOpFactory.create((CHANNEL) channel, this, msg);
 
 			if (op != null) {
-				ChannelOperations old = ChannelOperations.tryGetAndSet(channel, op);
+				ChannelOperations<?, ?> old = ChannelOperations.tryGetAndSet(channel, op);
 
 				if (old != null) {
 					if (log.isDebugEnabled()) {
