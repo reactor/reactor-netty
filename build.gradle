@@ -83,6 +83,7 @@ configure(rootProject) { project ->
   apply plugin: 'propdeps'
   apply plugin: 'osgi'
   apply from: "${gradleScriptDir}/ide.gradle"
+  apply from: "${gradleScriptDir}/errorprone.gradle"
 
   jacoco {
 	toolVersion = '0.7.7.201606060606'

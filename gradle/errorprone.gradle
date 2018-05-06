@@ -1,0 +1,25 @@
+buildscript {
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "net.ltgt.gradle:gradle-errorprone-plugin:0.0.13"
+	}
+}
+
+apply plugin: net.ltgt.gradle.errorprone.ErrorPronePlugin
+
+dependencies {
+	errorprone 'com.google.errorprone:error_prone_core:2.3.1'
+	errorprone 'com.google.guava:guava:23.5-jre' // prevents conflicts with guava versions of other gradle plugins
+}
+
+// Change all errorprone errors to warnings
+// TODO: remove when warning have been resolved
+project.afterEvaluate {
+	tasks.withType(JavaCompile) {
+		options.compilerArgs << '-XepAllErrorsAsWarnings'
+	}
+}
