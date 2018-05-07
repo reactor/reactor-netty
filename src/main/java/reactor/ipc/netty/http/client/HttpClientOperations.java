@@ -357,6 +357,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return nettyRequest.headers();
 	}
 
+	@Override
 	public HttpHeaders responseHeaders() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {

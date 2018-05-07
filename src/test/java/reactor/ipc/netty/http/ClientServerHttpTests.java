@@ -98,6 +98,7 @@ public class ClientServerHttpTests {
 		final List<String> data1 = new ArrayList<String>();
 		final CountDownLatch latch1 = new CountDownLatch(1);
 		Runnable runner1 = new Runnable() {
+			@Override
 			public void run() {
 				try {
 					Mono<List<String>> clientDataPromise1 = getClientDataPromise();
@@ -124,6 +125,7 @@ public class ClientServerHttpTests {
 		final List<String> data2 = new ArrayList<String>();
 		final CountDownLatch latch2 = new CountDownLatch(1);
 		Runnable runner2 = new Runnable() {
+			@Override
 			public void run() {
 				try {
 					Mono<List<String>> clientDataPromise2 = getClientDataPromise();

@@ -131,6 +131,7 @@ public class SmokeTests {
 		Runnable srunner = new Runnable() {
 			final Sender sender = smokeTests.newSender();
 
+			@Override
 			public void run() {
 				try {
 					long start = System.currentTimeMillis();
@@ -317,6 +318,7 @@ public class SmokeTests {
 		windowsData.clear();
 		Thread.sleep(1500);
 		Runnable srunner = new Runnable() {
+			@Override
 			public void run() {
 				try {
 					sender.sendNext(count);

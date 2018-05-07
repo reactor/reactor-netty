@@ -165,6 +165,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return this;
 	}
 
+	@Override
 	public HttpServerResponse chunkedTransfer(boolean chunked) {
 		if (!hasSentHeaders() && HttpUtil.isTransferEncodingChunked(nettyResponse) != chunked) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
