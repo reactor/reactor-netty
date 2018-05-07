@@ -139,7 +139,7 @@ public class HttpSendFileTests {
 				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(() -> context.address())
 				                                                   .compression(compression)))
 				          .get("/foo")
-				          .block(Duration.ofSeconds(120));
+				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
 		context.onClose().block();

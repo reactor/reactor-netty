@@ -761,7 +761,7 @@ public class HttpClientTest {
 				HttpClient.create(opt -> applyHostAndPortFromContext(opt, context)
 				                            .sslContext(sslClient))
 				          .post("/upload", r -> r.sendFile(largeFile))
-				          .block(Duration.ofSeconds(120));
+				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
 		context.onClose().block();
@@ -795,7 +795,7 @@ public class HttpClientTest {
 		HttpClientResponse response =
 				createHttpClientForContext(context)
 				          .post("/upload", r -> r.sendFile(largeFile))
-				          .block(Duration.ofSeconds(120));
+				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
 		context.onClose().block();

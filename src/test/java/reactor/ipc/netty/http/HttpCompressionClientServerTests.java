@@ -49,7 +49,7 @@ public class HttpCompressionClientServerTests {
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create(o -> o.compression(true)
 		                                            .connectAddress(() -> address(nettyContext)));
@@ -73,7 +73,7 @@ public class HttpCompressionClientServerTests {
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
 		HttpClientResponse resp =
@@ -100,7 +100,7 @@ public class HttpCompressionClientServerTests {
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
@@ -129,7 +129,7 @@ public class HttpCompressionClientServerTests {
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
@@ -173,7 +173,7 @@ public class HttpCompressionClientServerTests {
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.header("content-length", "5")
 				                                  .sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
@@ -205,7 +205,7 @@ public class HttpCompressionClientServerTests {
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
@@ -246,7 +246,7 @@ public class HttpCompressionClientServerTests {
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
@@ -279,7 +279,7 @@ public class HttpCompressionClientServerTests {
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
@@ -321,7 +321,7 @@ public class HttpCompressionClientServerTests {
 		String serverReply = "reply";
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just(serverReply)))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create(o -> o.compression(false)
 		                                            .connectAddress(() -> address(nettyContext)));
@@ -348,7 +348,7 @@ public class HttpCompressionClientServerTests {
 
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create(o -> o.connectAddress(() -> address(nettyContext)));
 
@@ -375,7 +375,7 @@ public class HttpCompressionClientServerTests {
 		HttpServer server = HttpServer.create(o -> o.port(0).compression(true));
 		NettyContext nettyContext =
 				server.newHandler((in, out) -> out.sendString(Mono.just("reply")))
-				      .block(Duration.ofMillis(10_000));
+				      .block(Duration.ofSeconds(10));
 		HttpClient client = HttpClient.create(opt -> opt.compression(true)
 		                                                .connectAddress(() -> address(nettyContext)));
 

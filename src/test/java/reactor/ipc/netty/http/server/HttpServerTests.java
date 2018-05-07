@@ -556,7 +556,7 @@ public class HttpServerTests {
 		NettyContext server =
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.status(200).send())
-				          .block(Duration.ofSeconds(300));
+				          .block(Duration.ofSeconds(30));
 
 		HttpClient client =
 				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
@@ -581,7 +581,7 @@ public class HttpServerTests {
 
 		StepVerifier.create(content)
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(300));
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -624,7 +624,7 @@ public class HttpServerTests {
 		NettyContext server =
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.status(200).send())
-				          .block(Duration.ofSeconds(300));
+				          .block(Duration.ofSeconds(30));
 
 		HttpClient client =
 				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
@@ -645,7 +645,7 @@ public class HttpServerTests {
 
 			StepVerifier.create(content)
 			            .expectComplete()
-			            .verify(Duration.ofSeconds(300));
+			            .verify(Duration.ofSeconds(30));
 			assertThat(context.get().get("Hello").equals("World")).isTrue();
 		}
 		finally {
