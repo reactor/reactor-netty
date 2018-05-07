@@ -381,7 +381,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
-		if (method() == HttpMethod.GET || method() == HttpMethod.HEAD) {
+		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 			ByteBufAllocator alloc = channel().alloc();
 			return then(Flux.from(source)
 			    .doOnNext(ByteBuf::retain)

@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.client;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -52,14 +53,15 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			HttpMethod method,
 			Function<? super HttpClientRequest, ? extends Publisher<Void>> handler) {
 		this.parent = parent;
+		boolean isWs = Objects.equals(method, HttpClient.WS);
 		try {
 			this.startURI = new URI(parent.options.formatSchemeAndHost(url,
-					method == HttpClient.WS));
+					isWs));
 		}
 		catch (URISyntaxException e) {
 			throw Exceptions.bubble(e);
 		}
-		this.method = method == HttpClient.WS ? HttpMethod.GET : method;
+		this.method = isWs ? HttpMethod.GET : method;
 		this.handler = handler;
 
 	}
@@ -109,9 +111,9 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 				  .add(HttpHeaderNames.HOST, host)
 				  .add(HttpHeaderNames.ACCEPT, ALL);
 
-				if (parent.method == HttpMethod.GET
-						|| parent.method == HttpMethod.HEAD
-						|| parent.method == HttpMethod.DELETE) {
+				if (Objects.equals(parent.method, HttpMethod.GET)
+						|| Objects.equals(parent.method, HttpMethod.HEAD)
+						|| Objects.equals(parent.method, HttpMethod.DELETE)) {
 					ch.chunkedTransfer(false);
 				}
 

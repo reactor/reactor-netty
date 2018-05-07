@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -413,7 +414,7 @@ public class HttpClientTest {
 		                 .closeFuture())
 		          .block(Duration.ofSeconds(5));
 
-		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
 		r.dispose();
 	}
 
@@ -431,7 +432,7 @@ public class HttpClientTest {
 		                 .closeFuture())
 		          .block(Duration.ofSeconds(5));
 
-		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
 		r.dispose();
 	}
 
@@ -454,7 +455,7 @@ public class HttpClientTest {
 		                   .channel() == r2.context()
 		                                   .channel());
 
-		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
 		r.dispose();
 		r2.dispose();
 		p.dispose();
@@ -480,7 +481,7 @@ public class HttpClientTest {
 		                   .channel() == r2.context()
 		                                   .channel());
 
-		Assert.assertTrue(r.status() == HttpResponseStatus.NOT_FOUND);
+		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
 		r.dispose();
 		r2.dispose();
 		p.dispose();
@@ -503,7 +504,7 @@ public class HttpClientTest {
 				                                        .sendString(Mono.just(" ")))
 		                                  .block(Duration.ofSeconds(30));
 
-		Assert.assertTrue(r.status() == HttpResponseStatus.BAD_REQUEST);
+		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.BAD_REQUEST));
 		r.dispose();
 		r1.dispose();
 		fixed.dispose();

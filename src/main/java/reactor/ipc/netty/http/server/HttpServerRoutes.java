@@ -282,7 +282,7 @@ public interface HttpServerRoutes extends
 
 	Predicate<HttpServerRequest> INDEX_PREDICATE = req -> {
 		URI uri = URI.create(req.uri());
-		return req.method() == HttpMethod.GET && (uri.getPath()
+		return Objects.equals(req.method(), HttpMethod.GET) && (uri.getPath()
 		                                             .endsWith("/") || uri.getPath()
 		                                                                  .indexOf(".",
 				                                                                  uri.getPath()

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -108,7 +109,7 @@ public class ProxyClientIssue {
 							                                                       HttpResponseStatus
 									                                                       statusCode =
 									                                                       clientResponse.status();
-							                                                       if (statusCode != OK) {
+							                                                       if (!Objects.equals(statusCode, OK)) {
 								                                                       System.out.println(
 										                                                       "Unsuccessful status code: " + statusCode);
 							                                                       }
