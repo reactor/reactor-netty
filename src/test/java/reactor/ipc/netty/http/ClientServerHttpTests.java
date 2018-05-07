@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -367,7 +368,7 @@ public class ClientServerHttpTests {
 				}
 			}
 			String data = buf.toString();
-			return alloc.buffer().writeBytes(data.getBytes());
+			return alloc.buffer().writeBytes(data.getBytes(Charset.defaultCharset()));
 		}
 	}
 }

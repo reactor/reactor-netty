@@ -179,7 +179,7 @@ public class WebsocketTest {
 		                       .newHandler((in, out) -> out.sendWebsocket(
 				                       (i, o) -> o.options(opt -> opt.flushOnEach())
 				                                  .sendByteArray(
-						                                  Mono.just("test".getBytes())
+						                                  Mono.just("test".getBytes(Charset.defaultCharset()))
 						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
 		                       .block(Duration.ofSeconds(30));

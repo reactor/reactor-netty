@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -257,7 +258,7 @@ public class ChannelOperationsHandlerTest {
 							"Transfer-Encoding: chunked\r\n" +
 							"\r\n" +
 							"0\r\n" +
-							"\r\n").getBytes();
+							"\r\n").getBytes(Charset.defaultCharset());
 
 					int written = ch.write(ByteBuffer.wrap(buffer));
 					if (written < 0) {

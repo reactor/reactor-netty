@@ -19,6 +19,7 @@ package reactor.ipc.netty.http.client;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -897,7 +898,8 @@ public class HttpClientTest {
 
 		Mono<String> content =
 				HttpClient.create(server.address().getPort())
-				          .get("/", req -> req.sendByteArray(Mono.defer(() -> Mono.just("Hello".getBytes()))))
+				          .get("/", req ->
+				                  req.sendByteArray(Mono.defer(() -> Mono.just("Hello".getBytes(Charset.defaultCharset())))))
 				          .flatMap(it -> it.receive().aggregate().asString());
 
 		StepVerifier.create(content)

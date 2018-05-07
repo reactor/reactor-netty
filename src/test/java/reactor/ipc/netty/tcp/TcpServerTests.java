@@ -259,7 +259,7 @@ public class TcpServerTests {
 				client.newHandler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
 				                                            .map(b -> out.alloc()
 				                                                         .buffer()
-				                                                         .writeBytes(b.getBytes()))))
+				                                                         .writeBytes(b.getBytes(Charset.defaultCharset())))))
 				      .block(Duration.ofSeconds(30));
 
 		assertTrue("Latch was counted down", latch.await(10, TimeUnit.SECONDS));
@@ -638,7 +638,8 @@ public class TcpServerTests {
 		Assertions.assertThat(client.e).isNull();
 		Assertions.assertThat(client.data).isNotNull();
 		Assertions.assertThat(client.data.remaining()).isEqualTo(19);
-		Assertions.assertThat(new String(client.data.array())).isEqualTo("{\"name\":\"Jane Doe\"}");
+		Assertions.assertThat(new String(client.data.array(), Charset.defaultCharset()))
+		          .isEqualTo("{\"name\":\"Jane Doe\"}");
 
 		server.dispose();
 	}

@@ -17,6 +17,7 @@ package reactor.ipc.netty.http;
 
 import java.io.ByteArrayInputStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
@@ -145,7 +146,7 @@ public class HttpCompressionClientServerTests {
 		                         .asByteArray()
 		                         .block();
 
-		assertThat(new String(replyBuffer)).isNotEqualTo("reply");
+		assertThat(new String(replyBuffer, Charset.defaultCharset())).isNotEqualTo("reply");
 
 		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(replyBuffer));
 		byte deflatedBuf[] = new byte[1024];
@@ -154,7 +155,7 @@ public class HttpCompressionClientServerTests {
 
 		assertThat(readable).isGreaterThan(0);
 
-		String deflated = new String(deflatedBuf, 0, readable);
+		String deflated = new String(deflatedBuf, 0, readable, Charset.defaultCharset());
 
 		assertThat(deflated).isEqualTo("reply");
 
@@ -221,7 +222,7 @@ public class HttpCompressionClientServerTests {
 		                         .asByteArray()
 		                         .block();
 
-		assertThat(new String(replyBuffer)).isNotEqualTo("reply");
+		assertThat(new String(replyBuffer, Charset.defaultCharset())).isNotEqualTo("reply");
 
 		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(replyBuffer));
 		byte deflatedBuf[] = new byte[1024];
@@ -230,7 +231,7 @@ public class HttpCompressionClientServerTests {
 
 		assertThat(readable).isGreaterThan(0);
 
-		String deflated = new String(deflatedBuf, 0, readable);
+		String deflated = new String(deflatedBuf, 0, readable, Charset.defaultCharset());
 
 		assertThat(deflated).isEqualTo("reply");
 
@@ -295,7 +296,7 @@ public class HttpCompressionClientServerTests {
 		                         .asByteArray()
 		                         .block();
 
-		assertThat(new String(replyBuffer)).isNotEqualTo("reply");
+		assertThat(new String(replyBuffer, Charset.defaultCharset())).isNotEqualTo("reply");
 
 		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(replyBuffer));
 		byte deflatedBuf[] = new byte[1024];
@@ -304,7 +305,7 @@ public class HttpCompressionClientServerTests {
 
 		assertThat(readable).isGreaterThan(0);
 
-		String deflated = new String(deflatedBuf, 0, readable);
+		String deflated = new String(deflatedBuf, 0, readable, Charset.defaultCharset());
 
 		assertThat(deflated).isEqualTo("reply");
 

@@ -19,6 +19,7 @@ package reactor.ipc.netty.http.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -99,7 +100,7 @@ public class HttpServerTests {
 
 		Flux<ByteBuf> src = Flux.range(0, 3)
 		                        .map(n -> Unpooled.wrappedBuffer(Integer.toString(n)
-		                                                                .getBytes()));
+		                                                                .getBytes(Charset.defaultCharset())));
 
 		Flux.range(0, 100)
 		    .concatMap(n -> HttpClient.create(c.address()

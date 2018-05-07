@@ -114,7 +114,7 @@ public class SmokeTests {
 			for (int i = 0; i < count; i++) {
 //				System.out.println("XXXX " + x);
 				String data = x++ + "\n";
-				processor.onNext(Unpooled.copiedBuffer(data.getBytes()));
+				processor.onNext(Unpooled.copiedBuffer(data.getBytes(Charset.defaultCharset())));
 			}
 		}
 	}
@@ -280,7 +280,7 @@ public class SmokeTests {
 							                                                        Unpooled.copiedBuffer(
 									                                                        new byte[0]) :
 							                                                        Unpooled.copiedBuffer(
-									                                                        "END".getBytes()))
+									                                                        "END".getBytes(Charset.defaultCharset())))
 			                                                                        .doOnComplete(
 					                                                                        integerPostConcat::decrementAndGet))//END
 			                                                        .doOnNext(d -> integerPostConcat.getAndIncrement())
