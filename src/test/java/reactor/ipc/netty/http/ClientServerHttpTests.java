@@ -348,11 +348,11 @@ public class ClientServerHttpTests {
 		}
 	}
 
-	public class DummyListEncoder implements Function<List<String>, ByteBuf> {
+	static class DummyListEncoder implements Function<List<String>, ByteBuf> {
 
 		final ByteBufAllocator alloc;
 
-		public DummyListEncoder(ByteBufAllocator alloc) {
+		DummyListEncoder(ByteBufAllocator alloc) {
 			this.alloc = alloc;
 		}
 
