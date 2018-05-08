@@ -358,7 +358,7 @@ public class ClientServerHttpTests {
 
 		@Override
 		public ByteBuf apply(List<String> t) {
-			StringBuffer buf = new StringBuffer();
+			StringBuilder buf = new StringBuilder();
 			if (t.isEmpty()) {
 				buf.append("END\n");
 			}
