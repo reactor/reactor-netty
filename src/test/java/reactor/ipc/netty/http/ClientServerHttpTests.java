@@ -42,6 +42,8 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
@@ -51,6 +53,8 @@ import static org.junit.Assert.assertThat;
  */
 @Ignore
 public class ClientServerHttpTests {
+
+	static final Logger log = Loggers.getLogger(ClientServerHttpTests.class);
 
 	private NettyContext              httpServer;
 	private Processor<String, String> broadcaster;
@@ -134,7 +138,7 @@ public class ClientServerHttpTests {
 					data2.addAll(clientDataPromise2.block(Duration.ofSeconds(30)));
 				}
 				catch (Exception ie) {
-					ie.printStackTrace();
+					log.error("", ie);
 				}
 			}
 		};
@@ -310,7 +314,7 @@ public class ClientServerHttpTests {
 					datas.add(clientDataPromise.block(Duration.ofSeconds(10)));
 				}
 				catch (Exception ie) {
-					ie.printStackTrace();
+					log.error("", ie);
 				}
 			};
 			Thread t = new Thread(runner, "SmokeThread" + i);

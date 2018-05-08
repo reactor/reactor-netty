@@ -111,7 +111,7 @@ public class UdpServerTests {
 				                                   udp.close();
 			                                   }
 			                                   catch (IOException e) {
-				                                   e.printStackTrace();
+				                                   log.error("", e);
 			                                   }
 		                                   })
 		                                     .block(Duration.ofSeconds(30));

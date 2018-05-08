@@ -181,7 +181,7 @@ public class ChannelOperationsHandlerTest {
 				}
 			}
 			catch (IOException e) {
-				e.printStackTrace();
+				log.error("", e);
 			}
 		}
 
