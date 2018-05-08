@@ -281,7 +281,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 	ChannelFuture doWrite(Object msg, ChannelPromise promise, PublisherSender inner) {
 		if (flushOnEach || //fastpath
-				inner == null && pendingWrites.isEmpty() || //last drained element
+				(inner == null && pendingWrites.isEmpty()) || //last drained element
 				!ctx.channel()
 				    .isWritable() //force flush if write buffer full
 				) {
