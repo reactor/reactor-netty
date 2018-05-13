@@ -268,13 +268,28 @@ public interface HttpServerRoutes extends
 			String protocols) {
 		Predicate<HttpServerRequest> condition = HttpPredicate.get(path);
 
+		return ws(condition, handler, protocols);
+	}
+
+	/**
+	 * Listen for WebSocket with the given route predicate to invoke the matching handlers
+	 *
+	 * @param condition a predicate given each inbound request
+	 * @param handler an handler to invoke for the given condition
+	 * @param protocols sub-protocol to use in WS handshake signature
+	 *
+	 * @return a new handler
+	 */
+	@SuppressWarnings("unchecked")
+	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
+					Publisher<Void>> handler,
+			String protocols) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
-			       .contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-
+					.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), protocols,
-						handler);
+				return ops.withWebsocketSupport(req.uri(), protocols, handler);
 			}
 			return resp.sendNotFound();
 		});
