@@ -227,8 +227,8 @@ final class HttpClientConnect extends HttpClient {
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == HttpClientOperations.RESPONSE_RECEIVED) {
 				sink.success(connection);
+				return;
 			}
-
 			if (newState == State.CONFIGURED) {
 				if (log.isDebugEnabled()) {
 					log.debug("{} handler is being applied: {}",

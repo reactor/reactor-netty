@@ -17,7 +17,6 @@
 package reactor.ipc.netty.http.client;
 
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
@@ -152,37 +151,6 @@ final class HttpClientConfiguration {
 	static Bootstrap body(Bootstrap b,
 			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> body) {
 		getOrCreate(b).body = body;
-		return b;
-	}
-
-	static Bootstrap aroundBody(Bootstrap b, @Nullable Consumer<? super HttpClientRequest> before, @Nullable Consumer<? super HttpClientRequest> after) {
-		HttpClientConfiguration hcc = getOrCreate(b);
-
-		if (hcc.body == null) {
-			hcc.body = (req, out) -> {
-				if (before != null) {
-					before.accept(req);
-				}
-				if (after != null) {
-					return Mono.<Void>empty().doAfterTerminate(() -> after.accept(req));
-				}
-				return Mono.empty();
-			};
-		}
-		else {
-			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> body = hcc.body;
-			hcc.body = (req, out) -> {
-				if (before != null){
-					before.accept(req);
-				}
-				if (after != null) {
-					return Mono.fromDirect(body.apply(req, out))
-					           .doAfterTerminate(() -> after.accept(req));
-				}
-				return body.apply(req, out);
-			};
-
-		}
 		return b;
 	}
 

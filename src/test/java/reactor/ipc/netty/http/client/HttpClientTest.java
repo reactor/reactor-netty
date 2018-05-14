@@ -405,11 +405,12 @@ public class HttpClientTest {
 
 	private void doSimpleTest404(HttpClient client) {
 		int res = client.followRedirect()
+		                .doAfterResponse(c -> System.out.println("LOLOL"))
 				        .get()
 				        .uri("/unsupportedURI")
 				        .responseSingle((r, buf) -> Mono.just(r.status().code()))
 				        .log()
-				        .block(Duration.ofSeconds(30));
+				        .block();
 
 		if (res != 404) {
 			throw new IllegalStateException("test status failed with " + res);

@@ -17,16 +17,21 @@
 package reactor.ipc.netty.http.client;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 
+import io.netty.bootstrap.Bootstrap;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
+import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.tcp.TcpClient;
 
 /**
  * @author Stephane Maldini
  */
-final class HttpClientLifecycle extends HttpClientOperator
-		implements Consumer<Connection> {
+final class HttpClientLifecycle extends HttpClientOperator implements
+                                                           ConnectionObserver,
+                                                           Function<Bootstrap, Bootstrap> {
 
 	final Consumer<? super HttpClientRequest>  onRequest;
 	final Consumer<? super HttpClientRequest>  afterRequest;
@@ -45,32 +50,37 @@ final class HttpClientLifecycle extends HttpClientOperator
 		this.afterResponse = afterResponse;
 	}
 
-	static final Consumer<? super Throwable> EMPTY_ERROR = e -> {};
-
 	@Override
-	protected TcpClient tcpConfiguration() {
-		TcpClient client = super.tcpConfiguration();
-		if (onRequest != null || afterRequest != null) {
-			client = client.bootstrap(b -> HttpClientConfiguration.aroundBody(b, onRequest, afterRequest));
-		}
-		if (onResponse != null || afterResponse != null) {
-			return client.doOnConnected(this);
-		}
-		return client;
+	public Bootstrap apply(Bootstrap bootstrap) {
+		BootstrapHandlers.connectionObserver(bootstrap, this);
+		return bootstrap;
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public void accept(Connection o) {
-		HttpClientOperations ops = (HttpClientOperations)o;
+	public void onStateChange(Connection connection, State newState) {
+		if (newState == State.CONFIGURED) {
+			if (onRequest != null) {
+				onRequest.accept(connection.as(HttpClientOperations.class));
+			}
 
-		if (onResponse != null) {
-			onResponse.accept(ops);
+			if (afterResponse != null) {
+				connection.onDispose(() ->
+						afterResponse.accept(connection.as(HttpClientOperations.class)));
+			}
+			return;
 		}
+		if (afterRequest != null && newState == HttpClientOperations.REQUEST_SENT) {
+			afterRequest.accept(connection.as(HttpClientOperations.class));
+			return;
+		}
+		if (onResponse != null && newState == HttpClientOperations.RESPONSE_RECEIVED) {
+			onResponse.accept(connection.as(HttpClientOperations.class));
+		}
+	}
 
-		if (afterResponse != null) {
-//			ops.responseEnd.subscribe(null, EMPTY_ERROR, () -> afterResponse.accept(ops));
-		}
+	@Override
+	protected TcpClient tcpConfiguration() {
+		return super.tcpConfiguration().bootstrap(this);
 	}
 
 }
