@@ -259,8 +259,7 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer doOnConnection(Consumer<? super Connection> doOnConnection) {
-		Objects.requireNonNull(doOnConnection, "doOnConnection");
-		return doOnBound(s -> s.connections().subscribe(doOnConnection));
+		return new TcpServerDoOnConnection(this, doOnConnection);
 	}
 
 	/**

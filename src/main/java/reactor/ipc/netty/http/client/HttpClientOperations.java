@@ -63,12 +63,11 @@ import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.Exceptions;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
@@ -87,19 +86,10 @@ import reactor.util.Loggers;
 class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClientRequest>
 		implements HttpClientResponse, HttpClientRequest {
 
-	static HttpOperations bindHttp(Connection connection, ConnectionEvents listener) {
-		return new HttpClientOperations(connection, listener);
-	}
-
-	enum HttpClientEvent {
-		afterRequest, onResponse
-	}
-
-	final DirectProcessor<HttpClientEvent> httpClientEvents;
-	final Supplier<String>[]               redirectedFrom;
-	final boolean                          isSecure;
-	final HttpRequest                      nettyRequest;
-	final HttpHeaders                      requestHeaders;
+	final Supplier<String>[]    redirectedFrom;
+	final boolean               isSecure;
+	final HttpRequest           nettyRequest;
+	final HttpHeaders           requestHeaders;
 
 	volatile ResponseState responseState;
 	int inboundPrefetch;
@@ -118,10 +108,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		this.redirectable = replaced.redirectable;
 		this.inboundPrefetch = replaced.inboundPrefetch;
 		this.requestHeaders = replaced.requestHeaders;
-		this.httpClientEvents = replaced.httpClientEvents;
 	}
 
-	HttpClientOperations(Connection c, ConnectionEvents listener) {
+	HttpClientOperations(Connection c, ConnectionObserver listener) {
 		super(c, listener);
 		this.isSecure = c.channel()
 		                 .pipeline()
@@ -134,7 +123,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
 		this.inboundPrefetch = 16;
-		this.httpClientEvents = DirectProcessor.create();
 	}
 
 	@Override
@@ -254,7 +242,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (responseState == null) {
-			httpClientEvents.onError(new IOException("Connection closed prematurely"));
+			listener().onUncaughtException(this, new IOException("Connection closed prematurely"));
 			return;
 		}
 		super.onInboundError(new IOException("Connection closed prematurely"));
@@ -470,14 +458,14 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		else if (markSentBody()) {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
-		httpClientEvents.onNext(HttpClientEvent.afterRequest);
+		listener().onStateChange(this, REQUEST_SENT);
 		channel().read();
 	}
 
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if(Connection.isPersistent(channel()) && responseState == null){
-			listener().onReceiveError(channel(), err);
+			listener().onUncaughtException(this, err);
 			onHandlerTerminate();
 			return;
 		}
@@ -525,8 +513,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 
 			if (notRedirected(response)) {
+				listener().onStateChange(this, RESPONSE_RECEIVED);
 				prefetchMore(ctx);
-				httpClientEvents.onNext(HttpClientEvent.onResponse);
 			}
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
@@ -545,7 +533,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (log.isDebugEnabled()) {
 				log.debug("{} Received last HTTP packet", channel());
 			}
-			httpClientEvents.onComplete();
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
 			}
@@ -589,7 +576,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 						        .entries()
 						        .toString());
 			}
-			httpClientEvents.onError(new RedirectClientException(response));
+			listener().onUncaughtException(this, new RedirectClientException(response));
 			return false;
 		}
 		return true;
@@ -636,7 +623,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			WebsocketClientOperations
 					ops = new WebsocketClientOperations(url, protocols, this);
 
-			if (replace(ops)) {
+			if (rebind(ops)) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
 				                                 .then(Mono.defer(() -> Mono.from(
 						                                 websocketHandler.apply(ops, ops))));
@@ -783,5 +770,19 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			Loggers.getLogger(HttpClientOperations.class);
 	static final AttributeKey<Supplier<String>[]> REDIRECT_ATTR_KEY  =
 			AttributeKey.newInstance("httpRedirects");
+
+	static final ConnectionObserver.State REQUEST_SENT = new ConnectionObserver.State() {
+		@Override
+		public String toString() {
+			return "[request_sent]";
+		}
+	};
+	static final ConnectionObserver.State RESPONSE_RECEIVED = new ConnectionObserver.State
+			() {
+		@Override
+		public String toString() {
+			return "[response_received]";
+		}
+	};
 
 }

@@ -177,7 +177,7 @@ public class HttpClientTest {
 
 	@Test
 	@Ignore
-	public void pipelined() throws Exception {
+	public void pipelined() {
 		DisposableServer x = TcpServer.create()
 		                        .host("localhost")
 		                        .port(0)
@@ -296,7 +296,7 @@ public class HttpClientTest {
 
 	@Test
 	@Ignore
-	public void proxy() throws Exception {
+	public void proxy() {
 		String remote =
 				HttpClient.prepare()
 				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
@@ -316,7 +316,7 @@ public class HttpClientTest {
 
 	@Test
 	@Ignore
-	public void nonProxyHosts() throws Exception {
+	public void nonProxyHosts() {
 		HttpClient client =
 				HttpClient.prepare()
 				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
@@ -353,7 +353,7 @@ public class HttpClientTest {
 	}
 
 	//@Test
-	public void postUpload() throws Exception {
+	public void postUpload() {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
 		//Path f = Paths.get("/Users/smaldini/Downloads/IMG_6702.mp4");
 		int res = HttpClient.prepare()
@@ -417,7 +417,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void disableChunkForced() throws Exception {
+	public void disableChunkForced() {
 		HttpClientResponse r =
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
@@ -438,7 +438,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void disableChunkForced2() throws Exception {
+	public void disableChunkForced2() {
 		HttpClientResponse r =
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
@@ -460,7 +460,8 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void disableChunkImplicit() throws Exception {
+	@Ignore
+	public void simpleClientPooling() {
 		PoolResources p = PoolResources.fixed("test", 1);
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
@@ -498,7 +499,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void disableChunkImplicitDefault() throws Exception {
+	public void disableChunkImplicitDefault() {
 		PoolResources p = PoolResources.fixed("test", 1);
 		HttpClientResponse r =
 				HttpClient.prepare(p)
@@ -532,7 +533,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void contentHeader() throws Exception {
+	public void contentHeader() {
 		PoolResources fixed = PoolResources.fixed("test", 1);
 		HttpResponseStatus r =
 				HttpClient.prepare(fixed)
@@ -581,7 +582,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void prematureCancel() throws Exception {
+	public void prematureCancel() {
 		DirectProcessor<Void> signal = DirectProcessor.create();
 		DisposableServer x = TcpServer.create()
 		                        .host("localhost")
@@ -776,7 +777,7 @@ public class HttpClientTest {
 
 		String responseString =
 				HttpClient.prepare()
-				          .addressSupplier(() -> context.address())
+				          .addressSupplier(context::address)
 				          .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
 				          .wiretap()
 				          .get()
@@ -787,6 +788,7 @@ public class HttpClientTest {
 		context.onDispose().block();
 
 		assertThat(responseString).isEqualTo("hello /foo");
+
 	}
 
 	@Test
@@ -918,6 +920,10 @@ public class HttpClientTest {
 
 		ByteBuf response1 =
 				createHttpClientForContext(context)
+						.doOnRequest(r -> System.out.println("onReq: "+r))
+						.doAfterRequest(r -> System.out.println("afterReq: "+r))
+						.doOnResponse(r -> System.out.println("onResp: "+r))
+						.doAfterResponse(r -> System.out.println("afterResp: "+r))
 				          .put()
 				          .uri("/201")
 				          .responseContent()

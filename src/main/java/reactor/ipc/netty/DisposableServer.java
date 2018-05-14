@@ -18,8 +18,6 @@ package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
 
-import reactor.core.publisher.Flux;
-
 /**
  * Hold contextual information for the underlying server
  *
@@ -27,15 +25,6 @@ import reactor.core.publisher.Flux;
  * @since 0.8
  */
 public interface DisposableServer extends DisposableChannel {
-
-	/**
-	 * Return the {@link Flux} of remote {@link Connection}. The {@link Flux}
-	 * subscriber must keep up with demand or will be receive an onError signal.
-	 * {@link Flux} will emit onComplete if the server is disposed.
-	 *
-	 * @return a hot {@link Flux} of server {@link Connection}
-	 */
-	Flux<Connection> connections();
 
 	/**
 	 * Return the server's host String. That is, the hostname or in case the server was bound

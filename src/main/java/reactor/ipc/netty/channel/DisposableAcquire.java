@@ -31,20 +31,19 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
-import static reactor.ipc.netty.channel.ChannelOperations.OPERATIONS_KEY;
 
 /**
  *
  * @author Stephane Maldini
  */
-final class DisposableAcquire implements Connection, ConnectionEvents,
+final class DisposableAcquire implements Connection, ConnectionObserver,
                                          Consumer<Future<?>>,
                                          Runnable {
 
@@ -105,11 +104,17 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 	}
 
 	@Override
-	public void onDispose(Channel channel) {
-		log.debug("onConnectionDispose({})", channel);
-		if (channel.isActive()) {
-			channel.close();
+	public void onStateChange(Connection connection, State newState) {
+		log.debug("onStateChange({}, {})", newState, connection);
+		if (newState == State.DISCONNECTING) {
+			if (channel.isActive()) {
+				channel.close();
+			}
 		}
+		else if (newState == State.RELEASED) {
+
+		}
+		//listener.onStateChange(connection, newState)
 	}
 
 	@Override
@@ -120,27 +125,16 @@ final class DisposableAcquire implements Connection, ConnectionEvents,
 	}
 
 	@Override
-	public void onReceiveError(Channel channel, Throwable error) {
-		log.error("onReceiveError({})", channel);
+	public void onUncaughtException(Connection c, Throwable error) {
+		log.error("onUncaughtException("+c+")", error);
 		if (DISPOSED == currentOwner) {
 			if (log.isDebugEnabled()) {
-				log.debug("Dropping error {} because of {}", channel,
+				log.debug("Dropping error {} because of {}", c,
 						"asynchronous user cancellation");
 			}
 			return;
 		}
 		sink.error(error);
-	}
-
-	@Override
-	public void onSetup(Channel channel, @Nullable Object msg) {
-		log.debug("onConnectionSetup({})", channel);
-		ChannelOperations<?, ?> ops = opsFactory.create(this, this, msg);
-
-		channel.attr(OPERATIONS_KEY)
-		       .set(ops);
-
-		sink.success(ops);
 	}
 
 	@SuppressWarnings("unchecked")

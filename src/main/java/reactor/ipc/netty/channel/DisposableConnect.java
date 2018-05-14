@@ -18,9 +18,7 @@ package reactor.ipc.netty.channel;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -28,31 +26,26 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.util.concurrent.Future;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
-
-import static reactor.ipc.netty.channel.ChannelOperations.OPERATIONS_KEY;
 
 /**
  * A {@link DisposableConnect} is bound to a user-facing {@link MonoSink}
  */
 final class DisposableConnect
-		implements Connection, ConnectionEvents, ChannelFutureListener, Consumer<Future<?>> {
+		implements Connection, ConnectionObserver, ChannelFutureListener, Consumer<Future<?>> {
 
 	static final Logger log = Loggers.getLogger(DisposableConnect.class);
 
-	final MonoSink<Connection>                            sink;
-	final ChannelOperations.OnSetup opsFactory;
+	final ConnectionObserver listener;
 
 	ChannelFuture f;
 	Channel channel;
 
-	DisposableConnect(MonoSink<Connection> sink,
-			ChannelOperations.OnSetup opsFactory) {
-		this.opsFactory = Objects.requireNonNull(opsFactory, "opsFactory");
-		this.sink = sink;
+	DisposableConnect(ConnectionObserver listener) {
+		this.listener = listener;
 	}
 
 	@Override
@@ -68,8 +61,6 @@ final class DisposableConnect
 		this.f = (ChannelFuture) future;
 
 		f.addListener(this);
-
-		sink.onCancel(this);
 	}
 
 	@Override
@@ -79,7 +70,7 @@ final class DisposableConnect
 
 	@Override
 	public Context currentContext() {
-		return sink.currentContext();
+		return listener.currentContext();
 	}
 
 	@Override
@@ -101,43 +92,39 @@ final class DisposableConnect
 	}
 
 	@Override
-	public void onDispose(Channel channel) {
-		log.debug("onConnectionDispose({})", channel);
+	public void onStateChange(Connection connection, State newState) {
+		log.debug("onStateChange({}, {})", newState, connection);
+		if (newState == State.DISCONNECTING) {
+			if (channel.isActive()) {
+				channel.close();
+			}
+		}
+		listener.onStateChange(connection, newState);
 	}
 
 	@Override
-	public void onReceiveError(Channel channel, Throwable error) {
-		log.error("onConnectionError({})", channel);
-		sink.error(error);
+	public void onUncaughtException(Connection connection, Throwable error) {
+		log.error("onUncaughtException("+connection+")", connection, error);
+		listener.onUncaughtException(connection, error);
 	}
 
 	@Override
-	public void onSetup(Channel channel, @Nullable Object msg) {
-		this.channel = channel;
-		log.debug("onConnectionSetup({})", channel);
-		ChannelOperations<?, ?> ops = opsFactory.create(this, this, msg);
-
-		channel.attr(OPERATIONS_KEY)
-		       .set(ops);
-
-		sink.success(ops);
-	}
-
-	@Override
-	public final void operationComplete(ChannelFuture f) throws Exception {
+	public final void operationComplete(ChannelFuture f) {
+		this.channel = f.channel();
+		bind();
 		if (!f.isSuccess()) {
 			if (f.isCancelled()) {
 				log.debug("Cancelled {}", f.channel());
 				return;
 			}
 			if (f.cause() != null) {
-				sink.error(f.cause());
+				listener.onUncaughtException(this, f.cause());
 			}
 			else {
-				sink.error(new IOException("error while connecting to " + f.channel()));
+				listener.onUncaughtException(this, new IOException("error while connecting to " + f.channel()));
 			}
 		}
-		if (log.isDebugEnabled()) {
+		else if (log.isDebugEnabled()) {
 			log.debug("Connected new channel {}", f.channel());
 		}
 	}

@@ -19,6 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.resources.LoopResources;
@@ -47,8 +48,8 @@ final class UdpServerBind extends UdpServer {
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
 			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
-			BootstrapHandlers.finalize(bootstrap, ops, sink)
-			                 .accept(bootstrap.bind());
+			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
+			sink.onCancel(BootstrapHandlers.bind(bootstrap, ops, new UdpObserver(sink, obs)));
 		});
 	}
 }

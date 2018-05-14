@@ -104,7 +104,7 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	private void doTestPrefetchSize(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
-		ChannelOperationsHandler handler = new ChannelOperationsHandler(null);
+		ChannelOperationsHandler handler = new ChannelOperationsHandler(null, null);
 
 		EmbeddedChannel channel = new EmbeddedChannel(handler);
 		channel.config().setWriteBufferLowWaterMark(writeBufferLowWaterMark)

@@ -19,9 +19,11 @@ package reactor.ipc.netty.tcp;
 import io.netty.bootstrap.Bootstrap;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.resources.LoopResources;
+import reactor.util.context.Context;
 
 /**
  * @author Stephane Maldini
@@ -44,11 +46,31 @@ final class TcpClientConnect extends TcpClient {
 
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
-			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
-			TcpUtils.fromLazyRemoteAddress(bootstrap);
+			ChannelOperations.OnSetup factory = BootstrapHandlers.channelOperationFactory(bootstrap);
+			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
 
-			BootstrapHandlers.finalize(bootstrap, ops, sink)
-			                 .accept(bootstrap.connect());
+			TcpUtils.convertLazyRemoteAddress(bootstrap);
+
+			sink.onCancel(BootstrapHandlers.connect(bootstrap, factory, new ConnectionObserver() {
+				@Override
+				public Context currentContext() {
+					return sink.currentContext();
+				}
+
+				@Override
+				public void onStateChange(Connection connection, State newState) {
+					if (newState == State.CONFIGURED) {
+						sink.success(connection);
+					}
+					obs.onStateChange(connection, newState);
+				}
+
+				@Override
+				public void onUncaughtException(Connection c, Throwable error) {
+					sink.error(error);
+					obs.onUncaughtException(c, error);
+				}
+			}));
 		});
 
 	}

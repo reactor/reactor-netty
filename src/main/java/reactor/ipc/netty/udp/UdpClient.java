@@ -386,7 +386,7 @@ public abstract class UdpClient {
 					.remoteAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
 
 	static {
-		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, (ch, c, msg) -> UdpOperations.bindUdp(ch, c));
+		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, (ch, c, msg) -> new UdpOperations(ch, c).bind());
 	}
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(UdpClient.class);

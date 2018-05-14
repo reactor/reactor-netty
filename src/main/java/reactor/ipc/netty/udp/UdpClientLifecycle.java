@@ -15,17 +15,19 @@
  */
 package reactor.ipc.netty.udp;
 
+import java.util.function.Consumer;
+import javax.annotation.Nullable;
+
 import io.netty.bootstrap.Bootstrap;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
-
-import javax.annotation.Nullable;
-import java.util.function.Consumer;
+import reactor.ipc.netty.ConnectionObserver;
+import reactor.ipc.netty.channel.BootstrapHandlers;
 
 /**
  * @author Stephane Maldini
  */
-final class UdpClientLifecycle extends UdpClientOperator implements Consumer<Connection> {
+final class UdpClientLifecycle extends UdpClientOperator implements ConnectionObserver {
 
 	final Consumer<? super Bootstrap>       onConnect;
 	final Consumer<? super Connection>      onConnected;
@@ -42,28 +44,32 @@ final class UdpClientLifecycle extends UdpClientOperator implements Consumer<Con
 	}
 
 	@Override
-	protected Mono<? extends Connection> connect(Bootstrap b) {
-		Mono<? extends Connection> m = source.connect(b);
-
-		if (onConnect != null) {
-			m = m.doOnSubscribe(s -> onConnect.accept(b.clone()));
-		}
-
-		if (onConnected != null) {
-			m = m.doOnNext(this);
-		}
-
-		if (onDisconnected != null) {
-			m = m.doOnNext(c -> c.onDispose(() -> onDisconnected.accept(c)));
-		}
-
-		return m;
+	public Bootstrap configure() {
+		Bootstrap b = source.configure();
+		ConnectionObserver observer = BootstrapHandlers.connectionObserver(b);
+		BootstrapHandlers.connectionObserver(b, observer.then(this));
+		return b;
 	}
 
 	@Override
-	public void accept(Connection o) {
-		if (onConnected != null) {
-			onConnected.accept(o);
+	public Mono<? extends Connection> connect(Bootstrap b) {
+		if (onConnect != null) {
+			return source.connect(b)
+			             .doOnSubscribe(s -> onConnect.accept(b));
+		}
+		return source.connect(b);
+	}
+
+	@Override
+	public void onStateChange(Connection connection, ConnectionObserver.State newState) {
+		if (newState == ConnectionObserver.State.CONFIGURED) {
+			if (onConnected != null) {
+				onConnected.accept(connection);
+			}
+			if (onDisconnected != null) {
+				connection.onDispose(() -> onDisconnected.accept(connection));
+			}
+			return;
 		}
 	}
 }

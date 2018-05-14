@@ -53,11 +53,11 @@ final class TcpClientAcquire extends TcpClient {
 		return Mono.create(sink -> {
 			Bootstrap bootstrap = b.clone();
 			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
-			TcpUtils.fromLazyRemoteAddress(bootstrap);
+			TcpUtils.convertLazyRemoteAddress(bootstrap);
 			ChannelPool pool = poolResources.selectOrCreate(bootstrap);
 			//bootstrap will be mutated so pool.onChannelCreate will see finalized handler
 			//todo re-implement pool
-			BootstrapHandlers.finalize(bootstrap, ops, sink, pool)
+			BootstrapHandlers.acquire(bootstrap, ops, sink, pool)
 			                 .accept(pool.acquire());
 		});
 	}

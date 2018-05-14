@@ -25,12 +25,12 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.Attribute;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionEvents;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
@@ -326,51 +326,33 @@ public abstract class HttpServer {
 		return DEFAULT_TCP_SERVER;
 	}
 
+	static final ChannelOperations.OnSetup HTTP_OPS =
+			(c, listener, msg) -> {
+				Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
+						c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
+				final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+				if (predicate != null && predicate.get() != null) {
+					compressionPredicate = predicate.get();
+				}
+				else {
+					compressionPredicate = null;
+				}
+				new HttpServerOperations(c, listener, compressionPredicate, (HttpRequest) msg, false).bind();
+			};
 
-
-	static final ChannelOperations.OnSetup HTTP_OPS = new ChannelOperations.OnSetup() {
-		@Nullable
-		@Override
-		public ChannelOperations<?, ?> create(Connection c, ConnectionEvents listener, Object msg) {
-			Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
-					c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
-			final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-			if (predicate != null && predicate.get() != null) {
-				compressionPredicate = predicate.get();
-			}
-			else {
-				compressionPredicate = null;
-			}
-			return HttpServerOperations.bindHttp(c, listener, compressionPredicate, msg, false);
-		}
-
-		@Override
-		public boolean createOnConnected() {
-			return false;
-		}
-	};
-
-	static final ChannelOperations.OnSetup HTTP_OPS_FORWARDED = new ChannelOperations.OnSetup() {
-		@Nullable
-		@Override
-		public ChannelOperations<?, ?> create(Connection c, ConnectionEvents listener, Object msg) {
-			Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
-					c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
-			final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-			if (predicate != null && predicate.get() != null) {
-				compressionPredicate = predicate.get();
-			}
-			else {
-				compressionPredicate = null;
-			}
-			return HttpServerOperations.bindHttp(c, listener, compressionPredicate, msg, true);
-		}
-
-		@Override
-		public boolean createOnConnected() {
-			return false;
-		}
-	};
+	static final ChannelOperations.OnSetup HTTP_OPS_FORWARDED =
+			(c, listener, msg) -> {
+				Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
+						c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
+				final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
+				if (predicate != null && predicate.get() != null) {
+					compressionPredicate = predicate.get();
+				}
+				else {
+					compressionPredicate = null;
+				}
+				new HttpServerOperations(c, listener, compressionPredicate, (HttpRequest) msg, true).bind();
+			};
 
 	static final int DEFAULT_PORT =
 			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 8080;

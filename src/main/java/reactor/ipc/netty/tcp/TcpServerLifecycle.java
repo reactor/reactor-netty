@@ -16,22 +16,24 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.util.function.Consumer;
+import javax.annotation.Nullable;
+
 import io.netty.bootstrap.ServerBootstrap;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.DisposableServer;
-
-import javax.annotation.Nullable;
-import java.util.function.Consumer;
+import reactor.ipc.netty.channel.BootstrapHandlers;
 
 /**
  * @author Stephane Maldini
  */
-final class TcpServerLifecycle extends TcpServerOperator implements Consumer<DisposableServer> {
+final class TcpServerLifecycle extends TcpServerOperator implements ConnectionObserver {
 
-	final Consumer<? super ServerBootstrap>       onBind;
-	final Consumer<? super DisposableServer>      onBound;
-	final Consumer<? super DisposableServer>      onUnbound;
+	final Consumer<? super ServerBootstrap>  onBind;
+	final Consumer<? super DisposableServer> onBound;
+	final Consumer<? super DisposableServer> onUnbound;
 
 	TcpServerLifecycle(TcpServer server,
 			@Nullable Consumer<? super ServerBootstrap> onBind,
@@ -44,28 +46,35 @@ final class TcpServerLifecycle extends TcpServerOperator implements Consumer<Dis
 	}
 
 	@Override
-	public Mono<? extends DisposableServer> bind(ServerBootstrap b) {
-		Mono<? extends DisposableServer> m = source.bind(b);
-
-		if (onBind != null) {
-			m = m.doOnSubscribe(s -> onBind.accept(b.clone()));
+	@SuppressWarnings("unchecked")
+	public void onStateChange(Connection connection, State newState) {
+		if (newState == State.CONNECTED) {
+			if (onBound != null) {
+				onBound.accept((DisposableServer)connection);
+			}
+			if (onUnbound != null) {
+				connection.channel()
+				          .closeFuture()
+				          .addListener(f -> onUnbound.accept((DisposableServer)connection));
+			}
+			return;
 		}
-
-		if (onBound != null) {
-			m = m.doOnNext(this);
-		}
-
-		if (onUnbound != null) {
-			m = m.doOnNext(c -> c.onDispose(() -> onUnbound.accept(c)));
-		}
-
-		return m;
 	}
 
 	@Override
-	public void accept(DisposableServer o) {
-		if (onBound != null) {
-			onBound.accept(o);
+	public Mono<? extends DisposableServer> bind(ServerBootstrap b) {
+		if (onBind != null) {
+			return source.bind(b)
+			             .doOnSubscribe(s -> onBind.accept(b));
 		}
+		return source.bind(b);
+	}
+
+	@Override
+	public ServerBootstrap configure() {
+		ServerBootstrap b = source.configure();
+		ConnectionObserver observer = BootstrapHandlers.connectionObserver(b);
+		BootstrapHandlers.connectionObserver(b, observer.then(this));
+		return b;
 	}
 }

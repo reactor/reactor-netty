@@ -51,7 +51,8 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Operators;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
@@ -68,9 +69,10 @@ import reactor.util.context.Context;
 final class ChannelOperationsHandler extends ChannelDuplexHandler
 		implements NettyPipeline.SendOptions, ChannelFutureListener {
 
-	final PublisherSender                inner;
-	final int                            prefetch;
-	final ConnectionEvents listener;
+	final PublisherSender    inner;
+	final int                prefetch;
+	final ConnectionObserver listener;
+	final ChannelOperations.OnSetup opsFactory;
 
 	/**
 	 * Cast the supplied queue (SpscLinkedArrayQueue) to use its atomic dual-insert
@@ -92,15 +94,18 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	volatile long    scheduledFlush;
 
 	@SuppressWarnings("unchecked")
-	ChannelOperationsHandler(ConnectionEvents listener) {
+	ChannelOperationsHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
 		this.inner = new PublisherSender(this);
 		this.prefetch = 32;
 		this.listener = listener;
+		this.opsFactory = opsFactory;
 	}
 
 	@Override
-	public void channelActive(ChannelHandlerContext ctx) throws Exception {
-		listener.onSetup(ctx.channel(), null);
+	public void channelActive(ChannelHandlerContext ctx) {
+		Connection c = Connection.from(ctx.channel());
+		listener.onStateChange(c, ConnectionObserver.State.CONNECTED);
+		opsFactory.create(c, listener, null);
 	}
 
 	@Override
@@ -172,8 +177,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			ops.onInboundError(err);
 		}
 		else {
-			listener.onReceiveError(ctx.channel(), err);
-			listener.onDispose(ctx.channel());
+			listener.onUncaughtException(Connection.from(ctx.channel()), err);
 		}
 	}
 
@@ -203,13 +207,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	final public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 		if (log.isTraceEnabled()) {
 			log.trace("{} End of the pipeline, User event {}", ctx.channel(), evt);
-		}
-		if (evt == NettyPipeline.handlerTerminatedEvent()) {
-			if (log.isDebugEnabled()){
-				log.debug("{} Disposing channel", ctx.channel());
-			}
-			listener.onDispose(ctx.channel());
-			return;
 		}
 		if (evt instanceof NettyPipeline.SendOptionsChangeEvent) {
 			if (log.isDebugEnabled()) {

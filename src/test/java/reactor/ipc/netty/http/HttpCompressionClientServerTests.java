@@ -72,7 +72,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@Test
-	public void serverCompressionDefault() throws Exception {
+	public void serverCompressionDefault() {
 		HttpServer server = HttpServer.create()
 		                              .port(0);
 
@@ -102,7 +102,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@Test
-	public void serverCompressionDisabled() throws Exception {
+	public void serverCompressionDisabled() {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
 		                              .noCompression();
@@ -182,7 +182,7 @@ public class HttpCompressionClientServerTests {
 
 
 	@Test
-	public void serverCompressionEnabledSmallResponse() throws Exception {
+	public void serverCompressionEnabledSmallResponse() {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
 		                              .compress(25);
@@ -299,7 +299,7 @@ public class HttpCompressionClientServerTests {
 
 		runningServer.dispose();
 		runningServer.onDispose()
-		            .block();
+		            .block(Duration.ofSeconds(15));
 	}
 
 	@Test
@@ -347,7 +347,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@Test
-	public void compressionServerEnabledClientDisabledIsNone() throws Exception {
+	public void compressionServerEnabledClientDisabledIsNone() {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
 		                              .compress();
@@ -380,7 +380,7 @@ public class HttpCompressionClientServerTests {
 
 
 	@Test
-	public void compressionServerDefaultClientDefaultIsNone() throws Exception {
+	public void compressionServerDefaultClientDefaultIsNone() {
 		HttpServer server = HttpServer.create()
 		                              .port(0);
 

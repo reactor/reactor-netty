@@ -18,7 +18,6 @@ package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
@@ -42,13 +41,14 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.AsciiString;
-import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
@@ -59,10 +59,12 @@ import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.InetSocketAddressUtil;
+import reactor.ipc.netty.tcp.ProxyProvider;
 import reactor.ipc.netty.tcp.SslProvider;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.context.Context;
 
 import static reactor.ipc.netty.http.client.HttpClientOperations.EMPTY;
 
@@ -72,65 +74,24 @@ import static reactor.ipc.netty.http.client.HttpClientOperations.EMPTY;
 final class HttpClientConnect extends HttpClient {
 
 	static final HttpClientConnect INSTANCE = new HttpClientConnect();
-
-	static final AsciiString          ALL = new AsciiString("*/*");
-	static final AttributeKey<String> URI = AttributeKey.newInstance("uri");
-
-	static final AttributeKey<HttpHeaders> HEADERS = AttributeKey.newInstance("headers");
-	static final AttributeKey<HttpMethod>  METHOD  = AttributeKey.newInstance("method");
-
-static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("subprotocols");	static final AttributeKey<BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>>
-			BODY = AttributeKey.newInstance("body");
-
-	static final String MONO_URI_MARKER = "[deferred]";
-
-	static final AttributeKey<Mono<String>> MONO_URI =
-			AttributeKey.newInstance("mono_uri");
-	static final Logger                     log      =
+	static final AsciiString       ALL      = new AsciiString("*/*");
+	static final Logger            log      =
 			Loggers.getLogger(HttpClientFinalizer.class);
 
-	final TcpClient defaultClient;
+	final HttpTcpClient defaultClient;
 
 	HttpClientConnect() {
 		this(DEFAULT_TCP_CLIENT);
 	}
 
 	HttpClientConnect(TcpClient defaultClient) {
-		this.defaultClient = Objects.requireNonNull(defaultClient, "tcpClient");
+		Objects.requireNonNull(defaultClient, "tcpClient");
+		this.defaultClient = new HttpTcpClient(defaultClient);
 	}
 
 	@Override
 	protected TcpClient tcpConfiguration() {
 		return defaultClient;
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	protected Mono<? extends Connection> connect(TcpClient tcpClient) {
-		final Bootstrap bootstrap;
-		try {
-			bootstrap = tcpClient.configure();
-		}
-		catch (Throwable t) {
-			Exceptions.throwIfFatal(t);
-			return Mono.error(t);
-		}
-
-		channelFactoryAndLoops(tcpClient, bootstrap);
-
-		Map<AttributeKey<?>, Object> attrs = bootstrap.config()
-		                                              .attrs();
-
-		bootstrap.attr(ACCEPT_GZIP, null)
-		 .attr(FOLLOW_REDIRECT, null)
-		 .attr(CHUNKED, null)
-		 .attr(BODY, null)
-		 .attr(HEADERS, null)
-		 .attr(URI, null)
-		 .attr(MONO_URI, null)
-		 .attr(METHOD, null).attr(SUBPROTOCOLS, null);
-
-		return new MonoHttpConnect(bootstrap, attrs, tcpClient);
 	}
 
 	static void channelFactoryAndLoops(TcpClient tcpClient, Bootstrap b) {
@@ -149,23 +110,51 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 		}
 	}
 
-	static final Predicate<HttpClientOperations.HttpClientEvent> filterHttpResponse =
-			HttpClientOperations.HttpClientEvent.onResponse::equals;
-
 	static final BiFunction<String, Integer, InetSocketAddress> URI_ADDRESS_MAPPER =
 			InetSocketAddressUtil::createUnresolved;
 
+	static final class HttpTcpClient extends TcpClient {
+
+		final TcpClient defaultClient;
+
+		HttpTcpClient(TcpClient defaultClient) {
+			this.defaultClient = defaultClient;
+		}
+
+		@Override
+		public Mono<? extends Connection> connect(Bootstrap b) {
+			channelFactoryAndLoops(defaultClient, b);
+			return new MonoHttpConnect(b, defaultClient);
+		}
+
+		@Override
+		public Bootstrap configure() {
+			return defaultClient.configure();
+		}
+
+		@Nullable
+		@Override
+		public ProxyProvider proxyProvider() {
+			return defaultClient.proxyProvider();
+		}
+
+		@Nullable
+		@Override
+		public SslContext sslContext() {
+			return defaultClient.sslContext();
+		}
+	}
+
 	static final class MonoHttpConnect extends Mono<Connection> {
 
-		final Bootstrap                    bootstrap;
-		final Map<AttributeKey<?>, Object> attrs;
-		final TcpClient                    tcpClient;
+		final Bootstrap               bootstrap;
+		final HttpClientConfiguration configuration;
+		final TcpClient               tcpClient;
 
 		MonoHttpConnect(Bootstrap bootstrap,
-				Map<AttributeKey<?>, Object> attrs,
 				TcpClient tcpClient) {
 			this.bootstrap = bootstrap;
-			this.attrs = attrs;
+			this.configuration = HttpClientConfiguration.getAndClean(bootstrap);
 			this.tcpClient = tcpClient;
 		}
 
@@ -174,7 +163,7 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 			final Bootstrap b = bootstrap.clone();
 
 			HttpClientHandler handler = new HttpClientHandler(b.config()
-			                                                   .remoteAddress(), attrs);
+			                                                   .remoteAddress(), configuration);
 
 			BootstrapHandlers.updateConfiguration(b,
 					NettyPipeline.HttpInitializer,
@@ -193,38 +182,66 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 
 			b.remoteAddress(handler);
 
-			Mono.defer(() -> {
+			Mono.<Connection>create(sink -> {
 				Bootstrap finalBootstrap;
 				//append secure handler if needed
 				if (handler.activeURI.isSecure()) {
 					finalBootstrap = SslProvider.addDefaultSslSupport(b.clone());
 				}
 				else {
-					finalBootstrap = b;
+					finalBootstrap = b.clone();
 				}
 
-				return tcpClient.doOnConnected(c -> {
-					if (log.isDebugEnabled()) {
-						log.debug("{} handler is being applied: {}",
-								c.channel(),
-								handler);
-					}
+				BootstrapHandlers.connectionObserver(finalBootstrap,
+						BootstrapHandlers.connectionObserver(finalBootstrap).then(new HttpObserver(sink, handler)));
 
-					ChannelOperations<?, ?> ops = ChannelOperations.get(c.channel());
-					handler.channel(c.channel());
-					Mono.fromDirect(handler.apply(ops, ops))
-					    .subscribe(c.disposeSubscriber());
-				})
-				                .connect(finalBootstrap);
-			})
-			    .delayUntil(c -> {
-				    HttpClientOperations ops = (HttpClientOperations) c;
-				    return ops.httpClientEvents.filter(filterHttpResponse)
-				                               .next()
-				                               .map(evt -> ops);
-			    })
-			    .retry(handler)
-			    .subscribe(actual);
+				tcpClient.connect(finalBootstrap)
+				         .subscribe(null, sink::error);
+			}).retry(handler)
+			  .subscribe(actual);
+		}
+	}
+
+	final static class HttpObserver implements ConnectionObserver {
+
+		final MonoSink<Connection> sink;
+		final HttpClientHandler handler;
+
+		HttpObserver(MonoSink<Connection> sink, HttpClientHandler handler) {
+			this.sink = sink;
+			this.handler = handler;
+		}
+
+		@Override
+		public Context currentContext() {
+			return sink.currentContext();
+		}
+
+		@Override
+		public void onUncaughtException(Connection connection, Throwable error) {
+			sink.error(error);
+		}
+
+		@Override
+		@SuppressWarnings("unchecked")
+		public void onStateChange(Connection connection, State newState) {
+			if (newState == HttpClientOperations.RESPONSE_RECEIVED) {
+				sink.success(connection);
+			}
+
+			if (newState == State.CONFIGURED) {
+				if (log.isDebugEnabled()) {
+					log.debug("{} handler is being applied: {}",
+							connection.channel(), handler);
+				}
+				handler.channel(connection.channel());
+
+				ChannelOperations<?, ?> ops =
+						(ChannelOperations<?, ?>) connection;
+
+				Mono.fromDirect(handler.apply(ops, ops))
+				    .subscribe(connection.disposeSubscriber());
+			}
 		}
 	}
 
@@ -234,7 +251,7 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 
 		final HttpMethod         method;
 		final HttpHeaders        defaultHeaders;
-		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>
+		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 		                         handler;
 		final boolean            followRedirect;
 		final boolean            compress;
@@ -245,21 +262,39 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 		volatile Supplier<String>[] redirectedFrom;
 
 		@SuppressWarnings("unchecked")
-		HttpClientHandler(SocketAddress address, Map<AttributeKey<?>, Object> attrs) {
-			this.method = (HttpMethod) attrs.get(METHOD);
+		HttpClientHandler(SocketAddress address, HttpClientConfiguration configuration) {
+			this.method = configuration.method;
+			this.compress = configuration.acceptGzip;
+			this.followRedirect = configuration.followRedirect;
+			this.chunkedTransfer = configuration.chunkedTransfer;
 
-			this.compress =
-					attrs.get(ACCEPT_GZIP) != null && (Boolean) attrs.get(ACCEPT_GZIP);
+			HttpHeaders defaultHeaders = configuration.headers;
+			if (compress) {
+				if (defaultHeaders == null) {
+					this.defaultHeaders = new DefaultHttpHeaders();
+				}
+				else {
+					this.defaultHeaders = defaultHeaders;
+				}
+				this.defaultHeaders.set(HttpHeaderNames.ACCEPT_ENCODING,
+						HttpHeaderValues.GZIP);
+			}
+			else {
+				this.defaultHeaders = defaultHeaders;
+			}
 
-			this.followRedirect =
-					attrs.get(FOLLOW_REDIRECT) != null && (Boolean) attrs.get(
-							FOLLOW_REDIRECT);
+			String baseUrl = configuration.baseUrl;
 
-			this.chunkedTransfer = (Boolean) attrs.get(CHUNKED);
-
-			String uri = (String) attrs.get(URI);
+			String uri = configuration.uri;
 
 			uri = uri == null ? "/" : uri;
+
+			if (baseUrl != null && uri.startsWith("/")) {
+				if (baseUrl.endsWith("/")) {
+					baseUrl = baseUrl.substring(0, baseUrl.length() - 2);
+				}
+				uri = baseUrl + uri;
+			}
 
 			Supplier<SocketAddress> addressSupplier;
 
@@ -273,38 +308,29 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 			this.uriEndpointFactory =
 					new UriEndpointFactory(addressSupplier, false, URI_ADDRESS_MAPPER);
 
-			HttpHeaders defaultHeaders =
-					(HttpHeaders) attrs.get(HttpClientConnect.HEADERS);
+			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
+					requestHandler;
+			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
+					body = configuration.body;
 
-			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound> requestHandler;
-			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends NettyOutbound>
-					body =
-					(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ?
-							extends NettyOutbound>) attrs.get(BODY);if (WS.equals(method)) {
+			boolean isWebsocket = configuration.websocketSubprotocols != null;
+
+			if (isWebsocket) {
+				String subprotocols = configuration.websocketSubprotocols;
 				if (body == null) {
-					requestHandler = (req, out) -> sendWebsocket(req, (String) attrs.get(SUBPROTOCOLS));
+					requestHandler = (req, out) -> sendWebsocket(req, subprotocols);
 				}
 				else {
-					requestHandler = (req, out) -> body.apply(req, sendWebsocket(req, (String) attrs.get(SUBPROTOCOLS)));
+					requestHandler = (req, out) -> body.apply(req,
+							sendWebsocket(req, subprotocols));
 				}
 			}
 			else {
 				requestHandler = body;
 			}
 
-			if (compress) {
-				if (defaultHeaders == null) {
-					defaultHeaders = new DefaultHttpHeaders();
-				}
-				defaultHeaders.set(HttpHeaderNames.ACCEPT_ENCODING,
-						HttpHeaderValues.GZIP);
-			}
-
-			this.defaultHeaders = defaultHeaders;
 			this.handler = requestHandler;
-
-			this.activeURI =
-					uriEndpointFactory.createUriEndpoint(uri, method == HttpClient.WS);
+			this.activeURI = uriEndpointFactory.createUriEndpoint(uri, isWebsocket);
 		}
 
 		@Override
@@ -398,8 +424,13 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 				return new Supplier[]{fromUrlSupplier};
 			}
 			else {
-				Supplier<String>[] newRedirectedFrom = new Supplier[redirectedFrom.length + 1];
-				System.arraycopy(redirectedFrom, 0, newRedirectedFrom, 0, redirectedFrom.length);
+				Supplier<String>[] newRedirectedFrom =
+						new Supplier[redirectedFrom.length + 1];
+				System.arraycopy(redirectedFrom,
+						0,
+						newRedirectedFrom,
+						0,
+						redirectedFrom.length);
 				newRedirectedFrom[redirectedFrom.length] = fromUrlSupplier;
 				return newRedirectedFrom;
 			}
@@ -447,7 +478,9 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 
 	static WebsocketOutbound sendWebsocket(HttpClientRequest req, String subprotocols) {
 		HttpClientOperations clientOps = (HttpClientOperations) req;
-		Mono<Void> m = clientOps.withWebsocketSupport(clientOps.websocketUri(), subprotocols, EMPTY);
+		Mono<Void> m = clientOps.withWebsocketSupport(clientOps.websocketUri(),
+				subprotocols,
+				EMPTY);
 
 		return new WebsocketOutbound() {
 
@@ -480,8 +513,8 @@ static final AttributeKey<String>  SUBPROTOCOLS  = AttributeKey.newInstance("sub
 
 			@Override
 			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
-											   BiFunction<? super Connection, ? super S, ?> mappedInput,
-											   Consumer<? super S> sourceCleanup) {
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
 				return then(clientOps.sendUsing(sourceInput, mappedInput, sourceCleanup));
 			}
 

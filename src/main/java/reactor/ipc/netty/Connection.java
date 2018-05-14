@@ -15,6 +15,8 @@
  */
 package reactor.ipc.netty;
 
+import javax.annotation.Nullable;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOutboundHandler;
@@ -27,6 +29,39 @@ import io.netty.channel.ChannelOutboundHandler;
  */
 @FunctionalInterface
 public interface Connection extends DisposableChannel {
+
+	/**
+	 * Return an existing {@link Connection} wrapper or create a simple new one
+	 *
+	 * @param channel channel to retrieve the connection reference from
+	 *
+	 * @return an existing {@link Connection} wrapper or create a simple new one
+	 */
+	static Connection from(Channel channel) {
+		if(channel.hasAttr(ReactorNetty.CONNECTION)) {
+			return channel.attr(ReactorNetty.CONNECTION)
+			              .get();
+		}
+		return new ReactorNetty.SimpleConnection(channel).bind();
+	}
+
+	/**
+	 * Return an existing {@link Connection} that must match the given type wrapper or
+	 * null.
+	 *
+	 * @param clazz connection type to match to
+	 *
+	 * @return a matching {@link Connection} reference or null
+	 */
+	@Nullable
+	default  <T> T as(Class<T> clazz) {
+		if(clazz.isAssignableFrom(this.getClass())) {
+			@SuppressWarnings("unchecked")
+			T thiz = (T) this;
+			return thiz;
+		}
+		return null;
+	}
 
 	/**
 	 * Return false if it will force a close on terminal protocol events thus defeating
@@ -163,6 +198,37 @@ public interface Connection extends DisposableChannel {
 	default Connection addHandlerFirst(String name, ChannelHandler handler){
 		ReactorNetty.addHandlerAfterReactorCodecs(this, name, handler);
 		return this;
+	}
+
+
+
+	/**
+	 * Bind the {@link Connection} to the channel scope via an attribute. Can be
+	 * retrieved later by {@link #from}. If a previous reference {@link Connection} was
+	 * bound, this instance will take precedence.
+	 *
+	 * @return this {@link Connection}.
+	 */
+	default Connection bind() {
+		channel().attr(ReactorNetty.CONNECTION)
+		         .set(this);
+		return this;
+	}
+
+
+
+	/**
+	 * Bind a new {@link Connection} reference or null to the channel
+	 * attributes only if this instance is currently bound.
+	 *
+	 * @param connection a new connection reference
+	 *
+	 * @return true if bound
+	 * @see #bind
+	 */
+	default boolean rebind(@Nullable Connection connection) {
+		return channel().attr(ReactorNetty.CONNECTION)
+		                .compareAndSet(this, connection);
 	}
 
 	/**

@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyPipeline;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -39,11 +39,11 @@ import static org.junit.Assert.assertThat;
 public class HttpClientOperationsTest {
 
 	@Test
-	public void addDecoderReplaysLastHttp() throws Exception {
+	public void addDecoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionEvents.emptyListener());
+				ConnectionObserver.emptyListener());
 
 		ops.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -62,11 +62,11 @@ public class HttpClientOperationsTest {
 	}
 
 	@Test
-	public void addNamedDecoderReplaysLastHttp() throws Exception {
+	public void addNamedDecoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionEvents.emptyListener());
+				ConnectionObserver.emptyListener());
 
 		ops.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -85,11 +85,11 @@ public class HttpClientOperationsTest {
 	}
 
 	@Test
-	public void addEncoderReplaysLastHttp() throws Exception {
+	public void addEncoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionEvents.emptyListener());
+				ConnectionObserver.emptyListener());
 
 		ops.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -108,11 +108,11 @@ public class HttpClientOperationsTest {
 	}
 
 	@Test
-	public void addNamedEncoderReplaysLastHttp() throws Exception {
+	public void addNamedEncoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
 		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionEvents.emptyListener());
+				ConnectionObserver.emptyListener());
 
 		ops.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -137,7 +137,7 @@ public class HttpClientOperationsTest {
 		});
 
 		HttpClientOperations ops1 = new HttpClientOperations(() -> channel,
-				ConnectionEvents.emptyListener());
+				ConnectionObserver.emptyListener());
 		ops1.followRedirect(true);
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);

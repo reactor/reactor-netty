@@ -44,7 +44,6 @@ import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -54,7 +53,6 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
-
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -186,7 +184,7 @@ public class TcpServerTests {
 	}
 
 	@Test(timeout = 10000)
-	public void testHang() throws Exception {
+	public void testHang() {
 		DisposableServer httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -354,7 +352,7 @@ public class TcpServerTests {
 
 	@Test
 	@Ignore
-	public void proxyTest() throws Exception {
+	public void proxyTest() {
 		HttpServer server = HttpServer.create();
 		server.router(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.prepare()
@@ -370,12 +368,12 @@ public class TcpServerTests {
 
 	@Test
 	@Ignore
-	public void wsTest() throws Exception {
+	public void wsTest() {
 		HttpServer server = HttpServer.create();
 		server.router(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.prepare()
 				                       .wiretap()
-				                       .ws()
+				                       .post()
 				                       .uri("ws://localhost:3000")
 				                       .send((requestOut, o) -> requestOut.sendString(Mono.just("ping")))
 				                       .response((repliesOut, buf) ->  out.sendGroups(buf.window(100)))))
@@ -395,7 +393,7 @@ public class TcpServerTests {
 
 	@Test
 	public void sendFileSecure()
-			throws CertificateException, SSLException, InterruptedException, URISyntaxException {
+			throws CertificateException, SSLException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
@@ -482,7 +480,7 @@ public class TcpServerTests {
 
 	@Test
 	public void sendZipFileChunked()
-			throws URISyntaxException, IOException, InterruptedException {
+			throws IOException, InterruptedException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -496,7 +494,7 @@ public class TcpServerTests {
 
 	@Test
 	public void sendZipFileDefault()
-			throws URISyntaxException, IOException, InterruptedException {
+			throws IOException, InterruptedException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 
@@ -508,8 +506,7 @@ public class TcpServerTests {
 		}
 	}
 
-	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn)
-			throws InterruptedException {
+	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn) {
 
 
 

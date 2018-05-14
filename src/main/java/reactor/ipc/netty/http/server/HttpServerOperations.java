@@ -27,7 +27,6 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
@@ -57,7 +56,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
@@ -80,10 +79,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		implements HttpServerRequest, HttpServerResponse {
 
 	@SuppressWarnings("unchecked")
-	static HttpServerOperations bindHttp(Connection connection, ConnectionEvents listener,
-		BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+	static void bindHttp(Connection connection, ConnectionObserver listener,
+			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			Object msg, boolean forwarded) {
-		return new HttpServerOperations(connection, listener, compressionPredicate, (HttpRequest) msg, forwarded);
+		new HttpServerOperations(connection, listener, compressionPredicate, (HttpRequest) msg, forwarded).bind();
 	}
 
 	final HttpResponse nettyResponse;
@@ -108,7 +107,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	HttpServerOperations(Connection c,
-			ConnectionEvents listener,
+			ConnectionObserver listener,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			HttpRequest nettyRequest,
 			boolean forwarded) {
@@ -530,7 +529,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			WebsocketServerOperations
 					ops = new WebsocketServerOperations(url, protocols, this);
 
-			if (replace(ops)) {
+			if (rebind(ops)) {
 				return FutureMono.from(ops.handshakerResult)
 				                 .then(Mono.defer(() -> {
 					                 //skip handler if no matching subprotocol

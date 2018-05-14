@@ -24,8 +24,6 @@ import java.util.function.Function;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
@@ -48,6 +46,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.context.Context;
 
 /**
  * Internal helpers for reactor-netty contracts
@@ -225,6 +224,64 @@ final class ReactorNetty {
 		}
 	}
 
+	public static ConnectionObserver compositeConnectionObserver(ConnectionObserver observer,
+			ConnectionObserver other) {
+
+		if (observer == ConnectionObserver.emptyListener()) {
+			return other;
+		}
+
+		if (other == ConnectionObserver.emptyListener()) {
+			return observer;
+		}
+
+		final ConnectionObserver[] newObservers;
+		final ConnectionObserver[] thizObservers;
+		final ConnectionObserver[] otherObservers;
+		int length = 2;
+
+		if (observer instanceof CompositeConnectionObserver) {
+			thizObservers = ((CompositeConnectionObserver)observer).observers;
+			length += thizObservers.length - 1;
+		}
+		else {
+			thizObservers = null;
+		}
+
+		if (other instanceof CompositeConnectionObserver) {
+			otherObservers = ((CompositeConnectionObserver)other).observers;
+			length += otherObservers.length - 1;
+		}
+		else {
+			otherObservers = null;
+		}
+
+		newObservers = new ConnectionObserver[length];
+
+		int pos;
+		if (thizObservers != null) {
+			pos = thizObservers.length;
+			System.arraycopy(thizObservers, 0,
+					newObservers, 0,
+					pos);
+		}
+		else {
+			pos = 1;
+			newObservers[0] = observer;
+		}
+
+		if (otherObservers != null) {
+			System.arraycopy(otherObservers, pos,
+					newObservers, pos,
+					otherObservers.length);
+		}
+		else {
+			newObservers[pos] = other;
+		}
+
+		return new CompositeConnectionObserver(newObservers);
+	}
+
 	/**
 	 * Determines if user-provided handlers registered on the given channel should
 	 * automatically be registered for removal through a
@@ -281,13 +338,6 @@ final class ReactorNetty {
 		}
 	}
 
-	static final class TerminatedHandlerEvent {
-		@Override
-		public String toString() {
-			return "[Handler Terminated]";
-		}
-	}
-
 	static final class ResponseWriteCompleted {
 		@Override
 		public String toString() {
@@ -295,10 +345,31 @@ final class ReactorNetty {
 		}
 	}
 
-	static final class HttpClientResponseEvent {
+	static final class CompositeConnectionObserver implements ConnectionObserver {
+
+		final ConnectionObserver[] observers;
+
+		CompositeConnectionObserver(ConnectionObserver[] observers) {
+			this.observers = observers;
+		}
+
 		@Override
-		public String toString() {
-			return "[Http Client Response Received]";
+		public Context currentContext() {
+			return observers[observers.length - 1].currentContext();
+		}
+
+		@Override
+		public void onUncaughtException(Connection connection, Throwable error) {
+			for (ConnectionObserver observer : observers) {
+				observer.onUncaughtException(connection, error);
+			}
+		}
+
+		@Override
+		public void onStateChange(Connection connection, State newState) {
+			for (ConnectionObserver observer : observers) {
+				observer.onStateChange(connection, newState);
+			}
 		}
 	}
 
@@ -395,6 +466,41 @@ final class ReactorNetty {
 		}
 	}
 
+	final static ConnectionObserver.State CONNECTED = new ConnectionObserver.State() {
+		@Override
+		public String toString() {
+			return "[connected]";
+		}
+	};
+
+	final static ConnectionObserver.State ACQUIRED = new ConnectionObserver.State() {
+		@Override
+		public String toString() {
+			return "[acquired]";
+		}
+	};
+
+	final static ConnectionObserver.State CONFIGURED = new ConnectionObserver.State() {
+		@Override
+		public String toString() {
+			return "[configured]";
+		}
+	};
+
+	final static ConnectionObserver.State RELEASED = new ConnectionObserver.State() {
+		@Override
+		public String toString() {
+			return "[released]";
+		}
+	};
+
+	final static ConnectionObserver.State DISCONNECTING = new ConnectionObserver.State() {
+		@Override
+		public String toString() {
+			return "[disconnecting]";
+		}
+	};
+
 	/**
 	 * A handler that can be used to extract {@link ByteBuf} out of {@link ByteBufHolder},
 	 * optionally also outputting additional messages
@@ -417,6 +523,7 @@ final class ReactorNetty {
 		}
 
 	}
+
 	static final class ChannelDisposer extends BaseSubscriber<Void> {
 
 
@@ -437,31 +544,29 @@ final class ReactorNetty {
 				channelDisposable.dispose();
 			}
 		}
-
 	}
 
-	static final ConnectionEvents NOOP_LISTENER = new ConnectionEvents() {
-		@Override
-		public void onDispose(Channel channel) {
+	static final class SimpleConnection implements Connection {
 
+		final Channel channel;
+
+		SimpleConnection(Channel channel) {
+			this.channel = Objects.requireNonNull(channel, "channel");
 		}
 
 		@Override
-		public void onReceiveError(Channel channel, Throwable error) {
-
+		public Channel channel() {
+			return channel;
 		}
+	}
 
-		@Override
-		public void onSetup(Channel channel, @Nullable Object msg) {
-
-		}
-	};
-
-	static final Object TERMINATED                 = new TerminatedHandlerEvent();
+	static final ConnectionObserver NOOP_LISTENER = (connection, newState) -> {};
 	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
-	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
 
+	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
 	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");
+
+	static final AttributeKey<Connection> CONNECTION = AttributeKey.newInstance("CONNECTION");
 
 	static final Consumer<? super FileChannel> fileCloser = fc -> {
 		try {

@@ -15,6 +15,14 @@
  */
 package reactor.ipc.netty.http.client;
 
+import java.net.SocketAddress;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -22,13 +30,11 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.ByteBufMono;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
@@ -38,23 +44,16 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
-import reactor.util.annotation.Nullable;
 
-import java.net.SocketAddress;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import static reactor.ipc.netty.http.client.HttpClientConfiguration.*;
 
 /**
  * An HttpClient allows to build in a safe immutable way an http client that is
- * materialized and connecting when {@link #connect(TcpClient)} is ultimately called.
+ * materialized and connecting when {@link TcpClient#connect)} is ultimately called.
  * <p> Internally, materialization happens in three phases, first {@link #tcpConfiguration()}
  * is called to retrieve a ready to use {@link TcpClient}, then {@link
  * TcpClient#configure()} retrieve a usable {@link Bootstrap} for the final {@link
- * #connect(TcpClient)} is called.
+ * TcpClient#connect)} is called.
  * <p> Examples:
  * <pre>
  * {@code
@@ -101,7 +100,8 @@ public abstract class HttpClient {
 		/**
 		 * Configure URI to use for this request/response
 		 *
-		 * @param uri target baseUri
+		 * @param uri target URI, if starting with "/" it will be prepended with
+		 * {@link #baseUrl(String)} when available
 		 *
 		 * @return the appropriate sending or receiving contract
 		 */
@@ -110,7 +110,8 @@ public abstract class HttpClient {
 		/**
 		 * Configure URI to use for this request/response on subscribe
 		 *
-		 * @param uri target baseUri
+		 * @param uri target URI, if starting with "/" it will be prepended with
+		 * {@link #baseUrl(String)} when available
 		 *
 		 * @return the appropriate sending or receiving contract
 		 */
@@ -149,6 +150,33 @@ public abstract class HttpClient {
 		 */
 		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver);
 
+
+
+		/**
+		 * WebSocket to connect the {@link HttpClient}.
+		 *
+		 * @return a {@link RequestSender} ready to consume for response
+		 */
+		default RequestSender websocket() {
+			return websocket("");
+		}
+
+		/**
+		 * WebSocket to the passed URL, negotiating one of the passed subprotocols.
+		 * <p>
+		 * The negotiated subprotocol can be accessed through the {@link HttpClientResponse}
+		 * by switching to websocket (using any of the {@link HttpClientResponse#receiveWebsocket()
+		 * receiveWebSocket} methods) and using {@link WebsocketInbound#selectedSubprotocol()}.
+		 * <p>
+		 * To send data through the websocket, use {@link HttpClientResponse#receiveWebsocket(BiFunction)}
+		 * and then use the function's {@link WebsocketOutbound}.
+		 *
+		 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if
+		 * not relevant.
+		 *
+		 * @return a {@link RequestSender} ready to consume for response
+		 */
+		RequestSender websocket(String subprotocols);
 	}
 
 	/**
@@ -169,17 +197,6 @@ public abstract class HttpClient {
 		 * @return
 		 */
 		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender);
-	}
-
-	public interface WebsocketReceiver extends ResponseReceiver<WebsocketReceiver> {
-
-		/**
-		 * @param sender
-		 *
-		 * @return
-		 */
-		WebsocketReceiver send(BiFunction<? super HttpClientRequest, ? super WebsocketOutbound, ? extends Publisher<Void>> sender);
-
 	}
 
 	/**
@@ -244,7 +261,8 @@ public abstract class HttpClient {
 	 * @return the appropriate sending or receiving contract
 	 */
 	public final HttpClient baseUrl(String baseUrl) {
-		return new HttpClientBaseUrl(this, baseUrl);
+		Objects.requireNonNull(baseUrl, "baseUrl");
+		return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpClientConfiguration.baseUrl(b, baseUrl)));
 	}
 
 	/**
@@ -442,7 +460,8 @@ public abstract class HttpClient {
 	 */
 	public RequestSender request(HttpMethod method) {
 		Objects.requireNonNull(method, "method");
-		return new HttpClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.METHOD, method)));
+		TcpClient tcpConfiguration = tcpConfiguration().bootstrap(b -> method(b, method));
+		return new HttpClientFinalizer(tcpConfiguration);
 	}
 
 	/**
@@ -457,36 +476,6 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient tcpConfiguration(Function<? super TcpClient, ? extends TcpClient> tcpMapper) {
 		return new HttpClientTcpConfig(this, tcpMapper);
-	}
-
-	/**
-	 * WebSocket to connect the {@link HttpClient}.
-	 *
-	 * @return a {@link WebsocketReceiver} ready to consume for response
-	 */
-	public final WebsocketReceiver ws() {
-		return ws(null);
-	}
-
-	/**
-	 * WebSocket to the passed URL, negotiating one of the passed subprotocols.
-	 * <p>
-	 * The negotiated subprotocol can be accessed through the {@link HttpClientResponse}
-	 * by switching to websocket (using any of the {@link HttpClientResponse#receiveWebsocket()
-	 * receiveWebSocket} methods) and using {@link WebsocketInbound#selectedSubprotocol()}.
-	 * <p>
-	 * To send data through the websocket, use {@link HttpClientResponse#receiveWebsocket(BiFunction)}
-	 * and then use the function's {@link WebsocketOutbound}.
-	 *
-	 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if
-	 * not relevant.
-	 *
-	 * @return a {@link WebsocketReceiver} ready to consume for response
-	 */
-	public final WebsocketReceiver ws(@Nullable String subprotocols) {
-		return new WebsocketClientFinalizer(
-		        tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.METHOD, WS)
-		                                   .attr(HttpClientConnect.SUBPROTOCOLS, subprotocols)));
 	}
 
 	/**
@@ -510,25 +499,8 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 *
-	 * @return the root uri to append to
-	 */
-	protected String baseUri() {
-		return "/";
-	}
-
-	/**
-	 * Bind the {@link HttpClient} and return a {@link Mono} of {@link Connection}
-	 *
-	 * @param tcpClient the {@link Bootstrap} to connect on
-	 *
-	 * @return a {@link Mono} of {@link Connection}
-	 */
-	protected abstract Mono<? extends Connection> connect(TcpClient tcpClient);
-
-	/**
-	 * Materialize a TcpClient from the parent {@link HttpClient} chain to use with {@link
-	 * #connect(TcpClient)} or separately
+	 * Get a TcpClient from the parent {@link HttpClient} chain to use with {@link
+	 * TcpClient#connect()}} or separately
 	 *
 	 * @return a configured {@link TcpClient}
 	 */
@@ -538,7 +510,7 @@ public abstract class HttpClient {
 
 
 	static final ChannelOperations.OnSetup HTTP_OPS =
-			(ch, c, msg) -> HttpClientOperations.bindHttp(ch, c);
+			(ch, c, msg) -> new HttpClientOperations(ch, c).bind();
 
 	static final Function<Bootstrap, Bootstrap> HTTP_OPS_CONF = b -> {
 		BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
@@ -551,11 +523,9 @@ public abstract class HttpClient {
 		               .orElse("dev");
 	}
 
-	final static HttpMethod                WS           = new HttpMethod("WS");
 	final static String                    WS_SCHEME    = "ws";
 	final static String                    WSS_SCHEME   = "wss";
 	final static String                    HTTP_SCHEME  = "http";
-
 	final static String                    HTTPS_SCHEME = "https";
 
 	static final TcpClient DEFAULT_TCP_CLIENT = TcpClient.newConnection()
@@ -564,32 +534,23 @@ public abstract class HttpClient {
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);
 
-	static final AttributeKey<Boolean>          ACCEPT_GZIP                  =
-			AttributeKey.newInstance("acceptGzip");
-
-	static final AttributeKey<Boolean>          FOLLOW_REDIRECT              =
-			AttributeKey.newInstance("followRedirect");
-
-	static final AttributeKey<Boolean>          CHUNKED                      =
-			AttributeKey.newInstance("chunkedTransfer");
-
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG         =
-			tcp -> tcp.attr(ACCEPT_GZIP, true);
+			tcp -> tcp.bootstrap(MAP_COMPRESS);
 
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE        =
-			tcp -> tcp.attr(ACCEPT_GZIP, null);
+			tcp -> tcp.bootstrap(MAP_NO_COMPRESS);
 
 	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_CONFIG          =
-			tcp -> tcp.attr(CHUNKED, true);
+			tcp -> tcp.bootstrap(MAP_CHUNKED);
 
 	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_DISABLE         =
-			tcp -> tcp.attr(CHUNKED, false);
+			tcp -> tcp.bootstrap(MAP_NO_CHUNKED);
 
 	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_CONFIG  =
-			tcp -> tcp.attr(FOLLOW_REDIRECT, true);
+			tcp -> tcp.bootstrap(MAP_REDIRECT);
 
 	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_DISABLE =
-			tcp -> tcp.attr(FOLLOW_REDIRECT, null);
+			tcp -> tcp.bootstrap(MAP_NO_REDIRECT);
 
 	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS = h ->
 			h.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);

@@ -15,11 +15,9 @@
  */
 package reactor.ipc.netty.http.client;
 
-import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.tcp.TcpClient;
-
 import java.util.Objects;
+
+import reactor.ipc.netty.tcp.TcpClient;
 
 /**
  * @author Stephane Maldini
@@ -33,17 +31,7 @@ abstract class HttpClientOperator extends HttpClient {
 	}
 
 	@Override
-	protected String baseUri() {
-		return source.baseUri();
-	}
-
-	@Override
 	protected TcpClient tcpConfiguration() {
 		return source.tcpConfiguration();
-	}
-
-	@Override
-	protected Mono<? extends Connection> connect(TcpClient tcpClient) {
-		return source.connect(tcpClient);
 	}
 }

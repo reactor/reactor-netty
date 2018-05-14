@@ -18,7 +18,6 @@ package reactor.ipc.netty.tcp;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -37,9 +36,8 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
-import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
@@ -76,7 +74,7 @@ final class TcpUtils {
 	}
 
 	@SuppressWarnings("unchecked")
-	static void fromLazyRemoteAddress(Bootstrap b) {
+	static void convertLazyRemoteAddress(Bootstrap b) {
 		SocketAddress remote = b.config().remoteAddress();
 
 		Objects.requireNonNull(remote, "Remote Address not configured");
@@ -90,7 +88,7 @@ final class TcpUtils {
 	}
 
 	@SuppressWarnings("unchecked")
-	static void fromLazyLocalAddress(ServerBootstrap b) {
+	static void convertLazyLocalAddress(ServerBootstrap b) {
 		SocketAddress local = b.config().localAddress();
 
 		Objects.requireNonNull(local, "Remote Address not configured");
@@ -210,7 +208,7 @@ final class TcpUtils {
 	}
 
 	static final class SslSupportConsumer
-			implements BiConsumer<ConnectionEvents, Channel> {
+			implements BiConsumer<ConnectionObserver, Channel> {
 		final SslProvider sslProvider;
 
 		final InetSocketAddress sniInfo;
@@ -235,7 +233,7 @@ final class TcpUtils {
 			}
 		}
 		@Override
-		public void accept(ConnectionEvents listener, Channel channel) {
+		public void accept(ConnectionObserver listener, Channel channel) {
 			SslHandler sslHandler;
 
 			if (sniInfo != null) {
@@ -294,7 +292,7 @@ final class TcpUtils {
 		boolean handshakeDone;
 
 		@Override
-		public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		public void channelActive(ChannelHandlerContext ctx) {
 			ctx.read(); //consume handshake
 		}
 
@@ -345,7 +343,7 @@ final class TcpUtils {
 	static final Logger log = Loggers.getLogger(TcpUtils.class);
 
 	static final ChannelOperations.OnSetup TCP_OPS =
-			(ch, c, msg) -> ChannelOperations.bind(ch, c);
+			(ch, c, msg) -> new ChannelOperations<>(ch, c).bind();
 
 	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC =
 			sslProviderBuilder -> sslProviderBuilder.sslContext(SslProvider.DEFAULT_SERVER_CONTEXT);

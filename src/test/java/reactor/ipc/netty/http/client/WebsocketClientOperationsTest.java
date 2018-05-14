@@ -70,19 +70,21 @@ public class WebsocketClientOperationsTest {
 			HttpClient.prepare()
 			          .port(httpServer.address().getPort())
 			          .wiretap()
-			          .ws(clientSubprotocol)
+			          .post()
 			          .uri("/ws")
 			          .send((request, out) -> {
 			              Mono.just(request)
 			                  .transform(req -> doLoginFirst(req, httpServer.address().getPort()));
 			              return out;
 			          })
+			          .websocket(clientSubprotocol)
 			          .response((res, buf) -> buf.zipWith(Mono.just(res.status().code())))
 			          .switchIfEmpty(Mono.error(new Exception()));
 
 		if(!serverSubprotocol.equals(clientSubprotocol)) {
 			StepVerifier.create(response)
-			            .verifyError(WebSocketHandshakeException.class);
+			            .expectError(WebSocketHandshakeException.class)
+			            .verify(Duration.ofSeconds(30));
 		}
 		else {
 			StepVerifier.create(response)

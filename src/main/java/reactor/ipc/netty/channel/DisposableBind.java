@@ -18,46 +18,34 @@ package reactor.ipc.netty.channel;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.util.concurrent.Future;
-import reactor.core.publisher.DirectProcessor;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.DisposableServer;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
-import static reactor.ipc.netty.channel.ChannelOperations.OPERATIONS_KEY;
-
 /**
  * @author Stephane Maldini
  */
 final class DisposableBind
-		implements DisposableServer, ChannelFutureListener, ConnectionEvents,
-		           Consumer<Future<?>> {
+		implements DisposableServer, ChannelFutureListener, ConnectionObserver,
+		           Consumer<Future<?>>, Connection {
 
 	static final Logger log = Loggers.getLogger(DisposableBind.class);
 
-	final MonoSink<DisposableServer>     sink;
-	final ChannelOperations.OnSetup      opsFactory;
-	final DirectProcessor<Connection>    connections;
+	final ConnectionObserver selectorListener;
 
 	ChannelFuture f;
 
-	DisposableBind(MonoSink<DisposableServer> sink,
-			ChannelOperations.OnSetup opsFactory) {
-		this.sink = sink;
-		this.opsFactory = Objects.requireNonNull(opsFactory, "opsFactory");
-		this.connections = DirectProcessor.create();
+	DisposableBind(ConnectionObserver selectorListener) {
+		this.selectorListener = Objects.requireNonNull(selectorListener, "listener");
 	}
 
 	@SuppressWarnings("unchecked")
@@ -71,12 +59,7 @@ final class DisposableBind
 		}
 		this.f = (ChannelFuture) future;
 
-		f.addListener(this)
-		 .channel()
-		 .closeFuture()
-		 .addListener(f -> connections.onComplete());
-
-		sink.onCancel(this);
+		f.addListener(this);
 	}
 
 	@Override
@@ -86,12 +69,7 @@ final class DisposableBind
 
 	@Override
 	public Context currentContext() {
-		return sink.currentContext();
-	}
-
-	@Override
-	public Flux<Connection> connections() {
-		return connections;
+		return selectorListener.currentContext();
 	}
 
 	@Override
@@ -110,38 +88,20 @@ final class DisposableBind
 	}
 
 	@Override
-	public void onDispose(Channel channel) {
-		log.debug("onConnectionDispose({})", channel);
-		if (!channel.isActive()) {
-			return;
-		}
-		if (!Connection.isPersistent(channel)) {
-			channel.close();
-		}
+	public void onStateChange(Connection connection, State newState) {
+		log.debug("onStateChange({}, {})", newState, connection);
+		selectorListener.onStateChange(connection, newState);
 	}
 
 	@Override
-	public void onReceiveError(Channel channel, Throwable error) {
-		log.error("onConnectionReceiveError({})", channel);
-		onDispose(channel);
+	public void onUncaughtException(Connection connection, Throwable error) {
+		log.error("onUncaughtException(" + connection + ")", error);
+		selectorListener.onUncaughtException(connection, error);
 	}
 
 	@Override
-	public void onSetup(Channel channel, @Nullable Object msg) {
-		if (opsFactory.createOnConnected() || msg != null) {
-			log.debug("onConnectionSetup({})", channel);
-
-			ChannelOperations<?, ?> ops = opsFactory.create(() -> channel, this, msg);
-
-			channel.attr(OPERATIONS_KEY)
-			       .set(ops);
-
-			connections.onNext(ops);
-		}
-	}
-
-	@Override
-	public final void operationComplete(ChannelFuture f) throws Exception {
+	public final void operationComplete(ChannelFuture f) {
+		bind();
 		if (!f.isSuccess()) {
 			if (f.isCancelled()) {
 				log.debug("Cancelled Server creation on {}",
@@ -150,11 +110,10 @@ final class DisposableBind
 				return;
 			}
 			if (f.cause() != null) {
-				sink.error(f.cause());
+				selectorListener.onUncaughtException(this, f.cause());
 			}
 			else {
-				sink.error(new IOException("error while binding server to " + f.channel()
-				                                                               .toString()));
+				selectorListener.onUncaughtException(this, new IOException("error while binding server to " + f.channel().toString()));
 			}
 		}
 		else {
@@ -164,7 +123,7 @@ final class DisposableBind
 						 .toString());
 			}
 
-			sink.success(this);
+			selectorListener.onStateChange(this, State.CONNECTED);
 		}
 	}
 }

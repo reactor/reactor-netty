@@ -28,33 +28,29 @@ import reactor.ipc.netty.ByteBufMono;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.tcp.TcpClient;
 
+import static reactor.ipc.netty.http.client.HttpClientConfiguration.websocketSubprotocols;
+
 /**
  * @author Stephane Maldini
  */
-final class HttpClientFinalizer extends HttpClientOperator
-		implements HttpClient.RequestSender {
+final class HttpClientFinalizer extends HttpClient implements HttpClient.RequestSender {
 
 	final TcpClient cachedConfiguration;
-	final String    baseUri;
 
-	HttpClientFinalizer(HttpClient parent) {
-		super(parent);
-		this.cachedConfiguration = parent.tcpConfiguration();
-		this.baseUri = baseUri();
+	HttpClientFinalizer(TcpClient parent) {
+		this.cachedConfiguration = parent;
 	}
 
 	// UriConfiguration methods
 
 	@Override
 	public HttpClient.RequestSender uri(String uri) {
-		return new HttpClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.URI, uri)));
+		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.uri(b, uri)));
 	}
 
 	@Override
 	public HttpClient.RequestSender uri(Mono<String> uri) {
-		return new HttpClientFinalizer(tcpConfiguration(tcp ->
-				tcp.bootstrap(b -> b.attr(HttpClientConnect.URI, HttpClientConnect.MONO_URI_MARKER)
-				                    .attr(HttpClientConnect.MONO_URI, uri))));
+		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredUri(b, uri)));
 	}
 
 	// ResponseReceiver methods
@@ -62,14 +58,13 @@ final class HttpClientFinalizer extends HttpClientOperator
 	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<HttpClientResponse> response() {
-		return this.connect(cachedConfiguration)
-		           .cast(HttpClientResponse.class);
+		return cachedConfiguration.connect()
+		                          .cast(HttpClientResponse.class);
 	}
 
 	@Override
 	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver) {
-		return response().flatMapMany(resp -> Flux.from(receiver.apply(resp,
-				resp.receive()))
+		return response().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp.receive()))
 		                                          .doFinally(s -> resp.dispose()));
 	}
 
@@ -89,18 +84,23 @@ final class HttpClientFinalizer extends HttpClientOperator
 	// RequestSender methods
 
 	@Override
-	public HttpClient.ResponseReceiver<?> send(Publisher<? extends ByteBuf> requestBody) {
+	public HttpClientFinalizer send(Publisher<? extends ByteBuf> requestBody) {
 		Objects.requireNonNull(requestBody, "requestBody");
 		return send((req, out) -> out.sendObject(requestBody));
 
 	}
 
 	@Override
-	public HttpClient.ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ?
+	public HttpClientFinalizer send(BiFunction<? super HttpClientRequest, ?
 			super NettyOutbound, ? extends Publisher<Void>> sender) {
 		Objects.requireNonNull(sender, "requestBody");
-		return new HttpClientFinalizer(tcpConfiguration(tcp -> tcp.attr(HttpClientConnect.BODY, sender)));
+		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.body(b, sender)));
 	}
 
+	@Override
+	public RequestSender websocket(String subprotocols) {
+		Objects.requireNonNull(subprotocols, "subprotocols");
+		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> websocketSubprotocols(b, subprotocols)));
+	}
 }
 

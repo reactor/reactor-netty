@@ -28,11 +28,11 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -108,6 +108,8 @@ final class HttpServerBind extends HttpServer implements Function<ServerBootstra
 
 		Integer buffer = getAttributeValue(b, INITIAL_BUFFER_SIZE, DEFAULT_INITIAL_BUFFER_SIZE);
 
+		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
+
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.HttpInitializer,
 				(listener, channel) -> {
@@ -126,7 +128,7 @@ final class HttpServerBind extends HttpServer implements Function<ServerBootstra
 					}
 
 					p.addLast(NettyPipeline.HttpServerHandler,
-							new HttpServerHandler(listener));
+							new HttpServerHandler(ops, listener));
 				});
 		return b;
 	}

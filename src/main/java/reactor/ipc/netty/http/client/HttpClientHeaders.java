@@ -46,16 +46,14 @@ final class HttpClientHeaders extends HttpClientOperator
 	@Override
 	@SuppressWarnings("unchecked")
 	public Bootstrap apply(Bootstrap bootstrap) {
-		HttpHeaders h = (HttpHeaders) bootstrap.config()
-		                                       .attrs()
-		                                       .get(HttpClientConnect.HEADERS);
+		HttpHeaders h = HttpClientConfiguration.headers(bootstrap);
 		if (h == null) {
 			h = new DefaultHttpHeaders();
 		}
 
 		headers.accept(h);
 		if (!h.isEmpty()) {
-			bootstrap.attr(HttpClientConnect.HEADERS, h);
+			HttpClientConfiguration.headers(bootstrap, h);
 		}
 		return bootstrap;
 	}

@@ -34,7 +34,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -61,7 +61,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		this.statusAndHeadersSent = replaced.statusAndHeadersSent;
 	}
 
-	protected HttpOperations(Connection connection, ConnectionEvents listener) {
+	protected HttpOperations(Connection connection, ConnectionObserver listener) {
 		super(connection, listener);
 		//reset channel to manual read if re-used
 		connection.channel()

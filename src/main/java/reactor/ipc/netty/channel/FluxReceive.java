@@ -171,7 +171,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if (d && getPending() == 0) {
 					Throwable ex = inboundError;
 					if (ex != null) {
-						parent.listener.onReceiveError(channel, ex);
+						parent.listener.onUncaughtException(parent, ex);
 					}
 					return;
 				}

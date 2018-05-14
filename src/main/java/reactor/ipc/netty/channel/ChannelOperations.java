@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -36,7 +35,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionEvents;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -55,23 +54,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void> {
 
 	/**
-	 * Create a new {@link ChannelOperations} attached to the {@link Channel} attribute
-	 * {@link #OPERATIONS_KEY}. Attach the {@link NettyPipeline#ReactiveBridge} handle.
-	 *
-	 * @param connection the new {@link Connection} connection
-	 * @param context the events callback
-	 * @param <INBOUND> the {@link NettyInbound} type
-	 * @param <OUTBOUND> the {@link NettyOutbound} type
-	 *
-	 * @return the created {@link ChannelOperations} bridge
-	 */
-	public static <INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound> ChannelOperations<INBOUND, OUTBOUND> bind(
-			Connection connection,
-			ConnectionEvents context) {
-		return new ChannelOperations<>(connection, context);
-	}
-
-	/**
 	 * Return the current {@link Channel} bound {@link ChannelOperations} or null if none
 	 *
 	 * @param ch the current {@link Channel}
@@ -79,14 +61,15 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return the current {@link Channel} bound {@link ChannelOperations} or null if none
 	 */
 	@Nullable
+	@SuppressWarnings("unchecked")
 	public static ChannelOperations<?, ?> get(Channel ch) {
-		return ch.attr(OPERATIONS_KEY)
-		         .get();
+		return Connection.from(ch)
+		                 .as(ChannelOperations.class);
 	}
 
-	final Connection       connection;
-	final FluxReceive      inbound;
-	final ConnectionEvents listener;
+	final Connection         connection;
+	final FluxReceive        inbound;
+	final ConnectionObserver listener;
 
 	@SuppressWarnings("unchecked")
 	volatile Subscription outboundSubscription;
@@ -95,7 +78,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this(replaced.connection, replaced.listener);
 	}
 
-	protected ChannelOperations(Connection connection, ConnectionEvents listener) {
+	/**
+	 * Create a new {@link ChannelOperations} attached to the {@link Channel}. Attach the {@link NettyPipeline#ReactiveBridge} handle.
+	 *
+	 * @param connection the new {@link Connection} connection
+	 * @param listener the events callback
+	 */
+	public ChannelOperations(Connection connection, ConnectionObserver listener) {
 		this.connection = Objects.requireNonNull(connection, "connection");
 		this.listener = Objects.requireNonNull(listener, "listener");
 		this.inbound = new FluxReceive(this);
@@ -113,10 +102,28 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 //		}
 	}
 
+	@Nullable
+	@Override
+	public <T> T as(Class<T> clazz) {
+		if (clazz == ChannelOperations.class) {
+			@SuppressWarnings("unchecked")
+			T thiz = (T) this;
+			return thiz;
+		}
+		return Connection.super.as(clazz);
+	}
+
 	@Override
 	public ByteBufAllocator alloc() {
 		return connection.channel()
 		                 .alloc();
+	}
+
+	@Override
+	public ChannelOperations<INBOUND, OUTBOUND> bind() {
+		Connection.super.bind();
+		listener.onStateChange(this, ConnectionObserver.State.CONFIGURED);
+		return this;
 	}
 
 	@Override
@@ -132,6 +139,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public void dispose() {
+		if (inbound.isDisposed()) {
+			return;
+		}
 		inbound.cancel();
 		connection.dispose();
 	}
@@ -264,19 +274,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Replace and complete previous operation inbound
-	 *
-	 * @param ops a new operations
-	 *
-	 * @return true if replaced
-	 */
-	protected final boolean replace(@Nullable ChannelOperations<?, ?> ops) {
-		return connection.channel()
-		                 .attr(OPERATIONS_KEY)
-		                 .compareAndSet(this, ops);
-	}
-
-	/**
 	 * React on inbound cancel (receive() subscriber cancelled)
 	 */
 	protected void onInboundCancel() {
@@ -324,25 +321,19 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * Final release/close (last packet)
 	 */
 	protected final void onHandlerTerminate() {
-		if (replace(null)) {
+		if (rebind(connection)) {
 			if (log.isTraceEnabled()) {
 				log.trace("{} Disposing ChannelOperation from a channel",
 						channel(),
 						new Exception("ChannelOperation terminal stack"));
 			}
-			try {
-				Operators.terminate(OUTBOUND_CLOSE, this);
-				listener.onDispose(connection.channel());
-				// Do not call directly inbound.onInboundComplete()
-				// HttpClientOperations need to notify with error
-				// when there is no response state
-				onInboundComplete();
-			}
-			finally {
-				connection.channel()
-				          .pipeline()
-				          .fireUserEventTriggered(NettyPipeline.handlerTerminatedEvent());
-			}
+
+			Operators.terminate(OUTBOUND_CLOSE, this);
+			listener.onStateChange(connection, ConnectionObserver.State.DISCONNECTING);
+			// Do not call directly inbound.onInboundComplete()
+			// HttpClientOperations need to notify with error
+			// when there is no response state
+			onInboundComplete();
 		}
 	}
 
@@ -366,13 +357,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
-	 * Return the available parent {@link ConnectionEvents} for user-facing lifecycle
+	 * Return the available parent {@link ConnectionObserver} for user-facing lifecycle
 	 * handling
 	 *
-	 * @return the available parent {@link ConnectionEvents}for user-facing lifecycle
+	 * @return the available parent {@link ConnectionObserver}for user-facing lifecycle
 	 * handling
 	 */
-	protected final ConnectionEvents listener() {
+	protected final ConnectionObserver listener() {
 		return listener;
 	}
 
@@ -408,34 +399,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 		/**
 		 * Create a new {@link ChannelOperations} given a netty channel, a parent {@link
-		 * ConnectionEvents} and an optional message (nullable).
+		 * ConnectionObserver} and an optional message (nullable).
 		 *
 		 * @param c a {@link Connection}
-		 * @param listener a {@link ConnectionEvents}
+		 * @param listener a {@link ConnectionObserver}
 		 * @param msg an optional message
 		 *
-		 * @return a new {@link ChannelOperations}
 		 */
-		ChannelOperations<?, ?> create(Connection c, ConnectionEvents listener,
-				@Nullable  Object msg);
+		void create(Connection c, ConnectionObserver listener, @Nullable  Object msg);
 
-		/**
-		 * True if {@link ChannelOperations} should be created by {@link
-		 * ChannelOperationsHandler} on channelActive event
-		 *
-		 * @return true if {@link ChannelOperations} should be created by {@link
-		 * ChannelOperationsHandler} on channelActive event
-		 */
-		default boolean createOnConnected() {
-			return true;
-		}
 	}
-
-	/**
-	 * The attribute in {@link Channel} to store the current {@link ChannelOperations}
-	 */
-	protected static final AttributeKey<ChannelOperations> OPERATIONS_KEY =
-			AttributeKey.newInstance("nettyOperations");
 
 	static final Logger log = Loggers.getLogger(ChannelOperations.class);
 
