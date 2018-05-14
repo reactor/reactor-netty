@@ -443,8 +443,8 @@ public class HttpServerTests {
 		                           "NO BODY".equals(t.getT3());
 		                }
 		                else if (code == 205) {
-		                    return h.contains("Transfer-Encoding") &&
-		                           !h.contains("Content-Length") &&
+		                    return !h.contains("Transfer-Encoding") &&
+		                           h.getInt("Content-Length").equals(0) &&
 		                           "NO BODY".equals(t.getT3());
 		                }else {
 		                    return false;
