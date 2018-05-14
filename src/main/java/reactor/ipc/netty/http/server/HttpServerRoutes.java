@@ -263,12 +263,9 @@ public interface HttpServerRoutes extends
 	 */
 	@SuppressWarnings("unchecked")
 	default HttpServerRoutes ws(String path,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
-					Publisher<Void>> handler,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			String protocols) {
-		Predicate<HttpServerRequest> condition = HttpPredicate.get(path);
-
-		return ws(condition, handler, protocols);
+		return ws(HttpPredicate.get(path), handler, protocols);
 	}
 
 	/**
@@ -282,12 +279,11 @@ public interface HttpServerRoutes extends
 	 */
 	@SuppressWarnings("unchecked")
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
-					Publisher<Void>> handler,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			String protocols) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
-					.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+			       .contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
 				return ops.withWebsocketSupport(req.uri(), protocols, handler);
 			}
@@ -297,12 +293,12 @@ public interface HttpServerRoutes extends
 
 	Predicate<HttpServerRequest> INDEX_PREDICATE = req -> {
 		URI uri = URI.create(req.uri());
-		return Objects.equals(req.method(), HttpMethod.GET) && (uri.getPath()
-		                                             .endsWith("/") || uri.getPath()
-		                                                                  .indexOf(".",
-				                                                                  uri.getPath()
-				                                                                     .lastIndexOf(
-						                                                                     "/")) == -1);
+		return Objects.equals(req.method(), HttpMethod.GET) &&
+		       (uri.getPath()
+		           .endsWith("/") || uri.getPath()
+		                                .indexOf(".",
+		                                         uri.getPath()
+		                                            .lastIndexOf("/")) == -1);
 	};
 
 }
