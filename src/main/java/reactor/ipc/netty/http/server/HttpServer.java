@@ -233,7 +233,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer handler(BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+	public final HttpServer handle(BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return tcpConfiguration(tcp -> tcp.doOnConnection(c -> {
 			if (log.isDebugEnabled()) {
@@ -304,7 +304,7 @@ public abstract class HttpServer {
 		Objects.requireNonNull(routesBuilder, "routeBuilder");
 		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
 		routesBuilder.accept(routes);
-		return handler(routes);
+		return handle(routes);
 	}
 
 	/**

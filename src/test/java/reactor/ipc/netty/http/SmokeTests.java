@@ -101,7 +101,7 @@ public class SmokeTests {
 	}
 
 	@After
-	public void clean() throws Exception {
+	public void clean() {
 		processor.onComplete();
 		httpServer.dispose();
 	}
@@ -248,7 +248,7 @@ public class SmokeTests {
 		assertThat(fulltotalints, is(count * iter));
 	}
 
-	private void setupFakeProtocolListener() throws Exception {
+	private void setupFakeProtocolListener() {
 
 		processor = TopicProcessor.<ByteBuf>builder().autoCancel(false).build();
 		workProcessor = WorkQueueProcessor.<ByteBuf>builder().autoCancel(false).build();
@@ -264,7 +264,7 @@ public class SmokeTests {
 
 		httpServer = HttpServer.create()
 		                       .port(port)
-		                       .handler((request, response) -> {
+		                       .handle((request, response) -> {
 			                       response.chunkedTransfer(false);
 
 			                       return response.addHeader("Content-type", "text/plain")
@@ -300,7 +300,7 @@ public class SmokeTests {
 
 	}
 
-	private List<String> getClientDataPromise() throws Exception {
+	private List<String> getClientDataPromise() {
 		HttpClient httpClient =
 				HttpClient.prepare()
 				          .port(httpServer.address().getPort())

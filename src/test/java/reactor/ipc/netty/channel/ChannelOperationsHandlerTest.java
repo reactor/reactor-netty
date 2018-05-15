@@ -63,7 +63,7 @@ public class ChannelOperationsHandlerTest {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .handler((req, res) ->
+				          .handle((req, res) ->
 				                  req.receive()
 				                     .asString()
 				                     .doOnNext(System.err::println)

@@ -147,7 +147,7 @@ public class ByteBufFluxTest {
         }
 
         Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-        DisposableServer c = server.handler((req, res) ->
+        DisposableServer c = server.handle((req, res) ->
                                        res.send(ByteBufFlux.fromPath(path))
                                           .then())
                                    .wiretap()

@@ -16,6 +16,9 @@
 
 package reactor.ipc.netty.http.client;
 
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import org.assertj.core.api.Assertions;
@@ -27,9 +30,6 @@ import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
-
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class HttpRedirectTest {
 
@@ -52,7 +52,7 @@ public class HttpRedirectTest {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .handler((req, res) -> {
+				          .handle((req, res) -> {
 				              if (req.uri().contains("/login") &&
 				                      req.method().equals(HttpMethod.POST) &&
 				                      counter.getAndDecrement() > 0) {

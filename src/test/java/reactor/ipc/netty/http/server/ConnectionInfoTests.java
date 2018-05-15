@@ -202,7 +202,7 @@ public class ConnectionInfoTests {
 	private void testClientRequest(Consumer<HttpClientRequest> clientConsumer,
 			Consumer<HttpServerRequest> serverConsumer) {
 
-		this.connection = HttpServer.create().forwarded().port(0).handler((req, res) -> {
+		this.connection = HttpServer.create().forwarded().port(0).handle((req, res) -> {
 			try {
 				serverConsumer.accept(req);
 				return res.status(200).sendString(Mono.just("OK"));

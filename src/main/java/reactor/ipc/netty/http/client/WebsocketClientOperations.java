@@ -50,14 +50,14 @@ final class WebsocketClientOperations extends HttpClientOperations
 	volatile int closeSent;
 
 	WebsocketClientOperations(URI currentURI,
-			@Nullable String protocols,
+			String protocols,
 			HttpClientOperations replaced) {
 		super(replaced);
 		Channel channel = channel();
 
 		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 					WebSocketVersion.V13,
-					protocols,
+					protocols.isEmpty() ? null : protocols,
 					true,
 					replaced.requestHeaders()
 					        .remove(HttpHeaderNames.HOST));

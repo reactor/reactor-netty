@@ -77,7 +77,7 @@ public class FluxReceiveTest {
 		                            .responseContent()
 		                            .log()
 		                            .onErrorResume(t -> Mono.empty()))
-		    .blockLast(Duration.ofSeconds(30));
+		    .blockLast(Duration.ofSeconds(15));
 
 		server1.dispose();
 		server2.dispose();

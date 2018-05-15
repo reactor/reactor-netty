@@ -78,9 +78,9 @@ public class HttpClientTest {
 	public void abort() {
 		DisposableServer x = TcpServer.create()
 		                        .port(0)
-		                        .handler((in, out) -> in.receive()
-		                                                     .take(1)
-		                                                     .thenMany(Flux.defer(() ->
+		                        .handle((in, out) -> in.receive()
+		                                               .take(1)
+		                                               .thenMany(Flux.defer(() ->
 						                                                     out.withConnection(c ->
 								                                                     c.addHandlerFirst(new HttpResponseEncoder()))
 						                                                        .sendObject(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.ACCEPTED))
@@ -181,12 +181,12 @@ public class HttpClientTest {
 		DisposableServer x = TcpServer.create()
 		                        .host("localhost")
 		                        .port(0)
-		                        .handler((in, out) -> out.withConnection(c -> c.addHandlerFirst(new
+		                        .handle((in, out) -> out.withConnection(c -> c.addHandlerFirst(new
 				                          HttpResponseEncoder()))
-		                                                      .sendObject(Flux.just(
+		                                                .sendObject(Flux.just(
 				                                                      response(),
 				                                                      response()))
-		                                                      .neverComplete())
+		                                                .neverComplete())
 		                        .wiretap()
 		                        .bindNow();
 
@@ -260,7 +260,7 @@ public class HttpClientTest {
 		CountDownLatch latch = new CountDownLatch(1);
 		DisposableServer c = HttpServer.create()
 		                         .port(0)
-		                         .handler((req, resp) -> {
+		                         .handle((req, resp) -> {
 			                           req.withConnection(
 			                              cn -> cn.onDispose(latch::countDown));
 
@@ -582,7 +582,7 @@ public class HttpClientTest {
 		DisposableServer x = TcpServer.create()
 		                        .host("localhost")
 		                        .port(0)
-		                        .handler((in, out) -> {
+		                        .handle((in, out) -> {
 										signal.onComplete();
 										return out.withConnection(c -> c.addHandlerFirst(
 												new HttpResponseEncoder()))
@@ -686,7 +686,7 @@ public class HttpClientTest {
 		String expectedResponse = gzipEnabled ? "gzip" : "no gzip";
 		DisposableServer server = HttpServer.create()
 		                         .port(0)
-		                         .handler((req,res) -> res.sendString(
+		                         .handle((req,res) -> res.sendString(
 		                Mono.just(req.requestHeaders().get(HttpHeaderNames.ACCEPT_ENCODING, "no gzip"))))
 		                         .wiretap()
 		                         .bindNow();
@@ -713,7 +713,7 @@ public class HttpClientTest {
 	public void testUserAgent() {
 		DisposableServer c = HttpServer.create()
 		                         .port(0)
-		                         .handler((req, resp) -> {
+		                         .handle((req, resp) -> {
 			                           Assert.assertTrue(""+req.requestHeaders()
 			                                                   .get(HttpHeaderNames.USER_AGENT),
 					                           req.requestHeaders()
@@ -761,7 +761,7 @@ public class HttpClientTest {
 		DisposableServer context =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
-				          .handler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+				          .handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
 				          .wiretap()
 				          .bindNow();
 
@@ -792,7 +792,7 @@ public class HttpClientTest {
 		DisposableServer context =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
-				          .handler((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
+				          .handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
 				          .wiretap()
 				          .bindNow();
 

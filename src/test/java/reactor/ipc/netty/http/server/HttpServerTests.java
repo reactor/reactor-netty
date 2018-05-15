@@ -75,7 +75,7 @@ public class HttpServerTests {
 	@Test
 	public void defaultHttpPort() {
 		DisposableServer blockingFacade = HttpServer.create()
-		                                      .handler((req, resp) -> resp.sendNotFound())
+		                                      .handle((req, resp) -> resp.sendNotFound())
 		                                      .wiretap()
 		                                      .bindNow();
 		blockingFacade.disposeNow();
@@ -88,7 +88,7 @@ public class HttpServerTests {
 	public void defaultHttpPortWithAddress() {
 		DisposableServer blockingFacade = HttpServer.create()
 		                                      .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
-		                                      .handler((req, resp) -> resp.sendNotFound())
+		                                      .handle((req, resp) -> resp.sendNotFound())
 		                                      .wiretap()
 		                                      .bindNow();
 		blockingFacade.disposeNow();
@@ -101,7 +101,7 @@ public class HttpServerTests {
 	public void releaseInboundChannelOnNonKeepAliveRequest() {
 		DisposableServer c = HttpServer.create()
 		                         .port(0)
-		                         .handler((req, resp) -> req.receive().then(resp.status(200).send()))
+		                         .handle((req, resp) -> req.receive().then(resp.status(200).send()))
 		                         .wiretap()
 		                         .bindNow();
 
@@ -133,8 +133,8 @@ public class HttpServerTests {
 		// start a first server with a handler that answers HTTP 200 OK
 		DisposableServer context = HttpServer.create()
 		                               .port(8080)
-		                               .handler((req, resp) -> resp.status(200)
-		                                                                .send().log())
+		                               .handle((req, resp) -> resp.status(200)
+		                                                          .send().log())
 		                               .wiretap()
 		                               .bindNow();
 
@@ -158,7 +158,7 @@ public class HttpServerTests {
 		// create a totally new server instance, with a different handler that answers HTTP 201
 		context = HttpServer.create()
 		                    .port(8080)
-		                    .handler((req, resp) -> resp.status(201).send())
+		                    .handle((req, resp) -> resp.status(201).send())
 		                    .wiretap()
 		                    .bindNow();
 
@@ -180,7 +180,7 @@ public class HttpServerTests {
 	public void errorResponseAndReturn() {
 		DisposableServer c = HttpServer.create()
 		                         .port(0)
-		                         .handler((req, resp) -> Mono.error(new Exception("returnError")))
+		                         .handle((req, resp) -> Mono.error(new Exception("returnError")))
 		                         .wiretap()
 		                         .bindNow();
 
@@ -205,8 +205,8 @@ public class HttpServerTests {
 
 		DisposableServer server = HttpServer.create()
 		                              .port(0)
-		                              .handler((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
-		                                                          .sendString(Mono.just(i.incrementAndGet())
+		                              .handle((req, resp) -> resp.header(HttpHeaderNames.CONTENT_LENGTH, "1")
+		                                                         .sendString(Mono.just(i.incrementAndGet())
 		                                                                          .flatMap(d -> Mono.delay(
 				                                                                          Duration.ofSeconds(
 						                                                                          4 - d))
@@ -260,7 +260,7 @@ public class HttpServerTests {
 
 		DisposableServer c = HttpServer.create()
 		                         .port(0)
-		                         .handler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
+		                         .handle((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
 		                         .wiretap()
 		                         .bindNow();
 
@@ -587,7 +587,7 @@ public class HttpServerTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .handler((req, res) -> res.status(200).send())
+				          .handle((req, res) -> res.status(200).send())
 				          .wiretap()
 				          .bindNow();
 
@@ -633,7 +633,7 @@ public class HttpServerTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .handler((req, res) -> res.sendString(content))
+				          .handle((req, res) -> res.sendString(content))
 				          .bindNow();
 
 		AtomicReference<Channel> ch = new AtomicReference<>();
@@ -801,7 +801,7 @@ public class HttpServerTests {
 				                                        .maxChunkSize(789)
 				                                        .validateHeaders(false)
 				                                        .initialBufferSize(10))
-				          .handler((req, resp) -> resp.sendNotFound())
+				          .handle((req, resp) -> resp.sendNotFound())
 				          .tcpConfiguration(tcp -> tcp.doOnConnection(c -> {
 				          	channelRef.set(c.channel());
 					          HttpServerCodec codec = c.channel()

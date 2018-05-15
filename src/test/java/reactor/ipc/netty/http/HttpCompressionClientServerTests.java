@@ -52,7 +52,7 @@ public class HttpCompressionClientServerTests {
 		                              .compress();
 
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
@@ -78,7 +78,7 @@ public class HttpCompressionClientServerTests {
 		                              .port(0);
 
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
@@ -109,7 +109,7 @@ public class HttpCompressionClientServerTests {
 		                              .noCompression();
 
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
@@ -142,7 +142,7 @@ public class HttpCompressionClientServerTests {
 		                              .compress();
 
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
@@ -271,7 +271,7 @@ public class HttpCompressionClientServerTests {
 		                              .compress((req, res) -> false);
 
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
@@ -308,7 +308,7 @@ public class HttpCompressionClientServerTests {
 		                              .compress(4);
 
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
@@ -353,7 +353,7 @@ public class HttpCompressionClientServerTests {
 
 		String serverReply = "reply";
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just(serverReply)))
+				server.handle((in, out) -> out.sendString(Mono.just(serverReply)))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
@@ -384,7 +384,7 @@ public class HttpCompressionClientServerTests {
 		                              .port(0);
 
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
@@ -415,7 +415,7 @@ public class HttpCompressionClientServerTests {
 		                              .port(0)
 		                              .compress();
 		DisposableServer runningServer =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 		HttpClient client = HttpClient.prepare()

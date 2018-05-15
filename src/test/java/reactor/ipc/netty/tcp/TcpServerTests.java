@@ -118,7 +118,7 @@ public class TcpServerTests {
 
 		ObjectMapper m = new ObjectMapper();
 
-		DisposableServer connectedServer = server.handler((in, out) -> {
+		DisposableServer connectedServer = server.handle((in, out) -> {
 			in.receive()
 			  .asByteArray()
 			  .map(bb -> {
@@ -203,7 +203,7 @@ public class TcpServerTests {
 		final CountDownLatch latch = new CountDownLatch(1);
 
 		DisposableServer server = TcpServer.create().port(port)
-		                             .handler((in, out) -> {
+		                             .handle((in, out) -> {
 
 			in.withConnection(c -> {
 				InetSocketAddress addr = c.address();
@@ -251,7 +251,7 @@ public class TcpServerTests {
 				                                                new LineBasedFrameDecoder(8 * 1024)))
 		                            .port(port);
 
-		DisposableServer connected = server.handler(serverHandler)
+		DisposableServer connected = server.handle(serverHandler)
 		                             .wiretap()
 		                             .bindNow();
 
@@ -322,7 +322,7 @@ public class TcpServerTests {
 		final CountDownLatch countDownLatch = new CountDownLatch(1);
 
 		DisposableServer server = TcpServer.create().port(0)
-		                             .handler((in, out) -> {
+		                             .handle((in, out) -> {
 			                             in.receive()
 			                               .log("channel")
 			                               .subscribe(trip -> {
@@ -401,7 +401,7 @@ public class TcpServerTests {
 
 		DisposableServer context =
 				TcpServer.create().secure(sslServer)
-				         .handler((in, out) ->
+				         .handle((in, out) ->
 						         in.receive()
 						           .asString()
 						           .flatMap(word -> "GOGOGO".equals(word) ?
@@ -512,7 +512,7 @@ public class TcpServerTests {
 
 		DisposableServer context =
 				TcpServer.create()
-				         .handler((in, out) ->
+				         .handle((in, out) ->
 						         in.receive()
 						           .asString()
 						           .flatMap(word -> "GOGOGO".equals(word) ?
@@ -583,7 +583,7 @@ public class TcpServerTests {
 		CountDownLatch startLatch = new CountDownLatch(1);
 
 		Thread t = new Thread(() -> TcpServer.create()
-		                                     .handler((in, out) -> out.sendString(Mono.just("foo")))
+		                                     .handle((in, out) -> out.sendString(Mono.just("foo")))
 		                                     .bindUntilJavaShutdown(Duration.ofMillis(200),
 		                                                            c -> {
 		                                                                  conn.set(c);
@@ -627,16 +627,16 @@ public class TcpServerTests {
 
 		DisposableServer server =
 		        TcpServer.create()
-		                 .handler((in, out) -> out.send(in.receive()
-		                                                     .asString()
-		                                                     .map(jsonDecoder)
-		                                                     .log()
-		                                                     .take(1)
-		                                                     .map(pojo -> {
+		                 .handle((in, out) -> out.send(in.receive()
+		                                                 .asString()
+		                                                 .map(jsonDecoder)
+		                                                 .log()
+		                                                 .take(1)
+		                                                 .map(pojo -> {
 		                                                         Assertions.assertThat(pojo.getName()).isEqualTo("John Doe");
 		                                                         return new Pojo("Jane Doe");
 		                                                     })
-		                                                     .map(jsonEncoder)))
+		                                                 .map(jsonEncoder)))
 		                 .wiretap()
 		                 .bindNow();
 
@@ -679,14 +679,14 @@ public class TcpServerTests {
 
 		DisposableServer server =
 				TcpServer.create()
-				         .handler((in, out) -> in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
-				                                    .receive()
-				                                    .asString()
-				                                    .log("serve")
-				                                    .map(jsonDecoder)
-				                                    .concatMap(Flux::fromArray)
-				                                    .window(5)
-				                                    .concatMap(w -> out.send(w.collectList().map(jsonEncoder))))
+				         .handle((in, out) -> in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
+				                                .receive()
+				                                .asString()
+				                                .log("serve")
+				                                .map(jsonDecoder)
+				                                .concatMap(Flux::fromArray)
+				                                .window(5)
+				                                .concatMap(w -> out.send(w.collectList().map(jsonEncoder))))
 				         .wiretap()
 				         .bindNow();
 
@@ -743,10 +743,10 @@ public class TcpServerTests {
 		final AtomicInteger j = new AtomicInteger();
 		DisposableServer server =
 		        TcpServer.create().host("localhost")
-		                 .handler((in, out) -> out.sendGroups(in.receive()
-		                                                           .asString()
-		                                                           .map(jsonDecoder)
-		                                                           .map(d -> Flux.fromArray(d)
+		                 .handle((in, out) -> out.sendGroups(in.receive()
+		                                                       .asString()
+		                                                       .map(jsonDecoder)
+		                                                       .map(d -> Flux.fromArray(d)
 		                                                                         .doOnNext(pojo -> {
 		                                                                             if (j.getAndIncrement() < 2) {
 		                                                                                 throw new RuntimeException("test");
@@ -755,8 +755,8 @@ public class TcpServerTests {
 		                                                                         .retry(2)
 		                                                                         .collectList()
 		                                                                         .map(jsonEncoder))
-		                                                           .doOnComplete(() -> System.out.println("wow"))
-		                                                           .log("flatmap-retry")))
+		                                                       .doOnComplete(() -> System.out.println("wow"))
+		                                                       .log("flatmap-retry")))
 		                 .wiretap()
 		                 .bindNow();
 

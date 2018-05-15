@@ -74,7 +74,7 @@ public class BlockingConnectionTest {
 	public void simpleServerFromAsyncServer() throws InterruptedException {
 		DisposableServer simpleServer =
 				TcpServer.create()
-				         .handler((in, out) -> out
+				         .handle((in, out) -> out
 						         .options(NettyPipeline.SendOptions::flushOnEach)
 						         .sendString(
 								         in.receive()
