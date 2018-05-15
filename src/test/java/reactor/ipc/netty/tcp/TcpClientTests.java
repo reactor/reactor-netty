@@ -52,9 +52,7 @@ import reactor.ipc.netty.resources.PoolResources;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * @author Stephane Maldini
@@ -425,15 +423,12 @@ public class TcpClientTests {
 				         .port(timeoutServerPort);
 
 		Connection s = client.handler((in, out) -> {
-			in.onReadIdle(500, () -> {
-				  totalDelay.addAndGet(System.currentTimeMillis() - start);
-				  latch.countDown();
-			}).withConnection(c -> c.onDispose(close::countDown));
+			in.withConnection(c -> c.onDispose(close::countDown));
 
-			out.onWriteIdle(500, () -> {
+			out.withConnection(c -> c.onWriteIdle(500, () -> {
 				totalDelay.addAndGet(System.currentTimeMillis() - start);
 				latch.countDown();
-			});
+			}));
 
 			return Mono.delay(Duration.ofSeconds(3))
 			           .then()
@@ -459,7 +454,7 @@ public class TcpClientTests {
 		                            .port(heartbeatServerPort);
 
 		Connection s = client.handler((in, out) -> {
-			in.onReadIdle(500, latch::countDown);
+			in.withConnection(c -> c.onReadIdle(500, latch::countDown));
 			return Flux.never();
 		})
 		                     .wiretap()
@@ -485,7 +480,7 @@ public class TcpClientTests {
 		                             .port(echoServerPort)
 		                             .handler((in, out) -> {
 			                               System.out.println("hello");
-			                               out.onWriteIdle(500, latch::countDown);
+			                               out.withConnection(c -> c.onWriteIdle(500, latch::countDown));
 
 			                               List<Publisher<Void>> allWrites =
 					                               new ArrayList<>();

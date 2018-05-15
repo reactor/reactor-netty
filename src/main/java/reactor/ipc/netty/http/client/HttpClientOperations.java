@@ -24,10 +24,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -69,13 +67,12 @@ import reactor.core.publisher.Operators;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.FutureMono;
+import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
-import reactor.ipc.netty.http.websocket.WebsocketInbound;
-import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -83,7 +80,7 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  * @author Simon Baslé
  */
-class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClientRequest>
+class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		implements HttpClientResponse, HttpClientRequest {
 
 	final Supplier<String>[]    redirectedFrom;
@@ -180,7 +177,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public HttpClientResponse removeHandler(String name) {
+	public HttpClientOperations removeHandler(String name) {
 		super.removeHandler(name);
 		return this;
 	}
@@ -345,17 +342,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
-	public Mono<Void> send() {
-		if (markSentHeaderAndBody()) {
-			HttpMessage request = newFullEmptyBodyMessage();
-			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
-		}
-		else {
-			return Mono.empty();
-		}
-	}
-
-	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 			ByteBufAllocator alloc = channel().alloc();
@@ -381,13 +367,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return new FluxSendForm(this, formCallback);
 	}
 
-	@Override
-	public Mono<Void> receiveWebsocket(String protocols,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		Objects.requireNonNull(websocketHandler, "websocketHandler");
-		return withWebsocketSupport(websocketUri(), protocols, websocketHandler);
-	}
-
 	final URI websocketUri() {
 		URI uri;
 		try {
@@ -407,12 +386,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return uri;
 	}
 
-
-	@Override
-	@Nullable
-	public WebsocketInbound receiveWebsocket() {
-		return null;
-	}
 
 	@Override
 	public HttpResponseStatus status() {
@@ -596,6 +569,16 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		return nettyRequest;
 	}
 
+	final Mono<Void> send() {
+		if (markSentHeaderAndBody()) {
+			HttpMessage request = newFullEmptyBodyMessage();
+			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
+		}
+		else {
+			return Mono.empty();
+		}
+	}
+
 	final void prefetchMore(ChannelHandlerContext ctx) {
 		int inboundPrefetch = this.inboundPrefetch - 1;
 		if (inboundPrefetch >= 0) {
@@ -612,45 +595,18 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 	}
 
-	final Mono<Void> withWebsocketSupport(URI url,
-			@Nullable String protocols,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-
+	final void withWebsocketSupport(String protocols) {
+		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-			WebsocketClientOperations
-					ops = new WebsocketClientOperations(url, protocols, this);
+			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, this);
 
-			if (rebind(ops)) {
-				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
-				                                 .then(Mono.defer(() -> Mono.from(
-						                                 websocketHandler.apply(ops, ops))));
-				if (websocketHandler != EMPTY) {
-					handshake = handshake.doAfterSuccessOrError(ops);
-				}
-				return handshake;
+			if(!rebind(ops)) {
+				log.error("Error while rebinding websocket in channel attribute");
 			}
 		}
-		else if (isWebsocket()) {
-			WebsocketClientOperations ops =
-					(WebsocketClientOperations) get(channel());
-			if(ops != null) {
-				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
-
-				if (websocketHandler != EMPTY) {
-					handshake =
-							handshake.then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops)))
-							         .doAfterSuccessOrError(ops));
-				}
-				return handshake;
-			}
-		}
-		else {
-			log.error("Cannot enable websocket if headers have already been sent");
-		}
-		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
 	}
 
 	static final class ResponseState {
@@ -762,7 +718,6 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 	}
 
-	static final BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> EMPTY = (x1, x2) -> Mono.empty();
 	static final int                    MAX_REDIRECTS      = 50;
 	@SuppressWarnings("unchecked")
 	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];

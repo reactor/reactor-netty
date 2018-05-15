@@ -29,21 +29,6 @@ import reactor.core.publisher.Flux;
  */
 public interface NettyInbound {
 
-	/**
-	 * Assign a {@link Runnable} to be invoked when reads have become idle for the given
-	 * timeout. This replaces any previously set idle callback.
-	 *
-	 * @param idleTimeout the idle timeout
-	 * @param onReadIdle the idle timeout handler
-	 *
-	 * @return {@literal this}
-	 */
-	default NettyInbound onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		return withConnection(c ->
-			c.removeHandler(NettyPipeline.OnChannelReadIdle)
-			 .addHandlerFirst(NettyPipeline.OnChannelReadIdle,
-					 new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle)));
-	}
 
 	/**
 	 * A {@link Flux} extension that allows for extra decoding operators

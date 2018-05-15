@@ -66,22 +66,6 @@ public interface NettyOutbound extends Publisher<Void> {
 	}
 
 	/**
-	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given
-	 * timeout. This replaces any previously set idle callback.
-	 *
-	 * @param idleTimeout the idle timeout
-	 * @param onWriteIdle the idle timeout handler
-	 *
-	 * @return {@literal this}
-	 */
-	default NettyOutbound onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
-		return withConnection(c ->
-			c.removeHandler(NettyPipeline.OnChannelWriteIdle)
-			 .addHandlerFirst(NettyPipeline.OnChannelWriteIdle,
-					new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle)));
-	}
-
-	/**
 	 * Provide a new {@link NettyOutbound} scoped configuration for sending. The
 	 * {@link NettyPipeline.SendOptions} changes will apply to the next written object or
 	 * {@link Publisher}.

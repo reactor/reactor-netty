@@ -375,7 +375,7 @@ public class TcpServerTests {
 				                       .wiretap()
 				                       .post()
 				                       .uri("ws://localhost:3000")
-				                       .send((requestOut, o) -> requestOut.sendString(Mono.just("ping")))
+				                       .send((requestOut, o) -> o.sendString(Mono.just("ping")))
 				                       .response((repliesOut, buf) ->  out.sendGroups(buf.window(100)))))
 		      .wiretap()
 		      .bindNow()
@@ -471,7 +471,7 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void sendFileChunked() throws InterruptedException, IOException, URISyntaxException {
+	public void sendFileChunked() throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 
@@ -480,7 +480,7 @@ public class TcpServerTests {
 
 	@Test
 	public void sendZipFileChunked()
-			throws IOException, InterruptedException {
+			throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -494,7 +494,7 @@ public class TcpServerTests {
 
 	@Test
 	public void sendZipFileDefault()
-			throws IOException, InterruptedException {
+			throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 

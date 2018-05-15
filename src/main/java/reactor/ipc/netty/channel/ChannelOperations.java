@@ -104,7 +104,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Nullable
 	@Override
-	public <T> T as(Class<T> clazz) {
+	public <T extends Connection> T as(Class<T> clazz) {
 		if (clazz == ChannelOperations.class) {
 			@SuppressWarnings("unchecked")
 			T thiz = (T) this;
@@ -123,6 +123,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public ChannelOperations<INBOUND, OUTBOUND> bind() {
 		Connection.super.bind();
 		listener.onStateChange(this, ConnectionObserver.State.CONFIGURED);
+		return this;
+	}
+
+	@Override
+	public NettyInbound inbound() {
+		return this;
+	}
+
+	@Override
+	public NettyOutbound outbound() {
 		return this;
 	}
 

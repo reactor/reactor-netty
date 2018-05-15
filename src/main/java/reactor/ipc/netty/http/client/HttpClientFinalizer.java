@@ -18,14 +18,22 @@ package reactor.ipc.netty.http.client;
 
 import java.util.Objects;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import org.reactivestreams.Publisher;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.ByteBufMono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.http.websocket.WebsocketInbound;
+import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.tcp.TcpClient;
 
 import static reactor.ipc.netty.http.client.HttpClientConfiguration.websocketSubprotocols;
@@ -55,39 +63,65 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 
 	// ResponseReceiver methods
 
+	@SuppressWarnings("unchecked")
+	Mono<HttpClientOperations> connect() {
+		return (Mono<HttpClientOperations>)cachedConfiguration.connect();
+	}
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<HttpClientResponse> response() {
-		return cachedConfiguration.connect()
-		                          .cast(HttpClientResponse.class);
+		return connect().map(RESPONSE_ONLY);
 	}
 
 	@Override
 	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver) {
-		return response().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp.receive()))
-		                                          .doFinally(s -> resp.dispose()));
+		return connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp.receive()))
+		                                          .doFinally(s -> dispose(resp)));
+	}
+
+	@Override
+	public <V> Flux<V> responseConnection(BiFunction<? super HttpClientResponse, ? super Connection, ? extends Publisher<V>> receiver) {
+		return connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp)));
 	}
 
 	@Override
 	public ByteBufFlux responseContent() {
-		// TODO assign allocator
-		return ByteBufFlux.fromInbound(response().flatMapMany((HttpClientResponse::receive)));
+		Bootstrap b;
+		try {
+			b = cachedConfiguration.configure();
+		}
+		catch (Throwable t) {
+			Exceptions.throwIfFatal(t);
+			return ByteBufFlux.fromInbound(Mono.error(t));
+		}
+		@SuppressWarnings("unchecked")
+		ByteBufAllocator alloc = (ByteBufAllocator) b.config()
+		                          .options()
+		                          .getOrDefault(ChannelOption.ALLOCATOR, ByteBufAllocator.DEFAULT);
+
+		return ByteBufFlux.fromInbound(connect().flatMapMany((HttpClientOperations::receive)), alloc);
 	}
 
 	@Override
 	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver) {
-		return response().flatMap(resp -> receiver.apply(resp,
+		return connect().flatMap(resp -> receiver.apply(resp,
 				resp.receive()
-				    .aggregate()).doFinally(s -> resp.dispose()));
+				    .aggregate()).doFinally(s -> dispose(resp)));
 	}
 
-	// RequestSender methods
+	static void dispose(Connection c) {
+		if (!c.isDisposed()) {
+			c.channel().eventLoop().execute(c::dispose);
+		}
+	}
 
+
+	// RequestSender methods
 	@Override
 	public HttpClientFinalizer send(Publisher<? extends ByteBuf> requestBody) {
 		Objects.requireNonNull(requestBody, "requestBody");
 		return send((req, out) -> out.sendObject(requestBody));
-
 	}
 
 	@Override
@@ -98,9 +132,29 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	}
 
 	@Override
-	public RequestSender websocket(String subprotocols) {
+	public <V> Flux<V> websocket(String subprotocols, BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver) {
 		Objects.requireNonNull(subprotocols, "subprotocols");
-		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> websocketSubprotocols(b, subprotocols)));
+		Bootstrap b;
+		try {
+			b = cachedConfiguration.configure();
+			websocketSubprotocols(b, subprotocols);
+		}
+		catch (Throwable t) {
+			Exceptions.throwIfFatal(t);
+			return Flux.error(t);
+		}
+		return cachedConfiguration.connect(b)
+		                          .flatMapMany(c -> {
+			                          WebsocketClientOperations wsOps =
+					                          c.as(WebsocketClientOperations.class);
+			                          return Flux.from(receiver.apply(wsOps, wsOps));
+		                          });
 	}
+
+	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {
+		//defer the dispose to avoid over disposing on receive
+		dispose(ops);
+		return ops;
+	};
 }
 

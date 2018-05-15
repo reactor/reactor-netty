@@ -20,12 +20,13 @@ import javax.annotation.Nullable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOutboundHandler;
+import reactor.core.Disposable;
 
 /**
  * Hold contextual information for the underlying {@link Channel}
  *
  * @author Stephane Maldini
- * @since 0.6
+ * @since 0.8
  */
 @FunctionalInterface
 public interface Connection extends DisposableChannel {
@@ -54,7 +55,7 @@ public interface Connection extends DisposableChannel {
 	 * @return a matching {@link Connection} reference or null
 	 */
 	@Nullable
-	default  <T> T as(Class<T> clazz) {
+	default  <T extends Connection> T as(Class<T> clazz) {
 		if(clazz.isAssignableFrom(this.getClass())) {
 			@SuppressWarnings("unchecked")
 			T thiz = (T) this;
@@ -200,8 +201,6 @@ public interface Connection extends DisposableChannel {
 		return this;
 	}
 
-
-
 	/**
 	 * Bind the {@link Connection} to the channel scope via an attribute. Can be
 	 * retrieved later by {@link #from}. If a previous reference {@link Connection} was
@@ -215,20 +214,15 @@ public interface Connection extends DisposableChannel {
 		return this;
 	}
 
-
-
 	/**
-	 * Bind a new {@link Connection} reference or null to the channel
-	 * attributes only if this instance is currently bound.
+	 * Return the {@link NettyInbound} read API from this connection. If
+	 * {@link Connection} has not been configured with a supporting bridge, receive
+	 * operations will be unavailable.
 	 *
-	 * @param connection a new connection reference
-	 *
-	 * @return true if bound
-	 * @see #bind
+	 * @return  the {@link NettyInbound} read API from this connection.
 	 */
-	default boolean rebind(@Nullable Connection connection) {
-		return channel().attr(ReactorNetty.CONNECTION)
-		                .compareAndSet(this, connection);
+	default NettyInbound inbound() {
+		return ReactorNetty.unavailableInbound(this);
 	}
 
 	/**
@@ -252,6 +246,67 @@ public interface Connection extends DisposableChannel {
 			         .set(persist);
 		}
 		return this;
+	}
+
+	@Override
+	default Connection onDispose(Disposable onDispose) {
+		DisposableChannel.super.onDispose(onDispose);
+		return this;
+	}
+
+	/**
+	 * Assign a {@link Runnable} to be invoked when reads have become idle for the given
+	 * timeout. This replaces any previously set idle callback.
+	 *
+	 * @param idleTimeout the idle timeout
+	 * @param onReadIdle the idle timeout handler
+	 *
+	 * @return {@literal this}
+	 */
+	default Connection onReadIdle(long idleTimeout, Runnable onReadIdle) {
+		return removeHandler(NettyPipeline.OnChannelReadIdle)
+				 .addHandlerFirst(NettyPipeline.OnChannelReadIdle,
+						 new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle));
+	}
+
+	/**
+	 * Assign a {@link Runnable} to be invoked when writes have become idle for the given
+	 * timeout. This replaces any previously set idle callback.
+	 *
+	 * @param idleTimeout the idle timeout
+	 * @param onWriteIdle the idle timeout handler
+	 *
+	 * @return {@literal this}
+	 */
+	default Connection onWriteIdle(long idleTimeout, Runnable onWriteIdle) {
+		return removeHandler(NettyPipeline.OnChannelWriteIdle)
+				 .addHandlerFirst(NettyPipeline.OnChannelWriteIdle,
+						 new ReactorNetty.OutboundIdleStateHandler(idleTimeout, onWriteIdle));
+	}
+
+	/**
+	 * Return the {@link NettyOutbound} write API from this connection. If
+	 * {@link Connection} has not been configured with a supporting bridge, send
+	 * operations will be unavailable.
+	 *
+	 * @return  the {@link NettyOutbound} read API from this connection.
+	 */
+	default NettyOutbound outbound() {
+		return ReactorNetty.unavailableOutbound(this);
+	}
+
+	/**
+	 * Bind a new {@link Connection} reference or null to the channel
+	 * attributes only if this instance is currently bound.
+	 *
+	 * @param connection a new connection reference
+	 *
+	 * @return true if bound
+	 * @see #bind
+	 */
+	default boolean rebind(@Nullable Connection connection) {
+		return channel().attr(ReactorNetty.CONNECTION)
+		                .compareAndSet(this, connection);
 	}
 
 	/**

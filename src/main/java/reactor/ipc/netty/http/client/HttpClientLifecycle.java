@@ -16,7 +16,7 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
@@ -33,16 +33,16 @@ final class HttpClientLifecycle extends HttpClientOperator implements
                                                            ConnectionObserver,
                                                            Function<Bootstrap, Bootstrap> {
 
-	final Consumer<? super HttpClientRequest>  onRequest;
-	final Consumer<? super HttpClientRequest>  afterRequest;
-	final Consumer<? super HttpClientResponse> onResponse;
-	final Consumer<? super HttpClientResponse> afterResponse;
+	final BiConsumer<? super HttpClientRequest, ? super Connection> onRequest;
+	final BiConsumer<? super HttpClientRequest, ? super Connection> afterRequest;
+	final BiConsumer<? super HttpClientResponse, ? super Connection> onResponse;
+	final BiConsumer<? super HttpClientResponse, ? super Connection> afterResponse;
 
 	HttpClientLifecycle(HttpClient client,
-			@Nullable Consumer<? super HttpClientRequest> onRequest,
-			@Nullable Consumer<? super HttpClientRequest> afterRequest,
-			@Nullable Consumer<? super HttpClientResponse> onResponse,
-			@Nullable Consumer<? super HttpClientResponse> afterResponse) {
+			@Nullable BiConsumer<? super HttpClientRequest,  ? super Connection> onRequest,
+			@Nullable BiConsumer<? super HttpClientRequest,  ? super Connection> afterRequest,
+			@Nullable BiConsumer<? super HttpClientResponse, ? super Connection> onResponse,
+			@Nullable BiConsumer<? super HttpClientResponse,  ? super Connection> afterResponse) {
 		super(client);
 		this.onRequest = onRequest;
 		this.afterRequest = afterRequest;
@@ -60,21 +60,21 @@ final class HttpClientLifecycle extends HttpClientOperator implements
 	public void onStateChange(Connection connection, State newState) {
 		if (newState == State.CONFIGURED) {
 			if (onRequest != null) {
-				onRequest.accept(connection.as(HttpClientOperations.class));
+				onRequest.accept(connection.as(HttpClientOperations.class), connection);
 			}
 
 			if (afterResponse != null) {
 				connection.onDispose(() ->
-						afterResponse.accept(connection.as(HttpClientOperations.class)));
+						afterResponse.accept(connection.as(HttpClientOperations.class), connection));
 			}
 			return;
 		}
 		if (afterRequest != null && newState == HttpClientOperations.REQUEST_SENT) {
-			afterRequest.accept(connection.as(HttpClientOperations.class));
+			afterRequest.accept(connection.as(HttpClientOperations.class), connection);
 			return;
 		}
 		if (onResponse != null && newState == HttpClientOperations.RESPONSE_RECEIVED) {
-			onResponse.accept(connection.as(HttpClientOperations.class));
+			onResponse.accept(connection.as(HttpClientOperations.class), connection);
 		}
 	}
 

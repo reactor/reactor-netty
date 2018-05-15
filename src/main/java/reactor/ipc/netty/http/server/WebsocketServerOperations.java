@@ -18,7 +18,6 @@ package reactor.ipc.netty.http.server;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiConsumer;
-
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
@@ -28,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -86,6 +86,11 @@ final class WebsocketServerOperations extends HttpServerOperations
 					handshakerResult)
 			          .addListener(f -> markPersistent(false));
 		}
+	}
+
+	@Override
+	public HttpHeaders headers() {
+		return requestHeaders();
 	}
 
 	@Override

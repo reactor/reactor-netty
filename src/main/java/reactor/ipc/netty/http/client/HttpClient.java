@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.client;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -31,10 +32,12 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.ByteBufMono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
@@ -66,10 +69,7 @@ import static reactor.ipc.netty.http.client.HttpClientConfiguration.*;
  * HttpClient.create("http://example.com")
  *           .post()
  *           .send(Flux.just(bb1, bb2, bb3))
- *           .responseSingle((res, content) -> {
- *                   content.subscribe().dispose();
- *                   return Mono.just(res.status().code());
- *           })
+ *           .responseSingle((res, content) -> Mono.just(res.status().code()))
  *           .block();
  * }
  * {@code
@@ -77,10 +77,7 @@ import static reactor.ipc.netty.http.client.HttpClientConfiguration.*;
  *           .baseUri("http://example.com")
  *           .post()
  *           .send(ByteBufFlux.fromString(flux))
- *           .responseSingle((res, content) -> {
- *                   content.subscribe().dispose();
- *                   return Mono.just(res.status().code());
- *           })
+ *           .responseSingle((res, content) -> Mono.just(res.status().code()))
  *           .block();
  * }
  *
@@ -119,85 +116,138 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * A ready to receive {@link HttpClient}
+	 * Allow a request body configuration before calling one of the terminal, {@link
+	 * Publisher} based, {@link ResponseReceiver} API.
+	 */
+	public interface RequestSender extends ResponseReceiver<RequestSender> {
+
+		/**
+		 * Configure a body to send on request.
+		 *
+		 * @param body  a body publisher that will terminate the request on complete
+		 *
+		 * @return a new {@link ResponseReceiver}
+		 */
+		ResponseReceiver<?> send(Publisher<? extends ByteBuf> body);
+
+		/**
+		 * Configure a body to send on request using the {@link NettyOutbound} sending
+		 * builder and returning a {@link Publisher} to signal end of the request.
+		 *
+		 * @param sender a bifunction given the outgoing request and the sending
+		 * {@link NettyOutbound}, returns a publisher that will terminate the request
+		 * body
+		 * on complete
+		 *
+		 * @return a new {@link ResponseReceiver}
+		 */
+		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender);
+	}
+
+	/**
+	 * A response extractor for this configured {@link HttpClient}. Since
+	 * {@link ResponseReceiver} API returns {@link Flux} or {@link Mono},
+	 * requesting is always deferred to {@link Publisher#subscribe(Subscriber)}.
 	 */
 	public interface ResponseReceiver<S extends ResponseReceiver<?>>
 			extends UriConfiguration<S> {
 
 		/**
-		 * @return
+		 * Return the response status and headers as {@link HttpClientResponse}
+		 * <p> Will automatically close the response if necessary.
+		 *
+		 * @return the response status and headers as {@link HttpClientResponse}
 		 */
 		Mono<HttpClientResponse> response();
 
 		/**
-		 * @param receiver
-		 * @param <V>
+		 * Extract a response flux from the given {@link HttpClientResponse} and body
+		 * {@link ByteBufFlux}.
+		 * <p> Will automatically close the response if necessary after the returned
+		 * {@link Flux} terminates or is being cancelled.
 		 *
-		 * @return
+		 * @param receiver extracting receiver
+		 * @param <V> the extracted flux type
+		 *
+		 * @return a {@link Flux} forwarding the returned {@link Publisher} sequence
 		 */
 		<V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver);
 
 		/**
-		 * @return
+		 * Extract a response flux from the given {@link HttpClientResponse} and
+		 * underlying {@link Connection}.
+		 * <p> The connection will not automatically {@link Connection#dispose()} and
+		 * manual interaction with this method might be necessary if the remote never
+		 * terminates itself.
+		 *
+		 * @param receiver extracting receiver
+		 * @param <V> the extracted flux type
+		 *
+		 * @return a {@link Flux} forwarding the returned {@link Publisher} sequence
+		 */
+		<V> Flux<V> responseConnection(BiFunction<? super HttpClientResponse, ? super Connection, ? extends Publisher<V>> receiver);
+
+		/**
+		 * Return the response body chunks as {@link ByteBufFlux}.
+		 *
+		 * <p> Will automatically close the response if necessary after the returned
+		 * {@link Flux} terminates or is being cancelled.
+		 *
+		 * @return the response body chunks as {@link ByteBufFlux}.
 		 */
 		ByteBufFlux responseContent();
 
 		/**
-		 * @param receiver
-		 * @param <V>
+		 * Extract a response mono from the given {@link HttpClientResponse} and
+		 * aggregated body {@link ByteBufMono}.
 		 *
-		 * @return
+		 * <p> Will automatically close the response if necessary after the returned
+		 * {@link Mono} terminates or is being cancelled.
+		 *
+		 * @param receiver extracting receiver
+		 * @param <V> the extracted mono type
+		 *
+		 * @return a {@link Mono} forwarding the returned {@link Mono} result
 		 */
 		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver);
 
-
-
 		/**
-		 * WebSocket to connect the {@link HttpClient}.
+		 * Negotiate a websocket upgrade and extract a flux from the given
+		 * {@link reactor.ipc.netty.http.websocket.WebsocketInbound} and
+		 *  {@link reactor.ipc.netty.http.websocket.WebsocketOutbound}}.
+		 * <p> The connection will not automatically {@link Connection#dispose()} and
+		 * manual disposing with the {@link Connection} or returned {@link Flux} might be
+		 * necessary if the remote never
+		 * terminates itself.
+		 *
+		 * @param receiver extracting receiver
+		 * @param <V> the extracted flux type
 		 *
 		 * @return a {@link RequestSender} ready to consume for response
 		 */
-		default RequestSender websocket() {
-			return websocket("");
+		default <V> Flux<V> websocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver) {
+			return websocket("", receiver);
 		}
 
 		/**
-		 * WebSocket to the passed URL, negotiating one of the passed subprotocols.
-		 * <p>
-		 * The negotiated subprotocol can be accessed through the {@link HttpClientResponse}
-		 * by switching to websocket (using any of the {@link HttpClientResponse#receiveWebsocket()
-		 * receiveWebSocket} methods) and using {@link WebsocketInbound#selectedSubprotocol()}.
-		 * <p>
-		 * To send data through the websocket, use {@link HttpClientResponse#receiveWebsocket(BiFunction)}
-		 * and then use the function's {@link WebsocketOutbound}.
+		 * Negotiate a websocket upgrade and extract a flux from the given
+		 * {@link reactor.ipc.netty.http.websocket.WebsocketInbound} and
+		 *  {@link reactor.ipc.netty.http.websocket.WebsocketOutbound}}.
+		 * <p> The connection will not automatically {@link Connection#dispose()} and
+		 * manual disposing with the {@link Connection} or returned {@link Flux} might be
+		 * necessary if the remote never terminates itself.
 		 *
 		 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if
 		 * not relevant.
+		 * @param receiver extracting receiver
+		 * @param <V> the extracted flux type
 		 *
 		 * @return a {@link RequestSender} ready to consume for response
 		 */
-		RequestSender websocket(String subprotocols);
+		<V> Flux<V> websocket(String subprotocols, BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver);
 	}
 
-	/**
-	 * A ready to request {@link HttpClient}
-	 */
-	public interface RequestSender extends ResponseReceiver<RequestSender> {
 
-		/**
-		 * @param body
-		 *
-		 * @return
-		 */
-		ResponseReceiver<?> send(Publisher<? extends ByteBuf> body);
-
-		/**
-		 * @param sender
-		 *
-		 * @return
-		 */
-		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender);
-	}
 
 	/**
 	 * Prepare a pooled {@link HttpClient} given the base URI.
@@ -320,7 +370,7 @@ public abstract class HttpClient {
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient doOnRequest(Consumer<? super HttpClientRequest> doOnRequest) {
+	public final HttpClient doOnRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest) {
 		return new HttpClientLifecycle(this, doOnRequest, null, null, null);
 	}
 
@@ -331,7 +381,7 @@ public abstract class HttpClient {
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient doAfterRequest(Consumer<? super HttpClientRequest> doAfterRequest) {
+	public final HttpClient doAfterRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest) {
 		return new HttpClientLifecycle(this, null, doAfterRequest, null, null);
 	}
 
@@ -343,7 +393,7 @@ public abstract class HttpClient {
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient doOnResponse(Consumer<? super HttpClientResponse> doOnResponse) {
+	public final HttpClient doOnResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse) {
 		return new HttpClientLifecycle(this, null, null, doOnResponse, null);
 	}
 
@@ -354,7 +404,7 @@ public abstract class HttpClient {
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient doAfterResponse(Consumer<? super HttpClientResponse> doAfterResponse) {
+	public final HttpClient doAfterResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponse) {
 		return new HttpClientLifecycle(this, null, null, null, doAfterResponse);
 	}
 

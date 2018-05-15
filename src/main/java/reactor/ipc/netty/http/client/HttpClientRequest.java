@@ -16,26 +16,22 @@
 
 package reactor.ipc.netty.http.client;
 
-import io.netty.buffer.Unpooled;
+import java.util.function.Consumer;
+
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
 
-import java.util.function.Consumer;
-
 /**
- * An Http Reactive client write contract for outgoing requests. It inherits several
+ * An Http Reactive client metadata contract for outgoing requests. It inherits several
  * accessor related to HTTP flow : headers, params, URI, method, websocket...
  *
  * @author Stephane Maldini
  * @author Simon Baslé
  */
-public interface HttpClientRequest extends NettyOutbound, HttpInfos {
+public interface HttpClientRequest extends HttpInfos {
 
 	/**
 	 * Add an outbound cookie
@@ -43,10 +39,6 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * @return this outbound
 	 */
 	HttpClientRequest addCookie(Cookie cookie);
-
-	@Override
-	HttpClientRequest withConnection(Consumer<? super Connection> withConnection);
-
 	/**
 	 * Add an outbound http header, appending the value if the header is already set.
 	 *
@@ -56,12 +48,6 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * @return this outbound
 	 */
 	HttpClientRequest addHeader(CharSequence name, CharSequence value);
-
-	@Override
-	default HttpClientRequest options(Consumer<? super NettyPipeline.SendOptions> configurator){
-		NettyOutbound.super.options(configurator);
-		return this;
-	}
 
 	/**
 	 * Return  true if headers and status have been sent to the client
@@ -104,12 +90,6 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 */
 	HttpClientRequest keepAlive(boolean keepAlive);
 
-	@Override
-	default HttpClientRequest onWriteIdle(long idleTimeout, Runnable onWriteIdle){
-		NettyOutbound.super.onWriteIdle(idleTimeout, onWriteIdle);
-		return this;
-	}
-
 	/**
 	 * Return the previous redirections or empty array
 	 *
@@ -123,17 +103,6 @@ public interface HttpClientRequest extends NettyOutbound, HttpInfos {
 	 * @return outbound headers to be sent
 	 */
 	HttpHeaders requestHeaders();
-
-	/**
-	 * Send headers and empty content thus delimiting a full empty body http request
-	 *
-	 * @return a {@link Mono} successful on committed response
-	 *
-	 * @see #sendObject(Object)
-	 */
-	default Mono<Void> send() {
-		return sendObject(Unpooled.EMPTY_BUFFER).then();
-	}
 
 	/**
 	 * Prepare to send an HTTP Form including Multipart encoded Form which support

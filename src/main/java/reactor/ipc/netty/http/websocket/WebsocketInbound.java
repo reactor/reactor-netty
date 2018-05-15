@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.websocket;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import reactor.core.publisher.Flux;
@@ -39,6 +40,13 @@ public interface WebsocketInbound extends NettyInbound {
 	 */
 	@Nullable
 	String selectedSubprotocol();
+
+	/**
+	 * Returns the websocket remote headers sent during handshake
+	 *
+	 * @return the websocket remote headers sent during handshake
+	 */
+	HttpHeaders headers();
 
 	/**
 	 * Turn this {@link WebsocketInbound} into aggregating mode which will only produce

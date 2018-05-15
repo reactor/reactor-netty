@@ -40,6 +40,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.client.HttpClient;
@@ -144,17 +145,17 @@ public class HttpSendFileTests {
 			client = HttpClient.prepare()
 			                   .addressSupplier(() -> context.address());
 		}
-		HttpClientResponse response =
+		Mono<String> response =
 				customizeClientOptions(client)
 				          .get()
 				          .uri("/foo")
-				          .response()
+				          .responseSingle((res, byteBufMono) -> Mono.just(byteBufMono.asString(StandardCharsets.UTF_8)))
 				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
 		context.onDispose().block();
 
-		String body = response.receive().aggregate().asString(StandardCharsets.UTF_8).block();
+		String body = response.block();
 		bodyAssertion.accept(body);
 	}
 

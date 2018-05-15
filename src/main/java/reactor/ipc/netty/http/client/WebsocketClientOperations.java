@@ -18,15 +18,14 @@ package reactor.ipc.netty.http.client;
 
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.BiConsumer;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -44,10 +43,9 @@ import reactor.util.annotation.Nullable;
  * @author Simon Baslé
  */
 final class WebsocketClientOperations extends HttpClientOperations
-		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
+		implements WebsocketInbound, WebsocketOutbound {
 
 	final WebSocketClientHandshaker handshaker;
-	final ChannelPromise            handshakerResult;
 
 	volatile int closeSent;
 
@@ -55,67 +53,25 @@ final class WebsocketClientOperations extends HttpClientOperations
 			@Nullable String protocols,
 			HttpClientOperations replaced) {
 		super(replaced);
-
 		Channel channel = channel();
 
-		//The following is commented until further review - this allows a user to
-		// override websocket headers written (especially key hash) if the original
-		// headers contain UPGRADE:websocket.
-		/*if (replaced.requestHeaders.contains(HttpHeaderNames.UPGRADE, HttpHeaderValues
-				.WEBSOCKET, true)) {
-			handshaker = new WebSocketClientHandshaker13(currentURI,
-					WebSocketVersion.V13,
-					protocols,
-					true,
-					null,
-					65536) {
-				@Override
-				protected FullHttpRequest newHandshakeRequest() {
-					FullHttpRequest request =
-							new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-									HttpMethod.GET,
-									replaced.uri());
-					request.headers()
-					       .set(replaced.requestHeaders);
-					return request;
-				}
-
-				@Override
-				protected void verify(FullHttpResponse response) {
-					final HttpResponseStatus status = HttpResponseStatus.SWITCHING_PROTOCOLS;
-					final HttpHeaders headers = response.headers();
-
-					if (!response.status().equals(status)) {
-						throw new WebSocketHandshakeException("Invalid handshake response getStatus: " + response.status());
-					}
-
-					CharSequence upgrade = headers.get(HttpHeaderNames.UPGRADE);
-					if (!HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(upgrade)) {
-						throw new WebSocketHandshakeException("Invalid handshake response upgrade: " + upgrade);
-					}
-
-					if (!headers.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-						throw new WebSocketHandshakeException("Invalid handshake response connection: "
-								+ headers.get(HttpHeaderNames.CONNECTION));
-					}
-				}
-			};
-		}
-		else {*/
-			handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
+		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 					WebSocketVersion.V13,
 					protocols,
 					true,
 					replaced.requestHeaders()
 					        .remove(HttpHeaderNames.HOST));
-//		}
-		handshakerResult = channel.newPromise();
 
 		handshaker.handshake(channel)
 		          .addListener(f -> {
 			          markPersistent(false);
 			          channel.read();
 		          });
+	}
+
+	@Override
+	public HttpHeaders headers() {
+		return responseHeaders();
 	}
 
 	@Override
@@ -144,13 +100,10 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 				try {
 					handshaker.finishHandshake(channel(), response);
-					handshakerResult.trySuccess();
+					listener().onStateChange(this, RESPONSE_RECEIVED);
 				}
 				catch (WebSocketHandshakeException wshe) {
-					if(response.status().code() == 101) {
-						onInboundError(wshe);
-						return;
-					}
+					onInboundError(wshe);
 				}
 				finally {
 					//Release unused content (101 status)
@@ -180,11 +133,6 @@ final class WebsocketClientOperations extends HttpClientOperations
 		else {
 			super.onInboundNext(ctx, msg);
 		}
-	}
-
-	@Override
-	public WebsocketInbound receiveWebsocket() {
-		return this;
 	}
 
 	@Override
@@ -220,21 +168,6 @@ final class WebsocketClientOperations extends HttpClientOperations
 			ChannelFuture f = channel().writeAndFlush(
 					frame == null ? new CloseWebSocketFrame() : frame);
 			f.addListener(ChannelFutureListener.CLOSE);
-		}
-	}
-
-	@Override
-	public void accept(Void aVoid, Throwable throwable) {
-		if (log.isDebugEnabled()) {
-			log.debug("Handler terminated. Closing Websocket");
-		}
-		if (throwable == null) {
-			if (channel().isActive()) {
-				sendClose(null);
-			}
-		}
-		else {
-			onOutboundError(throwable);
 		}
 	}
 

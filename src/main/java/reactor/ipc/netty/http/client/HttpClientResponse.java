@@ -16,26 +16,12 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.util.function.BiFunction;
-
-import javax.annotation.Nullable;
-
-import io.netty.channel.ChannelHandler;
-import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.reactivestreams.Publisher;
-import reactor.core.Disposable;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.http.HttpInfos;
-import reactor.ipc.netty.http.websocket.WebsocketInbound;
-import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
 /**
- * An HttpClient Reactive read contract for incoming response. It inherits several
+ * An HttpClient Reactive metadata contract for incoming response. It inherits several
  * accessor
  * related to HTTP
  * flow : headers, params,
@@ -44,91 +30,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
  * @author Stephane Maldini
  * @since 0.5
  */
-public interface HttpClientResponse extends NettyInbound, HttpInfos, Connection {
-
-	@Override
-	default HttpClientResponse addHandlerFirst(ChannelHandler handler) {
-		Connection.super.addHandlerFirst(handler);
-		return this;
-	}
-
-	@Override
-	HttpClientResponse addHandlerFirst(String name, ChannelHandler handler);
-
-	@Override
-	default HttpClientResponse addHandlerLast(ChannelHandler handler) {
-		return addHandlerLast(handler.getClass().getSimpleName(), handler);
-	}
-
-	@Override
-	HttpClientResponse addHandlerLast(String name, ChannelHandler handler);
-
-	@Override
-	default HttpClientResponse addHandler(ChannelHandler handler) {
-		return addHandler(handler.getClass().getSimpleName(), handler);
-	}
-
-	@Override
-	HttpClientResponse addHandler(String name, ChannelHandler handler);
-
-	@Override
-	HttpClientResponse removeHandler(String name);
-
-	@Override
-	HttpClientResponse replaceHandler(String name, ChannelHandler handler);
-
-	@Override
-	HttpClientResponse onDispose(Disposable onDispose);
-
-	@Override
-	default HttpClientResponse onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		NettyInbound.super.onReadIdle(idleTimeout, onReadIdle);
-		return this;
-	}
-
-	/**
-	 * Return a {@link Flux} of {@link HttpContent} containing received chunks
-	 *
-	 * @return a {@link Flux} of {@link HttpContent} containing received chunks
-	 */
-	default Flux<HttpContent> receiveContent(){
-		return receiveObject().ofType(HttpContent.class);
-	}
-
-	/**
-	 * Unidirectional conversion to a {@link WebsocketInbound}.
-	 * receive operations are invoked on handshake success, otherwise connection wasn't
-	 * upgraded by the server and the returned {@link WebsocketInbound} fails.
-	 *
-	 * @return a {@link WebsocketInbound} completing when upgrade is confirmed
-	 */
-	WebsocketInbound receiveWebsocket();
-
-	/**
-	 * Duplex conversion to {@link WebsocketInbound}, {@link WebsocketOutbound} and a
-	 * closing {@link Publisher}. Mono and Callback are invoked on handshake success,
-	 * otherwise the returned {@link Mono} fails.
-	 *
-	 * @param websocketHandler the in/out handler for ws transport
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	default Mono<Void> receiveWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return receiveWebsocket(null, websocketHandler);
-	}
-
-	/**
-	 * Duplex conversion to {@link WebsocketInbound}, {@link WebsocketOutbound} and a
-	 * closing {@link Publisher}. Mono and Callback are invoked on handshake success,
-	 * otherwise the returned {@link Mono} fails.
-	 *
-	 * @param protocols optional sub-protocol
-	 * @param websocketHandler the in/out handler for ws transport
-	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
-	 */
-	Mono<Void> receiveWebsocket(@Nullable String protocols,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
+public interface HttpClientResponse extends HttpInfos {
 
 	/**
 	 * Return the previous redirections or empty array

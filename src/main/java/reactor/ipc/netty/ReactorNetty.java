@@ -526,7 +526,6 @@ final class ReactorNetty {
 
 	static final class ChannelDisposer extends BaseSubscriber<Void> {
 
-
 		final DisposableChannel channelDisposable;
 		ChannelDisposer(DisposableChannel channelDisposable) {
 			this.channelDisposable = channelDisposable;
@@ -558,6 +557,64 @@ final class ReactorNetty {
 		public Channel channel() {
 			return channel;
 		}
+	}
+
+	static NettyInbound unavailableInbound(Connection c) {
+		return new NettyInbound() {
+			@Override
+			public ByteBufFlux receive() {
+				return ByteBufFlux.fromInbound(Mono.error(
+						new IllegalStateException("Receiver Unavailable. The Connection")));
+			}
+
+			@Override
+			public Flux<?> receiveObject() {
+				return Flux.error(new IllegalStateException("Receiver Unavailable"));
+			}
+
+			@Override
+			public NettyInbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(c);
+				return this;
+			}
+		};
+	}
+
+	static NettyOutbound unavailableOutbound(Connection c) {
+		return new NettyOutbound() {
+			@Override
+			public ByteBufAllocator alloc() {
+				return c.channel().alloc();
+			}
+
+			@Override
+			public NettyOutbound sendObject(Publisher<?> dataStream) {
+				return this;
+			}
+
+			@Override
+			public NettyOutbound sendObject(Object message) {
+				return this;
+			}
+
+			@Override
+			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+					BiFunction<? super Connection, ? super S, ?> mappedInput,
+					Consumer<? super S> sourceCleanup) {
+				return this;
+			}
+
+			@Override
+			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+				withConnection.accept(c);
+				return this;
+			}
+
+			@Override
+			public Mono<Void> then() {
+				return Mono.error(new IllegalStateException("Sender Unavailable"));
+			}
+		};
 	}
 
 	static final ConnectionObserver NOOP_LISTENER = (connection, newState) -> {};

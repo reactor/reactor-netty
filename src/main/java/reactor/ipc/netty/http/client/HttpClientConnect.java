@@ -45,10 +45,12 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
@@ -56,7 +58,6 @@ import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpResources;
-import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.InetSocketAddressUtil;
 import reactor.ipc.netty.tcp.ProxyProvider;
@@ -65,8 +66,6 @@ import reactor.ipc.netty.tcp.TcpClient;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
-
-import static reactor.ipc.netty.http.client.HttpClientOperations.EMPTY;
 
 /**
  * @author Stephane Maldini
@@ -197,6 +196,7 @@ final class HttpClientConnect extends HttpClient {
 
 				tcpClient.connect(finalBootstrap)
 				         .subscribe(null, sink::error);
+
 			}).retry(handler)
 			  .subscribe(actual);
 		}
@@ -229,7 +229,7 @@ final class HttpClientConnect extends HttpClient {
 				sink.success(connection);
 				return;
 			}
-			if (newState == State.CONFIGURED) {
+			if (newState == State.CONFIGURED && HttpClientOperations.class == connection.getClass()) {
 				if (log.isDebugEnabled()) {
 					log.debug("{} handler is being applied: {}",
 							connection.channel(), handler);
@@ -257,6 +257,7 @@ final class HttpClientConnect extends HttpClient {
 		final boolean            compress;
 		final Boolean            chunkedTransfer;
 		final UriEndpointFactory uriEndpointFactory;
+		final String             websocketProtocols;
 
 		volatile UriEndpoint        activeURI;
 		volatile Supplier<String>[] redirectedFrom;
@@ -308,29 +309,9 @@ final class HttpClientConnect extends HttpClient {
 			this.uriEndpointFactory =
 					new UriEndpointFactory(addressSupplier, false, URI_ADDRESS_MAPPER);
 
-			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
-					requestHandler;
-			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
-					body = configuration.body;
-
-			boolean isWebsocket = configuration.websocketSubprotocols != null;
-
-			if (isWebsocket) {
-				String subprotocols = configuration.websocketSubprotocols;
-				if (body == null) {
-					requestHandler = (req, out) -> sendWebsocket(req, subprotocols);
-				}
-				else {
-					requestHandler = (req, out) -> body.apply(req,
-							sendWebsocket(req, subprotocols));
-				}
-			}
-			else {
-				requestHandler = body;
-			}
-
-			this.handler = requestHandler;
-			this.activeURI = uriEndpointFactory.createUriEndpoint(uri, isWebsocket);
+			this.websocketProtocols = configuration.websocketSubprotocols;
+			this.handler = configuration.body;
+			this.activeURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketSubprotocols != null);
 		}
 
 		@Override
@@ -380,10 +361,21 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				if (handler != null) {
-					return handler.apply(ch, out);
+					if (websocketProtocols != null) {
+						WebsocketUpgradeOutbound wuo = new WebsocketUpgradeOutbound(ch, websocketProtocols);
+						return Flux.concat(handler.apply(ch, wuo), wuo.then());
+					}
+					else {
+						return handler.apply(ch, out);
+					}
 				}
 				else {
-					return ch.send();
+					if (websocketProtocols != null) {
+						return Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols));
+					}
+					else {
+						return ch.send();
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -464,6 +456,62 @@ final class HttpClientConnect extends HttpClient {
 		}
 	}
 
+	static final class WebsocketUpgradeOutbound implements NettyOutbound {
+
+		final HttpClientOperations ch;
+		final Mono<Void>           m;
+		final String               websocketProtocols;
+
+		WebsocketUpgradeOutbound(HttpClientOperations ch, String websocketProtocols) {
+			this.ch = ch;
+			this.websocketProtocols = websocketProtocols;
+			this.m = Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols));
+		}
+
+		@Override
+		public ByteBufAllocator alloc() {
+			return ch.alloc();
+		}
+
+		@Override
+		public NettyOutbound sendObject(Publisher<?> dataStream) {
+			return then(FutureMono.deferFuture(() -> ch.channel()
+			                                           .writeAndFlush(dataStream)));
+		}
+
+		@Override
+		public NettyOutbound sendObject(Object message) {
+			return then(FutureMono.deferFuture(() -> ch.channel()
+			                                           .writeAndFlush(message)));
+		}
+
+		@Override
+		public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+				BiFunction<? super Connection, ? super S, ?> mappedInput,
+				Consumer<? super S> sourceCleanup) {
+			Objects.requireNonNull(sourceInput, "sourceInput");
+			Objects.requireNonNull(mappedInput, "mappedInput");
+			Objects.requireNonNull(sourceCleanup, "sourceCleanup");
+
+			return then(Mono.using(
+					sourceInput,
+					s -> FutureMono.from(ch.channel()
+					                       .writeAndFlush(mappedInput.apply(ch, s))),
+					sourceCleanup)
+			);
+		}
+
+		@Override
+		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+			return ch.withConnection(withConnection);
+		}
+
+		@Override
+		public Mono<Void> then() {
+			return m;
+		}
+	}
+
 	static final Pattern VALID_IPV6_PATTERN;
 
 	static {
@@ -474,59 +522,5 @@ final class HttpClientConnect extends HttpClient {
 		catch (PatternSyntaxException e) {
 			throw new IllegalStateException("Impossible");
 		}
-	}
-
-	static WebsocketOutbound sendWebsocket(HttpClientRequest req, String subprotocols) {
-		HttpClientOperations clientOps = (HttpClientOperations) req;
-		Mono<Void> m = clientOps.withWebsocketSupport(clientOps.websocketUri(),
-				subprotocols,
-				EMPTY);
-
-		return new WebsocketOutbound() {
-
-			@Override
-			public ByteBufAllocator alloc() {
-				return clientOps.alloc();
-			}
-
-			@Override
-			public String selectedSubprotocol() {
-				if (clientOps.isWebsocket()) {
-					WebsocketClientOperations ops =
-							(WebsocketClientOperations) ChannelOperations.get(clientOps.channel());
-
-					assert ops != null;
-					return ops.selectedSubprotocol();
-				}
-				return null;
-			}
-
-			@Override
-			public NettyOutbound sendObject(Publisher<?> dataStream) {
-				return then(clientOps.sendObject(dataStream));
-			}
-
-			@Override
-			public NettyOutbound sendObject(Object message) {
-				return then(clientOps.sendObject(message));
-			}
-
-			@Override
-			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
-					BiFunction<? super Connection, ? super S, ?> mappedInput,
-					Consumer<? super S> sourceCleanup) {
-				return then(clientOps.sendUsing(sourceInput, mappedInput, sourceCleanup));
-			}
-
-			@Override
-			public Mono<Void> then() {
-				return m;
-			}
-
-			@Override
-			public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
-				return clientOps.withConnection(withConnection);
-			}
-		};
 	}
 }

@@ -19,16 +19,12 @@ package reactor.ipc.netty.http;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
 
-import org.junit.Assert;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 
 /**
@@ -51,14 +47,11 @@ public class HttpErrorTests {
 		HttpClient client = HttpClient.prepare()
 		                              .port(server.address().getPort());
 
-		HttpClientResponse r = client.get()
+		StepVerifier.create(client.get()
 		                             .uri("/")
-		                             .response()
-		                             .block(Duration.ofSeconds(30));
-
-		StepVerifier.create(r.receive()
-		                    .asString(StandardCharsets.UTF_8)
-		                    .collectList())
+		                             .responseContent()
+		                             .asString(StandardCharsets.UTF_8)
+		                             .collectList())
 		            .verifyError(IOException.class);
 
 		server.dispose();

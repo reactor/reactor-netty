@@ -17,7 +17,6 @@ package reactor.ipc.netty.http.server;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-
 import javax.annotation.Nullable;
 
 import io.netty.buffer.Unpooled;
@@ -113,12 +112,6 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return this outbound
 	 */
 	HttpServerResponse keepAlive(boolean keepAlive);
-
-	@Override
-	default HttpServerResponse onWriteIdle(long idleTimeout, Runnable onWriteIdle){
-		NettyOutbound.super.onWriteIdle(idleTimeout, onWriteIdle);
-		return this;
-	}
 
 	@Override
 	default HttpServerResponse options(Consumer<? super NettyPipeline.SendOptions> configurator){

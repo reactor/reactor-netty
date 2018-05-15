@@ -25,7 +25,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -67,12 +66,10 @@ public class WebsocketTest {
 				          .headers(h -> h.add("Authorization", auth))
 				          .get()
 				          .uri("/test")
-				          .websocket()
-				          .responseContent()
-				          .asString()
+				          .websocket((i, o) -> i.receive().asString())
 				          .log("client")
 				          .collectList()
-				          .block(Duration.ofSeconds(30))
+				          .block()
 				          .get(0);
 
 		Assert.assertThat(res, is("test"));
@@ -142,7 +139,6 @@ public class WebsocketTest {
 //	}
 
 	@Test
-	@Ignore
 	public void unidirectional() {
 		int c = 10;
 		httpServer = HttpServer.create()
@@ -161,14 +157,9 @@ public class WebsocketTest {
 		                            .wiretap()
 		                            .get()
 		                            .uri("/")
-		                            .websocket()
-		                            .response()
-		                            .flatMapMany(in -> {
-		                            	return in.receiveWebsocket()
-												.aggregateFrames()
-												.receive()
-												.asString();
-									});
+		                            .websocket((in, out) -> in.aggregateFrames()
+		                                                      .receive()
+		                                                      .asString());
 
 		StepVerifier.create(ws.take(c)
 		                      .log())
@@ -209,17 +200,20 @@ public class WebsocketTest {
 		Mono<List<String>> response =
 				client.headers(h -> h.add("Content-Type", "text/plain")
 				                     .add("test", "test"))
-				      .post()
+				      .post() //TODO investigate why get not working
 				      .uri("/test/World")
-				      .send((req, out) -> {
-					      req.options(c -> c.flushOnEach());
-					      return out.sendString(Flux.range(1, 1000)
-					                                .log("client-send")
-					                                .map(i -> "" + i), Charset.defaultCharset());
+				      .websocket((i, o) -> {
+					      o.options(c -> c.flushOnEach());
+
+					      o.sendString(Flux.range(1, 1000)
+					                       .log("client-send")
+					                       .map(it -> "" + it), Charset.defaultCharset())
+					       .then()
+					       .subscribe();
+
+					      return i.receive()
+					              .asString();
 				      })
-				      .websocket()
-				      .responseContent()
-				      .asString()
 				      .log("client-received")
 				      .publishOn(Schedulers.parallel())
 				      .doOnNext(s -> clientRes.incrementAndGet())
@@ -233,7 +227,7 @@ public class WebsocketTest {
 		StepVerifier.create(response)
 		            .expectNextMatches(list -> "1000 World!".equals(list.get(999)))
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(10));
+		            .verify();
 
 		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
 
@@ -378,9 +372,7 @@ public class WebsocketTest {
 		                       .headers(h -> h.add("Authorization", auth))
 		                       .get()
 		                       .uri("/test")
-		                       .websocket("SUBPROTOCOL,OTHER")
-		                       .responseContent()
-		                       .asString()
+		                       .websocket("SUBPROTOCOL,OTHER", (i, o) -> i.receive().asString())
 		                       .log()
 		                       .collectList()
 		                       .block(Duration.ofSeconds(30)).get(0);

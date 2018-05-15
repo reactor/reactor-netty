@@ -15,9 +15,6 @@
  */
 package reactor.ipc.netty.http.client;
 
-import java.time.Duration;
-
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -25,9 +22,6 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
-import reactor.util.function.Tuple2;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Violeta Georgieva
@@ -66,32 +60,24 @@ public class WebsocketClientOperationsTest {
 		                                  .wiretap()
 		                                  .bindNow();
 
-		Flux<Tuple2<ByteBuf, Integer>> response =
+		Flux<String> response =
 			HttpClient.prepare()
 			          .port(httpServer.address().getPort())
 			          .wiretap()
 			          .post()
 			          .uri("/ws")
-			          .send((request, out) -> {
+			          .send((request, out) ->
 			              Mono.just(request)
-			                  .transform(req -> doLoginFirst(req, httpServer.address().getPort()));
-			              return out;
-			          })
-			          .websocket(clientSubprotocol)
-			          .response((res, buf) -> buf.zipWith(Mono.just(res.status().code())))
+			                  .transform(req -> doLoginFirst(req, httpServer.address().getPort()))
+					          .then()
+			          )
+			          .websocket(clientSubprotocol, (i, o) -> i.receive().asString())
+			          .log()
 			          .switchIfEmpty(Mono.error(new Exception()));
 
-		if(!serverSubprotocol.equals(clientSubprotocol)) {
-			StepVerifier.create(response)
-			            .expectError(WebSocketHandshakeException.class)
-			            .verify(Duration.ofSeconds(30));
-		}
-		else {
-			StepVerifier.create(response)
-			            .assertNext(t -> assertThat(t.getT2()).isEqualTo(serverStatus == 200 ? 101 : serverStatus))
-			            .expectComplete()
-			            .verify(Duration.ofSeconds(30));
-		}
+		StepVerifier.create(response)
+		            .expectError(WebSocketHandshakeException.class)
+		            .verify();
 
 		httpServer.dispose();
 	}

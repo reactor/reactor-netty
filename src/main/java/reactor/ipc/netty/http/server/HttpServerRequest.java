@@ -20,7 +20,6 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
 import javax.annotation.Nullable;
 
 import io.netty.handler.codec.http.HttpContent;
@@ -38,12 +37,6 @@ import reactor.ipc.netty.http.HttpInfos;
  * @since 0.5
  */
 public interface HttpServerRequest extends NettyInbound, HttpInfos {
-
-	@Override
-	default HttpServerRequest onReadIdle(long idleTimeout, Runnable onReadIdle) {
-		NettyInbound.super.onReadIdle(idleTimeout, onReadIdle);
-		return this;
-	}
 
 	@Override
 	HttpServerRequest withConnection(Consumer<? super Connection> withConnection);

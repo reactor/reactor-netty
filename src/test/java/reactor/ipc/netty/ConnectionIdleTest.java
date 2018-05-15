@@ -18,58 +18,60 @@ package reactor.ipc.netty;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
-import reactor.core.publisher.Flux;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Simon Baslé
  */
-public class NettyInboundTest {
+public class ConnectionIdleTest {
 
 	@Test
-	public void onReadIdleReplaces() throws Exception {
+	public void onReadIdleReplaces() {
 		EmbeddedChannel channel = new EmbeddedChannel();
 		Connection mockContext = () -> channel;
-		NettyInbound inbound = new NettyInbound() {
-
-			@Override
-			public ByteBufFlux receive() {
-				return ByteBufFlux.fromInbound(Flux.empty());
-			}
-
-			@Override
-			public NettyInbound withConnection(Consumer<? super Connection> withConnection) {
-				withConnection.accept(mockContext);
-				return this;
-			}
-
-			@Override
-			public Flux<?> receiveObject() {
-				return Flux.empty();
-			}
-		};
 
 		AtomicLong idle1 = new AtomicLong();
 		AtomicLong idle2 = new AtomicLong();
 
-		inbound.onReadIdle(100, idle1::incrementAndGet);
-		inbound.onReadIdle(150, idle2::incrementAndGet);
+		mockContext.onReadIdle(100, idle1::incrementAndGet);
+		mockContext.onReadIdle(150, idle2::incrementAndGet);
 		ReactorNetty.InboundIdleStateHandler idleStateHandler =
 				(ReactorNetty.InboundIdleStateHandler) channel.pipeline().get(NettyPipeline.OnChannelReadIdle);
 		idleStateHandler.onReadIdle.run();
 
-		assertThat(channel.pipeline().names(), is(Arrays.asList(
+		assertThat(channel.pipeline().names()).isEqualTo(Arrays.asList(
 				NettyPipeline.OnChannelReadIdle,
-				"DefaultChannelPipeline$TailContext#0")));
+				"DefaultChannelPipeline$TailContext#0"));
 
-		assertThat(idle1.intValue(), is(0));
-		assertThat(idle2.intValue(), is(1));
+		assertThat(idle1.intValue()).isEqualTo(0);
+		assertThat(idle2.intValue()).isEqualTo(1);
 	}
 
+
+
+	@Test
+	public void onWriteIdleReplaces() {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		Connection mockContext = () -> channel;
+
+		AtomicLong idle1 = new AtomicLong();
+		AtomicLong idle2 = new AtomicLong();
+
+		mockContext.onWriteIdle(100, idle1::incrementAndGet);
+		mockContext.onWriteIdle(150, idle2::incrementAndGet);
+		ReactorNetty.OutboundIdleStateHandler idleStateHandler =
+				(ReactorNetty.OutboundIdleStateHandler) channel.pipeline().get(NettyPipeline.OnChannelWriteIdle);
+		idleStateHandler.onWriteIdle.run();
+
+		assertThat(channel.pipeline().names()).containsExactly(
+				NettyPipeline.OnChannelWriteIdle,
+				"DefaultChannelPipeline$TailContext#0");
+
+		assertThat(idle1.intValue()).isZero();
+		assertThat(idle2.intValue()).isEqualTo(1);
+	}
 }
