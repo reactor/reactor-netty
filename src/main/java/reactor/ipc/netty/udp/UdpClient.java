@@ -226,7 +226,7 @@ public abstract class UdpClient {
 	 *
 	 * @return a new {@link UdpClient}
 	 */
-	public final UdpClient handler(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler) {
+	public final UdpClient handle(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnected(c -> {
 			if (log.isDebugEnabled()) {

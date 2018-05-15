@@ -44,7 +44,7 @@ public class UdpClientTest {
 				UdpServer.create()
 				         .port(0)
 				         .runOn(resources)
-				         .handler((in, out) -> in.receiveObject()
+				         .handle((in, out) -> in.receiveObject()
 				                                    .map(o -> {
 				                                            if (o instanceof DatagramPacket) {
 				                                                DatagramPacket received = (DatagramPacket) o;
@@ -66,7 +66,7 @@ public class UdpClientTest {
 				UdpClient.create()
 				         .port(server.address().getPort())
 				         .runOn(resources)
-				         .handler((in, out) -> {
+				         .handle((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
 				                                        System.out.println("Client1 received " + b.toString(CharsetUtil.UTF_8));
@@ -84,7 +84,7 @@ public class UdpClientTest {
 				UdpClient.create()
 				         .port(server.address().getPort())
 				         .runOn(resources)
-				         .handler((in, out) -> {
+				         .handle((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
 				                                        System.out.println("Client2 received " + b.toString(CharsetUtil.UTF_8));

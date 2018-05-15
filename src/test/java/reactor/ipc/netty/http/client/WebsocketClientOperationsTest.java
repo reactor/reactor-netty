@@ -47,7 +47,7 @@ public class WebsocketClientOperationsTest {
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
 		DisposableServer httpServer = HttpServer.create()
 		                                  .port(0)
-		                                  .router(
+		                                  .route(
 			routes -> routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
 					.get("/ws", (req, res) -> {
 						int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
@@ -64,14 +64,14 @@ public class WebsocketClientOperationsTest {
 			HttpClient.prepare()
 			          .port(httpServer.address().getPort())
 			          .wiretap()
-			          .post()
+			          .websocket(clientSubprotocol)
 			          .uri("/ws")
-			          .send((request, out) ->
+			          .send(request ->
 			              Mono.just(request)
 			                  .transform(req -> doLoginFirst(req, httpServer.address().getPort()))
 					          .then()
 			          )
-			          .websocket(clientSubprotocol, (i, o) -> i.receive().asString())
+			          .handle((i, o) -> i.receive().asString())
 			          .log()
 			          .switchIfEmpty(Mono.error(new Exception()));
 

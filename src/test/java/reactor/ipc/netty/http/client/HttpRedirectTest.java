@@ -94,13 +94,13 @@ public class HttpRedirectTest {
 				          .port(9991)
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
 				          .wiretap()
-				          .router(r -> r.get("/1",
+				          .route(r -> r.get("/1",
 				                                   (req, res) -> res.sendRedirect("http://localhost:9991/3"))
-				                        .get("/2",
+				                       .get("/2",
 				                                   (req, res) -> res.status(301)
 				                                                    .header(HttpHeaderNames.LOCATION, "http://localhost:9991/3")
 				                                                    .send())
-				                        .get("/3",
+				                       .get("/3",
 				                                   (req, res) -> res.status(200)
 				                                                    .sendString(Mono.just("OK"))))
 				          .wiretap()
@@ -154,17 +154,17 @@ public class HttpRedirectTest {
 		DisposableServer server1 =
 				HttpServer.create()
 				          .port(8888)
-				          .router(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
-				                           .get("/2", (req, res) -> res.sendRedirect("http://localhost:8888/3"))
-				                           .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
-				                           .get("/4", (req, res) -> res.sendRedirect("http://localhost:8889/1")))
+				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+				                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:8888/3"))
+				                       .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
+				                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:8889/1")))
 				          .wiretap()
 				          .bindNow();
 
 		DisposableServer server2 =
 				HttpServer.create()
 				          .port(8889)
-				          .router(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
+				          .route(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
 				          .wiretap()
 				          .bindNow();
 

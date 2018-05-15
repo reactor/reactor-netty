@@ -41,7 +41,7 @@ public class FluxReceiveTest {
 		DisposableServer server1 =
 				HttpServer.create()
 				          .port(0)
-				          .router(routes ->
+				          .route(routes ->
 				                     routes.get("/target", (req, res) ->
 				                           res.sendByteArray(Flux.just(content)
 				                                                 .delayElements(Duration.ofMillis(100)))))
@@ -51,7 +51,7 @@ public class FluxReceiveTest {
 		DisposableServer server2 =
 				HttpServer.create()
 				          .port(0)
-				          .router(routes ->
+				          .route(routes ->
 				                     routes.get("/forward", (req, res) ->
 				                           HttpClient.prepare()
 				                                     .port(server1.address().getPort())

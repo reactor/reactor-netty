@@ -222,7 +222,7 @@ public class HttpServerTests {
 
 		Connection client =TcpClient.create()
 		                            .port(server.address().getPort())
-		         .handler((in, out) -> {
+		         .handle((in, out) -> {
 			         in.withConnection(x -> x
 			           .addHandlerFirst(new HttpClientCodec()))
 
@@ -287,7 +287,7 @@ public class HttpServerTests {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
 		DisposableServer s = HttpServer.create()
 		                         .port(0)
-		                         .router(routes -> routes.directory("/test", resource))
+		                         .route(routes -> routes.directory("/test", resource))
 		                         .wiretap()
 		                         .bindNow();
 
@@ -366,7 +366,7 @@ public class HttpServerTests {
 	public void startRouter() {
 		DisposableServer facade = HttpServer.create()
 		                              .port(0)
-		                              .router(routes -> routes.get("/hello",
+		                              .route(routes -> routes.get("/hello",
 				                                        (req, resp) -> resp.sendString(Mono.just("hello!"))))
 		                              .wiretap()
 		                              .bindNow();
@@ -405,7 +405,7 @@ public class HttpServerTests {
 		Future<?> f = ex.submit(() ->
 			    HttpServer.create()
 			              .port(0)
-			              .router(routes -> routes.get("/hello", (req, resp) -> resp.sendString(Mono.just("hello!"))))
+			              .route(routes -> routes.get("/hello", (req, resp) -> resp.sendString(Mono.just("hello!"))))
 			              .wiretap()
 			              .bindUntilJavaShutdown(Duration.ofSeconds(2), c -> ref.set(c))
 		);
@@ -430,15 +430,15 @@ public class HttpServerTests {
 				HttpServer.create()
 				          .port(0)
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
-				          .router(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
+				          .route(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
+				                                                       .sendHeaders())
+				                       .get("/204-2", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT))
+				                       .get("/205-1", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
 				                                                        .sendHeaders())
-				                        .get("/204-2", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT))
-				                        .get("/205-1", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
+				                       .get("/205-2", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT))
+				                       .get("/304-1", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
 				                                                        .sendHeaders())
-				                        .get("/205-2", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT))
-				                        .get("/304-1", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
-				                                                        .sendHeaders())
-				                        .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
+				                       .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
 				          .wiretap()
 				          .bindNow();
 
@@ -486,32 +486,32 @@ public class HttpServerTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
-				          .router(r -> r.route(req -> req.uri().startsWith("/1"),
+				          .route(r -> r.route(req -> req.uri().startsWith("/1"),
 				                                  (req, res) -> res.sendString(Mono.just("OK")))
-				                        .route(req -> req.uri().startsWith("/2"),
+				                       .route(req -> req.uri().startsWith("/2"),
 				                                  (req, res) -> res.chunkedTransfer(false)
 				                                                   .sendString(Mono.just("OK")))
-				                        .route(req -> req.uri().startsWith("/3"),
+				                       .route(req -> req.uri().startsWith("/3"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set("Content-Length", 2);
 				                                                return res.sendString(Mono.just("OK"));
 				                                                })
-				                        .route(req -> req.uri().startsWith("/4"),
+				                       .route(req -> req.uri().startsWith("/4"),
 				                                  (req, res) -> res.sendHeaders())
-				                        .route(req -> req.uri().startsWith("/5"),
+				                       .route(req -> req.uri().startsWith("/5"),
 				                                  (req, res) -> res.chunkedTransfer(false)
 				                                                   .sendHeaders())
-				                        .route(req -> req.uri().startsWith("/6"),
+				                       .route(req -> req.uri().startsWith("/6"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set("Content-Length", 2);
 				                                                return res.sendHeaders();
 				                                                })
-				                        .route(req -> req.uri().startsWith("/7"),
+				                       .route(req -> req.uri().startsWith("/7"),
 				                                  (req, res) -> res.send())
-				                        .route(req -> req.uri().startsWith("/8"),
+				                       .route(req -> req.uri().startsWith("/8"),
 				                                  (req, res) -> res.chunkedTransfer(false)
 				                                                   .send())
-				                        .route(req -> req.uri().startsWith("/9"),
+				                       .route(req -> req.uri().startsWith("/9"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set("Content-Length", 2);
 				                                                return res.send();
@@ -661,7 +661,7 @@ public class HttpServerTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .handler((req, res) -> res.status(200).send())
+				          .handle((req, res) -> res.status(200).send())
 				          .bindNow();
 
 		HttpClient client =
@@ -712,7 +712,7 @@ public class HttpServerTests {
 		DisposableServer server = HttpServer.create()
 		                                    .tcpConfiguration(tcp -> tcp.host("localhost"))
 		                                    .port(9999)
-		                                .handler((req, res) -> {
+		                                .handle((req, res) -> {
 			                                if (req.uri()
 			                                       .contains("/login") && req.method()
 			                                                                 .equals(HttpMethod.POST)) {
@@ -771,7 +771,7 @@ public class HttpServerTests {
 
 	private void doTestIssue309(String path, HttpServer httpServer) {
 		DisposableServer server =
-				httpServer.handler((req, res) -> res.sendString(Mono.just("Should not be reached")))
+				httpServer.handle((req, res) -> res.sendString(Mono.just("Should not be reached")))
 				          .bindNow();
 
 		Mono<HttpResponseStatus> status =

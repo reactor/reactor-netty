@@ -36,8 +36,8 @@ public class HttpResponseStatusCodesHandlingTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .router(r -> r.post("/test", (req, res) -> res.send(req.receive()
-				                                                                    .log("server-received"))))
+				          .route(r -> r.post("/test", (req, res) -> res.send(req.receive()
+				                                                                .log("server-received"))))
 				          .wiretap()
 				          .bindNow();
 

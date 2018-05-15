@@ -81,7 +81,7 @@ public class ProxyClientIssue {
 		                                                                      .option(ChannelOption.SO_LINGER,
 				                                                        -1));
 
-		server.router(routes -> routes.get("/**",
+		server.route(routes -> routes.get("/**",
 				(req, res) -> res.header("Content-length", String.valueOf(content.length))
 				                 .header("Content-type", "application/octet-stream")
 				                 .header("Connection", "Close")
@@ -137,7 +137,7 @@ public class ProxyClientIssue {
 		                              .port(PROXY_PORT)
 		                              .tcpConfiguration(tcpServer -> tcpServer.host("0.0.0.0"));
 
-		server.router(routes -> routes.get("/0/**", this::proxy))
+		server.route(routes -> routes.get("/0/**", this::proxy))
 		      .wiretap()
 		      .bindNow();
 	}

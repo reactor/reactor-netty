@@ -536,7 +536,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					                 if (protocols != null && ops.selectedSubprotocol() == null) {
 						                 return Mono.empty();
 					                 }
-					                 return Mono.from(websocketHandler.apply(ops, ops));
+					                 return Mono.fromDirect(websocketHandler.apply(ops, ops));
 				                 }))
 				                 .doAfterSuccessOrError(ops);
 			}

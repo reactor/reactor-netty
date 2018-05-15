@@ -128,7 +128,7 @@ public class TcpClientTests {
 		Connection client = TcpClient.create()
 		                             .host("localhost")
 		                             .port(echoServerPort)
-		                             .handler((in, out) -> {
+		                             .handle((in, out) -> {
 			                               in.receive()
 			                                 .log("conn")
 			                                 .subscribe(s -> latch.countDown());
@@ -153,7 +153,7 @@ public class TcpClientTests {
 		TcpClient client =
 				TcpClient.create().port(echoServerPort);
 
-		Connection s = client.handler((in, out) -> {
+		Connection s = client.handle((in, out) -> {
 			in.receive()
 			  .subscribe(d -> latch.countDown());
 
@@ -182,7 +182,7 @@ public class TcpClientTests {
 				         .port(echoServerPort)
 				         .doOnConnected(c -> c.addHandlerLast("codec",
 						                                 new LineBasedFrameDecoder(8 * 1024)))
-				         .handler((in, out) ->
+				         .handle((in, out) ->
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
@@ -238,7 +238,7 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<>();
 
-		client.handler((in, out) ->
+		client.handle((in, out) ->
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
@@ -269,7 +269,7 @@ public class TcpClientTests {
 				         .host("localhost")
 				         .port(abortServerPort);
 
-		client.handler((in, out) -> Mono.empty())
+		client.handle((in, out) -> Mono.empty())
 		      .wiretap()
 		      .connectNow()
 		      .disposeNow();
@@ -281,7 +281,7 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicLong totalDelay = new AtomicLong();
 
-		client.handler((in, out) -> Mono.never())
+		client.handle((in, out) -> Mono.never())
 		         .wiretap()
 		         .connect()
 		         .retryWhen(errors -> errors.zipWith(Flux.range(1, 4), (a, b) -> b)
@@ -345,7 +345,7 @@ public class TcpClientTests {
 					         .host("localhost")
 					         .port(abortServerPort);
 
-			Mono<? extends Connection> handler = tcpClient.handler((in, out) -> {
+			Mono<? extends Connection> handler = tcpClient.handle((in, out) -> {
 				System.out.println("Start");
 				connectionLatch.countDown();
 				in.receive()
@@ -378,7 +378,7 @@ public class TcpClientTests {
 		                 .port(echoServerPort);
 		Connection c;
 
-		c = tcpClient.handler((i, o) -> {
+		c = tcpClient.handle((i, o) -> {
 			o.sendObject(Mono.never()
 			                 .doOnCancel(connectionLatch::countDown)
 			                 .log("uno"))
@@ -422,7 +422,7 @@ public class TcpClientTests {
 				         .host("localhost")
 				         .port(timeoutServerPort);
 
-		Connection s = client.handler((in, out) -> {
+		Connection s = client.handle((in, out) -> {
 			in.withConnection(c -> c.onDispose(close::countDown));
 
 			out.withConnection(c -> c.onWriteIdle(500, () -> {
@@ -453,7 +453,7 @@ public class TcpClientTests {
 		TcpClient client = TcpClient.create()
 		                            .port(heartbeatServerPort);
 
-		Connection s = client.handler((in, out) -> {
+		Connection s = client.handle((in, out) -> {
 			in.withConnection(c -> c.onReadIdle(500, latch::countDown));
 			return Flux.never();
 		})
@@ -478,7 +478,7 @@ public class TcpClientTests {
 		Connection client = TcpClient.create()
 		                             .host("localhost")
 		                             .port(echoServerPort)
-		                             .handler((in, out) -> {
+		                             .handle((in, out) -> {
 			                               System.out.println("hello");
 			                               out.withConnection(c -> c.onWriteIdle(500, latch::countDown));
 

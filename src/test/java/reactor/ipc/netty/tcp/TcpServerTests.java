@@ -147,7 +147,7 @@ public class TcpServerTests {
 		                                  .port(connectedServer.address().getPort())
 		                                  .secure(clientOptions);
 
-		Connection connectedClient = client.handler((in, out) -> {
+		Connection connectedClient = client.handle((in, out) -> {
 			//in
 			in.receive()
 			  .asString()
@@ -189,7 +189,7 @@ public class TcpServerTests {
 				HttpServer.create()
 				          .port(0)
 				          .tcpConfiguration(tcpServer -> tcpServer.host("0.0.0.0"))
-				          .router(r -> r.get("/data", (request, response) -> {
+				          .route(r -> r.get("/data", (request, response) -> {
 				                  return response.send(Mono.empty());
 				          }))
 				          .wiretap()
@@ -217,7 +217,7 @@ public class TcpServerTests {
 		                             .bindNow();
 
 		Connection client = TcpClient.create().port(port)
-		                             .handler((in, out) -> out.sendString(Flux.just(
+		                             .handle((in, out) -> out.sendString(Flux.just(
 				                             "Hello World!")))
 		                             .wiretap()
 		                             .connectNow(Duration.ofDays(10));
@@ -256,8 +256,8 @@ public class TcpServerTests {
 		                             .bindNow();
 
 		Connection clientContext =
-				client.handler((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
-				                                            .map(b -> out.alloc()
+				client.handle((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
+				                                        .map(b -> out.alloc()
 				                                                         .buffer()
 				                                                         .writeBytes(b.getBytes(Charset.defaultCharset())))))
 				      .wiretap()
@@ -291,7 +291,7 @@ public class TcpServerTests {
 		//Listen for anything exactly hitting the root URI and route the incoming connection request to the callback
 		DisposableServer s = HttpServer.create()
 		                         .port(0)
-		                         .router(r -> r.get("/", (request, response) -> {
+		                         .route(r -> r.get("/", (request, response) -> {
 			                         //prepare a response header to be appended first before any reply
 			                         response.addHeader("X-CUSTOM", "12345");
 			                         //attach to the shared tail, take the most recent generated substream and merge it to the high level stream
@@ -338,7 +338,7 @@ public class TcpServerTests {
 
 		Connection client = TcpClient.create().port(server.address()
 		                                           .getPort())
-		                             .handler((in, out) -> out.sendString(Flux.just(
+		                             .handle((in, out) -> out.sendString(Flux.just(
 				                             "test")))
 		                             .wiretap()
 		                             .connectNow();
@@ -354,7 +354,7 @@ public class TcpServerTests {
 	@Ignore
 	public void proxyTest() {
 		HttpServer server = HttpServer.create();
-		server.router(r -> r.get("/search/{search}",
+		server.route(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.prepare()
 				                       .wiretap()
 				                       .get()
@@ -370,7 +370,7 @@ public class TcpServerTests {
 	@Ignore
 	public void wsTest() {
 		HttpServer server = HttpServer.create();
-		server.router(r -> r.get("/search/{search}",
+		server.route(r -> r.get("/search/{search}",
 				(in, out) -> HttpClient.prepare()
 				                       .wiretap()
 				                       .post()
@@ -419,7 +419,7 @@ public class TcpServerTests {
 				TcpClient.create()
 				         .port(context.address().getPort())
 				         .secure(sslClient)
-				         .handler((in, out) -> {
+				         .handle((in, out) -> {
 					         in.receive()
 					           .asString()
 					           .log("-----------------CLIENT1")
@@ -435,7 +435,7 @@ public class TcpServerTests {
 				TcpClient.create()
 				         .port(context.address().getPort())
 				         .secure(sslClient)
-				         .handler((in, out) -> {
+				         .handle((in, out) -> {
 					         in.receive()
 					           .asString(StandardCharsets.UTF_8)
 					           .take(2)
@@ -528,7 +528,7 @@ public class TcpServerTests {
 
 		Connection client1 =
 				TcpClient.create().port(context.address().getPort())
-				         .handler((in, out) -> {
+				         .handle((in, out) -> {
 					         in.receive()
 					           .asString()
 					           .log("-----------------CLIENT1")
@@ -542,7 +542,7 @@ public class TcpServerTests {
 
 		Connection client2 =
 				TcpClient.create().port(context.address().getPort())
-				         .handler((in, out) -> {
+				         .handle((in, out) -> {
 					         in.receive()
 					           .asString(StandardCharsets.UTF_8)
 					           .take(2)
@@ -691,7 +691,7 @@ public class TcpServerTests {
 				         .bindNow();
 
 		Connection client = TcpClient.create().port(server.address().getPort())
-		                               .handler((in, out) -> {
+		                               .handle((in, out) -> {
 			                               in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
 			                                 .receive()
 			                                 .asString()
@@ -761,7 +761,7 @@ public class TcpServerTests {
 		                 .bindNow();
 
 		Connection client = TcpClient.create().addressSupplier(server::address)
-		                               .handler((in, out) -> {
+		                               .handle((in, out) -> {
 		                                   in.receive()
 		                                     .asString()
 		                                     .map(jsonDecoder)

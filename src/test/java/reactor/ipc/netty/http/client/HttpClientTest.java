@@ -55,7 +55,6 @@ import org.junit.Test;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.channel.AbortedException;
@@ -141,7 +140,7 @@ public class HttpClientTest {
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
 		DisposableServer serverContext = HttpServer.create()
 		                                     .port(8080)
-		                                     .router(r -> r.post("/",
+		                                     .route(r -> r.post("/",
 				                                       (req, resp) -> req.receive()
 				                                                         .asString()
 				                                                         .flatMap(data -> {
@@ -226,7 +225,7 @@ public class HttpClientTest {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
 		DisposableServer c = HttpServer.create()
 		                         .port(0)
-		                         .router(routes -> routes.directory("/test", resource))
+		                         .route(routes -> routes.directory("/test", resource))
 		                         .wiretap()
 		                         .bindNow();
 
@@ -617,7 +616,7 @@ public class HttpClientTest {
 				HttpServer.create()
 				          .compress()
 				          .port(0)
-				          .handler((req, res) -> res.sendString(Mono.just(content)))
+				          .handle((req, res) -> res.sendString(Mono.just(content)))
 				          .bindNow();
 
 
@@ -823,7 +822,7 @@ public class HttpClientTest {
 		DisposableServer context =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
-				          .router(r -> r.post("/upload", (req, resp) ->
+				          .route(r -> r.post("/upload", (req, resp) ->
 						          req.receive()
 						             .aggregate()
 						             .asString(StandardCharsets.UTF_8)
@@ -864,7 +863,7 @@ public class HttpClientTest {
 		DisposableServer context =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
-				          .router(r -> r.post("/upload", (req, resp) ->
+				          .route(r -> r.post("/upload", (req, resp) ->
 						          req
 								          .receive()
 								          .aggregate()
@@ -900,12 +899,12 @@ public class HttpClientTest {
 		DisposableServer context =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
-				          .router(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
-				                                                         .status(HttpResponseStatus.CREATED)
+				          .route(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
+				                                                     .status(HttpResponseStatus.CREATED)
+				                                                     .sendHeaders())
+				                       .put("/204", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                         .sendHeaders())
-				                           .put("/204", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
-				                                                         .sendHeaders())
-				                           .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
+				                       .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                         .sendHeaders()))
 				          .bindNow();
 
@@ -942,8 +941,8 @@ public class HttpClientTest {
 		PoolResources pr = PoolResources.fixed("wstest", 1);
 		DisposableServer httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handler((in, out) ->  out.options(opt -> opt.flushOnEach())
-				                                  .sendString(
+		                       .handle((in, out) ->  out.options(opt -> opt.flushOnEach())
+		                                                .sendString(
 						                                  Mono.just("test")
 						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat()))
@@ -977,7 +976,7 @@ public class HttpClientTest {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .handler((req, resp) -> resp.sendString(Mono.just("OK")))
+				          .handle((req, resp) -> resp.sendString(Mono.just("OK")))
 				          .wiretap()
 				          .bindNow();
 

@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -130,7 +131,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 					close.rsv(),
 					close.content()));
 		}
-		else {
+		else if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 			super.onInboundNext(ctx, msg);
 		}
 	}

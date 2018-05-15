@@ -83,7 +83,7 @@ public class UdpServerTests {
 
 		final Connection server = UdpServer.create()
 		                                   .port(port)
-		                                   .handler((in, out) -> {
+		                                   .handle((in, out) -> {
 			                                   in.receive()
 			                                     .asByteArray()
 			                                     .log()
@@ -140,7 +140,7 @@ public class UdpServerTests {
 					         .option(ChannelOption.SO_REUSEADDR, true)
 					         .addressSupplier(() -> new InetSocketAddress(port))
 					         .runOn(resources, InternetProtocolFamily.IPv4)
-					         .handler((in, out) -> {
+					         .handle((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
 					                             if (ifaces.hasMoreElements()) {
 						                             s.next(ifaces.nextElement());

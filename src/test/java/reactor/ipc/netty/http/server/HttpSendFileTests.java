@@ -44,7 +44,6 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.http.client.HttpClientResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -132,7 +131,7 @@ public class HttpSendFileTests {
 		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
 				                                 .tcpConfiguration(tcpServer -> tcpServer.host("localhost")))
-				          .handler((req, resp) -> fn.apply(resp))
+				          .handle((req, resp) -> fn.apply(resp))
 				          .bindNow();
 
 		HttpClient client;
@@ -201,9 +200,9 @@ public class HttpSendFileTests {
 		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
 				                                 .tcpConfiguration(tcpServer -> tcpServer.host("localhost")))
-				          .handler((req, resp) -> resp.sendByteArray(req.receive()
-				                                                           .aggregate()
-				                                                           .asByteArray()))
+				          .handle((req, resp) -> resp.sendByteArray(req.receive()
+				                                                       .aggregate()
+				                                                       .asByteArray()))
 				          .bindNow();
 		byte[] response =
 				customizeClientOptions(HttpClient.prepare()

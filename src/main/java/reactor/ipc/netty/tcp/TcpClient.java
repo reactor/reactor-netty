@@ -291,7 +291,7 @@ public abstract class TcpClient {
 	 *
 	 * @return a new {@link TcpClient}
 	 */
-	public final TcpClient handler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+	public final TcpClient handle(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnected(c -> {
 			if (log.isDebugEnabled()) {

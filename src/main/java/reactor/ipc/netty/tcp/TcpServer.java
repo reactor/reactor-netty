@@ -303,7 +303,8 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	@SuppressWarnings("unchecked")
-	public final TcpServer handle(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+	public final TcpServer handle(BiFunction<? super NettyInbound, ? super
+			NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnection(c -> {
 			if (log.isDebugEnabled()) {

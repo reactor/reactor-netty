@@ -189,8 +189,8 @@ public class HttpCompressionClientServerTests {
 		                              .compress(25);
 
 		DisposableServer connection =
-				server.handler((in, out) -> out.header("content-length", "5")
-				                                  .sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.header("content-length", "5")
+				                              .sendString(Mono.just("reply")))
 				      .bindNow();
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
@@ -226,7 +226,7 @@ public class HttpCompressionClientServerTests {
 		                              .compress((req, res) -> true);
 
 		DisposableServer connection =
-				server.handler((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .bindNow();
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
@@ -446,7 +446,7 @@ public class HttpCompressionClientServerTests {
 				HttpServer.create()
 				          .compress(2048)
 				          .port(0)
-				          .handler((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
+				          .handle((req, res) -> res.sendString(Mono.just("testtesttesttesttest")))
 				          .bindNow();
 
 		Mono<String> response =
@@ -472,7 +472,7 @@ public class HttpCompressionClientServerTests {
 				HttpServer.create()
 				          .compress(10)
 				          .port(0)
-				          .handler((req, res) ->
+				          .handle((req, res) ->
 				                  res.sendHeaders().sendString(Flux.just("test", "test", "test", "test")))
 				          .bindNow();
 

@@ -32,11 +32,7 @@ import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.ByteBufMono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
-import reactor.ipc.netty.http.websocket.WebsocketInbound;
-import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.tcp.TcpClient;
-
-import static reactor.ipc.netty.http.client.HttpClientConfiguration.websocketSubprotocols;
 
 /**
  * @author Stephane Maldini
@@ -129,26 +125,6 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 			super NettyOutbound, ? extends Publisher<Void>> sender) {
 		Objects.requireNonNull(sender, "requestBody");
 		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.body(b, sender)));
-	}
-
-	@Override
-	public <V> Flux<V> websocket(String subprotocols, BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver) {
-		Objects.requireNonNull(subprotocols, "subprotocols");
-		Bootstrap b;
-		try {
-			b = cachedConfiguration.configure();
-			websocketSubprotocols(b, subprotocols);
-		}
-		catch (Throwable t) {
-			Exceptions.throwIfFatal(t);
-			return Flux.error(t);
-		}
-		return cachedConfiguration.connect(b)
-		                          .flatMapMany(c -> {
-			                          WebsocketClientOperations wsOps =
-					                          c.as(WebsocketClientOperations.class);
-			                          return Flux.from(receiver.apply(wsOps, wsOps));
-		                          });
 	}
 
 	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {

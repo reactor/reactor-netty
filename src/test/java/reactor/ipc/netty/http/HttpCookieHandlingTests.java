@@ -39,7 +39,7 @@ public class HttpCookieHandlingTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .router(r -> r.get("/test", (req, resp) ->
+				          .route(r -> r.get("/test", (req, resp) ->
 				                            resp.addCookie(new DefaultCookie("cookie1", "test_value"))
 				                                .send(req.receive()
 				                                         .log("server received"))))

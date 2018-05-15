@@ -16,22 +16,17 @@
 package reactor.ipc.netty.http;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.HttpMethod;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.client.HttpClient;
@@ -48,7 +43,7 @@ public class HttpTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .router(r ->
+				          .route(r ->
 				              r.post("/test/{param}", (req, res) -> Mono.empty()))
 				          .wiretap()
 				          .bindNow();
@@ -81,7 +76,7 @@ public class HttpTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .router(r ->
+				          .route(r ->
 				              r.post("/test/{param}", (req, res) ->
 				                  res.sendString(req.receive()
 				                                    .asString()
@@ -143,25 +138,25 @@ public class HttpTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-						  .router(r -> r.get("/test", (req, res) -> {throw new RuntimeException();})
-						                 .get("/test2", (req, res) -> res.send(Flux.error(new Exception()))
+						  .route(r -> r.get("/test", (req, res) -> {throw new RuntimeException();})
+						               .get("/test2", (req, res) -> res.send(Flux.error(new Exception()))
 						                                                 .then()
 						                                                 .log("send-1")
 						                                                 .doOnError(t -> errored1.countDown()))
-						                 .get("/test3", (req, res) -> Flux.error(new Exception()))
-						                 .get("/issue231_1", (req, res) -> res.send(flux1)
+						               .get("/test3", (req, res) -> Flux.error(new Exception()))
+						               .get("/issue231_1", (req, res) -> res.send(flux1)
 						                                                      .then()
 						                                                      .log("send-2")
 						                                                      .doOnError(t -> errored2.countDown()))
-						                 .get("/issue231_2", (req, res) -> res.send(flux2)
+						               .get("/issue231_2", (req, res) -> res.send(flux2)
 						                                                      .then()
 						                                                      .log("send-3")
 						                                                      .doOnError(t -> errored3.countDown()))
-						                 .get("/issue237_1", (req, res) -> res.send(flux1)
+						               .get("/issue237_1", (req, res) -> res.send(flux1)
 						                                                      .then()
 						                                                      .log("send-4")
 						                                                      .doOnError(t -> errored4.countDown()))
-						                 .get("/issue237_2", (req, res) -> res.send(flux2)
+						               .get("/issue237_2", (req, res) -> res.send(flux2)
 						                                                      .then()
 						                                                      .log("send-5")
 						                                                      .doOnError(t -> errored5.countDown())))
@@ -316,10 +311,10 @@ public class HttpTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .handler((req, res) -> req.receive()
-				                                       .aggregate()
-				                                       .asString()
-				                                       .flatMap(s -> {
+				          .handle((req, res) -> req.receive()
+				                                   .aggregate()
+				                                   .asString()
+				                                   .flatMap(s -> {
 					                                       latch.countDown();
 					                                       return res.sendString(Mono.just(s))
 					                                                 .then();
@@ -353,12 +348,12 @@ public class HttpTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .router(r -> r.post("/hi", (req, res) -> req.receive()
-				                                                       .aggregate()
-				                                                       .asString()
-				                                                       .log()
-				                                                       .then(res.sendString(Flux.just("test")).then()))
-				                           .get("/stream", (req, res) ->
+				          .route(r -> r.post("/hi", (req, res) -> req.receive()
+				                                                     .aggregate()
+				                                                     .asString()
+				                                                     .log()
+				                                                     .then(res.sendString(Flux.just("test")).then()))
+				                       .get("/stream", (req, res) ->
 						                           req.receive()
 						                              .then(res.compression(true)
 						                                       .options(op -> op.flushOnEach())
@@ -428,13 +423,13 @@ public class HttpTests {
 				HttpServer.create()
 				          .port(0)
 				          .compress()
-				          .router(r -> r.post("/hi", (req, res) -> req.receive()
-				                                                         .aggregate()
-				                                                         .asString()
-				                                                         .log()
-				                                                         .then(res.compression(false)
+				          .route(r -> r.post("/hi", (req, res) -> req.receive()
+				                                                     .aggregate()
+				                                                     .asString()
+				                                                     .log()
+				                                                     .then(res.compression(false)
 				                                                                  .sendString(Flux.just("test")).then()))
-				                           .get("/stream", (req, res) ->
+				                       .get("/stream", (req, res) ->
 						                           req.receive()
 						                              .then(res.options(op -> op.flushOnEach())
 						                                       .sendString(ep.log()).then())))

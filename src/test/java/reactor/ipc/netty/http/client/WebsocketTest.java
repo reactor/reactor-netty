@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
-import io.netty.handler.codec.http.HttpMethod;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -69,9 +68,9 @@ public class WebsocketTest {
 				          .port(httpServer.address().getPort())
 				          .wiretap()
 				          .headers(h -> h.add("Authorization", auth))
-				          .get()
+				          .websocket()
 				          .uri("/test")
-				          .websocket((i, o) -> i.receive().asString())
+				          .handle((i, o) -> i.receive().asString())
 				          .log("client")
 				          .collectList()
 				          .block()
@@ -79,13 +78,13 @@ public class WebsocketTest {
 
 		Assert.assertThat(res, is("test"));
 	}
-/*
+
 	@Test
 	public void serverWebSocketFailed() {
 		httpServer =
 				HttpServer.create()
 						.port(0)
-						.handler((in, out) -> {
+						.handle((in, out) -> {
 							if (!in.requestHeaders().contains("Authorization")) {
 								return out.status(401);
 							} else {
@@ -97,18 +96,17 @@ public class WebsocketTest {
 
 		Mono<String> res =
 				HttpClient.prepare()
-						.port(httpServer.address().getPort())
-						.request(HttpMethod.GET)
-						.uri("/test")
-						.send((req, out) -> req.sendWebsocket())
-						.responseContent()
-						.aggregate()
-						.asString();
+				          .port(httpServer.address()
+						                .getPort())
+						  .websocket()
+						  .uri("/test")
+						  .handle((in, out) -> in.receive().aggregate().asString())
+						  .next();
 
 		StepVerifier.create(res)
 				.expectError(WebSocketHandshakeException.class)
 				.verify(Duration.ofSeconds(30));
-	}*/
+	}
 
 //	static final byte[] testData;
 //
@@ -160,9 +158,9 @@ public class WebsocketTest {
 		Flux<String> ws = HttpClient.prepare()
 		                            .port(httpServer.address().getPort())
 		                            .wiretap()
-		                            .get()
+		                            .websocket()
 		                            .uri("/")
-		                            .websocket((in, out) -> in.aggregateFrames()
+		                            .handle((in, out) -> in.aggregateFrames()
 		                                                      .receive()
 		                                                      .asString());
 
@@ -183,7 +181,7 @@ public class WebsocketTest {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .router(r -> r.get("/test/{param}", (req, res) -> {
+				          .route(r -> r.get("/test/{param}", (req, res) -> {
 					          System.out.println(req.requestHeaders().get("test"));
 					          return res.header("content-type", "text/plain")
 					                    .sendWebsocket((in, out) ->
@@ -205,9 +203,9 @@ public class WebsocketTest {
 		Mono<List<String>> response =
 				client.headers(h -> h.add("Content-Type", "text/plain")
 				                     .add("test", "test"))
-				      .post() //TODO investigate why get not working
+				      .websocket() //TODO investigate why get not working
 				      .uri("/test/World")
-				      .websocket((i, o) -> {
+				      .handle((i, o) -> {
 					      o.options(c -> c.flushOnEach());
 
 					      o.sendString(Flux.range(1, 1000)
@@ -375,10 +373,9 @@ public class WebsocketTest {
 		                                       .getPort())
 		                       .wiretap()
 		                       .headers(h -> h.add("Authorization", auth))
-		                       .get()
+		                       .websocket("SUBPROTOCOL,OTHER")
 		                       .uri("/test")
-		                       .handle((i, o) -> i.receive()
-		                                          .asString())
+		                       .handle((i, o) -> i.receive().asString())
 		                       .log()
 		                       .collectList()
 		                       .block(Duration.ofSeconds(30))
@@ -508,266 +505,266 @@ public class WebsocketTest {
 
 
 	//TODO
-/*	@Test
-	public void closePool() {
-		PoolResources pr = PoolResources.fixed("wstest", 1);
-		httpServer = HttpServer.create()
-		                       .port(0)
-		                       .handler((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.options(opt -> opt.flushOnEach())
-				                                  .sendString(
-						                                  Mono.just("test")
-						                                      .delayElement(Duration.ofMillis(100))
-						                                      .repeat())))
-		                       .wiretap()
-		                       .bindNow();
-
-		Flux<String> ws = HttpClient.create(opts -> opts.port(httpServer.address()
-		                                                                .getPort())
-		                                                .poolResources(pr))
-		                            .ws("/")
-		                            .flatMapMany(in -> in.receiveWebsocket()
-		                                                 .aggregateFrames()
-		                                                 .receive()
-		                                                 .asString());
-
-		StepVerifier.create(
-				Flux.range(1, 10)
-				    .concatMap(i -> ws.take(2)
-				                      .log())
-		)
-		            .expectNextSequence(Flux.range(1, 20)
-		                                    .map(v -> "test")
-		                                    .toIterable())
-		            .expectComplete()
-		            .verify();
-
-		pr.dispose();
-	}
-
-	@Test
-	public void testCloseWebSocketFrameSentByServer() {
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .handler((req, res) ->
-				                  res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
-				                                                                  .doOnNext(WebSocketFrame::retain))))
-				          .wiretap()
-				          .bindNow();
-
-		Flux<WebSocketFrame> response =
-				HttpClient.create(httpServer.address().getPort())
-				          .get("/", req -> req.sendWebsocket()
-				                                  .sendString(Mono.just("echo"))
-				                                  .sendObject(new CloseWebSocketFrame()))
-				          .flatMapMany(res -> res.receiveWebsocket()
-				                                 .receiveFrames());
-
-		StepVerifier.create(response)
-		            .expectNextMatches(webSocketFrame ->
-		                    webSocketFrame instanceof TextWebSocketFrame &&
-		                    "echo".equals(((TextWebSocketFrame) webSocketFrame).text()))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-	}
-
-	@Test
-	public void testCloseWebSocketFrameSentByClient() {
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .handler((req, res) ->
-				                  res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
-				                                                    .sendObject(new CloseWebSocketFrame())))
-				          .wiretap()
-				          .bindNow();
-
-		Mono<Void> response =
-				HttpClient.create(httpServer.address().getPort())
-				          .ws("/")
-				          .flatMap(res ->
-				                  res.receiveWebsocket((in, out) -> out.sendObject(in.receiveFrames()
-				                                                                     .doOnNext(WebSocketFrame::retain))));
-
-		StepVerifier.create(response)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-	}
-
-	@Test
-	public void testConnectionAliveWhenTransformationErrors_1() {
-		doTestConnectionAliveWhenTransformationErrors((in, out) ->
-		        out.options(sendOptions -> sendOptions.flushOnEach())
-		           .sendObject(in.aggregateFrames()
-		                         .receiveFrames()
-		                         .map(WebSocketFrame::content)
-		                         //.share()
-		                         .publish()
-		                         .autoConnect()
-		                         .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
-		                         .map(Integer::parseInt)
-		                         .map(i -> new TextWebSocketFrame(i + ""))
-		                         .retry()),
-		       Flux.just("1", "2"), 2);
-	}
-
-	@Test
-	public void testConnectionAliveWhenTransformationErrors_2() {
-		doTestConnectionAliveWhenTransformationErrors((in, out) ->
-		        out.options(sendOptions -> sendOptions.flushOnEach())
-		           .sendObject(in.aggregateFrames()
-		                         .receiveFrames()
-		                         .map(WebSocketFrame::content)
-		                         .concatMap(content ->
-		                             Mono.just(content)
-		                                 .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
-		                                 .map(Integer::parseInt)
-		                                 .map(i -> new TextWebSocketFrame(i + ""))
-		                                 .onErrorResume(t -> Mono.just(new TextWebSocketFrame("error"))))),
-				Flux.just("1", "error", "2"), 3);
-	}
-
-	private void doTestConnectionAliveWhenTransformationErrors(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			Flux<String> expectation, int count) {
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .handler((req, res) -> res.sendWebsocket(handler))
-				          .wiretap()
-				          .bindNow();
-
-		ReplayProcessor<String> output = ReplayProcessor.create();
-		HttpClient.create(httpServer.address().getPort())
-		          .ws("/")
-		          .flatMap(res ->
-		                  res.receiveWebsocket((in, out) -> out.sendString(Flux.just("1", "text", "2"))
-		                                                       .then(in.aggregateFrames()
-		                                                               .receiveFrames()
-		                                                               .map(WebSocketFrame::content)
-		                                                               .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
-		                                                               .take(count)
-		                                                               .subscribeWith(output)
-		                                                               .then())))
-		          .block(Duration.ofSeconds(30));
-
-		Assertions.assertThat(output.collectList().block(Duration.ofSeconds(30)))
-		          .isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
-
-	}
-
-	@Test
-	public void testClientOnCloseIsInvokedClientDisposed() throws Exception {
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .handler((req, res) ->
-				              res.options(sendOptions -> sendOptions.flushOnEach())
-				                 .sendWebsocket((in, out) ->
-				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
-				                                        .map(l -> l + ""))))
-				          .bindNow();
-
-		CountDownLatch latch = new CountDownLatch(3);
-		AtomicBoolean error = new AtomicBoolean();
-		HttpClient.prepare()
-		          .port(httpServer.address().getPort())
-		          .ws("/test")
-		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
-		              in.withConnection(conn -> {
-		                  Mono.delay(Duration.ofSeconds(3))
-		                      .subscribe(c -> {
-		                              System.out.println("context.dispose()");
-		                              conn.dispose();
-		                              latch.countDown();
-		                      });
-		                  conn.onDispose()
-		                         .subscribe(
-		                                 c -> { // no-op
-		                                 },
-		                                 t -> {
-		                                     t.printStackTrace();
-		                                     error.set(true);
-		                                 },
-		                                 () -> {
-		                                     System.out.println("context.onClose() completed");
-		                                     latch.countDown();
-		                                 });
-		              });
-		                  Mono.delay(Duration.ofSeconds(3))
-		                      .repeat(() -> {
-		                          AtomicBoolean disposed = new AtomicBoolean(false);
-		                          in.withConnection(conn -> {
-		                              disposed.set(conn.isDisposed());
-		                              System.out.println("context.isDisposed() " + conn.isDisposed());
-		                          });
-		                          if (disposed.get()) {
-		                              latch.countDown();
-		                              return false;
-		                          }
-		                          return true;
-		                      })
-		                      .subscribe();
-		                  return Mono.delay(Duration.ofSeconds(7))
-		                             .then();
-		          }))
-		          .block(Duration.ofSeconds(30));
-
-		latch.await(30, TimeUnit.SECONDS);
-
-		Assertions.assertThat(error.get()).isFalse();
-	}
-
-	@Test
-	public void testClientOnCloseIsInvokedServerInitiatedClose() throws Exception {
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .handler((req, res) ->
-				              res.sendWebsocket((in, out) ->
-				                  out.sendString(Mono.just("test"))))
-				          .wiretap()
-				          .bindNow();
-
-		CountDownLatch latch = new CountDownLatch(2);
-		AtomicBoolean error = new AtomicBoolean();
-		HttpClient.create(httpServer.address().getPort())
-		          .ws("/test")
-		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
-		              in.withConnection(conn ->
-		                 conn.onDispose()
-		                     .subscribe(
-		                             c -> { // no-op
-		                             },
-		                             t -> {
-		                                 t.printStackTrace();
-		                                 error.set(true);
-		                             },
-		                             () -> {
-		                                 System.out.println("context.onClose() completed");
-		                                 latch.countDown();
-		                             }));
-		              Mono.delay(Duration.ofSeconds(3))
-		                  .repeat(() -> {
-		                      AtomicBoolean disposed = new AtomicBoolean(false);
-		                      in.withConnection(conn -> {
-		                          disposed.set(conn.isDisposed());
-		                          System.out.println("context.isDisposed() " + conn.isDisposed());
-		                      });
-		                      if (disposed.get()) {
-		                          latch.countDown();
-		                          return false;
-		                      }
-		                      return true;
-		                  })
-		                  .subscribe();
-		              return Mono.delay(Duration.ofSeconds(7))
-		                         .then();
-		          }))
-		          .block(Duration.ofSeconds(30));
-
-		latch.await(30, TimeUnit.SECONDS);
-
-		Assertions.assertThat(error.get()).isFalse();
-	}*/
+//	@Test
+//	public void closePool() {
+//		PoolResources pr = PoolResources.fixed("wstest", 1);
+//		httpServer = HttpServer.create()
+//		                       .port(0)
+//		                       .handle((in, out) -> out.sendWebsocket(
+//				                       (i, o) -> o.options(opt -> opt.flushOnEach())
+//				                                  .sendString(
+//						                                  Mono.just("test")
+//						                                      .delayElement(Duration.ofMillis(100))
+//						                                      .repeat())))
+//		                       .wiretap()
+//		                       .bindNow();
+//
+//		Flux<String> ws = HttpClient.create(opts -> opts.port(httpServer.address()
+//		                                                                .getPort())
+//		                                                .poolResources(pr))
+//		                            .ws("/")
+//		                            .flatMapMany(in -> in.receiveWebsocket()
+//		                                                 .aggregateFrames()
+//		                                                 .receive()
+//		                                                 .asString());
+//
+//		StepVerifier.create(
+//				Flux.range(1, 10)
+//				    .concatMap(i -> ws.take(2)
+//				                      .log())
+//		)
+//		            .expectNextSequence(Flux.range(1, 20)
+//		                                    .map(v -> "test")
+//		                                    .toIterable())
+//		            .expectComplete()
+//		            .verify();
+//
+//		pr.dispose();
+//	}
+//
+//	@Test
+//	public void testCloseWebSocketFrameSentByServer() {
+//		httpServer =
+//				HttpServer.create()
+//				          .port(0)
+//				          .handle((req, res) ->
+//				                  res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
+//				                                                                  .doOnNext(WebSocketFrame::retain))))
+//				          .wiretap()
+//				          .bindNow();
+//
+//		Flux<WebSocketFrame> response =
+//				HttpClient.create(httpServer.address().getPort())
+//				          .get("/", req -> req.sendWebsocket()
+//				                                  .sendString(Mono.just("echo"))
+//				                                  .sendObject(new CloseWebSocketFrame()))
+//				          .flatMapMany(res -> res.receiveWebsocket()
+//				                                 .receiveFrames());
+//
+//		StepVerifier.create(response)
+//		            .expectNextMatches(webSocketFrame ->
+//		                    webSocketFrame instanceof TextWebSocketFrame &&
+//		                    "echo".equals(((TextWebSocketFrame) webSocketFrame).text()))
+//		            .expectComplete()
+//		            .verify(Duration.ofSeconds(30));
+//	}
+//
+//	@Test
+//	public void testCloseWebSocketFrameSentByClient() {
+//		httpServer =
+//				HttpServer.create()
+//				          .port(0)
+//				          .handle((req, res) ->
+//				                  res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
+//				                                                    .sendObject(new CloseWebSocketFrame())))
+//				          .wiretap()
+//				          .bindNow();
+//
+//		Mono<Void> response =
+//				HttpClient.create(httpServer.address().getPort())
+//				          .ws("/")
+//				          .flatMap(res ->
+//				                  res.receiveWebsocket((in, out) -> out.sendObject(in.receiveFrames()
+//				                                                                     .doOnNext(WebSocketFrame::retain))));
+//
+//		StepVerifier.create(response)
+//		            .expectComplete()
+//		            .verify(Duration.ofSeconds(30));
+//	}
+//
+//	@Test
+//	public void testConnectionAliveWhenTransformationErrors_1() {
+//		doTestConnectionAliveWhenTransformationErrors((in, out) ->
+//		        out.options(sendOptions -> sendOptions.flushOnEach())
+//		           .sendObject(in.aggregateFrames()
+//		                         .receiveFrames()
+//		                         .map(WebSocketFrame::content)
+//		                         //.share()
+//		                         .publish()
+//		                         .autoConnect()
+//		                         .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+//		                         .map(Integer::parseInt)
+//		                         .map(i -> new TextWebSocketFrame(i + ""))
+//		                         .retry()),
+//		       Flux.just("1", "2"), 2);
+//	}
+//
+//	@Test
+//	public void testConnectionAliveWhenTransformationErrors_2() {
+//		doTestConnectionAliveWhenTransformationErrors((in, out) ->
+//		        out.options(sendOptions -> sendOptions.flushOnEach())
+//		           .sendObject(in.aggregateFrames()
+//		                         .receiveFrames()
+//		                         .map(WebSocketFrame::content)
+//		                         .concatMap(content ->
+//		                             Mono.just(content)
+//		                                 .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+//		                                 .map(Integer::parseInt)
+//		                                 .map(i -> new TextWebSocketFrame(i + ""))
+//		                                 .onErrorResume(t -> Mono.just(new TextWebSocketFrame("error"))))),
+//				Flux.just("1", "error", "2"), 3);
+//	}
+//
+//	private void doTestConnectionAliveWhenTransformationErrors(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+//			Flux<String> expectation, int count) {
+//		httpServer =
+//				HttpServer.create()
+//				          .port(0)
+//				          .handle((req, res) -> res.sendWebsocket(handler))
+//				          .wiretap()
+//				          .bindNow();
+//
+//		ReplayProcessor<String> output = ReplayProcessor.create();
+//		HttpClient.create(httpServer.address().getPort())
+//		          .ws("/")
+//		          .flatMap(res ->
+//		                  res.receiveWebsocket((in, out) -> out.sendString(Flux.just("1", "text", "2"))
+//		                                                       .then(in.aggregateFrames()
+//		                                                               .receiveFrames()
+//		                                                               .map(WebSocketFrame::content)
+//		                                                               .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+//		                                                               .take(count)
+//		                                                               .subscribeWith(output)
+//		                                                               .then())))
+//		          .block(Duration.ofSeconds(30));
+//
+//		Assertions.assertThat(output.collectList().block(Duration.ofSeconds(30)))
+//		          .isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
+//
+//	}
+//
+//	@Test
+//	public void testClientOnCloseIsInvokedClientDisposed() throws Exception {
+//		httpServer =
+//				HttpServer.create()
+//				          .port(0)
+//				          .handle((req, res) ->
+//				              res.options(sendOptions -> sendOptions.flushOnEach())
+//				                 .sendWebsocket((in, out) ->
+//				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
+//				                                        .map(l -> l + ""))))
+//				          .bindNow();
+//
+//		CountDownLatch latch = new CountDownLatch(3);
+//		AtomicBoolean error = new AtomicBoolean();
+//		HttpClient.prepare()
+//		          .port(httpServer.address().getPort())
+//		          .ws("/test")
+//		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
+//		              in.withConnection(conn -> {
+//		                  Mono.delay(Duration.ofSeconds(3))
+//		                      .subscribe(c -> {
+//		                              System.out.println("context.dispose()");
+//		                              conn.dispose();
+//		                              latch.countDown();
+//		                      });
+//		                  conn.onDispose()
+//		                         .subscribe(
+//		                                 c -> { // no-op
+//		                                 },
+//		                                 t -> {
+//		                                     t.printStackTrace();
+//		                                     error.set(true);
+//		                                 },
+//		                                 () -> {
+//		                                     System.out.println("context.onClose() completed");
+//		                                     latch.countDown();
+//		                                 });
+//		              });
+//		                  Mono.delay(Duration.ofSeconds(3))
+//		                      .repeat(() -> {
+//		                          AtomicBoolean disposed = new AtomicBoolean(false);
+//		                          in.withConnection(conn -> {
+//		                              disposed.set(conn.isDisposed());
+//		                              System.out.println("context.isDisposed() " + conn.isDisposed());
+//		                          });
+//		                          if (disposed.get()) {
+//		                              latch.countDown();
+//		                              return false;
+//		                          }
+//		                          return true;
+//		                      })
+//		                      .subscribe();
+//		                  return Mono.delay(Duration.ofSeconds(7))
+//		                             .then();
+//		          }))
+//		          .block(Duration.ofSeconds(30));
+//
+//		latch.await(30, TimeUnit.SECONDS);
+//
+//		Assertions.assertThat(error.get()).isFalse();
+//	}
+//
+//	@Test
+//	public void testClientOnCloseIsInvokedServerInitiatedClose() throws Exception {
+//		httpServer =
+//				HttpServer.create()
+//				          .port(0)
+//				          .handle((req, res) ->
+//				              res.sendWebsocket((in, out) ->
+//				                  out.sendString(Mono.just("test"))))
+//				          .wiretap()
+//				          .bindNow();
+//
+//		CountDownLatch latch = new CountDownLatch(2);
+//		AtomicBoolean error = new AtomicBoolean();
+//		HttpClient.create(httpServer.address().getPort())
+//		          .ws("/test")
+//		          .flatMap(res -> res.receiveWebsocket((in, out) -> {
+//		              in.withConnection(conn ->
+//		                 conn.onDispose()
+//		                     .subscribe(
+//		                             c -> { // no-op
+//		                             },
+//		                             t -> {
+//		                                 t.printStackTrace();
+//		                                 error.set(true);
+//		                             },
+//		                             () -> {
+//		                                 System.out.println("context.onClose() completed");
+//		                                 latch.countDown();
+//		                             }));
+//		              Mono.delay(Duration.ofSeconds(3))
+//		                  .repeat(() -> {
+//		                      AtomicBoolean disposed = new AtomicBoolean(false);
+//		                      in.withConnection(conn -> {
+//		                          disposed.set(conn.isDisposed());
+//		                          System.out.println("context.isDisposed() " + conn.isDisposed());
+//		                      });
+//		                      if (disposed.get()) {
+//		                          latch.countDown();
+//		                          return false;
+//		                      }
+//		                      return true;
+//		                  })
+//		                  .subscribe();
+//		              return Mono.delay(Duration.ofSeconds(7))
+//		                         .then();
+//		          }))
+//		          .block(Duration.ofSeconds(30));
+//
+//		latch.await(30, TimeUnit.SECONDS);
+//
+//		Assertions.assertThat(error.get()).isFalse();
+//	}
 }

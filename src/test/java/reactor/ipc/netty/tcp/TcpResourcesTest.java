@@ -129,7 +129,7 @@ public class TcpResourcesTest {
 
 		DisposableServer server = TcpServer.create()
 		                             .port(port)
-		                             .handler((in, out) -> {
+		                             .handle((in, out) -> {
 		                               	try {
 			                                in.receive()
 			                                  .blockFirst();
@@ -145,7 +145,7 @@ public class TcpResourcesTest {
 
 		Connection client = TcpClient.create()
 		                             .port(port)
-		                             .handler((in, out) -> {
+		                             .handle((in, out) -> {
 		                               	try {
 			                                out.sendString(Flux.just("Hello World!"))
 			                                   .then()

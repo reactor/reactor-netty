@@ -50,7 +50,7 @@ import reactor.util.Loggers;
  * HttpServer.create()
  * .host("0.0.0.0")
  * .tcpConfiguration(TcpServer::secure)
- * .handler((req, res) -> res.sendString(Flux.just("hello"))
+ * .handle((req, res) -> res.sendString(Flux.just("hello"))
  * .bind()
  * .block();
  * }
@@ -233,7 +233,8 @@ public abstract class HttpServer {
 	 *
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer handle(BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+	public final HttpServer handle(BiFunction<? super HttpServerRequest, ? super
+			HttpServerResponse, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return tcpConfiguration(tcp -> tcp.doOnConnection(c -> {
 			if (log.isDebugEnabled()) {
@@ -300,7 +301,7 @@ public abstract class HttpServer {
 	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
 	 * @return a new {@link HttpServer} starting the router on subscribe
 	 */
-	public final HttpServer router(Consumer<? super HttpServerRoutes> routesBuilder) {
+	public final HttpServer route(Consumer<? super HttpServerRoutes> routesBuilder) {
 		Objects.requireNonNull(routesBuilder, "routeBuilder");
 		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
 		routesBuilder.accept(routes);

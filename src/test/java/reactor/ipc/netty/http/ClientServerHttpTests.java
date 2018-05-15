@@ -266,7 +266,7 @@ public class ClientServerHttpTests {
 
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .router(r -> r.get("/data",
+		                       .route(r -> r.get("/data",
 				                       (req, resp) -> resp.options(NettyPipeline.SendOptions::flushOnEach)
 				                                          .send(Flux.from(processor)
 				                                                    .log("server")

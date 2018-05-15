@@ -92,7 +92,7 @@ public abstract class HttpClient {
 	/**
 	 * A URI configuration
 	 */
-	public interface UriConfiguration<S extends ResponseReceiver<?>> {
+	public interface UriConfiguration<S extends UriConfiguration<?>> {
 
 		/**
 		 * Configure URI to use for this request/response
@@ -142,6 +142,25 @@ public abstract class HttpClient {
 		 * @return a new {@link ResponseReceiver}
 		 */
 		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender);
+	}
+
+	/**
+	 * Allow a request body configuration before calling one of the terminal, {@link
+	 * Publisher} based, {@link WebsocketReceiver} API.
+	 */
+	public interface WebsocketSender extends WebsocketReceiver<WebsocketSender> {
+
+		/**
+		 * Configure headers to send on request using the returned {@link Publisher} to
+		 * signal end of
+		 * the request.
+		 *
+		 * @param sender a bfunction given the outgoing request returns a publisher
+		 * that will terminate the request body on complete
+		 *
+		 * @return a new {@link ResponseReceiver}
+		 */
+		WebsocketReceiver<?> send(Function<? super HttpClientRequest, ? extends Publisher<Void>> sender);
 	}
 
 	/**
@@ -210,24 +229,16 @@ public abstract class HttpClient {
 		 * @return a {@link Mono} forwarding the returned {@link Mono} result
 		 */
 		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver);
+	}
 
-		/**
-		 * Negotiate a websocket upgrade and extract a flux from the given
-		 * {@link reactor.ipc.netty.http.websocket.WebsocketInbound} and
-		 *  {@link reactor.ipc.netty.http.websocket.WebsocketOutbound}}.
-		 * <p> The connection will not automatically {@link Connection#dispose()} and
-		 * manual disposing with the {@link Connection} or returned {@link Flux} might be
-		 * necessary if the remote never
-		 * terminates itself.
-		 *
-		 * @param receiver extracting receiver
-		 * @param <V> the extracted flux type
-		 *
-		 * @return a {@link RequestSender} ready to consume for response
-		 */
-		default <V> Flux<V> websocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver) {
-			return websocket("", receiver);
-		}
+
+
+	/**
+	 * Allow a websocket handling. Since {@link WebsocketReceiver} API returns
+	 * {@link Flux} or {@link Mono}, r  equesting is always deferred to
+	 * {@link Publisher#subscribe(Subscriber)}.
+	 */
+	public interface WebsocketReceiver<S extends WebsocketReceiver<?>> extends UriConfiguration<S>  {
 
 		/**
 		 * Negotiate a websocket upgrade and extract a flux from the given
@@ -236,18 +247,15 @@ public abstract class HttpClient {
 		 * <p> The connection will not automatically {@link Connection#dispose()} and
 		 * manual disposing with the {@link Connection} or returned {@link Flux} might be
 		 * necessary if the remote never terminates itself.
+		 * <p> If the upgrade fails, the returned {@link Flux} will emit a {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
 		 *
-		 * @param subprotocols the subprotocol(s) to negotiate, comma-separated, or null if
-		 * not relevant.
 		 * @param receiver extracting receiver
 		 * @param <V> the extracted flux type
 		 *
 		 * @return a {@link RequestSender} ready to consume for response
 		 */
-		<V> Flux<V> websocket(String subprotocols, BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver);
+		<V> Flux<V> handle(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver);
 	}
-
-
 
 	/**
 	 * Prepare a pooled {@link HttpClient} given the base URI.
@@ -477,7 +485,7 @@ public abstract class HttpClient {
 	/**
 	 * HTTP PATCH to connect the {@link HttpClient}.
 	 *
-	 * @return a {@link RequestSender} ready to consume for response
+	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
 	public final RequestSender patch() {
 		return request(HttpMethod.PATCH);
@@ -486,16 +494,27 @@ public abstract class HttpClient {
 	/**
 	 * HTTP POST to connect the {@link HttpClient}.
 	 *
-	 * @return a {@link RequestSender} ready to consume for response
+	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
 	public final RequestSender post() {
 		return request(HttpMethod.POST);
 	}
 
 	/**
+	 * The port to which this client should connect.
+	 *
+	 * @param port The port to connect to.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient port(int port) {
+		return tcpConfiguration(tcpClient -> tcpClient.port(port));
+	}
+
+	/**
 	 * HTTP PUT to connect the {@link HttpClient}.
 	 *
-	 * @return a {@link RequestSender} ready to consume for response
+	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
 	public final RequestSender put() {
 		return request(HttpMethod.PUT);
@@ -506,7 +525,7 @@ public abstract class HttpClient {
 	 *
 	 * @param method the HTTP method to send
 	 *
-	 * @return a {@link RequestSender} ready to consume for response
+	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
 	public RequestSender request(HttpMethod method) {
 		Objects.requireNonNull(method, "method");
@@ -529,17 +548,6 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * The port to which this client should connect.
-	 *
-	 * @param port The port to connect to.
-	 *
-	 * @return a new {@link TcpClient}
-	 */
-	public final HttpClient port(int port) {
-		return tcpConfiguration(tcpClient -> tcpClient.port(port));
-	}
-
-	/**
 	 * Apply a wire logger configuration using {@link TcpServer} category
 	 *
 	 * @return a new {@link TcpServer}
@@ -547,6 +555,29 @@ public abstract class HttpClient {
 	public final HttpClient wiretap() {
 		return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
 	}
+
+	/**
+	 * HTTP Websocket to connect the {@link HttpClient}.
+	 *
+	 * @return a {@link WebsocketSender} ready to consume for response
+	 */
+	public final WebsocketSender websocket() {
+		return websocket("");
+	}
+
+	/**
+	 * HTTP Websocket to connect the {@link HttpClient}.
+	 *
+	 * @param subprotocols a websocket subprotocol comma separated list
+	 *
+	 * @return a {@link WebsocketSender} ready to consume for response
+	 */
+	public final WebsocketSender websocket(String subprotocols) {
+		Objects.requireNonNull(subprotocols, "subprotocols");
+		TcpClient tcpConfiguration = tcpConfiguration().bootstrap(b -> websocketSubprotocols(b, subprotocols));
+		return new WebsocketFinalizer(tcpConfiguration);
+	}
+
 
 	/**
 	 * Get a TcpClient from the parent {@link HttpClient} chain to use with {@link

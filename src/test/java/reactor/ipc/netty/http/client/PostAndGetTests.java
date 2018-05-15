@@ -56,7 +56,7 @@ public class PostAndGetTests {
 	private void setupServer() throws InterruptedException {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .router(routes -> {
+		                       .route(routes -> {
 			                       routes.get("/get/{name}", getHandler())
 			                             .post("/post", postHandler());
 		                       })

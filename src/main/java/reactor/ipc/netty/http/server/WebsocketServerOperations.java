@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -111,7 +112,9 @@ final class WebsocketServerOperations extends HttpServerOperations
 			ctx.read();
 			return;
 		}
-		super.onInboundNext(ctx, frame);
+		if (frame != LastHttpContent.EMPTY_LAST_CONTENT) {
+			super.onInboundNext(ctx, frame);
+		}
 	}
 
 	@Override

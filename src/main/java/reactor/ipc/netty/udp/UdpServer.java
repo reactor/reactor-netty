@@ -214,7 +214,7 @@ public abstract class UdpServer {
 	 *
 	 * @return a new {@link UdpServer}
 	 */
-	public final UdpServer handler(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler) {
+	public final UdpServer handle(BiFunction<? super UdpInbound, ? super UdpOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return doOnBound(c -> {
 			if (log.isDebugEnabled()) {

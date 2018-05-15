@@ -36,7 +36,7 @@ public class HttpErrorTests {
 	public void test() {
 		DisposableServer server = HttpServer.create()
 		                              .port(0)
-		                              .router(httpServerRoutes -> httpServerRoutes.get(
+		                              .route(httpServerRoutes -> httpServerRoutes.get(
 				                                "/",
 				                                (httpServerRequest, httpServerResponse) -> {
 					                                return httpServerResponse.sendString(
