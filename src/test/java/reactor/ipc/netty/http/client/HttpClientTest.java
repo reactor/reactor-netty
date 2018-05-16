@@ -629,10 +629,8 @@ public class HttpClientTest {
 		                                 .add("Accept-Encoding", "deflate"))
 		                  .followRedirect()
 		                  .get()
-		                  .uri("http://www.httpwatch.com")
-		                  .response((r, buf) -> buf.asString()
-		                                           .elementAt(0)
-		                                           .map(s -> s.substring(0, Math.min(s.length() -1, 100)))
+		                  .response((r, buf) -> buf.aggregate()
+		                                           .asString()
 		                                           .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))
 		                                           .zipWith(Mono.just(r))))
 		            .expectNextMatches(tuple -> {
@@ -655,10 +653,8 @@ public class HttpClientTest {
 				          	conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
 				          })
 				          .get()
-				          .uri("http://www.httpwatch.com")
-				          .response((r, buf) -> buf.asString()
-				                                   .elementAt(0)
-				                                   .map(s -> s.substring(0, Math.min(s.length() -1, 100)))
+				          .response((r, buf) -> buf.aggregate()
+				                                   .asString()
 				                                   .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))
 				                                   .zipWith(Mono.just(r))))
 		            .expectNextMatches(tuple -> {

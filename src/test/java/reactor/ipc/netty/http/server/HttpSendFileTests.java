@@ -49,11 +49,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class HttpSendFileTests {
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
-		return null;
+		return httpClient;
 	}
 
 	protected HttpServer customizeServerOptions(HttpServer httpServer) {
-		return null;
+		return httpServer;
 	}
 
 	@Test
@@ -129,8 +129,7 @@ public class HttpSendFileTests {
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression, Consumer<String> bodyAssertion) {
 		DisposableServer context =
-				customizeServerOptions(HttpServer.create()
-				                                 .tcpConfiguration(tcpServer -> tcpServer.host("localhost")))
+				customizeServerOptions(HttpServer.create())
 				          .handle((req, resp) -> fn.apply(resp))
 				          .bindNow();
 
@@ -148,13 +147,13 @@ public class HttpSendFileTests {
 				customizeClientOptions(client)
 				          .get()
 				          .uri("/foo")
-				          .responseSingle((res, byteBufMono) -> Mono.just(byteBufMono.asString(StandardCharsets.UTF_8)))
-				          .block(Duration.ofSeconds(30));
+				          .responseSingle((res, byteBufMono) -> byteBufMono.asString(StandardCharsets.UTF_8));
+
+		String body = response.block(Duration.ofSeconds(5));
 
 		context.dispose();
 		context.onDispose().block();
 
-		String body = response.block(Duration.ofSeconds(5));
 		bodyAssertion.accept(body);
 	}
 
