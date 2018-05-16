@@ -28,6 +28,7 @@ import java.util.function.Function;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
@@ -68,6 +69,14 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		                           .map(bytebufExtractor), allocator);
 	}
 
+
+	/**
+	 * Decorate as {@link ByteBufFlux}
+	 *
+	 * @param source publisher to decorate
+	 *
+	 * @return a {@link ByteBufFlux}
+	 */
 	public static ByteBufFlux fromString(Publisher<? extends String> source) {
 		return fromString(source, Charset.defaultCharset(), ByteBufAllocator.DEFAULT);
 	}
@@ -263,6 +272,9 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		}
 		if (o instanceof ByteBufHolder) {
 			return ((ByteBufHolder) o).content();
+		}
+		if (o instanceof byte[]) {
+			return Unpooled.wrappedBuffer((byte[])o);
 		}
 		throw new IllegalArgumentException("Object " + o + " of type " + o.getClass() + " " + "cannot be converted to ByteBuf");
 	};

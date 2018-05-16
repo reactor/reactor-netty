@@ -220,7 +220,7 @@ public class ConnectionInfoTests {
 				          .uri("/test")
 				          .send((req, out) -> {
 				                  clientConsumer.accept(req);
-				                  return req.sendHeaders();
+				                  return Mono.empty();
 				          })
 				          .responseContent()
 				          .aggregate()

@@ -120,6 +120,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public NettyOutbound sendHeaders() {
+		if (hasSentHeaders()) {
+			return this;
+		}
+
+		return then(Mono.empty());
+	}
+
+	@Override
 	public HttpServerOperations withConnection(Consumer<? super Connection> withConnection) {
 		Objects.requireNonNull(withConnection, "withConnection");
 		withConnection.accept(this);

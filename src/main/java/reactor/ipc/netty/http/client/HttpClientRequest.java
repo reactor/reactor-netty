@@ -16,12 +16,8 @@
 
 package reactor.ipc.netty.http.client;
 
-import java.util.function.Consumer;
-
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
-import reactor.core.publisher.Flux;
-import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpInfos;
 
 /**
@@ -103,22 +99,4 @@ public interface HttpClientRequest extends HttpInfos {
 	 * @return outbound headers to be sent
 	 */
 	HttpHeaders requestHeaders();
-
-	/**
-	 * Prepare to send an HTTP Form including Multipart encoded Form which support
-	 * chunked file upload. It will by default be encoded as Multipart but can be
-	 * adapted via {@link HttpClientForm#multipart(boolean)}.
-	 *
-	 * @param formCallback called when form generator is created
-	 *
-	 * @return a {@link Flux} of latest in-flight or uploaded bytes,
-	 */
-	Flux<Long> sendForm(Consumer<HttpClientForm> formCallback);
-
-	/**
-	 * Send the headers.
-	 *
-	 * @return a {@link NettyOutbound} completing when headers have been sent.
-	 */
-	NettyOutbound sendHeaders();
 }

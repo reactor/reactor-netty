@@ -17,7 +17,9 @@
 package reactor.ipc.netty.http.client;
 
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty.bootstrap.Bootstrap;
@@ -125,6 +127,16 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 			super NettyOutbound, ? extends Publisher<Void>> sender) {
 		Objects.requireNonNull(sender, "requestBody");
 		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.body(b, sender)));
+	}
+
+	@Override
+	public HttpClientFinalizer sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback, Consumer<Flux<Long>> progress) {
+		Objects.requireNonNull(formCallback, "formCallback");
+		return send((req, out) -> {
+			@SuppressWarnings("unchecked")
+			HttpClientOperations ops = (HttpClientOperations) out;
+			return new HttpClientOperations.SendForm(ops, formCallback, progress);
+		});
 	}
 
 	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {

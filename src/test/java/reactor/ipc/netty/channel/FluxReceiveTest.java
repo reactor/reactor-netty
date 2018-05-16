@@ -18,10 +18,9 @@ package reactor.ipc.netty.channel;
 import java.time.Duration;
 import java.util.Random;
 
-import org.junit.Test;
-
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
+import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
@@ -43,8 +42,7 @@ public class FluxReceiveTest {
 				          .port(0)
 				          .route(routes ->
 				                     routes.get("/target", (req, res) ->
-				                           res.sendByteArray(Flux.just(content)
-				                                                 .delayElements(Duration.ofMillis(100)))))
+				                           req.receive().thenMany(res.sendByteArray(Flux.just(content).delayElements(Duration.ofMillis(100))))))
 				          .wiretap()
 				          .bindNow();
 

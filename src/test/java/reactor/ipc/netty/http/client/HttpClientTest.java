@@ -351,7 +351,7 @@ public class HttpClientTest {
 		            .verify(Duration.ofSeconds(30));
 	}
 
-	//@Test
+//	@Test
 	public void postUpload() {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
 		//Path f = Paths.get("/Users/smaldini/Downloads/IMG_6702.mp4");
@@ -360,15 +360,10 @@ public class HttpClientTest {
 		                    .wiretap()
 		                    .put()
 		                    .uri("/post")
-		                    .send((c, out) -> {
-		                           c.sendForm(form -> form.multipart(true)
-		                                                  .file("test", f)
-		                                                  .attr("att1", "attr2")
-		                                                  .file("test2", f))
-		                                                  .log()
-		                                                  .then();
-		                           return out;
-		                    })
+		                    .sendForm((req, form) -> form.multipart(true)
+		                                          .file("test", f)
+		                                          .attr("att1", "attr2")
+		                                          .file("test2", f))
 		                    .responseSingle((r, buf) -> Mono.just(r.status().code()))
 		                    .block(Duration.ofSeconds(30));
 		res = HttpClient.prepare()
@@ -433,7 +428,7 @@ public class HttpClientTest {
 		// 		.closeFuture())
 		// 		.block(Duration.ofSeconds(5));
 
-		Assert.assertTrue(Objects.equals(r.code(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertTrue(Objects.equals(r, HttpResponseStatus.NOT_FOUND));
 	}
 
 	@Test
@@ -455,7 +450,7 @@ public class HttpClientTest {
 		// 		.closeFuture())
 		// 		.block(Duration.ofSeconds(5));
 
-		Assert.assertTrue(Objects.equals(r.code(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertTrue(Objects.equals(r, HttpResponseStatus.NOT_FOUND));
 	}
 
 	@Test
@@ -522,7 +517,7 @@ public class HttpClientTest {
 		// TODO
 		// Assert.assertTrue(r.channel() == r2.channel());
 
-		Assert.assertTrue(Objects.equals(r.code(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertTrue(Objects.equals(r, HttpResponseStatus.NOT_FOUND));
 		p.dispose();
 	}
 

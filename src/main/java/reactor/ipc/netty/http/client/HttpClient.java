@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -142,6 +143,31 @@ public abstract class HttpClient {
 		 * @return a new {@link ResponseReceiver}
 		 */
 		ResponseReceiver<?> send(BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> sender);
+
+		/**
+		 * Prepare to send an HTTP Form including Multipart encoded Form which support
+		 * chunked file upload. It will by default be encoded as Multipart but can be
+		 * adapted via {@link HttpClientForm#multipart(boolean)}.
+		 *
+		 * @param formCallback called when form generator is created
+		 *
+		 * @return a new {@link ResponseReceiver}
+		 */
+		default ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback) {
+			return sendForm(formCallback, null);
+		}
+
+		/**
+		 * Prepare to send an HTTP Form including Multipart encoded Form which support
+		 * chunked file upload. It will by default be encoded as Multipart but can be
+		 * adapted via {@link HttpClientForm#multipart(boolean)}.
+		 *
+		 * @param formCallback called when form generator is created
+		 * @param progress called after form is being sent and passed with a {@link Flux} of latest in-flight or uploaded bytes,
+		 *
+		 * @return a new {@link ResponseReceiver}
+		 */
+		ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback, @Nullable Consumer<Flux<Long>>progress);
 	}
 
 	/**

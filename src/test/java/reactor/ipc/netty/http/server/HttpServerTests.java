@@ -757,7 +757,7 @@ public class HttpServerTests {
 	}*/
 
 	@Test
-	public void testIssue309() throws Exception {
+	public void testIssue309() {
 		doTestIssue309("/somethingtooolooong",
 				HttpServer.create()
 				          .port(0)
@@ -801,7 +801,7 @@ public class HttpServerTests {
 				                                        .maxChunkSize(789)
 				                                        .validateHeaders(false)
 				                                        .initialBufferSize(10))
-				          .handle((req, resp) -> resp.sendNotFound())
+				          .handle((req, resp) -> req.receive().then(resp.sendNotFound()))
 				          .tcpConfiguration(tcp -> tcp.doOnConnection(c -> {
 				          	channelRef.set(c.channel());
 					          HttpServerCodec codec = c.channel()

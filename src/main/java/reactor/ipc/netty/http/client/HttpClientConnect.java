@@ -44,6 +44,7 @@ import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -195,10 +196,44 @@ final class HttpClientConnect extends HttpClient {
 						BootstrapHandlers.connectionObserver(finalBootstrap).then(new HttpObserver(sink, handler)));
 
 				tcpClient.connect(finalBootstrap)
-				         .subscribe(null, sink::error);
+				         .subscribe(new TcpClientSubscriber(sink));
 
 			}).retry(handler)
 			  .subscribe(actual);
+		}
+
+		final static class TcpClientSubscriber implements CoreSubscriber<Connection> {
+
+			final MonoSink<Connection> sink;
+
+			TcpClientSubscriber(MonoSink<Connection> sink) {
+				this.sink = sink;
+			}
+
+			@Override
+			public void onSubscribe(Subscription s) {
+				s.request(Long.MAX_VALUE);
+			}
+
+			@Override
+			public void onNext(Connection connection) {
+
+			}
+
+			@Override
+			public void onError(Throwable throwable) {
+				sink.error(throwable);
+			}
+
+			@Override
+			public void onComplete() {
+
+			}
+
+			@Override
+			public Context currentContext() {
+				return sink.currentContext();
+			}
 		}
 	}
 
@@ -263,7 +298,7 @@ final class HttpClientConnect extends HttpClient {
 		volatile Supplier<String>[] redirectedFrom;
 
 		@SuppressWarnings("unchecked")
-		HttpClientHandler(SocketAddress address, HttpClientConfiguration configuration) {
+		HttpClientHandler(@Nullable SocketAddress address, HttpClientConfiguration configuration) {
 			this.method = configuration.method;
 			this.compress = configuration.acceptGzip;
 			this.followRedirect = configuration.followRedirect;
@@ -298,7 +333,6 @@ final class HttpClientConnect extends HttpClient {
 			}
 
 			Supplier<SocketAddress> addressSupplier;
-
 			if (address instanceof Supplier) {
 				addressSupplier = (Supplier<SocketAddress>) address;
 			}
@@ -404,7 +438,13 @@ final class HttpClientConnect extends HttpClient {
 		void redirect(String to) {
 			Supplier<String>[] redirectedFrom = this.redirectedFrom;
 			UriEndpoint from = activeURI;
-			activeURI = uriEndpointFactory.createUriEndpoint(to, activeURI.isWs());
+			if (to.startsWith("/")) {
+				activeURI = uriEndpointFactory.createUriEndpoint(to, from.isWs(),
+						() -> URI_ADDRESS_MAPPER.apply(from.host, from.port));
+			}
+			else {
+				activeURI = uriEndpointFactory.createUriEndpoint(to, from.isWs());
+			}
 			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
 		}
 

@@ -25,11 +25,16 @@ import io.netty.util.NetUtil;
 
 final class UriEndpoint {
 	final String scheme;
+	final String host;
+	final int port;
 	final Supplier<SocketAddress> remoteAddress;
 	final String pathAndQuery;
 
-	UriEndpoint(String scheme, Supplier<SocketAddress> remoteAddress,
+	UriEndpoint(String scheme, String host, int port,
+			Supplier<SocketAddress> remoteAddress,
 			String pathAndQuery) {
+		this.host = host;
+		this.port = port;
 		this.scheme = Objects.requireNonNull(scheme, "scheme");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddressSupplier");
 		this.pathAndQuery = Objects.requireNonNull(pathAndQuery, "pathAndQuery");

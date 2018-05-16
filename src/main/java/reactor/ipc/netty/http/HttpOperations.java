@@ -83,16 +83,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return false;
 	}
 
-	//@Override
-	//TODO document this
-	public NettyOutbound sendHeaders() {
-		if (hasSentHeaders()) {
-			return this;
-		}
-
-		return then(Mono.empty());
-	}
-
 	@Override
 	public Mono<Void> then() {
 		if (hasSentHeaders()) {

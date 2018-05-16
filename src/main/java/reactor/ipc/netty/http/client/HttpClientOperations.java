@@ -24,8 +24,10 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -362,11 +364,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return super.send(source);
 	}
 
-	@Override
-	public Flux<Long> sendForm(Consumer<HttpClientForm> formCallback) {
-		return new FluxSendForm(this, formCallback);
-	}
-
 	final URI websocketUri() {
 		URI uri;
 		try {
@@ -622,21 +619,24 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 	}
 
-	static final class FluxSendForm extends Flux<Long> {
+	static final class SendForm extends Mono<Void> {
 
 		static final HttpDataFactory DEFAULT_FACTORY = new DefaultHttpDataFactory(DefaultHttpDataFactory.MINSIZE);
 
-		final HttpClientOperations parent;
-		final Consumer<HttpClientForm>       formCallback;
+		final HttpClientOperations                                  parent;
+		final BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback;
+		final Consumer<Flux<Long>>                                  progressCallback;
 
-		FluxSendForm(HttpClientOperations parent,
-				Consumer<HttpClientForm> formCallback) {
+		SendForm(HttpClientOperations parent,
+				BiConsumer<? super HttpClientRequest, HttpClientForm>  formCallback,
+				@Nullable Consumer<Flux<Long>> progressCallback) {
 			this.parent = parent;
 			this.formCallback = formCallback;
+			this.progressCallback = progressCallback;
 		}
 
 		@Override
-		public void subscribe(CoreSubscriber<? super Long> s) {
+		public void subscribe(CoreSubscriber<? super Void> s) {
 			if (parent.channel()
 			          .eventLoop()
 			          .inEventLoop()) {
@@ -649,7 +649,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 		}
 
-		void _subscribe(CoreSubscriber<? super Long> s) {
+		void _subscribe(CoreSubscriber<? super Void> s) {
 			if (!parent.markSentHeaders()) {
 				Operators.error(s,
 						new IllegalStateException("headers have already " + "been sent"));
@@ -665,7 +665,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						HttpConstants.DEFAULT_CHARSET,
 						HttpPostRequestEncoder.EncoderMode.RFC1738);
 
-				formCallback.accept(encoder);
+				formCallback.accept(parent, encoder);
 
 				encoder = encoder.applyChanges(parent.nettyRequest);
 				df = encoder.newFactory;
@@ -696,17 +696,21 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				}
 
 				if (encoder.isChunked()) {
-					tail.subscribe(s);
+					if (progressCallback != null) {
+						progressCallback.accept(tail);
+					}
 					parent.channel()
 					      .writeAndFlush(encoder);
 				}
 				else {
-					FutureMono.from(f)
-					          .cast(Long.class)
-					          .switchIfEmpty(Mono.just(encoder.length()))
-					          .flux()
-					          .subscribe(s);
+					if (progressCallback != null) {
+						progressCallback.accept(FutureMono.from(f)
+						                                  .cast(Long.class)
+						                                  .switchIfEmpty(Mono.just(encoder.length()))
+						                                  .flux());
+					}
 				}
+				Operators.complete(s);
 
 
 			}
