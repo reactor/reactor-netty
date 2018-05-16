@@ -17,39 +17,24 @@
 package reactor.ipc.netty.http.server;
 
 import java.util.Objects;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.JdkSslContext;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.util.annotation.Nullable;
-
-import java.util.function.BiPredicate;
-
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_INITIAL_BUFFER_SIZE;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_MAX_CHUNK_SIZE;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_MAX_HEADER_SIZE;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_MAX_INITIAL_LINE_LENGTH;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.DEFAULT_VALIDATE_HEADERS;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.INITIAL_BUFFER_SIZE;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.MAX_CHUNK_SIZE;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.MAX_HEADER_SIZE;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.MAX_INITIAL_LINE_LENGTH;
-import static reactor.ipc.netty.http.server.HttpRequestDecoderConfiguration.VALIDATE_HEADERS;
 
 /**
  * @author Stephane Maldini
@@ -96,64 +81,42 @@ final class HttpServerBind extends HttpServer implements Function<ServerBootstra
 			 .channel(loops.onServerChannel(elg));
 		}
 
-		Integer minCompressionSize = getAttributeValue(b, PRODUCE_GZIP, null);
+		HttpServerConfiguration conf = HttpServerConfiguration.getAndClean(b);
 
-		Integer line = getAttributeValue(b, MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		//remove any OPS since we will initialize below
+		BootstrapHandlers.channelOperationFactory(b);
 
-		Integer header = getAttributeValue(b, MAX_HEADER_SIZE, DEFAULT_MAX_HEADER_SIZE);
+		int line = conf.decoder.maxInitialLineLength;
+		int header = conf.decoder.maxHeaderSize;
+		int buffer = conf.decoder.initialBufferSize;
+		int chunk = conf.decoder.maxChunkSize;
+		boolean validate = conf.decoder.validateHeaders;
+		boolean forwarded = conf.forwarded;
+		int minCompressionSize = conf.minCompressionSize;
 
-		Integer chunk = getAttributeValue(b, MAX_CHUNK_SIZE, DEFAULT_MAX_CHUNK_SIZE);
+		BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate = compressPredicate(conf.compressPredicate, minCompressionSize);
 
-		Boolean validate = getAttributeValue(b, VALIDATE_HEADERS, DEFAULT_VALIDATE_HEADERS);
 
-		Integer buffer = getAttributeValue(b, INITIAL_BUFFER_SIZE, DEFAULT_INITIAL_BUFFER_SIZE);
-
-		ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(b);
-
-		BootstrapHandlers.updateConfiguration(b,
+		return BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.HttpInitializer,
 				(listener, channel) -> {
 					ChannelPipeline p = channel.pipeline();
 
 					p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(line, header, chunk, validate, buffer));
 
-					BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate =
-							compressPredicate(channel);
-
-					int minResponseSize = minCompressionSize != null ? minCompressionSize.intValue() : -1;
-
-					boolean alwaysCompress = compressPredicate == null && minResponseSize == 0;
+					boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 					if(alwaysCompress) {
 						p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
 					}
 
 					p.addLast(NettyPipeline.HttpServerHandler,
-							new HttpServerHandler(ops, listener));
+							new HttpServerHandler((c, l, msg) -> new HttpServerOperations(c, l, compressPredicate, (HttpRequest) msg, forwarded).bind(), listener));
 				});
-		return b;
 	}
 
-	private BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
-			Channel channel) {
-
-		Attribute<Integer> minCompressionSize = channel.attr(HttpServerBind.PRODUCE_GZIP);
-		final int minResponseSize;
-		if (minCompressionSize != null && minCompressionSize.get() != null) {
-			minResponseSize = minCompressionSize.get();
-		}
-		else {
-			minResponseSize = -1;
-		}
-
-		Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
-				channel.attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
-		final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-		if (predicate != null && predicate.get() != null) {
-			compressionPredicate = predicate.get();
-		}
-		else {
-			compressionPredicate = null;
-		}
+	@Nullable static BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+			int minResponseSize) {
 
 		if (minResponseSize <= 0){
 			if (compressionPredicate != null) {
@@ -181,25 +144,9 @@ final class HttpServerBind extends HttpServer implements Function<ServerBootstra
 					}
 				};
 
-		if (compressionPredicate == null) {
-			return lengthPredicate;
+		if (compressionPredicate != null) {
+			lengthPredicate = lengthPredicate.and(compressionPredicate);
 		}
-
-		return lengthPredicate.and(compressionPredicate);
-	}
-	static final AttributeKey<Integer> PRODUCE_GZIP =
-			AttributeKey.newInstance("produceGzip");
-	static final AttributeKey<BiPredicate<HttpServerRequest, HttpServerResponse>> PRODUCE_GZIP_PREDICATE =
-			AttributeKey.newInstance("produceGzipPredicate");
-
-	@SuppressWarnings("unchecked")
-	@Nullable
-	static  <T> T getAttributeValue(ServerBootstrap bootstrap, AttributeKey<T>
-			attributeKey, @Nullable T defaultValue) {
-		T result = bootstrap.config().attrs().get(attributeKey) != null
-				? (T) bootstrap.config().attrs().get(attributeKey)
-				: defaultValue;
-		bootstrap.attr(attributeKey, null);
-		return result;
+		return lengthPredicate;
 	}
 }

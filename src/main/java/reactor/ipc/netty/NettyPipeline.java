@@ -59,7 +59,6 @@ public interface NettyPipeline {
 	String ReactiveBridge     = RIGHT + "reactiveBridge";
 	String HttpCodec          = LEFT + "httpCodec";
 	String HttpDecompressor   = LEFT + "decompressor";
-	String HttpCompressor     = LEFT + "compressor";
 	String HttpAggregator     = LEFT + "httpAggregator";
 	String HttpServerHandler  = LEFT + "httpServerHandler";
 	String HttpInitializer    = LEFT + "httpInitializer";
@@ -139,9 +138,5 @@ public interface NettyPipeline {
 	 */
 	static ChannelInboundHandler inboundHandler(BiConsumer<? super ChannelHandlerContext, Object> handler) {
 		return new ReactorNetty.ExtractorHandler(handler);
-	}
-
-	static Object responseCompressionEvent() {
-		return ReactorNetty.RESPONSE_COMPRESSION_EVENT;
 	}
 }

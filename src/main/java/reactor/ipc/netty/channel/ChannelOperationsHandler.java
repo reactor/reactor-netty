@@ -27,7 +27,6 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
@@ -515,10 +514,6 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 		@Override
 		public void onComplete() {
-			if (parent.ctx.pipeline().get(NettyPipeline.CompressionHandler) != null) {
-				parent.ctx.pipeline()
-				          .fireUserEventTriggered(NettyPipeline.responseCompressionEvent());
-			}
 			long p = produced;
 			ChannelFuture f = lastWrite;
 			parent.innerActive = false;

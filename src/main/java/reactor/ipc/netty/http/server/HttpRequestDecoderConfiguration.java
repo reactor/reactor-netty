@@ -17,7 +17,6 @@ package reactor.ipc.netty.http.server;
 
 import java.util.function.Function;
 
-import io.netty.util.AttributeKey;
 import reactor.ipc.netty.tcp.TcpServer;
 
 /**
@@ -36,12 +35,6 @@ public final class HttpRequestDecoderConfiguration {
 	public static final int DEFAULT_MAX_CHUNK_SIZE          = 8192;
 	public static final boolean DEFAULT_VALIDATE_HEADERS    = true;
 	public static final int DEFAULT_INITIAL_BUFFER_SIZE     = 128;
-
-	static final AttributeKey<Integer> MAX_INITIAL_LINE_LENGTH = AttributeKey.newInstance("httpCodecMaxInitialLineLength");
-	static final AttributeKey<Integer> MAX_HEADER_SIZE         = AttributeKey.newInstance("httpCodecMaxHeaderSize");
-	static final AttributeKey<Integer> MAX_CHUNK_SIZE          = AttributeKey.newInstance("httpCodecMaxChunkSize");
-	static final AttributeKey<Boolean> VALIDATE_HEADERS        = AttributeKey.newInstance("httpCodecValidateHeaders");
-	static final AttributeKey<Integer> INITIAL_BUFFER_SIZE     = AttributeKey.newInstance("httpCodecInitialBufferSize");
 
 	int maxInitialLineLength = DEFAULT_MAX_INITIAL_LINE_LENGTH;
 	int maxHeaderSize        = DEFAULT_MAX_HEADER_SIZE;
@@ -127,11 +120,13 @@ public final class HttpRequestDecoderConfiguration {
 	 * {@link TcpServer} by enriching its attributes.
 	 */
 	Function<TcpServer, TcpServer> build() {
-		return tcp -> tcp.selectorAttr(MAX_INITIAL_LINE_LENGTH, maxInitialLineLength)
-		                 .selectorAttr(MAX_HEADER_SIZE, maxHeaderSize)
-		                 .selectorAttr(MAX_CHUNK_SIZE, maxChunkSize)
-		                 .selectorAttr(VALIDATE_HEADERS, validateHeaders)
-		                 .selectorAttr(INITIAL_BUFFER_SIZE, initialBufferSize);
+		HttpRequestDecoderConfiguration decoder = new HttpRequestDecoderConfiguration();
+		decoder.initialBufferSize = initialBufferSize;
+		decoder.maxChunkSize = maxChunkSize;
+		decoder.maxHeaderSize = maxHeaderSize;
+		decoder.maxInitialLineLength = maxInitialLineLength;
+		decoder.validateHeaders = validateHeaders;
+		return tcp -> tcp.bootstrap(b -> HttpServerConfiguration.decoder(b, decoder));
 	}
 
 }

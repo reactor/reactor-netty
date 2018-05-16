@@ -41,7 +41,13 @@ final class TcpServerDoOnConnection extends TcpServerOperator implements Connect
 	public void onStateChange(Connection connection, State newState) {
 		if (newState == State.CONFIGURED) {
 			if (onConnection != null) {
-				onConnection.accept(connection);
+				try {
+					onConnection.accept(connection);
+				}
+				catch (Throwable t) {
+					log.error("", t);
+					connection.channel().close();
+				}
 			}
 			return;
 		}

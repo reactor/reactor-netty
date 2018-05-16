@@ -36,7 +36,7 @@ final class HttpClientConfiguration {
 	static final HttpClientConfiguration DEFAULT = new HttpClientConfiguration();
 
 	static final AttributeKey<HttpClientConfiguration> CONF_KEY =
-			AttributeKey.newInstance("httpConf");
+			AttributeKey.newInstance("httpClientConf");
 
 	boolean      acceptGzip            = false;
 	boolean      followRedirect        = false;

@@ -25,7 +25,6 @@ import java.util.zip.GZIPInputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -41,7 +40,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author mostroverkhov
  * @author smaldini
  */
-@Ignore
 public class HttpCompressionClientServerTests {
 
 	@Test
@@ -196,22 +194,21 @@ public class HttpCompressionClientServerTests {
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.prepare()
 		                              .addressSupplier(() -> address(connection));
-		Tuple2<HttpHeaders, Flux<String>> resp =
+		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
 				      .uri("/test")
-				      .response((res, byteBufFlux) -> Mono.just(res.responseHeaders())
-				                                          .zipWith(Mono.just(byteBufFlux.asString())))
+				      .response((res, byteBufFlux) -> byteBufFlux.asString()
+				                                          .zipWith(Mono.just(res.responseHeaders())))
 				      .blockFirst();
 
 		//check the server didn't send the gzip header, only transfer-encoding
-		HttpHeaders headers = resp.getT1();
+		HttpHeaders headers = resp.getT2();
 		assertThat(headers.get("conTENT-encoding")).isNull();
 
 		//check the server sent plain text
-		String reply = resp.getT2()
-		                   .blockFirst();
+		String reply = resp.getT1();
 		Assert.assertEquals("reply", reply);
 
         connection.dispose();
@@ -223,7 +220,8 @@ public class HttpCompressionClientServerTests {
 	public void serverCompressionPredicateTrue() throws Exception {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
-		                              .compress((req, res) -> true);
+		                              .compress((req, res) -> true)
+				.wiretap();
 
 		DisposableServer connection =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -232,19 +230,21 @@ public class HttpCompressionClientServerTests {
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.prepare()
 		                              .addressSupplier(() -> address(connection));
-		Tuple2<HttpHeaders, Mono<byte[]>> resp =
+		Tuple2<HttpHeaders, byte[]> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
+				      .wiretap()
 				      .get()
 				      .uri("/test")
 				      .responseSingle((res, byteBufMono) -> Mono.just(res.responseHeaders())
-				                                          .zipWith(Mono.just(byteBufMono.asByteArray())))
+				                                          .zipWith(byteBufMono
+								                                          .asByteArray())
+						      .log())
 				      .block();
 
 		assertThat(resp.getT1().get("content-encoding")).isEqualTo("gzip");
 
-		byte[] replyBuffer = resp.getT2()
-		                         .block();
+		byte[] replyBuffer = resp.getT2();
 
 		assertThat(new String(replyBuffer, Charset.defaultCharset())).isNotEqualTo("reply");
 
@@ -265,7 +265,7 @@ public class HttpCompressionClientServerTests {
 	}
 
 	@Test
-	public void serverCompressionPredicateFalse() throws Exception {
+	public void serverCompressionPredicateFalse() {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
 		                              .compress((req, res) -> false);

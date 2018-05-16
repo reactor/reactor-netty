@@ -16,27 +16,26 @@
 
 package reactor.ipc.netty.http.server;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
-import java.time.Duration;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.Attribute;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.channel.BootstrapHandlers;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+
+import static reactor.ipc.netty.http.server.HttpServerConfiguration.*;
 
 /**
  * An HttpServer allows to build in a safe immutable way an HTTP server that is
@@ -186,7 +185,7 @@ public abstract class HttpServer {
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer forwarded() {
-		return tcpConfiguration(FORWARDED_ATTR_CONFIG);
+		return tcpConfiguration(FORWARD_ATTR_CONFIG);
 	}
 
 	/**
@@ -203,7 +202,7 @@ public abstract class HttpServer {
 		if (minResponseSize < 0) {
 			throw new IllegalArgumentException("minResponseSize must be positive");
 		}
-		return tcpConfiguration(tcp -> tcp.selectorAttr(HttpServerBind.PRODUCE_GZIP, minResponseSize));
+		return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpServerConfiguration.compressSize(b, minResponseSize)));
 	}
 
 	/**
@@ -220,7 +219,7 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer compress(BiPredicate<HttpServerRequest, HttpServerResponse> predicate) {
 		Objects.requireNonNull(predicate, "compressionPredicate");
-		return tcpConfiguration(tcp -> tcp.attr(HttpServerBind.PRODUCE_GZIP_PREDICATE, predicate));
+		return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpServerConfiguration.compressPredicate(b, predicate)));
 	}
 
 	/**
@@ -240,13 +239,10 @@ public abstract class HttpServer {
 			if (log.isDebugEnabled()) {
 				log.debug("{} handler is being applied: {}", c.channel(), handler);
 			}
-			try {
-				Mono.fromDirect(handler.apply((HttpServerRequest) c, (HttpServerResponse) c))
-				    .subscribe(c.disposeSubscriber());
-			} catch (Throwable t) {
-				log.error("", t);
-				c.channel().close();
-			}
+
+			Mono.fromDirect(handler.apply((HttpServerRequest) c, (HttpServerResponse) c))
+			    .subscribe(c.disposeSubscriber());
+
 		}));
 	}
 
@@ -278,7 +274,7 @@ public abstract class HttpServer {
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer noForwarded() {
-		return tcpConfiguration(FORWARDED_ATTR_DISABLE);
+		return tcpConfiguration(FORWARD_ATTR_DISABLE);
 	}
 
 	/**
@@ -327,64 +323,25 @@ public abstract class HttpServer {
 		return DEFAULT_TCP_SERVER;
 	}
 
-	static final ChannelOperations.OnSetup HTTP_OPS =
-			(c, listener, msg) -> {
-				Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
-						c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
-				final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-				if (predicate != null && predicate.get() != null) {
-					compressionPredicate = predicate.get();
-				}
-				else {
-					compressionPredicate = null;
-				}
-				new HttpServerOperations(c, listener, compressionPredicate, (HttpRequest) msg, false).bind();
-			};
-
-	static final ChannelOperations.OnSetup HTTP_OPS_FORWARDED =
-			(c, listener, msg) -> {
-				Attribute<BiPredicate<HttpServerRequest, HttpServerResponse>> predicate =
-						c.channel().attr(HttpServerBind.PRODUCE_GZIP_PREDICATE);
-				final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
-				if (predicate != null && predicate.get() != null) {
-					compressionPredicate = predicate.get();
-				}
-				else {
-					compressionPredicate = null;
-				}
-				new HttpServerOperations(c, listener, compressionPredicate, (HttpRequest) msg, true).bind();
-			};
 
 	static final int DEFAULT_PORT =
 			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 8080;
 
-	static final Function<ServerBootstrap, ServerBootstrap> HTTP_OPS_CONF = b -> {
-		BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
-		return b;
-	};
-
-	static final Function<ServerBootstrap, ServerBootstrap> HTTP_OPS_FORWARDED_CONF = b -> {
-		BootstrapHandlers.channelOperationFactory(b, HTTP_OPS_FORWARDED);
-		return b;
-	};
-
 	static final TcpServer DEFAULT_TCP_SERVER = TcpServer.create()
-			                                             .bootstrap(HTTP_OPS_CONF)
 			                                             .port(DEFAULT_PORT);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpServer.class);
 	static final Logger         log             = Loggers.getLogger(HttpServer.class);
 
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_CONFIG =
-			tcp -> tcp.selectorAttr(HttpServerBind.PRODUCE_GZIP, 0);
+			tcp -> tcp.bootstrap(MAP_COMPRESS);
 
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_DISABLE =
-			tcp -> tcp.selectorAttr(HttpServerBind.PRODUCE_GZIP, null)
-			          .selectorAttr(HttpServerBind.PRODUCE_GZIP_PREDICATE, null);
+			tcp -> tcp.bootstrap(MAP_NO_COMPRESS);
 
-	static final Function<TcpServer, TcpServer> FORWARDED_ATTR_CONFIG =
-			tcp -> tcp.bootstrap(HTTP_OPS_FORWARDED_CONF);
+	static final Function<TcpServer, TcpServer> FORWARD_ATTR_CONFIG =
+			tcp -> tcp.bootstrap(MAP_FORWARDED);
 
-	static final Function<TcpServer, TcpServer> FORWARDED_ATTR_DISABLE =
-			tcp -> tcp.bootstrap(HTTP_OPS_CONF);
+	static final Function<TcpServer, TcpServer> FORWARD_ATTR_DISABLE =
+			tcp -> tcp.bootstrap(MAP_NO_FORWARDED);
 }

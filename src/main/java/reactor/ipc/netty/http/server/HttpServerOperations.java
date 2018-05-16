@@ -78,13 +78,6 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse {
 
-	@SuppressWarnings("unchecked")
-	static void bindHttp(Connection connection, ConnectionObserver listener,
-			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
-			Object msg, boolean forwarded) {
-		new HttpServerOperations(connection, listener, compressionPredicate, (HttpRequest) msg, forwarded).bind();
-	}
-
 	final HttpResponse nettyResponse;
 	final HttpHeaders  responseHeaders;
 	final Cookies     cookieHolder;
@@ -108,7 +101,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	HttpServerOperations(Connection c,
 			ConnectionObserver listener,
-			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			HttpRequest nettyRequest,
 			boolean forwarded) {
 		super(c, listener);
