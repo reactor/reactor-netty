@@ -41,7 +41,8 @@ public class ConnectionInfoTests {
 		testClientRequest(
 				clientRequestHeaders -> {},
 				serverRequest -> {
-					assertThat(serverRequest.hostAddress().getHostString()).isIn("0:0:0:0:0:0:0:1", "127.0.0.1");
+					assertThat(serverRequest.hostAddress().getHostString())
+							.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
 					assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.address().getPort());
 				});
 	}
