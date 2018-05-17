@@ -179,8 +179,8 @@ final class HttpClientConnect extends HttpClient {
 						if (handler.compress) {
 							channel.pipeline()
 							       .addAfter(NettyPipeline.HttpCodec,
-									       NettyPipeline.HttpDecompressor,
-									       new HttpContentDecompressor());
+							                 NettyPipeline.HttpDecompressor,
+							                 new HttpContentDecompressor());
 						}
 
 					});
@@ -318,7 +318,7 @@ final class HttpClientConnect extends HttpClient {
 					this.defaultHeaders = defaultHeaders;
 				}
 				this.defaultHeaders.set(HttpHeaderNames.ACCEPT_ENCODING,
-						HttpHeaderValues.GZIP);
+				                        HttpHeaderValues.GZIP);
 			}
 			else {
 				this.defaultHeaders = defaultHeaders;
@@ -379,7 +379,7 @@ final class HttpClientConnect extends HttpClient {
 
 				if (!headers.contains(HttpHeaderNames.HOST)) {
 					headers.set(HttpHeaderNames.HOST,
-							resolveHostHeaderValue(ch.address()));
+					            resolveHostHeaderValue(ch.address()));
 				}
 
 				if (!headers.contains(HttpHeaderNames.ACCEPT)) {
@@ -562,7 +562,7 @@ final class HttpClientConnect extends HttpClient {
 	static {
 		try {
 			VALID_IPV6_PATTERN = Pattern.compile("([0-9a-f]{1,4}:){7}([0-9a-f]){1,4}",
-					Pattern.CASE_INSENSITIVE);
+			                                     Pattern.CASE_INSENSITIVE);
 		}
 		catch (PatternSyntaxException e) {
 			throw new IllegalStateException("Impossible");
