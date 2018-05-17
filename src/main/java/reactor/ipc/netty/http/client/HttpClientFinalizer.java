@@ -110,9 +110,9 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	}
 
 	static void dispose(HttpClientOperations c) {
-//		if (!c.isDisposed() && !c.isInboundDisposed()) {
-//			c.channel().eventLoop().execute(c::dispose);
-//		}
+		if (!c.isDisposed() && !c.isInboundDisposed()) {
+			c.channel().eventLoop().execute(c::dispose);
+		}
 	}
 
 

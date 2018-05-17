@@ -601,7 +601,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, this);
 
 			if(!rebind(ops)) {
-				log.error("Error while rebinding websocket in channel attribute");
+				log.error("Error while rebinding websocket in channel attribute: " +
+						":"+get(channel())+" to "+ops);
 			}
 		}
 	}
