@@ -19,9 +19,10 @@ package reactor.ipc.netty.tcp;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.Test;
@@ -53,7 +54,24 @@ public class BlockingConnectionTest {
 		}
 	};
 
-	static final Connection IMMEDIATE_STOP_CONTEXT = new Connection() {
+	static final DisposableServer NEVER_STOP_SERVER = new DisposableServer() {
+		@Override
+		public Channel channel() {
+			return new EmbeddedChannel();
+		}
+
+		@Override
+		public InetSocketAddress address() {
+			return InetSocketAddress.createUnresolved("localhost", 4321);
+		}
+
+		@Override
+		public Mono<Void> onDispose() {
+			return Mono.never();
+		}
+	};
+
+	static final DisposableServer IMMEDIATE_STOP_SERVER = new DisposableServer() {
 		@Override
 		public Channel channel() {
 			return new EmbeddedChannel();
@@ -156,86 +174,43 @@ public class BlockingConnectionTest {
 
 	@Test
 	public void testTimeoutOnStart() {
-		assertThatExceptionOfType(RuntimeException.class)
-				.isThrownBy(() -> new BlockingNettyContext(Mono.never(), "TEST NEVER START", Duration.ofMillis(100)))
-				.withCauseExactlyInstanceOf(TimeoutException.class)
-				.withMessage("java.util.concurrent.TimeoutException: TEST NEVER START couldn't be started within 100ms");
+		TcpClient neverStart = new TcpClient(){
+			@Override
+			public Mono<? extends Connection> connect(Bootstrap b) {
+				return Mono.never();
+			}
+		};
+
+		assertThatExceptionOfType(IllegalStateException.class)
+				.isThrownBy(() -> neverStart.connectNow(Duration.ofMillis(100)))
+				.withMessage("TcpClient couldn't be started within 100ms");
 	}
 
 	@Test
 	public void testTimeoutOnStop() {
-		final BlockingNettyContext neverStop =
-				new BlockingNettyContext(Mono.just(NEVER_STOP_CONTEXT), "TEST NEVER STOP", Duration.ofMillis(100));
+		Connection c = new TcpClient(){
+			@Override
+			public Mono<? extends Connection> connect(Bootstrap b) {
+				return Mono.just(NEVER_STOP_CONTEXT);
+			}
+		}.connectNow();
 
 		assertThatExceptionOfType(RuntimeException.class)
-				.isThrownBy(neverStop::shutdown)
-				.withCauseExactlyInstanceOf(TimeoutException.class)
-				.withMessage("java.util.concurrent.TimeoutException: TEST NEVER STOP couldn't be stopped within 100ms");
-	}
-
-	@Test
-	public void testTimeoutOnStopChangedTimeout() {
-		final BlockingNettyContext neverStop =
-				new BlockingNettyContext(Mono.just(NEVER_STOP_CONTEXT), "TEST NEVER STOP", Duration.ofMillis(500));
-
-		neverStop.setLifecycleTimeout(Duration.ofMillis(100));
-
-		assertThatExceptionOfType(RuntimeException.class)
-				.isThrownBy(neverStop::shutdown)
-				.withCauseExactlyInstanceOf(TimeoutException.class)
-				.withMessage("java.util.concurrent.TimeoutException: TEST NEVER STOP couldn't be stopped within 100ms");
+				.isThrownBy(() -> c.disposeNow(Duration.ofMillis(100)))
+				.withMessage("Socket couldn't be stopped within 100ms");
 	}
 
 	@Test
 	public void getContextAddressAndHost() {
-		BlockingNettyContext
-				facade = new BlockingNettyContext(Mono.just(NEVER_STOP_CONTEXT), "foo");
+		DisposableServer c = new TcpServer(){
+			@Override
+			public Mono<? extends DisposableServer> bind(ServerBootstrap b) {
+				return Mono.just(NEVER_STOP_SERVER);
+			}
+		}.bindNow();
 
-		assertThat(facade.getContext()).isSameAs(NEVER_STOP_CONTEXT);
-		assertThat(facade.getPort()).isEqualTo(NEVER_STOP_CONTEXT.address().getPort());
-		assertThat(facade.getHost()).isEqualTo(NEVER_STOP_CONTEXT.address().getHostString());
-	}
-
-	@Test
-	public void shutdownHookDeregisteredOnShutdown() {
-		BlockingNettyContext facade =
-				new BlockingNettyContext(Mono.just(IMMEDIATE_STOP_CONTEXT), "test");
-
-		facade.installShutdownHook();
-		Thread hook = facade.getShutdownHook();
-
-		assertThat(hook).isNotNull();
-
-		facade.shutdown();
-
-		assertThat(Runtime.getRuntime().removeShutdownHook(hook))
-				.withFailMessage("hook wasn't deregistered by shutdown")
-				.isFalse();
-		assertThat(facade.getShutdownHook())
-				.withFailMessage("hook reference wasn't nulled by shutdown")
-				.isNull();
-	}
-
-	@Test
-	public void installShutdownHookTwice() {
-		BlockingNettyContext facade =
-				new BlockingNettyContext(Mono.just(IMMEDIATE_STOP_CONTEXT), "test");
-
-		facade.installShutdownHook();
-		Thread hook1 = facade.getShutdownHook();
-
-		facade.installShutdownHook();
-		Thread hook2 = facade.getShutdownHook();
-
-		assertThat(hook1).isSameAs(hook2);
-
-		facade.shutdown();
-
-		assertThat(facade.getShutdownHook())
-				.withFailMessage("hook1 wasn't nulled out by shutdown")
-				.isNull();
-		assertThat(Runtime.getRuntime().removeShutdownHook(hook1))
-				.withFailMessage("hook1 wasn't deregistered by shutdown")
-				.isFalse();
+		assertThat(c).isSameAs(NEVER_STOP_SERVER);
+		assertThat(c.port()).isEqualTo(NEVER_STOP_CONTEXT.address().getPort());
+		assertThat(c.host()).isEqualTo(NEVER_STOP_CONTEXT.address().getHostString());
 	}
 }

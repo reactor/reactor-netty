@@ -18,7 +18,6 @@ package reactor.ipc.netty;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
-import java.util.concurrent.TimeoutException;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.DatagramChannel;
@@ -91,9 +90,12 @@ public interface DisposableChannel extends Disposable {
 			return;
 		}
 		dispose();
-		onDispose().timeout(timeout,
-				Mono.error(new TimeoutException("server couldn't be stopped within " + timeout.toMillis() + "ms")))
-		           .block();
+		try {
+			onDispose().block(timeout);
+		}
+		catch (Exception e) {
+			throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
+		}
 	}
 
 	/**

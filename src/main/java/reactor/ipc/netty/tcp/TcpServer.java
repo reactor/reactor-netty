@@ -170,8 +170,8 @@ public abstract class TcpServer {
 
 	/**
 	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
-	 * returned {@link Connection} offers simple server API, including to {@link
-	 * Connection#disposeNow()} shut it down in a blocking fashion.
+	 * returned {@link DisposableServer} offers simple server API, including to {@link
+	 * DisposableServer#disposeNow()} shut it down in a blocking fashion.
 	 *
 	 * @param timeout max startup timeout
 	 *
@@ -179,7 +179,12 @@ public abstract class TcpServer {
 	 */
 	public final DisposableServer bindNow(Duration timeout) {
 		Objects.requireNonNull(timeout, "timeout");
-		return Objects.requireNonNull(bind().block(timeout), "aborted");
+		DisposableServer server = bind().block(timeout);
+		if (server == null) {
+			throw new IllegalStateException("TcpServer couldn't be started within " +
+					timeout.toMillis() +	"ms");
+		}
+		return server;
 	}
 
 	/**

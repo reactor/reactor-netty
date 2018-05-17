@@ -17,6 +17,7 @@ package reactor.ipc.netty.udp;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -63,14 +64,6 @@ import reactor.util.Loggers;
  * @author Stephane Maldini
  */
 public abstract class UdpServer {
-
-	/**
-	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
-	 * the {@code PORT} <b>environment variable</b>.
-	 */
-	public static final int DEFAULT_PORT =
-			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
-					12012;
 
 	/**
 	 * Prepare a {@link UdpServer}
@@ -145,6 +138,25 @@ public abstract class UdpServer {
 			return Mono.error(t);
 		}
 		return bind(b);
+	}
+
+	/**
+	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
+	 * returned {@link Connection} offers simple server API, including to {@link
+	 * Connection#disposeNow()} shut it down in a blocking fashion.
+	 *
+	 * @param timeout max startup timeout
+	 *
+	 * @return a {@link Connection}
+	 */
+	public final Connection bindNow(Duration timeout) {
+		try {
+			return Objects.requireNonNull(bind().block(timeout), "aborted");
+		}
+		catch (Exception e) {
+			throw new IllegalStateException("UdpServer couldn't be started within " +
+					timeout.toMillis() +	"ms");
+		}
 	}
 
 	/**
@@ -376,6 +388,14 @@ public abstract class UdpServer {
 	 * @return a {@link Mono} of {@link Connection}
 	 */
 	protected abstract Mono<? extends Connection> bind(Bootstrap b);
+
+	/**
+	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
+	 * the {@code PORT} <b>environment variable</b>.
+	 */
+	static final int DEFAULT_PORT =
+			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) :
+					12012;
 
 	static final Bootstrap DEFAULT_BOOTSTRAP =
 			new Bootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)

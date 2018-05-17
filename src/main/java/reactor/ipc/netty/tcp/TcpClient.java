@@ -16,9 +16,18 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
+
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.LogLevel;
@@ -38,15 +47,6 @@ import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import javax.annotation.Nullable;
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * A TcpClient allows to build in a safe immutable way a TCP client that
@@ -213,7 +213,12 @@ public abstract class TcpClient {
 	 */
 	public final Connection connectNow(Duration timeout) {
 		Objects.requireNonNull(timeout, "timeout");
-		return Objects.requireNonNull(connect().block(timeout), "aborted");
+		try {
+			return Objects.requireNonNull(connect().block(timeout), "aborted");
+		}
+		catch (Exception e) {
+			throw new IllegalStateException("TcpClient couldn't be started within " + timeout.toMillis() +	"ms");
+		}
 	}
 
 	/**
