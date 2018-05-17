@@ -63,6 +63,7 @@ import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuple3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -442,10 +443,10 @@ public class HttpServerTests {
 				                                                       .sendHeaders())
 				                       .get("/204-2", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT))
 				                       .get("/205-1", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT)
-				                                                        .sendHeaders())
+				                                                       .sendHeaders())
 				                       .get("/205-2", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT))
 				                       .get("/304-1", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
-				                                                        .sendHeaders())
+				                                                       .sendHeaders())
 				                       .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
 				          .wiretap()
 				          .bindNow();
@@ -461,14 +462,17 @@ public class HttpServerTests {
 	}
 
 	private void checkResponse(String url, InetSocketAddress address) {
-		Mono<Tuple2<Integer, HttpHeaders>> response =
+		Mono<Tuple3<Integer, HttpHeaders, String>> response =
 				HttpClient.prepare()
 				          .addressSupplier(() -> address)
 				          .wiretap()
 				          .get()
 				          .uri(url)
-				          .responseSingle((r, buf) -> Mono.just(r.status().code())
-				                                          .zipWith(Mono.just(r.responseHeaders())));
+				          .responseSingle((r, buf) ->
+				                  Mono.zip(Mono.just(r.status().code()),
+				                           Mono.just(r.responseHeaders()),
+				                           buf.asString().defaultIfEmpty("NO BODY"))
+				          );
 
 		StepVerifier.create(response)
 		            .expectNextMatches(t -> {
@@ -476,11 +480,13 @@ public class HttpServerTests {
 		                HttpHeaders h = t.getT2();
 		                if (code == 204 || code == 304) {
 		                    return !h.contains("Transfer-Encoding") &&
-		                           !h.contains("Content-Length");
+		                           !h.contains("Content-Length") &&
+		                           "NO BODY".equals(t.getT3());
 		                }
 		                else if (code == 205) {
 		                    return !h.contains("Transfer-Encoding") &&
-		                           h.getInt("Content-Length").equals(0);
+		                           h.getInt("Content-Length").equals(0) &&
+		                           "NO BODY".equals(t.getT3());
 		                }else {
 		                    return false;
 		                }
