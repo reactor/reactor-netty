@@ -52,11 +52,11 @@ import static reactor.ipc.netty.http.client.HttpClientConfiguration.*;
 
 /**
  * An HttpClient allows to build in a safe immutable way an http client that is
- * materialized and connecting when {@link TcpClient#connect)} is ultimately called.
+ * materialized and connecting when {@link TcpClient#connect()} is ultimately called.
  * <p> Internally, materialization happens in three phases, first {@link #tcpConfiguration()}
  * is called to retrieve a ready to use {@link TcpClient}, then {@link
  * TcpClient#configure()} retrieve a usable {@link Bootstrap} for the final {@link
- * TcpClient#connect)} is called.
+ * TcpClient#connect()} is called.
  * <p> Examples:
  * <pre>
  * {@code

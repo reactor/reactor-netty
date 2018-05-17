@@ -105,7 +105,7 @@ public final class HttpRequestDecoderConfiguration {
 	 * {@link #DEFAULT_INITIAL_BUFFER_SIZE}.
 	 *
 	 * @param value the initial buffer size to use (strictly positive)
-	 * @return
+	 * @return this option builder for further configuration
 	 */
 	public HttpRequestDecoderConfiguration initialBufferSize(int value) {
 		if (value <= 0) {
