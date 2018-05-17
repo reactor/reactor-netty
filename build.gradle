@@ -181,6 +181,7 @@ configure(rootProject) { project ->
   }
 
   repositories {
+	mavenCentral()
 	if (version.endsWith('BUILD-SNAPSHOT') || project.hasProperty('platformVersion')) {
 	  if (System.getenv ()["bamboo_buildNumber"] == null) {
 		mavenLocal()
@@ -193,7 +194,6 @@ configure(rootProject) { project ->
 	maven { url 'http://repo.spring.io/libs-release' }
 	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 	jcenter()
-	mavenCentral()
   }
 
   // dependencies that are common across all java projects
