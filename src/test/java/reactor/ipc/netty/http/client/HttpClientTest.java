@@ -711,7 +711,7 @@ public class HttpClientTest {
 			                                                                                           .get(HttpHeaderNames.USER_AGENT)
 			                                                                                           .equals(HttpClient.USER_AGENT));
 
-			                           return resp;
+			                           return req.receive().then();
 		                           })
 		                         .wiretap()
 		                         .bindNow();
