@@ -107,8 +107,9 @@ public class ChannelOperationsHandlerTest {
 		ChannelOperationsHandler handler = new ChannelOperationsHandler(null, null);
 
 		EmbeddedChannel channel = new EmbeddedChannel(handler);
-		channel.config().setWriteBufferLowWaterMark(writeBufferLowWaterMark)
-		                .setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+		channel.config()
+		       .setWriteBufferLowWaterMark(writeBufferLowWaterMark)
+		       .setWriteBufferHighWaterMark(writeBufferHighWaterMark);
 
 		assertThat(handler.prefetch == (handler.inner.requested - handler.inner.produced)).isTrue();
 
@@ -155,8 +156,7 @@ public class ChannelOperationsHandlerTest {
 
 		private final int                 port;
 		private final ServerSocketChannel server;
-		private volatile boolean read = false;
-		private volatile Thread thread;
+		private volatile Thread           thread;
 
 		private ConnectionAbortServer(int port) {
 			super(1);
@@ -177,15 +177,13 @@ public class ChannelOperationsHandlerTest {
 				      .bind(new InetSocketAddress(port));
 				countDown();
 				thread = Thread.currentThread();
+				SocketChannel ch = server.accept();
 				while (true) {
-					SocketChannel ch = server.accept();
-					while (true) {
-						int bytes = ch.read(ByteBuffer.allocate(256));
-						if (bytes > 0) {
-							ch.close();
-							server.socket().close();
-							return;
-						}
+					int bytes = ch.read(ByteBuffer.allocate(256));
+					if (bytes > 0) {
+						ch.close();
+						server.socket().close();
+						return;
 					}
 				}
 			}

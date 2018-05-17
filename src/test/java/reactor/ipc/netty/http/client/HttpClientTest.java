@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLException;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -57,6 +56,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.DisposableServer;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
 import reactor.ipc.netty.resources.PoolResources;
@@ -75,19 +75,20 @@ public class HttpClientTest {
 
 	@Test
 	public void abort() {
-		DisposableServer x = TcpServer.create()
-		                        .port(0)
-		                        .handle((in, out) -> in.receive()
-		                                               .take(1)
-		                                               .thenMany(Flux.defer(() ->
-						                                                     out.withConnection(c ->
-								                                                     c.addHandlerFirst(new HttpResponseEncoder()))
-						                                                        .sendObject(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.ACCEPTED))
-						                                                        .then(Mono.delay(Duration.ofSeconds(2)).then()))
-		                                                     )
-		                          )
-		                        .wiretap()
-		                        .bindNow();
+		DisposableServer x =
+				TcpServer.create()
+				         .port(0)
+				         .handle((in, out) ->
+				                 in.receive()
+				                   .take(1)
+				                   .thenMany(Flux.defer(() ->
+				                           out.withConnection(c ->
+				                                   c.addHandlerFirst(new HttpResponseEncoder()))
+				                              .sendObject(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+				                                                                      HttpResponseStatus.ACCEPTED))
+				                              .then(Mono.delay(Duration.ofSeconds(2)).then()))))
+				         .wiretap()
+				         .bindNow();
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -100,33 +101,33 @@ public class HttpClientTest {
 		          .log()
 		          .block(Duration.ofSeconds(30));
 
-		ByteBuf resp =
-				HttpClient.prepare(pool)
-				          .port(x.address().getPort())
-				          .wiretap()
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .log()
-				          .blockLast(Duration.ofSeconds(30));
+		HttpClient.prepare(pool)
+		          .port(x.address().getPort())
+		          .wiretap()
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .log()
+		          .blockLast(Duration.ofSeconds(30));
 
-		resp = HttpClient.prepare(pool)
-		                 .port(x.address().getPort())
-		                 .wiretap()
-		                 .get()
-		                 .uri("/")
-		                 .responseContent()
-		                 .log()
-		                 .blockLast(Duration.ofSeconds(30));
+		HttpClient.prepare(pool)
+		          .port(x.address().getPort())
+		          .wiretap()
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .log()
+		          .blockLast(Duration.ofSeconds(30));
 
 		x.dispose();
 
 		pool.dispose();
 	}
 
-	DefaultFullHttpResponse response() {
-		DefaultFullHttpResponse r = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-				HttpResponseStatus.ACCEPTED);
+	private DefaultFullHttpResponse response() {
+		DefaultFullHttpResponse r =
+				new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+				                            HttpResponseStatus.ACCEPTED);
 		r.headers()
 		 .set(HttpHeaderNames.CONTENT_LENGTH, 0);
 		return r;
@@ -138,35 +139,37 @@ public class HttpClientTest {
 		final PoolResources pool = PoolResources.fixed("local", 1);
 		CountDownLatch latch = new CountDownLatch(3);
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
-		DisposableServer serverContext = HttpServer.create()
-		                                     .port(8080)
-		                                     .route(r -> r.post("/",
-				                                       (req, resp) -> req.receive()
-				                                                         .asString()
-				                                                         .flatMap(data -> {
-					                                                         latch.countDown();
-					                                                         return resp.status(
-							                                                         200)
-					                                                                    .send();
-				                                                         })))
-		                                     .wiretap()
-		                                     .bindNow();
+		DisposableServer serverContext =
+				HttpServer.create()
+				          .port(8080)
+				          .route(r -> r.post("/",
+				                  (req, resp) -> req.receive()
+				                                    .asString()
+				                                    .flatMap(data -> {
+				                                        latch.countDown();
+				                                        return resp.status(200)
+				                                                   .send();
+				                                    })))
+				          .wiretap()
+				          .bindNow();
 
 		final HttpClient client =
 				HttpClient.prepare(pool)
 				          .addressSupplier(() -> new InetSocketAddress(8080))
 				          .wiretap();
 		Flux.just("1", "2", "3")
-		    .concatMap(data -> client.doOnResponse((res, conn) -> localAddresses.add(conn.channel()
-		                                                                                 .localAddress()
-		                                                                                 .toString()))
-				                     .post()
-		                             .uri("/")
-		                             .send(ByteBufFlux.fromString(Flux.just(data)))
-		                             .response((res, buf) -> {
-		                                       buf.subscribe();
-		                                       return Mono.empty();
-		                             }));
+		    .concatMap(data ->
+		            client.doOnResponse((res, conn) ->
+		                    localAddresses.add(conn.channel()
+		                                           .localAddress()
+		                                           .toString()))
+		                  .post()
+		                  .uri("/")
+		                  .send(ByteBufFlux.fromString(Flux.just(data)))
+		                  .response((res, buf) -> {
+		                      buf.subscribe();
+		                      return Mono.empty();
+		                  }));
 
 		latch.await();
 		pool.dispose();
@@ -177,17 +180,16 @@ public class HttpClientTest {
 	@Test
 	@Ignore
 	public void pipelined() {
-		DisposableServer x = TcpServer.create()
-		                        .host("localhost")
-		                        .port(0)
-		                        .handle((in, out) -> out.withConnection(c -> c.addHandlerFirst(new
-				                          HttpResponseEncoder()))
-		                                                .sendObject(Flux.just(
-				                                                      response(),
-				                                                      response()))
-		                                                .neverComplete())
-		                        .wiretap()
-		                        .bindNow();
+		DisposableServer x =
+				TcpServer.create()
+				         .host("localhost")
+				         .port(0)
+				         .handle((in, out) ->
+				                 out.withConnection(c -> c.addHandlerFirst(new HttpResponseEncoder()))
+				                    .sendObject(Flux.just(response(), response()))
+				                    .neverComplete())
+				         .wiretap()
+				         .bindNow();
 
 		PoolResources pool = PoolResources.fixed("test", 1);
 
@@ -224,10 +226,10 @@ public class HttpClientTest {
 	public void backpressured() throws Exception {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
 		DisposableServer c = HttpServer.create()
-		                         .port(0)
-		                         .route(routes -> routes.directory("/test", resource))
-		                         .wiretap()
-		                         .bindNow();
+		                               .port(0)
+		                               .route(routes -> routes.directory("/test", resource))
+		                               .wiretap()
+		                               .bindNow();
 
 		ByteBufFlux remote =
 				HttpClient.prepare()
@@ -257,37 +259,36 @@ public class HttpClientTest {
 	public void serverInfiniteClientClose() throws Exception {
 
 		CountDownLatch latch = new CountDownLatch(1);
-		DisposableServer c = HttpServer.create()
-		                         .port(0)
-		                         .handle((req, resp) -> {
-			                           req.withConnection(
-			                              cn -> cn.onDispose(latch::countDown));
+		DisposableServer c =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) -> {
+				                  req.withConnection(cn -> cn.onDispose(latch::countDown));
 
-			                           return Flux.interval(Duration.ofSeconds(1))
-			                                      .flatMap(d ->
-				                                      resp.withConnection(cn ->
-						                                      cn.channel()
-						                                        .config()
-						                                        .setAutoRead(true))
-				                                          .sendObject(Unpooled.EMPTY_BUFFER)
-				                                                 .then()
-				                                                 .doOnSuccess(x ->
-						                                                 req.withConnection(cn ->
-								                                                 cn.channel()
-								                                                   .config()
-								                                                   .setAutoRead(false))));
-		})
-		                         .wiretap()
-		                         .bindNow();
-
-		Object remote =
-				HttpClient.prepare()
-				          .port(c.address().getPort())
+				                  return Flux.interval(Duration.ofSeconds(1))
+				                             .flatMap(d ->
+				                                     resp.withConnection(cn ->
+				                                             cn.channel()
+				                                               .config()
+				                                               .setAutoRead(true))
+				                                               .sendObject(Unpooled.EMPTY_BUFFER)
+				                                               .then()
+				                                               .doOnSuccess(x ->
+				                                                       req.withConnection(cn ->
+				                                                               cn.channel()
+				                                                                 .config()
+				                                                                 .setAutoRead(false))));
+				          })
 				          .wiretap()
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .blockLast();
+				          .bindNow();
+
+		HttpClient.prepare()
+		          .port(c.address().getPort())
+		          .wiretap()
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .blockLast();
 
 		latch.await();
 		c.dispose();
@@ -296,21 +297,20 @@ public class HttpClientTest {
 	@Test
 	@Ignore
 	public void proxy() {
-		String remote =
-				HttpClient.prepare()
-				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-				                                                                   .host("127.0.0.1")
-				                                                                   .port(8888)))
-				          .wiretap()
-				          .followRedirect()
-				          .get()
-				          .uri("https://projectreactor.io")
-				          .responseContent()
-				          .retain()
-				          .asString()
-				          .limitRate(1)
-				          .reduce(String::concat)
-				          .block(Duration.ofSeconds(30));
+		HttpClient.prepare()
+		          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+		                                                                   .host("127.0.0.1")
+		                                                                   .port(8888)))
+		          .wiretap()
+		          .followRedirect()
+		          .get()
+		          .uri("https://projectreactor.io")
+		          .responseContent()
+		          .retain()
+		          .asString()
+		          .limitRate(1)
+		          .reduce(String::concat)
+		          .block(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -361,9 +361,9 @@ public class HttpClientTest {
 		                    .put()
 		                    .uri("/post")
 		                    .sendForm((req, form) -> form.multipart(true)
-		                                          .file("test", f)
-		                                          .attr("att1", "attr2")
-		                                          .file("test2", f))
+		                                                 .file("test", f)
+		                                                 .attr("att1", "attr2")
+		                                                 .file("test2", f))
 		                    .responseSingle((r, buf) -> Mono.just(r.status().code()))
 		                    .block(Duration.ofSeconds(30));
 		res = HttpClient.prepare()
@@ -534,15 +534,14 @@ public class HttpClientTest {
 				          .responseSingle((res, buf) -> Mono.just(res.status()))
 				          .block(Duration.ofSeconds(30));
 
-		HttpResponseStatus r1 =
-				HttpClient.prepare(fixed)
-				          .wiretap()
-				          .headers(h -> h.add("content-length", "1"))
-				          .request(HttpMethod.GET)
-				          .uri("http://google.com")
-				          .send(ByteBufFlux.fromString(Mono.just(" ")))
-				          .responseSingle((res, buf) -> Mono.just(res.status()))
-				          .block(Duration.ofSeconds(30));
+		HttpClient.prepare(fixed)
+		          .wiretap()
+		          .headers(h -> h.add("content-length", "1"))
+		          .request(HttpMethod.GET)
+		          .uri("http://google.com")
+		          .send(ByteBufFlux.fromString(Mono.just(" ")))
+		          .responseSingle((res, buf) -> Mono.just(res.status()))
+		          .block(Duration.ofSeconds(30));
 
 		Assert.assertTrue(Objects.equals(r, HttpResponseStatus.BAD_REQUEST));
 		fixed.dispose();
@@ -573,38 +572,32 @@ public class HttpClientTest {
 	@Test
 	public void prematureCancel() {
 		DirectProcessor<Void> signal = DirectProcessor.create();
-		DisposableServer x = TcpServer.create()
-		                        .host("localhost")
-		                        .port(0)
-		                        .handle((in, out) -> {
-										signal.onComplete();
-										return out.withConnection(c -> c.addHandlerFirst(
-												new HttpResponseEncoder()))
-										          .sendObject(Mono.delay(Duration
-												          .ofSeconds(2))
-												          .map(t ->
-												          new DefaultFullHttpResponse(
-														          HttpVersion.HTTP_1_1,
-														          HttpResponseStatus
-																          .PROCESSING)))
-												.neverComplete();
-		                          })
-		                        .wiretap()
-		                        .bindNow(Duration.ofSeconds(30));
+		DisposableServer x =
+				TcpServer.create()
+				         .host("localhost")
+				         .port(0)
+				         .handle((in, out) -> {
+				             signal.onComplete();
+				             return out.withConnection(c -> c.addHandlerFirst(new HttpResponseEncoder()))
+				                       .sendObject(Mono.delay(Duration.ofSeconds(2))
+				                                       .map(t -> new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+				                                                                             HttpResponseStatus.PROCESSING)))
+				                       .neverComplete();
+				         })
+				         .wiretap()
+				         .bindNow(Duration.ofSeconds(30));
 
-		StepVerifier.create(createHttpClientForContext(x)
-		                              .get()
-		                              .uri("/")
-		                              .responseContent()
-		                              .timeout(signal)
-		)
-		            .verifyError(TimeoutException.class);
+		StepVerifier.create(
+				createHttpClientForContext(x).get()
+				                             .uri("/")
+				                             .responseContent()
+				                             .timeout(signal))
+				    .verifyError(TimeoutException.class);
 //		Thread.sleep(1000000);
 	}
 
 	@Test
 	public void gzip() {
-
 		String content = "HELLO WORLD";
 
 		DisposableServer c =
@@ -614,27 +607,27 @@ public class HttpClientTest {
 				          .handle((req, res) -> res.sendString(Mono.just(content)))
 				          .bindNow();
 
-
 		//verify gzip is negotiated (when no decoder)
 		StepVerifier.create(
-		        HttpClient.prepare()
-		                  .port(c.address().getPort())
-		                  .wiretap()
-		                  .headers(h -> h.add("Accept-Encoding", "gzip")
-		                                 .add("Accept-Encoding", "deflate"))
-		                  .followRedirect()
-		                  .get()
-		                  .response((r, buf) -> buf.aggregate()
-		                                           .asString()
-		                                           .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))
-		                                           .zipWith(Mono.just(r))))
-		            .expectNextMatches(tuple -> {
-		                               String content1 = tuple.getT1().getT1();
-		                               return !content1.equals(content)
-		                                      && "gzip".equals(tuple.getT1().getT2());
-		                               })
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+				HttpClient.prepare()
+				          .port(c.address().getPort())
+				          .wiretap()
+				          .headers(h -> h.add("Accept-Encoding", "gzip")
+				                         .add("Accept-Encoding", "deflate"))
+				          .followRedirect()
+				          .get()
+				          .response((r, buf) -> buf.aggregate()
+				                                   .asString()
+				                                   .zipWith(Mono.just(r.responseHeaders()
+				                                                       .get("Content-Encoding", "")))
+				                                   .zipWith(Mono.just(r))))
+				    .expectNextMatches(tuple -> {
+				            String content1 = tuple.getT1().getT1();
+				            return !content1.equals(content)
+				                   && "gzip".equals(tuple.getT1().getT2());
+				    })
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
 
 		//verify decoder does its job and removes the header
 		StepVerifier.create(
@@ -643,22 +636,23 @@ public class HttpClientTest {
 				          .wiretap()
 				          .followRedirect()
 				          .doOnRequest((req, conn) -> {
-				          	req.addHeader("Accept-Encoding", "gzip")
-				               .addHeader("Accept-Encoding", "deflate");
-				          	conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
+				                  req.addHeader("Accept-Encoding", "gzip")
+				                     .addHeader("Accept-Encoding", "deflate");
+				                  conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
 				          })
 				          .get()
 				          .response((r, buf) -> buf.aggregate()
 				                                   .asString()
-				                                   .zipWith(Mono.just(r.responseHeaders().get("Content-Encoding", "")))
+				                                   .zipWith(Mono.just(r.responseHeaders()
+				                                                       .get("Content-Encoding", "")))
 				                                   .zipWith(Mono.just(r))))
-		            .expectNextMatches(tuple -> {
-			            String content1 = tuple.getT1().getT1();
-		                               return content1.equals(content)
-		                                      && "".equals(tuple.getT1().getT2());
-		                               })
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+				    .expectNextMatches(tuple -> {
+				            String content1 = tuple.getT1().getT1();
+				            return content1.equals(content)
+				                   && "".equals(tuple.getT1().getT2());
+				    })
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
 		c.dispose();
 	}
 
@@ -674,12 +668,14 @@ public class HttpClientTest {
 
 	private void doTestGzip(boolean gzipEnabled) {
 		String expectedResponse = gzipEnabled ? "gzip" : "no gzip";
-		DisposableServer server = HttpServer.create()
-		                         .port(0)
-		                         .handle((req,res) -> res.sendString(
-		                Mono.just(req.requestHeaders().get(HttpHeaderNames.ACCEPT_ENCODING, "no gzip"))))
-		                         .wiretap()
-		                         .bindNow();
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req,res) -> res.sendString(Mono.just(req.requestHeaders()
+				                                                           .get(HttpHeaderNames.ACCEPT_ENCODING,
+				                                                                "no gzip"))))
+				          .wiretap()
+				          .bindNow();
 		HttpClient client = HttpClient.prepare()
 		                              .port(server.address().getPort())
 		                              .wiretap();
@@ -688,10 +684,10 @@ public class HttpClientTest {
 		}
 
 		StepVerifier.create(client.get()
-		                  .uri("/")
-		                  .response((r, buf) -> buf.asString()
-		                                           .elementAt(0)
-		                                           .zipWith(Mono.just(r))))
+		                          .uri("/")
+		                          .response((r, buf) -> buf.asString()
+		                                                   .elementAt(0)
+		                                                   .zipWith(Mono.just(r))))
 		            .expectNextMatches(tuple -> expectedResponse.equals(tuple.getT1()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -701,28 +697,30 @@ public class HttpClientTest {
 
 	@Test
 	public void testUserAgent() {
-		DisposableServer c = HttpServer.create()
-		                         .port(0)
-		                         .handle((req, resp) -> {
-			                           Assert.assertTrue(""+req.requestHeaders()
-			                                                   .get(HttpHeaderNames.USER_AGENT),
-					                           req.requestHeaders()
-			                                               .contains(HttpHeaderNames.USER_AGENT) && req.requestHeaders()
-			                                                                                           .get(HttpHeaderNames.USER_AGENT)
-			                                                                                           .equals(HttpClient.USER_AGENT));
+		DisposableServer c =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) -> {
+				                  Assert.assertTrue("" + req.requestHeaders()
+				                                            .get(HttpHeaderNames.USER_AGENT),
+				                                   req.requestHeaders()
+				                                       .contains(HttpHeaderNames.USER_AGENT) &&
+				                                   req.requestHeaders()
+				                                      .get(HttpHeaderNames.USER_AGENT)
+				                                      .equals(HttpClient.USER_AGENT));
 
-			                           return req.receive().then();
-		                           })
-		                         .wiretap()
-		                         .bindNow();
+				                  return req.receive().then();
+				          })
+				          .wiretap()
+				          .bindNow();
 
-		ByteBuf resp = HttpClient.prepare()
-		                         .port(c.address().getPort())
-		                         .wiretap()
-		                         .get()
-		                         .uri("/")
-		                         .responseContent()
-		                         .blockLast();
+		HttpClient.prepare()
+		          .port(c.address().getPort())
+		          .wiretap()
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .blockLast();
 
 		c.dispose();
 	}
@@ -787,7 +785,7 @@ public class HttpClientTest {
 				          .bindNow();
 
 		String responseString = HttpClient.prepare()
-		                                  .addressSupplier(() -> context.address())
+		                                  .addressSupplier(context::address)
 		                                  .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
 		                                  .wiretap()
 		                                  .get()
@@ -807,24 +805,24 @@ public class HttpClientTest {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient()
-				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 		AtomicReference<String> uploaded = new AtomicReference<>();
 
 		DisposableServer context =
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
 				          .route(r -> r.post("/upload", (req, resp) ->
-						          req.receive()
-						             .aggregate()
-						             .asString(StandardCharsets.UTF_8)
-						             .doOnNext(uploaded::set)
-						             .then(resp.status(201).sendString(Mono.just("Received File")).then())))
+				                  req.receive()
+				                     .aggregate()
+				                     .asString(StandardCharsets.UTF_8)
+				                     .doOnNext(uploaded::set)
+				                     .then(resp.status(201).sendString(Mono.just("Received File")).then())))
 				          .wiretap()
 				          .bindNow();
 
 		Tuple2<String, Integer> response =
 				HttpClient.prepare()
-				          .addressSupplier(() -> context.address())
+				          .addressSupplier(context::address)
 				          .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
 				          .wiretap()
 				          .post()
@@ -837,13 +835,15 @@ public class HttpClientTest {
 		context.dispose();
 		context.onDispose().block();
 
+		assertThat(response).isNotNull();
 		assertThat(response.getT2()).isEqualTo(201);
 		assertThat(response.getT1()).isEqualTo("Received File");
 
 		assertThat(uploaded.get())
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
-				.contains("1024 mark here -><- 1024 mark here")
-				.endsWith("End of File");
+		                   .startsWith("This is an UTF-8 file that is larger than 1024 bytes. " +
+		                           "It contains accents like é.")
+		                   .contains("1024 mark here -><- 1024 mark here")
+		                   .endsWith("End of File");
 	}
 
 	@Test
@@ -855,12 +855,13 @@ public class HttpClientTest {
 				HttpServer.create()
 				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
 				          .route(r -> r.post("/upload", (req, resp) ->
-						          req
-								          .receive()
-								          .aggregate()
-								          .asString(StandardCharsets.UTF_8)
-								          .doOnNext(uploaded::set)
-								          .then(resp.status(201).sendString(Mono.just("Received File")).then())))
+				                  req.receive()
+				                    .aggregate()
+				                    .asString(StandardCharsets.UTF_8)
+				                    .doOnNext(uploaded::set)
+				                    .then(resp.status(201)
+				                              .sendString(Mono.just("Received File"))
+				                              .then())))
 				          .wiretap()
 				          .bindNow();
 
@@ -876,13 +877,15 @@ public class HttpClientTest {
 		context.dispose();
 		context.onDispose().block();
 
+		assertThat(response).isNotNull();
 		assertThat(response.getT2()).isEqualTo(201);
 		assertThat(response.getT1()).isEqualTo("Received File");
 
 		assertThat(uploaded.get())
-				.startsWith("This is an UTF-8 file that is larger than 1024 bytes. " + "It contains accents like é.")
-				.contains("1024 mark here -><- 1024 mark here")
-				.endsWith("End of File");
+		                   .startsWith("This is an UTF-8 file that is larger than 1024 bytes. " +
+		                           "It contains accents like é.")
+		                   .contains("1024 mark here -><- 1024 mark here")
+		                   .endsWith("End of File");
 	}
 
 	@Test
@@ -894,35 +897,32 @@ public class HttpClientTest {
 				                                                     .status(HttpResponseStatus.CREATED)
 				                                                     .sendHeaders())
 				                       .put("/204", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
-				                                                         .sendHeaders())
+				                                                     .sendHeaders())
 				                       .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
-				                                                         .sendHeaders()))
+				                                                     .sendHeaders()))
 				          .bindNow();
 
-		ByteBuf response1 =
-				createHttpClientForContext(context)
-						.doOnRequest((r, c) -> System.out.println("onReq: "+r))
-						.doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-						.doOnResponse((r, c) -> System.out.println("onResp: "+r))
-						.doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
-				          .put()
-				          .uri("/201")
-				          .responseContent()
-				          .blockLast();
+		createHttpClientForContext(context)
+		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
+		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
+		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
+		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .put()
+		        .uri("/201")
+		        .responseContent()
+		        .blockLast();
 
-		ByteBuf response2 =
-				createHttpClientForContext(context)
-				          .put()
-				          .uri("/204")
-				          .responseContent()
-				          .blockLast(Duration.ofSeconds(30));
+		createHttpClientForContext(context)
+		          .put()
+		          .uri("/204")
+		          .responseContent()
+		          .blockLast(Duration.ofSeconds(30));
 
-		ByteBuf response3 =
-				createHttpClientForContext(context)
-				          .get()
-				          .uri("/200")
-				          .responseContent()
-				          .blockLast(Duration.ofSeconds(30));
+		createHttpClientForContext(context)
+		          .get()
+		          .uri("/200")
+		          .responseContent()
+		          .blockLast(Duration.ofSeconds(30));
 
 		context.dispose();
 	}
@@ -930,15 +930,15 @@ public class HttpClientTest {
 	@Test
 	public void closePool() {
 		PoolResources pr = PoolResources.fixed("wstest", 1);
-		DisposableServer httpServer = HttpServer.create()
-		                       .port(0)
-		                       .handle((in, out) ->  out.options(opt -> opt.flushOnEach())
-		                                                .sendString(
-						                                  Mono.just("test")
-						                                      .delayElement(Duration.ofMillis(100))
-						                                      .repeat()))
-		                       .wiretap()
-		                       .bindNow();
+		DisposableServer httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((in, out) ->  out.options(NettyPipeline.SendOptions::flushOnEach)
+				                                   .sendString(Mono.just("test")
+				                                                   .delayElement(Duration.ofMillis(100))
+				                                                   .repeat()))
+				          .wiretap()
+				          .bindNow();
 
 		Flux<String> ws = HttpClient.prepare(pr)
 		                            .port(httpServer.address().getPort())
@@ -950,13 +950,12 @@ public class HttpClientTest {
 		StepVerifier.create(
 				Flux.range(1, 10)
 				    .concatMap(i -> ws.take(2)
-				                      .log())
-		)
-		            .expectNextSequence(Flux.range(1, 20)
-		                                    .map(v -> "test")
-		                                    .toIterable())
-		            .expectComplete()
-		            .verify();
+				                      .log()))
+				    .expectNextSequence(Flux.range(1, 20)
+				                            .map(v -> "test")
+				                            .toIterable())
+				    .expectComplete()
+				    .verify();
 
 		httpServer.dispose();
 		pr.dispose();
@@ -982,7 +981,7 @@ public class HttpClientTest {
 				          .asString();
 
 		StepVerifier.create(content)
-		            .expectNextMatches(s -> "OK".equals(s))
+		            .expectNextMatches("OK"::equals)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
@@ -991,7 +990,7 @@ public class HttpClientTest {
 
 	private HttpClient createHttpClientForContext(DisposableServer context) {
 		return HttpClient.prepare()
-		                 .addressSupplier(() -> context.address())
+		                 .addressSupplier(context::address)
 		                 .wiretap();
 	}
 }
