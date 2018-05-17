@@ -16,21 +16,26 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.util.Objects;
+
 import io.netty.bootstrap.Bootstrap;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
-import reactor.ipc.netty.ConnectionObserver;
-import reactor.ipc.netty.channel.BootstrapHandlers;
-import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.resources.LoopResources;
-import reactor.util.context.Context;
 
 /**
  * @author Stephane Maldini
  */
 final class TcpClientConnect extends TcpClient {
 
-	static final TcpClientConnect INSTANCE = new TcpClientConnect();
+	static final TcpClientConnect INSTANCE = new TcpClientConnect(ConnectionProvider.newConnection());
+
+	final ConnectionProvider provider;
+
+	TcpClientConnect(ConnectionProvider provider) {
+		this.provider = Objects.requireNonNull(provider, "connectionProvider");
+	}
 
 	@Override
 	public Mono<? extends Connection> connect(Bootstrap b) {
@@ -44,34 +49,7 @@ final class TcpClientConnect extends TcpClient {
 					TcpUtils.findSslContext(b));
 		}
 
-		return Mono.create(sink -> {
-			Bootstrap bootstrap = b.clone();
-			ChannelOperations.OnSetup factory = BootstrapHandlers.channelOperationFactory(bootstrap);
-			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
-
-			TcpUtils.convertLazyRemoteAddress(bootstrap);
-
-			sink.onCancel(BootstrapHandlers.connect(bootstrap, factory, new ConnectionObserver() {
-				@Override
-				public Context currentContext() {
-					return sink.currentContext();
-				}
-
-				@Override
-				public void onStateChange(Connection connection, State newState) {
-					if (newState == State.CONFIGURED) {
-						sink.success(connection);
-					}
-					obs.onStateChange(connection, newState);
-				}
-
-				@Override
-				public void onUncaughtException(Connection c, Throwable error) {
-					sink.error(error);
-					obs.onUncaughtException(c, error);
-				}
-			}));
-		});
+		return provider.acquire(b);
 
 	}
 }

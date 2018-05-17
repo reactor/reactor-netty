@@ -71,23 +71,6 @@ public class BlockingConnectionTest {
 		}
 	};
 
-	static final DisposableServer IMMEDIATE_STOP_SERVER = new DisposableServer() {
-		@Override
-		public Channel channel() {
-			return new EmbeddedChannel();
-		}
-
-		@Override
-		public InetSocketAddress address() {
-			return InetSocketAddress.createUnresolved("localhost", 4321);
-		}
-
-		@Override
-		public Mono<Void> onDispose() {
-			return Mono.empty();
-		}
-	};
-
 	@Test
 	public void simpleServerFromAsyncServer() throws InterruptedException {
 		DisposableServer simpleServer =

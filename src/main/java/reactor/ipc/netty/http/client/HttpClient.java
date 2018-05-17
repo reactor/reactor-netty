@@ -41,7 +41,6 @@ import reactor.ipc.netty.ByteBufMono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
@@ -323,7 +322,6 @@ public abstract class HttpClient {
 	 */
 	public static HttpClient prepare(PoolResources poolResources) {
 		return new HttpClientConnect(TcpClient.create(poolResources)
-		                                      .bootstrap(HTTP_OPS_CONF)
 		                                      .port(80));
 	}
 
@@ -333,7 +331,7 @@ public abstract class HttpClient {
 	 * @return a {@link HttpClient}
 	 */
 	public static HttpClient from(TcpClient tcpClient) {
-		return new HttpClientConnect(tcpClient.bootstrap(HTTP_OPS_CONF));
+		return new HttpClientConnect(tcpClient);
 	}
 
 	/**
@@ -616,14 +614,6 @@ public abstract class HttpClient {
 	}
 
 
-	static final ChannelOperations.OnSetup HTTP_OPS =
-			(ch, c, msg) -> new HttpClientOperations(ch, c).bind();
-
-	static final Function<Bootstrap, Bootstrap> HTTP_OPS_CONF = b -> {
-		BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
-		return b;
-	};
-
 	static String reactorNettyVersion() {
 		return Optional.ofNullable(HttpClient.class.getPackage()
 		                                           .getImplementationVersion())
@@ -636,7 +626,6 @@ public abstract class HttpClient {
 	final static String                    HTTPS_SCHEME = "https";
 
 	static final TcpClient DEFAULT_TCP_CLIENT = TcpClient.newConnection()
-	                                                     .bootstrap(HTTP_OPS_CONF)
 	                                                     .port(80);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);

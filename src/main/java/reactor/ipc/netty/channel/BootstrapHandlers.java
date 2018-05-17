@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.AbstractBootstrap;
@@ -31,13 +30,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.Future;
-import reactor.core.Disposable;
 import reactor.core.Exceptions;
-import reactor.core.publisher.MonoSink;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
@@ -65,18 +59,13 @@ public abstract class BootstrapHandlers {
 	 *
 	 * @param b a server bootstrap
 	 * @param opsFactory an operation factory
-	 * @param selectorListener a selector connection observer
 	 * @param childListener a connection observer
-	 * @return a listener for deferred or bind()
 	 */
-	public static Disposable bind(ServerBootstrap b, ChannelOperations.OnSetup
-			opsFactory, ConnectionObserver selectorListener, ConnectionObserver childListener) {
+	public static void finalizeHandler(ServerBootstrap b, ChannelOperations.OnSetup
+			opsFactory, ConnectionObserver childListener) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(opsFactory, "ops");
-		Objects.requireNonNull(selectorListener, "selectorListener");
 		Objects.requireNonNull(childListener, "childListener");
-
-		DisposableBind disposableServer = new DisposableBind(selectorListener);
 
 		BootstrapPipelineHandler pipeline = null;
 		ChannelHandler handler = b.config().childHandler();
@@ -85,8 +74,6 @@ public abstract class BootstrapHandlers {
 		}
 
 		b.childHandler(new BootstrapInitializerHandler(pipeline, opsFactory, childListener));
-		disposableServer.accept(b.bind());
-		return disposableServer;
 	}
 
 	/**
@@ -97,13 +84,12 @@ public abstract class BootstrapHandlers {
 	 * @param opsFactory an operation factory
 	 * @param listener a connection observer
 	 *
-	 * @return a disposable to cancel a connection
 	 */
-	public static Disposable bind(Bootstrap b, ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
+	public static void finalizeHandler(Bootstrap b,
+			ChannelOperations.OnSetup opsFactory,
+			ConnectionObserver listener) {
 		Objects.requireNonNull(b, "bootstrap");
-		Objects.requireNonNull(listener, "sink");
-
-		DisposableConnect disposableConnect = new DisposableConnect(listener);
+		Objects.requireNonNull(listener, "listener");
 
 		BootstrapPipelineHandler pipeline = null;
 		ChannelHandler handler = b.config().handler();
@@ -111,69 +97,7 @@ public abstract class BootstrapHandlers {
 			pipeline = (BootstrapPipelineHandler) handler;
 		}
 
-		b.handler(new BootstrapInitializerHandler(pipeline, opsFactory, disposableConnect));
-		disposableConnect.accept(b.bind());
-		return disposableConnect;
-	}
-
-	/**
-	 * Finalize a bootstrap pipeline configuration by turning it into a
-	 * {@link ChannelInitializer} to safely initialize each child channel.
-	 *
-	 * @param b a bootstrap
-	 * @param opsFactory an operation factory
-	 * @param listener a connection observer
-	 *
-	 * @return a disposable to cancel a connection
-	 */
-	public static Disposable connect(Bootstrap b, ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
-		Objects.requireNonNull(b, "bootstrap");
-		Objects.requireNonNull(listener, "sink");
-
-		DisposableConnect disposableConnect = new DisposableConnect(listener);
-
-		BootstrapPipelineHandler pipeline = null;
-		ChannelHandler handler = b.config().handler();
-		if (handler instanceof BootstrapPipelineHandler){
-			pipeline = (BootstrapPipelineHandler) handler;
-		}
-
-		b.handler(new BootstrapInitializerHandler(pipeline, opsFactory, disposableConnect));
-		disposableConnect.accept(b.connect());
-		return disposableConnect;
-	}
-
-	/**
-	 * Finalize a bootstrap pipeline configuration by turning it into a {@link
-	 * ChannelInitializer} to safely initialize each child channel.
-	 *
-	 * @param b a bootstrap
-	 * @param ops a connection factory
-	 * @param sink a client mono callback
-	 * @param pool a channel pool
-	 * @return a listener for deferred connect() or bind()
-	 */
-	public static Consumer<Future<?>> acquire(Bootstrap b,
-			ChannelOperations.OnSetup ops,
-			MonoSink<Connection> sink,
-			ChannelPool pool) {
-		Objects.requireNonNull(b, "bootstrap");
-		Objects.requireNonNull(ops, "ops");
-		Objects.requireNonNull(pool, "pool");
-
-		DisposableAcquire disposableAcquire =
-				new DisposableAcquire(sink, ops, pool);
-
-		BootstrapPipelineHandler pipeline = null;
-		ChannelHandler handler = b.config()
-		                          .handler();
-		if (handler instanceof BootstrapPipelineHandler) {
-			pipeline = (BootstrapPipelineHandler) handler;
-		}
-
-		b.handler(new BootstrapInitializerHandler(pipeline, ops, disposableAcquire));
-
-		return disposableAcquire;
+		b.handler(new BootstrapInitializerHandler(pipeline, opsFactory, listener));
 	}
 
 	/**
@@ -489,6 +413,16 @@ public abstract class BootstrapHandlers {
 			if (log.isDebugEnabled()) {
 				log.debug("{} Initialized pipeline {}", ch, ch.pipeline().toString());
 			}
+		}
+
+		@Override
+		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+			ctx.fireExceptionCaught(cause);
+		}
+
+		@Override
+		public void channelInactive(ChannelHandlerContext ctx) {
+			ctx.fireChannelInactive();
 		}
 	}
 

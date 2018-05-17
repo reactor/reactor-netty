@@ -124,6 +124,7 @@ final class HttpClientConnect extends HttpClient {
 		@Override
 		public Mono<? extends Connection> connect(Bootstrap b) {
 			channelFactoryAndLoops(defaultClient, b);
+			BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
 			return new MonoHttpConnect(b, defaultClient);
 		}
 
@@ -144,6 +145,10 @@ final class HttpClientConnect extends HttpClient {
 			return defaultClient.sslContext();
 		}
 	}
+
+
+	static final ChannelOperations.OnSetup HTTP_OPS =
+			(ch, c, msg) -> new HttpClientOperations(ch, c).bind();
 
 	static final class MonoHttpConnect extends Mono<Connection> {
 

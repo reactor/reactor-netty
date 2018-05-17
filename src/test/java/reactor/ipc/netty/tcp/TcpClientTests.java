@@ -47,6 +47,7 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.resources.PoolResources;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -212,7 +213,7 @@ public class TcpClientTests {
 				            new LineBasedFrameDecoder(8 * 1024));
 
 		tcpClientHandlesLineFeedData(
-				TcpClient.create(PoolResources.fixed("tcpClientHandlesLineFeedDataFixedPool", 1))
+				TcpClient.create(ConnectionProvider.fixed("tcpClientHandlesLineFeedDataFixedPool", 1))
 				         .host("localhost")
 				         .port(echoServerPort)
 				         .doOnConnected(channelInit)

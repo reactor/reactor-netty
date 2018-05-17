@@ -43,6 +43,7 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.util.Logger;
@@ -93,6 +94,16 @@ public abstract class TcpClient {
 	 * @return a {@link TcpClient}
 	 */
 	public static TcpClient create(PoolResources poolResources) {
+		return TcpClientConnect.INSTANCE;
+	}
+	/**
+	 * Prepare a {@link TcpClient}
+	 *
+	 * @param provider a {@link ConnectionProvider} to acquire connections
+	 *
+	 * @return a {@link TcpClient}
+	 */
+	public static TcpClient create(ConnectionProvider provider) {
 		return TcpClientConnect.INSTANCE;
 	}
 

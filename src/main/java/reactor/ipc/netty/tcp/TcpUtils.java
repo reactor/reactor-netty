@@ -73,43 +73,6 @@ final class TcpUtils {
 		return b;
 	}
 
-	@SuppressWarnings("unchecked")
-	static void convertLazyRemoteAddress(Bootstrap b) {
-		SocketAddress remote = b.config().remoteAddress();
-
-		Objects.requireNonNull(remote, "Remote Address not configured");
-
-		if (remote instanceof Supplier) {
-			Supplier<? extends SocketAddress> lazyRemote =
-					(Supplier<? extends SocketAddress>) remote;
-
-			b.remoteAddress(Objects.requireNonNull(lazyRemote.get(), "address supplier returned null"));
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	static void convertLazyLocalAddress(ServerBootstrap b) {
-		SocketAddress local = b.config().localAddress();
-
-		Objects.requireNonNull(local, "Remote Address not configured");
-
-		if (local instanceof Supplier) {
-			Supplier<? extends SocketAddress> lazyLocal =
-					(Supplier<? extends SocketAddress>) local;
-
-			b.localAddress(Objects.requireNonNull(lazyLocal.get(), "address supplier returned  null"));
-		}
-
-		if (local instanceof InetSocketAddress) {
-			InetSocketAddress localInet = (InetSocketAddress)local;
-
-			if (localInet.isUnresolved()){
-				b.localAddress(InetSocketAddressUtil.createResolved(localInet.getHostName(), localInet.getPort()));
-			}
-
-		}
-	}
-
 	static ServerBootstrap updateSslSupport(ServerBootstrap b,
 											SslProvider sslProvider) {
 

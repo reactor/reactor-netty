@@ -16,7 +16,17 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Objects;
+import java.util.function.Supplier;
+
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
@@ -50,18 +60,105 @@ final class TcpServerBind extends TcpServer {
 			ServerBootstrap bootstrap = b.clone();
 
 			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
-			ConnectionObserver childObs = BootstrapHandlers.childConnectionObserver(bootstrap);
-			ChannelOperations.OnSetup ops = BootstrapHandlers.channelOperationFactory(bootstrap);
+			ConnectionObserver childObs =
+					BootstrapHandlers.childConnectionObserver(bootstrap);
+			ChannelOperations.OnSetup ops =
+					BootstrapHandlers.channelOperationFactory(bootstrap);
 
-			TcpUtils.convertLazyLocalAddress(bootstrap);
+			convertLazyLocalAddress(bootstrap);
 
-			sink.onCancel(BootstrapHandlers.bind(
-					bootstrap,
-					ops,
-					new SelectorObserver(sink, obs),
-					new ChildObserver(childObs)
-			));
+			BootstrapHandlers.finalizeHandler(bootstrap, ops, new ChildObserver(childObs));
+
+			ChannelFuture f = bootstrap.bind();
+
+			DisposableBind disposableServer = new DisposableBind(sink, f, obs);
+			f.addListener(disposableServer);
+			sink.onCancel(disposableServer);
 		});
+	}
+
+	@SuppressWarnings("unchecked")
+	static void convertLazyLocalAddress(ServerBootstrap b) {
+		SocketAddress local = b.config()
+		                       .localAddress();
+
+		Objects.requireNonNull(local, "Remote Address not configured");
+
+		if (local instanceof Supplier) {
+			Supplier<? extends SocketAddress> lazyLocal =
+					(Supplier<? extends SocketAddress>) local;
+
+			b.localAddress(Objects.requireNonNull(lazyLocal.get(),
+					"address supplier returned  null"));
+		}
+
+		if (local instanceof InetSocketAddress) {
+			InetSocketAddress localInet = (InetSocketAddress) local;
+
+			if (localInet.isUnresolved()) {
+				b.localAddress(InetSocketAddressUtil.createResolved(localInet.getHostName(),
+						localInet.getPort()));
+			}
+
+		}
+	}
+
+	static final class DisposableBind
+			implements Disposable, ChannelFutureListener, DisposableServer, Connection {
+
+		final MonoSink<DisposableServer> sink;
+		final ChannelFuture              f;
+		final ConnectionObserver         selectorObserver;
+
+		DisposableBind(MonoSink<DisposableServer> sink, ChannelFuture f,
+				ConnectionObserver selectorObserver) {
+			this.sink = sink;
+			this.f = f;
+			this.selectorObserver = selectorObserver;
+		}
+
+		@Override
+		public final void dispose() {
+			f.removeListener(this);
+
+			if (f.channel()
+			     .isActive()) {
+
+				f.channel()
+				 .close();
+			}
+			else if (!f.isDone()) {
+				f.cancel(true);
+			}
+		}
+
+		@Override
+		public Channel channel() {
+			return f.channel();
+		}
+
+		@Override
+		public final void operationComplete(ChannelFuture f) {
+			if (!f.isSuccess()) {
+				if (f.isCancelled()) {
+					log.debug("Cancelled {}", f.channel());
+					return;
+				}
+				if (f.cause() != null) {
+					sink.error(f.cause());
+				}
+				else {
+					sink.error(new IOException("error while binding to " + f.channel()));
+				}
+			}
+			else {
+				if (log.isDebugEnabled()) {
+					log.debug("Bound new server {}", f.channel());
+				}
+				sink.success(this);
+				selectorObserver.onStateChange(this, ConnectionObserver.State.CONNECTED);
+			}
+		}
 	}
 
 	final static class ChildObserver implements ConnectionObserver {
@@ -74,7 +171,7 @@ final class TcpServerBind extends TcpServer {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			log.error("onUncaughtException("+connection+")", error);
+			log.error("onUncaughtException(" + connection + ")", error);
 			onStateChange(connection, State.DISCONNECTING);
 		}
 
@@ -94,7 +191,7 @@ final class TcpServerBind extends TcpServer {
 	final static class SelectorObserver implements ConnectionObserver {
 
 		final MonoSink<DisposableServer> sink;
-		final ConnectionObserver obs;
+		final ConnectionObserver         obs;
 
 		SelectorObserver(MonoSink<DisposableServer> sink, ConnectionObserver obs) {
 			this.sink = sink;
@@ -115,7 +212,7 @@ final class TcpServerBind extends TcpServer {
 		@SuppressWarnings("unchecked")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONNECTED) {
-				sink.success((DisposableServer)connection);
+				sink.success((DisposableServer) connection);
 			}
 			obs.onStateChange(connection, newState);
 
