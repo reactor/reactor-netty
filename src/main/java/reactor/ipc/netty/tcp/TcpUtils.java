@@ -54,15 +54,15 @@ final class TcpUtils {
 				NettyPipeline.ProxyHandler,
 				(listener, channel) -> {
 			if (proxyOptions.shouldProxy(b.config()
-					.remoteAddress())) {
+			                .remoteAddress())) {
 
 				channel.pipeline()
-						.addFirst(NettyPipeline.ProxyHandler,
-								proxyOptions.newProxyHandler());
+				       .addFirst(NettyPipeline.ProxyHandler,
+				                 proxyOptions.newProxyHandler());
 
 				if (log.isDebugEnabled()) {
 					channel.pipeline()
-							.addFirst(new LoggingHandler("reactor.ipc.netty.proxy"));
+					       .addFirst(new LoggingHandler("reactor.ipc.netty.proxy"));
 				}
 			}
 		});
@@ -73,8 +73,7 @@ final class TcpUtils {
 		return b;
 	}
 
-	static ServerBootstrap updateSslSupport(ServerBootstrap b,
-											SslProvider sslProvider) {
+	static ServerBootstrap updateSslSupport(ServerBootstrap b, SslProvider sslProvider) {
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.SslHandler,
@@ -83,8 +82,7 @@ final class TcpUtils {
 		return b;
 	}
 
-	static Bootstrap updateSslSupport(Bootstrap b,
-									  SslProvider sslProvider) {
+	static Bootstrap updateSslSupport(Bootstrap b, SslProvider sslProvider) {
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.SslHandler,
@@ -97,7 +95,7 @@ final class TcpUtils {
 	static SslContext findSslContext(Bootstrap b) {
 		SslSupportConsumer c =
 				BootstrapHandlers.findConfiguration(SslSupportConsumer.class,
-						b.config().handler());
+				                                    b.config().handler());
 
 		return c != null ? c.sslProvider.getSslContext() : null;
 	}
@@ -106,7 +104,7 @@ final class TcpUtils {
 	static SslContext findSslContext(ServerBootstrap b) {
 		SslSupportConsumer c =
 				BootstrapHandlers.findConfiguration(SslSupportConsumer.class,
-						b.config().childHandler());
+				                                    b.config().childHandler());
 
 		return c != null ? c.sslProvider.getSslContext() : null;
 	}
@@ -135,7 +133,7 @@ final class TcpUtils {
 	}
 
 	static SocketAddress _updateHost(@Nullable SocketAddress address, String host) {
-		if(address == null || !(address instanceof InetSocketAddress)) {
+		if(!(address instanceof InetSocketAddress)) {
 			return InetSocketAddressUtil.createUnresolved(host, 0);
 		}
 
@@ -153,7 +151,7 @@ final class TcpUtils {
 	}
 
 	static SocketAddress _updatePort(@Nullable SocketAddress address, int port) {
-		if(address == null || !(address instanceof InetSocketAddress)) {
+		if(!(address instanceof InetSocketAddress)) {
 			return InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), port);
 		}
 
@@ -176,8 +174,7 @@ final class TcpUtils {
 
 		final InetSocketAddress sniInfo;
 
-		SslSupportConsumer(SslProvider sslProvider,
-						   AbstractBootstrap b) {
+		SslSupportConsumer(SslProvider sslProvider, AbstractBootstrap b) {
 			this.sslProvider = sslProvider;
 
 			if (b instanceof Bootstrap) {
@@ -195,14 +192,16 @@ final class TcpUtils {
 				sniInfo = null;
 			}
 		}
+
 		@Override
 		public void accept(ConnectionObserver listener, Channel channel) {
 			SslHandler sslHandler;
 
 			if (sniInfo != null) {
-				sslHandler = sslProvider.getSslContext().newHandler(channel.alloc(),
-						sniInfo.getHostString(),
-						sniInfo.getPort());
+				sslHandler = sslProvider.getSslContext()
+				                        .newHandler(channel.alloc(),
+				                                    sniInfo.getHostString(),
+				                                    sniInfo.getPort());
 
 				if (log.isDebugEnabled()) {
 					log.debug("SSL enabled using engine {} and SNI {}",
@@ -222,29 +221,29 @@ final class TcpUtils {
 			sslProvider.configure(sslHandler);
 
 			if (channel.pipeline()
-					.get(NettyPipeline.ProxyHandler) != null) {
+			           .get(NettyPipeline.ProxyHandler) != null) {
 				channel.pipeline()
-						.addAfter(NettyPipeline.ProxyHandler,
-								NettyPipeline.SslHandler,
-								sslHandler);
+				       .addAfter(NettyPipeline.ProxyHandler,
+				                 NettyPipeline.SslHandler,
+				                 sslHandler);
 			}
 			else {
 				channel.pipeline()
-						.addFirst(NettyPipeline.SslHandler, sslHandler);
+				       .addFirst(NettyPipeline.SslHandler, sslHandler);
 			}
 
 			if (channel.pipeline()
-					.get(NettyPipeline.LoggingHandler) != null) {
+			           .get(NettyPipeline.LoggingHandler) != null) {
 				channel.pipeline()
-						.addAfter(NettyPipeline.LoggingHandler,
-								NettyPipeline.SslReader,
-								new SslReadHandler());
+				       .addAfter(NettyPipeline.LoggingHandler,
+				                 NettyPipeline.SslReader,
+				                 new SslReadHandler());
 			}
 			else {
 				channel.pipeline()
-						.addAfter(NettyPipeline.SslHandler,
-								NettyPipeline.SslReader,
-								new SslReadHandler());
+				       .addAfter(NettyPipeline.SslHandler,
+				                 NettyPipeline.SslReader,
+				                 new SslReadHandler());
 			}
 		}
 
@@ -266,15 +265,16 @@ final class TcpUtils {
 			}
 			super.channelReadComplete(ctx);
 		}
+
 		@Override
 		public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
 				throws Exception {
 			if (evt instanceof SslHandshakeCompletionEvent) {
 				handshakeDone = true;
 				if (ctx.pipeline()
-						.context(this) != null) {
+				       .context(this) != null) {
 					ctx.pipeline()
-							.remove(this);
+					   .remove(this);
 				}
 				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
 				if (handshake.isSuccess()) {
@@ -289,8 +289,7 @@ final class TcpUtils {
 
 	}
 
-	static final class SocketAddressSupplier extends SocketAddress implements
-	                                                               Supplier<SocketAddress> {
+	static final class SocketAddressSupplier extends SocketAddress implements Supplier<SocketAddress> {
 		final Supplier<? extends SocketAddress> supplier;
 
 		SocketAddressSupplier(Supplier<? extends SocketAddress> supplier) {
