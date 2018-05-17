@@ -348,18 +348,18 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 			ByteBufAllocator alloc = channel().alloc();
 			return then(Flux.from(source)
-			    .doOnNext(ByteBuf::retain)
-			    .collect(alloc::buffer, ByteBuf::writeBytes)
-			    .flatMapMany(agg -> {
-				    if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
-						    outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-						    outboundHttpMessage())) {
-					    outboundHttpMessage().headers()
-					                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
-							                         agg.readableBytes());
-				    }
-				    return super.send(Mono.just(agg)).then();
-			    }));
+			                .doOnNext(ByteBuf::retain)
+			                .collect(alloc::buffer, ByteBuf::writeBytes)
+			                .flatMapMany(agg -> {
+			                    if (!hasSentHeaders() &&
+			                            !HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) &&
+			                            !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+			                        outboundHttpMessage().headers()
+			                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
+			                                                     agg.readableBytes());
+			                    }
+			                    return super.send(Mono.just(agg)).then();
+			                }));
 		}
 		return super.send(source);
 	}
@@ -373,9 +373,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 			else {
 				String host = requestHeaders().get(HttpHeaderNames.HOST);
-				uri = new URI((isSecure ? HttpClient.WSS_SCHEME : HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ? url : "/" + url));
+				uri = new URI((isSecure ? HttpClient.WSS_SCHEME :
+				                          HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ? url : "/" + url));
 			}
-
 		}
 		catch (URISyntaxException e) {
 			throw Exceptions.bubble(e);
@@ -415,6 +415,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected void preSendHeadersAndStatus() {
 		//Noop
 	}
+
 	protected void onOutboundComplete() {
 		if (isWebsocket() || isInboundCancelled()) {
 			return;
