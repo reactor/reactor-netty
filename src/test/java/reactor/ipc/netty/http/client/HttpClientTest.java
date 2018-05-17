@@ -590,7 +590,7 @@ public class HttpClientTest {
 												.neverComplete();
 		                          })
 		                        .wiretap()
-		                        .bindNow();
+		                        .bindNow(Duration.ofSeconds(30));
 
 		StepVerifier.create(createHttpClientForContext(x)
 		                              .get()

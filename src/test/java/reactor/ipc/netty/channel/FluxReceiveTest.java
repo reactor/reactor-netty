@@ -43,7 +43,6 @@ public class FluxReceiveTest {
 				          .route(routes ->
 				                     routes.get("/target", (req, res) ->
 				                           req.receive().thenMany(res.sendByteArray(Flux.just(content).delayElements(Duration.ofMillis(100))))))
-				          .wiretap()
 				          .bindNow();
 
 		DisposableServer server2 =
@@ -53,23 +52,19 @@ public class FluxReceiveTest {
 				                     routes.get("/forward", (req, res) ->
 				                           HttpClient.prepare()
 				                                     .port(server1.address().getPort())
-				                                     .wiretap()
 				                                     .get()
 				                                     .uri("/target")
 				                                     .responseContent()
 				                                     .aggregate()
 				                                     .asString()
 				                                     .log()
-				                                     .delayElement(Duration.ofMillis(50))
 				                                     .timeout(Duration.ofMillis(50))
 				                                     .then()))
-				          .wiretap()
 				          .bindNow();
 
 		Flux.range(0, 50)
 		    .flatMap(i -> HttpClient.prepare()
 		                            .port(server2.address().getPort())
-		                            .wiretap()
 		                            .get()
 		                            .uri("/forward")
 		                            .responseContent()
