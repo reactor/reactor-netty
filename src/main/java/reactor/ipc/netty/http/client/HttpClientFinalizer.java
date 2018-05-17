@@ -21,6 +21,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -109,9 +110,9 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	}
 
 	static void dispose(HttpClientOperations c) {
-		if (!c.isDisposed() && !c.isInboundDisposed()) {
-			c.channel().eventLoop().execute(c::dispose);
-		}
+//		if (!c.isDisposed() && !c.isInboundDisposed()) {
+//			c.channel().eventLoop().execute(c::dispose);
+//		}
 	}
 
 
@@ -130,7 +131,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	}
 
 	@Override
-	public HttpClientFinalizer sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback, Consumer<Flux<Long>> progress) {
+	public HttpClientFinalizer sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback, @Nullable Consumer<Flux<Long>> progress) {
 		Objects.requireNonNull(formCallback, "formCallback");
 		return send((req, out) -> {
 			@SuppressWarnings("unchecked")
