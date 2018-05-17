@@ -260,7 +260,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 *
 	 * @return true if inbound traffic is not expected anymore
 	 */
-	protected final boolean isInboundCancelled() {
+	public final boolean isInboundCancelled() {
 		return inbound.isCancelled();
 	}
 
@@ -269,7 +269,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 *
 	 * @return true if inbound traffic is not incoming or expected anymore
 	 */
-	protected final boolean isInboundDisposed() {
+	public final boolean isInboundDisposed() {
 		return inbound.isDisposed();
 	}
 

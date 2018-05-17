@@ -108,8 +108,8 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 				    .aggregate()).doFinally(s -> dispose(resp)));
 	}
 
-	static void dispose(Connection c) {
-		if (!c.isDisposed()) {
+	static void dispose(HttpClientOperations c) {
+		if (!c.isDisposed() && !c.isInboundDisposed()) {
 			c.channel().eventLoop().execute(c::dispose);
 		}
 	}
