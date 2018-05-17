@@ -174,7 +174,7 @@ final class TcpUtils {
 
 		final InetSocketAddress sniInfo;
 
-		SslSupportConsumer(SslProvider sslProvider, AbstractBootstrap b) {
+		SslSupportConsumer(SslProvider sslProvider, AbstractBootstrap<?, ?> b) {
 			this.sslProvider = sslProvider;
 
 			if (b instanceof Bootstrap) {
