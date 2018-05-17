@@ -830,7 +830,7 @@ public class HttpClientTest {
 				          .send((r, out) -> out.sendFile(largeFile))
 				          .responseSingle((res, buf) -> buf.asString()
 				                                           .zipWith(Mono.just(res.status().code())))
-				          .block(Duration.ofSeconds(120));
+				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
 		context.onDispose().block();
@@ -872,7 +872,7 @@ public class HttpClientTest {
 				          .send((r, out) -> out.sendFile(largeFile))
 				          .responseSingle((res, buf) -> buf.asString()
 				                                           .zipWith(Mono.just(res.status().code())))
-				          .block(Duration.ofSeconds(120));
+				          .block(Duration.ofSeconds(30));
 
 		context.dispose();
 		context.onDispose().block();

@@ -69,7 +69,7 @@ public class ChannelOperationsHandlerTest {
 				                     .doOnNext(System.err::println)
 				                     .then(res.status(200).sendHeaders().then()))
 				          .wiretap()
-				          .bindNow(Duration.ofSeconds(300));
+				          .bindNow(Duration.ofSeconds(30));
 
 		Flux<String> flux = Flux.range(1, 257).map(count -> count + "");
 		if (useScheduler) {
@@ -88,7 +88,7 @@ public class ChannelOperationsHandlerTest {
 		StepVerifier.create(code)
 		            .expectNextMatches(c -> c == 200)
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(300));
+		            .verify(Duration.ofSeconds(30));
 
 		server.dispose();
 	}
