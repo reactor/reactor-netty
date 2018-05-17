@@ -416,6 +416,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		//Noop
 	}
 
+	@Override
 	protected void onOutboundComplete() {
 		if (isWebsocket() || isInboundCancelled()) {
 			return;
