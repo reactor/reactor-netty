@@ -388,7 +388,9 @@ final class HttpClientConnect extends HttpClient {
 
 				ch.followRedirect(followRedirect);
 
-				if (method == HttpMethod.GET || method == HttpMethod.HEAD || method == HttpMethod.DELETE) {
+				if (Objects.equals(method, HttpMethod.GET) ||
+						Objects.equals(method, HttpMethod.HEAD) ||
+								Objects.equals(method, HttpMethod.DELETE)) {
 					ch.chunkedTransfer(false);
 				}
 				else {
