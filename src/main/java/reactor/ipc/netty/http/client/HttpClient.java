@@ -44,7 +44,7 @@ import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
-import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
 
@@ -314,14 +314,14 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Prepare a pooled {@link HttpClient}. {@link UriConfiguration#uri(String)} or
+	 * Prepare an {@link HttpClient}. {@link UriConfiguration#uri(String)} or
 	 * {@link #baseUrl(String)} should be invoked before a verb
 	 * {@link #request(HttpMethod)} is selected.
 	 *
 	 * @return a {@link HttpClient}
 	 */
-	public static HttpClient prepare(PoolResources poolResources) {
-		return new HttpClientConnect(TcpClient.create(poolResources)
+	public static HttpClient prepare(ConnectionProvider connectionProvider) {
+		return new HttpClientConnect(TcpClient.create(connectionProvider)
 		                                      .port(80));
 	}
 

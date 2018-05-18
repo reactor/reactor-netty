@@ -17,7 +17,6 @@
 package reactor.ipc.netty.http.client;
 
 import java.io.InputStream;
-import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -60,7 +59,7 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.tcp.ProxyProvider;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -91,7 +90,7 @@ public class HttpClientTest {
 				         .wiretap()
 				         .bindNow();
 
-		PoolResources pool = PoolResources.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
 		HttpClient.prepare(pool)
 		          .port(x.address().getPort())
@@ -135,9 +134,8 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@Ignore
 	public void userIssue() throws Exception {
-		final PoolResources pool = PoolResources.fixed("local", 1);
+		final ConnectionProvider pool = ConnectionProvider.fixed("local", 1);
 		CountDownLatch latch = new CountDownLatch(3);
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
 		DisposableServer serverContext =
@@ -156,7 +154,7 @@ public class HttpClientTest {
 
 		final HttpClient client =
 				HttpClient.prepare(pool)
-				          .addressSupplier(() -> new InetSocketAddress(8080))
+				          .addressSupplier(() -> serverContext.address())
 				          .wiretap();
 		Flux.just("1", "2", "3")
 		    .concatMap(data ->
@@ -167,10 +165,10 @@ public class HttpClientTest {
 		                  .post()
 		                  .uri("/")
 		                  .send(ByteBufFlux.fromString(Flux.just(data)))
-		                  .response((res, buf) -> {
-		                      buf.subscribe();
-		                      return Mono.empty();
-		                  }));
+		                  .responseContent()
+		    )
+		    .subscribe();
+
 
 		latch.await();
 		pool.dispose();
@@ -192,7 +190,7 @@ public class HttpClientTest {
 				         .wiretap()
 				         .bindNow();
 
-		PoolResources pool = PoolResources.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
 		HttpClient.prepare(pool)
 		          .port(x.address().getPort())
@@ -200,7 +198,7 @@ public class HttpClientTest {
 		          .wiretap()
 		          .get()
 		          .uri("/")
-		          .responseSingle((r, buf) -> Mono.just(r.status().code()))
+		          .responseSingle((r, buf) -> buf.thenReturn(r.status().code()))
 		          .log()
 		          .block(Duration.ofSeconds(30));
 
@@ -256,7 +254,6 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@Ignore
 	public void serverInfiniteClientClose() throws Exception {
 
 		CountDownLatch latch = new CountDownLatch(1);
@@ -267,18 +264,17 @@ public class HttpClientTest {
 				                  req.withConnection(cn -> cn.onDispose(latch::countDown));
 
 				                  return Flux.interval(Duration.ofSeconds(1))
-				                             .flatMap(d ->
-				                                     resp.withConnection(cn ->
-				                                             cn.channel()
-				                                               .config()
-				                                               .setAutoRead(true))
+				                             .flatMap(d -> resp.withConnection(cn -> cn.channel()
+				                                                                       .config()
+				                                                                       .setAutoRead(
+						                                                                       true))
 				                                               .sendObject(Unpooled.EMPTY_BUFFER)
 				                                               .then()
-				                                               .doOnSuccess(x ->
-				                                                       req.withConnection(cn ->
-				                                                               cn.channel()
-				                                                                 .config()
-				                                                                 .setAutoRead(false))));
+				                                               .doOnSuccess(x -> req.withConnection(
+						                                               cn -> cn.channel()
+						                                                       .config()
+						                                                       .setAutoRead(
+								                                                       false))));
 				          })
 				          .wiretap()
 				          .bindNow();
@@ -288,8 +284,8 @@ public class HttpClientTest {
 		          .wiretap()
 		          .get()
 		          .uri("/")
-		          .responseContent()
-		          .blockLast();
+		          .response()
+		          .block();
 
 		latch.await();
 		c.dispose();
@@ -390,7 +386,7 @@ public class HttpClientTest {
 	@Test
 	public void simpleTest404_1() {
 		HttpClient client =
-				HttpClient.prepare(PoolResources.fixed("http", 1))
+				HttpClient.prepare(ConnectionProvider.fixed("http", 1))
 				          .port(80)
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap();
@@ -457,11 +453,9 @@ public class HttpClientTest {
 		Assert.assertTrue(Objects.equals(r.getT1(), HttpResponseStatus.NOT_FOUND));
 	}
 
-// TODO
 	@Test
-	@Ignore
 	public void simpleClientPooling() {
-		PoolResources p = PoolResources.fixed("test", 1);
+		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
 
@@ -471,7 +465,7 @@ public class HttpClientTest {
 				          .wiretap()
 				          .get()
 				          .uri("http://google.com/unsupportedURI")
-				          .responseSingle((res, buf) -> Mono.just(res.status()))
+				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 				          .block(Duration.ofSeconds(30));
 
 		HttpResponseStatus r2 =
@@ -480,7 +474,7 @@ public class HttpClientTest {
 				          .wiretap()
 				          .get()
 				          .uri("http://google.com/unsupportedURI")
-				          .responseSingle((res, buf) -> Mono.just(res.status()))
+				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 				          .block(Duration.ofSeconds(30));
 
 		AtomicBoolean same = new AtomicBoolean();
@@ -493,11 +487,9 @@ public class HttpClientTest {
 		p.dispose();
 	}
 
-// TODO
 	@Test
-	@Ignore
 	public void disableChunkImplicitDefault() {
-		PoolResources p = PoolResources.fixed("test", 1);
+		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
 		Tuple2<HttpResponseStatus, Channel> r =
 				HttpClient.prepare(p)
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
@@ -533,7 +525,7 @@ public class HttpClientTest {
 
 	@Test
 	public void contentHeader() {
-		PoolResources fixed = PoolResources.fixed("test", 1);
+		ConnectionProvider fixed = ConnectionProvider.fixed("test", 1);
 		HttpResponseStatus r =
 				HttpClient.prepare(fixed)
 				          .wiretap()
@@ -825,6 +817,7 @@ public class HttpClientTest {
 				                  req.receive()
 				                     .aggregate()
 				                     .asString(StandardCharsets.UTF_8)
+				                     .log()
 				                     .doOnNext(uploaded::set)
 				                     .then(resp.status(201).sendString(Mono.just("Received File")).then())))
 				          .wiretap()
@@ -939,7 +932,7 @@ public class HttpClientTest {
 
 	@Test
 	public void closePool() {
-		PoolResources pr = PoolResources.fixed("wstest", 1);
+		ConnectionProvider pr = ConnectionProvider.fixed("wstest", 1);
 		DisposableServer httpServer =
 				HttpServer.create()
 				          .port(0)

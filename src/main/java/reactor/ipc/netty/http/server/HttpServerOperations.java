@@ -36,6 +36,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -421,6 +422,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
+		if (msg instanceof HttpRequest) {
+			listener().onStateChange(this, ConnectionObserver.State.CONFIGURED);
+			if (msg instanceof FullHttpRequest) {
+				super.onInboundNext(ctx, msg);
+			}
+			return;
+		}
 		if (msg instanceof HttpContent) {
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
@@ -514,6 +522,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 
 		markSentBody();
+		log.error("Error finishing response. Closing connection", err);
 		channel().writeAndFlush(EMPTY_BUFFER)
 		         .addListener(ChannelFutureListener.CLOSE);
 	}

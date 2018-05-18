@@ -28,7 +28,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 
 public class HttpRedirectTest {
@@ -66,7 +66,7 @@ public class HttpRedirectTest {
 				          .wiretap()
 				          .bindNow();
 
-		PoolResources pool = PoolResources.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
 		HttpClient client =
 				HttpClient.prepare(pool)

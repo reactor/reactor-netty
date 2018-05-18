@@ -507,7 +507,7 @@ public class WebsocketTest {
 	//TODO
 //	@Test
 //	public void closePool() {
-//		PoolResources pr = PoolResources.fixed("wstest", 1);
+//		ConnectionProvider pr = ConnectionProvider.fixed("wstest", 1);
 //		httpServer = HttpServer.create()
 //		                       .port(0)
 //		                       .handle((in, out) -> out.sendWebsocket(

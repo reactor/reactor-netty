@@ -120,13 +120,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public ChannelOperations<INBOUND, OUTBOUND> bind() {
-		Connection.super.bind();
-		listener.onStateChange(this, ConnectionObserver.State.CONFIGURED);
-		return this;
-	}
-
-	@Override
 	public NettyInbound inbound() {
 		return this;
 	}
@@ -412,8 +405,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		 * @param listener a {@link ConnectionObserver}
 		 * @param msg an optional message
 		 *
+		 * @return the new {@link ChannelOperations}
 		 */
-		void create(Connection c, ConnectionObserver listener, @Nullable  Object msg);
+		@Nullable
+		ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg);
 
 	}
 

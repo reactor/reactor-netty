@@ -109,17 +109,20 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public final void dispose() {
+			if (isDisposed()) {
+				return;
+			}
+
 			f.removeListener(this);
 
-			if (f.channel()
-			     .isActive()) {
-
-				f.channel()
-				 .close();
-			}
-			else if (!f.isDone()) {
+			if (!f.isDone()) {
 				f.cancel(true);
 			}
+		}
+
+		@Override
+		public boolean isDisposed() {
+			return f.isCancelled() || f.isDone();
 		}
 
 		@Override

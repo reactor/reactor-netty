@@ -35,7 +35,6 @@ import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.resources.LoopResources;
-import reactor.util.context.Context;
 
 /**
  * @author Stephane Maldini
@@ -185,37 +184,6 @@ final class TcpServerBind extends TcpServer {
 			}
 
 			childObs.onStateChange(connection, newState);
-		}
-	}
-
-	final static class SelectorObserver implements ConnectionObserver {
-
-		final MonoSink<DisposableServer> sink;
-		final ConnectionObserver         obs;
-
-		SelectorObserver(MonoSink<DisposableServer> sink, ConnectionObserver obs) {
-			this.sink = sink;
-			this.obs = obs;
-		}
-
-		@Override
-		public Context currentContext() {
-			return sink.currentContext();
-		}
-
-		@Override
-		public void onUncaughtException(Connection connection, Throwable error) {
-			sink.error(error);
-		}
-
-		@Override
-		@SuppressWarnings("unchecked")
-		public void onStateChange(Connection connection, State newState) {
-			if (newState == State.CONNECTED) {
-				sink.success((DisposableServer) connection);
-			}
-			obs.onStateChange(connection, newState);
-
 		}
 	}
 }

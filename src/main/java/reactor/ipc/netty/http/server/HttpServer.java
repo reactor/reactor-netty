@@ -116,9 +116,12 @@ public abstract class HttpServer {
 		try {
 			return Objects.requireNonNull(bind().block(timeout), "aborted");
 		}
-		catch (Exception e) {
-			throw new IllegalStateException("HttpServer couldn't be started within "
-					+ timeout.toMillis() +	"ms");
+		catch (IllegalStateException e) {
+			if (e.getMessage().contains("blocking read")) {
+				throw new IllegalStateException("HttpServer couldn't be started within "
+						+ timeout.toMillis() +	"ms");
+			}
+			throw e;
 		}
 	}
 
@@ -329,12 +332,7 @@ public abstract class HttpServer {
 		return DEFAULT_TCP_SERVER;
 	}
 
-
-	static final int DEFAULT_PORT =
-			System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 8080;
-
-	static final TcpServer DEFAULT_TCP_SERVER = TcpServer.create()
-			                                             .port(DEFAULT_PORT);
+	static final TcpServer DEFAULT_TCP_SERVER = TcpServer.create();
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpServer.class);
 	static final Logger         log             = Loggers.getLogger(HttpServer.class);

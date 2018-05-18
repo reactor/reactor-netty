@@ -40,7 +40,6 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -218,16 +217,18 @@ public class ChannelOperationsHandlerTest {
 		}
 
 		HttpClient client =
-		        HttpClient.prepare(PoolResources.fixed("test", 1))
-		                  .port(testServerPort);
+		        HttpClient.newConnection()
+		                  .port(testServerPort)
+		                  .wiretap();
 
 		Flux.range(0, 2)
 		    .flatMap(i -> client.get()
 		                        .uri("/205")
 		                        .responseContent()
 		                        .aggregate()
-		                        .asString())
-		    .blockLast(Duration.ofSeconds(100));
+		                        .asString()
+		                        .log())
+		    .blockLast(Duration.ofSeconds(1000));
 
 		testServer.close();
 	}

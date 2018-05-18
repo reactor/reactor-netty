@@ -472,6 +472,7 @@ public class HttpCompressionClientServerTests {
 				HttpServer.create()
 				          .compress(10)
 				          .port(0)
+				          .wiretap()
 				          .handle((req, res) ->
 				                  res.sendHeaders().sendString(Flux.just("test", "test", "test", "test")))
 				          .bindNow();
@@ -480,6 +481,7 @@ public class HttpCompressionClientServerTests {
 				HttpClient.prepare()
 				          .port(server.address().getPort())
 				          .compress()
+				          .wiretap()
 				          .get()
 				          .uri("/")
 				          .responseContent()
@@ -493,6 +495,7 @@ public class HttpCompressionClientServerTests {
 
 		response = HttpClient.prepare()
 		                     .port(server.address().getPort())
+		                     .wiretap()
 		                     .compress()
 		                     .get()
 		                     .uri("/")

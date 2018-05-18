@@ -153,8 +153,12 @@ public abstract class UdpClient {
 		try {
 			return Objects.requireNonNull(connect().block(timeout), "aborted");
 		}
-		catch (Exception e) {
-			throw new IllegalStateException("UdpClient couldn't be started within " + timeout.toMillis() +	"ms");
+		catch (IllegalStateException e) {
+			if (e.getMessage().contains("blocking read")) {
+				throw new IllegalStateException("UdpClient couldn't be started within "
+						+ timeout.toMillis() +	"ms");
+			}
+			throw e;
 		}
 	}
 
@@ -406,7 +410,7 @@ public abstract class UdpClient {
 					.remoteAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
 
 	static {
-		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, (ch, c, msg) -> new UdpOperations(ch, c).bind());
+		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, (ch, c, msg) -> new UdpOperations(ch, c));
 	}
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(UdpClient.class);

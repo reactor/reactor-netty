@@ -48,7 +48,6 @@ import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.resources.ConnectionProvider;
-import reactor.ipc.netty.resources.PoolResources;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -212,12 +211,18 @@ public class TcpClientTests {
 				.addHandler("codec",
 				            new LineBasedFrameDecoder(8 * 1024));
 
+//		ConnectionProvider p = ConnectionProvider.fixed
+//				("tcpClientHandlesLineFeedDataFixedPool", 1);
+
+		ConnectionProvider p = ConnectionProvider.newConnection();
+
 		tcpClientHandlesLineFeedData(
-				TcpClient.create(ConnectionProvider.fixed("tcpClientHandlesLineFeedDataFixedPool", 1))
+				TcpClient.create(p)
 				         .host("localhost")
 				         .port(echoServerPort)
 				         .doOnConnected(channelInit)
 		);
+
 	}
 
 	@Test
@@ -227,7 +232,7 @@ public class TcpClientTests {
 				            new LineBasedFrameDecoder(8 * 1024));
 
 		tcpClientHandlesLineFeedData(
-				TcpClient.create(PoolResources.elastic("tcpClientHandlesLineFeedDataElasticPool"))
+				TcpClient.create(ConnectionProvider.elastic("tcpClientHandlesLineFeedDataElasticPool"))
 				         .host("localhost")
 				         .port(echoServerPort)
 				         .doOnConnected(channelInit)
@@ -239,7 +244,7 @@ public class TcpClientTests {
 		final CountDownLatch latch = new CountDownLatch(messages);
 		final List<String> strings = new ArrayList<>();
 
-		client.handle((in, out) ->
+		Connection c = client.handle((in, out) ->
 					        out.sendString(Flux.range(1, messages)
 					                            .map(i -> "Hello World!" + i + "\n")
 					                            .subscribeOn(Schedulers.parallel()))
@@ -253,9 +258,13 @@ public class TcpClientTests {
 					                     }).then())
 				         )
 				         .wiretap()
-				         .connectNow()
-				         .onDispose()
-				         .block(Duration.ofSeconds(30));
+				         .connectNow(Duration.ofSeconds(3000));
+
+		System.out.println("Connected");
+
+		c.onDispose()
+		 .log()
+		 .block(Duration.ofSeconds(3000));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
 				latch.await(15, TimeUnit.SECONDS));
@@ -328,7 +337,7 @@ public class TcpClientTests {
 	public void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool()
 			throws InterruptedException {
 		connectionWillRetryConnectionAttemptWhenItFails(
-				TcpClient.create(PoolResources.fixed("test", 1))
+				TcpClient.create(ConnectionProvider.fixed("test", 1))
 				         .host("localhost")
 				         .port(abortServerPort + 3)
 				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));

@@ -18,18 +18,17 @@ package reactor.ipc.netty.tcp;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.resources.LoopResources;
-import reactor.ipc.netty.resources.PoolResources;
 
 /**
  * Hold the default Tcp resources
@@ -37,7 +36,7 @@ import reactor.ipc.netty.resources.PoolResources;
  * @author Stephane Maldini
  * @since 0.6
  */
-public class TcpResources implements PoolResources, LoopResources {
+public class TcpResources implements ConnectionProvider, LoopResources {
 
 	/**
 	 * Return the global HTTP resources for event loops and pooling
@@ -49,12 +48,12 @@ public class TcpResources implements PoolResources, LoopResources {
 	}
 
 	/**
-	 * Update event loops resources and return the global HTTP resources
+	 * Update provider resources and return the global HTTP resources
 	 *
 	 * @return the global HTTP resources
 	 */
-	public static TcpResources set(PoolResources pools) {
-		return getOrCreate(tcpResources, null, pools, ON_TCP_NEW, "tcp");
+	public static TcpResources set(ConnectionProvider provider) {
+		return getOrCreate(tcpResources, null, provider, ON_TCP_NEW, "tcp");
 	}
 
 	/**
@@ -104,12 +103,13 @@ public class TcpResources implements PoolResources, LoopResources {
 		});
 	}
 
-	final PoolResources defaultPools;
-	final LoopResources defaultLoops;
+	final ConnectionProvider defaultProvider;
+	final LoopResources      defaultLoops;
 
-	protected TcpResources(LoopResources defaultLoops, PoolResources defaultPools) {
+	protected TcpResources(LoopResources defaultLoops,
+			ConnectionProvider defaultProvider) {
 		this.defaultLoops = defaultLoops;
-		this.defaultPools = defaultPools;
+		this.defaultProvider = defaultProvider;
 	}
 
 	@Override
@@ -127,7 +127,7 @@ public class TcpResources implements PoolResources, LoopResources {
 	 */
 	//TODO make public?
 	protected void _dispose(){
-		defaultPools.dispose();
+		defaultProvider.dispose();
 		defaultLoops.dispose();
 	}
 
@@ -137,18 +137,17 @@ public class TcpResources implements PoolResources, LoopResources {
 	 */
 	protected Mono<Void> _disposeLater() {
 		return Mono.when(
-				defaultLoops.disposeLater(),
-				defaultPools.disposeLater());
+				defaultLoops.disposeLater(), defaultProvider.disposeLater());
 	}
 
 	@Override
 	public boolean isDisposed() {
-		return defaultLoops.isDisposed() && defaultPools.isDisposed();
+		return defaultLoops.isDisposed() && defaultProvider.isDisposed();
 	}
 
 	@Override
-	public ChannelPool selectOrCreate(Bootstrap bootstrap) {
-		return defaultPools.selectOrCreate(bootstrap);
+	public Mono<? extends Connection> acquire(Bootstrap bootstrap) {
+		return defaultProvider.acquire(bootstrap);
 	}
 
 	@Override
@@ -197,7 +196,7 @@ public class TcpResources implements PoolResources, LoopResources {
 	 *
 	 * @param ref the resources atomic reference
 	 * @param loops the eventual new {@link LoopResources}
-	 * @param pools the eventual new {@link PoolResources}
+	 * @param provider the eventual new {@link ConnectionProvider}
 	 * @param onNew a {@link TcpResources} factory
 	 * @param name a name for resources
 	 * @param <T> the reified type of {@link TcpResources}
@@ -206,21 +205,21 @@ public class TcpResources implements PoolResources, LoopResources {
 	 */
 	protected static <T extends TcpResources> T getOrCreate(AtomicReference<T> ref,
 			@Nullable LoopResources loops,
-			@Nullable PoolResources pools,
-			BiFunction<LoopResources, PoolResources, T> onNew,
+			@Nullable ConnectionProvider provider,
+			BiFunction<LoopResources, ConnectionProvider, T> onNew,
 			String name) {
 		T update;
 		for (; ; ) {
 			T resources = ref.get();
-			if (resources == null || loops != null || pools != null) {
-				update = create(resources, loops, pools, name, onNew);
+			if (resources == null || loops != null || provider != null) {
+				update = create(resources, loops, provider, name, onNew);
 				if (ref.compareAndSet(resources, update)) {
 					if(resources != null){
 						if(loops != null){
 							resources.defaultLoops.dispose();
 						}
-						if(pools != null){
-							resources.defaultPools.dispose();
+						if(provider != null){
+							resources.defaultProvider.dispose();
 						}
 					}
 					return update;
@@ -235,8 +234,8 @@ public class TcpResources implements PoolResources, LoopResources {
 		}
 	}
 
-	static final AtomicReference<TcpResources>                          tcpResources;
-	static final BiFunction<LoopResources, PoolResources, TcpResources> ON_TCP_NEW;
+	static final AtomicReference<TcpResources>                               tcpResources;
+	static final BiFunction<LoopResources, ConnectionProvider, TcpResources> ON_TCP_NEW;
 
 	static {
 		ON_TCP_NEW = TcpResources::new;
@@ -244,18 +243,17 @@ public class TcpResources implements PoolResources, LoopResources {
 	}
 
 	static <T extends TcpResources> T create(@Nullable T previous,
-			@Nullable LoopResources loops,
-			@Nullable PoolResources pools,
+			@Nullable LoopResources loops, @Nullable ConnectionProvider provider,
 			String name,
-			BiFunction<LoopResources, PoolResources, T> onNew) {
+			BiFunction<LoopResources, ConnectionProvider, T> onNew) {
 		if (previous == null) {
 			loops = loops == null ? LoopResources.create("reactor-" + name) : loops;
-			pools = pools == null ? PoolResources.elastic(name) : pools;
+			provider = provider == null ? ConnectionProvider.elastic(name) : provider;
 		}
 		else {
 			loops = loops == null ? previous.defaultLoops : loops;
-			pools = pools == null ? previous.defaultPools : pools;
+			provider = provider == null ? previous.defaultProvider : provider;
 		}
-		return onNew.apply(loops, pools);
+		return onNew.apply(loops, provider);
 	}
 }

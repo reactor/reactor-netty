@@ -19,12 +19,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.pool.ChannelPool;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.resources.LoopResources;
-import reactor.ipc.netty.resources.PoolResources;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,7 +33,7 @@ public class HttpResourcesTest {
 	private AtomicBoolean loopDisposed;
 	private AtomicBoolean poolDisposed;
 	private LoopResources loopResources;
-	private PoolResources poolResources;
+	private ConnectionProvider poolResources;
 	private HttpResources testResources;
 
 	@Before
@@ -58,10 +58,10 @@ public class HttpResourcesTest {
 			}
 		};
 
-		poolResources = new PoolResources() {
+		poolResources = new ConnectionProvider() {
 			@Override
-			public ChannelPool selectOrCreate(Bootstrap bootstrap) {
-				return null;
+			public Mono<? extends Connection> acquire(Bootstrap bootstrap) {
+				return Mono.never();
 			}
 
 			@Override

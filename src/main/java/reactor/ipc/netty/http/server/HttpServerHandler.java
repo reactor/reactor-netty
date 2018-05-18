@@ -27,7 +27,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
@@ -134,11 +133,13 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			}
 			else {
 				overflow = false;
-				opsFactory.create(Connection.from(ctx.channel()), listener, msg);
-
-				if (!(msg instanceof FullHttpRequest)) {
+				ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ctx.channel()), listener, msg);
+				if (ops != null) {
+					ops.bind();
+					ctx.fireChannelRead(msg);
 					return;
 				}
+
 			}
 		}
 		else if (persistentConnection && pendingResponses == 0) {
@@ -259,10 +260,10 @@ final class HttpServerHandler extends ChannelDuplexHandler
 					return;
 				}
 				nextRequest = true;
-				opsFactory.create(Connection.from(ctx.channel()), listener, next);
-
-				if (!(next instanceof FullHttpRequest)) {
-					pipelined.poll();
+				ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ctx.channel()), listener, next);
+				if (ops != null) {
+					ops.bind();
+					ctx.fireChannelRead(pipelined.poll());
 					continue;
 				}
 			}
@@ -330,7 +331,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 		}
 
 		@Override
-		public void operationComplete(ChannelFuture future) throws Exception {
+		public void operationComplete(ChannelFuture future) {
 			HttpServerOperations.cleanHandlerTerminate(channel);
 		}
 	}

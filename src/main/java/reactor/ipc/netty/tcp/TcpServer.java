@@ -179,12 +179,16 @@ public abstract class TcpServer {
 	 */
 	public final DisposableServer bindNow(Duration timeout) {
 		Objects.requireNonNull(timeout, "timeout");
-		DisposableServer server = bind().block(timeout);
-		if (server == null) {
-			throw new IllegalStateException("TcpServer couldn't be started within " +
-					timeout.toMillis() +	"ms");
+		try {
+			return Objects.requireNonNull(bind().block(timeout), "aborted");
 		}
-		return server;
+		catch (IllegalStateException e) {
+			if (e.getMessage().contains("blocking read")) {
+				throw new IllegalStateException("HttpServer couldn't be started within "
+						+ timeout.toMillis() +	"ms");
+			}
+			throw e;
+		}
 	}
 
 	/**

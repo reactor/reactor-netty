@@ -45,7 +45,6 @@ import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.resources.LoopResources;
-import reactor.ipc.netty.resources.PoolResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -85,17 +84,7 @@ public abstract class TcpClient {
 		return create(TcpResources.get());
 	}
 
-	/**
-	 * Prepare a pooled {@link TcpClient}
-	 *
-	 * @param poolResources a set of {@link PoolResources} to hold and manage pooled
-	 * connections
-	 *
-	 * @return a {@link TcpClient}
-	 */
-	public static TcpClient create(PoolResources poolResources) {
-		return TcpClientConnect.INSTANCE;
-	}
+
 	/**
 	 * Prepare a {@link TcpClient}
 	 *
@@ -104,7 +93,7 @@ public abstract class TcpClient {
 	 * @return a {@link TcpClient}
 	 */
 	public static TcpClient create(ConnectionProvider provider) {
-		return TcpClientConnect.INSTANCE;
+		return new TcpClientConnect(provider);
 	}
 
 	/**
@@ -227,8 +216,12 @@ public abstract class TcpClient {
 		try {
 			return Objects.requireNonNull(connect().block(timeout), "aborted");
 		}
-		catch (Exception e) {
-			throw new IllegalStateException("TcpClient couldn't be started within " + timeout.toMillis() +	"ms");
+		catch (IllegalStateException e) {
+			if (e.getMessage().contains("blocking read")) {
+				throw new IllegalStateException("TcpClient couldn't be started within "
+						+ timeout.toMillis() +	"ms");
+			}
+			throw e;
 		}
 	}
 

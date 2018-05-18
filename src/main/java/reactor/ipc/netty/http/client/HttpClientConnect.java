@@ -52,7 +52,6 @@ import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.FutureMono;
-import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
@@ -148,7 +147,7 @@ final class HttpClientConnect extends HttpClient {
 
 
 	static final ChannelOperations.OnSetup HTTP_OPS =
-			(ch, c, msg) -> new HttpClientOperations(ch, c).bind();
+			(ch, c, msg) -> new HttpClientOperations(ch, c);
 
 	static final class MonoHttpConnect extends Mono<Connection> {
 
@@ -276,18 +275,14 @@ final class HttpClientConnect extends HttpClient {
 				}
 				handler.channel(connection.channel());
 
-				ChannelOperations<?, ?> ops =
-						(ChannelOperations<?, ?>) connection;
-
-				Mono.fromDirect(handler.apply(ops, ops))
+				Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection))
 				    .subscribe(connection.disposeSubscriber());
 			}
 		}
 	}
 
 	static final class HttpClientHandler extends SocketAddress
-			implements BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>,
-			           Predicate<Throwable>, Supplier<SocketAddress> {
+			implements Predicate<Throwable>, Supplier<SocketAddress> {
 
 		final HttpMethod         method;
 		final HttpHeaders        defaultHeaders;
@@ -358,11 +353,9 @@ final class HttpClientConnect extends HttpClient {
 			return activeURI.getRemoteAddress();
 		}
 
-		@Override
-		public Publisher<Void> apply(NettyInbound in, NettyOutbound out) {
+		public Publisher<Void> requestWithbody(HttpClientOperations ch) {
 			try {
 				UriEndpoint uri = activeURI;
-				HttpClientOperations ch = (HttpClientOperations) in;
 				HttpHeaders headers = ch.getNettyRequest()
 				                        .setUri(uri.getPathAndQuery())
 				                        .setMethod(method)
@@ -407,7 +400,7 @@ final class HttpClientConnect extends HttpClient {
 						return Flux.concat(handler.apply(ch, wuo), wuo.then());
 					}
 					else {
-						return handler.apply(ch, out);
+						return handler.apply(ch, ch);
 					}
 				}
 				else {

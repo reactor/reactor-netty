@@ -110,7 +110,7 @@ final class HttpServerBind extends HttpServer implements Function<ServerBootstra
 					}
 
 					p.addLast(NettyPipeline.HttpServerHandler,
-							new HttpServerHandler((c, l, msg) -> new HttpServerOperations(c, l, compressPredicate, (HttpRequest) msg, forwarded).bind(), listener));
+							new HttpServerHandler((c, l, msg) -> new HttpServerOperations(c, l, compressPredicate, (HttpRequest) msg, forwarded), listener));
 				});
 	}
 

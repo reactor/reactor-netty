@@ -47,7 +47,6 @@ import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
@@ -58,7 +57,7 @@ import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
-import reactor.ipc.netty.resources.PoolResources;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
@@ -74,8 +73,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 public class HttpServerTests {
 
 	@Test
-	public void defaultHttpPort() {
+	public void httpPort() {
 		DisposableServer blockingFacade = HttpServer.create()
+		                                            .port(8080)
 		                                            .handle((req, resp) -> resp.sendNotFound())
 		                                            .wiretap()
 		                                            .bindNow();
@@ -86,8 +86,9 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void defaultHttpPortWithAddress() {
+	public void httpPortWithAddress() {
 		DisposableServer blockingFacade = HttpServer.create()
+		                                            .port(8080)
 		                                            .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
 		                                            .handle((req, resp) -> resp.sendNotFound())
 		                                            .wiretap()
@@ -285,7 +286,6 @@ public class HttpServerTests {
 	}
 
 	@Test
-	@Ignore
 	public void keepAlive() throws URISyntaxException {
 		Path resource = Paths.get(getClass().getResource("/public").toURI());
 		DisposableServer s = HttpServer.create()
@@ -294,27 +294,27 @@ public class HttpServerTests {
 		                               .wiretap()
 		                               .bindNow();
 
-		HttpResources.set(PoolResources.fixed("http", 1));
+		ConnectionProvider p = ConnectionProvider.fixed("http", 1);
 
-		Channel response0 = HttpClient.prepare()
+		Channel response0 = HttpClient.prepare(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/index.html")
 		                              .responseConnection((res, c) -> Mono.just(c.channel())
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
-		                              .blockLast(Duration.ofSeconds(30));
+		                              .blockLast(Duration.ofSeconds(3099));
 
-		Channel response1 = HttpClient.prepare()
+		Channel response1 = HttpClient.prepare(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
 		                              .uri("/test/test.css")
 		                              .responseConnection((res, c) -> Mono.just(c.channel())
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
-		                              .blockLast(Duration.ofSeconds(30));
+		                              .blockLast(Duration.ofSeconds(3099));
 
-		Channel response2 = HttpClient.prepare()
+		Channel response2 = HttpClient.prepare(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -323,7 +323,7 @@ public class HttpServerTests {
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response3 = HttpClient.prepare()
+		Channel response3 = HttpClient.prepare(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -332,7 +332,7 @@ public class HttpServerTests {
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response4 = HttpClient.prepare()
+		Channel response4 = HttpClient.prepare(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -341,7 +341,7 @@ public class HttpServerTests {
 		                                                                         .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response5 = HttpClient.prepare()
+		Channel response5 = HttpClient.prepare(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -356,7 +356,7 @@ public class HttpServerTests {
 		Assert.assertEquals(response0, response4);
 		Assert.assertEquals(response0, response5);
 
-		HttpResources.reset();
+		p.dispose();
 		s.dispose();
 	}
 
@@ -605,7 +605,7 @@ public class HttpServerTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare(PoolResources.fixed("test", 1))
+				HttpClient.prepare(ConnectionProvider.fixed("test", 1))
 				          .addressSupplier(server::address)
 				          .wiretap();
 
@@ -678,7 +678,7 @@ public class HttpServerTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare(PoolResources.fixed("test", 1))
+				HttpClient.prepare(ConnectionProvider.fixed("test", 1))
 				          .addressSupplier(server::address);
 
 		try {
@@ -746,7 +746,7 @@ public class HttpServerTests {
 		                                    })
 		                                    .bindNow(Duration.ofSeconds(30));
 
-		PoolResources pool = PoolResources.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
 		HttpClient client =
 				HttpClient.prepare(pool)

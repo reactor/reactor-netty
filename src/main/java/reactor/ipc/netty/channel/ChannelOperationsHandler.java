@@ -104,7 +104,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	public void channelActive(ChannelHandlerContext ctx) {
 		Connection c = Connection.from(ctx.channel());
 		listener.onStateChange(c, ConnectionObserver.State.CONNECTED);
-		opsFactory.create(c, listener, null);
+		ChannelOperations<?, ?> ops = opsFactory.create(c, listener, null);
+		if (ops != null) {
+			ops.bind();
+			listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+		}
 	}
 
 	@Override

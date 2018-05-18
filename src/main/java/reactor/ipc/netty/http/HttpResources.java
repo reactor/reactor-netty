@@ -20,8 +20,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.resources.ConnectionProvider;
 import reactor.ipc.netty.resources.LoopResources;
-import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpResources;
 
 /**
@@ -46,8 +46,8 @@ public final class HttpResources extends TcpResources {
 	 *
 	 * @return the global HTTP resources
 	 */
-	public static HttpResources set(PoolResources pools) {
-		return getOrCreate(httpResources, null, pools, ON_HTTP_NEW, "http");
+	public static HttpResources set(ConnectionProvider provider) {
+		return getOrCreate(httpResources, null, provider, ON_HTTP_NEW, "http");
 	}
 
 	/**
@@ -97,12 +97,12 @@ public final class HttpResources extends TcpResources {
 		});
 	}
 
-	HttpResources(LoopResources loops, PoolResources pools) {
-		super(loops, pools);
+	HttpResources(LoopResources loops, ConnectionProvider provider) {
+		super(loops, provider);
 	}
 
 	static final AtomicReference<HttpResources>                          httpResources;
-	static final BiFunction<LoopResources, PoolResources, HttpResources> ON_HTTP_NEW;
+	static final BiFunction<LoopResources, ConnectionProvider, HttpResources> ON_HTTP_NEW;
 
 	static {
 		ON_HTTP_NEW = HttpResources::new;

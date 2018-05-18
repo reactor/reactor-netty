@@ -461,13 +461,13 @@ public abstract class BootstrapHandlers {
 		@Override
 		public void handlerAdded(ChannelHandlerContext ctx) {
 			throw new UnsupportedOperationException("Transient handler, missing " +
-					"BootstrapHandlers.finalize() call");
+					"BootstrapHandlers.finalizeHandler() call");
 		}
 
 		@Override
 		public void handlerRemoved(ChannelHandlerContext ctx) {
 			throw new UnsupportedOperationException("Transient handler, missing " +
-					"BootstrapHandlers.finalize() call");
+					"BootstrapHandlers.finalizeHandler() call");
 		}
 
 		@Override
@@ -479,7 +479,7 @@ public abstract class BootstrapHandlers {
 	BootstrapHandlers() {
 	}
 
-	static final ChannelOperations.OnSetup EMPTY = (c, listener, msg) -> { };
+	static final ChannelOperations.OnSetup EMPTY = (c, listener, msg) -> null;
 
 	static final ChannelOption<ChannelOperations.OnSetup> OPS_OPTION = ChannelOption.newInstance("ops_factory");
 	static final ChannelOption<ConnectionObserver> OBSERVER_OPTION = ChannelOption.newInstance("connectionObserver");

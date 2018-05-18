@@ -203,19 +203,23 @@ public class HttpSendFileTests {
 				                                                       .aggregate()
 				                                                       .asByteArray()))
 				          .bindNow();
-		byte[] response =
-				customizeClientOptions(HttpClient.prepare()
-				                                 .addressSupplier(() -> context.address()))
-				          .request(HttpMethod.POST)
-				          .uri("/")
-				          .send(content)
-				          .responseContent()
-				          .aggregate()
-				          .asByteArray()
-				          .block();
 
-		assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
-		context.dispose();
+		try {
+			byte[] response = customizeClientOptions(HttpClient.prepare()
+			                                                   .addressSupplier(() -> context.address())).request(
+					HttpMethod.POST)
+			                                                                                             .uri("/")
+			                                                                                             .send(content)
+			                                                                                             .responseContent()
+			                                                                                             .aggregate()
+			                                                                                             .asByteArray()
+			                                                                                             .block();
+
+			assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
+		}
+		finally {
+			context.dispose();
+		}
 	}
 
 	private static final class TestCompletionHandler implements CompletionHandler<Integer, ByteBuffer> {
