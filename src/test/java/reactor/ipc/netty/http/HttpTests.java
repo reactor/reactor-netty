@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.assertj.core.api.Assertions;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
@@ -488,4 +489,63 @@ public class HttpTests {
 
 		server.dispose();
 	}
+
+	@Test
+	@Ignore
+	public void testHttpToHttp2Ssl() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(8080)
+				          .secure()
+				          .handle((req, res) -> res.asHttp2((in, out) -> out.sendString(Mono.just("Hello"))))
+				          .wiretap()
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
+	public void testHttpSsl() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(8080)
+				          .secure()
+				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				          .wiretap()
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
+	public void testHttpToHttp2ClearText() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(8080)
+				          .handle((req, res) -> res.asHttp2((in, out) -> out.sendString(Mono.just("Hello"))))
+				          .wiretap()
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
+	public void testHttp() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(8080)
+				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				          .wiretap()
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
 }

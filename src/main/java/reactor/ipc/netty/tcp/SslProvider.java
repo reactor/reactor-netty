@@ -26,6 +26,10 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.handler.codec.http2.Http2SecurityUtil;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -34,6 +38,7 @@ import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -641,6 +646,32 @@ public final class SslProvider {
 	static final Consumer<SslContextSpec> DEFAULT_SERVER_SPEC =
 			sslProviderBuilder -> sslProviderBuilder.sslContext(DEFAULT_SERVER_CONTEXT);
 
+
+	public static final SslContext DEFAULT_SERVER_HTTP2_CONTEXT;
+	static {
+		SslContext sslContext;
+		try {
+			SelfSignedCertificate cert = new SelfSignedCertificate();
+			io.netty.handler.ssl.SslProvider provider =
+			        OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+			                                    io.netty.handler.ssl.SslProvider.JDK;
+			sslContext =
+					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+					                 .sslProvider(provider)
+					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
+					                         ApplicationProtocolConfig.Protocol.ALPN,
+					                         ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+					                         ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+					                         ApplicationProtocolNames.HTTP_2,
+					                         ApplicationProtocolNames.HTTP_1_1))
+					                 .build();
+		}
+		catch (Exception e) {
+			sslContext = null;
+		}
+		DEFAULT_SERVER_HTTP2_CONTEXT = sslContext;
+	}
 }
 
 

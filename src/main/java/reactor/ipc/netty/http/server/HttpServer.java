@@ -303,7 +303,7 @@ public abstract class HttpServer {
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer secure() {
-		return new HttpServerSecure(this, null);
+		return new HttpServerSecure(this, SSL_DEFAULT_SERVER_HTTP2_SPEC);
 	}
 
 	/**
@@ -392,4 +392,6 @@ public abstract class HttpServer {
 
 	static final Function<TcpServer, TcpServer> FORWARD_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(MAP_NO_FORWARDED);
+	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SERVER_HTTP2_SPEC =
+			sslProviderBuilder -> sslProviderBuilder.sslContext(SslProvider.DEFAULT_SERVER_HTTP2_CONTEXT);
 }

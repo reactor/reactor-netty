@@ -51,6 +51,13 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
+import io.netty.handler.codec.http2.Http2DataFrame;
+import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2HeadersFrame;
+import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
+import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -65,6 +72,9 @@ import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
+import reactor.ipc.netty.http2.server.Http2ServerOperations;
+import reactor.ipc.netty.http2.server.Http2ServerRequest;
+import reactor.ipc.netty.http2.server.Http2ServerResponse;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -82,6 +92,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final HttpHeaders  responseHeaders;
 	final Cookies     cookieHolder;
 	final HttpRequest nettyRequest;
+	final Http2Headers http2Headers;
+	final boolean forwarded;
 	final ConnectionInfo connectionInfo;
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
@@ -91,10 +103,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
 		this.cookieHolder = replaced.cookieHolder;
+		this.forwarded = replaced.forwarded;
 		this.connectionInfo = replaced.connectionInfo;
 		this.responseHeaders = replaced.responseHeaders;
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
+		this.http2Headers = replaced.http2Headers;
 		this.nettyRequest = replaced.nettyRequest;
 		this.compressionPredicate = replaced.compressionPredicate;
 	}
@@ -105,7 +119,27 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpRequest nettyRequest,
 			ConnectionInfo connectionInfo) {
 		super(c, listener);
-		this.nettyRequest = Objects.requireNonNull(nettyRequest, "nettyRequest");
+		Objects.requireNonNull(msg, "msg");
+		if (msg instanceof Http2HeadersFrame) {
+			Http2HeadersFrame reqHeaders = (Http2HeadersFrame) msg;
+			this.http2Headers = reqHeaders.headers();
+			try {
+				if (reqHeaders.isEndStream()) {
+					this.nettyRequest = HttpConversionUtil.toFullHttpRequest(-1, reqHeaders.headers(),
+							channel().alloc(), false);
+				} else {
+					this.nettyRequest = HttpConversionUtil.toHttpRequest(-1, reqHeaders.headers(), false);
+				}
+			}
+			catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		else {
+			this.http2Headers = null;
+			this.nettyRequest = (HttpRequest) msg;
+		}
+
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		this.compressionPredicate = compressionPredicate;
@@ -343,6 +377,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		           .send();
 	}
 
+	@Override
+	public Mono<Void> asHttp2(
+			BiFunction<? super Http2ServerRequest, ? super Http2ServerResponse, ? extends Publisher<Void>> handler) {
+		return withHttp2Support(handler);
+	}
+
 	/**
 	 * @return the Transfer setting SSE for this http connection (e.g. event-stream)
 	 */
@@ -415,10 +455,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest) {
+		if (msg instanceof HttpRequest || msg instanceof Http2HeadersFrame) {
 			listener().onStateChange(this, ConnectionObserver.State.CONFIGURED);
 			if (msg instanceof FullHttpRequest) {
 				super.onInboundNext(ctx, msg);
+			} else if (msg instanceof DefaultHttp2HeadersFrame) {
+				if (((DefaultHttp2HeadersFrame) msg).isEndStream()) {
+					super.onInboundNext(ctx, msg);
+				}
 			}
 			return;
 		}
@@ -427,6 +471,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
+				onInboundComplete();
+			}
+		}
+		else if (msg instanceof Http2DataFrame) {
+			Http2DataFrame data = (Http2DataFrame) msg;
+			super.onInboundNext(ctx, data.content());
+			if (data.isEndStream()) {
 				onInboundComplete();
 			}
 		}
@@ -545,6 +596,31 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			log.error("Cannot enable websocket if headers have already been sent");
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
+	}
+
+	final Mono<Void> withHttp2Support(
+			BiFunction<? super Http2ServerRequest, ? super Http2ServerResponse, ? extends Publisher<Void>> handler) {
+		Objects.requireNonNull(handler, "handler");
+		if (markSentHeaders()) {
+			if (channel() instanceof Http2StreamChannel) {
+				int streamId = ((Http2StreamChannel) channel()).stream().id();
+				Http2ServerOperations
+						ops = new Http2ServerOperations(connection(), listener(), http2Headers, forwarded, streamId);
+
+				if (rebind(ops)) {
+					channel().pipeline().remove(Http2StreamFrameToHttpObjectCodec.class);
+					return Mono.defer(() -> Mono.fromDirect(handler.apply(ops, ops)))
+					           .doAfterSuccessOrError(ops);
+				}
+			}
+			else {
+				log.error("{} Unexpected channel type {}", channel(), channel().getClass());
+			}
+		}
+		else {
+			log.error("{} Cannot enable HTTP/2 if headers have already been sent", channel());
+		}
+		return Mono.error(new IllegalStateException("Failed to upgrade to HTTP/2"));
 	}
 
 	static final Logger log = Loggers.getLogger(HttpServerOperations.class);
