@@ -112,10 +112,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.compressionPredicate = compressionPredicate;
 		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
 		if (forwarded) {
-			this.connectionInfo = ConnectionInfo.newForwardedConnectionInfo(this, (SocketChannel) channel());
+			this.connectionInfo = ConnectionInfo.newForwardedConnectionInfo(nettyRequest, (SocketChannel) channel());
 		}
 		else {
-			this.connectionInfo = ConnectionInfo.newConnectionInfo(this, (SocketChannel) channel());
+			this.connectionInfo = ConnectionInfo.newConnectionInfo((SocketChannel) channel());
 		}
 		chunkedTransfer(true);
 	}
