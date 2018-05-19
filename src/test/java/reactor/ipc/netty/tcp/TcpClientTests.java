@@ -258,13 +258,13 @@ public class TcpClientTests {
 					                     }).then())
 				         )
 				         .wiretap()
-				         .connectNow(Duration.ofSeconds(3000));
+				         .connectNow(Duration.ofSeconds(30));
 
 		System.out.println("Connected");
 
 		c.onDispose()
 		 .log()
-		 .block(Duration.ofSeconds(3000));
+		 .block(Duration.ofSeconds(30));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
 				latch.await(15, TimeUnit.SECONDS));
