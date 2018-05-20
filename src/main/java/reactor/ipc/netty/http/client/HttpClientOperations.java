@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -32,9 +33,11 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -56,6 +59,7 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
@@ -72,9 +76,13 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
+import reactor.ipc.netty.http2.client.Http2ClientOperations;
+import reactor.ipc.netty.http2.client.Http2ClientRequest;
+import reactor.ipc.netty.http2.client.Http2ClientResponse;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -594,6 +602,19 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						":"+get(channel())+" to "+ops);
 			}
 		}
+	}
+
+	@Override
+	public Mono<Void> asHttp2(
+			BiFunction<? super Http2ClientRequest, ? super Http2ClientResponse, ? extends Publisher<Void>> handler) {
+		return withHttp2Support(handler);
+	}
+
+	final Mono<Void> withHttp2Support(
+			BiFunction<? super Http2ClientRequest, ? super Http2ClientResponse, ? extends Publisher<Void>> handler) {
+		Objects.requireNonNull(handler, "handler");
+
+		return Mono.empty();
 	}
 
 	static final class ResponseState {

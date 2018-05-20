@@ -14,33 +14,16 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.http.client;
+package reactor.ipc.netty.http2.client;
 
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.cookie.Cookie;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
-import reactor.ipc.netty.http.HttpInfos;
-import reactor.ipc.netty.http2.client.Http2ClientRequest;
-import reactor.ipc.netty.http2.client.Http2ClientResponse;
-
-import java.util.function.BiFunction;
+import io.netty.handler.codec.http2.Http2Headers;
 
 /**
  * An Http Reactive client metadata contract for outgoing requests. It inherits several
- * accessor related to HTTP flow : headers, params, URI, method, websocket...
- *
- * @author Stephane Maldini
- * @author Simon Baslé
+ * accessor related to HTTP flow : headers, params, URI, method...
  */
-public interface HttpClientRequest extends HttpInfos {
+public interface Http2ClientRequest {
 
-	/**
-	 * Add an outbound cookie
-	 *
-	 * @return this outbound
-	 */
-	HttpClientRequest addCookie(Cookie cookie);
 	/**
 	 * Add an outbound http header, appending the value if the header is already set.
 	 *
@@ -49,7 +32,7 @@ public interface HttpClientRequest extends HttpInfos {
 	 *
 	 * @return this outbound
 	 */
-	HttpClientRequest addHeader(CharSequence name, CharSequence value);
+	Http2ClientRequest addHeader(CharSequence name, CharSequence value);
 
 	/**
 	 * Return  true if headers and status have been sent to the client
@@ -66,7 +49,7 @@ public interface HttpClientRequest extends HttpInfos {
 	 *
 	 * @return this outbound
 	 */
-	HttpClientRequest header(CharSequence name, CharSequence value);
+	Http2ClientRequest header(CharSequence name, CharSequence value);
 
 	/**
 	 * Set outbound headers from the passed headers. It will however ignore {@code
@@ -76,36 +59,12 @@ public interface HttpClientRequest extends HttpInfos {
 	 *
 	 * @return this outbound
 	 */
-	HttpClientRequest headers(HttpHeaders headers);
-
-	/**
-	 * Return true  if redirected will be followed
-	 *
-	 * @return true if redirected will be followed
-	 */
-	boolean isFollowRedirect();
-
-	/**
-	 * set the request keepAlive if true otherwise remove the existing connection keep alive header
-	 *
-	 * @return this outbound
-	 */
-	HttpClientRequest keepAlive(boolean keepAlive);
-
-	/**
-	 * Return the previous redirections or empty array
-	 *
-	 * @return the previous redirections or empty array
-	 */
-	String[] redirectedFrom();
+	Http2ClientRequest headers(Http2Headers headers);
 
 	/**
 	 * Return outbound headers to be sent
 	 *
 	 * @return outbound headers to be sent
 	 */
-	HttpHeaders requestHeaders();
-
-	Mono<Void> asHttp2(
-			BiFunction<? super Http2ClientRequest, ? super Http2ClientResponse, ? extends Publisher<Void>> handler);
+	Http2Headers requestHeaders();
 }

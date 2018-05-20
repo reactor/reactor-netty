@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpMethod;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -491,7 +492,7 @@ public class HttpTests {
 	}
 
 	@Test
-	@Ignore
+//	@Ignore
 	public void testHttpToHttp2Ssl() throws Exception {
 		DisposableServer server =
 				HttpServer.create()
@@ -501,7 +502,18 @@ public class HttpTests {
 				          .wiretap()
 				          .bindNow();
 
-		new CountDownLatch(1).await();
+		String response =
+				HttpClient.prepare()
+				          .port(server.port())
+				          .secure()
+				          .wiretap()
+				          .get()
+				          .uri("/")
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .block(Duration.ofSeconds(30));
+
 		server.disposeNow();
 	}
 

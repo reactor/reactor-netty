@@ -632,6 +632,18 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Enable default sslContext support. The default {@link SslContext} will be assigned
+	 * to with a default value of {@literal 10} seconds handshake timeout unless the
+	 * environment property {@literal reactor.ipc.netty.sslHandshakeTimeout} is set.
+	 * The default {@link SslContext} will contain HTTP/2 settings.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient secure() {
+		return tcpConfiguration(tcp -> tcp.secure(SSL_DEFAULT_SPEC_HTTP2));
+	}
+
+	/**
 	 * HTTP Websocket to connect the {@link HttpClient}.
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response
@@ -711,4 +723,6 @@ public abstract class HttpClient {
 	static boolean isCompressing(HttpHeaders h){
 		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true);
 	}
+	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC_HTTP2 =
+			sslProviderBuilder -> sslProviderBuilder.sslContext(SslProvider.DEFAULT_CLIENT_HTTP2_CONTEXT);
 }

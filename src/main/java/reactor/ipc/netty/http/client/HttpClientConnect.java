@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -33,19 +34,38 @@ import javax.net.ssl.SSLParameters;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
+import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent;
+import io.netty.handler.codec.http2.Http2FrameLogger;
+import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
+import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
+import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -192,20 +212,9 @@ final class HttpClientConnect extends HttpClient {
 			HttpClientHandler handler = new HttpClientHandler(b.config()
 			                                                   .remoteAddress(), configuration);
 
+			HttpClientInitializer initializer = new HttpClientInitializer(handler);
 			BootstrapHandlers.updateConfiguration(b,
-					NettyPipeline.HttpInitializer,
-					(listener, channel) -> {
-						channel.pipeline()
-						       .addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
-
-						if (handler.compress) {
-							channel.pipeline()
-							       .addAfter(NettyPipeline.HttpCodec,
-							                 NettyPipeline.HttpDecompressor,
-							                 new HttpContentDecompressor());
-						}
-
-					});
+					NettyPipeline.HttpInitializer, initializer);
 
 			b.remoteAddress(handler);
 
@@ -227,7 +236,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				BootstrapHandlers.connectionObserver(finalBootstrap,
-						BootstrapHandlers.connectionObserver(finalBootstrap).then(new HttpObserver(sink, handler)));
+						BootstrapHandlers.connectionObserver(finalBootstrap).then(new HttpObserver(sink, handler, initializer)));
 
 				tcpClient.connect(finalBootstrap)
 				         .subscribe(new TcpClientSubscriber(sink));
@@ -275,10 +284,12 @@ final class HttpClientConnect extends HttpClient {
 
 		final MonoSink<Connection> sink;
 		final HttpClientHandler handler;
+		final HttpClientInitializer initializer;
 
-		HttpObserver(MonoSink<Connection> sink, HttpClientHandler handler) {
+		HttpObserver(MonoSink<Connection> sink, HttpClientHandler handler, HttpClientInitializer initializer) {
 			this.sink = sink;
 			this.handler = handler;
+			this.initializer = initializer;
 		}
 
 		@Override
@@ -305,8 +316,10 @@ final class HttpClientConnect extends HttpClient {
 				}
 				handler.channel(connection.channel());
 
-				Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection))
-				    .subscribe(connection.disposeSubscriber());
+				FutureMono.from(initializer.http2SettingsWritten)
+				          .then(FutureMono.from(initializer.childChannelOpened))
+				          .then(Mono.defer(() -> Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection))))
+				          .subscribe(connection.disposeSubscriber());
 			}
 		}
 	}
@@ -593,4 +606,167 @@ final class HttpClientConnect extends HttpClient {
 			throw new IllegalStateException("Impossible");
 		}
 	}
+
+	static final class HttpClientInitializer
+			implements BiConsumer<ConnectionObserver, Channel>, ChannelOperations.OnSetup {
+		final HttpClientHandler handler;
+		ChannelPromise childChannelOpened;
+		ChannelPromise http2SettingsWritten;
+
+		HttpClientInitializer(HttpClientHandler handler) {
+			this.handler = handler;
+		}
+
+		@Override
+		public ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg) {
+			return new HttpClientOperations(c, listener);
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			childChannelOpened = channel.newPromise();
+			http2SettingsWritten = channel.newPromise();
+			ChannelPipeline p = channel.pipeline();
+
+			if (p.get(NettyPipeline.SslHandler) != null) {
+				p.addLast(new Http2ClientInitializer(listener, handler, childChannelOpened, http2SettingsWritten));
+			}
+			else {
+				HttpClientCodec httpClientCodec = new HttpClientCodec();
+				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
+						Http2MultiplexCodecBuilder.forClient(new Http2StreamInitializer())
+						                          .initialSettings(Http2Settings.defaultSettings());
+				if (p.get(NettyPipeline.LoggingHandler) != null) {
+					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
+				}
+
+				p.addLast(NettyPipeline.HttpCodec, httpClientCodec)
+				 .addLast(new HttpClientUpgradeHandler(httpClientCodec,
+				          new Http2ClientUpgradeCodec(http2MultiplexCodecBuilder.build()), 65536));
+
+				if (handler.compress) {
+					p.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+				}
+			}
+		}
+	}
+
+	static final class Http2ClientInitializer extends ApplicationProtocolNegotiationHandler {
+
+		final ConnectionObserver listener;
+		final HttpClientHandler handler;
+
+		final ChannelPromise childChannelOpened;
+		final ChannelPromise http2SettingsWritten;
+
+		protected Http2ClientInitializer(ConnectionObserver listener, HttpClientHandler handler,
+				ChannelPromise childChannelOpened, ChannelPromise http2SettingsWritten) {
+			super(ApplicationProtocolNames.HTTP_1_1);
+			this.listener = listener;
+			this.handler = handler;
+			this.childChannelOpened = childChannelOpened;
+			this.http2SettingsWritten = http2SettingsWritten;
+		}
+
+		@Override
+		protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+			ChannelPipeline p = ctx.pipeline();
+
+			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
+				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
+						Http2MultiplexCodecBuilder.forClient(new Http2StreamInitializer())
+						                          .initialSettings(Http2Settings.defaultSettings());
+				if (p.get(NettyPipeline.LoggingHandler) != null) {
+					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
+				}
+
+				p.addLast(new Http2SettingWrittenHandler(http2SettingsWritten));
+				p.addLast(http2MultiplexCodecBuilder.build());
+
+				Http2StreamChannelBootstrap http2StreamChannelBootstrap =
+						new Http2StreamChannelBootstrap(ctx.channel()).handler(new ChannelInitializer() {
+							@Override
+							protected void initChannel(Channel ch) {
+								ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(false));
+								ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
+								if (log.isDebugEnabled()) {
+									log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
+								}
+							}
+						});
+				BootstrapHandlers.channelOperationFactory(http2StreamChannelBootstrap, HTTP_OPS);
+
+				http2StreamChannelBootstrap.open()
+				                           .addListener(new ChannelOpenedListener(childChannelOpened));
+
+				return;
+			}
+
+			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
+				childChannelOpened.setSuccess();
+				http2SettingsWritten.setSuccess();
+				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, new HttpClientCodec());
+
+				if (handler.compress) {
+					p.addAfter(NettyPipeline.HttpCodec,
+					           NettyPipeline.HttpDecompressor,
+					           new HttpContentDecompressor());
+				}
+				return;
+			}
+
+			throw new IllegalStateException("unknown protocol: " + protocol);
+		}
+	}
+
+	static final class Http2StreamInitializer extends ChannelInitializer<Channel> {
+
+		Http2StreamInitializer() {
+		}
+
+		@Override
+		protected void initChannel(Channel ch) {
+			// TODO handle server pushes
+		}
+	}
+
+	static final class ChannelOpenedListener
+			implements GenericFutureListener<Future<? super Http2StreamChannel>> {
+
+		final ChannelPromise channelOpened;
+
+		ChannelOpenedListener(ChannelPromise channelOpened) {
+			this.channelOpened = channelOpened;
+		}
+
+		@Override
+		public void operationComplete(Future future) throws Exception {
+			if (future.isSuccess() && future.isDone()) {
+				channelOpened.setSuccess();
+			}
+			else {
+				channelOpened.setFailure(future.cause());
+			}
+		}
+	}
+
+	static final class Http2SettingWrittenHandler extends ChannelInboundHandlerAdapter {
+
+		final ChannelPromise http2SettingsWritten;
+
+		Http2SettingWrittenHandler(ChannelPromise http2SettingsWritten) {
+			this.http2SettingsWritten = http2SettingsWritten;
+		}
+
+		@Override
+		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+			if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent) {
+				System.out.println("VILY");
+				http2SettingsWritten.setSuccess();
+				ctx.pipeline().remove(this);
+			}
+			super.userEventTriggered(ctx, evt);
+		}
+	}
+
 }
