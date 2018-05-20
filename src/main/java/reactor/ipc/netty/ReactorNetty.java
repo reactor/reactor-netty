@@ -540,6 +540,11 @@ final class ReactorNetty {
 		public Channel channel() {
 			return channel;
 		}
+
+		@Override
+		public String toString() {
+			return "SimpleConnection{" + "channel=" + channel + '}';
+		}
 	}
 
 	static NettyInbound unavailableInbound(Connection c) {

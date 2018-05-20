@@ -147,10 +147,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public String toString() {
 		if (isWebsocket()) {
-			return "ws:" + uri();
+			return "ws{uri=" + uri()+", connection="+connection()+"}";
 		}
 
-		return method().name() + ":" + uri();
+		return method().name() + "{uri=" + uri()+", connection="+connection()+"}";
 	}
 
 	@Override

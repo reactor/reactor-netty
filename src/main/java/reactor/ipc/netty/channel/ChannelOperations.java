@@ -244,8 +244,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public String toString() {
-		return connection.channel()
-		                 .toString();
+		return "ChannelOperations{"+connection.toString()+"}";
 	}
 
 	/**
@@ -384,6 +383,11 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final String formatName() {
 		return getClass().getSimpleName()
 		                 .replace("Operations", "");
+	}
+
+	@Override
+	public boolean isPersistent() {
+		return connection.isPersistent();
 	}
 
 	@Override

@@ -91,7 +91,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final HttpHeaders           requestHeaders;
 
 	volatile ResponseState responseState;
-	int inboundPrefetch;
 
 	boolean started;
 
@@ -105,7 +104,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.nettyRequest = replaced.nettyRequest;
 		this.responseState = replaced.responseState;
 		this.redirectable = replaced.redirectable;
-		this.inboundPrefetch = replaced.inboundPrefetch;
 		this.requestHeaders = replaced.requestHeaders;
 	}
 
@@ -121,7 +119,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.nettyRequest =
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
-		this.inboundPrefetch = 16;
 	}
 
 	@Override
@@ -486,7 +483,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			if (notRedirected(response)) {
 				listener().onStateChange(this, RESPONSE_RECEIVED);
-				prefetchMore(ctx);
 			}
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
@@ -529,7 +525,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			return;
 		}
 		super.onInboundNext(ctx, msg);
-		prefetchMore(ctx);
 	}
 
 	@Override
@@ -575,14 +570,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		else {
 			return Mono.empty();
-		}
-	}
-
-	final void prefetchMore(ChannelHandlerContext ctx) {
-		int inboundPrefetch = this.inboundPrefetch - 1;
-		if (inboundPrefetch >= 0) {
-			this.inboundPrefetch = inboundPrefetch;
-			ctx.read();
 		}
 	}
 

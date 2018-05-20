@@ -55,7 +55,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.DisposableServer;
-import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
@@ -409,7 +408,7 @@ public class HttpClientTest {
 
 	@Test
 	public void disableChunkForced() {
-		Tuple2<HttpResponseStatus, Channel> r =
+		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
@@ -417,22 +416,18 @@ public class HttpClientTest {
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
 				          .send(ByteBufFlux.fromString(Flux.just("hello")))
-				          .responseConnection((res, conn) -> Mono.just(res.status())
-				                                                 .zipWith(Mono.just(conn.channel())))
-				          .blockLast(Duration.ofSeconds(30));
+				          .responseSingle((res, conn) -> Mono.just(res.status())
+				                                                 .zipWith(conn.asString()))
+				          .block(Duration.ofSeconds(30));
 
 		assertThat(r).isNotNull();
-
-		FutureMono.from(r.getT2()
-		                 .closeFuture())
-		          .block(Duration.ofSeconds(5));
 
 		Assert.assertTrue(Objects.equals(r.getT1(), HttpResponseStatus.NOT_FOUND));
 	}
 
 	@Test
 	public void disableChunkForced2() {
-		Tuple2<HttpResponseStatus, Channel> r =
+		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
@@ -440,15 +435,11 @@ public class HttpClientTest {
 				          .doOnRequest((req, c) -> req.keepAlive(false))
 				          .get()
 				          .uri("/unsupportedURI")
-				          .responseConnection((res, conn) -> Mono.just(res.status())
-				                                                 .zipWith(Mono.just(conn.channel())))
-				          .blockLast(Duration.ofSeconds(30));
+				          .responseSingle((res, conn) -> Mono.just(res.status())
+				                                             .zipWith(conn.asString()))
+				          .block(Duration.ofSeconds(30));
 
 		assertThat(r).isNotNull();
-
-		FutureMono.from(r.getT2()
-		                 .closeFuture())
-		          .block(Duration.ofSeconds(5));
 
 		Assert.assertTrue(Objects.equals(r.getT1(), HttpResponseStatus.NOT_FOUND));
 	}
@@ -499,6 +490,7 @@ public class HttpClientTest {
 				          .get()
 				          .uri("/unsupportedURI")
 				          .responseConnection((res, conn) -> Mono.just(res.status())
+				                                                 .delayUntil(s -> conn.inbound().receive())
 				                                                 .zipWith(Mono.just(conn.channel())))
 				          .blockLast(Duration.ofSeconds(30));
 
@@ -512,7 +504,8 @@ public class HttpClientTest {
 				          .noChunkedTransfer()
 				          .get()
 				          .uri("/unsupportedURI")
-				          .responseConnection((res, conn) -> Mono.just(conn.channel()))
+				          .responseConnection((res, conn) -> Mono.just(conn.channel())
+				                                                 .delayUntil(s -> conn.inbound().receive()))
 				          .blockLast(Duration.ofSeconds(30));
 
 		assertThat(r2).isNotNull();

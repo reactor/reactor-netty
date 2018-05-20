@@ -377,6 +377,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 			owner().onStateChange(connection, newState);
 		}
+
+		@Override
+		public String toString() {
+			return "PooledConnection{" + "channel=" + channel + '}';
+		}
 	}
 
 	final static class DisposableAcquire
@@ -452,6 +457,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				@SuppressWarnings("unchecked")
 				PendingConnectionObserver pending = (PendingConnectionObserver)current;
 				PendingConnectionObserver.Pending p;
+				current = null;
 				registerClose(c);
 
 				while((p = pending.pendingQueue.poll()) != null) {
@@ -469,9 +475,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 			Connection conn = Connection.from(c);
 
-			obs.onStateChange(conn, State.ACQUIRED);
 
 			if (current != null) {
+				obs.onStateChange(conn, State.ACQUIRED);
+
 				PooledConnection con = conn.as(PooledConnection.class);
 				if (con != null) {
 					ChannelOperations<?, ?> ops = pool.opsFactory.create(con, con, null);

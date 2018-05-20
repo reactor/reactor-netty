@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import reactor.core.Disposable;
@@ -139,9 +140,35 @@ final class NewConnectionProvider implements ConnectionProvider {
 					sink.error(new IOException("error while connecting to " + f.channel()));
 				}
 			}
-			else if (log.isDebugEnabled()) {
-				log.debug("Connected new channel {}", f.channel());
+			else {
+				new NewConnection(f.channel()).bind();
+				if (log.isDebugEnabled()) {
+					log.debug("Connected new channel {}", f.channel());
+				}
 			}
+		}
+	}
+
+	static final class NewConnection implements Connection {
+		final Channel channel;
+
+		NewConnection(Channel channel) {
+			this.channel = channel;
+		}
+
+		@Override
+		public Channel channel() {
+			return channel;
+		}
+
+		@Override
+		public boolean isPersistent() {
+			return false;
+		}
+
+		@Override
+		public String toString() {
+			return "NewConnection{" + "channel=" + channel + '}';
 		}
 	}
 
