@@ -29,14 +29,14 @@ import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.channel.ChannelOperations;
 
-final class Http2BridgeServerHandler extends ChannelDuplexHandler {
+final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
 	final ChannelOperations.OnSetup opsFactory;
 	final ConnectionObserver listener;
 
 	ChannelHandlerContext ctx;
 
-	Http2BridgeServerHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
+	Http2StreamBridgeHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
 		this.opsFactory = opsFactory;
 		this.listener = listener;
 	}

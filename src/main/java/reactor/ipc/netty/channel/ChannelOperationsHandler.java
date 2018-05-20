@@ -68,7 +68,7 @@ import reactor.util.context.Context;
  *
  * @author Stephane Maldini
  */
-public final class ChannelOperationsHandler extends ChannelDuplexHandler
+final class ChannelOperationsHandler extends ChannelDuplexHandler
 		implements NettyPipeline.SendOptions, ChannelFutureListener {
 
 	final PublisherSender    inner;
@@ -98,7 +98,7 @@ public final class ChannelOperationsHandler extends ChannelDuplexHandler
 	volatile long    scheduledFlush;
 
 	@SuppressWarnings("unchecked")
-	public ChannelOperationsHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
+	ChannelOperationsHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
 		this.inner = new PublisherSender(this);
 		this.prefetch = 32;
 		this.listener = listener;

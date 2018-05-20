@@ -60,6 +60,7 @@ import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
@@ -88,12 +89,12 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerResponse>
 		implements HttpServerRequest, HttpServerResponse {
 
-	final HttpResponse nettyResponse;
-	final HttpHeaders  responseHeaders;
-	final Cookies     cookieHolder;
-	final HttpRequest nettyRequest;
-	final Http2Headers http2Headers;
-	final boolean forwarded;
+	final HttpResponse   nettyResponse;
+	final HttpHeaders    responseHeaders;
+	final Cookies        cookieHolder;
+	final HttpRequest    nettyRequest;
+	final Http2Headers   http2Headers;
+	final boolean        forwarded;
 	final ConnectionInfo connectionInfo;
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
@@ -127,17 +128,24 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				if (reqHeaders.isEndStream()) {
 					this.nettyRequest = HttpConversionUtil.toFullHttpRequest(-1, reqHeaders.headers(),
 							channel().alloc(), false);
-				} else {
+				}
+				else {
 					this.nettyRequest = HttpConversionUtil.toHttpRequest(-1, reqHeaders.headers(), false);
 				}
 			}
 			catch(Exception e) {
-				throw new RuntimeException(e);
+				throw Exceptions.propagate(e);
 			}
+			this.connectionInfo =
+					initConnectionInfo(channel(), nettyRequest, forwarded, true);
 		}
 		else {
 			this.http2Headers = null;
 			this.nettyRequest = (HttpRequest) msg;
+			this.connectionInfo =
+					initConnectionInfo(channel(), nettyRequest, forwarded, false);
+
+			chunkedTransfer(true);
 		}
 
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -455,14 +463,35 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
-		if (msg instanceof HttpRequest || msg instanceof Http2HeadersFrame) {
+
+		// Http2 bridge enabled
+		if (http2Headers != null) {
+			if (msg instanceof Http2DataFrame) {
+				Http2DataFrame data = (Http2DataFrame) msg;
+				super.onInboundNext(ctx, data.content());
+				if (data.isEndStream()) {
+					onInboundComplete();
+				}
+			}
+			else if(msg instanceof Http2HeadersFrame) {
+				listener().onStateChange(this, ConnectionObserver.State.CONFIGURED);
+				if (msg instanceof DefaultHttp2HeadersFrame) {
+					if (((DefaultHttp2HeadersFrame) msg).isEndStream()) {
+						super.onInboundNext(ctx, msg);
+					}
+				}
+			}
+			else {
+				super.onInboundNext(ctx, msg);
+			}
+			return;
+		}
+
+		//http1
+		if (msg instanceof HttpRequest) {
 			listener().onStateChange(this, ConnectionObserver.State.CONFIGURED);
 			if (msg instanceof FullHttpRequest) {
 				super.onInboundNext(ctx, msg);
-			} else if (msg instanceof DefaultHttp2HeadersFrame) {
-				if (((DefaultHttp2HeadersFrame) msg).isEndStream()) {
-					super.onInboundNext(ctx, msg);
-				}
 			}
 			return;
 		}
@@ -471,13 +500,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
-				onInboundComplete();
-			}
-		}
-		else if (msg instanceof Http2DataFrame) {
-			Http2DataFrame data = (Http2DataFrame) msg;
-			super.onInboundNext(ctx, data.content());
-			if (data.isEndStream()) {
 				onInboundComplete();
 			}
 		}
@@ -602,7 +624,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			BiFunction<? super Http2ServerRequest, ? super Http2ServerResponse, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		if (markSentHeaders()) {
-			if (channel() instanceof Http2StreamChannel) {
+			if (http2Headers != null) {
 				int streamId = ((Http2StreamChannel) channel()).stream().id();
 				Http2ServerOperations
 						ops = new Http2ServerOperations(connection(), listener(), http2Headers, forwarded, streamId);
@@ -614,13 +636,28 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				}
 			}
 			else {
-				log.error("{} Unexpected channel type {}", channel(), channel().getClass());
+				log.error("{} Current operations is running on HTTP1 protocol channel " +
+								"type {}",
+						channel(), channel().getClass());
 			}
 		}
 		else {
 			log.error("{} Cannot enable HTTP/2 if headers have already been sent", channel());
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to HTTP/2"));
+	}
+
+	static ConnectionInfo initConnectionInfo(Channel c,
+			HttpRequest nettyRequest,
+			boolean forwarded,
+			boolean http2) {
+		c = http2 ? c.parent() : c;
+		if (forwarded) {
+			return ConnectionInfo.newForwardedConnectionInfo(nettyRequest, c);
+		}
+		else {
+			return ConnectionInfo.newConnectionInfo(c);
+		}
 	}
 
 	static final Logger log = Loggers.getLogger(HttpServerOperations.class);

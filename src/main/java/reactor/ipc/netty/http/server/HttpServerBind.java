@@ -42,12 +42,12 @@ import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.util.AsciiString;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
-import reactor.ipc.netty.channel.ChannelOperationsHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.tcp.SslProvider;
@@ -107,49 +107,21 @@ final class HttpServerBind extends HttpServer
 		//remove any OPS since we will initialize below
 		BootstrapHandlers.channelOperationFactory(b);
 
-		int line = conf.decoder.maxInitialLineLength;
-		int header = conf.decoder.maxHeaderSize;
-		int buffer = conf.decoder.initialBufferSize;
-		int chunk = conf.decoder.maxChunkSize;
-		boolean validate = conf.decoder.validateHeaders;
-		boolean forwarded = conf.forwarded;
-		int minCompressionSize = conf.minCompressionSize;
-
-		BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate =
-				compressPredicate(conf.compressPredicate, minCompressionSize);
-
-
 		return BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.HttpInitializer,
-				(listener, channel) -> {
-					ChannelPipeline p = channel.pipeline();
-
-					if (p.get(NettyPipeline.SslHandler) != null) {
-						p.addLast(new Http2ServerInitializer(line, header, chunk, validate, buffer,
-								minCompressionSize, compressPredicate, forwarded, listener));
-					}
-					else {
-						HttpServerCodec httpServerCodec = new HttpServerCodec(line, header, chunk, validate, buffer);
-						ChannelOperations.OnSetup ops = (c, l, msg) ->
-								new HttpServerOperations(c, l, compressPredicate, (HttpRequest) msg, forwarded);
-
-						p.addLast(NettyPipeline.HttpCodec, httpServerCodec)
-						 .addLast(new HttpServerUpgradeHandler(httpServerCodec,
-						          new UpgradeCodecFactoryImpl(compressPredicate, forwarded, listener)));
-
-						boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
-						if (alwaysCompress) {
-							p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
-						}
-
-						HttpRequestPipeliningHandler httpServerHandler = new HttpRequestPipeliningHandler(ops, listener);
-						p.addLast(NettyPipeline.HttpServerHandler, httpServerHandler);
-					}
-				});
+				new HttpServerInitializer(
+						conf.decoder.maxInitialLineLength,
+						conf.decoder.maxHeaderSize,
+						conf.decoder.maxChunkSize,
+						conf.decoder.validateHeaders,
+						conf.decoder.initialBufferSize,
+						conf.minCompressionSize,
+						compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+						conf.forwarded));
 	}
 
-	@Nullable static BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
-			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
+	@Nullable
+	static BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			int minResponseSize) {
 
 		if (minResponseSize <= 0) {
@@ -184,8 +156,21 @@ final class HttpServerBind extends HttpServer
 		return lengthPredicate;
 	}
 
+	static void addStreamHandlers(Channel ch, HttpServerInitializer parent, ConnectionObserver listener) {
+		ch.pipeline()
+		  .addLast(new Http2StreamBridgeHandler(parent, listener))
+		  .addLast(new Http2StreamFrameToHttpObjectCodec(true));
+
+		ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
+
+		if (log.isDebugEnabled()) {
+			log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
+		}
+	}
+
 	static final class HttpServerInitializer
-			implements BiConsumer<ConnectionObserver, Channel> {
+			implements BiConsumer<ConnectionObserver, Channel>,
+			           ChannelOperations.OnSetup {
 
 		final int                                                line;
 		final int                                                header;
@@ -215,95 +200,98 @@ final class HttpServerBind extends HttpServer
 		}
 
 		@Override
-		public void accept(ConnectionObserver listener, Channel channel) {
-			ChannelPipeline p = channel.pipeline();
-
-			HttpServerCodec httpServerCodec =
-					new HttpServerCodec(line, header, chunk, validate, buffer);
-
-			p.addLast(NettyPipeline.HttpCodec, httpServerCodec);
-
-			boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
-
-			if (alwaysCompress) {
-				p.addLast(NettyPipeline.CompressionHandler,
-						new SimpleCompressionHandler());
-			}
-
-			p.addLast(NettyPipeline.HttpTrafficHandler,
-					new HttpTrafficHandler(listener, forwarded, compressPredicate));
-		}
-	}
-
-	static final class UpgradeCodecFactoryImpl implements HttpServerUpgradeHandler.UpgradeCodecFactory {
-		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
-		final boolean forwarded;
-		final ConnectionObserver listener;
-
-		UpgradeCodecFactoryImpl(BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				boolean forwarded, ConnectionObserver listener) {
-			this.compressPredicate = compressPredicate;
-			this.forwarded = forwarded;
-			this.listener = listener;
+		public ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg) {
+			return new HttpServerOperations(c, listener, compressPredicate, msg, forwarded);
 		}
 
 		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			ChannelPipeline p = channel.pipeline();
+
+			if (p.get(NettyPipeline.SslHandler) != null) {
+				p.addLast(new Http2ServerInitializer(this, listener));
+			}
+			else {
+				HttpServerCodec httpServerCodec = new HttpServerCodec(line, header, chunk, validate, buffer);
+
+				p.addLast(NettyPipeline.HttpCodec, httpServerCodec)
+				 .addLast(new HttpServerUpgradeHandler(httpServerCodec, new UpgradeCodecFactoryImpl(this, listener, p.get(NettyPipeline.LoggingHandler) != null)));
+
+				boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
+
+				if (alwaysCompress) {
+					p.addLast(NettyPipeline.CompressionHandler,
+							new SimpleCompressionHandler());
+				}
+
+				p.addLast(NettyPipeline.HttpServerHandler, new HttpRequestPipeliningHandler(this, listener));
+			}
+		}
+	}
+
+	/**
+	 * Initialize Http1 - Http2 pipeline configuration using packet inspection
+	 * or cleartext upgrade
+	 */
+	static final class UpgradeCodecFactoryImpl extends ChannelInitializer<Channel>
+			implements HttpServerUpgradeHandler.UpgradeCodecFactory {
+
+		final HttpServerInitializer parent;
+		final ConnectionObserver    listener;
+		final boolean               debug;
+
+		UpgradeCodecFactoryImpl(HttpServerInitializer parent, ConnectionObserver listener, boolean debug) {
+			this.parent = parent;
+			this.listener = listener;
+			this.debug = debug;
+		}
+
+		/**
+		 * Inline channel initializer
+		 */
+		@Override
+		protected void initChannel(Channel ch) {
+			addStreamHandlers(ch, parent, listener);
+		}
+
+		@Override
+		@Nullable
 		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
-			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
+			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME,
+					protocol)) {
 				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-						Http2MultiplexCodecBuilder.forServer(new ChannelInitializer() {
-							@Override
-							protected void initChannel(Channel ch) {
-								ChannelOperations.OnSetup ops = (c, l, msg) ->
-										new HttpServerOperations(c, l, compressPredicate, msg, forwarded);
-								Http2BridgeServerHandler httpServerHandler = new Http2BridgeServerHandler(ops, listener);
-								ch.pipeline().addLast(NettyPipeline.HttpServerHandler, httpServerHandler);
+						Http2MultiplexCodecBuilder.forServer(this)
+						                          .initialSettings(Http2Settings.defaultSettings());
 
-								ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(true));
-
-								ch.pipeline().addLast(NettyPipeline.ReactiveBridge,
-										new ChannelOperationsHandler((c, listener, msg) -> null, listener));
-
-								if (log.isDebugEnabled()) {
-									log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
-								}
-							}
-						})
-						.initialSettings(Http2Settings.defaultSettings())
-						// TODO how to check that LoggingHandler is configured
-						.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpServer.class));
+				if (debug) {
+					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(
+							LogLevel.DEBUG,
+							HttpServer.class));
+				}
 				return new Http2ServerUpgradeCodec(http2MultiplexCodecBuilder.build());
-			} else {
+			}
+			else {
 				return null;
 			}
 		}
 	}
 
+	/**
+	 * Initialize Http1 - Http2 pipeline configuration using SSL detection
+	 */
 	static final class Http2ServerInitializer extends ApplicationProtocolNegotiationHandler {
-		final Integer line;
-		final Integer header;
-		final Integer chunk;
-		final Boolean validate;
-		final Integer buffer;
-		final Integer minCompressionSize;
-		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
-		final boolean forwarded;
-		final ConnectionObserver listener;
 
-		Http2ServerInitializer(Integer line, Integer header, Integer chunk, Boolean validate,
-				Integer buffer, Integer minCompressionSize,
-				BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				boolean forwarded, ConnectionObserver listener) {
+		final HttpServerInitializer parent;
+		final ConnectionObserver    listener;
+		final Http2StreamInitializer initializer;
+
+		Http2ServerInitializer(final HttpServerInitializer parent,
+				ConnectionObserver listener) {
 			super(ApplicationProtocolNames.HTTP_1_1);
-			this.line = line;
-			this.header = header;
-			this.chunk = chunk;
-			this.validate = validate;
-			this.buffer = buffer;
-			this.minCompressionSize = minCompressionSize;
-			this.compressPredicate = compressPredicate;
-			this.forwarded = forwarded;
+			this.parent = parent;
 			this.listener = listener;
+			// Cannot inline channel initializer so share it for all streams
+			this.initializer = new Http2StreamInitializer(this);
 		}
 
 		@Override
@@ -312,25 +300,9 @@ final class HttpServerBind extends HttpServer
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
 				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-						Http2MultiplexCodecBuilder.forServer(new ChannelInitializer() {
-							@Override
-							protected void initChannel(Channel ch) {
-								ChannelOperations.OnSetup ops = (c, l, msg) ->
-										new HttpServerOperations(c, l, compressPredicate, msg, forwarded);
-								Http2BridgeServerHandler httpServerHandler = new Http2BridgeServerHandler(ops, listener);
-								ch.pipeline().addLast(NettyPipeline.HttpServerHandler, httpServerHandler);
+						Http2MultiplexCodecBuilder.forServer(initializer)
+						                          .initialSettings(Http2Settings.defaultSettings());
 
-								ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(true));
-
-								ch.pipeline().addLast(NettyPipeline.ReactiveBridge,
-										new ChannelOperationsHandler((c, listener, msg) -> null, listener));
-
-								if (log.isDebugEnabled()) {
-									log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
-								}
-							}
-						})
-						.initialSettings(Http2Settings.defaultSettings());
 				if (p.get(NettyPipeline.LoggingHandler) != null) {
 					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpServer.class));
 				}
@@ -340,21 +312,40 @@ final class HttpServerBind extends HttpServer
 			}
 
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-				HttpServerCodec httpServerCodec = new HttpServerCodec(line, header, chunk, validate, buffer);
-				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, httpServerCodec);
 
-				boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
+				p.addBefore(NettyPipeline.ReactiveBridge,
+						NettyPipeline.HttpCodec,
+						new HttpServerCodec(parent.line, parent.header, parent.chunk, parent.validate, parent.buffer))
+				 .addBefore(NettyPipeline.ReactiveBridge,
+						NettyPipeline.HttpServerHandler,
+						new HttpRequestPipeliningHandler(parent, listener));
+
+				boolean alwaysCompress = parent.compressPredicate == null && parent.minCompressionSize == 0;
+
 				if (alwaysCompress) {
-					p.addBefore(NettyPipeline.HttpServerHandler, NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
+					p.addBefore(NettyPipeline.HttpServerHandler,
+							NettyPipeline.CompressionHandler,
+							new SimpleCompressionHandler());
 				}
-
-				HttpServerHandler httpServerHandler = new HttpServerHandler((c, l, msg) ->
-						new HttpServerOperations(c, l, compressPredicate, msg, forwarded), listener);
-				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpServerHandler, httpServerHandler);
 				return;
 			}
 
 			throw new IllegalStateException("unknown protocol: " + protocol);
+		}
+
+	}
+
+	static final class Http2StreamInitializer extends ChannelInitializer<Channel> {
+
+		final Http2ServerInitializer parent;
+
+		Http2StreamInitializer(Http2ServerInitializer parent) {
+			this.parent = parent;
+		}
+
+		@Override
+		protected void initChannel(Channel ch) {
+			addStreamHandlers(ch, parent.parent, parent.listener);
 		}
 	}
 }

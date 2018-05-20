@@ -16,12 +16,22 @@
 
 package reactor.ipc.netty.http2.server;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import javax.annotation.Nullable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -45,17 +55,6 @@ import reactor.ipc.netty.http.server.ConnectionInfo;
 import reactor.ipc.netty.http2.Http2Operations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -94,7 +93,7 @@ public class Http2ServerOperations extends Http2Operations<Http2ServerRequest, H
 				}
 				this.connectionInfo =
 						ConnectionInfo.newForwardedConnectionInfo(HttpConversionUtil.toHttpRequest(streamId, nettyRequest, false),
-								(SocketChannel) socketChannel);
+								socketChannel);
 			}
 			else {
 				Channel socketChannel;
@@ -104,7 +103,7 @@ public class Http2ServerOperations extends Http2Operations<Http2ServerRequest, H
 				else {
 					socketChannel = channel();
 				}
-				this.connectionInfo = ConnectionInfo.newConnectionInfo((SocketChannel) socketChannel);
+				this.connectionInfo = ConnectionInfo.newConnectionInfo(socketChannel);
 			}
 		}
 		catch(Exception e) {
