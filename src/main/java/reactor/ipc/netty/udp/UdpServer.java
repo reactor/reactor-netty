@@ -38,6 +38,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.Logger;
@@ -172,7 +173,7 @@ public abstract class UdpServer {
 	 */
 	public final UdpServer doOnBind(Consumer<? super Bootstrap> doOnBind) {
 		Objects.requireNonNull(doOnBind, "doOnBind");
-		return new UdpServerLifecycle(this, doOnBind, null, null);
+		return new UdpServerDoOn(this, doOnBind, null, null);
 
 	}
 
@@ -186,7 +187,7 @@ public abstract class UdpServer {
 	 */
 	public final UdpServer doOnBound(Consumer<? super Connection> doOnBound) {
 		Objects.requireNonNull(doOnBound, "doOnBound");
-		return new UdpServerLifecycle(this, null, doOnBound, null);
+		return new UdpServerDoOn(this, null, doOnBound, null);
 	}
 
 	/**
@@ -199,7 +200,7 @@ public abstract class UdpServer {
 	 */
 	public final UdpServer doOnUnbound(Consumer<? super Connection> doOnUnbound) {
 		Objects.requireNonNull(doOnUnbound, "doOnUnbound");
-		return new UdpServerLifecycle(this, null, null, doOnUnbound);
+		return new UdpServerDoOn(this, null, null, doOnUnbound);
 	}
 
 	/**
@@ -218,7 +219,7 @@ public abstract class UdpServer {
 		Objects.requireNonNull(onBind, "onBind");
 		Objects.requireNonNull(onBound, "onBound");
 		Objects.requireNonNull(onUnbound, "onUnbound");
-		return new UdpServerLifecycle(this, onBind, onBound, onUnbound);
+		return new UdpServerDoOn(this, onBind, onBound, onUnbound);
 	}
 
 	/**
@@ -252,6 +253,18 @@ public abstract class UdpServer {
 	public final UdpServer host(String host) {
 		Objects.requireNonNull(host, "host");
 		return bootstrap(b -> b.localAddress(host, getPort(b)));
+	}
+
+	/**
+	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
+	 * has been connected and after it has been disconnected.
+	 *
+	 * @param observer a consumer observing state changes
+	 *
+	 * @return a new {@link UdpServer}
+	 */
+	public final UdpServer observe(ConnectionObserver observer) {
+		return new UdpServerObserve(this, observer);
 	}
 
 	/**

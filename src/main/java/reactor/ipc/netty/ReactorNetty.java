@@ -20,9 +20,9 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -39,7 +39,6 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
-import reactor.core.Disposable;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -107,7 +106,7 @@ final class ReactorNetty {
 			channel.pipeline().addBefore(NettyPipeline.ReactiveBridge, name, handler);
 		}
 
-		registerForClose(shouldCleanupOnClose(channel),  name, context);
+		registerForClose(context.isPersistent(),  name, context);
 
 		if (log.isDebugEnabled()) {
 			log.debug("Added decoder [{}] at the end of the user pipeline, full pipeline: {}",
@@ -160,7 +159,7 @@ final class ReactorNetty {
 			channel.pipeline().addAfter(after, name, handler);
 		}
 
-		registerForClose(shouldCleanupOnClose(channel), name, context);
+		registerForClose(context.isPersistent(), name, context);
 
 		if (log.isDebugEnabled()) {
 			log.debug("Added encoder [{}] at the beginning of the user pipeline, full pipeline: {}",
@@ -177,6 +176,7 @@ final class ReactorNetty {
 			String name,
 			Connection context) {
 		if (!shouldCleanupOnClose) return;
+		//TODO review onDispose
 		context.onDispose(() -> context.removeHandler(name));
 	}
 
@@ -281,23 +281,6 @@ final class ReactorNetty {
 
 		return new CompositeConnectionObserver(newObservers);
 	}
-
-	/**
-	 * Determines if user-provided handlers registered on the given channel should
-	 * automatically be registered for removal through a
-	 * {@link Connection#onDispose(Disposable)}}
-	 * (or similar on close hook). This depends on the
-	 * {@link Connection#isPersistent(Channel)} ()}
-	 * attribute.
-	 */
-	static boolean shouldCleanupOnClose(Channel channel) {
-		boolean registerForClose = true;
-		if (!Connection.isPersistent(channel)) {
-			registerForClose = false;
-		}
-		return registerForClose;
-	}
-
 
 
 	static <T, V> Publisher<V> publisherOrScalarMap(Publisher<T> publisher,

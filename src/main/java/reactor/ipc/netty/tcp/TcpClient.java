@@ -40,6 +40,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
@@ -234,7 +235,7 @@ public abstract class TcpClient {
 	 */
 	public final TcpClient doOnConnect(Consumer<? super Bootstrap> doOnConnect) {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
-		return new TcpClientLifecycle(this, doOnConnect, null, null);
+		return new TcpClientDoOn(this, doOnConnect, null, null);
 	}
 
 	/**
@@ -246,7 +247,7 @@ public abstract class TcpClient {
 	 */
 	public final TcpClient doOnConnected(Consumer<? super Connection> doOnConnected) {
 		Objects.requireNonNull(doOnConnected, "doOnConnected");
-		return new TcpClientLifecycle(this, null, doOnConnected, null);
+		return new TcpClientDoOn(this, null, doOnConnected, null);
 	}
 
 	/**
@@ -258,7 +259,7 @@ public abstract class TcpClient {
 	 */
 	public final TcpClient doOnDisconnected(Consumer<? super Connection> doOnDisconnected) {
 		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
-		return new TcpClientLifecycle(this, null, null, doOnDisconnected);
+		return new TcpClientDoOn(this, null, null, doOnDisconnected);
 	}
 
 	/**
@@ -277,7 +278,7 @@ public abstract class TcpClient {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
 		Objects.requireNonNull(doOnConnected, "doOnConnected");
 		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
-		return new TcpClientLifecycle(this, doOnConnect, doOnConnected, doOnDisconnected);
+		return new TcpClientDoOn(this, doOnConnect, doOnConnected, doOnDisconnected);
 	}
 
 	/**
@@ -347,6 +348,18 @@ public abstract class TcpClient {
 	 */
 	public final TcpClient noSSL() {
 		return new TcpClientUnsecure(this);
+	}
+
+	/**
+	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
+	 * has been connected and after it has been disconnected.
+	 *
+	 * @param observer a consumer observing state changes
+	 *
+	 * @return a new {@link TcpClient}
+	 */
+	public final TcpClient observe(ConnectionObserver observer) {
+		return new TcpClientObserve(this, observer);
 	}
 
 	/**

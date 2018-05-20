@@ -39,6 +39,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
@@ -243,7 +244,7 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer doOnBind(Consumer<? super ServerBootstrap> doOnBind) {
 		Objects.requireNonNull(doOnBind, "doOnBind");
-		return new TcpServerLifecycle(this, doOnBind, null, null);
+		return new TcpServerDoOn(this, doOnBind, null, null);
 
 	}
 
@@ -257,7 +258,7 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer doOnBound(Consumer<? super DisposableServer> doOnBound) {
 		Objects.requireNonNull(doOnBound, "doOnBound");
-		return new TcpServerLifecycle(this, null, doOnBound, null);
+		return new TcpServerDoOn(this, null, doOnBound, null);
 	}
 
 	/**
@@ -281,7 +282,7 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer doOnUnbound(Consumer<? super DisposableServer> doOnUnbind) {
 		Objects.requireNonNull(doOnUnbind, "doOnUnbound");
-		return new TcpServerLifecycle(this, null, null, doOnUnbind);
+		return new TcpServerDoOn(this, null, null, doOnUnbind);
 	}
 
 	/**
@@ -300,7 +301,7 @@ public abstract class TcpServer {
 		Objects.requireNonNull(onBind, "onBind");
 		Objects.requireNonNull(onBound, "onBound");
 		Objects.requireNonNull(onUnbound, "onUnbound");
-		return new TcpServerLifecycle(this, onBind, onBound, onUnbound);
+		return new TcpServerDoOn(this, onBind, onBound, onUnbound);
 	}
 
 	/**
@@ -311,18 +312,9 @@ public abstract class TcpServer {
 	 *
 	 * @return a new {@link TcpServer}
 	 */
-	@SuppressWarnings("unchecked")
 	public final TcpServer handle(BiFunction<? super NettyInbound, ? super
 			NettyOutbound, ? extends Publisher<Void>> handler) {
-		Objects.requireNonNull(handler, "handler");
-		return doOnConnection(c -> {
-			if (log.isDebugEnabled()) {
-				log.debug("{} handler is being applied: {}", c.channel(), handler);
-			}
-
-			Mono.fromDirect(handler.apply((NettyInbound) c, (NettyOutbound) c))
-			    .subscribe(c.disposeSubscriber());
-		});
+		return new TcpServerHandle(this, handler);
 	}
 
 	/**
@@ -353,6 +345,18 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer noSSL() {
 		return new TcpServerUnsecure(this);
+	}
+
+	/**
+	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
+	 * has been connected and after it has been disconnected.
+	 *
+	 * @param observer a consumer observing state changes
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer observe(ConnectionObserver observer) {
+		return new TcpServerObserve(this, observer);
 	}
 
 	/**

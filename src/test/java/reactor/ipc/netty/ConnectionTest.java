@@ -56,7 +56,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteDecoderWhenNoLeft() throws Exception {
+	public void addByteDecoderWhenNoLeft() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
@@ -76,7 +76,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteDecoderWhenNoRight() throws Exception {
+	public void addByteDecoderWhenNoRight() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
@@ -96,7 +96,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteDecoderWhenEmptyPipeline() throws Exception {
+	public void addByteDecoderWhenEmptyPipeline() {
 
 		ChannelHandler decoder = new LineBasedFrameDecoder(12);
 
@@ -112,7 +112,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteDecoderWhenFullReactorPipeline() throws Exception {
+	public void addByteDecoderWhenFullReactorPipeline() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
@@ -136,7 +136,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteDecoderWhenNoLeft() throws Exception {
+	public void addNonByteDecoderWhenNoLeft() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
@@ -154,7 +154,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteDecoderWhenNoRight() throws Exception {
+	public void addNonByteDecoderWhenNoRight() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
@@ -172,7 +172,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteDecoderWhenEmptyPipeline() throws Exception {
+	public void addNonByteDecoderWhenEmptyPipeline() {
 
 		ChannelHandler decoder = new ChannelHandlerAdapter() {
 		};
@@ -185,7 +185,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteDecoderWhenFullReactorPipeline() throws Exception {
+	public void addNonByteDecoderWhenFullReactorPipeline() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
@@ -207,7 +207,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addSeveralByteDecodersWhenCodec() throws Exception {
+	public void addSeveralByteDecodersWhenCodec() {
 		ChannelHandler decoder1 = new LineBasedFrameDecoder(12);
 		ChannelHandler decoder2 = new LineBasedFrameDecoder(13);
 
@@ -238,7 +238,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteEncoderWhenNoLeft() throws Exception {
+	public void addByteEncoderWhenNoLeft() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
@@ -255,7 +255,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteEncoderWhenNoRight() throws Exception {
+	public void addByteEncoderWhenNoRight() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
@@ -272,7 +272,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteEncoderWhenEmptyPipeline() throws Exception {
+	public void addByteEncoderWhenEmptyPipeline() {
 
 		ChannelHandler encoder = new LineBasedFrameDecoder(12);
 
@@ -284,7 +284,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addByteEncoderWhenFullReactorPipeline() throws Exception {
+	public void addByteEncoderWhenFullReactorPipeline() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
@@ -305,7 +305,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteEncoderWhenNoLeft() throws Exception {
+	public void addNonByteEncoderWhenNoLeft() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
@@ -323,7 +323,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteEncoderWhenNoRight() throws Exception {
+	public void addNonByteEncoderWhenNoRight() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new ChannelHandlerAdapter() {
@@ -341,7 +341,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteEncoderWhenEmptyPipeline() throws Exception {
+	public void addNonByteEncoderWhenEmptyPipeline() {
 
 		ChannelHandler encoder = new ChannelHandlerAdapter() {
 		};
@@ -354,7 +354,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addNonByteEncoderWhenFullReactorPipeline() throws Exception {
+	public void addNonByteEncoderWhenFullReactorPipeline() {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
@@ -376,7 +376,7 @@ public class ConnectionTest {
 	}
 
 	@Test
-	public void addSeveralByteEncodersWhenCodec() throws Exception {
+	public void addSeveralByteEncodersWhenCodec() {
 		ChannelHandler encoder1 = new LineBasedFrameDecoder(12);
 		ChannelHandler encoder2 = new LineBasedFrameDecoder(13);
 
@@ -425,7 +425,7 @@ public class ConnectionTest {
 		 .addHandlerFirst("encoder", new ChannelHandlerAdapter() {
 		 });
 
-		assertThat(Connection.isPersistent(channel), is(false));
+		assertThat(c.isPersistent(), is(false));
 		assertThat(closeCount.intValue(), is(0));
 	}
 
@@ -455,7 +455,7 @@ public class ConnectionTest {
 		 .addHandlerLast("decoder", new ChannelHandlerAdapter() {
 		 });
 
-		assertThat(Connection.isPersistent(channel), is(false));
+		assertThat(c.isPersistent(), is(false));
 		assertThat(closeCount.intValue(), is(0));
 	}
 

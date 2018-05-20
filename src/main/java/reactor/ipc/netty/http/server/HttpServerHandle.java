@@ -14,26 +14,39 @@
  * limitations under the License.
  */
 
-package reactor.ipc.netty.tcp;
+package reactor.ipc.netty.http.server;
 
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.tcp.TcpServer;
 
 /**
  * @author Stephane Maldini
  */
-final class TcpServerDoOnConnection extends TcpServerOperator implements ConnectionObserver {
+final class HttpServerHandle extends HttpServerOperator implements ConnectionObserver,
+                                                                   Function<ServerBootstrap, ServerBootstrap> {
 
-	final Consumer<? super Connection>       onConnection;
+	final BiFunction<? super HttpServerRequest, ? super
+			HttpServerResponse, ? extends Publisher<Void>> handler;
 
-	TcpServerDoOnConnection(TcpServer server, Consumer<? super Connection> onConnection) {
+	HttpServerHandle(HttpServer server,
+			BiFunction<? super HttpServerRequest, ? super
+					HttpServerResponse, ? extends Publisher<Void>> handler) {
 		super(server);
-		this.onConnection = Objects.requireNonNull(onConnection, "onConnection");
+		this.handler = Objects.requireNonNull(handler, "handler");
+	}
+
+	@Override
+	protected TcpServer tcpConfiguration() {
+		return source.tcpConfiguration().bootstrap(this);
 	}
 
 	@Override
@@ -41,7 +54,12 @@ final class TcpServerDoOnConnection extends TcpServerOperator implements Connect
 	public void onStateChange(Connection connection, State newState) {
 		if (newState == State.CONFIGURED) {
 			try {
-				onConnection.accept(connection);
+				if (log.isDebugEnabled()) {
+					log.debug("{} handler is being applied: {}", connection.channel(), handler);
+				}
+				HttpServerOperations ops = (HttpServerOperations) connection;
+				Mono.fromDirect(handler.apply(ops, ops))
+				    .subscribe(ops.disposeSubscriber());
 			}
 			catch (Throwable t) {
 				log.error("", t);
@@ -52,8 +70,7 @@ final class TcpServerDoOnConnection extends TcpServerOperator implements Connect
 	}
 
 	@Override
-	public ServerBootstrap configure() {
-		ServerBootstrap b = source.configure();
+	public ServerBootstrap apply(ServerBootstrap b) {
 		ConnectionObserver observer = BootstrapHandlers.childConnectionObserver(b);
 		BootstrapHandlers.childConnectionObserver(b, observer.then(this));
 		return b;

@@ -39,6 +39,7 @@ import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.ByteBufMono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.http.HttpResources;
@@ -403,7 +404,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doOnRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest) {
-		return new HttpClientLifecycle(this, doOnRequest, null, null, null);
+		return new HttpClientDoOn(this, doOnRequest, null, null, null);
 	}
 
 	/**
@@ -414,7 +415,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doAfterRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest) {
-		return new HttpClientLifecycle(this, null, doAfterRequest, null, null);
+		return new HttpClientDoOn(this, null, doAfterRequest, null, null);
 	}
 
 	/**
@@ -426,7 +427,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doOnResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse) {
-		return new HttpClientLifecycle(this, null, null, doOnResponse, null);
+		return new HttpClientDoOn(this, null, null, doOnResponse, null);
 	}
 
 	/**
@@ -437,7 +438,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doAfterResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponse) {
-		return new HttpClientLifecycle(this, null, null, null, doAfterResponse);
+		return new HttpClientDoOn(this, null, null, null, doAfterResponse);
 	}
 
 	/**
@@ -495,6 +496,18 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient noChunkedTransfer() {
 		return tcpConfiguration(CHUNKED_ATTR_DISABLE);
+	}
+
+	/**
+	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
+	 * has been connected and after it has been disconnected.
+	 *
+	 * @param observer a consumer observing state changes
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient observe(ConnectionObserver observer) {
+		return new HttpClientObserve(this, observer);
 	}
 
 	/**

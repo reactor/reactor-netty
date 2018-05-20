@@ -38,6 +38,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.util.Logger;
@@ -172,7 +173,7 @@ public abstract class UdpClient {
 	 */
 	public final UdpClient doOnConnect(Consumer<? super Bootstrap> doOnConnect) {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
-		return new UdpClientLifecycle(this, doOnConnect, null, null);
+		return new UdpClientDoOn(this, doOnConnect, null, null);
 
 	}
 
@@ -186,7 +187,7 @@ public abstract class UdpClient {
 	 */
 	public final UdpClient doOnConnected(Consumer<? super Connection> doOnConnected) {
 		Objects.requireNonNull(doOnConnected, "doOnConnected");
-		return new UdpClientLifecycle(this, null, doOnConnected, null);
+		return new UdpClientDoOn(this, null, doOnConnected, null);
 	}
 
 	/**
@@ -199,7 +200,7 @@ public abstract class UdpClient {
 	 */
 	public final UdpClient doOnDisconnected(Consumer<? super Connection> doOnDisconnected) {
 		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
-		return new UdpClientLifecycle(this, null, null, doOnDisconnected);
+		return new UdpClientDoOn(this, null, null, doOnDisconnected);
 	}
 
 	/**
@@ -218,7 +219,7 @@ public abstract class UdpClient {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
 		Objects.requireNonNull(doOnConnected, "doOnConnected");
 		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
-		return new UdpClientLifecycle(this, doOnConnect, doOnConnected, doOnDisconnected);
+		return new UdpClientDoOn(this, doOnConnect, doOnConnected, doOnDisconnected);
 	}
 
 	/**
@@ -252,6 +253,18 @@ public abstract class UdpClient {
 					(UdpOutbound) c))
 					.subscribe(c.disposeSubscriber());
 		});
+	}
+
+	/**
+	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
+	 * has been connected and after it has been disconnected.
+	 *
+	 * @param observer a consumer observing state changes
+	 *
+	 * @return a new {@link UdpClient}
+	 */
+	public final UdpClient observe(ConnectionObserver observer) {
+		return new UdpClientObserve(this, observer);
 	}
 
 	/**

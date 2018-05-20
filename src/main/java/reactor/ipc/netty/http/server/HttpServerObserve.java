@@ -13,49 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package reactor.ipc.netty.tcp;
+package reactor.ipc.netty.http.server;
 
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.tcp.TcpServer;
 
 /**
  * @author Stephane Maldini
  */
-final class TcpServerDoOnConnection extends TcpServerOperator implements ConnectionObserver {
+final class HttpServerObserve extends HttpServerOperator
+		implements Function<ServerBootstrap, ServerBootstrap> {
 
-	final Consumer<? super Connection>       onConnection;
+	final ConnectionObserver observer;
 
-	TcpServerDoOnConnection(TcpServer server, Consumer<? super Connection> onConnection) {
-		super(server);
-		this.onConnection = Objects.requireNonNull(onConnection, "onConnection");
+	HttpServerObserve(HttpServer client, ConnectionObserver observer) {
+		super(client);
+		this.observer = Objects.requireNonNull(observer, "observer");
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public void onStateChange(Connection connection, State newState) {
-		if (newState == State.CONFIGURED) {
-			try {
-				onConnection.accept(connection);
-			}
-			catch (Throwable t) {
-				log.error("", t);
-				connection.channel()
-				          .close();
-			}
-		}
+	protected TcpServer tcpConfiguration() {
+		return super.tcpConfiguration().bootstrap(this);
 	}
 
 	@Override
-	public ServerBootstrap configure() {
-		ServerBootstrap b = source.configure();
+	public ServerBootstrap apply(ServerBootstrap b) {
 		ConnectionObserver observer = BootstrapHandlers.childConnectionObserver(b);
-		BootstrapHandlers.childConnectionObserver(b, observer.then(this));
+		BootstrapHandlers.childConnectionObserver(b, observer.then(this.observer));
 		return b;
 	}
 }

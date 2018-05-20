@@ -436,7 +436,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	protected void onOutboundError(Throwable err) {
-		if(Connection.isPersistent(channel()) && responseState == null){
+		if(isPersistent() && responseState == null){
 			listener().onUncaughtException(this, err);
 			onHandlerTerminate();
 			return;

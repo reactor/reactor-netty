@@ -29,7 +29,7 @@ import reactor.ipc.netty.tcp.TcpClient;
 /**
  * @author Stephane Maldini
  */
-final class HttpClientLifecycle extends HttpClientOperator implements
+final class HttpClientDoOn extends HttpClientOperator implements
                                                            ConnectionObserver,
                                                            Function<Bootstrap, Bootstrap> {
 
@@ -38,7 +38,7 @@ final class HttpClientLifecycle extends HttpClientOperator implements
 	final BiConsumer<? super HttpClientResponse, ? super Connection> onResponse;
 	final BiConsumer<? super HttpClientResponse, ? super Connection> afterResponse;
 
-	HttpClientLifecycle(HttpClient client,
+	HttpClientDoOn(HttpClient client,
 			@Nullable BiConsumer<? super HttpClientRequest,  ? super Connection> onRequest,
 			@Nullable BiConsumer<? super HttpClientRequest,  ? super Connection> afterRequest,
 			@Nullable BiConsumer<? super HttpClientResponse, ? super Connection> onResponse,
@@ -58,14 +58,16 @@ final class HttpClientLifecycle extends HttpClientOperator implements
 
 	@Override
 	public void onStateChange(Connection connection, State newState) {
-		if (newState == State.CONFIGURED) {
-			if (onRequest != null) {
-				onRequest.accept(connection.as(HttpClientOperations.class), connection);
+		if (onRequest != null && newState == State.CONFIGURED) {
+			onRequest.accept(connection.as(HttpClientOperations.class), connection);
+			return;
+		}
+		if (afterResponse != null) {
+			if (newState == State.RELEASED){
+				afterResponse.accept(connection.as(HttpClientOperations.class), connection);
 			}
-
-			if (afterResponse != null) {
-				connection.onDispose(() ->
-						afterResponse.accept(connection.as(HttpClientOperations.class), connection));
+			else if (newState == State.DISCONNECTING) {
+				connection.onDispose(() -> afterResponse.accept(connection.as(HttpClientOperations.class), connection));
 			}
 			return;
 		}

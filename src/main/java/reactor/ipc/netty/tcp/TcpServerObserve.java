@@ -13,49 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package reactor.ipc.netty.tcp;
 
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import io.netty.bootstrap.ServerBootstrap;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 
 /**
  * @author Stephane Maldini
  */
-final class TcpServerDoOnConnection extends TcpServerOperator implements ConnectionObserver {
+final class TcpServerObserve extends TcpServerOperator {
 
-	final Consumer<? super Connection>       onConnection;
+	final ConnectionObserver observer;
 
-	TcpServerDoOnConnection(TcpServer server, Consumer<? super Connection> onConnection) {
+	TcpServerObserve(TcpServer server, ConnectionObserver observer) {
 		super(server);
-		this.onConnection = Objects.requireNonNull(onConnection, "onConnection");
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public void onStateChange(Connection connection, State newState) {
-		if (newState == State.CONFIGURED) {
-			try {
-				onConnection.accept(connection);
-			}
-			catch (Throwable t) {
-				log.error("", t);
-				connection.channel()
-				          .close();
-			}
-		}
+		this.observer = Objects.requireNonNull(observer, "observer");
 	}
 
 	@Override
 	public ServerBootstrap configure() {
 		ServerBootstrap b = source.configure();
 		ConnectionObserver observer = BootstrapHandlers.childConnectionObserver(b);
-		BootstrapHandlers.childConnectionObserver(b, observer.then(this));
+		BootstrapHandlers.childConnectionObserver(b, observer.then(this.observer));
 		return b;
 	}
 }

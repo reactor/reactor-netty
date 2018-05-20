@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.ipc.netty.udp;
+package reactor.ipc.netty.tcp;
 
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
@@ -27,20 +27,20 @@ import reactor.ipc.netty.channel.BootstrapHandlers;
 /**
  * @author Stephane Maldini
  */
-final class UdpServerLifecycle extends UdpServerOperator implements ConnectionObserver {
+final class TcpClientDoOn extends TcpClientOperator implements ConnectionObserver {
 
-	final Consumer<? super Bootstrap>  onBind;
-	final Consumer<? super Connection> onBound;
-	final Consumer<? super Connection> onUnbound;
+	final Consumer<? super Bootstrap>  onConnect;
+	final Consumer<? super Connection> onConnected;
+	final Consumer<? super Connection> onDisconnected;
 
-	UdpServerLifecycle(UdpServer server,
-			@Nullable Consumer<? super Bootstrap> onBind,
-			@Nullable Consumer<? super Connection> onBound,
-			@Nullable Consumer<? super Connection> onUnbound) {
-		super(server);
-		this.onBind = onBind;
-		this.onBound = onBound;
-		this.onUnbound = onUnbound;
+	TcpClientDoOn(TcpClient client,
+			@Nullable Consumer<? super Bootstrap> onConnect,
+			@Nullable Consumer<? super Connection> onConnected,
+			@Nullable Consumer<? super Connection> onDisconnected) {
+		super(client);
+		this.onConnect = onConnect;
+		this.onConnected = onConnected;
+		this.onDisconnected = onDisconnected;
 	}
 
 	@Override
@@ -52,24 +52,27 @@ final class UdpServerLifecycle extends UdpServerOperator implements ConnectionOb
 	}
 
 	@Override
-	public Mono<? extends Connection> bind(Bootstrap b) {
-		if (onBind != null) {
-			return source.bind(b)
-			             .doOnSubscribe(s -> onBind.accept(b));
+	public Mono<? extends Connection> connect(Bootstrap b) {
+		if (onConnect != null) {
+			return source.connect(b)
+			             .doOnSubscribe(s -> onConnect.accept(b));
 		}
-		return source.bind(b);
+		return source.connect(b);
 	}
 
 	@Override
-	public void onStateChange(Connection connection, ConnectionObserver.State newState) {
-		if (newState == ConnectionObserver.State.CONFIGURED) {
-			if (onBound != null) {
-				onBound.accept(connection);
-			}
-			if (onUnbound != null) {
-				connection.onDispose(() -> onUnbound.accept(connection));
-			}
+	public void onStateChange(Connection connection, State newState) {
+		if (onConnected != null && newState == State.CONFIGURED) {
+			onConnected.accept(connection);
 			return;
+		}
+		if (onDisconnected != null) {
+			if (newState == State.DISCONNECTING) {
+				connection.onDispose(() -> onDisconnected.accept(connection));
+			}
+			else if (newState == State.RELEASED) {
+				onDisconnected.accept(connection);
+			}
 		}
 	}
 }

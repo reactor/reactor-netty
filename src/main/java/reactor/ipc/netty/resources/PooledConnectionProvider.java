@@ -103,11 +103,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				pool.close();
 			}
 
-			Future<Channel> f = pool.acquire();
-			DisposableAcquire disposableAcquire =
-					new DisposableAcquire(sink, f, pool, obs);
-			f.addListener(disposableAcquire);
-			sink.onCancel(disposableAcquire);
+			disposableAcquire(sink, obs, pool);
 
 		});
 
@@ -136,6 +132,14 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		return channelPools.isEmpty() || channelPools.values()
 		                                             .stream()
 		                                             .allMatch(AtomicBoolean::get);
+	}
+
+	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, Pool pool) {
+		Future<Channel> f = pool.acquire();
+		DisposableAcquire disposableAcquire =
+				new DisposableAcquire(sink, f, pool, obs);
+		f.addListener(disposableAcquire);
+		sink.onCancel(disposableAcquire);
 	}
 
 	static final Logger log = Loggers.getLogger(PooledConnectionProvider.class);
@@ -353,8 +357,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					log.debug("Releasing channel: {}", channel);
 				}
 
-				if (!Connection.isPersistent(channel) && channel.isActive()) {
+				if (!isPersistent() && channel.isActive()) {
 					//will be released by closeFuture internals
+					owner().onStateChange(connection, State.DISCONNECTING);
 					channel.close();
 					return;
 				}
@@ -502,6 +507,13 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 			else {
 				Channel c = f.get();
+
+				if (!c.isActive()) {
+					//TODO is this case necessary
+					log.debug("Immediately aborted pooled channel, re-acquiring new channel: {}", c);
+					disposableAcquire(sink, obs, pool);
+					return;
+				}
 				if (c.eventLoop().inEventLoop()) {
 					run();
 				}
@@ -548,219 +560,4 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			return result;
 		}
 	}
-/*
-
-	final class PooledClientContextHandler<CHANNEL extends Channel>
-			extends ContextHandler<CHANNEL>
-			implements GenericFutureListener<Future<CHANNEL>> {
-
-		static final Logger log = Loggers.getLogger(PooledClientContextHandler.class);
-
-		final ClientOptions         clientOptions;
-		final boolean               secure;
-		final ChannelPool           pool;
-		final DirectProcessor<Void> onReleaseEmitter;
-
-		volatile Future<CHANNEL> future;
-
-		@SuppressWarnings("rawtypes")
-		static final AtomicReferenceFieldUpdater<PooledClientContextHandler, Future> FUTURE =
-				AtomicReferenceFieldUpdater.newUpdater(PooledClientContextHandler.class,
-						Future.class,
-						"future");
-
-		static final Future<?> DISPOSED = new SucceededFuture<>(null, null);
-
-		@Override
-		@SuppressWarnings("unchecked")
-		public void setFuture(Future<?> future) {
-			Objects.requireNonNull(future, "future");
-
-			Future<CHANNEL> f;
-			for (; ; ) {
-				f = this.future;
-
-				if (f == DISPOSED) {
-					if (log.isDebugEnabled()) {
-						log.debug("Cancelled existing channel from pool: {}",
-								pool.toString());
-					}
-					sink.success();
-					return;
-				}
-
-				if (FUTURE.compareAndSet(this, f, future)) {
-					break;
-				}
-			}
-			if (log.isDebugEnabled()) {
-				log.debug("Acquiring existing channel from pool: {} {}",
-						future,
-						pool.toString());
-			}
-			((Future<CHANNEL>) future).addListener(this);
-		}
-
-		@Override
-		@SuppressWarnings("unchecked")
-		protected void terminateChannel(Channel channel) {
-			release((CHANNEL) channel);
-		}
-
-		@Override
-		public void operationComplete(Future<CHANNEL> future) throws Exception {
-			if (future.isCancelled()) {
-				if (log.isDebugEnabled()) {
-					log.debug("Cancelled {}", future.toString());
-				}
-				return;
-			}
-
-			if (DISPOSED == this.future) {
-				if (log.isDebugEnabled()) {
-					log.debug("Dropping acquisition {} because of {}",
-							future,
-							"asynchronous user cancellation");
-				}
-				if (future.isSuccess()) {
-					disposeOperationThenRelease(future.get());
-				}
-				sink.success();
-				return;
-			}
-
-			if (!future.isSuccess()) {
-				if (future.cause() != null) {
-					fireContextError(future.cause());
-				}
-				else {
-					fireContextError(new AbortedException("error while acquiring connection"));
-				}
-				return;
-			}
-
-			CHANNEL c = future.get();
-
-			if (c.eventLoop()
-			     .inEventLoop()) {
-				connectOrAcquire(c);
-			}
-			else {
-				c.eventLoop()
-				 .execute(() -> connectOrAcquire(c));
-			}
-		}
-
-		@Override
-		protected Publisher<Void> onCloseOrRelease(Channel channel) {
-			return onReleaseEmitter;
-		}
-
-		@SuppressWarnings("unchecked")
-		final void connectOrAcquire(CHANNEL c) {
-			if (DISPOSED == this.future) {
-				if (log.isDebugEnabled()) {
-					log.debug("Dropping acquisition because of asynchronous user cancellation");
-				}
-				disposeOperationThenRelease(c);
-				sink.success();
-				return;
-			}
-
-			if (!c.isActive()) {
-				log.debug("Immediately aborted pooled channel, re-acquiring new channel: {}",
-						c.toString());
-				setFuture(pool.acquire());
-				return;
-			}
-
-			if (log.isDebugEnabled()) {
-				log.debug("Acquired active channel: " + c.toString());
-			}
-			if (createOperations(c, null) == null) {
-				setFuture(pool.acquire());
-			}
-		}
-
-
-
-		@Override
-		@SuppressWarnings("unchecked")
-		public void dispose() {
-			Future<CHANNEL> f = FUTURE.getAndSet(this, DISPOSED);
-			if (f == null || f == DISPOSED) {
-				return;
-			}
-			if (!f.isDone()) {
-				return;
-			}
-
-			try {
-				CHANNEL c = f.get();
-
-				if (!c.eventLoop()
-				      .inEventLoop()) {
-					c.eventLoop()
-					 .execute(() -> disposeOperationThenRelease(c));
-
-				}
-				else {
-					disposeOperationThenRelease(c);
-				}
-
-			}
-			catch (Exception e) {
-				log.error("Failed releasing channel", e);
-				onReleaseEmitter.onError(e);
-			}
-		}
-
-		final void disposeOperationThenRelease(CHANNEL c) {
-			ChannelOperations<?, ?> ops = ChannelOperations.get(c);
-			//defer to operation dispose if present
-			if (ops != null) {
-				ops.inbound.cancel();
-				return;
-			}
-
-			release(c);
-		}
-
-		final void release(CHANNEL c) {
-			if (log.isDebugEnabled()) {
-				log.debug("Releasing channel: {}", c.toString());
-			}
-
-			if (!NettyContext.isPersistent(c) && c.isActive()) {
-				c.close();
-				onReleaseEmitter.onComplete();
-				//will be released by poolResources internals
-				return;
-			}
-
-			if (!c.isActive()) {
-				onReleaseEmitter.onComplete();
-				//will be released by poolResources internals
-				return;
-			}
-
-			pool.release(c)
-			    .addListener(f -> {
-				    if (log.isDebugEnabled() && !f.isSuccess()){
-					    log.debug("Failed cleaning the channel from pool", f.cause());
-				    }
-				    onReleaseEmitter.onComplete();
-			    });
-
-		}
-
-		@Override
-		protected Tuple2<String, Integer> getSNI() {
-			if (providedAddress instanceof InetSocketAddress) {
-				InetSocketAddress ipa = (InetSocketAddress) providedAddress;
-				return Tuples.of(ipa.getHostString(), ipa.getPort());
-			}
-			return null;
-		}
-	}*/
 }

@@ -27,17 +27,17 @@ import reactor.ipc.netty.channel.BootstrapHandlers;
 /**
  * @author Stephane Maldini
  */
-final class UdpClientLifecycle extends UdpClientOperator implements ConnectionObserver {
+final class UdpClientDoOn extends UdpClientOperator implements ConnectionObserver {
 
 	final Consumer<? super Bootstrap>       onConnect;
 	final Consumer<? super Connection>      onConnected;
 	final Consumer<? super Connection>      onDisconnected;
 
-	UdpClientLifecycle(UdpClient server,
+	UdpClientDoOn(UdpClient client,
 			@Nullable Consumer<? super Bootstrap> onConnect,
 			@Nullable Consumer<? super Connection> onConnected,
 			@Nullable Consumer<? super Connection> onDisconnected) {
-		super(server);
+		super(client);
 		this.onConnect = onConnect;
 		this.onConnected = onConnected;
 		this.onDisconnected = onDisconnected;
@@ -61,15 +61,18 @@ final class UdpClientLifecycle extends UdpClientOperator implements ConnectionOb
 	}
 
 	@Override
-	public void onStateChange(Connection connection, ConnectionObserver.State newState) {
-		if (newState == ConnectionObserver.State.CONFIGURED) {
-			if (onConnected != null) {
-				onConnected.accept(connection);
-			}
-			if (onDisconnected != null) {
+	public void onStateChange(Connection connection, State newState) {
+		if (onConnected != null && newState == State.CONFIGURED) {
+			onConnected.accept(connection);
+			return;
+		}
+		if (onDisconnected != null) {
+			if (newState == State.DISCONNECTING) {
 				connection.onDispose(() -> onDisconnected.accept(connection));
 			}
-			return;
+			else if (newState == State.RELEASED) {
+				onDisconnected.accept(connection);
+			}
 		}
 	}
 }

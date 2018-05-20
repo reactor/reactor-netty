@@ -65,20 +65,6 @@ public interface Connection extends DisposableChannel {
 	}
 
 	/**
-	 * Return false if it will force a close on terminal protocol events thus defeating
-	 * any pooling strategy
-	 * Return true (default) if it will release on terminal protocol events thus
-	 * keeping alive the channel if possible.
-	 *
-	 * @return whether or not the underlying {@link Channel} will be closed on terminal
-	 * handler event
-	 */
-	static boolean isPersistent(Channel channel) {
-		return !channel.hasAttr(ReactorNetty.PERSISTENT_CHANNEL) ||
-				channel.attr(ReactorNetty.PERSISTENT_CHANNEL).get();
-	}
-
-	/**
 	 * Add a {@link ChannelHandler} with {@link #addHandlerFirst} if of type of
 	 * {@link io.netty.channel.ChannelOutboundHandler} otherwise with
 	 * {@link #addHandlerLast}. Implementation may add more auto handling in particular
@@ -224,6 +210,23 @@ public interface Connection extends DisposableChannel {
 	default NettyInbound inbound() {
 		return ReactorNetty.unavailableInbound(this);
 	}
+
+
+
+	/**
+	 * Return false if it will force a close on terminal protocol events thus defeating
+	 * any pooling strategy
+	 * Return true (default) if it will release on terminal protocol events thus
+	 * keeping alive the channel if possible.
+	 *
+	 * @return whether or not the underlying {@link Connection} will be disposed on
+	 * terminal handler event
+	 */
+	default boolean isPersistent() {
+		return !channel().hasAttr(ReactorNetty.PERSISTENT_CHANNEL) ||
+				channel().attr(ReactorNetty.PERSISTENT_CHANNEL).get();
+	}
+
 
 	/**
 	 * Mark the underlying channel as persistent or not.

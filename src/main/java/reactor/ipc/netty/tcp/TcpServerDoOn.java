@@ -29,13 +29,13 @@ import reactor.ipc.netty.channel.BootstrapHandlers;
 /**
  * @author Stephane Maldini
  */
-final class TcpServerLifecycle extends TcpServerOperator implements ConnectionObserver {
+final class TcpServerDoOn extends TcpServerOperator implements ConnectionObserver {
 
 	final Consumer<? super ServerBootstrap>  onBind;
 	final Consumer<? super DisposableServer> onBound;
 	final Consumer<? super DisposableServer> onUnbound;
 
-	TcpServerLifecycle(TcpServer server,
+	TcpServerDoOn(TcpServer server,
 			@Nullable Consumer<? super ServerBootstrap> onBind,
 			@Nullable Consumer<? super DisposableServer> onBound,
 			@Nullable Consumer<? super DisposableServer> onUnbound) {

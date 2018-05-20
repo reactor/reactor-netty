@@ -29,6 +29,7 @@ import io.netty.handler.logging.LoggingHandler;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.tcp.TcpServer;
@@ -243,25 +244,7 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer handle(BiFunction<? super HttpServerRequest, ? super
 			HttpServerResponse, ? extends Publisher<Void>> handler) {
-		Objects.requireNonNull(handler, "handler");
-		return tcpConfiguration(tcp -> tcp.doOnConnection(c -> {
-			if (log.isDebugEnabled()) {
-				log.debug("{} handler is being applied: {}", c.channel(), handler);
-			}
-
-			Mono.fromDirect(handler.apply((HttpServerRequest) c, (HttpServerResponse) c))
-			    .subscribe(c.disposeSubscriber());
-
-		}));
-	}
-
-	/**
-	 * Disable gzip compression
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer noCompression() {
-		return tcpConfiguration(COMPRESS_ATTR_DISABLE);
+		return new HttpServerHandle(this, handler);
 	}
 
 	/**
@@ -277,6 +260,15 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Disable gzip compression
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer noCompression() {
+		return tcpConfiguration(COMPRESS_ATTR_DISABLE);
+	}
+
+	/**
 	 * Disable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
 	 * HTTP request headers.
 	 *
@@ -284,6 +276,19 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer noForwarded() {
 		return tcpConfiguration(FORWARD_ATTR_DISABLE);
+	}
+
+	/**
+	 * Setup all lifecycle callbacks called on or after
+	 * each child {@link io.netty.channel.Channel}
+	 * has been connected and after it has been disconnected.
+	 *
+	 * @param observer a consumer observing state changes
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer observe(ConnectionObserver observer) {
+		return new HttpServerObserve(this, observer);
 	}
 
 	/**

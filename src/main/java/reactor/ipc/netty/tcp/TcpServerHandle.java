@@ -17,38 +17,28 @@
 package reactor.ipc.netty.tcp;
 
 import java.util.Objects;
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
 
 import io.netty.bootstrap.ServerBootstrap;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
+import reactor.ipc.netty.NettyInbound;
+import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 
 /**
  * @author Stephane Maldini
  */
-final class TcpServerDoOnConnection extends TcpServerOperator implements ConnectionObserver {
+final class TcpServerHandle extends TcpServerOperator implements ConnectionObserver {
 
-	final Consumer<? super Connection>       onConnection;
+	final BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler;
 
-	TcpServerDoOnConnection(TcpServer server, Consumer<? super Connection> onConnection) {
+	TcpServerHandle(TcpServer server, BiFunction<? super NettyInbound, ? super
+			NettyOutbound, ? extends Publisher<Void>> handler) {
 		super(server);
-		this.onConnection = Objects.requireNonNull(onConnection, "onConnection");
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public void onStateChange(Connection connection, State newState) {
-		if (newState == State.CONFIGURED) {
-			try {
-				onConnection.accept(connection);
-			}
-			catch (Throwable t) {
-				log.error("", t);
-				connection.channel()
-				          .close();
-			}
-		}
+		this.handler = Objects.requireNonNull(handler, "handler");
 	}
 
 	@Override
@@ -57,5 +47,26 @@ final class TcpServerDoOnConnection extends TcpServerOperator implements Connect
 		ConnectionObserver observer = BootstrapHandlers.childConnectionObserver(b);
 		BootstrapHandlers.childConnectionObserver(b, observer.then(this));
 		return b;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void onStateChange(Connection connection, State newState) {
+		if (newState == State.CONFIGURED) {
+			try {
+				if (log.isDebugEnabled()) {
+					log.debug("{} handler is being applied: {}",
+							connection.channel(),
+							handler);
+				}
+				Mono.fromDirect(handler.apply(connection.inbound(), connection.outbound()))
+				    .subscribe(connection.disposeSubscriber());
+			}
+			catch (Throwable t) {
+				log.error("", t);
+				connection.channel()
+				          .close();
+			}
+		}
 	}
 }
