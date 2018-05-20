@@ -106,7 +106,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			CloseWebSocketFrame close = (CloseWebSocketFrame) frame;
 			sendCloseNow(new CloseWebSocketFrame(true,
 					close.rsv(),
-					close.content()), f -> onHandlerTerminate());
+					close.content()), f -> terminate());
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {
@@ -127,7 +127,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	public void accept(Void aVoid, Throwable throwable) {
 		if (throwable == null) {
 			if (channel().isActive()) {
-				sendCloseNow(null, f -> onHandlerTerminate());
+				sendCloseNow(null, f -> terminate());
 			}
 		}
 		else {
@@ -139,7 +139,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	protected void onOutboundError(Throwable err) {
 		if (channel().isActive()) {
 			sendCloseNow(new CloseWebSocketFrame(1002, "Server internal error"), f ->
-					onHandlerTerminate());
+					terminate());
 		}
 	}
 

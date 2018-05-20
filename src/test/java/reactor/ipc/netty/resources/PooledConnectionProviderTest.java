@@ -17,11 +17,9 @@ package reactor.ipc.netty.resources;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.bootstrap.Bootstrap;
@@ -33,11 +31,12 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.SocketUtils;
 import reactor.ipc.netty.channel.ChannelOperations;
+import reactor.ipc.netty.resources.PooledConnectionProvider.PooledConnection;
 import reactor.ipc.netty.tcp.TcpClientTests;
 import reactor.test.StepVerifier;
 
@@ -79,20 +78,18 @@ public class PooledConnectionProviderTest {
 		};
 	}
 
-	ChannelOperations.OnSetup NO_OPS = (c,l,msg) -> null;
-
 	@Test
 	public void disposeLaterDefers() {
 		PooledConnectionProvider.Pool pool = new PooledConnectionProvider.Pool(
 				new Bootstrap().group(new DefaultEventLoopGroup()),
-				(b, handler, checker) -> channelPool, NO_OPS);
+				(b, handler, checker) -> channelPool, ChannelOperations.OnSetup.empty());
 
 		PooledConnectionProvider poolResources = new PooledConnectionProvider("test",
 				(b, handler, checker) -> channelPool);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
-						InetSocketAddress.createUnresolved("localhost", 80), NO_OPS),
+						InetSocketAddress.createUnresolved("localhost", 80), ChannelOperations.OnSetup.empty()),
 				pool);
 
 		Mono<Void> disposer = poolResources.disposeLater();
@@ -106,7 +103,7 @@ public class PooledConnectionProviderTest {
 	public void disposeOnlyOnce() {
 		PooledConnectionProvider.Pool pool = new PooledConnectionProvider.Pool(
 				new Bootstrap().group(new DefaultEventLoopGroup()),
-				(b, handler, checker) -> channelPool, NO_OPS
+				(b, handler, checker) -> channelPool, ChannelOperations.OnSetup.empty()
 				);
 
 		PooledConnectionProvider poolResources = new PooledConnectionProvider("test",
@@ -114,7 +111,7 @@ public class PooledConnectionProviderTest {
 		//"register" our fake Pool
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
-						InetSocketAddress.createUnresolved("localhost", 80), NO_OPS),
+						InetSocketAddress.createUnresolved("localhost", 80), ChannelOperations.OnSetup.empty()),
 				pool);
 
 		poolResources.dispose();
@@ -129,14 +126,11 @@ public class PooledConnectionProviderTest {
 	}
 
 	@Test
-	@Ignore
 	public void fixedPoolTwoAcquire()
-			throws ExecutionException, InterruptedException, IOException {
+			throws InterruptedException, IOException {
 		final ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
 		int echoServerPort = SocketUtils.findAvailableTcpPort();
 		TcpClientTests.EchoServer echoServer = new TcpClientTests.EchoServer(echoServerPort);
-
-		List<Channel> createdChannels = new ArrayList<>();
 
 		try {
 			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
@@ -158,31 +152,47 @@ public class PooledConnectionProviderTest {
 			Thread.sleep(100);
 
 			//acquire 2
-			final Channel channel1 = pool.acquire(bootstrap).block().channel();
-			final Channel channel2 = pool.acquire(bootstrap).block().channel();
+			final PooledConnection c1 = (PooledConnection) pool.acquire(bootstrap)
+			                                                   .block();
+			final PooledConnection c2 = (PooledConnection) pool.acquire(bootstrap)
+			                                                   .block();
 
 			//make room for 1 more
-			channel2.close().get();
-			final Channel channel3 = pool.acquire(bootstrap).block().channel();
+			c2.disposeNow();
 
-//			//next one will block until a previous one is released
-//			long start = System.currentTimeMillis();
-//			service.schedule(() -> pool.release(channel1), 500, TimeUnit.MILLISECONDS);
-//			final Channel channel4 = pool.acquire().get();
-//			long end = System.currentTimeMillis();
-//
-//			assertThat(end - start)
-//					.as("channel4 acquire blocked until channel1 released")
-//					.isGreaterThanOrEqualTo(500);
-//
-//			pool.release(channel3).get();
-//			pool.release(channel4).get();
-//
-//			assertThat(pool).isInstanceOf(PooledConnectionProvider.Pool.class);
-//			PooledConnectionProvider.Pool defaultPool = (PooledConnectionProvider.Pool) pool;
-//			assertThat(defaultPool.activeConnections.get())
-//					.as("activeConnections fully released")
-//					.isZero();
+
+			final PooledConnection c3 = (PooledConnection) pool.acquire(bootstrap)
+			                                                   .block();
+
+			//next one will block until a previous one is released
+			long start = System.currentTimeMillis();
+			service.schedule(() -> c1.onStateChange(c1, ConnectionObserver.State.DISCONNECTING), 500, TimeUnit
+					.MILLISECONDS);
+
+
+			final PooledConnection c4 = (PooledConnection) pool.acquire(bootstrap)
+			                                                   .block();
+
+			long end = System.currentTimeMillis();
+
+			assertThat(end - start)
+					.as("channel4 acquire blocked until channel1 released")
+					.isGreaterThanOrEqualTo(500);
+
+			c3.onStateChange(c3, ConnectionObserver.State.DISCONNECTING);
+
+			c4.onStateChange(c4, ConnectionObserver.State.DISCONNECTING);
+
+			assertThat(c1).isEqualTo(c4);
+
+			assertThat(c1.pool).isEqualTo(c2.pool)
+			                   .isEqualTo(c3.pool)
+			                   .isEqualTo(c4.pool);
+
+			PooledConnectionProvider.Pool defaultPool = c1.pool;
+			assertThat(defaultPool.activeConnections.get())
+					.as("activeConnections fully released")
+					.isZero();
 		}
 		finally {
 			echoServer.close();

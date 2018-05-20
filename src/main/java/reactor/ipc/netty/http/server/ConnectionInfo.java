@@ -19,6 +19,7 @@ import java.net.InetSocketAddress;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import io.netty.channel.Channel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.ssl.SslHandler;
@@ -39,28 +40,29 @@ import reactor.ipc.netty.tcp.InetSocketAddressUtil;
  */
 public final class ConnectionInfo {
 
-	private static final String FORWARDED_HEADER = "Forwarded";
-	private static final Pattern FORWARDED_HOST_PATTERN = Pattern.compile("host=\"?([^;,\"]+)\"?");
-	private static final Pattern FORWARDED_PROTO_PATTERN = Pattern.compile("proto=\"?([^;,\"]+)\"?");
-	private static final Pattern FORWARDED_FOR_PATTERN = Pattern.compile("for=\"?([^;,\"]+)\"?");
+	static final String FORWARDED_HEADER = "Forwarded";
+	static final Pattern FORWARDED_HOST_PATTERN = Pattern.compile("host=\"?([^;,\"]+)\"?");
+	static final Pattern FORWARDED_PROTO_PATTERN = Pattern.compile("proto=\"?([^;,\"]+)\"?");
+	static final Pattern FORWARDED_FOR_PATTERN = Pattern.compile("for=\"?([^;,\"]+)\"?");
 
-	private static final String XFORWARDED_IP_HEADER = "X-Forwarded-For";
-	private static final String XFORWARDED_HOST_HEADER = "X-Forwarded-Host";
-	private static final String XFORWARDED_PORT_HEADER = "X-Forwarded-Port";
-	private static final String XFORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
+	static final String XFORWARDED_IP_HEADER = "X-Forwarded-For";
+	static final String XFORWARDED_HOST_HEADER = "X-Forwarded-Host";
+	static final String XFORWARDED_PORT_HEADER = "X-Forwarded-Port";
+	static final String XFORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
 
-	private final InetSocketAddress hostAddress;
+	final InetSocketAddress hostAddress;
 
-	private final InetSocketAddress remoteAddress;
+	final InetSocketAddress remoteAddress;
 
-	private final String scheme;
+	final String scheme;
 
 	/**
 	 * Retrieve the connection information from the current connection directly
-	 * @param channel the current channel
+	 * @param c the current channel
 	 * @return the connection information
 	 */
-	public static ConnectionInfo newConnectionInfo(SocketChannel channel) {
+	public static ConnectionInfo newConnectionInfo(Channel c) {
+		SocketChannel channel = (SocketChannel) c; 
 		InetSocketAddress hostAddress = channel.localAddress();
 		InetSocketAddress remoteAddress = channel.remoteAddress();
 		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
@@ -74,16 +76,16 @@ public final class ConnectionInfo {
 	 * @param channel the current channel
 	 * @return the connection information
 	 */
-	public static ConnectionInfo newForwardedConnectionInfo(HttpRequest request, SocketChannel channel) {
+	public static ConnectionInfo newForwardedConnectionInfo(HttpRequest request, Channel channel) {
 		if (request.headers().contains(FORWARDED_HEADER)) {
-			return parseForwardedInfo(request, channel);
+			return parseForwardedInfo(request, (SocketChannel)channel);
 		}
 		else {
-			return parseXForwardedInfo(request, channel);
+			return parseXForwardedInfo(request, (SocketChannel)channel);
 		}
 	}
 
-	private static ConnectionInfo parseForwardedInfo(HttpRequest request, SocketChannel channel) {
+	static ConnectionInfo parseForwardedInfo(HttpRequest request, SocketChannel channel) {
 		InetSocketAddress hostAddress = channel.localAddress();
 		InetSocketAddress remoteAddress = channel.remoteAddress();
 		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
@@ -104,7 +106,7 @@ public final class ConnectionInfo {
 		return new ConnectionInfo(hostAddress, remoteAddress, scheme);
 	}
 
-	private static InetSocketAddress parseAddress(String address, int defaultPort) {
+	static InetSocketAddress parseAddress(String address, int defaultPort) {
 		int portSeparatorIdx = address.lastIndexOf(":");
 		if (portSeparatorIdx > address.lastIndexOf("]")) {
 			return InetSocketAddressUtil.createUnresolved(address.substring(0, portSeparatorIdx),
@@ -115,7 +117,7 @@ public final class ConnectionInfo {
 		}
 	}
 
-	private static ConnectionInfo parseXForwardedInfo(HttpRequest request, SocketChannel channel) {
+	static ConnectionInfo parseXForwardedInfo(HttpRequest request, SocketChannel channel) {
 		InetSocketAddress hostAddress = channel.localAddress();
 		InetSocketAddress remoteAddress = channel.remoteAddress();
 		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
@@ -141,7 +143,7 @@ public final class ConnectionInfo {
 		return new ConnectionInfo(hostAddress, remoteAddress, scheme);
 	}
 
-	private ConnectionInfo(InetSocketAddress hostAddress, InetSocketAddress remoteAddress, String scheme) {
+	ConnectionInfo(InetSocketAddress hostAddress, InetSocketAddress remoteAddress, String scheme) {
 		this.hostAddress = hostAddress;
 		this.remoteAddress = remoteAddress;
 		this.scheme = scheme;

@@ -185,7 +185,7 @@ public abstract class BootstrapHandlers {
 				                             .get(OPS_OPTION);
 		b.option(OPS_OPTION, null);
 		if (ops == null) {
-			return EMPTY; //will not be triggered in
+			return ChannelOperations.OnSetup.empty(); //will not be triggered in
 		}
 		return ops;
 	}
@@ -407,8 +407,8 @@ public abstract class BootstrapHandlers {
 					pipelineConfiguration.consumer.accept(listener, ch);
 				}
 			}
-			ch.pipeline()
-			  .addLast(NettyPipeline.ReactiveBridge, new ChannelOperationsHandler(opsFactory, listener));
+
+			ChannelOperations.addReactiveBridge(ch, opsFactory, listener);
 
 			if (log.isDebugEnabled()) {
 				log.debug("{} Initialized pipeline {}", ch, ch.pipeline().toString());
@@ -478,8 +478,6 @@ public abstract class BootstrapHandlers {
 
 	BootstrapHandlers() {
 	}
-
-	static final ChannelOperations.OnSetup EMPTY = (c, listener, msg) -> null;
 
 	static final ChannelOption<ChannelOperations.OnSetup> OPS_OPTION = ChannelOption.newInstance("ops_factory");
 	static final ChannelOption<ConnectionObserver> OBSERVER_OPTION = ChannelOption.newInstance("connectionObserver");

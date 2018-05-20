@@ -213,7 +213,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		public void channelReleased(Channel ch) {
 			activeConnections.decrementAndGet();
 			if (log.isDebugEnabled()) {
-				log.debug("Released {}, now {} active connections",
+				log.debug("Cleaned {}, now {} active connections",
 						ch.toString(),
 						activeConnections);
 			}
@@ -348,10 +348,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			if (log.isDebugEnabled() && !future.isSuccess()) {
 				log.debug("Failed cleaning the channel from pool", future.cause());
 			}
-			fireReleaseState();
-		}
-
-		void fireReleaseState() {
 			onTerminate.onComplete();
 			channel.attr(OWNER)
 			       .getAndSet(ConnectionObserver.emptyListener())
@@ -362,9 +358,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		public void onStateChange(Connection connection, State newState) {
 			log.debug("onStateChange({}, {})", connection, newState);
 			if (newState == State.DISCONNECTING) {
-				if (log.isDebugEnabled()) {
-					log.debug("Releasing channel: {}", channel);
-				}
 
 				if (!isPersistent() && channel.isActive()) {
 					//will be released by closeFuture internals
@@ -374,9 +367,13 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				}
 
 				if (!channel.isActive()) {
-					fireReleaseState();
+					owner().onStateChange(connection, State.DISCONNECTING);
 					//will be released by poolResources internals
 					return;
+				}
+
+				if (log.isDebugEnabled()) {
+					log.debug("Releasing channel: {}", channel);
 				}
 
 				pool.release(channel)
@@ -453,11 +450,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		public void run() {
 			Channel c = f.getNow();
 			pool.activeConnections.incrementAndGet();
-			if (log.isDebugEnabled()) {
-				log.debug("Acquired {}, now {} active connections",
-						c,
-						pool.activeConnections);
-			}
+
 
 			ConnectionObserver current = c.attr(OWNER)
 			                              .getAndSet(this);
@@ -486,6 +479,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 
 			if (current != null) {
+				if (log.isDebugEnabled()) {
+					log.debug("Acquired {}, now {} active connection(s)",
+							c,
+							pool.activeConnections);
+				}
 				obs.onStateChange(conn, State.ACQUIRED);
 
 				PooledConnection con = conn.as(PooledConnection.class);
@@ -493,9 +491,26 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					ChannelOperations<?, ?> ops = pool.opsFactory.create(con, con, null);
 					if (ops != null) {
 						ops.bind();
+						sink.success(ops);
 						obs.onStateChange(ops, State.CONFIGURED);
 					}
+					else {
+						//already configured, just forward the connection
+						sink.success(con);
+					}
 				}
+				else {
+					//already bound, just forward the connection
+					sink.success(conn);
+				}
+			}
+			else {
+				if (log.isDebugEnabled()) {
+					log.debug("Connected {}, now {} active connection(s)",
+							c,
+							pool.activeConnections);
+				}
+				sink.success(conn);
 			}
 		}
 

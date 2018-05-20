@@ -33,7 +33,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -112,10 +111,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.compressionPredicate = compressionPredicate;
 		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
 		if (forwarded) {
-			this.connectionInfo = ConnectionInfo.newForwardedConnectionInfo(nettyRequest, (SocketChannel) channel());
+			this.connectionInfo = ConnectionInfo.newForwardedConnectionInfo(nettyRequest, channel());
 		}
 		else {
-			this.connectionInfo = ConnectionInfo.newConnectionInfo((SocketChannel) channel());
+			this.connectionInfo = ConnectionInfo.newConnectionInfo(channel());
 		}
 		chunkedTransfer(true);
 	}
@@ -435,10 +434,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			if (msg instanceof LastHttpContent) {
 				onInboundComplete();
-				if (!isKeepAlive()) {
-					channel().config()
-					         .setAutoRead(true); //detect close
-				}
 			}
 		}
 		else {
@@ -497,7 +492,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return;
 		}
 
-		((HttpServerOperations)ops).onHandlerTerminate();
+		((HttpServerOperations)ops).terminate();
 	}
 
 	@Override

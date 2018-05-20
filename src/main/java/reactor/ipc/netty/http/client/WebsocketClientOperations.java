@@ -148,7 +148,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	@Override
 	protected void onInboundClose() {
-		onHandlerTerminate();
+		terminate();
 	}
 
 	@Override

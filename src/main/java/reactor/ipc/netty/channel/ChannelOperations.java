@@ -60,6 +60,20 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		           ChannelPromise {
 
 	/**
+	 * Add {@link NettyPipeline#ReactiveBridge} handler at the end of {@link Channel}
+	 * pipeline. The bridge will buffer outgoing write and pass along incoming read to
+	 * the current {@link ChannelOperations#get(Channel)}.
+	 *
+	 * @param ch the channel to bridge
+	 * @param opsFactory the operations factory to invoke on channel active
+	 * @param listener the listener to forward connection events to
+	 */
+	public static void addReactiveBridge(Channel ch, OnSetup opsFactory, ConnectionObserver listener) {
+		ch.pipeline()
+		  .addLast(NettyPipeline.ReactiveBridge, new ChannelOperationsHandler(opsFactory, listener));
+	}
+
+	/**
 	 * Return the current {@link Channel} bound {@link ChannelOperations} or null if none
 	 *
 	 * @param ch the current {@link Channel}
@@ -302,7 +316,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * React on inbound close (channel closed prematurely)
 	 */
 	protected void onInboundClose() {
-		onHandlerTerminate();
+		terminate();
 	}
 
 	/**
@@ -313,7 +327,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			log.debug("[{}] {} User Handler requesting close connection", formatName(), channel());
 		}
 		markPersistent(false);
-		onHandlerTerminate();
+		terminate();
 	}
 
 	/**
@@ -323,14 +337,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onOutboundError(Throwable err) {
 		markPersistent(false);
-		onHandlerTerminate();
+		terminate();
 	}
 
 
 	/**
 	 * Final release/close (last packet)
 	 */
-	protected final void onHandlerTerminate() {
+	protected final void terminate() {
 		if (rebind(connection)) {
 			if (log.isTraceEnabled()) {
 				log.trace("{} Disposing ChannelOperation from a channel",
@@ -497,6 +511,15 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public interface OnSetup {
 
 		/**
+		 * Return an empty, no-op factory
+		 *
+		 * @return an empty, no-op factory
+		 */
+		static OnSetup empty() {
+			return EMPTY_SETUP;
+		}
+
+		/**
 		 * Create a new {@link ChannelOperations} given a netty channel, a parent {@link
 		 * ConnectionObserver} and an optional message (nullable).
 		 *
@@ -514,6 +537,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	static final Logger log = Loggers.getLogger(ChannelOperations.class);
 
 	static final Object TERMINATED_OPS = new Object();
+
+	static final OnSetup EMPTY_SETUP = (c, l, msg) -> null;
 
 	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<ChannelOperations, Subscription>

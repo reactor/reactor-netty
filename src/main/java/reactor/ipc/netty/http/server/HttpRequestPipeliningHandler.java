@@ -18,7 +18,6 @@ package reactor.ipc.netty.http.server;
 
 import java.util.Queue;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -48,8 +47,8 @@ import static io.netty.handler.codec.http.HttpUtil.*;
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
-final class HttpServerHandler extends ChannelDuplexHandler
-		implements Runnable {
+final class HttpRequestPipeliningHandler extends ChannelDuplexHandler
+		implements Runnable, ChannelFutureListener {
 
 	static final String MULTIPART_PREFIX = "multipart";
 
@@ -67,7 +66,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 	boolean overflow;
 	boolean mustRecycleEncoder;
 
-	HttpServerHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
+	HttpRequestPipeliningHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
 		this.opsFactory = opsFactory;
 		this.listener = listener;
 	}
@@ -213,7 +212,7 @@ final class HttpServerHandler extends ChannelDuplexHandler
 			}
 
 			ctx.write(msg, promise)
-			   .addListener(new TerminateHttpHandler(ctx.channel()));
+			   .addListener(this);
 
 			if (!persistentConnection) {
 				return;
@@ -273,6 +272,11 @@ final class HttpServerHandler extends ChannelDuplexHandler
 	}
 
 	@Override
+	public void operationComplete(ChannelFuture future) {
+		HttpServerOperations.cleanHandlerTerminate(future.channel());
+	}
+
+	@Override
 	public void handlerRemoved(ChannelHandlerContext ctx) {
 		discard();
 	}
@@ -320,19 +324,5 @@ final class HttpServerHandler extends ChannelDuplexHandler
 				MULTIPART_PREFIX,
 				0,
 				MULTIPART_PREFIX.length());
-	}
-
-	static final class TerminateHttpHandler implements ChannelFutureListener {
-
-		final Channel channel;
-
-		TerminateHttpHandler(Channel channel) {
-			this.channel = channel;
-		}
-
-		@Override
-		public void operationComplete(ChannelFuture future) {
-			HttpServerOperations.cleanHandlerTerminate(channel);
-		}
 	}
 }

@@ -435,7 +435,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected void onOutboundError(Throwable err) {
 		if(isPersistent() && responseState == null){
 			listener().onUncaughtException(this, err);
-			onHandlerTerminate();
+			terminate();
 			return;
 		}
 		super.onOutboundError(err);
@@ -486,7 +486,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
-				onHandlerTerminate();
+				terminate();
 			}
 			return;
 		}
@@ -509,7 +509,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (markSentBody()) {
 				markPersistent(false);
 			}
-			onHandlerTerminate();
+			terminate();
 			return;
 		}
 

@@ -39,7 +39,8 @@ import reactor.util.annotation.Nullable;
 /**
  * @author Stephane Maldini
  */
-final class HttpServerBind extends HttpServer implements Function<ServerBootstrap, ServerBootstrap> {
+final class HttpServerBind extends HttpServer
+		implements Function<ServerBootstrap, ServerBootstrap> {
 
 	static final HttpServerBind INSTANCE = new HttpServerBind();
 
@@ -110,7 +111,7 @@ final class HttpServerBind extends HttpServer implements Function<ServerBootstra
 					}
 
 					p.addLast(NettyPipeline.HttpServerHandler,
-							new HttpServerHandler((c, l, msg) -> new HttpServerOperations(c, l, compressPredicate, (HttpRequest) msg, forwarded), listener));
+							new HttpRequestPipeliningHandler((c, l, msg) -> new HttpServerOperations(c, l, compressPredicate, (HttpRequest) msg, forwarded), listener));
 				});
 	}
 
@@ -118,7 +119,7 @@ final class HttpServerBind extends HttpServer implements Function<ServerBootstra
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			int minResponseSize) {
 
-		if (minResponseSize <= 0){
+		if (minResponseSize <= 0) {
 			if (compressionPredicate != null) {
 				return compressionPredicate;
 			}
@@ -130,7 +131,7 @@ final class HttpServerBind extends HttpServer implements Function<ServerBootstra
 		BiPredicate<HttpServerRequest, HttpServerResponse> lengthPredicate =
 				(req, res) -> {
 					String length = res.responseHeaders()
-							.get(HttpHeaderNames.CONTENT_LENGTH);
+					                   .get(HttpHeaderNames.CONTENT_LENGTH);
 
 					if (length == null) {
 						return true;
