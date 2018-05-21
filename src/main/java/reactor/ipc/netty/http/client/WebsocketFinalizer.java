@@ -65,7 +65,7 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 
 	@Override
 	public ByteBufFlux receive() {
-		return HttpClientFinalizer.content(cachedConfiguration);
+		return HttpClientFinalizer.content(cachedConfiguration, HttpClientFinalizer.contentReceiver);
 	}
 
 	@Override
