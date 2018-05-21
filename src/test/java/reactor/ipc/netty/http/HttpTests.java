@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.HttpMethod;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -344,7 +343,7 @@ public class HttpTests {
 	}
 
 	@Test
-	public void streamAndPoolExplicitCompression() throws Exception {
+	public void streamAndPoolExplicitCompression() {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
 		DisposableServer server =
@@ -418,7 +417,7 @@ public class HttpTests {
 
 
 	@Test
-	public void streamAndPoolDefaultCompression() throws Exception {
+	public void streamAndPoolDefaultCompression() {
 		EmitterProcessor<String> ep = EmitterProcessor.create();
 
 		DisposableServer server =
@@ -493,7 +492,7 @@ public class HttpTests {
 
 	@Test
 //	@Ignore
-	public void testHttpToHttp2Ssl() throws Exception {
+	public void testHttpToHttp2Ssl() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(8080)
@@ -512,7 +511,7 @@ public class HttpTests {
 				          .responseContent()
 				          .aggregate()
 				          .asString()
-				          .block(Duration.ofSeconds(30));
+				          .block(Duration.ofSeconds(3000));
 
 		server.disposeNow();
 	}

@@ -35,10 +35,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -50,7 +48,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
-import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
 import io.netty.handler.codec.http2.Http2Settings;
@@ -69,6 +66,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -316,10 +314,9 @@ final class HttpClientConnect extends HttpClient {
 				}
 				handler.channel(connection.channel());
 
-				FutureMono.from(initializer.http2SettingsWritten)
-				          .then(FutureMono.from(initializer.childChannelOpened))
-				          .then(Mono.defer(() -> Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection))))
-				          .subscribe(connection.disposeSubscriber());
+				Mono.fromDirect(initializer.upgraded)
+				    .then(Mono.defer(() -> Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection))))
+				    .subscribe(connection.disposeSubscriber());
 			}
 		}
 	}
@@ -610,11 +607,11 @@ final class HttpClientConnect extends HttpClient {
 	static final class HttpClientInitializer
 			implements BiConsumer<ConnectionObserver, Channel>, ChannelOperations.OnSetup {
 		final HttpClientHandler handler;
-		ChannelPromise childChannelOpened;
-		ChannelPromise http2SettingsWritten;
+		final DirectProcessor<Void> upgraded;
 
 		HttpClientInitializer(HttpClientHandler handler) {
 			this.handler = handler;
+			this.upgraded = DirectProcessor.create();
 		}
 
 		@Override
@@ -624,19 +621,18 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void accept(ConnectionObserver listener, Channel channel) {
-			childChannelOpened = channel.newPromise();
-			http2SettingsWritten = channel.newPromise();
 			ChannelPipeline p = channel.pipeline();
 
 			if (p.get(NettyPipeline.SslHandler) != null) {
-				p.addLast(new Http2ClientInitializer(listener, handler, childChannelOpened, http2SettingsWritten));
+				p.addLast(new Http2ClientInitializer(listener, handler, upgraded));
 			}
 			else {
 				HttpClientCodec httpClientCodec = new HttpClientCodec();
 				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
 						Http2MultiplexCodecBuilder.forClient(new Http2StreamInitializer())
 						                          .initialSettings(Http2Settings.defaultSettings());
-				if (p.get(NettyPipeline.LoggingHandler) != null) {
+				if (p.get(NettyPipeline.LoggingHandler) != null) { //TODO only when
+					// upgraded
 					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
 				}
 
@@ -647,25 +643,37 @@ final class HttpClientConnect extends HttpClient {
 				if (handler.compress) {
 					p.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
 				}
+				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(channel), listener,	null);
+				if (ops != null) {
+					ops.bind();
+					listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+				}
+				upgraded.onComplete();
 			}
 		}
 	}
 
-	static final class Http2ClientInitializer extends ApplicationProtocolNegotiationHandler {
+	static final class Http2ClientInitializer extends ApplicationProtocolNegotiationHandler
+			implements GenericFutureListener<Future<Http2StreamChannel>>{
 
 		final ConnectionObserver listener;
 		final HttpClientHandler handler;
 
-		final ChannelPromise childChannelOpened;
-		final ChannelPromise http2SettingsWritten;
+		final DirectProcessor<Void> upgraded;
 
-		protected Http2ClientInitializer(ConnectionObserver listener, HttpClientHandler handler,
-				ChannelPromise childChannelOpened, ChannelPromise http2SettingsWritten) {
+		Http2ClientInitializer(ConnectionObserver listener, HttpClientHandler handler,
+				DirectProcessor<Void> upgraded) {
 			super(ApplicationProtocolNames.HTTP_1_1);
 			this.listener = listener;
 			this.handler = handler;
-			this.childChannelOpened = childChannelOpened;
-			this.http2SettingsWritten = http2SettingsWritten;
+			this.upgraded = upgraded;
+		}
+
+		@Override
+		public void operationComplete(Future<Http2StreamChannel> future) {
+			if (!future.isSuccess()) {
+				upgraded.onError(future.cause());
+			}
 		}
 
 		@Override
@@ -680,7 +688,6 @@ final class HttpClientConnect extends HttpClient {
 					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
 				}
 
-				p.addLast(new Http2SettingWrittenHandler(http2SettingsWritten));
 				p.addLast(http2MultiplexCodecBuilder.build());
 
 				Http2StreamChannelBootstrap http2StreamChannelBootstrap =
@@ -688,23 +695,21 @@ final class HttpClientConnect extends HttpClient {
 							@Override
 							protected void initChannel(Channel ch) {
 								ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(false));
-								ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
+								ChannelOperations.addReactiveBridge(ch, HTTP_OPS, listener);
 								if (log.isDebugEnabled()) {
 									log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
 								}
+								upgraded.onComplete();
 							}
 						});
-				BootstrapHandlers.channelOperationFactory(http2StreamChannelBootstrap, HTTP_OPS);
 
 				http2StreamChannelBootstrap.open()
-				                           .addListener(new ChannelOpenedListener(childChannelOpened));
+				                           .addListener(this);
 
 				return;
 			}
 
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-				childChannelOpened.setSuccess();
-				http2SettingsWritten.setSuccess();
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, new HttpClientCodec());
 
 				if (handler.compress) {
@@ -712,10 +717,15 @@ final class HttpClientConnect extends HttpClient {
 					           NettyPipeline.HttpDecompressor,
 					           new HttpContentDecompressor());
 				}
+				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(ctx.channel()), listener,	null);
+				if (ops != null) {
+					ops.bind();
+					listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+				}
+				upgraded.onComplete();
 				return;
 			}
-
-			throw new IllegalStateException("unknown protocol: " + protocol);
+			upgraded.onError(new IllegalStateException("unknown protocol: " + protocol));
 		}
 	}
 
@@ -726,46 +736,8 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		protected void initChannel(Channel ch) {
+			System.out.println("test");
 			// TODO handle server pushes
-		}
-	}
-
-	static final class ChannelOpenedListener
-			implements GenericFutureListener<Future<? super Http2StreamChannel>> {
-
-		final ChannelPromise channelOpened;
-
-		ChannelOpenedListener(ChannelPromise channelOpened) {
-			this.channelOpened = channelOpened;
-		}
-
-		@Override
-		public void operationComplete(Future future) throws Exception {
-			if (future.isSuccess() && future.isDone()) {
-				channelOpened.setSuccess();
-			}
-			else {
-				channelOpened.setFailure(future.cause());
-			}
-		}
-	}
-
-	static final class Http2SettingWrittenHandler extends ChannelInboundHandlerAdapter {
-
-		final ChannelPromise http2SettingsWritten;
-
-		Http2SettingWrittenHandler(ChannelPromise http2SettingsWritten) {
-			this.http2SettingsWritten = http2SettingsWritten;
-		}
-
-		@Override
-		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-			if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent) {
-				System.out.println("VILY");
-				http2SettingsWritten.setSuccess();
-				ctx.pipeline().remove(this);
-			}
-			super.userEventTriggered(ctx, evt);
 		}
 	}
 

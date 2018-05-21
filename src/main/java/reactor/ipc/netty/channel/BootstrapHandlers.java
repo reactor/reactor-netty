@@ -31,7 +31,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.ConnectionObserver;
@@ -178,19 +177,6 @@ public abstract class BootstrapHandlers {
 	 * @param opsFactory a new {@link ChannelOperations.OnSetup} factory
 	 */
 	public static void channelOperationFactory(AbstractBootstrap<?, ?> b,
-			ChannelOperations.OnSetup opsFactory) {
-		Objects.requireNonNull(b, "bootstrap");
-		Objects.requireNonNull(opsFactory, "opsFactory");
-		b.option(OPS_OPTION, opsFactory);
-	}
-
-	/**
-	 * Set a {@link ChannelOperations.OnSetup} to the passed bootstrap.
-	 *
-	 * @param b the bootstrap to scan
-	 * @param opsFactory a new {@link ChannelOperations.OnSetup} factory
-	 */
-	public static void channelOperationFactory(Http2StreamChannelBootstrap b,
 			ChannelOperations.OnSetup opsFactory) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(opsFactory, "opsFactory");

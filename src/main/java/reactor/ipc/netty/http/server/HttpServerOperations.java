@@ -43,6 +43,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -121,6 +122,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ConnectionInfo connectionInfo) {
 		super(c, listener);
 		Objects.requireNonNull(msg, "msg");
+		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+		this.responseHeaders = nettyResponse.headers();
+		this.compressionPredicate = compressionPredicate;
+		this.forwarded = forwarded;
+
 		if (msg instanceof Http2HeadersFrame) {
 			Http2HeadersFrame reqHeaders = (Http2HeadersFrame) msg;
 			this.http2Headers = reqHeaders.headers();
@@ -147,10 +153,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			chunkedTransfer(true);
 		}
-
-		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-		this.responseHeaders = nettyResponse.headers();
-		this.compressionPredicate = compressionPredicate;
 		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
 		this.connectionInfo = connectionInfo;
 	}
@@ -472,6 +474,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				if (data.isEndStream()) {
 					onInboundComplete();
 				}
+				return;
 			}
 			else if(msg instanceof Http2HeadersFrame) {
 				listener().onStateChange(this, ConnectionObserver.State.CONFIGURED);
@@ -480,11 +483,15 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 						super.onInboundNext(ctx, msg);
 					}
 				}
+				return;
+			}
+			else if (msg instanceof HttpObject) {
+				//bridged
 			}
 			else {
 				super.onInboundNext(ctx, msg);
+				return;
 			}
-			return;
 		}
 
 		//http1
