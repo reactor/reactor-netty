@@ -35,6 +35,8 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -102,7 +104,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			}
 			onInboundComplete();
 			CloseWebSocketFrame close = (CloseWebSocketFrame) frame;
-			sendClose(new CloseWebSocketFrame(true,
+			sendCloseNow(new CloseWebSocketFrame(true,
 					close.rsv(),
 					close.content()), f -> onHandlerTerminate());
 			return;
@@ -125,7 +127,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	public void accept(Void aVoid, Throwable throwable) {
 		if (throwable == null) {
 			if (channel().isActive()) {
-				sendClose(null, f -> onHandlerTerminate());
+				sendCloseNow(null, f -> onHandlerTerminate());
 			}
 		}
 		else {
@@ -136,12 +138,45 @@ final class WebsocketServerOperations extends HttpServerOperations
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if (channel().isActive()) {
-			sendClose(new CloseWebSocketFrame(1002, "Server internal error"), f ->
+			sendCloseNow(new CloseWebSocketFrame(1002, "Server internal error"), f ->
 					onHandlerTerminate());
 		}
 	}
 
-	void sendClose(@Nullable CloseWebSocketFrame frame, ChannelFutureListener listener) {
+	@Override
+	public Mono<Void> sendClose() {
+		return sendClose(new CloseWebSocketFrame());
+	}
+
+	@Override
+	public Mono<Void> sendClose(int rsv) {
+		return sendClose(new CloseWebSocketFrame(true, rsv));
+	}
+
+	@Override
+	public Mono<Void> sendClose(int statusCode, @Nullable String reasonText) {
+		return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
+	}
+
+	@Override
+	public Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText) {
+		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
+	}
+
+	Mono<Void> sendClose(CloseWebSocketFrame frame) {
+		if (CLOSE_SENT.get(this) == 0) {
+			return FutureMono.deferFuture(() -> {
+				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+					return channel().writeAndFlush(frame)
+					                .addListener(ChannelFutureListener.CLOSE);
+				}
+				return channel().newSucceededFuture();
+			});
+		}
+		return Mono.empty();
+	}
+
+	void sendCloseNow(@Nullable CloseWebSocketFrame frame, ChannelFutureListener listener) {
 		if (frame != null && !frame.isFinalFragment()) {
 			channel().writeAndFlush(frame);
 			return;

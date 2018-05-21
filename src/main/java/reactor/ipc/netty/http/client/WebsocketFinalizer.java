@@ -20,11 +20,10 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import io.netty.bootstrap.Bootstrap;
 import org.reactivestreams.Publisher;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.tcp.TcpClient;
@@ -59,22 +58,19 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.body(b, (req, out) -> sender.apply(req))));
 	}
 
+	@SuppressWarnings("unchecked")
+	Mono<WebsocketClientOperations> connect() {
+		return (Mono<WebsocketClientOperations>)cachedConfiguration.connect();
+	}
+
+	@Override
+	public ByteBufFlux receive() {
+		return HttpClientFinalizer.content(cachedConfiguration);
+	}
+
 	@Override
 	public <V> Flux<V> handle(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver) {
-		Bootstrap b;
-		try {
-			b = cachedConfiguration.configure();
-		}
-		catch (Throwable t) {
-			Exceptions.throwIfFatal(t);
-			return Flux.error(t);
-		}
-		return cachedConfiguration.connect(b)
-		                          .flatMapMany(c -> {
-			                          WebsocketClientOperations wsOps =
-					                          c.as(WebsocketClientOperations.class);
-			                          return Flux.from(receiver.apply(wsOps, wsOps));
-		                          });
+		return connect().flatMapMany(c -> Flux.from(receiver.apply(c, c)));
 	}
 }
 

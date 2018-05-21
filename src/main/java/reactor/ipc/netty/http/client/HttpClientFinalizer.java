@@ -35,6 +35,7 @@ import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.ByteBufMono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.tcp.TcpClient;
 
 /**
@@ -84,8 +85,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 		return connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp)));
 	}
 
-	@Override
-	public ByteBufFlux responseContent() {
+	static ByteBufFlux content(TcpClient cachedConfiguration, Function<ChannelOperations<?, ?>, Publisher<ByteBuf>> contentReceiver) {
 		Bootstrap b;
 		try {
 			b = cachedConfiguration.configure();
@@ -96,10 +96,18 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 		}
 		@SuppressWarnings("unchecked")
 		ByteBufAllocator alloc = (ByteBufAllocator) b.config()
-		                          .options()
-		                          .getOrDefault(ChannelOption.ALLOCATOR, ByteBufAllocator.DEFAULT);
+		                                             .options()
+		                                             .getOrDefault(ChannelOption.ALLOCATOR, ByteBufAllocator.DEFAULT);
 
-		return ByteBufFlux.fromInbound(connect().flatMapMany((HttpClientOperations::receive)), alloc);
+		@SuppressWarnings("unchecked")
+		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) cachedConfiguration.connect(b);
+
+		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
+	}
+
+	@Override
+	public ByteBufFlux responseContent() {
+		return content(cachedConfiguration, contentReceiver);
 	}
 
 	@Override
@@ -117,12 +125,12 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 
 
 	// RequestSender methods
+
 	@Override
 	public HttpClientFinalizer send(Publisher<? extends ByteBuf> requestBody) {
 		Objects.requireNonNull(requestBody, "requestBody");
 		return send((req, out) -> out.sendObject(requestBody));
 	}
-
 	@Override
 	public HttpClientFinalizer send(BiFunction<? super HttpClientRequest, ?
 			super NettyOutbound, ? extends Publisher<Void>> sender) {
@@ -140,10 +148,13 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 		});
 	}
 
+
 	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {
 		//defer the dispose to avoid over disposing on receive
 		dispose(ops);
 		return ops;
 	};
+
+	static final Function<ChannelOperations<?, ?>, Publisher<ByteBuf>> contentReceiver = ChannelOperations::receive;
 }
 

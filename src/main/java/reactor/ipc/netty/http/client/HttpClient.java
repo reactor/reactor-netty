@@ -257,8 +257,6 @@ public abstract class HttpClient {
 		<V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver);
 	}
 
-
-
 	/**
 	 * Allow a websocket handling. Since {@link WebsocketReceiver} API returns
 	 * {@link Flux} or {@link Mono}, r  equesting is always deferred to
@@ -271,16 +269,30 @@ public abstract class HttpClient {
 		 * {@link reactor.ipc.netty.http.websocket.WebsocketInbound} and
 		 *  {@link reactor.ipc.netty.http.websocket.WebsocketOutbound}}.
 		 * <p> The connection will not automatically {@link Connection#dispose()} and
-		 * manual disposing with the {@link Connection} or returned {@link Flux} might be
-		 * necessary if the remote never terminates itself.
+		 * manual disposing with the {@link Connection},
+		 * {@link WebsocketOutbound#sendClose}
+		 * or the returned {@link Flux} might be necessary if the remote never
+		 * terminates itself.
 		 * <p> If the upgrade fails, the returned {@link Flux} will emit a {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
 		 *
 		 * @param receiver extracting receiver
 		 * @param <V> the extracted flux type
 		 *
-		 * @return a {@link RequestSender} ready to consume for response
+		 * @return a {@link Flux} of the extracted data via the returned {@link Publisher}
 		 */
 		<V> Flux<V> handle(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver);
+
+		/**
+		 * Negotiate a websocket upgrade and extract a flux from the underlying
+		 * {@link WebsocketInbound}.
+		 * <p> The connection will be disposed when the underlying subscriber is
+		 * disposed OR when a close frame has been received, forwarding onComplete to
+		 * the returned flux subscription.
+		 * <p> If the upgrade fails, the returned {@link Flux} will emit a {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
+		 *
+		 * @return a {@link ByteBufFlux} of the inbound websocket content
+		 */
+		ByteBufFlux receive();
 	}
 
 	/**
