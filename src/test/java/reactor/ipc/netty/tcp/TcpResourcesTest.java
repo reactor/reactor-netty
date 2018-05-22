@@ -143,7 +143,7 @@ public class TcpResourcesTest {
 		                               })
 		                               .bindNow();
 
-		Connection client = TcpClient.create()
+		Connection client = TcpClient.newConnection()
 		                             .port(port)
 		                             .handle((in, out) -> {
 		                               	try {
