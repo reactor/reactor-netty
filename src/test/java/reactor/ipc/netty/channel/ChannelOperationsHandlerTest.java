@@ -228,7 +228,7 @@ public class ChannelOperationsHandlerTest {
 		                        .aggregate()
 		                        .asString()
 		                        .log())
-		    .blockLast(Duration.ofSeconds(30));
+		    .blockLast(Duration.ofSeconds(10));
 
 		testServer.close();
 	}

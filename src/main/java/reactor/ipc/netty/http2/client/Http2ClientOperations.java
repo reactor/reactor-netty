@@ -16,6 +16,12 @@
 
 package reactor.ipc.netty.http2.client;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
@@ -43,12 +49,6 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http2.Http2Operations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Objects;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 public class Http2ClientOperations extends Http2Operations<NettyInbound, NettyOutbound>
 		implements Http2ClientResponse, Http2ClientRequest, BiConsumer<Void, Throwable> {
@@ -260,7 +260,7 @@ public class Http2ClientOperations extends Http2Operations<NettyInbound, NettyOu
 	protected void onOutboundError(Throwable err) {
 		if(responseState == null){
 			listener().onUncaughtException(this, err);
-			onHandlerTerminate();
+			terminate();
 			return;
 		}
 		super.onOutboundError(err);
@@ -298,7 +298,7 @@ public class Http2ClientOperations extends Http2Operations<NettyInbound, NettyOu
 
 			if (response.isEndStream()) {
 				super.onInboundNext(ctx, msg);
-				onHandlerTerminate();
+				terminate();
 			}
 			return;
 		}
@@ -318,7 +318,7 @@ public class Http2ClientOperations extends Http2Operations<NettyInbound, NettyOu
 			if (markSentBody()) {
 				markPersistent(false);
 			}
-			onHandlerTerminate();
+			terminate();
 			return;
 		}
 

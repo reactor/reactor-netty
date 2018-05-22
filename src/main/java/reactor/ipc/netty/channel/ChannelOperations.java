@@ -264,6 +264,17 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		return FutureMono.from((Future<Void>)this).or(connection.onDispose());
 	}
 
+	/**
+	 * Return the available parent {@link ConnectionObserver} for user-facing lifecycle
+	 * handling
+	 *
+	 * @return the available parent {@link ConnectionObserver}for user-facing lifecycle
+	 * handling
+	 */
+	public final ConnectionObserver listener() {
+		return listener;
+	}
+
 	@Override
 	public String toString() {
 		return "ChannelOperations{"+connection.toString()+"}";
@@ -381,17 +392,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected final void onInboundError(Throwable err) {
 		inbound.onInboundError(err);
-	}
-
-	/**
-	 * Return the available parent {@link ConnectionObserver} for user-facing lifecycle
-	 * handling
-	 *
-	 * @return the available parent {@link ConnectionObserver}for user-facing lifecycle
-	 * handling
-	 */
-	protected final ConnectionObserver listener() {
-		return listener;
 	}
 
 	/**

@@ -152,7 +152,7 @@ public abstract class Http2Operations<INBOUND extends NettyInbound, OUTBOUND ext
 			c.channel().pipeline().addBefore(name, extractorName, HTTP_EXTRACTOR);
 
 			if(c.isPersistent()){
-				c.onDispose(() -> c.removeHandler(extractorName));
+				c.onTerminate().subscribe(null, null, () -> c.removeHandler(extractorName));
 			}
 
 		}

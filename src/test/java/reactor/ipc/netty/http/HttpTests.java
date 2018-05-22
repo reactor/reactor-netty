@@ -495,9 +495,8 @@ public class HttpTests {
 	public void testHttpToHttp2Ssl() {
 		DisposableServer server =
 				HttpServer.create()
-				          .port(8080)
 				          .secure()
-				          .handle((req, res) -> res.asHttp2((in, out) -> out.sendString(Mono.just("Hello"))))
+				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
 				          .wiretap()
 				          .bindNow();
 
@@ -533,15 +532,28 @@ public class HttpTests {
 
 	@Test
 	@Ignore
-	public void testHttpToHttp2ClearText() throws Exception {
+	public void testHttpToHttp2ClearText() {
 		DisposableServer server =
 				HttpServer.create()
-				          .port(8080)
 				          .handle((req, res) -> res.asHttp2((in, out) -> out.sendString(Mono.just("Hello"))))
 				          .wiretap()
 				          .bindNow();
 
-		new CountDownLatch(1).await();
+		StepVerifier.create(
+				HttpClient.prepare()
+				          .port(server.port())
+				          .wiretap()
+				          .post()
+				          .uri("/")
+//				          .send((req, out) -> out.sendString(Mono.just("World")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+		)
+		            .expectNext("Hello")
+		            .verifyComplete();
+
+
 		server.disposeNow();
 	}
 

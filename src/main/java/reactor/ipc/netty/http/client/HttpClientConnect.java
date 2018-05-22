@@ -34,7 +34,9 @@ import javax.net.ssl.SSLParameters;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -47,13 +49,16 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
+import io.netty.handler.codec.http2.DefaultHttp2Connection;
+import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
+import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder;
+import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterBuilder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
@@ -210,9 +215,20 @@ final class HttpClientConnect extends HttpClient {
 			HttpClientHandler handler = new HttpClientHandler(b.config()
 			                                                   .remoteAddress(), configuration);
 
-			HttpClientInitializer initializer = new HttpClientInitializer(handler);
 			BootstrapHandlers.updateConfiguration(b,
-					NettyPipeline.HttpInitializer, initializer);
+					NettyPipeline.HttpInitializer,
+					(listener, channel) -> {
+						channel.pipeline()
+						       .addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
+
+						if (handler.compress) {
+							channel.pipeline()
+							       .addAfter(NettyPipeline.HttpCodec,
+							                 NettyPipeline.HttpDecompressor,
+							                 new HttpContentDecompressor());
+						}
+
+					});
 
 			b.remoteAddress(handler);
 
@@ -234,7 +250,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				BootstrapHandlers.connectionObserver(finalBootstrap,
-						BootstrapHandlers.connectionObserver(finalBootstrap).then(new HttpObserver(sink, handler, initializer)));
+						BootstrapHandlers.connectionObserver(finalBootstrap).then(new HttpObserver(sink, handler)));
 
 				tcpClient.connect(finalBootstrap)
 				         .subscribe(new TcpClientSubscriber(sink));
@@ -282,12 +298,10 @@ final class HttpClientConnect extends HttpClient {
 
 		final MonoSink<Connection> sink;
 		final HttpClientHandler handler;
-		final HttpClientInitializer initializer;
 
-		HttpObserver(MonoSink<Connection> sink, HttpClientHandler handler, HttpClientInitializer initializer) {
+		HttpObserver(MonoSink<Connection> sink, HttpClientHandler handler) {
 			this.sink = sink;
 			this.handler = handler;
-			this.initializer = initializer;
 		}
 
 		@Override
@@ -314,8 +328,10 @@ final class HttpClientConnect extends HttpClient {
 				}
 				handler.channel(connection.channel());
 
-				Mono.fromDirect(initializer.upgraded)
-				    .then(Mono.defer(() -> Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection))))
+//				Mono.fromDirect(initializer.upgraded)
+//				    .then(Mono.defer(() -> Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection))))
+//				    .subscribe(connection.disposeSubscriber());
+				Mono.defer(() -> Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection)))
 				    .subscribe(connection.disposeSubscriber());
 			}
 		}
@@ -604,14 +620,57 @@ final class HttpClientConnect extends HttpClient {
 		}
 	}
 
+	@ChannelHandler.Sharable
 	static final class HttpClientInitializer
-			implements BiConsumer<ConnectionObserver, Channel>, ChannelOperations.OnSetup {
+			extends ChannelInboundHandlerAdapter
+			implements BiConsumer<ConnectionObserver, Channel>, ChannelOperations
+			.OnSetup, GenericFutureListener<Future<Http2StreamChannel>> {
 		final HttpClientHandler handler;
 		final DirectProcessor<Void> upgraded;
 
 		HttpClientInitializer(HttpClientHandler handler) {
 			this.handler = handler;
 			this.upgraded = DirectProcessor.create();
+		}
+
+		@Override
+		public void operationComplete(Future<Http2StreamChannel> future) {
+			if (!future.isSuccess()) {
+				upgraded.onError(future.cause());
+			}
+		}
+
+		@Override
+		public void channelActive(ChannelHandlerContext ctx) {
+			ChannelOperations<?, ?> ops = Connection.from(ctx.channel()).as(ChannelOperations.class);
+			if (ops != null) {
+				ops.listener().onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+			}
+			ctx.fireChannelActive();
+		}
+
+		@Override
+		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+			if(evt == HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL) {
+				//upgraded to h2, read the next streams/settings from server
+
+				ctx.channel()
+				   .read();
+
+				ctx.pipeline()
+				   .remove(this);
+			}
+			else if (evt == HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED) {
+				ctx.pipeline()
+				   .remove(this);
+
+
+				if (handler.compress) {
+					ctx.pipeline()
+					   .addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
+				}
+			}
+			ctx.fireUserEventTriggered(evt);
 		}
 
 		@Override
@@ -624,56 +683,48 @@ final class HttpClientConnect extends HttpClient {
 			ChannelPipeline p = channel.pipeline();
 
 			if (p.get(NettyPipeline.SslHandler) != null) {
-				p.addLast(new Http2ClientInitializer(listener, handler, upgraded));
+				p.addLast(new Http2ClientInitializer(listener, this));
 			}
 			else {
 				HttpClientCodec httpClientCodec = new HttpClientCodec();
-				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-						Http2MultiplexCodecBuilder.forClient(new Http2StreamInitializer())
-						                          .initialSettings(Http2Settings.defaultSettings());
-				if (p.get(NettyPipeline.LoggingHandler) != null) { //TODO only when
-					// upgraded
-					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
+
+				final Http2Connection connection = new DefaultHttp2Connection(false);
+				HttpToHttp2ConnectionHandlerBuilder h2HandlerBuilder = new
+						HttpToHttp2ConnectionHandlerBuilder()
+						.frameListener(new InboundHttp2ToHttpAdapterBuilder(connection)
+										.maxContentLength(65536)
+										.propagateSettings(true)
+										.build())
+						.connection(connection);
+
+				if (p.get(NettyPipeline.LoggingHandler) != null) {
+					h2HandlerBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
 				}
 
-				p.addLast(NettyPipeline.HttpCodec, httpClientCodec)
-				 .addLast(new HttpClientUpgradeHandler(httpClientCodec,
-				          new Http2ClientUpgradeCodec(http2MultiplexCodecBuilder.build()), 65536));
+				p.addLast(NettyPipeline.HttpCodec, httpClientCodec);
+//				 .addLast(new HttpClientUpgradeHandler(httpClientCodec,
+//				          new Http2ClientUpgradeCodec(h2HandlerBuilder.build()), 65536))
+//				 .addLast(this);
+//				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(channel), listener,	null);
+//				if (ops != null) {
+//					ops.bind();
+//					listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+//				}
 
-				if (handler.compress) {
-					p.addLast(NettyPipeline.HttpDecompressor, new HttpContentDecompressor());
-				}
-				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(channel), listener,	null);
-				if (ops != null) {
-					ops.bind();
-					listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
-				}
 				upgraded.onComplete();
 			}
 		}
 	}
 
-	static final class Http2ClientInitializer extends ApplicationProtocolNegotiationHandler
-			implements GenericFutureListener<Future<Http2StreamChannel>>{
+	static final class Http2ClientInitializer extends ApplicationProtocolNegotiationHandler {
 
+		final HttpClientInitializer parent;
 		final ConnectionObserver listener;
-		final HttpClientHandler handler;
 
-		final DirectProcessor<Void> upgraded;
-
-		Http2ClientInitializer(ConnectionObserver listener, HttpClientHandler handler,
-				DirectProcessor<Void> upgraded) {
+		Http2ClientInitializer(ConnectionObserver listener, HttpClientInitializer parent) {
 			super(ApplicationProtocolNames.HTTP_1_1);
 			this.listener = listener;
-			this.handler = handler;
-			this.upgraded = upgraded;
-		}
-
-		@Override
-		public void operationComplete(Future<Http2StreamChannel> future) {
-			if (!future.isSuccess()) {
-				upgraded.onError(future.cause());
-			}
+			this.parent = parent;
 		}
 
 		@Override
@@ -684,27 +735,14 @@ final class HttpClientConnect extends HttpClient {
 				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
 						Http2MultiplexCodecBuilder.forClient(new Http2StreamInitializer())
 						                          .initialSettings(Http2Settings.defaultSettings());
+
 				if (p.get(NettyPipeline.LoggingHandler) != null) {
 					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
 				}
 
 				p.addLast(http2MultiplexCodecBuilder.build());
 
-				Http2StreamChannelBootstrap http2StreamChannelBootstrap =
-						new Http2StreamChannelBootstrap(ctx.channel()).handler(new ChannelInitializer() {
-							@Override
-							protected void initChannel(Channel ch) {
-								ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(false));
-								ChannelOperations.addReactiveBridge(ch, HTTP_OPS, listener);
-								if (log.isDebugEnabled()) {
-									log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
-								}
-								upgraded.onComplete();
-							}
-						});
-
-				http2StreamChannelBootstrap.open()
-				                           .addListener(this);
+				openStream(ctx.channel(), listener, parent.upgraded, parent);
 
 				return;
 			}
@@ -712,21 +750,41 @@ final class HttpClientConnect extends HttpClient {
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
 				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, new HttpClientCodec());
 
-				if (handler.compress) {
+				if (parent.handler.compress) {
 					p.addAfter(NettyPipeline.HttpCodec,
 					           NettyPipeline.HttpDecompressor,
 					           new HttpContentDecompressor());
 				}
-				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(ctx.channel()), listener,	null);
-				if (ops != null) {
-					ops.bind();
-					listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
-				}
-				upgraded.onComplete();
+//				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(ctx.channel()), listener,	null);
+//				if (ops != null) {
+//					ops.bind();
+//					listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+//				}
+				parent.upgraded.onComplete();
 				return;
 			}
-			upgraded.onError(new IllegalStateException("unknown protocol: " + protocol));
+			parent.upgraded.onError(new IllegalStateException("unknown protocol: " + protocol));
 		}
+
+	}
+
+	static void openStream(Channel ch, ConnectionObserver listener,
+			DirectProcessor<Void> upgraded, GenericFutureListener<Future<Http2StreamChannel>> onStreamOpen) {
+		Http2StreamChannelBootstrap http2StreamChannelBootstrap =
+				new Http2StreamChannelBootstrap(ch).handler(new ChannelInitializer() {
+					@Override
+					protected void initChannel(Channel ch) {
+						ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(false));
+						ChannelOperations.addReactiveBridge(ch, HTTP_OPS, listener);
+						if (log.isDebugEnabled()) {
+							log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
+						}
+						upgraded.onComplete();
+					}
+				});
+
+		http2StreamChannelBootstrap.open()
+		                           .addListener(onStreamOpen);
 	}
 
 	static final class Http2StreamInitializer extends ChannelInitializer<Channel> {
