@@ -16,16 +16,27 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
+import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.core.Exceptions;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 
@@ -34,20 +45,7 @@ import reactor.ipc.netty.channel.BootstrapHandlers;
  *
  * @author Violeta Georgieva
  */
-public class SslProvider {
-
-	/**
-	 * Provide a default SSL support for client bootstrap
-	 * @param b a given bootstrap to enrich
-	 * @return an enriched bootstrap
-	 */
-	public static Bootstrap addDefaultSslSupport(Bootstrap b) {
-		BootstrapHandlers.updateConfiguration(b,
-				NettyPipeline.SslHandler,
-				new TcpUtils.SslSupportConsumer(DEFAULT_CLIENT_PROVIDER, b));
-
-		return b;
-	}
+public final class SslProvider {
 
 	/**
 	 * Creates a builder for {@link SslProvider SslProvider}
@@ -58,18 +56,88 @@ public class SslProvider {
 		return new SslProvider.Build();
 	}
 
+	/**
+	 * Creates a new {@link SslProvider SslProvider} with a prepending handler
+	 * configurator callback to inject default settings to an existing provider
+	 * configuration.
+	 *
+	 * @return a new SslProvider
+	 */
+	public static SslProvider addHandlerConfigurator(
+			SslProvider provider, Consumer<? super SslHandler> handlerConfigurator) {
+		Objects.requireNonNull(provider, "provider");
+		Objects.requireNonNull(handlerConfigurator, "handlerConfigurator");
+		return new SslProvider(provider, handlerConfigurator);
+	}
 
+	/**
+	 * Return the default client ssl provider
+	 *
+	 * @return default client ssl provider
+	 */
+	public static SslProvider defaultClientProvider() {
+		return DEFAULT_CLIENT_PROVIDER;
+	}
 
-	final SslContext sslContext;
-	final long handshakeTimeoutMillis;
-	final long closeNotifyFlushTimeoutMillis;
-	final long closeNotifyReadTimeoutMillis;
+	/**
+	 * Add Ssl support on the given client bootstrap
+	 * @param b a given bootstrap to enrich
+	 *
+	 * @return an enriched bootstrap
+	 */
+	public static Bootstrap updateSslSupport(Bootstrap b, SslProvider sslProvider) {
+		BootstrapHandlers.updateConfiguration(b,
+				NettyPipeline.SslHandler,
+				new SslSupportConsumer(sslProvider, b));
 
-	protected SslProvider(SslProvider.Build builder) {
+		return b;
+	}
+
+	/**
+	 * Find Ssl support in the given client bootstrap
+	 *
+	 * @param b a bootstrap to search
+	 *
+	 * @return any {@link SslProvider} found or null
+	 */
+	@Nullable
+	public static SslProvider findSslSupport(Bootstrap b) {
+		SslSupportConsumer ssl = BootstrapHandlers.findConfiguration(SslSupportConsumer.class, b.config().handler());
+
+		if (ssl == null) {
+			return null;
+		}
+		return ssl.sslProvider;
+	}
+
+	final SslContext                   sslContext;
+	final long                         handshakeTimeoutMillis;
+	final long                         closeNotifyFlushTimeoutMillis;
+	final long                         closeNotifyReadTimeoutMillis;
+	final Consumer<? super SslHandler> handlerConfigurator;
+
+	SslProvider(SslProvider.Build builder) {
 		this.sslContext = builder.sslContext;
+		this.handlerConfigurator = builder.handlerConfigurator;
 		this.handshakeTimeoutMillis = builder.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = builder.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = builder.closeNotifyReadTimeoutMillis;
+	}
+
+	SslProvider(SslProvider from, Consumer<? super SslHandler> handlerConfigurator) {
+		this.sslContext = from.sslContext;
+		if (from.handlerConfigurator == null) {
+			this.handlerConfigurator = handlerConfigurator;
+		}
+		else {
+			this.handlerConfigurator = h -> {
+				handlerConfigurator.accept(h);
+				from.handlerConfigurator.accept(h);
+			};
+		}
+		this.handshakeTimeoutMillis = from.handshakeTimeoutMillis;
+		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
+		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
 	}
 
 
@@ -78,7 +146,7 @@ public class SslProvider {
 	 * 
 	 * @return {@code SslContext} instance with configured settings.
 	 */
-	public final SslContext getSslContext() {
+	public SslContext getSslContext() {
 		return this.sslContext;
 	}
 
@@ -86,6 +154,9 @@ public class SslProvider {
 		sslHandler.setHandshakeTimeoutMillis(handshakeTimeoutMillis);
 		sslHandler.setCloseNotifyFlushTimeoutMillis(closeNotifyFlushTimeoutMillis);
 		sslHandler.setCloseNotifyReadTimeoutMillis(closeNotifyReadTimeoutMillis);
+		if (handlerConfigurator != null) {
+			handlerConfigurator.accept(sslHandler);
+		}
 	}
 
 
@@ -105,7 +176,7 @@ public class SslProvider {
 	}
 
 	
-	static protected class Build implements SslContextSpec, Builder {
+	static final class Build implements SslContextSpec, Builder {
 
 		static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT =
 				Long.parseLong(System.getProperty(
@@ -127,6 +198,7 @@ public class SslProvider {
 
 		SslContextBuilder sslCtxBuilder;
 		SslContext sslContext;
+		Consumer<? super SslHandler> handlerConfigurator;
 		long handshakeTimeoutMillis = DEFAULT_SSL_HANDSHAKE_TIMEOUT;
 		long closeNotifyFlushTimeoutMillis = 3000L;
 		long closeNotifyReadTimeoutMillis;
@@ -169,6 +241,13 @@ public class SslProvider {
 		public final Builder handshakeTimeout(Duration handshakeTimeout) {
 			Objects.requireNonNull(handshakeTimeout, "handshakeTimeout");
 			return handshakeTimeoutMillis(handshakeTimeout.toMillis());
+		}
+
+		@Override
+		public final Builder handlerConfigurator(Consumer<? super SslHandler> handlerConfigurator) {
+			Objects.requireNonNull(handlerConfigurator, "handshakeTimeout");
+			this.handlerConfigurator = handlerConfigurator;
+			return this;
 		}
 
 		@Override
@@ -229,6 +308,16 @@ public class SslProvider {
 		 * @return {@literal this}
 		 */
 		Builder sslContext(Consumer<? super SslContextBuilder> sslContextBuilder);
+
+		/**
+		 * Set a configurator callback to mutate any property from the provided
+		 * {@link SslHandler}
+		 *
+		 * @param handlerConfigurator A callback given the generated {@link SslHandler}
+		 *
+		 * @return {@literal this}
+		 */
+		Builder handlerConfigurator(Consumer<? super SslHandler> handlerConfigurator);
 
 		/**
 		 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
@@ -316,12 +405,171 @@ public class SslProvider {
 		 * @return {@literal this}
 		 */
 		Builder forServer();
+
+	}
+
+	@Nullable
+	static SslContext findSslContext(Bootstrap b) {
+		SslSupportConsumer c =
+				BootstrapHandlers.findConfiguration(SslSupportConsumer.class,
+						b.config().handler());
+
+		return c != null ? c.sslProvider.getSslContext() : null;
+	}
+
+	@Nullable
+	static SslContext findSslContext(ServerBootstrap b) {
+		SslSupportConsumer c =
+				BootstrapHandlers.findConfiguration(SslSupportConsumer.class,
+						b.config().childHandler());
+
+		return c != null ? c.sslProvider.getSslContext() : null;
+	}
+
+	static Bootstrap removeSslSupport(Bootstrap b) {
+		BootstrapHandlers.removeConfiguration(b, NettyPipeline.SslHandler);
+		return b;
+	}
+
+	static ServerBootstrap removeSslSupport(ServerBootstrap b) {
+		BootstrapHandlers.removeConfiguration(b, NettyPipeline.SslHandler);
+		return b;
+	}
+
+	static ServerBootstrap updateSslSupport(ServerBootstrap b, SslProvider sslProvider) {
+
+		BootstrapHandlers.updateConfiguration(b,
+				NettyPipeline.SslHandler,
+				new SslSupportConsumer(sslProvider, b));
+
+		return b;
+	}
+
+	static final class SslSupportConsumer
+			implements BiConsumer<ConnectionObserver, Channel> {
+		final SslProvider sslProvider;
+
+		final InetSocketAddress sniInfo;
+
+		SslSupportConsumer(SslProvider sslProvider, AbstractBootstrap<?, ?> b) {
+			this.sslProvider = sslProvider;
+
+			if (b instanceof Bootstrap) {
+				SocketAddress sniInfo = ((Bootstrap) b).config().remoteAddress();
+
+				if (sniInfo instanceof InetSocketAddress) {
+					this.sniInfo = (InetSocketAddress) sniInfo;
+				}
+				else {
+					this.sniInfo = null;
+				}
+
+			}
+			else {
+				sniInfo = null;
+			}
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			SslHandler sslHandler;
+
+			if (sniInfo != null) {
+				sslHandler = sslProvider.getSslContext()
+				                        .newHandler(channel.alloc(),
+						                        sniInfo.getHostString(),
+						                        sniInfo.getPort());
+
+				if (TcpUtils.log.isDebugEnabled()) {
+					TcpUtils.log.debug("SSL enabled using engine {} and SNI {}",
+							sslHandler.engine().getClass().getSimpleName(),
+							sniInfo);
+				}
+			}
+			else {
+				sslHandler = sslProvider.getSslContext().newHandler(channel.alloc());
+
+				if (TcpUtils.log.isDebugEnabled()) {
+					TcpUtils.log.debug("SSL enabled using engine {}",
+							sslHandler.engine().getClass().getSimpleName());
+				}
+			}
+
+			sslProvider.configure(sslHandler);
+
+			if (channel.pipeline()
+			           .get(NettyPipeline.ProxyHandler) != null) {
+				channel.pipeline()
+				       .addAfter(NettyPipeline.ProxyHandler,
+						       NettyPipeline.SslHandler,
+						       sslHandler);
+			}
+			else {
+				channel.pipeline()
+				       .addFirst(NettyPipeline.SslHandler, sslHandler);
+			}
+
+			if (channel.pipeline()
+			           .get(NettyPipeline.LoggingHandler) != null) {
+				channel.pipeline()
+				       .addAfter(NettyPipeline.LoggingHandler,
+						       NettyPipeline.SslReader,
+						       new SslReadHandler());
+			}
+			else {
+				channel.pipeline()
+				       .addAfter(NettyPipeline.SslHandler,
+						       NettyPipeline.SslReader,
+						       new SslReadHandler());
+			}
+		}
+
+	}
+
+	static final class SslReadHandler extends ChannelInboundHandlerAdapter {
+
+		boolean handshakeDone;
+
+		@Override
+		public void channelActive(ChannelHandlerContext ctx) {
+			ctx.read(); //consume handshake
+		}
+
+		@Override
+		public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+			if (!handshakeDone) {
+				ctx.read(); /* continue consuming. */
+			}
+			super.channelReadComplete(ctx);
+		}
+
+		@Override
+		public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
+				throws Exception {
+			if (evt instanceof SslHandshakeCompletionEvent) {
+				handshakeDone = true;
+				if (ctx.pipeline()
+				       .context(this) != null) {
+					ctx.pipeline()
+					   .remove(this);
+				}
+				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
+				if (handshake.isSuccess()) {
+					ctx.fireChannelActive();
+				}
+				else {
+					ctx.fireExceptionCaught(handshake.cause());
+				}
+			}
+			super.userEventTriggered(ctx, evt);
+		}
+
 	}
 
 	static final SslContext DEFAULT_CLIENT_CONTEXT;
 	static final SslContext DEFAULT_SERVER_CONTEXT;
-	static final SslProvider DEFAULT_CLIENT_PROVIDER;
 
+	static final SslProvider DEFAULT_CLIENT_PROVIDER;
 
 	static {
 		SslContext sslContext;
@@ -350,4 +598,12 @@ public class SslProvider {
 		}
 		DEFAULT_SERVER_CONTEXT = sslContext;
 	}
+
+
+	static final Consumer<SslContextSpec> DEFAULT_SERVER_SPEC =
+			sslProviderBuilder -> sslProviderBuilder.sslContext(DEFAULT_SERVER_CONTEXT);
+
 }
+
+
+

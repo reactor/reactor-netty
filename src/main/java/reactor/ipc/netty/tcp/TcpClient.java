@@ -475,7 +475,7 @@ public abstract class TcpClient {
 	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient secure() {
-		return secure(sslProviderBuilder -> sslProviderBuilder.sslContext(SslProvider.DEFAULT_CLIENT_CONTEXT));
+		return new TcpClientSecure(this, null);
 	}
 
 	/**
@@ -490,21 +490,6 @@ public abstract class TcpClient {
 	 */
 	public final TcpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		return TcpClientSecure.secure(this, sslProviderBuilder);
-	}
-
-	/**
-	 * Apply an SSL configuration customization via the passed provider. The builder
-	 * will produce the {@link SslContext} to be passed to with a default value of
-	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
-	 * reactor.ipc.netty.sslHandshakeTimeout} is set.
-	 *
-	 * @param provider A provider instance callback for further customization of
-	 * SslContext.
-	 *
-	 * @return a new {@link TcpClient}
-	 */
-	public final TcpClient secure(SslProvider provider) {
-		return new TcpClientSecure(this, provider);
 	}
 
 	/**

@@ -18,6 +18,7 @@ package reactor.ipc.netty.tcp;
 
 import java.util.Objects;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.ssl.SslContext;
@@ -37,18 +38,24 @@ final class TcpClientSecure extends TcpClientOperator {
 		return new TcpClientSecure(client, builder.build());
 	}
 
-	TcpClientSecure(TcpClient client, SslProvider provider) {
+	TcpClientSecure(TcpClient client, @Nullable SslProvider provider) {
 		super(client);
-		this.sslProvider = Objects.requireNonNull(provider, "provider");
+		if (provider == null) {
+			this.sslProvider = SslProvider.DEFAULT_CLIENT_PROVIDER;
+		}
+		else {
+			this.sslProvider = Objects.requireNonNull(provider, "provider");
+		}
 	}
 
 	@Override
 	public Bootstrap configure() {
-		return TcpUtils.updateSslSupport(source.configure(), sslProvider);
+		return SslProvider.updateSslSupport(source.configure(), sslProvider);
 	}
 
 	@Override
 	public SslContext sslContext(){
 		return this.sslProvider.getSslContext();
 	}
+
 }

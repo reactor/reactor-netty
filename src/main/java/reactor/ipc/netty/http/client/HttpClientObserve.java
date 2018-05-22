@@ -38,7 +38,7 @@ final class HttpClientObserve extends HttpClientOperator
 
 	@Override
 	protected TcpClient tcpConfiguration() {
-		return super.tcpConfiguration().bootstrap(this);
+		return source.tcpConfiguration().bootstrap(this);
 	}
 
 	@Override

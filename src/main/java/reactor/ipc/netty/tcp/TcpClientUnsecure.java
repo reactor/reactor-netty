@@ -16,10 +16,10 @@
 
 package reactor.ipc.netty.tcp;
 
+import javax.annotation.Nullable;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.ssl.SslContext;
-
-import javax.annotation.Nullable;
 
 /**
  * @author Stephane Maldini
@@ -32,7 +32,7 @@ final class TcpClientUnsecure extends TcpClientOperator {
 
 	@Override
 	public Bootstrap configure() {
-		return TcpUtils.removeSslSupport(source.configure());
+		return SslProvider.removeSslSupport(source.configure());
 	}
 
 	@Override

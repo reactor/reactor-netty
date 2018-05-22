@@ -586,7 +586,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient secure() {
-		return new HttpClientSecure(this, new HttpClientSslProvider.HttpBuild().build());
+		return new HttpClientSecure(this, null);
 	}
 
 	/**
@@ -594,11 +594,6 @@ public abstract class HttpClient {
 	 * will produce the {@link SslContext} to be passed to with a default value of
 	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
 	 * reactor.ipc.netty.sslHandshakeTimeout} is set.
-	 *
-	 * <p> Always prefer {@link HttpClient#secure} to
-	 * {@link #tcpConfiguration()}  and {@link TcpClient#secure}. While configuration
-	 * with the later is possible, {@link HttpClient#secure} will inject extra information
-	 * for HTTPS support.
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 *

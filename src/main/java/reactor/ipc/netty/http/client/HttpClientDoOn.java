@@ -82,7 +82,7 @@ final class HttpClientDoOn extends HttpClientOperator implements
 
 	@Override
 	protected TcpClient tcpConfiguration() {
-		return super.tcpConfiguration().bootstrap(this);
+		return source.tcpConfiguration().bootstrap(this);
 	}
 
 }

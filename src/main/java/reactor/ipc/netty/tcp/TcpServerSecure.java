@@ -16,13 +16,11 @@
 
 package reactor.ipc.netty.tcp;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-
 import java.util.Objects;
 import java.util.function.Consumer;
+
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.handler.ssl.SslContext;
 
 /**
  * @author Stephane Maldini
@@ -43,7 +41,7 @@ final class TcpServerSecure extends TcpServerOperator {
 
 	@Override
 	public ServerBootstrap configure() {
-		return TcpUtils.updateSslSupport(source.configure(), sslProvider);
+		return SslProvider.updateSslSupport(source.configure(), sslProvider);
 	}
 
 	@Override

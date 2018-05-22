@@ -27,6 +27,8 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
@@ -42,6 +44,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
@@ -93,14 +96,14 @@ final class HttpClientConnect extends HttpClient {
 		return defaultClient;
 	}
 
-	static void channelFactoryAndLoops(TcpClient tcpClient, Bootstrap b) {
+	static void channelFactoryAndLoops(Bootstrap b, @Nullable SslContext sslContext) {
 		if (b.config()
 		     .group() == null) {
 
 			LoopResources loops = HttpResources.get();
 
 			boolean useNative =
-					LoopResources.DEFAULT_NATIVE && !(tcpClient.sslContext() instanceof JdkSslContext);
+					LoopResources.DEFAULT_NATIVE && !(sslContext instanceof JdkSslContext);
 
 			EventLoopGroup elg = loops.onClient(useNative);
 
@@ -112,6 +115,13 @@ final class HttpClientConnect extends HttpClient {
 	static final BiFunction<String, Integer, InetSocketAddress> URI_ADDRESS_MAPPER =
 			InetSocketAddressUtil::createUnresolved;
 
+	static final Consumer<? super SslHandler> DEFAULT_HOSTNAME_VERIFICATION = handler -> {
+		SSLEngine sslEngine = handler.engine();
+		SSLParameters sslParameters = sslEngine.getSSLParameters();
+		sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+		sslEngine.setSSLParameters(sslParameters);
+	};
+
 	static final class HttpTcpClient extends TcpClient {
 
 		final TcpClient defaultClient;
@@ -122,9 +132,19 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public Mono<? extends Connection> connect(Bootstrap b) {
-			channelFactoryAndLoops(defaultClient, b);
+			SslProvider ssl = SslProvider.findSslSupport(b);
+			if (ssl != null) {
+				channelFactoryAndLoops(b, ssl.getSslContext());
+				SslProvider.updateSslSupport(b,
+						SslProvider.addHandlerConfigurator(ssl, DEFAULT_HOSTNAME_VERIFICATION));
+			}
+			else {
+				channelFactoryAndLoops(b, null);
+			}
 			BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
 			HttpClientConfiguration conf = HttpClientConfiguration.getAndClean(b);
+
+
 
 			if (conf.deferredUri != null) {
 				return conf.deferredUri.flatMap(uri ->
@@ -198,7 +218,7 @@ final class HttpClientConnect extends HttpClient {
 				Bootstrap finalBootstrap;
 				//append secure handler if needed
 				if (handler.activeURI.isSecure()) {
-					finalBootstrap = SslProvider.addDefaultSslSupport(b.clone());
+					finalBootstrap = SslProvider.updateSslSupport(b.clone(), SslProvider.defaultClientProvider());
 				}
 				else {
 					finalBootstrap = b.clone();

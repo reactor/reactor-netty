@@ -17,6 +17,7 @@ package reactor.ipc.netty.http.client;
 
 import java.util.Objects;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 import reactor.ipc.netty.tcp.SslProvider;
 import reactor.ipc.netty.tcp.TcpClient;
@@ -28,21 +29,23 @@ final class HttpClientSecure extends HttpClientOperator {
 
 	static HttpClient secure(HttpClient client, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
-
-		HttpClientSslProvider.HttpBuild builder = new HttpClientSslProvider.HttpBuild();
-		sslProviderBuilder.accept(builder);
-		return new HttpClientSecure(client, builder.build());
+		return new HttpClientSecure(client, sslProviderBuilder);
 	}
 
-	final SslProvider sslProvider;
+	final Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder;
 
-	HttpClientSecure(HttpClient client, SslProvider provider) {
+	HttpClientSecure(HttpClient client,
+			@Nullable Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		super(client);
-		this.sslProvider = provider;
+		this.sslProviderBuilder = sslProviderBuilder;
 	}
 
 	@Override
 	protected TcpClient tcpConfiguration() {
-		return super.tcpConfiguration().secure(sslProvider);
+		if (sslProviderBuilder == null) {
+			return source.tcpConfiguration()
+			             .secure();
+		}
+		return source.tcpConfiguration().secure(sslProviderBuilder);
 	}
 }

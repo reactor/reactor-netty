@@ -19,25 +19,15 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
-import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.NetUtil;
-import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.channel.ChannelOperations;
@@ -73,54 +63,8 @@ final class TcpUtils {
 		return b;
 	}
 
-	static ServerBootstrap updateSslSupport(ServerBootstrap b, SslProvider sslProvider) {
-
-		BootstrapHandlers.updateConfiguration(b,
-				NettyPipeline.SslHandler,
-				new SslSupportConsumer(sslProvider, b));
-
-		return b;
-	}
-
-	static Bootstrap updateSslSupport(Bootstrap b, SslProvider sslProvider) {
-
-		BootstrapHandlers.updateConfiguration(b,
-				NettyPipeline.SslHandler,
-				new SslSupportConsumer(sslProvider, b));
-
-		return b;
-	}
-
-	@Nullable
-	static SslContext findSslContext(Bootstrap b) {
-		SslSupportConsumer c =
-				BootstrapHandlers.findConfiguration(SslSupportConsumer.class,
-				                                    b.config().handler());
-
-		return c != null ? c.sslProvider.getSslContext() : null;
-	}
-
-	@Nullable
-	static SslContext findSslContext(ServerBootstrap b) {
-		SslSupportConsumer c =
-				BootstrapHandlers.findConfiguration(SslSupportConsumer.class,
-				                                    b.config().childHandler());
-
-		return c != null ? c.sslProvider.getSslContext() : null;
-	}
-
 	static Bootstrap removeProxySupport(Bootstrap b) {
 		BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyHandler);
-		return b;
-	}
-
-	static Bootstrap removeSslSupport(Bootstrap b) {
-		BootstrapHandlers.removeConfiguration(b, NettyPipeline.SslHandler);
-		return b;
-	}
-
-	static ServerBootstrap removeSslSupport(ServerBootstrap b) {
-		BootstrapHandlers.removeConfiguration(b, NettyPipeline.SslHandler);
 		return b;
 	}
 
@@ -168,127 +112,6 @@ final class TcpUtils {
 		return new SocketAddressSupplier(supplier);
 	}
 
-	static final class SslSupportConsumer
-			implements BiConsumer<ConnectionObserver, Channel> {
-		final SslProvider sslProvider;
-
-		final InetSocketAddress sniInfo;
-
-		SslSupportConsumer(SslProvider sslProvider, AbstractBootstrap<?, ?> b) {
-			this.sslProvider = sslProvider;
-
-			if (b instanceof Bootstrap) {
-				SocketAddress sniInfo = ((Bootstrap) b).config().remoteAddress();
-
-				if (sniInfo instanceof InetSocketAddress) {
-					this.sniInfo = (InetSocketAddress) sniInfo;
-				}
-				else {
-					this.sniInfo = null;
-				}
-
-			}
-			else {
-				sniInfo = null;
-			}
-		}
-
-		@Override
-		public void accept(ConnectionObserver listener, Channel channel) {
-			SslHandler sslHandler;
-
-			if (sniInfo != null) {
-				sslHandler = sslProvider.getSslContext()
-				                        .newHandler(channel.alloc(),
-				                                    sniInfo.getHostString(),
-				                                    sniInfo.getPort());
-
-				if (log.isDebugEnabled()) {
-					log.debug("SSL enabled using engine {} and SNI {}",
-							sslHandler.engine().getClass().getSimpleName(),
-							sniInfo);
-				}
-			}
-			else {
-				sslHandler = sslProvider.getSslContext().newHandler(channel.alloc());
-
-				if (log.isDebugEnabled()) {
-					log.debug("SSL enabled using engine {}",
-							sslHandler.engine().getClass().getSimpleName());
-				}
-			}
-
-			sslProvider.configure(sslHandler);
-
-			if (channel.pipeline()
-			           .get(NettyPipeline.ProxyHandler) != null) {
-				channel.pipeline()
-				       .addAfter(NettyPipeline.ProxyHandler,
-				                 NettyPipeline.SslHandler,
-				                 sslHandler);
-			}
-			else {
-				channel.pipeline()
-				       .addFirst(NettyPipeline.SslHandler, sslHandler);
-			}
-
-			if (channel.pipeline()
-			           .get(NettyPipeline.LoggingHandler) != null) {
-				channel.pipeline()
-				       .addAfter(NettyPipeline.LoggingHandler,
-				                 NettyPipeline.SslReader,
-				                 new SslReadHandler());
-			}
-			else {
-				channel.pipeline()
-				       .addAfter(NettyPipeline.SslHandler,
-				                 NettyPipeline.SslReader,
-				                 new SslReadHandler());
-			}
-		}
-
-	}
-
-	static final class SslReadHandler extends ChannelInboundHandlerAdapter {
-
-		boolean handshakeDone;
-
-		@Override
-		public void channelActive(ChannelHandlerContext ctx) {
-			ctx.read(); //consume handshake
-		}
-
-		@Override
-		public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-			if (!handshakeDone) {
-				ctx.read(); /* continue consuming. */
-			}
-			super.channelReadComplete(ctx);
-		}
-
-		@Override
-		public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
-				throws Exception {
-			if (evt instanceof SslHandshakeCompletionEvent) {
-				handshakeDone = true;
-				if (ctx.pipeline()
-				       .context(this) != null) {
-					ctx.pipeline()
-					   .remove(this);
-				}
-				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
-				if (handshake.isSuccess()) {
-					ctx.fireChannelActive();
-				}
-				else {
-					ctx.fireExceptionCaught(handshake.cause());
-				}
-			}
-			super.userEventTriggered(ctx, evt);
-		}
-
-	}
-
 	static final class SocketAddressSupplier extends SocketAddress implements Supplier<SocketAddress> {
 		final Supplier<? extends SocketAddress> supplier;
 
@@ -307,6 +130,4 @@ final class TcpUtils {
 	static final ChannelOperations.OnSetup TCP_OPS =
 			(ch, c, msg) -> new ChannelOperations<>(ch, c);
 
-	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC =
-			sslProviderBuilder -> sslProviderBuilder.sslContext(SslProvider.DEFAULT_SERVER_CONTEXT);
 }

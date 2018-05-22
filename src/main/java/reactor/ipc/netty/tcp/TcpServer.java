@@ -437,7 +437,7 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer secure() {
-		return secure(TcpUtils.SSL_DEFAULT_SPEC);
+		return secure(SslProvider.DEFAULT_SERVER_SPEC);
 	}
 
 	/**
