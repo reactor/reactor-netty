@@ -452,14 +452,9 @@ public class TcpServerTests {
 		String client1Response = m1.block();
 		String client2Response = m2.block();
 
-		client1.dispose();
-		client1.onDispose().block();
-
-		client2.dispose();
-		client2.onDispose().block();
-
-		context.dispose();
-		context.onDispose().block();
+		client1.disposeNow();
+		client2.disposeNow();
+		context.disposeNow();
 
 		Assertions.assertThat(client1Response).isEqualTo("NOPE");
 
@@ -559,14 +554,9 @@ public class TcpServerTests {
 		String client1Response = m1.block();
 		String client2Response = m2.block();
 
-		client1.dispose();
-		client1.onDispose().block();
-
-		client2.dispose();
-		client2.onDispose().block();
-
-		context.dispose();
-		context.onDispose().block();
+		client1.disposeNow();
+		client2.disposeNow();
+		context.disposeNow();
 
 		Assertions.assertThat(client1Response).isEqualTo("NOPE");
 

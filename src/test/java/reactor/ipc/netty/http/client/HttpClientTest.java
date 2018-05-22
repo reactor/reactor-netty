@@ -759,8 +759,7 @@ public class HttpClientTest {
 				          .uri("/foo")
 				          .responseSingle((res, buf) -> buf.asString(CharsetUtil.UTF_8))
 				          .block(Duration.ofMillis(200));
-		context.dispose();
-		context.onDispose().block();
+		context.disposeNow();
 
 		assertThat(responseString).isEqualTo("hello /foo");
 
@@ -788,8 +787,7 @@ public class HttpClientTest {
 		                                  .uri("/foo")
 		                                  .responseSingle((res, buf) -> buf.asString(CharsetUtil.UTF_8))
 		                                  .block();
-		context.dispose();
-		context.onDispose().block();
+		context.disposeNow();
 
 		assertThat(responseString).isEqualTo("hello /foo");
 	}
@@ -806,6 +804,7 @@ public class HttpClientTest {
 
 		DisposableServer context =
 				HttpServer.create()
+				          .port(9090)
 				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
 				          .route(r -> r.post("/upload", (req, resp) ->
 				                  req.receive()
@@ -829,8 +828,7 @@ public class HttpClientTest {
 				                                           .zipWith(Mono.just(res.status().code())))
 				          .block(Duration.ofSeconds(30));
 
-		context.dispose();
-		context.onDispose().block();
+		context.disposeNow();
 
 		assertThat(response).isNotNull();
 		assertThat(response.getT2()).isEqualTo(201);
@@ -871,8 +869,7 @@ public class HttpClientTest {
 				                                           .zipWith(Mono.just(res.status().code())))
 				          .block(Duration.ofSeconds(30));
 
-		context.dispose();
-		context.onDispose().block();
+		context.disposeNow();
 
 		assertThat(response).isNotNull();
 		assertThat(response.getT2()).isEqualTo(201);
@@ -949,8 +946,8 @@ public class HttpClientTest {
 		          .uri(Mono.fromCallable(() -> {
 		          	switch (i.incrementAndGet()) {
 			            case 1: return "/201";
-			            case 2: return "/201";
-			            case 3: return "/201";
+			            case 2: return "/204";
+			            case 3: return "/200";
 			            default: return null;
 		            }
 		          }))

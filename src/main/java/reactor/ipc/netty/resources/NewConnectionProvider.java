@@ -141,7 +141,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 				}
 			}
 			else {
-				new NewConnection(f.channel()).bind();
+//				new NewConnection(f.channel()).bind();
 				if (log.isDebugEnabled()) {
 					log.debug("Connected new channel {}", f.channel());
 				}

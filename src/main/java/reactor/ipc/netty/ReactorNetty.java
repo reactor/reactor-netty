@@ -321,13 +321,6 @@ final class ReactorNetty {
 		}
 	}
 
-	static final class ResponseWriteCompleted {
-		@Override
-		public String toString() {
-			return "[Response Write Completed]";
-		}
-	}
-
 	static final class CompositeConnectionObserver implements ConnectionObserver {
 
 		final ConnectionObserver[] observers;
@@ -606,7 +599,6 @@ final class ReactorNetty {
 	}
 
 	static final ConnectionObserver NOOP_LISTENER = (connection, newState) -> {};
-	static final Object RESPONSE_COMPRESSION_EVENT = new ResponseWriteCompleted();
 
 	static final Logger log                        = Loggers.getLogger(ReactorNetty.class);
 	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");

@@ -261,6 +261,8 @@ public class ChannelOperationsHandlerTest {
 				while (true) {
 					SocketChannel ch = server.accept();
 
+					log.debug("Accepting {}", ch);
+
 					byte[] buffer =
 							("HTTP/1.1 205 Reset Content\r\n" +
 							"Transfer-Encoding: chunked\r\n" +

@@ -151,8 +151,7 @@ public class HttpSendFileTests {
 
 		String body = response.block(Duration.ofSeconds(5));
 
-		context.dispose();
-		context.onDispose().block();
+		context.disposeNow();
 
 		bodyAssertion.accept(body);
 	}
