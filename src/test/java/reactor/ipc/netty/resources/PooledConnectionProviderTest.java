@@ -17,10 +17,12 @@ package reactor.ipc.netty.resources;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -190,11 +192,22 @@ public class PooledConnectionProviderTest {
 			                   .isEqualTo(c4.pool);
 
 			PooledConnectionProvider.Pool defaultPool = c1.pool;
-			assertThat(defaultPool.activeConnections.get())
+
+			CountDownLatch latch = new CountDownLatch(1);
+			service.submit(() -> {
+				while(defaultPool.activeConnections.get() > 0) {
+					LockSupport.parkNanos(100);
+				}
+				latch.countDown();
+			});
+
+
+			assertThat(latch.await(5, TimeUnit.SECONDS))
 					.as("activeConnections fully released")
-					.isZero();
+					.isTrue();
 		}
 		finally {
+			service.shutdownNow();
 			echoServer.close();
 		}
 	}
