@@ -188,7 +188,7 @@ public class TcpServerTests {
 		DisposableServer httpServer =
 				HttpServer.create()
 				          .port(0)
-				          .tcpConfiguration(tcpServer -> tcpServer.host("0.0.0.0"))
+				          .host("0.0.0.0")
 				          .route(r -> r.get("/data", (request, response) -> {
 				                  return response.send(Mono.empty());
 				          }))

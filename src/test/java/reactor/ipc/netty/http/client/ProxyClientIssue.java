@@ -135,7 +135,7 @@ public class ProxyClientIssue {
 	public void startProxyServer() throws Exception {
 		HttpServer server = HttpServer.create()
 		                              .port(PROXY_PORT)
-		                              .tcpConfiguration(tcpServer -> tcpServer.host("0.0.0.0"));
+		                              .host("0.0.0.0");
 
 		server.route(routes -> routes.get("/0/**", this::proxy))
 		      .wiretap()

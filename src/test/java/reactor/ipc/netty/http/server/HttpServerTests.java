@@ -89,7 +89,7 @@ public class HttpServerTests {
 	public void httpPortWithAddress() {
 		DisposableServer blockingFacade = HttpServer.create()
 		                                            .port(8080)
-		                                            .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+		                                            .host("localhost")
 		                                            .handle((req, resp) -> resp.sendNotFound())
 		                                            .wiretap()
 		                                            .bindNow();
@@ -362,7 +362,7 @@ public class HttpServerTests {
 	public void gettingOptionsDuplicates() {
 		HttpServer server = HttpServer.create()
 		                              .port(123)
-		                              .tcpConfiguration(tcpServer -> tcpServer.host("foo"))
+		                              .host(("foo"))
 		                              .compress();
 		assertThat(server.tcpConfiguration().configure())
 		          .isNotSameAs(HttpServer.DEFAULT_TCP_SERVER)
@@ -436,7 +436,7 @@ public class HttpServerTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .host("localhost")
 				          .route(r -> r.get("/204-1", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT)
 				                                                       .sendHeaders())
 				                       .get("/204-2", (req, res) -> res.status(HttpResponseStatus.NO_CONTENT))
@@ -497,7 +497,7 @@ public class HttpServerTests {
 	public void testContentLengthHeadRequest() {
 		DisposableServer server =
 				HttpServer.create()
-				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .host("localhost")
 				          .route(r -> r.route(req -> req.uri().startsWith("/1"),
 				                                  (req, res) -> res.sendString(Mono.just("OK")))
 				                       .route(req -> req.uri().startsWith("/2"),

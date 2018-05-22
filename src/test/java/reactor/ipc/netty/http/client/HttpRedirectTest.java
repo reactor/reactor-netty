@@ -92,7 +92,7 @@ public class HttpRedirectTest {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(9991)
-				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .host("localhost")
 				          .wiretap()
 				          .route(r -> r.get("/1",
 				                                   (req, res) -> res.sendRedirect("http://localhost:9991/3"))
@@ -153,7 +153,7 @@ public class HttpRedirectTest {
 	public void testIssue278() {
 		DisposableServer server1 =
 				HttpServer.create()
-				          .tcpConfiguration( tcp -> tcp.host("localhost"))
+				          .host("localhost")
 				          .port(8888)
 				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
 				                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:8888/3"))
@@ -164,7 +164,7 @@ public class HttpRedirectTest {
 
 		DisposableServer server2 =
 				HttpServer.create()
-				          .tcpConfiguration( tcp -> tcp.host("localhost"))
+				          .host("localhost")
 				          .port(8889)
 				          .route(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
 				          .wiretap()

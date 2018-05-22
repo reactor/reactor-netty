@@ -197,7 +197,7 @@ public class HttpSendFileTests {
 
 		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
-				                                 .tcpConfiguration(tcpServer -> tcpServer.host("localhost")))
+				                                 .host("localhost"))
 				          .handle((req, resp) -> resp.sendByteArray(req.receive()
 				                                                       .aggregate()
 				                                                       .asByteArray()))

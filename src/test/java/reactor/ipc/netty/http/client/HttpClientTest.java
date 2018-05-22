@@ -849,7 +849,7 @@ public class HttpClientTest {
 
 		DisposableServer context =
 				HttpServer.create()
-				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .host("localhost")
 				          .route(r -> r.post("/upload", (req, resp) ->
 				                  req.receive()
 				                    .aggregate()
@@ -887,7 +887,7 @@ public class HttpClientTest {
 	public void test() {
 		DisposableServer context =
 				HttpServer.create()
-				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .host("localhost")
 				          .route(r -> r.put("/201", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)
 				                                                     .sendHeaders())
@@ -926,7 +926,7 @@ public class HttpClientTest {
 	public void testDeferredUri() {
 		DisposableServer context =
 				HttpServer.create()
-				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .host("localhost")
 				          .route(r -> r.get("/201", (req, res) -> res.addHeader
 						          ("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)

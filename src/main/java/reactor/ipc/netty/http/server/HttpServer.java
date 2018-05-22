@@ -158,27 +158,6 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * The port to which this server should bind.
-	 *
-	 * @param port The port to bind to.
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer port(int port) {
-		return tcpConfiguration(tcpServer -> tcpServer.port(port));
-	}
-
-	/**
-	 * Apply a wire logger configuration using {@link HttpServer} category
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer wiretap() {
-		return tcpConfiguration(tcpServer ->
-		        tcpServer.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
-	}
-
-	/**
 	 * Enable GZip response compression if the client request presents accept encoding
 	 * headers.
 	 *
@@ -186,16 +165,6 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer compress() {
 		return tcpConfiguration(COMPRESS_ATTR_CONFIG);
-	}
-
-	/**
-	 * Enable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
-	 * HTTP request headers for deriving information about the connection.
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer forwarded() {
-		return tcpConfiguration(FORWARD_ATTR_CONFIG);
 	}
 
 	/**
@@ -230,6 +199,27 @@ public abstract class HttpServer {
 	public final HttpServer compress(BiPredicate<HttpServerRequest, HttpServerResponse> predicate) {
 		Objects.requireNonNull(predicate, "compressionPredicate");
 		return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpServerConfiguration.compressPredicate(b, predicate)));
+	}
+
+	/**
+	 * Enable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers for deriving information about the connection.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer forwarded() {
+		return tcpConfiguration(FORWARD_ATTR_CONFIG);
+	}
+
+	/**
+	 * The host to which this server should bind.
+	 *
+	 * @param host The host to bind to.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer host(String host) {
+		return tcpConfiguration(tcpServer -> tcpServer.host(host));
 	}
 
 	/**
@@ -279,6 +269,17 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * The port to which this server should bind.
+	 *
+	 * @param port The port to bind to.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer port(int port) {
+		return tcpConfiguration(tcpServer -> tcpServer.port(port));
+	}
+
+	/**
 	 * Setup all lifecycle callbacks called on or after
 	 * each child {@link io.netty.channel.Channel}
 	 * has been connected and after it has been disconnected.
@@ -289,6 +290,19 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer observe(ConnectionObserver observer) {
 		return new HttpServerObserve(this, observer);
+	}
+
+	/**
+	 * Define routes for the server through the provided {@link HttpServerRoutes} builder.
+	 *
+	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
+	 * @return a new {@link HttpServer} starting the router on subscribe
+	 */
+	public final HttpServer route(Consumer<? super HttpServerRoutes> routesBuilder) {
+		Objects.requireNonNull(routesBuilder, "routeBuilder");
+		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
+		routesBuilder.accept(routes);
+		return handle(routes);
 	}
 
 	/**
@@ -306,16 +320,13 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Define routes for the server through the provided {@link HttpServerRoutes} builder.
+	 * Apply a wire logger configuration using {@link HttpServer} category
 	 *
-	 * @param routesBuilder provides a route builder to be mutated in order to define routes.
-	 * @return a new {@link HttpServer} starting the router on subscribe
+	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer route(Consumer<? super HttpServerRoutes> routesBuilder) {
-		Objects.requireNonNull(routesBuilder, "routeBuilder");
-		HttpServerRoutes routes = HttpServerRoutes.newRoutes();
-		routesBuilder.accept(routes);
-		return handle(routes);
+	public final HttpServer wiretap() {
+		return tcpConfiguration(tcpServer ->
+		        tcpServer.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
 	}
 
 	/**
