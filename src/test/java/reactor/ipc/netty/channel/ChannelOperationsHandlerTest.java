@@ -222,13 +222,13 @@ public class ChannelOperationsHandlerTest {
 		                  .wiretap();
 
 		Flux.range(0, 2)
-		    .flatMap(i -> client.get()
+		    .concatMap(i -> client.get()
 		                        .uri("/205")
 		                        .responseContent()
 		                        .aggregate()
 		                        .asString()
 		                        .log())
-		    .blockLast(Duration.ofSeconds(1000));
+		    .blockLast(Duration.ofSeconds(30));
 
 		testServer.close();
 	}
@@ -275,7 +275,7 @@ public class ChannelOperationsHandlerTest {
 				}
 			}
 			catch (IOException e) {
-				// Server closed
+				log.error("TestServer" ,e);
 			}
 		}
 

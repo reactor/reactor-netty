@@ -226,7 +226,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	@SuppressWarnings("unchecked")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		if (log.isDebugEnabled()) {
+		if (log.isDebugEnabled() && msg != ChannelOperations.TERMINATED_OPS) {
 			log.debug("{} Writing object {}", ctx.channel(), msg);
 		}
 
@@ -405,7 +405,10 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				}
 				else if (future instanceof ChannelPromise) {
 					ChannelPromise promise = (ChannelPromise) future;
-					if (v instanceof Publisher) {
+					if (v == ChannelOperations.TERMINATED_OPS) {
+						promise.trySuccess();
+					}
+					else if (v instanceof Publisher) {
 						Publisher<?> p = (Publisher<?>) v;
 	
 						if (p instanceof Callable) {

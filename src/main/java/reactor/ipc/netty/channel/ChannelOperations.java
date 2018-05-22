@@ -26,6 +26,10 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -51,7 +55,9 @@ import reactor.util.context.Context;
  * @since 0.6
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
-		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void> {
+		extends DefaultPromise<Void>
+		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void>,
+		           ChannelPromise {
 
 	/**
 	 * Return the current {@link Channel} bound {@link ChannelOperations} or null if none
@@ -85,21 +91,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param listener the events callback
 	 */
 	public ChannelOperations(Connection connection, ConnectionObserver listener) {
+		super(connection.channel().eventLoop());
 		this.connection = Objects.requireNonNull(connection, "connection");
 		this.listener = Objects.requireNonNull(listener, "listener");
 		this.inbound = new FluxReceive(this);
-
-		//FIXME evaluate
-//		Subscription[] _s = new Subscription[1];
-//		Mono.fromDirect(context.onCloseOrRelease(channel))
-//		    .doOnSubscribe(s -> _s[0] = s)
-//		    .subscribe(onInactive);
-//
-//		if(_s[0] != null) { //remove closeFuture listener ref by onCloseOrRelease
-//			// subscription when onInactive is called for any reason from
-//			// onHandlerTerminate
-//			onInactive.subscribe(null, null, _s[0]::cancel);
-//		}
 	}
 
 	@Nullable
@@ -242,6 +237,19 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		);
 	}
 
+	/**
+	 * Return a Mono succeeding when a {@link ChannelOperations} has been terminated
+	 *
+	 * @return a Mono succeeding when a {@link ChannelOperations} has been terminated
+	 */
+	@Override
+	public final Mono<Void> onTerminate() {
+		if (!isPersistent()) {
+			return connection.onDispose();
+		}
+		return FutureMono.from((Future<Void>)this).or(connection.onDispose());
+	}
+
 	@Override
 	public String toString() {
 		return "ChannelOperations{"+connection.toString()+"}";
@@ -336,6 +344,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// HttpClientOperations need to notify with error
 			// when there is no response state
 			onInboundComplete();
+			if (isPersistent()) {
+				channel().writeAndFlush(TERMINATED_OPS, this);
+			}
+			else {
+				setSuccess(null);
+			}
 		}
 	}
 
@@ -386,6 +400,87 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	public ChannelPromise setSuccess() {
+		setSuccess(null);
+		return this;
+	}
+
+	@Override
+	public ChannelPromise setSuccess(Void result) {
+		super.setSuccess(result);
+		return this;
+	}
+
+	@Override
+	public boolean trySuccess() {
+		return trySuccess(null);
+	}
+
+	@Override
+	public ChannelPromise unvoid() {
+		return this;
+	}
+
+	@Override
+	public boolean isVoid() {
+		return true;
+	}
+
+	@Override
+	public ChannelPromise setFailure(Throwable cause) {
+		super.setFailure(cause);
+		return this;
+	}
+
+	@Override
+	public ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+		super.addListener(listener);
+		return this;
+	}
+
+	@Override
+	public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
+		super.addListeners(listeners);
+		return this;
+	}
+
+	@Override
+	public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+		super.removeListener(listener);
+		return this;
+	}
+
+	@Override
+	public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
+		super.removeListeners(listeners);
+		return this;
+	}
+
+	@Override
+	public ChannelPromise sync() throws InterruptedException {
+		super.sync();
+		return this;
+	}
+
+	@Override
+	public ChannelPromise await() throws InterruptedException {
+		super.await();
+		return this;
+	}
+
+	@Override
+	public ChannelPromise awaitUninterruptibly() {
+		super.awaitUninterruptibly();
+		return this;
+	}
+
+	@Override
+	public ChannelPromise syncUninterruptibly() {
+		super.syncUninterruptibly();
+		return this;
+	}
+
+	@Override
 	public boolean isPersistent() {
 		return connection.isPersistent();
 	}
@@ -417,6 +512,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	static final Logger log = Loggers.getLogger(ChannelOperations.class);
+
+	static final Object TERMINATED_OPS = new Object();
 
 	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<ChannelOperations, Subscription>

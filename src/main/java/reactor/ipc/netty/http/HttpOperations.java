@@ -165,8 +165,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		return this;
 	}
 
-	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler
-			handler){
+	static void autoAddHttpExtractor(Connection c, String name, ChannelHandler handler){
 
 		if (handler instanceof ByteToMessageDecoder
 				|| handler instanceof ByteToMessageCodec
@@ -180,8 +179,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			c.channel().pipeline().addBefore(name, extractorName, HTTP_EXTRACTOR);
 
 			if(c.isPersistent()){
-				//TODO useless on current onDispose
-				c.onDispose(() -> c.removeHandler(extractorName));
+				c.onTerminate().subscribe(null, null, () -> c.removeHandler(extractorName));
 			}
 
 		}

@@ -21,7 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import reactor.core.Disposable;
-
+import reactor.core.publisher.Mono;
 /**
  * Hold contextual information for the underlying {@link Channel}
  *
@@ -270,6 +270,17 @@ public interface Connection extends DisposableChannel {
 		return removeHandler(NettyPipeline.OnChannelReadIdle)
 				 .addHandlerFirst(NettyPipeline.OnChannelReadIdle,
 						 new ReactorNetty.InboundIdleStateHandler(idleTimeout, onReadIdle));
+	}
+
+	/**
+	 * Return a Mono succeeding when a {@link Connection} is not used anymore by any
+	 * current operations. A typical example is when a pooled connection is released or
+	 * an operations bridge has terminated.
+	 *
+	 * @return a Mono succeeding when a {@link Connection} has been terminated
+	 */
+	default Mono<Void> onTerminate() {
+		return onDispose();
 	}
 
 	/**

@@ -38,6 +38,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
@@ -294,10 +295,12 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		final Channel channel;
 		final Pool    pool;
+		final MonoProcessor<Void> onTerminate;
 
 		PooledConnection(Channel channel, Pool pool) {
 			this.channel = channel;
 			this.pool = pool;
+			this.onTerminate = MonoProcessor.create();
 		}
 
 		ConnectionObserver owner() {
@@ -317,6 +320,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					return obs;
 				}
 			}
+		}
+
+		@Override
+		public Mono<Void> onTerminate() {
+			return onTerminate.or(onDispose());
 		}
 
 		@Override
@@ -344,6 +352,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		void fireReleaseState() {
+			onTerminate.onComplete();
 			channel.attr(OWNER)
 			       .getAndSet(ConnectionObserver.emptyListener())
 			       .onStateChange(this, State.RELEASED);

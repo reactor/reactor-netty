@@ -176,8 +176,8 @@ final class ReactorNetty {
 			String name,
 			Connection context) {
 		if (!shouldCleanupOnClose) return;
-		//TODO review onDispose
-		context.onDispose(() -> context.removeHandler(name));
+
+		context.onTerminate().subscribe(null, null, () -> context.removeHandler(name));
 	}
 
 	static void removeHandler(Channel channel, String name){
