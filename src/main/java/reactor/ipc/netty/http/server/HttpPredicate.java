@@ -72,6 +72,23 @@ final class HttpPredicate
 	}
 
 	/**
+	 * An alias for {@link HttpPredicate#http}.
+	 * <p>
+	 * Creates a {@link Predicate} based on a URI template filtering .
+	 * <p>
+	 * This will listen for HEAD Method.
+	 *
+	 * @param uri The string to compile into a URI template and use for matching
+	 *
+	 * @return The new {@link Predicate}.
+	 *
+	 * @see Predicate
+	 */
+	public static Predicate<HttpServerRequest> head(String uri) {
+		return http(uri, null, HttpMethod.HEAD);
+	}
+
+	/**
 	 * Creates a {@link Predicate} based on a URI template.
 	 * This will listen for all Methods.
 	 *
@@ -89,6 +106,23 @@ final class HttpPredicate
 		}
 
 		return new HttpPredicate(uri, protocol, method);
+	}
+
+	/**
+	 * An alias for {@link HttpPredicate#http}.
+	 * <p>
+	 * Creates a {@link Predicate} based on a URI template filtering .
+	 * <p>
+	 * This will listen for OPTIONS Method.
+	 *
+	 * @param uri The string to compile into a URI template and use for matching
+	 *
+	 * @return The new {@link Predicate}.
+	 *
+	 * @see Predicate
+	 */
+	public static Predicate<HttpServerRequest> options(String uri) {
+		return http(uri, null, HttpMethod.OPTIONS);
 	}
 
 	/**
