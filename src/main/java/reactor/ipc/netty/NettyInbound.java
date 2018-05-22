@@ -42,7 +42,7 @@ public interface NettyInbound {
 	 *
 	 * @return a {@literal Object} inbound {@link Flux}
 	 */
-	Flux<?> receiveObject();
+	Flux<Object> receiveObject();
 
 	/**
 	 * Call the passed callback with a {@link Connection} to operate on the

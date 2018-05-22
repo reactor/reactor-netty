@@ -18,12 +18,15 @@ package reactor.ipc.netty.http.client;
 
 import java.util.Objects;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.ByteBufFlux;
+import reactor.ipc.netty.Connection;
+import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.tcp.TcpClient;
@@ -66,6 +69,16 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 	@Override
 	public ByteBufFlux receive() {
 		return HttpClientFinalizer.content(cachedConfiguration, HttpClientFinalizer.contentReceiver);
+	}
+
+	@Override
+	public Flux<Object> receiveObject() {
+		return connect().flatMapMany(HttpClientFinalizer.messageReceiver);
+	}
+
+	@Override
+	public NettyInbound withConnection(Consumer<? super Connection> withConnection) {
+		return new WebsocketFinalizer(cachedConfiguration.doOnConnected(withConnection));
 	}
 
 	@Override

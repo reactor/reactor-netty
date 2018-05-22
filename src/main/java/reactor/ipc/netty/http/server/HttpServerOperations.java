@@ -262,7 +262,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Flux<?> receiveObject() {
+	public Flux<Object> receiveObject() {
 		// Handle the 'Expect: 100-continue' header if necessary.
 		// TODO: Respond with 413 Request Entity Too Large
 		//   and discard the traffic or close the connection.

@@ -551,6 +551,40 @@ public class WebsocketTest {
 	}
 
 	@Test
+	public void test2() {
+		ConnectionProvider pr = ConnectionProvider.fixed("wstest", 1);
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handle((in, out) -> out.sendWebsocket(
+				                       (i, o) -> o.options(opt -> opt.flushOnEach())
+				                                  .sendString(
+						                                  Mono.just("test")
+						                                      .delayElement(Duration.ofMillis(100))
+						                                      .repeat())))
+		                       .wiretap()
+		                       .bindNow();
+
+		Flux<?> ws = HttpClient.prepare(pr)
+		                       .port(httpServer.address()
+		                                       .getPort())
+		                       .websocket()
+		                       .uri("/")
+		                       .withConnection(System.out::println)
+		                       .receiveObject();
+
+		StepVerifier.create(
+				Flux.range(1, 10)
+				    .concatMap(i -> ws.take(2)
+				                      .log())
+		)
+		            .assertNext(e -> {})
+		            .expectComplete()
+		            .verify();
+
+		pr.dispose();
+	}
+
+	@Test
 	public void testCloseWebSocketFrameSentByServer() {
 		httpServer =
 				HttpServer.create()

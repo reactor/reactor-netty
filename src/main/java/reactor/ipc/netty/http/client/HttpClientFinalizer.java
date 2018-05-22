@@ -27,6 +27,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -155,6 +156,9 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 		return ops;
 	};
 
+	static final Consumer<? super Object> retain = ReferenceCountUtil::retain;
 	static final Function<ChannelOperations<?, ?>, Publisher<ByteBuf>> contentReceiver = ChannelOperations::receive;
+	static final Function<ChannelOperations<?, ?>, Publisher<?>> messageReceiver = ops -> ops.receiveObject().doOnNext(retain);
+
 }
 

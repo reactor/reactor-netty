@@ -40,6 +40,7 @@ import reactor.ipc.netty.ByteBufFlux;
 import reactor.ipc.netty.ByteBufMono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
+import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.http.HttpResources;
@@ -262,7 +263,8 @@ public abstract class HttpClient {
 	 * {@link Flux} or {@link Mono}, r  equesting is always deferred to
 	 * {@link Publisher#subscribe(Subscriber)}.
 	 */
-	public interface WebsocketReceiver<S extends WebsocketReceiver<?>> extends UriConfiguration<S>  {
+	public interface WebsocketReceiver<S extends WebsocketReceiver<?>>
+			extends UriConfiguration<S>, NettyInbound {
 
 		/**
 		 * Negotiate a websocket upgrade and extract a flux from the given
@@ -292,6 +294,7 @@ public abstract class HttpClient {
 		 *
 		 * @return a {@link ByteBufFlux} of the inbound websocket content
 		 */
+		@Override
 		ByteBufFlux receive();
 	}
 

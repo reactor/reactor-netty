@@ -214,7 +214,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	public Flux<?> receiveObject() {
+	public Flux<Object> receiveObject() {
 		return inbound;
 	}
 

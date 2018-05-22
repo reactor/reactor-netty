@@ -549,7 +549,7 @@ final class ReactorNetty {
 			}
 
 			@Override
-			public Flux<?> receiveObject() {
+			public Flux<Object> receiveObject() {
 				return Flux.error(new IllegalStateException("Receiver Unavailable"));
 			}
 
