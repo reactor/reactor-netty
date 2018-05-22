@@ -42,7 +42,7 @@ public class HttpResponseStatusCodesHandlingTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .wiretap();
 

@@ -135,12 +135,12 @@ public class HttpSendFileTests {
 
 		HttpClient client;
 		if (compression) {
-			client = HttpClient.prepare()
+			client = HttpClient.create()
 			                   .addressSupplier(() -> context.address())
 			                   .compress();
 		}
 		else {
-			client = HttpClient.prepare()
+			client = HttpClient.create()
 			                   .addressSupplier(() -> context.address());
 		}
 		Mono<String> response =
@@ -204,7 +204,7 @@ public class HttpSendFileTests {
 				          .bindNow();
 
 		try {
-			byte[] response = customizeClientOptions(HttpClient.prepare()
+			byte[] response = customizeClientOptions(HttpClient.create()
 			                                                   .addressSupplier(() -> context.address())).request(
 					HttpMethod.POST)
 			                                                                                             .uri("/")

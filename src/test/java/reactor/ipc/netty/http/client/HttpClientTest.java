@@ -92,7 +92,7 @@ public class HttpClientTest {
 
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
-		HttpClient.prepare(pool)
+		HttpClient.create(pool)
 		          .port(x.address().getPort())
 		          .wiretap()
 		          .get()
@@ -101,7 +101,7 @@ public class HttpClientTest {
 		          .log()
 		          .block(Duration.ofSeconds(30));
 
-		HttpClient.prepare(pool)
+		HttpClient.create(pool)
 		          .port(x.address().getPort())
 		          .wiretap()
 		          .get()
@@ -110,7 +110,7 @@ public class HttpClientTest {
 		          .log()
 		          .blockLast(Duration.ofSeconds(30));
 
-		HttpClient.prepare(pool)
+		HttpClient.create(pool)
 		          .port(x.address().getPort())
 		          .wiretap()
 		          .get()
@@ -153,7 +153,7 @@ public class HttpClientTest {
 				          .bindNow();
 
 		final HttpClient client =
-				HttpClient.prepare(pool)
+				HttpClient.create(pool)
 				          .addressSupplier(() -> serverContext.address())
 				          .wiretap();
 		Flux.just("1", "2", "3")
@@ -192,7 +192,7 @@ public class HttpClientTest {
 
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
-		HttpClient.prepare(pool)
+		HttpClient.create(pool)
 		          .port(x.address().getPort())
 		          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
 		          .wiretap()
@@ -203,7 +203,7 @@ public class HttpClientTest {
 		          .block(Duration.ofSeconds(30));
 
 		try {
-			HttpClient.prepare(pool)
+			HttpClient.create(pool)
 			          .port(x.address().getPort())
 			          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
 			          .wiretap()
@@ -231,7 +231,7 @@ public class HttpClientTest {
 		                               .bindNow();
 
 		ByteBufFlux remote =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(c.address().getPort())
 				          .wiretap()
 				          .get()
@@ -279,7 +279,7 @@ public class HttpClientTest {
 				          .wiretap()
 				          .bindNow();
 
-		HttpClient.prepare()
+		HttpClient.create()
 		          .port(c.address().getPort())
 		          .wiretap()
 		          .get()
@@ -294,7 +294,7 @@ public class HttpClientTest {
 	@Test
 	@Ignore
 	public void proxy() {
-		HttpClient.prepare()
+		HttpClient.create()
 		          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 		                                                                   .host("127.0.0.1")
 		                                                                   .port(8888)))
@@ -314,7 +314,7 @@ public class HttpClientTest {
 	@Ignore
 	public void nonProxyHosts() {
 		HttpClient client =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
 				                                                                   .host("127.0.0.1")
 				                                                                   .port(8888)
@@ -352,7 +352,7 @@ public class HttpClientTest {
 	public void postUpload() {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
 		//Path f = Paths.get("/Users/smaldini/Downloads/IMG_6702.mp4");
-		int res = HttpClient.prepare()
+		int res = HttpClient.create()
 		                    .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 		                    .wiretap()
 		                    .put()
@@ -363,7 +363,7 @@ public class HttpClientTest {
 		                                                 .file("test2", f))
 		                    .responseSingle((r, buf) -> Mono.just(r.status().code()))
 		                    .block(Duration.ofSeconds(30));
-		res = HttpClient.prepare()
+		res = HttpClient.create()
 		                .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 		                .wiretap()
 		                .followRedirect()
@@ -380,13 +380,14 @@ public class HttpClientTest {
 
 	@Test
 	public void simpleTest404() {
-		doSimpleTest404(HttpClient.create("google.com"));
+		doSimpleTest404(HttpClient.create()
+		                          .baseUrl("google.com"));
 	}
 
 	@Test
 	public void simpleTest404_1() {
 		HttpClient client =
-				HttpClient.prepare(ConnectionProvider.fixed("http", 1))
+				HttpClient.create(ConnectionProvider.fixed("http", 1))
 				          .port(80)
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap();
@@ -452,7 +453,7 @@ public class HttpClientTest {
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
 
 		HttpResponseStatus r =
-				HttpClient.prepare(p)
+				HttpClient.create(p)
 				          .doOnResponse((res, c) -> ch1.set(c.channel()))
 				          .wiretap()
 				          .get()
@@ -461,7 +462,7 @@ public class HttpClientTest {
 				          .block(Duration.ofSeconds(30));
 
 		HttpResponseStatus r2 =
-				HttpClient.prepare(p)
+				HttpClient.create(p)
 				          .doOnResponse((res, c) -> ch2.set(c.channel()))
 				          .wiretap()
 				          .get()
@@ -483,7 +484,7 @@ public class HttpClientTest {
 	public void disableChunkImplicitDefault() {
 		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
 		Tuple2<HttpResponseStatus, Channel> r =
-				HttpClient.prepare(p)
+				HttpClient.create(p)
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
 				                                                  .noSSL())
 				          .wiretap()
@@ -498,7 +499,7 @@ public class HttpClientTest {
 		assertThat(r).isNotNull();
 
 		Channel r2 =
-				HttpClient.prepare(p)
+				HttpClient.create(p)
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
 				                                                  .noSSL())
 				          .wiretap()
@@ -521,7 +522,7 @@ public class HttpClientTest {
 	public void contentHeader() {
 		ConnectionProvider fixed = ConnectionProvider.fixed("test", 1);
 		HttpResponseStatus r =
-				HttpClient.prepare(fixed)
+				HttpClient.create(fixed)
 				          .wiretap()
 				          .headers(h -> h.add("content-length", "1"))
 				          .request(HttpMethod.GET)
@@ -530,7 +531,7 @@ public class HttpClientTest {
 				          .responseSingle((res, buf) -> Mono.just(res.status()))
 				          .block(Duration.ofSeconds(30));
 
-		HttpClient.prepare(fixed)
+		HttpClient.create(fixed)
 		          .wiretap()
 		          .headers(h -> h.add("content-length", "1"))
 		          .request(HttpMethod.GET)
@@ -546,7 +547,7 @@ public class HttpClientTest {
 	@Test
 	public void simpleTestHttps() {
 
-		StepVerifier.create(HttpClient.prepare()
+		StepVerifier.create(HttpClient.create()
 		                              .wiretap()
 		                              .get()
 		                              .uri("https://developer.chrome.com")
@@ -555,7 +556,7 @@ public class HttpClientTest {
 		            .expectComplete()
 		            .verify();
 
-		StepVerifier.create(HttpClient.prepare()
+		StepVerifier.create(HttpClient.create()
 		                              .wiretap()
 		                              .get()
 		                              .uri("https://developer.chrome.com")
@@ -605,7 +606,7 @@ public class HttpClientTest {
 
 		//verify gzip is negotiated (when no decoder)
 		StepVerifier.create(
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(c.address().getPort())
 				          .wiretap()
 				          .headers(h -> h.add("Accept-Encoding", "gzip")
@@ -627,7 +628,7 @@ public class HttpClientTest {
 
 		//verify decoder does its job and removes the header
 		StepVerifier.create(
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(c.address().getPort())
 				          .wiretap()
 				          .followRedirect()
@@ -672,7 +673,7 @@ public class HttpClientTest {
 				                                                                "no gzip"))))
 				          .wiretap()
 				          .bindNow();
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 		                              .port(server.address().getPort())
 		                              .wiretap();
 		if (gzipEnabled){
@@ -710,7 +711,7 @@ public class HttpClientTest {
 				          .wiretap()
 				          .bindNow();
 
-		HttpClient.prepare()
+		HttpClient.create()
 		          .port(c.address().getPort())
 		          .wiretap()
 		          .get()
@@ -723,7 +724,7 @@ public class HttpClientTest {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 		                              .tcpConfiguration(tcpClient -> tcpClient.host("foo"))
 		                              .wiretap()
 		                              .port(123)
@@ -751,7 +752,7 @@ public class HttpClientTest {
 
 
 		String responseString =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .addressSupplier(context::address)
 				          .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
 				          .wiretap()
@@ -779,7 +780,7 @@ public class HttpClientTest {
 				          .wiretap()
 				          .bindNow();
 
-		String responseString = HttpClient.prepare()
+		String responseString = HttpClient.create()
 		                                  .addressSupplier(context::address)
 		                                  .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
 		                                  .wiretap()
@@ -817,7 +818,7 @@ public class HttpClientTest {
 				          .bindNow();
 
 		Tuple2<String, Integer> response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .addressSupplier(context::address)
 				          .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
 				          .wiretap()
@@ -938,7 +939,7 @@ public class HttpClientTest {
 				          .bindNow();
 
 		AtomicInteger i = new AtomicInteger();
-		HttpClient.prepare()
+		HttpClient.create()
 		          .addressSupplier(context::address)
 		          .wiretap()
 		          .observe((c, s) -> System.out.println(s + "" + c))
@@ -971,7 +972,7 @@ public class HttpClientTest {
 				          .wiretap()
 				          .bindNow();
 
-		Flux<String> ws = HttpClient.prepare(pr)
+		Flux<String> ws = HttpClient.create(pr)
 		                            .port(httpServer.address().getPort())
 		                            .get()
 		                            .uri("/")
@@ -1002,7 +1003,7 @@ public class HttpClientTest {
 				          .bindNow();
 
 		Mono<String> content =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .request(HttpMethod.GET)
 				          .uri("/")
@@ -1020,7 +1021,7 @@ public class HttpClientTest {
 	}
 
 	HttpClient createHttpClientForContext(DisposableServer context) {
-		return HttpClient.prepare()
+		return HttpClient.create()
 		                 .addressSupplier(context::address)
 		                 .wiretap();
 	}

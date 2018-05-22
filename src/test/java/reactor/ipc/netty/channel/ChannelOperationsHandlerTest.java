@@ -75,7 +75,7 @@ public class ChannelOperationsHandlerTest {
 			flux.publishOn(Schedulers.single());
 		}
 		Mono<Integer> code =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .wiretap()
 				          .post()
@@ -133,7 +133,7 @@ public class ChannelOperationsHandlerTest {
 		}
 
 		ByteBufFlux response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(abortServerPort)
 				          .wiretap()
 				          .request(HttpMethod.GET)

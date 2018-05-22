@@ -302,7 +302,7 @@ public class SmokeTests {
 
 	private List<String> getClientDataPromise() {
 		HttpClient httpClient =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .wiretap();
 

@@ -135,14 +135,14 @@ public class ByteBufFluxTest {
             server = HttpServer.create()
                                .port(serverPort)
                                .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer));
-            client = HttpClient.prepare()
+            client = HttpClient.create()
                                .port(serverPort)
                                .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient));
         }
         else {
             server = HttpServer.create()
                                .port(serverPort);
-            client = HttpClient.prepare()
+            client = HttpClient.create()
                                .port(serverPort);
         }
 

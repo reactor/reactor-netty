@@ -205,7 +205,7 @@ public class ConnectionInfoTests {
 				          .bindNow();
 
 		String response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(this.connection.address().getPort())
 				          .wiretap()
 				          .headers(clientRequestHeadersConsumer)

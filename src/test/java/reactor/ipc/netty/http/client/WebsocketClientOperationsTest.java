@@ -61,7 +61,7 @@ public class WebsocketClientOperationsTest {
 		                                  .bindNow();
 
 		Flux<String> response =
-			HttpClient.prepare()
+			HttpClient.create()
 			          .port(httpServer.address().getPort())
 			          .wiretap()
 			          .websocket(clientSubprotocol)
@@ -92,7 +92,7 @@ public class WebsocketClientOperationsTest {
 	}
 
 	private Mono<String> login(int port) {
-		return HttpClient.prepare()
+		return HttpClient.create()
 		                 .port(port)
 		                 .wiretap()
 		                 .post()

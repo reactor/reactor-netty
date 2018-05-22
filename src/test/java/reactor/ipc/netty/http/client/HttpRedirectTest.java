@@ -69,7 +69,7 @@ public class HttpRedirectTest {
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
 		HttpClient client =
-				HttpClient.prepare(pool)
+				HttpClient.create(pool)
 				          .addressSupplier(() -> server.address());
 
 		try {
@@ -107,7 +107,7 @@ public class HttpRedirectTest {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .addressSupplier(() -> server.address())
 				          .wiretap();
 
@@ -170,7 +170,8 @@ public class HttpRedirectTest {
 				          .wiretap()
 				          .bindNow();
 
-		HttpClient client = HttpClient.create("http://localhost:8888");
+		HttpClient client = HttpClient.create()
+		                              .baseUrl("http://localhost:8888");
 
 		Mono<String> response =
 				client.followRedirect()

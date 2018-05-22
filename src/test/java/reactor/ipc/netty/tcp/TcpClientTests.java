@@ -515,7 +515,7 @@ public class TcpClientTests {
 
 	@Test
 	public void nettyNetChannelAcceptsNettyChannelHandlers() throws InterruptedException {
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 		                              .wiretap();
 
 		final CountDownLatch latch = new CountDownLatch(1);

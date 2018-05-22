@@ -112,7 +112,7 @@ public class HttpServerTests {
 		                                                                .getBytes(Charset.defaultCharset())));
 
 		Flux.range(0, 100)
-		    .concatMap(n -> HttpClient.prepare()
+		    .concatMap(n -> HttpClient.create()
 		                              .port(c.address().getPort())
 		                              .tcpConfiguration(TcpClient::noSSL)
 		                              .wiretap()
@@ -140,7 +140,7 @@ public class HttpServerTests {
 		                                     .wiretap()
 		                                     .bindNow();
 
-		int code = HttpClient.prepare()
+		int code = HttpClient.create()
 		                     .port(8080)
 		                     .wiretap()
 		                     .get()
@@ -163,7 +163,7 @@ public class HttpServerTests {
 		                    .wiretap()
 		                    .bindNow();
 
-		code = HttpClient.prepare()
+		code = HttpClient.create()
 		                 .port(8080)
 		                 .wiretap()
 		                 .get()
@@ -185,7 +185,7 @@ public class HttpServerTests {
 		                               .bindNow();
 
 		int code =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(c.address().getPort())
 				          .wiretap()
 				          .get()
@@ -265,7 +265,7 @@ public class HttpServerTests {
 		                               .wiretap()
 		                               .bindNow();
 
-		Flux<String> client = HttpClient.prepare()
+		Flux<String> client = HttpClient.create()
 		                                .port(c.address().getPort())
 		                                .wiretap()
 		                                .tcpConfiguration(tcp -> tcp.doOnConnected(res ->
@@ -294,7 +294,7 @@ public class HttpServerTests {
 
 		ConnectionProvider p = ConnectionProvider.fixed("http", 1);
 
-		Channel response0 = HttpClient.prepare(p)
+		Channel response0 = HttpClient.create(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -303,7 +303,7 @@ public class HttpServerTests {
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(3099));
 
-		Channel response1 = HttpClient.prepare(p)
+		Channel response1 = HttpClient.create(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -312,7 +312,7 @@ public class HttpServerTests {
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(3099));
 
-		Channel response2 = HttpClient.prepare(p)
+		Channel response2 = HttpClient.create(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -321,7 +321,7 @@ public class HttpServerTests {
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response3 = HttpClient.prepare(p)
+		Channel response3 = HttpClient.create(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -330,7 +330,7 @@ public class HttpServerTests {
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response4 = HttpClient.prepare(p)
+		Channel response4 = HttpClient.create(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -339,7 +339,7 @@ public class HttpServerTests {
 		                                                                         .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Channel response5 = HttpClient.prepare(p)
+		Channel response5 = HttpClient.create(p)
 		                              .port(s.address().getPort())
 		                              .wiretap()
 		                              .get()
@@ -381,7 +381,7 @@ public class HttpServerTests {
 
 		try {
 			int code =
-					HttpClient.prepare()
+					HttpClient.create()
 					          .port(facade.address().getPort())
 					          .wiretap()
 					          .get()
@@ -390,7 +390,7 @@ public class HttpServerTests {
 					          .block();
 			assertThat(code).isEqualTo(200);
 
-			code = HttpClient.prepare()
+			code = HttpClient.create()
 			                 .port(facade.address().getPort())
 			                 .wiretap()
 			                 .get()
@@ -461,7 +461,7 @@ public class HttpServerTests {
 
 	private void checkResponse(String url, InetSocketAddress address) {
 		Mono<Tuple3<Integer, HttpHeaders, String>> response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .addressSupplier(() -> address)
 				          .wiretap()
 				          .get()
@@ -550,7 +550,7 @@ public class HttpServerTests {
 	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
 			HttpMethod method, boolean chunk, boolean close) {
 		Mono<Tuple2<HttpHeaders, String>> response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .addressSupplier(() -> address)
 				          .wiretap()
 				          .request(method)
@@ -603,7 +603,7 @@ public class HttpServerTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare(ConnectionProvider.fixed("test", 1))
+				HttpClient.create(ConnectionProvider.fixed("test", 1))
 				          .addressSupplier(server::address)
 				          .wiretap();
 
@@ -649,7 +649,7 @@ public class HttpServerTests {
 
 		AtomicReference<Channel> ch = new AtomicReference<>();
 		Flux<ByteBuf> r =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .doOnResponse((res, c) -> ch.set(c.channel()))
 						  .port(server.address().getPort())
 				          .get()
@@ -676,7 +676,7 @@ public class HttpServerTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare(ConnectionProvider.fixed("test", 1))
+				HttpClient.create(ConnectionProvider.fixed("test", 1))
 				          .addressSupplier(server::address);
 
 		try {
@@ -747,7 +747,7 @@ public class HttpServerTests {
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
 		HttpClient client =
-				HttpClient.prepare(pool)
+				HttpClient.create(pool)
 				          .addressSupplier(() -> server.address());
 
 		try {
@@ -785,7 +785,7 @@ public class HttpServerTests {
 				          .bindNow();
 
 		Mono<HttpResponseStatus> status =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .get()
 				          .uri(path)
@@ -826,7 +826,7 @@ public class HttpServerTests {
 
 		DisposableServer ds = server.bindNow();
 
-		HttpClient.prepare()
+		HttpClient.create()
 		          .addressSupplier(ds::address)
 		          .post()
 		          .uri("/")

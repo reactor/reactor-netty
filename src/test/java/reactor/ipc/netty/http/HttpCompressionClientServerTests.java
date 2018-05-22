@@ -54,7 +54,7 @@ public class HttpCompressionClientServerTests {
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 		                              .addressSupplier(() -> address(runningServer))
 		                              .wiretap()
 		                              .compress();
@@ -80,7 +80,7 @@ public class HttpCompressionClientServerTests {
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap();
 		Tuple2<String, HttpHeaders> resp =
@@ -112,7 +112,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap();
 		Tuple2<String, HttpHeaders> resp =
@@ -145,7 +145,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 		                              .noCompression()
 				                      .wiretap();
@@ -192,7 +192,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow();
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 		                              .addressSupplier(() -> address(connection));
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
@@ -228,7 +228,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow();
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 		                              .addressSupplier(() -> address(connection));
 		Tuple2<HttpHeaders, byte[]> resp =
 				//edit the header manually to attempt to trigger compression on server side
@@ -276,7 +276,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap();
 		Tuple2<String, HttpHeaders> resp =
@@ -313,7 +313,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap();
 		Tuple2<byte[], HttpHeaders> resp =
@@ -357,7 +357,7 @@ public class HttpCompressionClientServerTests {
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap()
 				                      .noCompression();
@@ -388,7 +388,7 @@ public class HttpCompressionClientServerTests {
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap();
 
@@ -418,7 +418,7 @@ public class HttpCompressionClientServerTests {
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
 				      .bindNow(Duration.ofSeconds(10));
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap()
 				                      .compress();
@@ -450,7 +450,7 @@ public class HttpCompressionClientServerTests {
 				          .bindNow();
 
 		Mono<String> response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .get()
 				          .uri("/")
@@ -478,7 +478,7 @@ public class HttpCompressionClientServerTests {
 				          .bindNow();
 
 		Mono<String> response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .compress()
 				          .wiretap()
@@ -493,7 +493,7 @@ public class HttpCompressionClientServerTests {
 		            .expectComplete()
 		            .verify();
 
-		response = HttpClient.prepare()
+		response = HttpClient.create()
 		                     .port(server.address().getPort())
 		                     .wiretap()
 		                     .compress()

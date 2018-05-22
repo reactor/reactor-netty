@@ -355,7 +355,7 @@ public class TcpServerTests {
 	public void proxyTest() {
 		HttpServer server = HttpServer.create();
 		server.route(r -> r.get("/search/{search}",
-				(in, out) -> HttpClient.prepare()
+				(in, out) -> HttpClient.create()
 				                       .wiretap()
 				                       .get()
 				                       .uri("foaas.herokuapp.com/life/" + in.param("search"))
@@ -371,7 +371,7 @@ public class TcpServerTests {
 	public void wsTest() {
 		HttpServer server = HttpServer.create();
 		server.route(r -> r.get("/search/{search}",
-				(in, out) -> HttpClient.prepare()
+				(in, out) -> HttpClient.create()
 				                       .wiretap()
 				                       .post()
 				                       .uri("ws://localhost:3000")

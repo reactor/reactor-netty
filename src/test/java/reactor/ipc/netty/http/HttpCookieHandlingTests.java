@@ -47,7 +47,7 @@ public class HttpCookieHandlingTests {
 				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .wiretap()
 				          .get()

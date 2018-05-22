@@ -61,20 +61,22 @@ import static reactor.ipc.netty.http.client.HttpClientConfiguration.*;
  * <p> Examples:
  * <pre>
  * {@code
- * HttpClient.create("http://example.com")
+ * HttpClient.create()
+ *           .baseUrl("http://example.com")
  *           .get()
  *           .response()
  *           .block();
  * }
  * {@code
- * HttpClient.create("http://example.com")
+ * HttpClient.create()
  *           .post()
+ *           .uri("http://example.com")
  *           .send(Flux.just(bb1, bb2, bb3))
  *           .responseSingle((res, content) -> Mono.just(res.status().code()))
  *           .block();
  * }
  * {@code
- * HttpClient.prepare()
+ * HttpClient.create()
  *           .baseUri("http://example.com")
  *           .post()
  *           .send(ByteBufFlux.fromString(flux))
@@ -296,12 +298,26 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Prepare a pooled {@link HttpClient} given the base URI.
+	 * Prepare a pooled {@link HttpClient}. {@link UriConfiguration#uri(String)} or
+	 * {@link #baseUrl(String)} should be invoked before a verb
+	 * {@link #request(HttpMethod)} is selected.
 	 *
-	 * @return a new {@link HttpClient}
+	 * @return a {@link HttpClient}
 	 */
-	public static HttpClient create(String baseUri) {
-		return prepare().baseUrl(baseUri);
+	public static HttpClient create() {
+		return create(HttpResources.get());
+	}
+
+	/**
+	 * Prepare an {@link HttpClient}. {@link UriConfiguration#uri(String)} or
+	 * {@link #baseUrl(String)} should be invoked before a verb
+	 * {@link #request(HttpMethod)} is selected.
+	 *
+	 * @return a {@link HttpClient}
+	 */
+	public static HttpClient create(ConnectionProvider connectionProvider) {
+		return new HttpClientConnect(TcpClient.create(connectionProvider)
+		                                      .port(80));
 	}
 
 	/**
@@ -313,29 +329,6 @@ public abstract class HttpClient {
 	 */
 	public static HttpClient newConnection() {
 		return HttpClientConnect.INSTANCE;
-	}
-
-	/**
-	 * Prepare a pooled {@link HttpClient}. {@link UriConfiguration#uri(String)} or
-	 * {@link #baseUrl(String)} should be invoked before a verb
-	 * {@link #request(HttpMethod)} is selected.
-	 *
-	 * @return a {@link HttpClient}
-	 */
-	public static HttpClient prepare() {
-		return prepare(HttpResources.get());
-	}
-
-	/**
-	 * Prepare an {@link HttpClient}. {@link UriConfiguration#uri(String)} or
-	 * {@link #baseUrl(String)} should be invoked before a verb
-	 * {@link #request(HttpMethod)} is selected.
-	 *
-	 * @return a {@link HttpClient}
-	 */
-	public static HttpClient prepare(ConnectionProvider connectionProvider) {
-		return new HttpClientConnect(TcpClient.create(connectionProvider)
-		                                      .port(80));
 	}
 
 	/**

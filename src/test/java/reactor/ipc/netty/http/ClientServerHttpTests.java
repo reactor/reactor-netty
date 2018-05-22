@@ -288,7 +288,7 @@ public class ClientServerHttpTests {
 
 	private Mono<List<String>> getClientDataPromise() throws Exception {
 		HttpClient httpClient =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .wiretap();
 

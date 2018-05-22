@@ -49,7 +49,7 @@ public class HttpTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .wiretap();
 
@@ -87,7 +87,7 @@ public class HttpTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .wiretap();
 
@@ -164,7 +164,7 @@ public class HttpTests {
 						  .bindNow();
 
 		HttpClient client =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .wiretap();
 
@@ -268,7 +268,7 @@ public class HttpTests {
 				          .wiretap()
 				          .bindNow(Duration.ofSeconds(5));
 
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 				                      .port(server.address().getPort())
 				                      .wiretap();
 
@@ -323,7 +323,7 @@ public class HttpTests {
 				          .bindNow();
 
 		String content =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .headers(h -> h.add("Expect", "100-continue"))
 				          .post()
@@ -363,7 +363,7 @@ public class HttpTests {
 
 
 		String content =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .compress()
 				          .post()
@@ -375,7 +375,7 @@ public class HttpTests {
 				          .log()
 				          .block();
 
-		Flux<String> f = HttpClient.prepare()
+		Flux<String> f = HttpClient.create()
 		                           .port(server.address().getPort())
 		                           .compress()
 		                           .get()
@@ -398,7 +398,7 @@ public class HttpTests {
 
 
 		content =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .compress()
 				          .post()
@@ -438,7 +438,7 @@ public class HttpTests {
 
 
 		String content =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .compress()
 				          .post()
@@ -450,7 +450,7 @@ public class HttpTests {
 				          .log()
 				          .block();
 
-		Flux<String> f = HttpClient.prepare()
+		Flux<String> f = HttpClient.create()
 		                           .port(server.address().getPort())
 		                           .compress()
 		                           .get()
@@ -473,7 +473,7 @@ public class HttpTests {
 
 
 		content =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.address().getPort())
 				          .compress()
 				          .post()

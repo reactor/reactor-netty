@@ -50,7 +50,7 @@ public class FluxReceiveTest {
 				          .port(0)
 				          .route(routes ->
 				                     routes.get("/forward", (req, res) ->
-				                           HttpClient.prepare()
+				                           HttpClient.create()
 				                                     .port(server1.address().getPort())
 				                                     .get()
 				                                     .uri("/target")
@@ -63,7 +63,7 @@ public class FluxReceiveTest {
 				          .bindNow();
 
 		Flux.range(0, 50)
-		    .flatMap(i -> HttpClient.prepare()
+		    .flatMap(i -> HttpClient.create()
 		                            .port(server2.address().getPort())
 		                            .get()
 		                            .uri("/forward")

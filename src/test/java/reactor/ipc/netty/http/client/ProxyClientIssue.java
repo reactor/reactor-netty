@@ -102,7 +102,7 @@ public class ProxyClientIssue {
 		for (int i = 0; i < concurrencyLevel; i++) {
 			Mono<Void> currentRequestFlow = Mono.empty();
 			for (int j = 0; j < requestCount; j++) {
-				currentRequestFlow = currentRequestFlow.then(HttpClient.prepare()
+				currentRequestFlow = currentRequestFlow.then(HttpClient.create()
 				                                                       .wiretap()
 				                                                       .get()
 				                                                       .uri("http://localhost:" + PROXY_PORT + "/0/content/" + ThreadLocalRandom.current()
@@ -143,7 +143,7 @@ public class ProxyClientIssue {
 	}
 
 	private Mono<Void> proxy(HttpServerRequest request, HttpServerResponse response) {
-		return HttpClient.prepare()
+		return HttpClient.create()
 		                 .wiretap()
 		                 .headers(h -> h.add(filterRequestHeaders(request.requestHeaders())))
 		                 .get()

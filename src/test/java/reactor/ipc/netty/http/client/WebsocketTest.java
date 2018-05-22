@@ -74,7 +74,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		String res =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .wiretap()
 				          .headers(h -> h.add("Authorization", auth))
@@ -105,7 +105,7 @@ public class WebsocketTest {
 						.bindNow();
 
 		Mono<String> res =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(httpServer.address()
 						                .getPort())
 						  .websocket()
@@ -165,7 +165,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		Flux<String> ws = HttpClient.prepare()
+		Flux<String> ws = HttpClient.create()
 		                            .port(httpServer.address().getPort())
 		                            .wiretap()
 		                            .websocket()
@@ -206,7 +206,7 @@ public class WebsocketTest {
 				          .wiretap()
 				          .bindNow(Duration.ofSeconds(5));
 
-		HttpClient client = HttpClient.prepare()
+		HttpClient client = HttpClient.create()
 		                              .port(server.address().getPort())
 		                              .wiretap();
 
@@ -261,7 +261,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		Flux<String> ws = HttpClient.prepare()
+		Flux<String> ws = HttpClient.create()
 		                            .port(httpServer.address().getPort())
 		                            .websocket()
 		                            .uri("/test")
@@ -309,7 +309,7 @@ public class WebsocketTest {
 		    .map(Object::toString)
 		    .subscribe(client::onNext);
 
-		HttpClient.prepare()
+		HttpClient.create()
 		          .port(httpServer.address().getPort())
 		          .headers(h -> h.add("Authorization", auth))
 		          .websocket()
@@ -335,7 +335,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		StepVerifier.create(
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket("SUBPROTOCOL,OTHER")
@@ -358,7 +358,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		StepVerifier.create(
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket("SUBPROTOCOL,OTHER")
@@ -378,7 +378,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.prepare()
+		String res = HttpClient.create()
 		                       .port(httpServer.address()
 		                                       .getPort())
 		                       .wiretap()
@@ -405,7 +405,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.prepare()
+		String res = HttpClient.create()
 		                       .port(httpServer.address().getPort())
 		                       .tcpConfiguration(tcpClient -> tcpClient.noSSL())
 		                       .wiretap()
@@ -432,7 +432,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.prepare()
+		String res = HttpClient.create()
 		                       .port(httpServer.address().getPort())
 		                       .headers(h -> h.add("Authorization", auth))
 		                       .websocket()
@@ -457,7 +457,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.prepare()
+		String res = HttpClient.create()
 		                       .port(httpServer.address().getPort())
 		                       .headers(h -> h.add("Authorization", auth))
 		                       .websocket("proto1, proto2")
@@ -495,7 +495,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		HttpClient.prepare()
+		HttpClient.create()
 		           .port(httpServer.address().getPort())
 		           .headers(h -> h.add("Authorization", auth))
 		           .websocket("proto1,proto2")
@@ -528,7 +528,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		Flux<String> ws = HttpClient.prepare(pr)
+		Flux<String> ws = HttpClient.create(pr)
 		                            .port(httpServer.address()
 		                                            .getPort())
 		                            .websocket()
@@ -563,7 +563,7 @@ public class WebsocketTest {
 				          .bindNow();
 
 		Flux<WebSocketFrame> response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .websocket()
 				          .uri("/")
@@ -592,7 +592,7 @@ public class WebsocketTest {
 				          .bindNow();
 
 		Mono<Void> response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .websocket()
 				          .uri("/")
@@ -649,7 +649,7 @@ public class WebsocketTest {
 				          .bindNow();
 
 		ReplayProcessor<String> output = ReplayProcessor.create();
-		HttpClient.prepare()
+		HttpClient.create()
 		          .port(httpServer.address().getPort())
 		          .websocket()
 		          .uri("/")
@@ -682,7 +682,7 @@ public class WebsocketTest {
 
 		CountDownLatch latch = new CountDownLatch(3);
 		AtomicBoolean error = new AtomicBoolean();
-		HttpClient.prepare()
+		HttpClient.create()
 		          .port(httpServer.address().getPort())
 		          .websocket()
 		          .uri("/test")
@@ -745,7 +745,7 @@ public class WebsocketTest {
 
 		CountDownLatch latch = new CountDownLatch(3);
 		AtomicBoolean error = new AtomicBoolean();
-		HttpClient.prepare()
+		HttpClient.create()
 		          .port(httpServer.address().getPort())
 		          .websocket()
 		          .uri("/test")
@@ -807,7 +807,7 @@ public class WebsocketTest {
 
 		CountDownLatch latch = new CountDownLatch(2);
 		AtomicBoolean error = new AtomicBoolean();
-		HttpClient.prepare()
+		HttpClient.create()
 		          .port(httpServer.address().getPort())
 		          .websocket()
 		          .uri("/test")
