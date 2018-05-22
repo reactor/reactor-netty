@@ -17,7 +17,6 @@
 package reactor.ipc.netty.http.server;
 
 import java.security.cert.CertificateException;
-
 import javax.net.ssl.SSLException;
 
 import io.netty.handler.ssl.SslContext;
@@ -51,7 +50,7 @@ public class HttpsSendFileTests extends HttpSendFileTests {
 		try {
 			SslContext ctx = SslContextBuilder.forClient()
 			                                  .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-			return httpClient.tcpConfiguration(tcpClient -> tcpClient.secure(ctx));
+			return httpClient.secure(ssl -> ssl.sslContext(ctx));
 		}
 		catch (SSLException e) {
 			throw new RuntimeException(e);

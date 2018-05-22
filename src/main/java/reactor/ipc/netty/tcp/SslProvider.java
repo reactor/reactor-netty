@@ -16,8 +16,11 @@
 
 package reactor.ipc.netty.tcp;
 
+import java.time.Duration;
+import java.util.Objects;
+import java.util.function.Consumer;
+
 import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
@@ -26,16 +29,12 @@ import reactor.core.Exceptions;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 
-import java.time.Duration;
-import java.util.Objects;
-import java.util.function.Consumer;
-
 /**
  * SSL Provider
  *
  * @author Violeta Georgieva
  */
-public final class SslProvider {
+public class SslProvider {
 
 	/**
 	 * Provide a default SSL support for client bootstrap
@@ -66,7 +65,7 @@ public final class SslProvider {
 	final long closeNotifyFlushTimeoutMillis;
 	final long closeNotifyReadTimeoutMillis;
 
-	SslProvider(SslProvider.Build builder) {
+	protected SslProvider(SslProvider.Build builder) {
 		this.sslContext = builder.sslContext;
 		this.handshakeTimeoutMillis = builder.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = builder.closeNotifyFlushTimeoutMillis;
@@ -79,7 +78,7 @@ public final class SslProvider {
 	 * 
 	 * @return {@code SslContext} instance with configured settings.
 	 */
-	public SslContext getSslContext() {
+	public final SslContext getSslContext() {
 		return this.sslContext;
 	}
 
@@ -106,7 +105,7 @@ public final class SslProvider {
 	}
 
 	
-	static final class Build implements SslContextSpec, Builder {
+	static protected class Build implements SslContextSpec, Builder {
 
 		static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT =
 				Long.parseLong(System.getProperty(
@@ -131,9 +130,6 @@ public final class SslProvider {
 		long handshakeTimeoutMillis = DEFAULT_SSL_HANDSHAKE_TIMEOUT;
 		long closeNotifyFlushTimeoutMillis = 3000L;
 		long closeNotifyReadTimeoutMillis;
-
-		Build() {
-		}
 
 		@Override
 		public final Builder forClient() {

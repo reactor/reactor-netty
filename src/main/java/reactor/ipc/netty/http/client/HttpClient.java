@@ -32,6 +32,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import reactor.core.publisher.Flux;
@@ -46,6 +47,7 @@ import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.ConnectionProvider;
+import reactor.ipc.netty.tcp.SslProvider;
 import reactor.ipc.netty.tcp.TcpClient;
 import reactor.ipc.netty.tcp.TcpServer;
 
@@ -576,9 +578,45 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Enable default sslContext support. The default {@link SslContext} will be
+	 * assigned to
+	 * with a default value of {@literal 10} seconds handshake timeout unless
+	 * the environment property {@literal reactor.ipc.netty.sslHandshakeTimeout} is set.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient secure() {
+		return new HttpClientSecure(this, new HttpClientSslProvider.HttpBuild().build());
+	}
+
+	/**
+	 * Apply an SSL configuration customization via the passed builder. The builder
+	 * will produce the {@link SslContext} to be passed to with a default value of
+	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
+	 * reactor.ipc.netty.sslHandshakeTimeout} is set.
+	 *
+	 * <p> Always prefer {@link HttpClient#secure} to
+	 * {@link #tcpConfiguration()}  and {@link TcpClient#secure}. While configuration
+	 * with the later is possible, {@link HttpClient#secure} will inject extra information
+	 * for HTTPS support.
+	 *
+	 * @param sslProviderBuilder builder callback for further customization of SslContext.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+		return HttpClientSecure.secure(this, sslProviderBuilder);
+	}
+
+	/**
 	 * Apply {@link Bootstrap} configuration given mapper taking currently configured one
 	 * and returning a new one to be ultimately used for socket binding. <p> Configuration
 	 * will apply during {@link #tcpConfiguration()} phase.
+	 *
+	 * <p> Always prefer {@link HttpClient#secure} to
+	 * {@link #tcpConfiguration()}  and {@link TcpClient#secure}. While configuration
+	 * with the later is possible, {@link HttpClient#secure} will inject extra information
+	 * for HTTPS support.
 	 *
 	 * @param tcpMapper A tcpClient mapping function to update tcp configuration and
 	 * return an enriched tcp client to use.

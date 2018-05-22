@@ -13,42 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package reactor.ipc.netty.tcp;
+package reactor.ipc.netty.http.client;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.handler.ssl.SslContext;
+import reactor.ipc.netty.tcp.SslProvider;
+import reactor.ipc.netty.tcp.TcpClient;
 
 /**
  * @author Stephane Maldini
  */
-final class TcpClientSecure extends TcpClientOperator {
+final class HttpClientSecure extends HttpClientOperator {
+
+	static HttpClient secure(HttpClient client, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
+
+		HttpClientSslProvider.HttpBuild builder = new HttpClientSslProvider.HttpBuild();
+		sslProviderBuilder.accept(builder);
+		return new HttpClientSecure(client, builder.build());
+	}
 
 	final SslProvider sslProvider;
 
-	static TcpClient secure(TcpClient client, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
-
-		SslProvider.Build builder = (SslProvider.Build) SslProvider.builder();
-		sslProviderBuilder.accept(builder);
-		return new TcpClientSecure(client, builder.build());
-	}
-
-	TcpClientSecure(TcpClient client, SslProvider provider) {
+	HttpClientSecure(HttpClient client, SslProvider provider) {
 		super(client);
-		this.sslProvider = Objects.requireNonNull(provider, "provider");
+		this.sslProvider = provider;
 	}
 
 	@Override
-	public Bootstrap configure() {
-		return TcpUtils.updateSslSupport(source.configure(), sslProvider);
-	}
-
-	@Override
-	public SslContext sslContext(){
-		return this.sslProvider.getSslContext();
+	protected TcpClient tcpConfiguration() {
+		return super.tcpConfiguration().secure(sslProvider);
 	}
 }

@@ -754,7 +754,7 @@ public class HttpClientTest {
 		String responseString =
 				HttpClient.create()
 				          .addressSupplier(context::address)
-				          .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
+				          .secure(ssl -> ssl.sslContext(sslClient))
 				          .wiretap()
 				          .get()
 				          .uri("/foo")
@@ -782,7 +782,7 @@ public class HttpClientTest {
 
 		String responseString = HttpClient.create()
 		                                  .addressSupplier(context::address)
-		                                  .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
+		                                  .secure(ssl -> ssl.sslContext(sslClient))
 		                                  .wiretap()
 		                                  .get()
 		                                  .uri("/foo")
@@ -820,7 +820,7 @@ public class HttpClientTest {
 		Tuple2<String, Integer> response =
 				HttpClient.create()
 				          .addressSupplier(context::address)
-				          .tcpConfiguration(tcpClient -> tcpClient.secure(sslClient))
+				          .secure(ssl -> ssl.sslContext(sslClient))
 				          .wiretap()
 				          .post()
 				          .uri("/upload")

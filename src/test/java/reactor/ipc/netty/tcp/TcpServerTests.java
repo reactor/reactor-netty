@@ -397,7 +397,7 @@ public class TcpServerTests {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
-		SslContext sslClient = SslContextBuilder.forClient().trustManager(ssc.cert()).build();
+		SslContext sslClient = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
 		DisposableServer context =
 				TcpServer.create().secure(sslServer)
