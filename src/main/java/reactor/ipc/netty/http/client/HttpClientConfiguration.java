@@ -51,6 +51,21 @@ final class HttpClientConfiguration {
 	BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 			body;
 
+	HttpClientConfiguration() {
+	}
+
+	HttpClientConfiguration(HttpClientConfiguration from, String uri) {
+		this.uri = uri;
+		this.acceptGzip = from.acceptGzip;
+		this.followRedirect = from.followRedirect;
+		this.chunkedTransfer = from.chunkedTransfer;
+		this.baseUrl = from.baseUrl;
+		this.headers = from.headers;
+		this.method = from.method;
+		this.websocketSubprotocols = from.websocketSubprotocols;
+		this.body = from.body;
+	}
+
 	static HttpClientConfiguration getAndClean(Bootstrap b) {
 		HttpClientConfiguration hcc = (HttpClientConfiguration) b.config()
 		                                                         .attrs()

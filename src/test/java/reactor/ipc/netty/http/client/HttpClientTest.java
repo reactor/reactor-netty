@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLException;
 
@@ -924,6 +925,43 @@ public class HttpClientTest {
 	}
 
 	@Test
+	public void testDeferredUri() {
+		DisposableServer context =
+				HttpServer.create()
+				          .tcpConfiguration(tcpServer -> tcpServer.host("localhost"))
+				          .route(r -> r.get("/201", (req, res) -> res.addHeader
+						          ("Content-Length", "0")
+				                                                     .status(HttpResponseStatus.CREATED)
+				                                                     .sendHeaders())
+				                       .get("/204", (req, res) -> res.status
+						                       (HttpResponseStatus.NO_CONTENT)
+				                                                     .sendHeaders())
+				                       .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
+				                                                     .sendHeaders()))
+				          .bindNow();
+
+		AtomicInteger i = new AtomicInteger();
+		HttpClient.prepare()
+		          .addressSupplier(context::address)
+		          .wiretap()
+		          .observe((c, s) -> System.out.println(s + "" + c))
+		          .get()
+		          .uri(Mono.fromCallable(() -> {
+		          	switch (i.incrementAndGet()) {
+			            case 1: return "/201";
+			            case 2: return "/201";
+			            case 3: return "/201";
+			            default: return null;
+		            }
+		          }))
+		          .responseContent()
+		          .repeat(4)
+		          .blockLast();
+
+		context.dispose();
+	}
+
+	@Test
 	public void closePool() {
 		ConnectionProvider pr = ConnectionProvider.fixed("wstest", 1);
 		DisposableServer httpServer =
@@ -984,7 +1022,7 @@ public class HttpClientTest {
 		server.dispose();
 	}
 
-	private HttpClient createHttpClientForContext(DisposableServer context) {
+	HttpClient createHttpClientForContext(DisposableServer context) {
 		return HttpClient.prepare()
 		                 .addressSupplier(context::address)
 		                 .wiretap();

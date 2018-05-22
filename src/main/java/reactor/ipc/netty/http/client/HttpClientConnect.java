@@ -124,7 +124,14 @@ final class HttpClientConnect extends HttpClient {
 		public Mono<? extends Connection> connect(Bootstrap b) {
 			channelFactoryAndLoops(defaultClient, b);
 			BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
-			return new MonoHttpConnect(b, defaultClient);
+			HttpClientConfiguration conf = HttpClientConfiguration.getAndClean(b);
+
+			if (conf.deferredUri != null) {
+				return conf.deferredUri.flatMap(uri ->
+						new MonoHttpConnect(b, new HttpClientConfiguration(conf, uri), defaultClient));
+			}
+
+			return new MonoHttpConnect(b, conf, defaultClient);
 		}
 
 		@Override
@@ -156,9 +163,10 @@ final class HttpClientConnect extends HttpClient {
 		final TcpClient               tcpClient;
 
 		MonoHttpConnect(Bootstrap bootstrap,
+				HttpClientConfiguration configuration,
 				TcpClient tcpClient) {
 			this.bootstrap = bootstrap;
-			this.configuration = HttpClientConfiguration.getAndClean(bootstrap);
+			this.configuration = configuration;
 			this.tcpClient = tcpClient;
 		}
 
