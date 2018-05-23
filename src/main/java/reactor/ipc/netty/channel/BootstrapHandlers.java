@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.AbstractBootstrap;
@@ -95,6 +96,20 @@ public abstract class BootstrapHandlers {
 		ChannelHandler handler = b.config().handler();
 		if (handler instanceof BootstrapPipelineHandler){
 			pipeline = (BootstrapPipelineHandler) handler;
+		}
+
+
+		if (pipeline != null) {
+			PipelineConfiguration pipelineConfiguration;
+			for (int i = 0; i < pipeline.size(); i++) {
+				pipelineConfiguration = pipeline.get(i);
+				if (pipelineConfiguration.deferredConsumer != null) {
+					pipeline.set(i,
+							new PipelineConfiguration(
+									pipelineConfiguration.deferredConsumer.apply(b),
+									pipelineConfiguration.name));
+				}
+			}
 		}
 
 		b.handler(new BootstrapInitializerHandler(pipeline, opsFactory, listener));
@@ -280,6 +295,26 @@ public abstract class BootstrapHandlers {
 	}
 
 	/**
+	 * Add the configuration consumer to this {@link Bootstrap} given a unique
+	 * configuration name. Configuration will be run on channel init.
+	 *
+	 * @param b a bootstrap
+	 * @param name a configuration name
+	 * @param c a deferred configuration consumer
+	 * @return the mutated bootstrap
+	 */
+	@SuppressWarnings("unchecked")
+	public static Bootstrap updateConfiguration(Bootstrap b, String name,
+												Function<? super Bootstrap, ? extends BiConsumer<ConnectionObserver, ? super Channel>> c) {
+		Objects.requireNonNull(b, "bootstrap");
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(c, "configuration");
+		b.handler(updateConfiguration(b.config().handler(), name,
+				(Function<AbstractBootstrap<?, ?>, BiConsumer<ConnectionObserver, ? super Channel>>)c));
+		return b;
+	}
+
+	/**
 	 * Add the configuration consumer to this {@link ServerBootstrap} given a unique
 	 * configuration name. Configuration will be run on child channel init.
 	 *
@@ -340,24 +375,38 @@ public abstract class BootstrapHandlers {
 		return handler;
 	}
 
-	static ChannelHandler updateConfiguration(@Nullable ChannelHandler handler,
-			String name,
-											  BiConsumer<ConnectionObserver, ? super Channel> c) {
-
-		BootstrapPipelineHandler p;
-
+	static BootstrapPipelineHandler getOrCreateInitializer(@Nullable ChannelHandler
+			handler) {
 		if (handler instanceof BootstrapPipelineHandler) {
-			p = new BootstrapPipelineHandler((BootstrapPipelineHandler) handler);
+			return new BootstrapPipelineHandler((BootstrapPipelineHandler) handler);
 		}
 		else {
-			p = new BootstrapPipelineHandler(Collections.emptyList());
+			BootstrapPipelineHandler p = new BootstrapPipelineHandler(Collections.emptyList());
 
 			if (handler != null) {
 				p.add(new PipelineConfiguration((ctx, ch) -> ch.pipeline()
-						.addFirst(handler),
+				                                               .addFirst(handler),
 						"user"));
 			}
+			return p;
 		}
+	}
+
+	static ChannelHandler updateConfiguration(@Nullable ChannelHandler handler,
+			String name,
+			BiConsumer<ConnectionObserver, ? super Channel> c) {
+
+		BootstrapPipelineHandler p = getOrCreateInitializer(handler);
+
+		p.add(new PipelineConfiguration(c, name));
+		return p;
+	}
+
+	static ChannelHandler updateConfiguration(@Nullable ChannelHandler handler,
+			String name,
+			Function<AbstractBootstrap<?, ?>, BiConsumer<ConnectionObserver, ? super Channel>> c) {
+
+		BootstrapPipelineHandler p = getOrCreateInitializer(handler);
 
 		p.add(new PipelineConfiguration(c, name));
 		return p;
@@ -433,9 +482,18 @@ public abstract class BootstrapHandlers {
 		final BiConsumer<ConnectionObserver, ? super Channel> consumer;
 		final String                                          name;
 
+		final Function<AbstractBootstrap<?, ?>, BiConsumer<ConnectionObserver, ? super Channel>> deferredConsumer;
+
 		PipelineConfiguration(BiConsumer<ConnectionObserver, ? super Channel> consumer, String name) {
 			this.consumer = consumer;
 			this.name = name;
+			this.deferredConsumer = null;
+		}
+
+		PipelineConfiguration(Function<AbstractBootstrap<?, ?>, BiConsumer<ConnectionObserver, ? super Channel>> deferredConsumer, String name) {
+			this.consumer = null;
+			this.name = name;
+			this.deferredConsumer = deferredConsumer;
 		}
 
 	}

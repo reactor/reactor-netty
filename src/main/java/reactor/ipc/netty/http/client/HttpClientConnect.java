@@ -96,11 +96,14 @@ final class HttpClientConnect extends HttpClient {
 		return defaultClient;
 	}
 
-	static void channelFactoryAndLoops(Bootstrap b, @Nullable SslContext sslContext) {
+	static void channelFactoryAndLoops(Bootstrap b) {
 		if (b.config()
 		     .group() == null) {
 
 			LoopResources loops = HttpResources.get();
+
+			SslProvider ssl = SslProvider.findSslSupport(b);
+			SslContext sslContext = ssl != null ? ssl.getSslContext() : null;
 
 			boolean useNative =
 					LoopResources.DEFAULT_NATIVE && !(sslContext instanceof JdkSslContext);
@@ -122,6 +125,8 @@ final class HttpClientConnect extends HttpClient {
 		sslEngine.setSSLParameters(sslParameters);
 	};
 
+	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER = SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), DEFAULT_HOSTNAME_VERIFICATION);
+
 	static final class HttpTcpClient extends TcpClient {
 
 		final TcpClient defaultClient;
@@ -132,19 +137,9 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public Mono<? extends Connection> connect(Bootstrap b) {
-			SslProvider ssl = SslProvider.findSslSupport(b);
-			if (ssl != null) {
-				channelFactoryAndLoops(b, ssl.getSslContext());
-				SslProvider.updateSslSupport(b,
-						SslProvider.addHandlerConfigurator(ssl, DEFAULT_HOSTNAME_VERIFICATION));
-			}
-			else {
-				channelFactoryAndLoops(b, null);
-			}
+			channelFactoryAndLoops(b);
 			BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
 			HttpClientConfiguration conf = HttpClientConfiguration.getAndClean(b);
-
-
 
 			if (conf.deferredUri != null) {
 				return conf.deferredUri.flatMap(uri ->
@@ -214,11 +209,18 @@ final class HttpClientConnect extends HttpClient {
 
 			b.remoteAddress(handler);
 
+			SslProvider ssl = SslProvider.findSslSupport(b);
+			if (ssl != null) {
+				SslProvider.updateSslSupport(b,
+						SslProvider.addHandlerConfigurator(ssl,
+								DEFAULT_HOSTNAME_VERIFICATION));
+			}
+
 			Mono.<Connection>create(sink -> {
 				Bootstrap finalBootstrap;
 				//append secure handler if needed
 				if (handler.activeURI.isSecure()) {
-					finalBootstrap = SslProvider.updateSslSupport(b.clone(), SslProvider.defaultClientProvider());
+					finalBootstrap = SslProvider.updateSslSupport(b.clone(), DEFAULT_HTTP_SSL_PROVIDER);
 				}
 				else {
 					finalBootstrap = b.clone();

@@ -22,9 +22,9 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 
-import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -39,6 +39,8 @@ import reactor.core.Exceptions;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * SSL Provider
@@ -88,7 +90,7 @@ public final class SslProvider {
 	public static Bootstrap updateSslSupport(Bootstrap b, SslProvider sslProvider) {
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.SslHandler,
-				new SslSupportConsumer(sslProvider, b));
+				new DeferredSslSupport(sslProvider));
 
 		return b;
 	}
@@ -440,33 +442,37 @@ public final class SslProvider {
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.SslHandler,
-				new SslSupportConsumer(sslProvider, b));
+				new SslSupportConsumer(sslProvider, null));
 
 		return b;
+	}
+
+	static final class DeferredSslSupport implements Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>>
+	{
+		final SslProvider sslProvider;
+
+		DeferredSslSupport(SslProvider sslProvider) {
+			this.sslProvider = sslProvider;
+		}
+
+		@Override
+		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
+			return new SslSupportConsumer(sslProvider, bootstrap.config().remoteAddress());
+		}
 	}
 
 	static final class SslSupportConsumer
 			implements BiConsumer<ConnectionObserver, Channel> {
 		final SslProvider sslProvider;
-
 		final InetSocketAddress sniInfo;
 
-		SslSupportConsumer(SslProvider sslProvider, AbstractBootstrap<?, ?> b) {
+		SslSupportConsumer(SslProvider sslProvider, @Nullable SocketAddress sniInfo) {
 			this.sslProvider = sslProvider;
-
-			if (b instanceof Bootstrap) {
-				SocketAddress sniInfo = ((Bootstrap) b).config().remoteAddress();
-
-				if (sniInfo instanceof InetSocketAddress) {
-					this.sniInfo = (InetSocketAddress) sniInfo;
-				}
-				else {
-					this.sniInfo = null;
-				}
-
+			if (sniInfo instanceof InetSocketAddress) {
+				this.sniInfo = (InetSocketAddress) sniInfo;
 			}
 			else {
-				sniInfo = null;
+				this.sniInfo = null;
 			}
 		}
 
@@ -480,8 +486,8 @@ public final class SslProvider {
 						                        sniInfo.getHostString(),
 						                        sniInfo.getPort());
 
-				if (TcpUtils.log.isDebugEnabled()) {
-					TcpUtils.log.debug("SSL enabled using engine {} and SNI {}",
+				if (log.isDebugEnabled()) {
+					log.debug("SSL enabled using engine {} and SNI {}",
 							sslHandler.engine().getClass().getSimpleName(),
 							sniInfo);
 				}
@@ -489,8 +495,8 @@ public final class SslProvider {
 			else {
 				sslHandler = sslProvider.getSslContext().newHandler(channel.alloc());
 
-				if (TcpUtils.log.isDebugEnabled()) {
-					TcpUtils.log.debug("SSL enabled using engine {}",
+				if (log.isDebugEnabled()) {
+					log.debug("SSL enabled using engine {}",
 							sslHandler.engine().getClass().getSimpleName());
 				}
 			}
@@ -565,6 +571,8 @@ public final class SslProvider {
 		}
 
 	}
+	
+	static final Logger log = Loggers.getLogger(SslProvider.class);
 
 	static final SslContext DEFAULT_CLIENT_CONTEXT;
 	static final SslContext DEFAULT_SERVER_CONTEXT;

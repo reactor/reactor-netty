@@ -735,7 +735,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void sshExchangeRelativeGet() throws CertificateException, SSLException {
+	public void sslExchangeRelativeGet() throws CertificateException, SSLException {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
@@ -767,7 +767,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void sshExchangeAbsoluteGet() throws CertificateException, SSLException {
+	public void sslExchangeAbsoluteGet() throws CertificateException, SSLException {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
 		SslContext sslClient = SslContextBuilder.forClient()
