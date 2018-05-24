@@ -134,7 +134,7 @@ public class ByteBufFluxTest {
 					.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
             server = HttpServer.create()
                                .port(serverPort)
-                               .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer));
+                               .secure(ssl -> ssl.sslContext(sslServer));
             client = HttpClient.create()
                                .port(serverPort)
                                .secure(ssl -> ssl.sslContext(sslClient));

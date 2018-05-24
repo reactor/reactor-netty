@@ -38,7 +38,7 @@ public class HttpsSendFileTests extends HttpSendFileTests {
 	protected HttpServer customizeServerOptions(HttpServer server) {
 		try {
 			SslContext ctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
-			return server.tcpConfiguration(tcpServer -> tcpServer.secure(ctx));
+			return server.secure(ssl -> ssl.sslContext(ctx));
 		}
 		catch (SSLException e) {
 			throw new RuntimeException(e);

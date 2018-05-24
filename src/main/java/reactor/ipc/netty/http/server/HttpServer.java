@@ -26,12 +26,14 @@ import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.channel.BootstrapHandlers;
+import reactor.ipc.netty.tcp.SslProvider;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -269,6 +271,19 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Setup all lifecycle callbacks called on or after
+	 * each child {@link io.netty.channel.Channel}
+	 * has been connected and after it has been disconnected.
+	 *
+	 * @param observer a consumer observing state changes
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer observe(ConnectionObserver observer) {
+		return new HttpServerObserve(this, observer);
+	}
+
+	/**
 	 * The port to which this server should bind.
 	 *
 	 * @param port The port to bind to.
@@ -280,16 +295,29 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Setup all lifecycle callbacks called on or after
-	 * each child {@link io.netty.channel.Channel}
-	 * has been connected and after it has been disconnected.
-	 *
-	 * @param observer a consumer observing state changes
+	 * Enable default sslContext support. The default {@link SslContext} will be
+	 * assigned to
+	 * with a default value of {@literal 10} seconds handshake timeout unless
+	 * the environment property {@literal reactor.ipc.netty.sslHandshakeTimeout} is set.
 	 *
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer observe(ConnectionObserver observer) {
-		return new HttpServerObserve(this, observer);
+	public final HttpServer secure() {
+		return new HttpServerSecure(this, null);
+	}
+
+	/**
+	 * Apply an SSL configuration customization via the passed builder. The builder
+	 * will produce the {@link SslContext} to be passed to with a default value of
+	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
+	 * reactor.ipc.netty.sslHandshakeTimeout} is set.
+	 *
+	 * @param sslProviderBuilder builder callback for further customization of SslContext.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+		return HttpServerSecure.secure(this, sslProviderBuilder);
 	}
 
 	/**

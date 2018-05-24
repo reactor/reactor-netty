@@ -193,8 +193,7 @@ public class HttpClientTest {
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
 		HttpClient.create(pool)
-		          .port(x.address().getPort())
-		          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+		          .addressSupplier(x::address)
 		          .wiretap()
 		          .get()
 		          .uri("/")
@@ -204,8 +203,7 @@ public class HttpClientTest {
 
 		try {
 			HttpClient.create(pool)
-			          .port(x.address().getPort())
-			          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+			          .addressSupplier(x::address)
 			          .wiretap()
 			          .get()
 			          .uri("/")
@@ -745,7 +743,7 @@ public class HttpClientTest {
 
 		DisposableServer context =
 				HttpServer.create()
-				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
+				          .secure(ssl -> ssl.sslContext(sslServer))
 				          .handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
 				          .wiretap()
 				          .bindNow();
@@ -775,7 +773,7 @@ public class HttpClientTest {
 
 		DisposableServer context =
 				HttpServer.create()
-				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
+				          .secure(ssl -> ssl.sslContext(sslServer))
 				          .handle((req, resp) -> resp.sendString(Flux.just("hello ", req.uri())))
 				          .wiretap()
 				          .bindNow();
@@ -806,7 +804,7 @@ public class HttpClientTest {
 		DisposableServer context =
 				HttpServer.create()
 				          .port(9090)
-				          .tcpConfiguration(tcpServer -> tcpServer.secure(sslServer))
+				          .secure(ssl -> ssl.sslContext(sslServer))
 				          .route(r -> r.post("/upload", (req, resp) ->
 				                  req.receive()
 				                     .aggregate()
