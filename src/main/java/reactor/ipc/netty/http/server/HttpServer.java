@@ -243,9 +243,9 @@ public abstract class HttpServer {
 	 * @param requestDecoderOptions a function to mutate the provided Http request decoder options
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer httpRequestDecoder(Function<HttpRequestDecoderConfiguration, HttpRequestDecoderConfiguration> requestDecoderOptions) {
+	public final HttpServer httpRequestDecoder(Function<HttpRequestDecoderSpec, HttpRequestDecoderSpec> requestDecoderOptions) {
 		return tcpConfiguration(
-				requestDecoderOptions.apply(new HttpRequestDecoderConfiguration())
+				requestDecoderOptions.apply(new HttpRequestDecoderSpec())
 				                     .build());
 	}
 

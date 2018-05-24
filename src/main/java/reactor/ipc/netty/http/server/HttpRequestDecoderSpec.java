@@ -28,7 +28,7 @@ import reactor.ipc.netty.tcp.TcpServer;
  *
  * @author Simon Baslé
  */
-public final class HttpRequestDecoderConfiguration {
+public final class HttpRequestDecoderSpec {
 
 	public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
 	public static final int DEFAULT_MAX_HEADER_SIZE         = 8192;
@@ -49,7 +49,7 @@ public final class HttpRequestDecoderConfiguration {
 	 * @param value the value for the maximum initial line length (strictly positive)
 	 * @return this option builder for further configuration
 	 */
-	public HttpRequestDecoderConfiguration maxInitialLineLength(int value) {
+	public HttpRequestDecoderSpec maxInitialLineLength(int value) {
 		if (value <= 0) {
 			throw new IllegalArgumentException(
 					"maxInitialLineLength must be strictly positive");
@@ -65,7 +65,7 @@ public final class HttpRequestDecoderConfiguration {
 	 * @param value the value for the maximum header size (strictly positive)
 	 * @return this option builder for further configuration
 	 */
-	public HttpRequestDecoderConfiguration maxHeaderSize(int value) {
+	public HttpRequestDecoderSpec maxHeaderSize(int value) {
 		if (value <= 0) {
 			throw new IllegalArgumentException("maxHeaderSize must be strictly positive");
 		}
@@ -80,7 +80,7 @@ public final class HttpRequestDecoderConfiguration {
 	 * @param value the value for the maximum chunk size (strictly positive)
 	 * @return this option builder for further configuration
 	 */
-	public HttpRequestDecoderConfiguration maxChunkSize(int value) {
+	public HttpRequestDecoderSpec maxChunkSize(int value) {
 		if (value <= 0) {
 			throw new IllegalArgumentException("maxChunkSize must be strictly positive");
 		}
@@ -95,7 +95,7 @@ public final class HttpRequestDecoderConfiguration {
 	 * @param validate true to validate headers, false otherwise
 	 * @return this option builder for further configuration
 	 */
-	public HttpRequestDecoderConfiguration validateHeaders(boolean validate) {
+	public HttpRequestDecoderSpec validateHeaders(boolean validate) {
 		this.validateHeaders = validate;
 		return this;
 	}
@@ -107,7 +107,7 @@ public final class HttpRequestDecoderConfiguration {
 	 * @param value the initial buffer size to use (strictly positive)
 	 * @return this option builder for further configuration
 	 */
-	public HttpRequestDecoderConfiguration initialBufferSize(int value) {
+	public HttpRequestDecoderSpec initialBufferSize(int value) {
 		if (value <= 0) {
 			throw new IllegalArgumentException("initialBufferSize must be strictly positive");
 		}
@@ -120,7 +120,7 @@ public final class HttpRequestDecoderConfiguration {
 	 * {@link TcpServer} by enriching its attributes.
 	 */
 	Function<TcpServer, TcpServer> build() {
-		HttpRequestDecoderConfiguration decoder = new HttpRequestDecoderConfiguration();
+		HttpRequestDecoderSpec decoder = new HttpRequestDecoderSpec();
 		decoder.initialBufferSize = initialBufferSize;
 		decoder.maxChunkSize = maxChunkSize;
 		decoder.maxHeaderSize = maxHeaderSize;

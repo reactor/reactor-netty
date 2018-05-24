@@ -339,6 +339,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				return;
 			}
 			v = pendingWrites.poll();
+			if (v == ChannelOperations.TERMINATED_OPS) {
+				continue;
+			}
 			if (log.isDebugEnabled()) {
 				log.debug("{} Terminated ChannelOperation. Dropping Pending Write: {}",
 						ctx.channel().toString(), v);

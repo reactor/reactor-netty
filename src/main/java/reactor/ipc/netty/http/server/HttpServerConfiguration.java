@@ -35,8 +35,8 @@ final class HttpServerConfiguration {
 	int                                                minCompressionSize = -1;
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate  = null;
 	boolean                                            forwarded          = false;
-	HttpRequestDecoderConfiguration                    decoder            =
-			new HttpRequestDecoderConfiguration();
+	HttpRequestDecoderSpec                             decoder            =
+			new HttpRequestDecoderSpec();
 
 	static HttpServerConfiguration getAndClean(ServerBootstrap b) {
 		HttpServerConfiguration hcc = (HttpServerConfiguration) b.config()
@@ -99,7 +99,7 @@ final class HttpServerConfiguration {
 	}
 
 	static ServerBootstrap decoder(ServerBootstrap b,
-			HttpRequestDecoderConfiguration decoder) {
+			HttpRequestDecoderSpec decoder) {
 		getOrCreate(b).decoder = decoder;
 		return b;
 	}

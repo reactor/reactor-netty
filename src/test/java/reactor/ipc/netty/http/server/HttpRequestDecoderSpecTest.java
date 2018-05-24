@@ -21,13 +21,13 @@ import org.junit.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-public class HttpRequestDecoderConfigurationTest {
+public class HttpRequestDecoderSpecTest {
 
-	private HttpRequestDecoderConfiguration conf;
+	private HttpRequestDecoderSpec conf;
 
 	@Before
 	public void init() {
-		conf = new HttpRequestDecoderConfiguration();
+		conf = new HttpRequestDecoderSpec();
 	}
 
 	@Test
@@ -36,10 +36,10 @@ public class HttpRequestDecoderConfigurationTest {
 
 		assertThat(conf.maxInitialLineLength).as("initial line length").isEqualTo(123);
 
-		assertThat(conf.maxHeaderSize).as("default header size").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.maxChunkSize).as("default chunk size").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.validateHeaders).as("default validate headers").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_VALIDATE_HEADERS);
-		assertThat(conf.initialBufferSize).as("default initial buffer sizez").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_INITIAL_BUFFER_SIZE);
+		assertThat(conf.maxHeaderSize).as("default header size").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
+		assertThat(conf.maxChunkSize).as("default chunk size").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
+		assertThat(conf.validateHeaders).as("default validate headers").isEqualTo(HttpRequestDecoderSpec.DEFAULT_VALIDATE_HEADERS);
+		assertThat(conf.initialBufferSize).as("default initial buffer sizez").isEqualTo(HttpRequestDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
 	}
 
 	@Test
@@ -61,10 +61,10 @@ public class HttpRequestDecoderConfigurationTest {
 
 		assertThat(conf.maxHeaderSize).as("header size").isEqualTo(123);
 
-		assertThat(conf.maxInitialLineLength).as("default initial line length").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxChunkSize).as("default chunk size").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.validateHeaders).as("default validate headers").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_VALIDATE_HEADERS);
-		assertThat(conf.initialBufferSize).as("default initial buffer sizez").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_INITIAL_BUFFER_SIZE);
+		assertThat(conf.maxInitialLineLength).as("default initial line length").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		assertThat(conf.maxChunkSize).as("default chunk size").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
+		assertThat(conf.validateHeaders).as("default validate headers").isEqualTo(HttpRequestDecoderSpec.DEFAULT_VALIDATE_HEADERS);
+		assertThat(conf.initialBufferSize).as("default initial buffer sizez").isEqualTo(HttpRequestDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
 	}
 
 	@Test
@@ -86,10 +86,10 @@ public class HttpRequestDecoderConfigurationTest {
 
 		assertThat(conf.maxChunkSize).as("chunk size").isEqualTo(123);
 
-		assertThat(conf.maxInitialLineLength).as("default initial line length").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxHeaderSize).as("default header size").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.validateHeaders).as("default validate headers").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_VALIDATE_HEADERS);
-		assertThat(conf.initialBufferSize).as("default initial buffer sizez").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_INITIAL_BUFFER_SIZE);
+		assertThat(conf.maxInitialLineLength).as("default initial line length").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		assertThat(conf.maxHeaderSize).as("default header size").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
+		assertThat(conf.validateHeaders).as("default validate headers").isEqualTo(HttpRequestDecoderSpec.DEFAULT_VALIDATE_HEADERS);
+		assertThat(conf.initialBufferSize).as("default initial buffer sizez").isEqualTo(HttpRequestDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
 	}
 
 	@Test
@@ -111,10 +111,10 @@ public class HttpRequestDecoderConfigurationTest {
 
 		assertThat(conf.validateHeaders).as("validate headers").isFalse();
 
-		assertThat(conf.maxInitialLineLength).as("default initial line length").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxHeaderSize).as("default header size").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.maxChunkSize).as("default chunk size").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.initialBufferSize).as("default initial buffer sizez").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_INITIAL_BUFFER_SIZE);
+		assertThat(conf.maxInitialLineLength).as("default initial line length").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		assertThat(conf.maxHeaderSize).as("default header size").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
+		assertThat(conf.maxChunkSize).as("default chunk size").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
+		assertThat(conf.initialBufferSize).as("default initial buffer sizez").isEqualTo(HttpRequestDecoderSpec.DEFAULT_INITIAL_BUFFER_SIZE);
 	}
 
 	@Test
@@ -123,10 +123,10 @@ public class HttpRequestDecoderConfigurationTest {
 
 		assertThat(conf.initialBufferSize).as("initial buffer size").isEqualTo(123);
 
-		assertThat(conf.maxInitialLineLength).as("default initial line length").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_INITIAL_LINE_LENGTH);
-		assertThat(conf.maxHeaderSize).as("default header size").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_HEADER_SIZE);
-		assertThat(conf.maxChunkSize).as("default chunk size").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_MAX_CHUNK_SIZE);
-		assertThat(conf.validateHeaders).as("default validate headers").isEqualTo(HttpRequestDecoderConfiguration.DEFAULT_VALIDATE_HEADERS);
+		assertThat(conf.maxInitialLineLength).as("default initial line length").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_INITIAL_LINE_LENGTH);
+		assertThat(conf.maxHeaderSize).as("default header size").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_HEADER_SIZE);
+		assertThat(conf.maxChunkSize).as("default chunk size").isEqualTo(HttpRequestDecoderSpec.DEFAULT_MAX_CHUNK_SIZE);
+		assertThat(conf.validateHeaders).as("default validate headers").isEqualTo(HttpRequestDecoderSpec.DEFAULT_VALIDATE_HEADERS);
 	}
 
 	@Test

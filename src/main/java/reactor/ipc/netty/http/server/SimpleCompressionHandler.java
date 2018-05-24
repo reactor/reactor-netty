@@ -24,7 +24,7 @@ import io.netty.handler.codec.http.HttpContentCompressor;
 /**
  * @author Stephane Maldini
  */
-public class SimpleCompressionHandler extends HttpContentCompressor {
+final class SimpleCompressionHandler extends HttpContentCompressor {
 
 	@Override
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
