@@ -16,6 +16,7 @@
 package reactor.ipc.netty;
 
 import java.nio.channels.FileChannel;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +32,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.nio.NioEventLoop;
+import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleState;
@@ -168,12 +171,12 @@ final class ReactorNetty {
 		}
 	}
 
-	static boolean hasSslHandler(Connection c){
-		return c.channel().pipeline().get(SslHandler.class) != null;
-	}
-
-	static boolean hasHttp2(Connection c){
-		return c.channel().pipeline().get(SslHandler.class) != null;
+	static boolean canTransferFile(Connection c, Path file) {
+		return c.channel().pipeline().get(SslHandler.class) != null  ||
+				c.channel().pipeline().get(Http2ConnectionHandler.class) != null ||
+				c.channel().pipeline().get(NettyPipeline.CompressionHandler) != null ||
+				(!(c.channel().eventLoop() instanceof NioEventLoop) &&
+						!"file".equals(file.toUri().getScheme()));
 	}
 
 	static void registerForClose(boolean shouldCleanupOnClose,

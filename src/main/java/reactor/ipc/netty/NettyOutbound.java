@@ -34,7 +34,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.nio.NioEventLoop;
 import io.netty.handler.stream.ChunkedNioFile;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -165,10 +164,7 @@ public interface NettyOutbound extends Publisher<Void> {
 
 		return sendUsing(() -> FileChannel.open(file, StandardOpenOption.READ),
 				(c, fc) -> {
-					if (ReactorNetty.hasSslHandler(c) ||
-						c.channel().pipeline().get(NettyPipeline.CompressionHandler) != null ||
-								(!(c.channel().eventLoop() instanceof NioEventLoop) &&
-										!"file".equals(file.toUri().getScheme()))) {
+					if (!ReactorNetty.canTransferFile(c, file)) {
 						ReactorNetty.addChunkedWriter(c);
 						try {
 							return new ChunkedNioFile(fc, position, count, 1024);
