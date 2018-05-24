@@ -33,13 +33,20 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2FrameLogger;
 import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
+import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.logging.LogLevel;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.JdkSslContext;
+import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
@@ -107,6 +114,19 @@ final class HttpServerBind extends HttpServer
 		//remove any OPS since we will initialize below
 		BootstrapHandlers.channelOperationFactory(b);
 
+		if (ssl != null) {
+			return BootstrapHandlers.updateConfiguration(b,
+					NettyPipeline.HttpInitializer,
+					new HttpServerSecuredInitializer(
+							conf.decoder.maxInitialLineLength,
+							conf.decoder.maxHeaderSize,
+							conf.decoder.maxChunkSize,
+							conf.decoder.validateHeaders,
+							conf.decoder.initialBufferSize,
+							conf.minCompressionSize,
+							compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+							conf.forwarded));
+		}
 		return BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.HttpInitializer,
 				new HttpServerInitializer(
@@ -156,9 +176,9 @@ final class HttpServerBind extends HttpServer
 		return lengthPredicate;
 	}
 
-	static void addStreamHandlers(Channel ch, HttpServerInitializer parent, ConnectionObserver listener) {
+	static void addStreamHandlers(Channel ch, ChannelOperations.OnSetup setup, ConnectionObserver listener) {
 		ch.pipeline()
-		  .addLast(new Http2StreamBridgeHandler(parent, listener))
+		  .addLast(new Http2StreamBridgeHandler(setup, listener))
 		  .addLast(new Http2StreamFrameToHttpObjectCodec(true));
 
 		ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
@@ -208,24 +228,23 @@ final class HttpServerBind extends HttpServer
 		public void accept(ConnectionObserver listener, Channel channel) {
 			ChannelPipeline p = channel.pipeline();
 
-			if (p.get(NettyPipeline.SslHandler) != null) {
-				p.addLast(new Http2ServerInitializer(this, listener));
+			HttpServerCodec httpServerCodec =
+					new HttpServerCodec(line, header, chunk, validate, buffer);
+
+			p.addLast(NettyPipeline.HttpCodec, httpServerCodec)
+			 .addLast(new HttpServerUpgradeHandler(httpServerCodec,
+					 new UpgradeCodecFactoryImpl(this,
+							 listener,
+							 p.get(NettyPipeline.LoggingHandler) != null)));
+
+			boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
+
+			if (alwaysCompress) {
+				p.addLast(NettyPipeline.CompressionHandler,
+						new SimpleCompressionHandler());
 			}
-			else {
-				HttpServerCodec httpServerCodec = new HttpServerCodec(line, header, chunk, validate, buffer);
 
-				p.addLast(NettyPipeline.HttpCodec, httpServerCodec)
-				 .addLast(new HttpServerUpgradeHandler(httpServerCodec, new UpgradeCodecFactoryImpl(this, listener, p.get(NettyPipeline.LoggingHandler) != null)));
-
-				boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
-
-				if (alwaysCompress) {
-					p.addLast(NettyPipeline.CompressionHandler,
-							new SimpleCompressionHandler());
-				}
-
-				p.addLast(NettyPipeline.HttpServerHandler, new HttpRequestPipeliningHandler(this, listener));
-			}
+			p.addLast(NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(this, listener));
 		}
 	}
 
@@ -279,19 +298,51 @@ final class HttpServerBind extends HttpServer
 	/**
 	 * Initialize Http1 - Http2 pipeline configuration using SSL detection
 	 */
-	static final class Http2ServerInitializer extends ApplicationProtocolNegotiationHandler {
+	static final class HttpServerSecuredInitializer extends ApplicationProtocolNegotiationHandler
+			implements BiConsumer<ConnectionObserver, Channel>, ChannelOperations.OnSetup {
 
-		final HttpServerInitializer parent;
-		final ConnectionObserver    listener;
-		final Http2StreamInitializer initializer;
+		final int                                                line;
+		final int                                                header;
+		final int                                                chunk;
+		final boolean                                            validate;
+		final int                                                buffer;
+		final int                                                minCompressionSize;
+		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
+		final boolean                                            forwarded;
 
-		Http2ServerInitializer(final HttpServerInitializer parent,
-				ConnectionObserver listener) {
+		Http2StreamInitializer initializer;
+		ConnectionObserver listener;
+
+		HttpServerSecuredInitializer(
+				int line,
+				int header,
+				int chunk,
+				boolean validate,
+				int buffer,
+				int minCompressionSize,
+				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+				boolean forwarded) {
 			super(ApplicationProtocolNames.HTTP_1_1);
-			this.parent = parent;
-			this.listener = listener;
-			// Cannot inline channel initializer so share it for all streams
-			this.initializer = new Http2StreamInitializer(this);
+			this.line = line;
+			this.header = header;
+			this.chunk = chunk;
+			this.validate = validate;
+			this.buffer = buffer;
+			this.minCompressionSize = minCompressionSize;
+			this.compressPredicate = compressPredicate;
+			this.forwarded = forwarded;
+		}
+
+
+		@Override
+		public ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg) {
+			return new HttpServerOperations(c, listener, compressPredicate, msg, forwarded);
+		}
+
+		@Override
+		public void accept(ConnectionObserver observer, Channel channel) {
+			listener = observer;
+			channel.pipeline().addLast(this);
 		}
 
 		@Override
@@ -299,6 +350,11 @@ final class HttpServerBind extends HttpServer
 			ChannelPipeline p = ctx.pipeline();
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
+
+				p.remove(NettyPipeline.ReactiveBridge);
+
+				initializer = new Http2StreamInitializer(this, listener);
+
 				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
 						Http2MultiplexCodecBuilder.forServer(initializer)
 						                          .initialSettings(Http2Settings.defaultSettings());
@@ -315,15 +371,15 @@ final class HttpServerBind extends HttpServer
 
 				p.addBefore(NettyPipeline.ReactiveBridge,
 						NettyPipeline.HttpCodec,
-						new HttpServerCodec(parent.line, parent.header, parent.chunk, parent.validate, parent.buffer))
+						new HttpServerCodec(line, header, chunk, validate, buffer))
 				 .addBefore(NettyPipeline.ReactiveBridge,
-						NettyPipeline.HttpServerHandler,
-						new HttpRequestPipeliningHandler(parent, listener));
+						NettyPipeline.HttpTrafficHandler,
+						new HttpTrafficHandler(this, listener));
 
-				boolean alwaysCompress = parent.compressPredicate == null && parent.minCompressionSize == 0;
+				boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
 				if (alwaysCompress) {
-					p.addBefore(NettyPipeline.HttpServerHandler,
+					p.addBefore(NettyPipeline.HttpTrafficHandler,
 							NettyPipeline.CompressionHandler,
 							new SimpleCompressionHandler());
 				}
@@ -337,15 +393,44 @@ final class HttpServerBind extends HttpServer
 
 	static final class Http2StreamInitializer extends ChannelInitializer<Channel> {
 
-		final Http2ServerInitializer parent;
+		final HttpServerSecuredInitializer parent;
+		final ConnectionObserver           listener;
 
-		Http2StreamInitializer(Http2ServerInitializer parent) {
+		Http2StreamInitializer(HttpServerSecuredInitializer parent,
+				ConnectionObserver listener) {
 			this.parent = parent;
+			this.listener = listener;
 		}
 
 		@Override
 		protected void initChannel(Channel ch) {
-			addStreamHandlers(ch, parent.parent, parent.listener);
+			addStreamHandlers(ch, parent, listener);
 		}
+	}
+
+	static final SslContext DEFAULT_SERVER_HTTP2_CONTEXT;
+	static {
+		SslContext sslContext;
+		try {
+			SelfSignedCertificate cert = new SelfSignedCertificate();
+			io.netty.handler.ssl.SslProvider provider =
+					OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+							io.netty.handler.ssl.SslProvider.JDK;
+			sslContext =
+					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+					                 .sslProvider(provider)
+					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
+							                 ApplicationProtocolConfig.Protocol.ALPN,
+							                 ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+							                 ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+							                 ApplicationProtocolNames.HTTP_2,
+							                 ApplicationProtocolNames.HTTP_1_1))
+					                 .build();
+		}
+		catch (Exception e) {
+			sslContext = null;
+		}
+		DEFAULT_SERVER_HTTP2_CONTEXT = sslContext;
 	}
 }

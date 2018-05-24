@@ -392,6 +392,7 @@ public abstract class HttpServer {
 
 	static final Function<TcpServer, TcpServer> FORWARD_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(MAP_NO_FORWARDED);
+
 	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SERVER_HTTP2_SPEC =
-			sslProviderBuilder -> sslProviderBuilder.sslContext(SslProvider.DEFAULT_SERVER_HTTP2_CONTEXT);
+			sslProviderBuilder -> sslProviderBuilder.sslContext(HttpServerBind.DEFAULT_SERVER_HTTP2_CONTEXT);
 }

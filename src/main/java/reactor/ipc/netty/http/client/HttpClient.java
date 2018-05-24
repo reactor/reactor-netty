@@ -586,7 +586,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient secure() {
-		return new HttpClientSecure(this, SslProvider.SSL_DEFAULT_SPEC_HTTP2);
+		return new HttpClientSecure(this, null);
 	}
 
 	/**

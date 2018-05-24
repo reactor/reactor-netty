@@ -19,6 +19,14 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
+import io.netty.handler.codec.http2.Http2SecurityUtil;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.ipc.netty.tcp.SslProvider;
 import reactor.ipc.netty.tcp.TcpClient;
 
@@ -48,4 +56,34 @@ final class HttpClientSecure extends HttpClientOperator {
 		}
 		return source.tcpConfiguration().secure(sslProviderBuilder);
 	}
+
+	static final SslContext DEFAULT_CLIENT_HTTP2_CONTEXT;
+	static {
+		SslContext sslCtx;
+		try {
+			io.netty.handler.ssl.SslProvider provider =
+					OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+							io.netty.handler.ssl.SslProvider.JDK;
+			sslCtx =
+					SslContextBuilder.forClient()
+					                 .sslProvider(provider)
+					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+					                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
+					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
+							                 ApplicationProtocolConfig.Protocol.ALPN,
+							                 ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+							                 ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+							                 ApplicationProtocolNames.HTTP_2,
+							                 ApplicationProtocolNames.HTTP_1_1))
+					                 .build();
+		}
+		catch (Exception e) {
+			sslCtx = null;
+		}
+		DEFAULT_CLIENT_HTTP2_CONTEXT = sslCtx;
+	}
+
+	public static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC_HTTP2 =
+			sslProviderBuilder -> sslProviderBuilder.sslContext(
+					DEFAULT_CLIENT_HTTP2_CONTEXT);
 }

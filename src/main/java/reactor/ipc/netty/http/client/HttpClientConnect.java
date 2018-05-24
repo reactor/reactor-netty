@@ -98,11 +98,6 @@ import reactor.util.context.Context;
  */
 final class HttpClientConnect extends HttpClient {
 
-	static final HttpClientConnect INSTANCE = new HttpClientConnect();
-	static final AsciiString       ALL      = new AsciiString("*/*");
-	static final Logger            log      =
-			Loggers.getLogger(HttpClientFinalizer.class);
-
 	final HttpTcpClient defaultClient;
 
 	HttpClientConnect() {
@@ -137,18 +132,6 @@ final class HttpClientConnect extends HttpClient {
 			 .channel(loops.onChannel(elg));
 		}
 	}
-
-	static final BiFunction<String, Integer, InetSocketAddress> URI_ADDRESS_MAPPER =
-			InetSocketAddressUtil::createUnresolved;
-
-	static final Consumer<? super SslHandler> DEFAULT_HOSTNAME_VERIFICATION = handler -> {
-		SSLEngine sslEngine = handler.engine();
-		SSLParameters sslParameters = sslEngine.getSSLParameters();
-		sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
-		sslEngine.setSSLParameters(sslParameters);
-	};
-
-	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER = SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), DEFAULT_HOSTNAME_VERIFICATION);
 
 	static final class HttpTcpClient extends TcpClient {
 
@@ -799,4 +782,21 @@ final class HttpClientConnect extends HttpClient {
 		}
 	}
 
+	static final HttpClientConnect INSTANCE = new HttpClientConnect();
+	static final AsciiString       ALL      = new AsciiString("*/*");
+	static final Logger            log      =
+			Loggers.getLogger(HttpClientFinalizer.class);
+
+
+	static final BiFunction<String, Integer, InetSocketAddress> URI_ADDRESS_MAPPER =
+			InetSocketAddressUtil::createUnresolved;
+
+	static final Consumer<? super SslHandler> DEFAULT_HOSTNAME_VERIFICATION = handler -> {
+		SSLEngine sslEngine = handler.engine();
+		SSLParameters sslParameters = sslEngine.getSSLParameters();
+		sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+		sslEngine.setSSLParameters(sslParameters);
+	};
+
+	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER = SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), DEFAULT_HOSTNAME_VERIFICATION);
 }

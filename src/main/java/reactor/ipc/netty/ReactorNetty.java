@@ -172,6 +172,10 @@ final class ReactorNetty {
 		return c.channel().pipeline().get(SslHandler.class) != null;
 	}
 
+	static boolean hasHttp2(Connection c){
+		return c.channel().pipeline().get(SslHandler.class) != null;
+	}
+
 	static void registerForClose(boolean shouldCleanupOnClose,
 			String name,
 			Connection context) {
