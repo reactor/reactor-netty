@@ -501,7 +501,7 @@ public class HttpTests {
 				          .bindNow();
 
 		String response =
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.port())
 				          .secure()
 				          .wiretap()
@@ -540,7 +540,7 @@ public class HttpTests {
 				          .bindNow();
 
 		StepVerifier.create(
-				HttpClient.prepare()
+				HttpClient.create()
 				          .port(server.port())
 				          .wiretap()
 				          .post()

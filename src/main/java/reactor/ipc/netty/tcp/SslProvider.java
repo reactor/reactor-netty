@@ -26,10 +26,6 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.handler.codec.http2.Http2SecurityUtil;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,8 +34,8 @@ import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.core.Exceptions;
@@ -698,6 +694,10 @@ public final class SslProvider {
 		}
 		DEFAULT_CLIENT_HTTP2_CONTEXT = sslCtx;
 	}
+
+	public static final Consumer<SslContextSpec> SSL_DEFAULT_SPEC_HTTP2 =
+			sslProviderBuilder -> sslProviderBuilder.sslContext(
+					DEFAULT_CLIENT_HTTP2_CONTEXT);
 }
 
 
