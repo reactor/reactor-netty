@@ -83,7 +83,7 @@ final class HttpClientSecure extends HttpClientOperator {
 		DEFAULT_CLIENT_HTTP2_CONTEXT = sslCtx;
 	}
 
-	public static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC_HTTP2 =
+	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC_HTTP2 =
 			sslProviderBuilder -> sslProviderBuilder.sslContext(
 					DEFAULT_CLIENT_HTTP2_CONTEXT);
 }
