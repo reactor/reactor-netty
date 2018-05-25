@@ -17,22 +17,25 @@
 package reactor.ipc.netty.http.server;
 
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.JdkSslContext;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.BootstrapHandlers;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.resources.LoopResources;
+import reactor.ipc.netty.tcp.SslProvider;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.util.annotation.Nullable;
 
@@ -68,12 +71,14 @@ final class HttpServerBind extends HttpServer
 
 	@Override
 	public ServerBootstrap apply(ServerBootstrap b) {
+		SslProvider ssl = SslProvider.findSslSupport(b);
+
 		if (b.config()
 		     .group() == null) {
 			LoopResources loops = HttpResources.get();
 
 			boolean useNative =
-					LoopResources.DEFAULT_NATIVE && !(tcpConfiguration().sslContext() instanceof JdkSslContext);
+					LoopResources.DEFAULT_NATIVE || (ssl != null && !(ssl.getSslContext() instanceof JdkSslContext));
 
 			EventLoopGroup selector = loops.onServerSelect(useNative);
 			EventLoopGroup elg = loops.onServer(useNative);
@@ -87,32 +92,17 @@ final class HttpServerBind extends HttpServer
 		//remove any OPS since we will initialize below
 		BootstrapHandlers.channelOperationFactory(b);
 
-		int line = conf.decoder.maxInitialLineLength;
-		int header = conf.decoder.maxHeaderSize;
-		int buffer = conf.decoder.initialBufferSize;
-		int chunk = conf.decoder.maxChunkSize;
-		boolean validate = conf.decoder.validateHeaders;
-		boolean forwarded = conf.forwarded;
-		int minCompressionSize = conf.minCompressionSize;
-
-		BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate = compressPredicate(conf.compressPredicate, minCompressionSize);
-
-
 		return BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.HttpInitializer,
-				(listener, channel) -> {
-					ChannelPipeline p = channel.pipeline();
-
-					p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(line, header, chunk, validate, buffer));
-
-					boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
-					if(alwaysCompress) {
-						p.addLast(NettyPipeline.CompressionHandler, new SimpleCompressionHandler());
-					}
-
-					p.addLast(NettyPipeline.HttpServerHandler,
-							new HttpRequestPipeliningHandler((c, l, msg) -> new HttpServerOperations(c, l, compressPredicate, (HttpRequest) msg, forwarded), listener));
-				});
+				new HttpServerInitializer(
+						conf.decoder.maxInitialLineLength,
+						conf.decoder.maxHeaderSize,
+						conf.decoder.maxChunkSize,
+						conf.decoder.validateHeaders,
+						conf.decoder.initialBufferSize,
+						conf.minCompressionSize,
+						compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+						conf.forwarded));
 	}
 
 	@Nullable static BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
@@ -149,5 +139,56 @@ final class HttpServerBind extends HttpServer
 			lengthPredicate = lengthPredicate.and(compressionPredicate);
 		}
 		return lengthPredicate;
+	}
+
+	static final class HttpServerInitializer
+			implements BiConsumer<ConnectionObserver, Channel> {
+
+		final int                                                line;
+		final int                                                header;
+		final int                                                chunk;
+		final boolean                                            validate;
+		final int                                                buffer;
+		final int                                                minCompressionSize;
+		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
+		final boolean                                            forwarded;
+
+		HttpServerInitializer(int line,
+				int header,
+				int chunk,
+				boolean validate,
+				int buffer,
+				int minCompressionSize,
+				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+				boolean forwarded) {
+			this.line = line;
+			this.header = header;
+			this.chunk = chunk;
+			this.validate = validate;
+			this.buffer = buffer;
+			this.minCompressionSize = minCompressionSize;
+			this.compressPredicate = compressPredicate;
+			this.forwarded = forwarded;
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			ChannelPipeline p = channel.pipeline();
+
+			HttpServerCodec httpServerCodec =
+					new HttpServerCodec(line, header, chunk, validate, buffer);
+
+			p.addLast(NettyPipeline.HttpCodec, httpServerCodec);
+
+			boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
+
+			if (alwaysCompress) {
+				p.addLast(NettyPipeline.CompressionHandler,
+						new SimpleCompressionHandler());
+			}
+
+			p.addLast(NettyPipeline.HttpTrafficHandler,
+					new HttpTrafficHandler(listener, forwarded, compressPredicate));
+		}
 	}
 }

@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.server;
 
 import java.util.Queue;
+import java.util.function.BiPredicate;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -38,7 +39,6 @@ import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
-import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.util.concurrent.Queues;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
@@ -47,13 +47,14 @@ import static io.netty.handler.codec.http.HttpUtil.*;
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
  * handler management.
  */
-final class HttpRequestPipeliningHandler extends ChannelDuplexHandler
+final class HttpTrafficHandler extends ChannelDuplexHandler
 		implements Runnable, ChannelFutureListener {
 
 	static final String MULTIPART_PREFIX = "multipart";
 
-	final ChannelOperations.OnSetup opsFactory;
 	final ConnectionObserver listener;
+	final boolean            readForwardHeaders;
+	final BiPredicate<HttpServerRequest, HttpServerResponse> compress;
 
 	boolean persistentConnection = true;
 	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
@@ -66,9 +67,10 @@ final class HttpRequestPipeliningHandler extends ChannelDuplexHandler
 	boolean overflow;
 	boolean mustRecycleEncoder;
 
-	HttpRequestPipeliningHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
-		this.opsFactory = opsFactory;
+	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders, BiPredicate<HttpServerRequest, HttpServerResponse> compress) {
 		this.listener = listener;
+		this.readForwardHeaders = readForwardHeaders;
+		this.compress = compress;
 	}
 
 	@Override
@@ -132,12 +134,16 @@ final class HttpRequestPipeliningHandler extends ChannelDuplexHandler
 			}
 			else {
 				overflow = false;
-				ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ctx.channel()), listener, msg);
-				if (ops != null) {
-					ops.bind();
-					ctx.fireChannelRead(msg);
-					return;
-				}
+
+				new HttpServerOperations(Connection.from(ctx.channel()),
+						listener,
+						compress,
+						request, ConnectionInfo.from(ctx.channel(), readForwardHeaders, request))
+						.chunkedTransfer(true)
+						.bind();
+
+				ctx.fireChannelRead(msg);
+				return;
 
 			}
 		}
@@ -252,19 +258,23 @@ final class HttpRequestPipeliningHandler extends ChannelDuplexHandler
 	@Override
 	public void run() {
 		Object next;
-		boolean nextRequest = false;
+		HttpRequest nextRequest = null;
 		while ((next = pipelined.peek()) != null) {
 			if (next instanceof HttpRequest) {
-				if (nextRequest || !persistentConnection) {
+				if (nextRequest != null) {
 					return;
 				}
-				nextRequest = true;
-				ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ctx.channel()), listener, next);
-				if (ops != null) {
-					ops.bind();
-					ctx.fireChannelRead(pipelined.poll());
-					continue;
+				if (!persistentConnection) {
+					discard();
+					return;
 				}
+				nextRequest = (HttpRequest)next;
+				new HttpServerOperations(Connection.from(ctx.channel()),
+						listener,
+						compress,
+						nextRequest, ConnectionInfo.from(ctx.channel(), readForwardHeaders, nextRequest))
+						.chunkedTransfer(true)
+						.bind();
 			}
 			ctx.fireChannelRead(pipelined.poll());
 		}

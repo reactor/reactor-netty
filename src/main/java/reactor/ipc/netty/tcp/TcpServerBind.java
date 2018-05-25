@@ -171,7 +171,7 @@ final class TcpServerBind extends TcpServer {
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
 			log.error("onUncaughtException(" + connection + ")", error);
-			onStateChange(connection, State.DISCONNECTING);
+			connection.dispose();
 		}
 
 		@Override
@@ -184,6 +184,7 @@ final class TcpServerBind extends TcpServer {
 			}
 
 			childObs.onStateChange(connection, newState);
+
 		}
 	}
 }

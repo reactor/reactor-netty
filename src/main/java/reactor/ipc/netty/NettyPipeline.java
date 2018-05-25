@@ -37,7 +37,7 @@ import org.reactivestreams.Publisher;
  * -> log ? [LoggingHandler]
  * -> http ? [HttpCodecHandler]
  * -> http ws ? [HttpAggregator]
- * -> http server  ? [HttpServerHandler]
+ * -> http server  ? [HttpTrafficHandler]
  * -> onWriteIdle ? [OnChannelWriteIdle]
  * -> onReadIdle ? [OnChannelReadIdle]
  * -> http form/multipart ? [ChunkedWriter]
@@ -60,7 +60,7 @@ public interface NettyPipeline {
 	String HttpCodec          = LEFT + "httpCodec";
 	String HttpDecompressor   = LEFT + "decompressor";
 	String HttpAggregator     = LEFT + "httpAggregator";
-	String HttpServerHandler  = LEFT + "httpServerHandler";
+	String HttpTrafficHandler = LEFT + "httpTrafficHandler";
 	String HttpInitializer    = LEFT + "httpInitializer";
 	String OnChannelWriteIdle = LEFT + "onChannelWriteIdle";
 	String OnChannelReadIdle  = LEFT + "onChannelReadIdle";

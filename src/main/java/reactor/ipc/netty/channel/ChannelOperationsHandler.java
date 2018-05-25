@@ -118,6 +118,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			if (ops != null) {
 				ops.onInboundClose();
 			}
+			else {
+				listener.onStateChange(Connection.from(ctx.channel()), ConnectionObserver.State.DISCONNECTING);
+			}
 		}
 		catch (Throwable err) {
 			Exceptions.throwIfFatal(err);

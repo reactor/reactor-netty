@@ -438,7 +438,7 @@ public class TcpServerTests {
 				         .handle((in, out) -> {
 					         in.receive()
 					           .asString(StandardCharsets.UTF_8)
-					           .take(2)
+					           .takeUntil(d -> d.contains("<- 1024 mark here"))
 					           .reduceWith(String::new, String::concat)
 					           .log("-----------------CLIENT2")
 					           .subscribe(m2::onNext);

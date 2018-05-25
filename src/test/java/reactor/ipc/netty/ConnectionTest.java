@@ -116,7 +116,7 @@ public class ConnectionTest {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
-		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
+		       .addLast(NettyPipeline.HttpTrafficHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
 		ChannelHandler decoder = new LineBasedFrameDecoder(12);
@@ -128,7 +128,7 @@ public class ConnectionTest {
 		assertEquals(channel.pipeline()
 		                    .names(),
 				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpServerHandler,
+						NettyPipeline.HttpTrafficHandler,
 						"decoder$extract",
 						"decoder",
 						NettyPipeline.ReactiveBridge,
@@ -189,7 +189,7 @@ public class ConnectionTest {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
-		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
+		       .addLast(NettyPipeline.HttpTrafficHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
 		ChannelHandler decoder = new ChannelHandlerAdapter() {
@@ -200,7 +200,7 @@ public class ConnectionTest {
 		assertEquals(channel.pipeline()
 		                    .names(),
 				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpServerHandler,
+						NettyPipeline.HttpTrafficHandler,
 						"decoder",
 						NettyPipeline.ReactiveBridge,
 						"DefaultChannelPipeline$TailContext#0"));
@@ -213,7 +213,7 @@ public class ConnectionTest {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
-		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
+		       .addLast(NettyPipeline.HttpTrafficHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
 
@@ -228,7 +228,7 @@ public class ConnectionTest {
 		assertEquals(channel.pipeline()
 		                    .names(),
 				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpServerHandler,
+						NettyPipeline.HttpTrafficHandler,
 						"decoder1$extract",
 						"decoder1",
 						"decoder2$extract",
@@ -288,7 +288,7 @@ public class ConnectionTest {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
-		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
+		       .addLast(NettyPipeline.HttpTrafficHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
 		ChannelHandler encoder = new LineBasedFrameDecoder(12);
@@ -298,7 +298,7 @@ public class ConnectionTest {
 		assertEquals(channel.pipeline()
 		                    .names(),
 				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpServerHandler,
+						NettyPipeline.HttpTrafficHandler,
 						"encoder",
 						NettyPipeline.ReactiveBridge,
 						"DefaultChannelPipeline$TailContext#0"));
@@ -358,7 +358,7 @@ public class ConnectionTest {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
-		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
+		       .addLast(NettyPipeline.HttpTrafficHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
 		ChannelHandler encoder = new ChannelHandlerAdapter() {
@@ -369,7 +369,7 @@ public class ConnectionTest {
 		assertEquals(channel.pipeline()
 		                    .names(),
 				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpServerHandler,
+						NettyPipeline.HttpTrafficHandler,
 						"encoder",
 						NettyPipeline.ReactiveBridge,
 						"DefaultChannelPipeline$TailContext#0"));
@@ -382,7 +382,7 @@ public class ConnectionTest {
 
 		channel.pipeline()
 		       .addLast(NettyPipeline.HttpCodec, new HttpServerCodec())
-		       .addLast(NettyPipeline.HttpServerHandler, new ChannelDuplexHandler())
+		       .addLast(NettyPipeline.HttpTrafficHandler, new ChannelDuplexHandler())
 		       .addLast(NettyPipeline.ReactiveBridge, new ChannelHandlerAdapter() {
 		       });
 
@@ -392,7 +392,7 @@ public class ConnectionTest {
 		assertEquals(channel.pipeline()
 		                    .names(),
 				Arrays.asList(NettyPipeline.HttpCodec,
-						NettyPipeline.HttpServerHandler,
+						NettyPipeline.HttpTrafficHandler,
 						"encoder2",
 						"encoder1",
 						NettyPipeline.ReactiveBridge,

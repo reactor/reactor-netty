@@ -24,7 +24,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.ssl.SslHandler;
 import reactor.ipc.netty.tcp.InetSocketAddressUtil;
-
 /**
  * Resolve information about the current connection, including the
  * host (server) address, the remote (client) address and the scheme.
@@ -38,30 +37,39 @@ import reactor.ipc.netty.tcp.InetSocketAddressUtil;
  * @since 0.8
  * @see <a href="https://tools.ietf.org/html/rfc7239">rfc7239</a>
  */
-public final class ConnectionInfo {
+final class ConnectionInfo {
 
-	static final String FORWARDED_HEADER = "Forwarded";
-	static final Pattern FORWARDED_HOST_PATTERN = Pattern.compile("host=\"?([^;,\"]+)\"?");
+	static final String  FORWARDED_HEADER        = "Forwarded";
+
+	static final Pattern FORWARDED_HOST_PATTERN  = Pattern.compile("host=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_PROTO_PATTERN = Pattern.compile("proto=\"?([^;,\"]+)\"?");
-	static final Pattern FORWARDED_FOR_PATTERN = Pattern.compile("for=\"?([^;,\"]+)\"?");
-
+	static final Pattern FORWARDED_FOR_PATTERN   = Pattern.compile("for=\"?([^;,\"]+)\"?");
 	static final String XFORWARDED_IP_HEADER = "X-Forwarded-For";
+
 	static final String XFORWARDED_HOST_HEADER = "X-Forwarded-Host";
 	static final String XFORWARDED_PORT_HEADER = "X-Forwarded-Port";
 	static final String XFORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
-
 	final InetSocketAddress hostAddress;
 
 	final InetSocketAddress remoteAddress;
 
 	final String scheme;
 
+	static ConnectionInfo from(Channel channel, boolean headers, HttpRequest request) {
+		if (headers) {
+			return ConnectionInfo.newForwardedConnectionInfo(request, channel);
+		}
+		else {
+			return ConnectionInfo.newConnectionInfo(channel);
+		}
+	}
+
 	/**
 	 * Retrieve the connection information from the current connection directly
 	 * @param c the current channel
 	 * @return the connection information
 	 */
-	public static ConnectionInfo newConnectionInfo(Channel c) {
+	static ConnectionInfo newConnectionInfo(Channel c) {
 		SocketChannel channel = (SocketChannel) c; 
 		InetSocketAddress hostAddress = channel.localAddress();
 		InetSocketAddress remoteAddress = channel.remoteAddress();
@@ -76,7 +84,7 @@ public final class ConnectionInfo {
 	 * @param channel the current channel
 	 * @return the connection information
 	 */
-	public static ConnectionInfo newForwardedConnectionInfo(HttpRequest request, Channel channel) {
+	static ConnectionInfo newForwardedConnectionInfo(HttpRequest request, Channel channel) {
 		if (request.headers().contains(FORWARDED_HEADER)) {
 			return parseForwardedInfo(request, (SocketChannel)channel);
 		}
@@ -149,15 +157,15 @@ public final class ConnectionInfo {
 		this.scheme = scheme;
 	}
 
-	public InetSocketAddress getHostAddress() {
+	InetSocketAddress getHostAddress() {
 		return hostAddress;
 	}
 
-	public InetSocketAddress getRemoteAddress() {
+	InetSocketAddress getRemoteAddress() {
 		return remoteAddress;
 	}
 
-	public String getScheme() {
+	String getScheme() {
 		return scheme;
 	}
 }

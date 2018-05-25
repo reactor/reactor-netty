@@ -30,10 +30,12 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.core.Exceptions;
 import reactor.ipc.netty.ConnectionObserver;
@@ -105,6 +107,23 @@ public final class SslProvider {
 	@Nullable
 	public static SslProvider findSslSupport(Bootstrap b) {
 		SslSupportConsumer ssl = BootstrapHandlers.findConfiguration(SslSupportConsumer.class, b.config().handler());
+
+		if (ssl == null) {
+			return null;
+		}
+		return ssl.sslProvider;
+	}
+
+	/**
+	 * Find Ssl support in the given server bootstrap
+	 *
+	 * @param b a bootstrap to search
+	 *
+	 * @return any {@link SslProvider} found or null
+	 */
+	@Nullable
+	public static SslProvider findSslSupport(ServerBootstrap b) {
+		SslSupportConsumer ssl = BootstrapHandlers.findConfiguration(SslSupportConsumer.class, b.config().childHandler());
 
 		if (ssl == null) {
 			return null;
@@ -571,7 +590,7 @@ public final class SslProvider {
 		}
 
 	}
-	
+
 	static final Logger log = Loggers.getLogger(SslProvider.class);
 
 	static final SslContext DEFAULT_CLIENT_CONTEXT;
@@ -582,8 +601,14 @@ public final class SslProvider {
 	static {
 		SslContext sslContext;
 		try {
-			sslContext = SslContextBuilder.forClient()
-			                              .build();
+			io.netty.handler.ssl.SslProvider provider =
+					OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+							io.netty.handler.ssl.SslProvider.JDK;
+			sslContext =
+					SslContextBuilder.forClient()
+					                 .sslProvider(provider)
+					                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
+					                 .build();
 		}
 		catch (Exception e) {
 			sslContext = null;
@@ -597,8 +622,13 @@ public final class SslProvider {
 		SelfSignedCertificate cert;
 		try {
 			cert = new SelfSignedCertificate();
+			io.netty.handler.ssl.SslProvider provider =
+					OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+							io.netty.handler.ssl.SslProvider.JDK;
 			sslContext =
 					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+					                 .sslProvider(provider)
+					                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
 					                 .build();
 		}
 		catch (Exception e) {

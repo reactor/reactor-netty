@@ -103,20 +103,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ConnectionObserver listener,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			HttpRequest nettyRequest,
-			boolean forwarded) {
+			ConnectionInfo connectionInfo) {
 		super(c, listener);
 		this.nettyRequest = Objects.requireNonNull(nettyRequest, "nettyRequest");
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		this.compressionPredicate = compressionPredicate;
 		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
-		if (forwarded) {
-			this.connectionInfo = ConnectionInfo.newForwardedConnectionInfo(nettyRequest, channel());
-		}
-		else {
-			this.connectionInfo = ConnectionInfo.newConnectionInfo(channel());
-		}
-		chunkedTransfer(true);
+		this.connectionInfo = connectionInfo;
 	}
 
 	@Override
@@ -176,7 +170,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerResponse chunkedTransfer(boolean chunked) {
+	public HttpServerOperations chunkedTransfer(boolean chunked) {
 		if (!hasSentHeaders() && HttpUtil.isTransferEncodingChunked(nettyResponse) != chunked) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			HttpUtil.setTransferEncodingChunked(nettyResponse, chunked);

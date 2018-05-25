@@ -353,7 +353,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			}
 
 			Operators.terminate(OUTBOUND_CLOSE, this);
-			listener.onStateChange(connection, ConnectionObserver.State.DISCONNECTING);
+			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 			// Do not call directly inbound.onInboundComplete()
 			// HttpClientOperations need to notify with error
 			// when there is no response state
