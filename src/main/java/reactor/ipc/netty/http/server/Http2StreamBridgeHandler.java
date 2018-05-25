@@ -19,47 +19,60 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2StreamChannel;
+import io.netty.handler.codec.http2.HttpConversionUtil;
 import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
-import reactor.ipc.netty.channel.ChannelOperations;
 
 final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
-	final ChannelOperations.OnSetup opsFactory;
+	final boolean readForwardHeaders;
 	final ConnectionObserver listener;
 
-	ChannelHandlerContext ctx;
-
-	Http2StreamBridgeHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
-		this.opsFactory = opsFactory;
+	Http2StreamBridgeHandler(ConnectionObserver listener, boolean readForwardHeaders) {
+		this.readForwardHeaders = readForwardHeaders;
 		this.listener = listener;
 	}
 
 	@Override
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		super.handlerAdded(ctx);
-		this.ctx = ctx;
 		if (HttpServerOperations.log.isDebugEnabled()) {
-			HttpServerOperations.log.debug("New http connection, requesting read");
+			HttpServerOperations.log.debug("New http2 connection, requesting read");
 		}
 		ctx.read();
 	}
 
 	@Override
-	public void channelRead(ChannelHandlerContext ctx, Object msg) {
+	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		if (msg instanceof Http2HeadersFrame) {
-			ChannelOperations<?, ?> ops = opsFactory.create(Connection.from(ctx.channel()), listener, msg);
-			if (ops != null) {
-				ops.bind();
-				ctx.fireChannelRead(msg);
+			Http2HeadersFrame headersFrame = (Http2HeadersFrame)msg;
+			HttpRequest request;
+			if (headersFrame.isEndStream()) {
+				request = HttpConversionUtil.toFullHttpRequest(-1,
+						headersFrame.headers(),
+						ctx.channel().alloc(),
+						false);
 			}
-			return;
+			else {
+				request = HttpConversionUtil.toHttpRequest(-1,
+								headersFrame.headers(),
+								false);
+			}
+			new HttpToH2Operations(Connection.from(ctx.channel()),
+					listener,
+					request,
+					headersFrame.headers(),
+					ConnectionInfo.from(ctx.channel()
+					                       .parent(),
+							readForwardHeaders,
+							request)).bind();
 		}
 		ctx.fireChannelRead(msg);
 	}

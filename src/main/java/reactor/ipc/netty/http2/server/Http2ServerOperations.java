@@ -43,7 +43,6 @@ import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2StreamChannel;
-import io.netty.handler.codec.http2.HttpConversionUtil;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.Connection;
@@ -51,7 +50,6 @@ import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.http.HttpOperations;
-import reactor.ipc.netty.http.server.ConnectionInfo;
 import reactor.ipc.netty.http2.Http2Operations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -70,7 +68,6 @@ public class Http2ServerOperations extends Http2Operations<Http2ServerRequest, H
 	final Http2Headers nettyResponse;
 	final Http2Headers nettyRequest;
 	final int streamId;
-	final ConnectionInfo connectionInfo;
 
 	Function<? super String, Map<String, String>> paramsResolver;
 
@@ -91,9 +88,9 @@ public class Http2ServerOperations extends Http2Operations<Http2ServerRequest, H
 				else {
 					socketChannel = channel();
 				}
-				this.connectionInfo =
-						ConnectionInfo.newForwardedConnectionInfo(HttpConversionUtil.toHttpRequest(streamId, nettyRequest, false),
-								socketChannel);
+//				this.connectionInfo =
+//						ConnectionInfo.newForwardedConnectionInfo(HttpConversionUtil.toHttpRequest(streamId, nettyRequest, false),
+//								socketChannel);
 			}
 			else {
 				Channel socketChannel;
@@ -103,7 +100,7 @@ public class Http2ServerOperations extends Http2Operations<Http2ServerRequest, H
 				else {
 					socketChannel = channel();
 				}
-				this.connectionInfo = ConnectionInfo.newConnectionInfo(socketChannel);
+//				this.connectionInfo = ConnectionInfo.newConnectionInfo(socketChannel);
 			}
 		}
 		catch(Exception e) {
@@ -217,12 +214,14 @@ public class Http2ServerOperations extends Http2Operations<Http2ServerRequest, H
 
 	@Override
 	public InetSocketAddress hostAddress() {
-		return this.connectionInfo.getHostAddress();
+		return null;
+//		return this.connectionInfo.getHostAddress();
 	}
 
 	@Override
 	public InetSocketAddress remoteAddress() {
-		return this.connectionInfo.getRemoteAddress();
+		return null;
+//		return this.connectionInfo.getRemoteAddress();
 	}
 
 	@Override
@@ -235,7 +234,8 @@ public class Http2ServerOperations extends Http2Operations<Http2ServerRequest, H
 
 	@Override
 	public String scheme() {
-		return this.connectionInfo.getScheme();
+		return null;
+//		return this.connectionInfo.getScheme();
 	}
 
 	@Override

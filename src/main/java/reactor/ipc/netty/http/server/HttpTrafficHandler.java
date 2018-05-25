@@ -18,6 +18,7 @@ package reactor.ipc.netty.http.server;
 
 import java.util.Queue;
 import java.util.function.BiPredicate;
+import javax.annotation.Nullable;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -67,7 +68,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	boolean overflow;
 	boolean mustRecycleEncoder;
 
-	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders, BiPredicate<HttpServerRequest, HttpServerResponse> compress) {
+	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders,
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress) {
 		this.listener = listener;
 		this.readForwardHeaders = readForwardHeaders;
 		this.compress = compress;

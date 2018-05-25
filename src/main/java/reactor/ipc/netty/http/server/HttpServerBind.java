@@ -23,6 +23,7 @@ import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -42,7 +43,6 @@ import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.util.AsciiString;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.Connection;
 import reactor.ipc.netty.ConnectionObserver;
 import reactor.ipc.netty.DisposableServer;
 import reactor.ipc.netty.NettyPipeline;
@@ -169,9 +169,9 @@ final class HttpServerBind extends HttpServer
 		return lengthPredicate;
 	}
 
-	static void addStreamHandlers(Channel ch, ChannelOperations.OnSetup setup, ConnectionObserver listener) {
+	static void addStreamHandlers(Channel ch, ConnectionObserver listener, boolean readForwardHeaders) {
 		ch.pipeline()
-		  .addLast(new Http2StreamBridgeHandler(setup, listener))
+		  .addLast(new Http2StreamBridgeHandler(listener, readForwardHeaders))
 		  .addLast(new Http2StreamFrameToHttpObjectCodec(true));
 
 		ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
@@ -182,8 +182,7 @@ final class HttpServerBind extends HttpServer
 	}
 
 	static final class HttpServerInitializer
-			implements BiConsumer<ConnectionObserver, Channel>,
-			           ChannelOperations.OnSetup {
+			implements BiConsumer<ConnectionObserver, Channel>  {
 
 		final int                                                line;
 		final int                                                header;
@@ -213,11 +212,6 @@ final class HttpServerBind extends HttpServer
 		}
 
 		@Override
-		public ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg) {
-			return new HttpServerOperations(c, listener, compressPredicate, msg, forwarded);
-		}
-
-		@Override
 		public void accept(ConnectionObserver listener, Channel channel) {
 			ChannelPipeline p = channel.pipeline();
 
@@ -237,7 +231,8 @@ final class HttpServerBind extends HttpServer
 						new SimpleCompressionHandler());
 			}
 
-			p.addLast(NettyPipeline.HttpTrafficHandler, new HttpTrafficHandler(this, listener));
+			p.addLast(NettyPipeline.HttpTrafficHandler,
+					new HttpTrafficHandler(listener, forwarded, compressPredicate));
 		}
 	}
 
@@ -245,6 +240,7 @@ final class HttpServerBind extends HttpServer
 	 * Initialize Http1 - Http2 pipeline configuration using packet inspection
 	 * or cleartext upgrade
 	 */
+	@ChannelHandler.Sharable
 	static final class UpgradeCodecFactoryImpl extends ChannelInitializer<Channel>
 			implements HttpServerUpgradeHandler.UpgradeCodecFactory {
 
@@ -263,7 +259,7 @@ final class HttpServerBind extends HttpServer
 		 */
 		@Override
 		protected void initChannel(Channel ch) {
-			addStreamHandlers(ch, parent, listener);
+			addStreamHandlers(ch, listener, parent.forwarded);
 		}
 
 		@Override
@@ -291,8 +287,9 @@ final class HttpServerBind extends HttpServer
 	/**
 	 * Initialize Http1 - Http2 pipeline configuration using SSL detection
 	 */
+	@ChannelHandler.Sharable
 	static final class HttpServerSecuredInitializer extends ApplicationProtocolNegotiationHandler
-			implements BiConsumer<ConnectionObserver, Channel>, ChannelOperations.OnSetup {
+			implements BiConsumer<ConnectionObserver, Channel> {
 
 		final int                                                line;
 		final int                                                header;
@@ -326,11 +323,6 @@ final class HttpServerBind extends HttpServer
 			this.forwarded = forwarded;
 		}
 
-
-		@Override
-		public ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg) {
-			return new HttpServerOperations(c, listener, compressPredicate, msg, forwarded);
-		}
 
 		@Override
 		public void accept(ConnectionObserver observer, Channel channel) {
@@ -367,7 +359,7 @@ final class HttpServerBind extends HttpServer
 						new HttpServerCodec(line, header, chunk, validate, buffer))
 				 .addBefore(NettyPipeline.ReactiveBridge,
 						NettyPipeline.HttpTrafficHandler,
-						new HttpTrafficHandler(this, listener));
+						new HttpTrafficHandler( listener, forwarded, compressPredicate));
 
 				boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
@@ -397,7 +389,7 @@ final class HttpServerBind extends HttpServer
 
 		@Override
 		protected void initChannel(Channel ch) {
-			addStreamHandlers(ch, parent, listener);
+			addStreamHandlers(ch, listener, parent.forwarded);
 		}
 	}
 }
