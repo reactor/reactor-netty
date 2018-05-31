@@ -32,6 +32,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.nio.NioEventLoop;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.ssl.SslHandler;
@@ -171,10 +172,11 @@ final class ReactorNetty {
 		}
 	}
 
-	static boolean canTransferFile(Connection c, Path file) {
-		return c.channel().pipeline().get(SslHandler.class) != null  ||
-				c.channel().pipeline().get(Http2ConnectionHandler.class) != null ||
-				c.channel().pipeline().get(NettyPipeline.CompressionHandler) != null ||
+	static boolean mustChunkFileTransfer(Connection c, Path file) {
+		ChannelPipeline p = c.channel().pipeline();
+		return p.get(SslHandler.class) != null  ||
+				p.get(Http2ConnectionHandler.class) != null ||
+				p.get(NettyPipeline.CompressionHandler) != null ||
 				(!(c.channel().eventLoop() instanceof NioEventLoop) &&
 						!"file".equals(file.toUri().getScheme()));
 	}

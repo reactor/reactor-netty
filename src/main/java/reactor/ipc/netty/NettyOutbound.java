@@ -164,7 +164,7 @@ public interface NettyOutbound extends Publisher<Void> {
 
 		return sendUsing(() -> FileChannel.open(file, StandardOpenOption.READ),
 				(c, fc) -> {
-					if (!ReactorNetty.canTransferFile(c, file)) {
+					if (ReactorNetty.mustChunkFileTransfer(c, file)) {
 						ReactorNetty.addChunkedWriter(c);
 						try {
 							return new ChunkedNioFile(fc, position, count, 1024);
