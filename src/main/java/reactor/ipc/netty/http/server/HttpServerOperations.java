@@ -65,8 +65,6 @@ import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
-import reactor.ipc.netty.http2.server.Http2ServerRequest;
-import reactor.ipc.netty.http2.server.Http2ServerResponse;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -343,11 +341,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return this.status(HttpResponseStatus.FOUND)
 		           .header(HttpHeaderNames.LOCATION, location)
 		           .send();
-	}
-
-	@Override
-	public Mono<Void> asHttp2(BiFunction<? super Http2ServerRequest, ? super Http2ServerResponse, ? extends Publisher<Void>> handler) {
-		return Mono.error(new IllegalStateException("Current operations is running on HTTP1 protocol channel"));
 	}
 
 	/**

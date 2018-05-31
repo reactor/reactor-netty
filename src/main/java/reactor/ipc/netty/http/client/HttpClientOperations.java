@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -75,8 +74,6 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.http.Cookies;
 import reactor.ipc.netty.http.HttpOperations;
-import reactor.ipc.netty.http2.client.Http2ClientRequest;
-import reactor.ipc.netty.http2.client.Http2ClientResponse;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -596,19 +593,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						":"+get(channel())+" to "+ops);
 			}
 		}
-	}
-
-	@Override
-	public Mono<Void> asHttp2(
-			BiFunction<? super Http2ClientRequest, ? super Http2ClientResponse, ? extends Publisher<Void>> handler) {
-		return withHttp2Support(handler);
-	}
-
-	final Mono<Void> withHttp2Support(
-			BiFunction<? super Http2ClientRequest, ? super Http2ClientResponse, ? extends Publisher<Void>> handler) {
-		Objects.requireNonNull(handler, "handler");
-
-		return Mono.empty();
 	}
 
 	static final class ResponseState {

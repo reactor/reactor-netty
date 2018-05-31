@@ -19,7 +19,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -31,8 +30,6 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.HttpInfos;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
-import reactor.ipc.netty.http2.server.Http2ServerRequest;
-import reactor.ipc.netty.http2.server.Http2ServerResponse;
 
 /**
  *
@@ -133,9 +130,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return a {@link Mono} successful on committed response
 	 * @see #send(Publisher)
 	 */
-	default Mono<Void> send(){
-		return sendObject(Unpooled.EMPTY_BUFFER).then();
-	}
+	Mono<Void> send();
 
 	/**
 	 * Return a {@link NettyOutbound} successful on committed response
@@ -171,9 +166,6 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return sendWebsocket(null, websocketHandler);
 	}
-
-	Mono<Void> asHttp2(
-			BiFunction<? super Http2ServerRequest, ? super Http2ServerResponse, ? extends Publisher<Void>> handler);
 
 	 /**
 	 * Upgrade connection to Websocket with optional subprotocol(s). Mono and Callback

@@ -535,7 +535,7 @@ public class HttpTests {
 	public void testHttpToHttp2ClearText() {
 		DisposableServer server =
 				HttpServer.create()
-				          .handle((req, res) -> res.asHttp2((in, out) -> out.sendString(Mono.just("Hello"))))
+				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
 				          .wiretap()
 				          .bindNow();
 

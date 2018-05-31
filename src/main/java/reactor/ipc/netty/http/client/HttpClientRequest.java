@@ -18,13 +18,7 @@ package reactor.ipc.netty.http.client;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Mono;
 import reactor.ipc.netty.http.HttpInfos;
-import reactor.ipc.netty.http2.client.Http2ClientRequest;
-import reactor.ipc.netty.http2.client.Http2ClientResponse;
-
-import java.util.function.BiFunction;
 
 /**
  * An Http Reactive client metadata contract for outgoing requests. It inherits several
@@ -105,7 +99,4 @@ public interface HttpClientRequest extends HttpInfos {
 	 * @return outbound headers to be sent
 	 */
 	HttpHeaders requestHeaders();
-
-	Mono<Void> asHttp2(
-			BiFunction<? super Http2ClientRequest, ? super Http2ClientResponse, ? extends Publisher<Void>> handler);
 }
