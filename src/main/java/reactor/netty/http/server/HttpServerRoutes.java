@@ -178,6 +178,22 @@ public interface HttpServerRoutes extends
 	}
 
 	/**
+	 * Listen for HTTP HEAD on the passed path to be used as a routing condition. Incoming
+	 * connections will query the internal registry to invoke the matching handlers. <p>
+	 * Additional regex matching is available e.g.
+	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 *
+	 * @param path The HEAD path used by clients
+	 * @param handler an handler to invoke for the given condition
+	 *
+	 * @return this {@link HttpServerRoutes}
+	 */
+	default HttpServerRoutes head(String path,
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+		return route(HttpPredicate.head(path), handler);
+	}
+
+	/**
 	 * This route will be invoked when GET "/path" or "/path/" like uri are requested.
 	 *
 	 * @param handler an handler to invoke on index/root request
@@ -186,6 +202,22 @@ public interface HttpServerRoutes extends
 	 */
 	default HttpServerRoutes index(final BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		return route(INDEX_PREDICATE, handler);
+	}
+
+	/**
+	 * Listen for HTTP OPTIONS on the passed path to be used as a routing condition. Incoming
+	 * connections will query the internal registry to invoke the matching handlers. <p>
+	 * Additional regex matching is available e.g.
+	 * "/test/{param}". Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 *
+	 * @param path The OPTIONS path used by clients
+	 * @param handler an handler to invoke for the given condition
+	 *
+	 * @return this {@link HttpServerRoutes}
+	 */
+	default HttpServerRoutes options(String path,
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
+		return route(HttpPredicate.options(path), handler);
 	}
 
 	/**
