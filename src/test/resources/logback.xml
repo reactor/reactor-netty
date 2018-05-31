@@ -35,10 +35,10 @@
 
     <!--<logger name="reactor" level="DEBUG"/>-->
     <!--<logger name="reactor" level="INFO"/>-->
-    <logger name="reactor.ipc.netty" level="DEBUG" />
-    <!--<logger name="reactor.ipc.netty.http.client.HttpClient" level="DEBUG" />-->
-    <!--<logger name="reactor.ipc.netty.channel.FluxReceive" level="DEBUG" />-->
-    <!--<logger name="reactor.ipc.netty.http.server.HttpServer" level="DEBUG" />-->
+    <logger name="reactor.netty" level="DEBUG" />
+    <!--<logger name="reactor.netty.http.client.HttpClient" level="DEBUG" />-->
+    <!--<logger name="reactor.netty.channel.FluxReceive" level="DEBUG" />-->
+    <!--<logger name="reactor.netty.http.server.HttpServer" level="DEBUG" />-->
 
     <root level="info">
         <appender-ref ref="stdout"/>

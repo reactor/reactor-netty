@@ -76,7 +76,7 @@ ext {
 
 
 configure(rootProject) { project ->
-  group = 'io.projectreactor.ipc'
+  group = 'io.projectreactor.netty'
 
   apply plugin: 'java'
   apply plugin: 'jacoco'
@@ -198,7 +198,7 @@ configure(rootProject) { project ->
 	jcenter()
   }
 
-	def os_suffix = "";
+	def os_suffix = ""
 	if (osdetector.classifier in ["linux-x86_64"] || ["osx-x86_64"] || ["windows-x86_64"]) {
 		os_suffix = ":" + osdetector.classifier
 	}
