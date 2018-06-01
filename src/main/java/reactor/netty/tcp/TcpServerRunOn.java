@@ -17,12 +17,10 @@
 package reactor.netty.tcp;
 
 import java.util.Objects;
-import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.SslContext;
 import reactor.netty.resources.LoopResources;
 
 /**
@@ -43,16 +41,18 @@ final class TcpServerRunOn extends TcpServerOperator {
 	public ServerBootstrap configure() {
 		ServerBootstrap b = source.configure();
 
-		configure(b, preferNative, loopResources, sslContext());
+		configure(b, preferNative, loopResources);
 
 		return b;
 	}
 
 	static void configure(ServerBootstrap b,
 			boolean preferNative,
-			LoopResources resources,
-			@Nullable SslContext sslContext) {
-		boolean useNative = preferNative && !(sslContext instanceof JdkSslContext);
+			LoopResources resources) {
+		SslProvider sslProvider =  SslProvider.findSslSupport(b);
+
+		boolean useNative = preferNative &&
+				(sslProvider == null || !(sslProvider.sslContext instanceof JdkSslContext));
 		EventLoopGroup selectorGroup = resources.onServerSelect(useNative);
 		EventLoopGroup elg = resources.onServer(useNative);
 

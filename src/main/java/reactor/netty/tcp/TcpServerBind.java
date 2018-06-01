@@ -49,10 +49,7 @@ final class TcpServerBind extends TcpServer {
 		if (b.config()
 		     .group() == null) {
 
-			TcpServerRunOn.configure(b,
-					LoopResources.DEFAULT_NATIVE,
-					TcpResources.get(),
-					SslProvider.findSslContext(b));
+			TcpServerRunOn.configure(b, LoopResources.DEFAULT_NATIVE, TcpResources.get());
 		}
 
 		return Mono.create(sink -> {

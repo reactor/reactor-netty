@@ -335,7 +335,7 @@ public abstract class TcpServer {
 	 * @return true if that {@link TcpServer} secured via SSL transport
 	 */
 	public final boolean isSecure(){
-		return sslContext() != null;
+		return sslProvider() != null;
 	}
 
 	/**
@@ -501,14 +501,14 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Return the current {@link SslContext} if that {@link TcpServer} secured via SSL
+	 * Return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
 	 * transport or null
 	 *
-	 * @return he current {@link SslContext} if that {@link TcpServer} secured via SSL
+	 * @return he current {@link SslProvider} if that {@link TcpServer} secured via SSL
 	 * transport or null
 	 */
 	@Nullable
-	public SslContext sslContext() {
+	public SslProvider sslProvider() {
 		return null;
 	}
 

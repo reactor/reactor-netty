@@ -168,8 +168,8 @@ final class HttpClientConnect extends HttpClient {
 
 		@Nullable
 		@Override
-		public SslContext sslContext() {
-			return defaultClient.sslContext();
+		public SslProvider sslProvider() {
+			return defaultClient.sslProvider();
 		}
 	}
 
@@ -195,8 +195,17 @@ final class HttpClientConnect extends HttpClient {
 		public void subscribe(CoreSubscriber<? super Connection> actual) {
 			final Bootstrap b = bootstrap.clone();
 
-			HttpClientHandler handler = new HttpClientHandler(b.config()
-			                                                   .remoteAddress(), configuration);
+			SslProvider ssl = SslProvider.findSslSupport(b);
+			if (ssl != null) {
+				SslProvider.updateSslSupport(b,
+						SslProvider.addHandlerConfigurator(ssl,
+								DEFAULT_HOSTNAME_VERIFICATION));
+			}
+
+			HttpClientHandler handler = new HttpClientHandler(configuration, b.config()
+			                                                                  .remoteAddress(), ssl);
+
+			b.remoteAddress(handler);
 
 			BootstrapHandlers.updateConfiguration(b,
 					NettyPipeline.HttpInitializer,
@@ -213,23 +222,25 @@ final class HttpClientConnect extends HttpClient {
 
 					});
 
-			b.remoteAddress(handler);
-
-			SslProvider ssl = SslProvider.findSslSupport(b);
-			if (ssl != null) {
-				SslProvider.updateSslSupport(b,
-						SslProvider.addHandlerConfigurator(ssl,
-								DEFAULT_HOSTNAME_VERIFICATION));
-			}
-
 			Mono.<Connection>create(sink -> {
 				Bootstrap finalBootstrap;
 				//append secure handler if needed
 				if (handler.activeURI.isSecure()) {
-					finalBootstrap = SslProvider.updateSslSupport(b.clone(), DEFAULT_HTTP_SSL_PROVIDER);
+					if (ssl == null) {
+						finalBootstrap = SslProvider.updateSslSupport(b.clone(),
+								DEFAULT_HTTP_SSL_PROVIDER);
+					}
+					else {
+						finalBootstrap = b.clone();
+					}
 				}
 				else {
-					finalBootstrap = b.clone();
+					if (ssl != null) {
+						finalBootstrap = SslProvider.removeSslSupport(b.clone());
+					}
+					else {
+						finalBootstrap = b.clone();
+					}
 				}
 
 				BootstrapHandlers.connectionObserver(finalBootstrap,
@@ -337,7 +348,7 @@ final class HttpClientConnect extends HttpClient {
 		volatile Supplier<String>[] redirectedFrom;
 
 		@SuppressWarnings("unchecked")
-		HttpClientHandler(@Nullable SocketAddress address, HttpClientConfiguration configuration) {
+		HttpClientHandler(HttpClientConfiguration configuration, @Nullable SocketAddress address, @Nullable SslProvider sslProvider) {
 			this.method = configuration.method;
 			this.compress = configuration.acceptGzip;
 			this.followRedirect = configuration.followRedirect;
@@ -380,7 +391,7 @@ final class HttpClientConnect extends HttpClient {
 			}
 
 			this.uriEndpointFactory =
-					new UriEndpointFactory(addressSupplier, false, URI_ADDRESS_MAPPER);
+					new UriEndpointFactory(addressSupplier, sslProvider != null, URI_ADDRESS_MAPPER);
 
 			this.websocketProtocols = configuration.websocketSubprotocols;
 			this.handler = configuration.body;

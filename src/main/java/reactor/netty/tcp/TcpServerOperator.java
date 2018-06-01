@@ -19,7 +19,6 @@ import java.util.Objects;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.handler.ssl.SslContext;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 
@@ -46,7 +45,7 @@ abstract class TcpServerOperator extends TcpServer {
 
 	@Override
 	@Nullable
-	public SslContext sslContext(){
-		return source.sslContext();
+	public SslProvider sslProvider(){
+		return source.sslProvider();
 	}
 }

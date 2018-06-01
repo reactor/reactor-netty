@@ -19,7 +19,6 @@ package reactor.netty.tcp;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.handler.ssl.SslContext;
 
 /**
  * @author Stephane Maldini
@@ -37,7 +36,7 @@ final class TcpServerUnsecure extends TcpServerOperator {
 
 	@Override
 	@Nullable
-	public SslContext sslContext(){
+	public SslProvider sslProvider(){
 		return null;
 	}
 }
