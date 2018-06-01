@@ -106,7 +106,7 @@ public final class SslProvider {
 	 */
 	@Nullable
 	public static SslProvider findSslSupport(Bootstrap b) {
-		SslSupportConsumer ssl = BootstrapHandlers.findConfiguration(SslSupportConsumer.class, b.config().handler());
+		DeferredSslSupport ssl = BootstrapHandlers.findConfiguration(DeferredSslSupport.class, b.config().handler());
 
 		if (ssl == null) {
 			return null;
@@ -129,6 +129,18 @@ public final class SslProvider {
 			return null;
 		}
 		return ssl.sslProvider;
+	}
+
+	/**
+	 * Remove Ssl support in the given client bootstrap
+	 *
+	 * @param b a bootstrap to search and remove
+	 *
+	 * @return passed {@link Bootstrap}
+	 */
+	public static Bootstrap removeSslSupport(Bootstrap b) {
+		BootstrapHandlers.removeConfiguration(b, NettyPipeline.SslHandler);
+		return b;
 	}
 
 	final SslContext                   sslContext;
@@ -427,29 +439,6 @@ public final class SslProvider {
 		 */
 		Builder forServer();
 
-	}
-
-	@Nullable
-	static SslContext findSslContext(Bootstrap b) {
-		SslSupportConsumer c =
-				BootstrapHandlers.findConfiguration(SslSupportConsumer.class,
-						b.config().handler());
-
-		return c != null ? c.sslProvider.getSslContext() : null;
-	}
-
-	@Nullable
-	static SslContext findSslContext(ServerBootstrap b) {
-		SslSupportConsumer c =
-				BootstrapHandlers.findConfiguration(SslSupportConsumer.class,
-						b.config().childHandler());
-
-		return c != null ? c.sslProvider.getSslContext() : null;
-	}
-
-	static Bootstrap removeSslSupport(Bootstrap b) {
-		BootstrapHandlers.removeConfiguration(b, NettyPipeline.SslHandler);
-		return b;
 	}
 
 	static ServerBootstrap removeSslSupport(ServerBootstrap b) {

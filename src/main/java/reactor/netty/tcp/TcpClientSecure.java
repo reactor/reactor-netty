@@ -21,7 +21,6 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.handler.ssl.SslContext;
 
 /**
  * @author Stephane Maldini
@@ -54,8 +53,8 @@ final class TcpClientSecure extends TcpClientOperator {
 	}
 
 	@Override
-	public SslContext sslContext(){
-		return this.sslProvider.getSslContext();
+	public SslProvider sslProvider(){
+		return this.sslProvider;
 	}
 
 }

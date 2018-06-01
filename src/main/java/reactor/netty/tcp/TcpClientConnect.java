@@ -45,8 +45,7 @@ final class TcpClientConnect extends TcpClient {
 
 			TcpClientRunOn.configure(b,
 					LoopResources.DEFAULT_NATIVE,
-					TcpResources.get(),
-					SslProvider.findSslContext(b));
+					TcpResources.get());
 		}
 
 		return provider.acquire(b);

@@ -136,6 +136,9 @@ public abstract class BootstrapHandlers {
 				if (clazz.isInstance(aRph.consumer)) {
 					return (C) aRph.consumer;
 				}
+				if (clazz.isInstance(aRph.deferredConsumer)) {
+					return (C) aRph.deferredConsumer;
+				}
 			}
 		}
 		return null;
