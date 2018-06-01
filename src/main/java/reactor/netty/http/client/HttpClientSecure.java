@@ -68,7 +68,6 @@ final class HttpClientSecure extends HttpClientOperator {
 					SslContextBuilder.forClient()
 					                 .sslProvider(provider)
 					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
-					                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
 					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
 							                 ApplicationProtocolConfig.Protocol.ALPN,
 							                 ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,

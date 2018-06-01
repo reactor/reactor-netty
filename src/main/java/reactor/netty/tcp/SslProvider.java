@@ -596,7 +596,6 @@ public final class SslProvider {
 			sslContext =
 					SslContextBuilder.forClient()
 					                 .sslProvider(provider)
-					                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
 					                 .build();
 		}
 		catch (Exception e) {
@@ -617,7 +616,6 @@ public final class SslProvider {
 			sslContext =
 					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
 					                 .sslProvider(provider)
-					                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
 					                 .build();
 		}
 		catch (Exception e) {

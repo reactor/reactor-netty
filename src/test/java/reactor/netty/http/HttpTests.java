@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -503,7 +504,7 @@ public class HttpTests {
 		String response =
 				HttpClient.create()
 				          .port(server.port())
-				          .secure()
+						  .secure(ssl -> ssl.forClient().sslContext(s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE)))
 				          .wiretap()
 				          .get()
 				          .uri("/")
