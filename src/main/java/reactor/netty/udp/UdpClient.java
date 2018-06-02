@@ -311,7 +311,7 @@ public abstract class UdpClient {
 	/**
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
 	 * container. Will prefer native (epoll) implementation if available unless the
-	 * environment property {@literal reactor..netty.epoll} is set to {@literal
+	 * environment property {@literal reactor.netty.epoll} is set to {@literal
 	 * false}.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime

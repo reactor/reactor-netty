@@ -41,14 +41,14 @@ public interface LoopResources extends Disposable {
 	 * Default worker thread count, fallback to available processor
 	 */
 	int DEFAULT_IO_WORKER_COUNT = Integer.parseInt(System.getProperty(
-			"reactor..netty.workerCount",
+			"reactor.netty.workerCount",
 			"" + Math.max(Runtime.getRuntime()
 			            .availableProcessors(), 4)));
 	/**
 	 * Default selector thread count, fallback to -1 (no selector thread)
 	 */
 	int DEFAULT_IO_SELECT_COUNT = Integer.parseInt(System.getProperty(
-			"reactor..netty.selectCount",
+			"reactor.netty.selectCount",
 			"" + -1));
 
 	boolean DEFAULT_NATIVE = Boolean.parseBoolean(System.getProperty(

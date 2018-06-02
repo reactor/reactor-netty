@@ -440,7 +440,7 @@ public abstract class TcpClient {
 	/**
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the
 	 * {@link LoopResources} container. Will prefer native (epoll) implementation if
-	 * available unless the environment property {@literal reactor..netty.epoll} is set
+	 * available unless the environment property {@literal reactor.netty.epoll} is set
 	 * to {@literal false}.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime expectation and
@@ -470,7 +470,7 @@ public abstract class TcpClient {
 	 * Enable default sslContext support. The default {@link SslContext} will be
 	 * assigned to
 	 * with a default value of {@literal 10} seconds handshake timeout unless
-	 * the environment property {@literal reactor..netty.sslHandshakeTimeout} is set.
+	 * the environment property {@literal reactor.netty.sslHandshakeTimeout} is set.
 	 *
 	 * @return a new {@link TcpClient}
 	 */
@@ -482,7 +482,7 @@ public abstract class TcpClient {
 	 * Apply an SSL configuration customization via the passed builder. The builder
 	 * will produce the {@link SslContext} to be passed to with a default value of
 	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
-	 * reactor..netty.sslHandshakeTimeout} is set.
+	 * reactor.netty.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 *
@@ -495,7 +495,7 @@ public abstract class TcpClient {
 	/**
 	 * Apply an SSL configuration customization via the passed {@link SslContext}.
 	 * with a default value of {@literal 10} seconds handshake timeout unless
-	 * the environment property {@literal reactor..netty.sslHandshakeTimeout} is set.
+	 * the environment property {@literal reactor.netty.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslContext The context to set when configuring SSL
 	 *

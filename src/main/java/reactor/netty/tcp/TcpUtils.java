@@ -52,7 +52,7 @@ final class TcpUtils {
 
 				if (log.isDebugEnabled()) {
 					channel.pipeline()
-					       .addFirst(new LoggingHandler("reactor..netty.proxy"));
+					       .addFirst(new LoggingHandler("reactor.netty.proxy"));
 				}
 			}
 		});

@@ -38,7 +38,7 @@ public interface ConnectionProvider extends Disposable {
 	 * available number of processors.
 	 */
 	int DEFAULT_POOL_MAX_CONNECTION =
-			Integer.parseInt(System.getProperty("reactor..netty.pool.maxConnections",
+			Integer.parseInt(System.getProperty("reactor.netty.pool.maxConnections",
 			"" + Math.max(Runtime.getRuntime()
 			            .availableProcessors(), 8) * 2));
 
@@ -49,7 +49,7 @@ public interface ConnectionProvider extends Disposable {
 	 * available number of processors.
 	 */
 	long DEFAULT_POOL_ACQUIRE_TIMEOUT = Long.parseLong(System.getProperty(
-			"reactor..netty.pool.acquireTimeout",
+			"reactor.netty.pool.acquireTimeout",
 			"" + 45000));
 
 	/**

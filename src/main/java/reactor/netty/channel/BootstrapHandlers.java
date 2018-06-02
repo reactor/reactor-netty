@@ -423,7 +423,7 @@ public abstract class BootstrapHandlers {
 					channel.pipeline()
 							.addBefore(NettyPipeline.SslHandler,
 									NettyPipeline.SslLoggingHandler,
-									new LoggingHandler("reactor..netty.tcp.ssl"));
+									new LoggingHandler("reactor.netty.tcp.ssl"));
 				}
 				channel.pipeline()
 						.addAfter(NettyPipeline.SslHandler,

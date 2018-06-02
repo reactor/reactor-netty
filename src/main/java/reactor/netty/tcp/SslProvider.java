@@ -213,7 +213,7 @@ public final class SslProvider {
 
 		static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT =
 				Long.parseLong(System.getProperty(
-						"reactor..netty.sslHandshakeTimeout",
+						"reactor.netty.sslHandshakeTimeout",
 						"10000"));
 
 		static final SelfSignedCertificate DEFAULT_SSL_CONTEXT_SELF;
