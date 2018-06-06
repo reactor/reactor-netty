@@ -173,9 +173,12 @@ final class ReactorNetty {
 	}
 
 	static boolean mustChunkFileTransfer(Connection c, Path file) {
+		// if channel multiplexing a parrent channel as an http2 stream
+		if (c.channel().parent() != null && c.channel().parent().pipeline().get(Http2ConnectionHandler.class) != null) {
+			return true;
+		}
 		ChannelPipeline p = c.channel().pipeline();
 		return p.get(SslHandler.class) != null  ||
-				p.get(Http2ConnectionHandler.class) != null ||
 				p.get(NettyPipeline.CompressionHandler) != null ||
 				(!(c.channel().eventLoop() instanceof NioEventLoop) &&
 						!"file".equals(file.toUri().getScheme()));
