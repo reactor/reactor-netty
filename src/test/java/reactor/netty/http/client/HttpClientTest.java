@@ -154,7 +154,7 @@ public class HttpClientTest {
 
 		final HttpClient client =
 				HttpClient.create(pool)
-				          .addressSupplier(() -> serverContext.address())
+				          .addressSupplier(serverContext::address)
 				          .wiretap();
 		Flux.just("1", "2", "3")
 		    .concatMap(data ->
@@ -265,14 +265,13 @@ public class HttpClientTest {
 				                             .flatMap(d -> resp.withConnection(cn -> cn.channel()
 				                                                                       .config()
 				                                                                       .setAutoRead(
-						                                                                       true))
+				                                                                               true))
 				                                               .sendObject(Unpooled.EMPTY_BUFFER)
 				                                               .then()
 				                                               .doOnSuccess(x -> req.withConnection(
-						                                               cn -> cn.channel()
-						                                                       .config()
-						                                                       .setAutoRead(
-								                                                       false))));
+				                                                       cn -> cn.channel()
+				                                                               .config()
+				                                                               .setAutoRead(false))));
 				          })
 				          .wiretap()
 				          .bindNow();
@@ -346,31 +345,32 @@ public class HttpClientTest {
 		            .verify(Duration.ofSeconds(30));
 	}
 
-//	@Test
+	@Test
+	@Ignore
 	public void postUpload() {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
-		//Path f = Paths.get("/Users/smaldini/Downloads/IMG_6702.mp4");
-		int res = HttpClient.create()
-		                    .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
-		                    .wiretap()
-		                    .put()
-		                    .uri("/post")
-		                    .sendForm((req, form) -> form.multipart(true)
-		                                                 .file("test", f)
-		                                                 .attr("att1", "attr2")
-		                                                 .file("test2", f))
-		                    .responseSingle((r, buf) -> Mono.just(r.status().code()))
-		                    .block(Duration.ofSeconds(30));
-		res = HttpClient.create()
-		                .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
-		                .wiretap()
-		                .followRedirect()
-		                .get()
-		                .uri("/search")
-		                .responseSingle((r, out) -> Mono.just(r.status().code()))
-		                .log()
-		                .block(Duration.ofSeconds(30));
+		HttpClient.create()
+		          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+		          .wiretap()
+		          .put()
+		          .uri("/post")
+		          .sendForm((req, form) -> form.multipart(true)
+		                                       .file("test", f)
+		                                       .attr("att1", "attr2")
+		                                       .file("test2", f))
+		          .responseSingle((r, buf) -> Mono.just(r.status().code()))
+		          .block(Duration.ofSeconds(30));
+		Integer res = HttpClient.create()
+		                        .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+		                        .wiretap()
+		                        .followRedirect()
+		                        .get()
+		                        .uri("/search")
+		                        .responseSingle((r, out) -> Mono.just(r.status().code()))
+		                        .log()
+		                        .block(Duration.ofSeconds(30));
 
+		assertThat(res).isNotNull();
 		if (res != 200) {
 			throw new IllegalStateException("test status failed with " + res);
 		}
@@ -394,13 +394,14 @@ public class HttpClientTest {
 	}
 
 	private void doSimpleTest404(HttpClient client) {
-		int res = client.followRedirect()
-				        .get()
-				        .uri("/unsupportedURI")
-				        .responseSingle((r, buf) -> Mono.just(r.status().code()))
-				        .log()
-				        .block();
+		Integer res = client.followRedirect()
+				            .get()
+				            .uri("/unsupportedURI")
+				            .responseSingle((r, buf) -> Mono.just(r.status().code()))
+				            .log()
+				            .block();
 
+		assertThat(res).isNotNull();
 		if (res != 404) {
 			throw new IllegalStateException("test status failed with " + res);
 		}
@@ -417,7 +418,7 @@ public class HttpClientTest {
 				          .uri("/unsupportedURI")
 				          .send(ByteBufFlux.fromString(Flux.just("hello")))
 				          .responseSingle((res, conn) -> Mono.just(res.status())
-				                                                 .zipWith(conn.asString()))
+				                                             .zipWith(conn.asString()))
 				          .block(Duration.ofSeconds(30));
 
 		assertThat(r).isNotNull();
@@ -459,14 +460,13 @@ public class HttpClientTest {
 				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 				          .block(Duration.ofSeconds(30));
 
-		HttpResponseStatus r2 =
-				HttpClient.create(p)
-				          .doOnResponse((res, c) -> ch2.set(c.channel()))
-				          .wiretap()
-				          .get()
-				          .uri("http://google.com/unsupportedURI")
-				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
-				          .block(Duration.ofSeconds(30));
+		HttpClient.create(p)
+		          .doOnResponse((res, c) -> ch2.set(c.channel()))
+		          .wiretap()
+		          .get()
+		          .uri("http://google.com/unsupportedURI")
+		          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
+		          .block(Duration.ofSeconds(30));
 
 		AtomicBoolean same = new AtomicBoolean();
 
@@ -588,7 +588,6 @@ public class HttpClientTest {
 				                             .responseContent()
 				                             .timeout(signal))
 				    .verifyError(TimeoutException.class);
-//		Thread.sleep(1000000);
 	}
 
 	@Test
@@ -1018,7 +1017,7 @@ public class HttpClientTest {
 		server.dispose();
 	}
 
-	HttpClient createHttpClientForContext(DisposableServer context) {
+	private HttpClient createHttpClientForContext(DisposableServer context) {
 		return HttpClient.create()
 		                 .addressSupplier(context::address)
 		                 .wiretap();

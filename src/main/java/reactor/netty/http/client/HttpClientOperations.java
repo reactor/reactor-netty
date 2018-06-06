@@ -347,14 +347,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			                .doOnNext(ByteBuf::retain)
 			                .collect(alloc::buffer, ByteBuf::writeBytes)
 			                .flatMapMany(agg -> {
-			                    if (!hasSentHeaders() &&
-			                            !HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) &&
-			                            !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-			                        outboundHttpMessage().headers()
-			                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
-			                                                     agg.readableBytes());
-			                    }
-			                    return super.send(Mono.just(agg)).then();
+			                        if (!hasSentHeaders() &&
+			                                !HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) &&
+			                                !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+			                            outboundHttpMessage().headers()
+			                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH,
+			                                                         agg.readableBytes());
+			                        }
+			                        return super.send(Mono.just(agg)).then();
 			                }));
 		}
 		return super.send(source);
@@ -590,7 +590,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			if(!rebind(ops)) {
 				log.error("Error while rebinding websocket in channel attribute: " +
-						":"+get(channel())+" to "+ops);
+						get(channel()) + " to " + ops);
 			}
 		}
 	}
