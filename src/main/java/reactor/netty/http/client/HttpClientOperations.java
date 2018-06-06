@@ -434,6 +434,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected void onOutboundError(Throwable err) {
 		if(isPersistent() && responseState == null){
 			listener().onUncaughtException(this, err);
+			if (markSentBody()) {
+				markPersistent(false);
+			}
 			terminate();
 			return;
 		}

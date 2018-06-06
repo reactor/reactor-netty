@@ -1022,4 +1022,49 @@ public class HttpClientTest {
 		                 .addressSupplier(context::address)
 		                 .wiretap();
 	}
+
+	@Test
+	public void testIssue361() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> req.receive()
+				                                   .aggregate()
+				                                   .asString()
+				          .flatMap(s -> res.sendString(Mono.just(s))
+				                           .then()))
+				          .bindNow();
+
+		assertThat(server).isNotNull();
+
+		ConnectionProvider connectionProvider = ConnectionProvider.fixed("test", 1);
+		HttpClient client =
+				HttpClient.create(connectionProvider)
+				          .port(server.address().getPort());
+
+		String response = client.post()
+		                        .uri("/")
+		                        .send(ByteBufFlux.fromString(Mono.just("test")
+		                                         .then(Mono.error(new Exception("error")))))
+		                        .responseContent()
+		                        .aggregate()
+		                        .asString()
+		                        .onErrorResume(t -> Mono.just(t.getMessage()))
+		                        .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("error");
+
+		response = client.post()
+		                 .uri("/")
+		                 .send(ByteBufFlux.fromString(Mono.just("test")))
+		                 .responseContent()
+		                 .aggregate()
+		                 .asString()
+		                 .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("test");
+
+		server.dispose();
+		connectionProvider.dispose();
+	}
 }
