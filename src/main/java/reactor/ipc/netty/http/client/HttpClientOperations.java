@@ -524,6 +524,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	protected void onOutboundError(Throwable err) {
 		if(NettyContext.isPersistent(channel()) && responseState == null){
 			parentContext().fireContextError(err);
+			if (markSentBody()) {
+				markPersistent(false);
+			}
 			onHandlerTerminate();
 			return;
 		}

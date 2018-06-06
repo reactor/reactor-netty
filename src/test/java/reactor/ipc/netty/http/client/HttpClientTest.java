@@ -936,4 +936,44 @@ public class HttpClientTest {
 
 		server.dispose();
 	}
+
+	@Test
+	public void testIssue361() {
+		NettyContext server =
+				HttpServer.create(0)
+				          .newHandler((req, res) -> req.receive()
+				                                       .aggregate()
+				                                       .asString()
+				                                       .flatMap(s -> res.sendString(Mono.just(s))
+				                                                        .then()))
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(server).isNotNull();
+
+		PoolResources fixedPool = PoolResources.fixed("test", 1);
+		HttpClient client =
+				HttpClient.create(ops -> ops.port(server.address().getPort())
+				                            .poolResources(fixedPool));
+
+		String response = client.post("/", req -> req.sendString(Mono.just("test"))
+		                                             .send(Mono.error(new Exception("error"))))
+		                        .flatMap(res -> res.receive()
+		                                           .aggregate()
+		                                           .asString())
+		                        .onErrorResume(t -> Mono.just(t.getMessage()))
+		                        .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("error");
+
+		response = client.post("/", req -> req.sendString(Mono.just("test")))
+		                 .flatMap(res -> res.receive()
+		                                    .aggregate()
+		                                    .asString())
+		                 .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("test");
+
+		server.dispose();
+		fixedPool.dispose();
+	}
 }
