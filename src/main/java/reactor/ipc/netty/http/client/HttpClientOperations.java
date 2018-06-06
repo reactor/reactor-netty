@@ -384,18 +384,18 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 			ByteBufAllocator alloc = channel().alloc();
 			return then(Flux.from(source)
-			    .doOnNext(ByteBuf::retain)
-			    .collect(alloc::buffer, ByteBuf::writeBytes)
-			    .flatMapMany(agg -> {
-				    if (!hasSentHeaders() && !HttpUtil.isTransferEncodingChunked(
-						    outboundHttpMessage()) && !HttpUtil.isContentLengthSet(
-						    outboundHttpMessage())) {
-					    outboundHttpMessage().headers()
-					                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
-							                         agg.readableBytes());
-				    }
-				    return super.send(Mono.just(agg)).then();
-			    }));
+			                .doOnNext(ByteBuf::retain)
+			                .collect(alloc::buffer, ByteBuf::writeBytes)
+			                .flatMapMany(agg -> {
+			                        if (!hasSentHeaders() &&
+			                                !HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) &&
+			                                !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
+			                            outboundHttpMessage().headers()
+			                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH,
+			                                                         agg.readableBytes());
+			                        }
+			                        return super.send(Mono.just(agg)).then();
+			                }));
 		}
 		return super.send(source);
 	}
@@ -630,8 +630,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (serverError){
 				if (log.isDebugEnabled()) {
 					log.debug("{} Received Server Error, stop reading: {}", channel(),
-							response
-									.toString());
+							response.toString());
 				}
 				Exception ex = new HttpClientException(uri(), response);
 				parentContext().fireContextError(ex);
@@ -712,10 +711,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
 			if (replace(ops)) {
-				Mono<Void> handshake = FutureMono.from(ops.handshakerResult)
-				                                 .then(Mono.defer(() -> Mono.from(websocketHandler.apply(
-						                                 ops,
-						                                 ops))));
+				Mono<Void> handshake =
+						FutureMono.from(ops.handshakerResult)
+						                   .then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops))));
 				if (websocketHandler != noopHandler()) {
 					handshake = handshake.doAfterSuccessOrError(ops);
 				}
