@@ -22,6 +22,7 @@ import io.netty.channel.pool.SimpleChannelPool;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.SystemPropertiesNames;
 
 /**
  * A {@link ConnectionProvider} will produce {@link Connection}
@@ -33,23 +34,22 @@ import reactor.netty.Connection;
 public interface ConnectionProvider extends Disposable {
 
 	/**
-	 * Default max connection, if -1 will never wait to acquire before opening new
+	 * Default max connections, if -1 will never wait to acquire before opening a new
 	 * connection in an unbounded fashion. Fallback to
-	 * available number of processors.
+	 * available number of processors (but with a minimum value of 16)
 	 */
-	int DEFAULT_POOL_MAX_CONNECTION =
-			Integer.parseInt(System.getProperty("reactor.netty.pool.maxConnections",
+	int DEFAULT_POOL_MAX_CONNECTIONS =
+			Integer.parseInt(System.getProperty(SystemPropertiesNames.POOL_MAX_CONNECTIONS,
 			"" + Math.max(Runtime.getRuntime()
 			            .availableProcessors(), 8) * 2));
 
 	/**
-	 * Default acquisition timeout before error. If -1 will never wait to
-	 * acquire before opening new
-	 * connection in an unbounded fashion. Fallback to
-	 * available number of processors.
+	 * Default acquisition timeout (milliseconds) before error. If -1 will never wait to
+	 * acquire before opening a new
+	 * connection in an unbounded fashion. Fallback 45 seconds
 	 */
 	long DEFAULT_POOL_ACQUIRE_TIMEOUT = Long.parseLong(System.getProperty(
-			"reactor.netty.pool.acquireTimeout",
+			SystemPropertiesNames.POOL_ACQUIRE_TIMEOUT,
 			"" + 45000));
 
 	/**
@@ -91,7 +91,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name) {
-		return fixed(name, DEFAULT_POOL_MAX_CONNECTION);
+		return fixed(name, DEFAULT_POOL_MAX_CONNECTIONS);
 	}
 
 	/**

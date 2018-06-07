@@ -40,6 +40,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
+import reactor.netty.SystemPropertiesNames;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -211,9 +212,12 @@ public final class SslProvider {
 	
 	static final class Build implements SslContextSpec, Builder {
 
+		/**
+		 * Default SSL handshake timeout (milliseconds), fallback to 10 seconds
+		 */
 		static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT =
 				Long.parseLong(System.getProperty(
-						"reactor.netty.sslHandshakeTimeout",
+						SystemPropertiesNames.SSL_HANDSHAKE_TIMEOUT,
 						"10000"));
 
 		static final SelfSignedCertificate DEFAULT_SSL_CONTEXT_SELF;

@@ -432,7 +432,7 @@ public abstract class TcpServer {
 	/**
 	 * Enable default sslContext support. The default {@link SslContext} will be assigned
 	 * to with a default value of {@literal 10} seconds handshake timeout unless the
-	 * environment property {@literal reactor.netty.sslHandshakeTimeout} is set.
+	 * environment property {@literal reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -443,7 +443,7 @@ public abstract class TcpServer {
 	/**
 	 * Apply an SSL configuration customization via the passed {@link SslContext}. with a
 	 * default value of {@literal 10} seconds handshake timeout unless the environment
-	 * property {@literal reactor.netty.sslHandshakeTimeout} is set.
+	 * property {@literal reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslContext The context to set when configuring SSL
 	 *
@@ -457,7 +457,7 @@ public abstract class TcpServer {
 	 * Apply an SSL configuration customization via the passed builder. The builder
 	 * will produce the {@link SslContext} to be passed to with a default value of
 	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
-	 * reactor.netty.sslHandshakeTimeout} is set.
+	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 *

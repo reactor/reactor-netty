@@ -26,6 +26,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.netty.SystemPropertiesNames;
 
 /**
  * An {@link EventLoopGroup} selector with associated
@@ -39,20 +40,25 @@ public interface LoopResources extends Disposable {
 
 	/**
 	 * Default worker thread count, fallback to available processor
+	 * (but with a minimum value of 4)
 	 */
 	int DEFAULT_IO_WORKER_COUNT = Integer.parseInt(System.getProperty(
-			"reactor.netty.workerCount",
+			SystemPropertiesNames.IO_WORKER_COUNT,
 			"" + Math.max(Runtime.getRuntime()
 			            .availableProcessors(), 4)));
 	/**
 	 * Default selector thread count, fallback to -1 (no selector thread)
 	 */
 	int DEFAULT_IO_SELECT_COUNT = Integer.parseInt(System.getProperty(
-			"reactor.netty.selectCount",
+			SystemPropertiesNames.IO_SELECT_COUNT,
 			"" + -1));
 
+	/**
+	 * Default value whether the native transport (epoll, kqueue) will be preferred,
+	 * fallback it will be preferred when available
+	 */
 	boolean DEFAULT_NATIVE = Boolean.parseBoolean(System.getProperty(
-			"reactor.netty.native",
+			SystemPropertiesNames.NATIVE,
 			"true"));
 
 	/**
