@@ -26,6 +26,7 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.SystemPropertiesNames;
 import reactor.netty.resources.LoopResources;
 
 /**
@@ -206,8 +207,12 @@ public class UdpResources implements LoopResources {
 	static final AtomicReference<UdpResources>         udpResources;
 	static final Function<LoopResources, UdpResources> ON_UDP_NEW;
 
+	/**
+	 * Default worker thread count, fallback to available processor
+	 * (but with a minimum value of 4)
+	 */
 	static final int DEFAULT_UDP_THREAD_COUNT = Integer.parseInt(System.getProperty(
-			"reactor.udp.ioThreadCount",
+			SystemPropertiesNames.UDP_IO_THREAD_COUNT,
 			"" + Schedulers.DEFAULT_POOL_SIZE));
 
 	static {
