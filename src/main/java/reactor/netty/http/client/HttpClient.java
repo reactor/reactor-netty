@@ -49,7 +49,6 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
-import reactor.netty.tcp.TcpServer;
 
 /**
  * An HttpClient allows to build in a safe immutable way an http client that is
@@ -127,7 +126,7 @@ public abstract class HttpClient {
 		/**
 		 * Configure a body to send on request.
 		 *
-		 * @param body  a body publisher that will terminate the request on complete
+		 * @param body a body publisher that will terminate the request on complete
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
@@ -139,8 +138,7 @@ public abstract class HttpClient {
 		 *
 		 * @param sender a bifunction given the outgoing request and the sending
 		 * {@link NettyOutbound}, returns a publisher that will terminate the request
-		 * body
-		 * on complete
+		 * body on complete
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
@@ -165,11 +163,12 @@ public abstract class HttpClient {
 		 * adapted via {@link HttpClientForm#multipart(boolean)}.
 		 *
 		 * @param formCallback called when form generator is created
-		 * @param progress called after form is being sent and passed with a {@link Flux} of latest in-flight or uploaded bytes,
+		 * @param progress called after form is being sent and passed with a {@link Flux} of latest in-flight or uploaded bytes
 		 *
 		 * @return a new {@link ResponseReceiver}
 		 */
-		ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback, @Nullable Consumer<Flux<Long>>progress);
+		ResponseReceiver<?> sendForm(BiConsumer<? super HttpClientRequest, HttpClientForm> formCallback,
+				@Nullable Consumer<Flux<Long>>progress);
 	}
 
 	/**
@@ -180,10 +179,9 @@ public abstract class HttpClient {
 
 		/**
 		 * Configure headers to send on request using the returned {@link Publisher} to
-		 * signal end of
-		 * the request.
+		 * signal end of the request.
 		 *
-		 * @param sender a bfunction given the outgoing request returns a publisher
+		 * @param sender a bifunction given the outgoing request returns a publisher
 		 * that will terminate the request body on complete
 		 *
 		 * @return a new {@link ResponseReceiver}
@@ -261,21 +259,21 @@ public abstract class HttpClient {
 
 	/**
 	 * Allow a websocket handling. Since {@link WebsocketReceiver} API returns
-	 * {@link Flux} or {@link Mono}, r  equesting is always deferred to
+	 * {@link Flux} or {@link Mono}, requesting is always deferred to
 	 * {@link Publisher#subscribe(Subscriber)}.
 	 */
 	public interface WebsocketReceiver<S extends WebsocketReceiver<?>> extends UriConfiguration<S>  {
 
 		/**
 		 * Negotiate a websocket upgrade and extract a flux from the given
-		 * {@link WebsocketInbound} and
-		 *  {@link WebsocketOutbound}}.
+		 * {@link WebsocketInbound} and {@link WebsocketOutbound}.
 		 * <p> The connection will not automatically {@link Connection#dispose()} and
 		 * manual disposing with the {@link Connection},
 		 * {@link WebsocketOutbound#sendClose}
 		 * or the returned {@link Flux} might be necessary if the remote never
 		 * terminates itself.
-		 * <p> If the upgrade fails, the returned {@link Flux} will emit a {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
+		 * <p> If the upgrade fails, the returned {@link Flux} will emit a
+		 * {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
 		 *
 		 * @param receiver extracting receiver
 		 * @param <V> the extracted flux type
@@ -290,7 +288,8 @@ public abstract class HttpClient {
 		 * <p> The connection will be disposed when the underlying subscriber is
 		 * disposed OR when a close frame has been received, forwarding onComplete to
 		 * the returned flux subscription.
-		 * <p> If the upgrade fails, the returned {@link Flux} will emit a {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
+		 * <p> If the upgrade fails, the returned {@link Flux} will emit a
+		 * {@link io.netty.handler.codec.http.websocketx.WebSocketHandshakeException}
 		 *
 		 * @return a {@link ByteBufFlux} of the inbound websocket content
 		 */
@@ -456,7 +455,7 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * HTTP GET to connect the {@link HttpClient}.
+	 * HTTP HEAD to connect the {@link HttpClient}.
 	 *
 	 * @return a {@link RequestSender} ready to consume for response
 	 */
@@ -467,7 +466,7 @@ public abstract class HttpClient {
 	/**
 	 * Apply headers configuration.
 	 *
-	 * @param headerBuilder the  header {@link Consumer} to invoke before sending
+	 * @param headerBuilder the header {@link Consumer} to invoke before sending
 	 * websocket handshake
 	 *
 	 * @return a new {@link HttpClient}
@@ -578,8 +577,8 @@ public abstract class HttpClient {
 	/**
 	 * Enable default sslContext support. The default {@link SslContext} will be
 	 * assigned to
-	 * with a default value of {@literal 10} seconds handshake timeout unless
-	 * the environment property {@literal reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * with a default value of {@code 10} seconds handshake timeout unless
+	 * the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @return a new {@link HttpClient}
 	 */
@@ -590,7 +589,7 @@ public abstract class HttpClient {
 	/**
 	 * Apply an SSL configuration customization via the passed builder. The builder
 	 * will produce the {@link SslContext} to be passed to with a default value of
-	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
+	 * {@code 10} seconds handshake timeout unless the environment property {@code
 	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
@@ -607,7 +606,7 @@ public abstract class HttpClient {
 	 * will apply during {@link #tcpConfiguration()} phase.
 	 *
 	 * <p> Always prefer {@link HttpClient#secure} to
-	 * {@link #tcpConfiguration()}  and {@link TcpClient#secure}. While configuration
+	 * {@link #tcpConfiguration()} and {@link TcpClient#secure}. While configuration
 	 * with the later is possible, {@link HttpClient#secure} will inject extra information
 	 * for HTTPS support.
 	 *
@@ -621,9 +620,10 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Apply a wire logger configuration using {@link TcpServer} category
+	 * Apply a wire logger configuration using {@link HttpClient} category
+	 * and {@code DEBUG} logger level
 	 *
-	 * @return a new {@link TcpServer}
+	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient wiretap() {
 		return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));

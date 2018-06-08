@@ -58,15 +58,17 @@ import reactor.util.Loggers;
  * <p>
  * <p> Example:
  * <pre>
- * {@code TcpServer.create()
- * .doOnBind(startMetrics)
- * .doOnBound(startedMetrics)
- * .doOnUnbound(stopMetrics)
- * .host("127.0.0.1")
- * .port(1234)
- * .secure()
- * .send(ByteBufFlux.fromByteArrays(pub))
- * .block() }
+ * {@code
+ * TcpServer.create()
+ *          .doOnBind(startMetrics)
+ *          .doOnBound(startedMetrics)
+ *          .doOnUnbound(stopMetrics)
+ *          .host("127.0.0.1")
+ *          .port(1234)
+ *          .secure()
+ *          .bind()
+ *          .block()
+ * }
  *
  * @author Stephane Maldini
  */
@@ -127,14 +129,14 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Bind the {@link TcpServer} and return a {@link Mono} of {@link Connection}. If
+	 * Bind the {@link TcpServer} and return a {@link Mono} of {@link DisposableServer}. If
 	 * {@link Mono} is cancelled, the underlying binding will be aborted. Once the {@link
-	 * Connection} has been emitted and is not necessary anymore, disposing main server
-	 * loop must be done by the user via {@link Connection#dispose()}.
+	 * DisposableServer} has been emitted and is not necessary anymore, disposing main server
+	 * loop must be done by the user via {@link DisposableServer#dispose()}.
 	 *
 	 * If updateConfiguration phase fails, a {@link Mono#error(Throwable)} will be returned;
 	 *
-	 * @return a {@link Mono} of {@link Connection}
+	 * @return a {@link Mono} of {@link DisposableServer}
 	 */
 	public final Mono<? extends DisposableServer> bind() {
 		ServerBootstrap b;
@@ -149,7 +151,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Bind the {@link TcpServer} and return a {@link Mono} of {@link Connection}
+	 * Bind the {@link TcpServer} and return a {@link Mono} of {@link DisposableServer}
 	 *
 	 * @param b the {@link ServerBootstrap} to bind
 	 *
@@ -159,11 +161,11 @@ public abstract class TcpServer {
 
 	/**
 	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
-	 * returned {@link Connection} offers simple server API, including to {@link
-	 * Connection#disposeNow()} shut it down in a blocking fashion. The max startup
+	 * returned {@link DisposableServer} offers simple server API, including to {@link
+	 * DisposableServer#disposeNow()} shut it down in a blocking fashion. The max startup
 	 * timeout is 45 seconds.
 	 *
-	 * @return a {@link Connection}
+	 * @return a {@link DisposableServer}
 	 */
 	public final DisposableServer bindNow() {
 		return bindNow(Duration.ofSeconds(45));
@@ -176,7 +178,7 @@ public abstract class TcpServer {
 	 *
 	 * @param timeout max startup timeout
 	 *
-	 * @return a {@link Connection}
+	 * @return a {@link DisposableServer}
 	 */
 	public final DisposableServer bindNow(Duration timeout) {
 		Objects.requireNonNull(timeout, "timeout");
@@ -186,7 +188,7 @@ public abstract class TcpServer {
 		catch (IllegalStateException e) {
 			if (e.getMessage().contains("blocking read")) {
 				throw new IllegalStateException("HttpServer couldn't be started within "
-						+ timeout.toMillis() +	"ms");
+						+ timeout.toMillis() + "ms");
 			}
 			throw e;
 		}
@@ -217,10 +219,10 @@ public abstract class TcpServer {
 		}
 
 		Runtime.getRuntime()
-				.addShutdownHook(new Thread(() -> facade.disposeNow(timeout)));
+		       .addShutdownHook(new Thread(() -> facade.disposeNow(timeout)));
 
 		facade.onDispose()
-				.block();
+		      .block();
 	}
 
 
@@ -296,8 +298,8 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer doOnLifecycle(Consumer<? super ServerBootstrap> onBind,
-										 Consumer<? super DisposableServer> onBound,
-										 Consumer<? super DisposableServer> onUnbound) {
+			Consumer<? super DisposableServer> onBound,
+			Consumer<? super DisposableServer> onUnbound) {
 		Objects.requireNonNull(onBind, "onBind");
 		Objects.requireNonNull(onBound, "onBound");
 		Objects.requireNonNull(onUnbound, "onUnbound");
@@ -360,8 +362,8 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Set a {@link ChannelOption} value for low level connection settings like SO_TIMEOUT
-	 * or SO_KEEPALIVE. This will apply to each new channel from remote peer.
+	 * Set a {@link ChannelOption} value for low level connection settings like {@code SO_TIMEOUT}
+	 * or {@code SO_KEEPALIVE}. This will apply to each new channel from remote peer.
 	 * Use a value of {@code null} to remove a previous set {@link ChannelOption}.
 	 *
 	 * @param key the option key
@@ -402,9 +404,8 @@ public abstract class TcpServer {
 
 	/**
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
-	 * container. Will prefer native (epoll) implementation if available unless the
-	 * environment property {@literal reactor.netty.epoll} is set to {@literal
-	 * false}.
+	 * container. Will prefer native (epoll/kqueue) implementation if available unless the
+	 * environment property {@code reactor.netty.native} is set to {@code false}.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime
 	 * expectation and returning an eventLoopGroup
@@ -421,7 +422,7 @@ public abstract class TcpServer {
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime
 	 * expectation and returning an eventLoopGroup.
-	 * @param preferNative Should the connector prefer native (epoll) if available.
+	 * @param preferNative Should the connector prefer native (epoll/kqueue) if available.
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -431,8 +432,8 @@ public abstract class TcpServer {
 
 	/**
 	 * Enable default sslContext support. The default {@link SslContext} will be assigned
-	 * to with a default value of {@literal 10} seconds handshake timeout unless the
-	 * environment property {@literal reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * to with a default value of {@code 10} seconds handshake timeout unless the
+	 * environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -442,8 +443,8 @@ public abstract class TcpServer {
 
 	/**
 	 * Apply an SSL configuration customization via the passed {@link SslContext}. with a
-	 * default value of {@literal 10} seconds handshake timeout unless the environment
-	 * property {@literal reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * default value of {@code 10} seconds handshake timeout unless the environment
+	 * property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslContext The context to set when configuring SSL
 	 *
@@ -456,7 +457,7 @@ public abstract class TcpServer {
 	/**
 	 * Apply an SSL configuration customization via the passed builder. The builder
 	 * will produce the {@link SslContext} to be passed to with a default value of
-	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
+	 * {@code 10} seconds handshake timeout unless the environment property {@code
 	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
@@ -485,8 +486,8 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Set a {@link ChannelOption} value for low level connection settings like SO_TIMEOUT
-	 * or SO_KEEPALIVE. This will apply to parent selector channel.
+	 * Set a {@link ChannelOption} value for low level connection settings like {@code SO_TIMEOUT}
+	 * or {@code SO_KEEPALIVE}. This will apply to parent selector channel.
 	 *
 	 * @param key the option key
 	 * @param value the option value
@@ -504,7 +505,7 @@ public abstract class TcpServer {
 	 * Return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
 	 * transport or null
 	 *
-	 * @return he current {@link SslProvider} if that {@link TcpServer} secured via SSL
+	 * @return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
 	 * transport or null
 	 */
 	@Nullable
@@ -514,6 +515,7 @@ public abstract class TcpServer {
 
 	/**
 	 * Apply a wire logger configuration using {@link TcpServer} category
+	 * and {@code DEBUG} logger level
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -522,7 +524,8 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Apply a wire logger configuration
+	 * Apply a wire logger configuration using the specified category
+	 * and {@code DEBUG} logger level
 	 *
 	 * @param category the logger category
 	 *
@@ -533,7 +536,8 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Apply a wire logger configuration
+	 * Apply a wire logger configuration using the specified category
+	 * and logger level
 	 *
 	 * @param category the logger category
 	 * @param level the logger level
@@ -562,7 +566,9 @@ public abstract class TcpServer {
 			                     .childOption(ChannelOption.SO_KEEPALIVE, true)
 			                     .childOption(ChannelOption.TCP_NODELAY, true)
 			                     .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-			                     .localAddress(InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT));
+			                     .localAddress(
+			                         InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(),
+			                                                                DEFAULT_PORT));
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);

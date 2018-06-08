@@ -54,13 +54,16 @@ import reactor.util.Loggers;
  * <p>
  * <p> Example:
  * <pre>
- * {@code UdpClient.create()
- * .doOnConnect(startMetrics)
- * .doOnConnected(startedMetrics)
- * .doOnDisconnected(stopMetrics)
- * .host("127.0.0.1")
- * .port(1234)
- * .block() }
+ * {@code
+ * UdpClient.create()
+ *          .doOnConnect(startMetrics)
+ *          .doOnConnected(startedMetrics)
+ *          .doOnDisconnected(stopMetrics)
+ *          .host("127.0.0.1")
+ *          .port(1234)
+ *          .connect()
+ *          .block()
+ * }
  *
  * @author Stephane Maldini
  */
@@ -125,7 +128,7 @@ public abstract class UdpClient {
 	 * Connection} has been emitted and is not necessary anymore, disposing main client
 	 * loop must be done by the user via {@link Connection#dispose()}.
 	 *
-	 * If updateConfiguration phase fails, a {@link Mono#error(Throwable)} will be returned;
+	 * If update configuration phase fails, a {@link Mono#error(Throwable)} will be returned
 	 *
 	 * @return a {@link Mono} of {@link Connection}
 	 */
@@ -157,7 +160,7 @@ public abstract class UdpClient {
 		catch (IllegalStateException e) {
 			if (e.getMessage().contains("blocking read")) {
 				throw new IllegalStateException("UdpClient couldn't be started within "
-						+ timeout.toMillis() +	"ms");
+						+ timeout.toMillis() + "ms");
 			}
 			throw e;
 		}
@@ -174,7 +177,6 @@ public abstract class UdpClient {
 	public final UdpClient doOnConnect(Consumer<? super Bootstrap> doOnConnect) {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
 		return new UdpClientDoOn(this, doOnConnect, null, null);
-
 	}
 
 	/**
@@ -214,8 +216,8 @@ public abstract class UdpClient {
 	 * @return a new {@link UdpClient}
 	 */
 	public final UdpClient doOnLifecycle(Consumer<? super Bootstrap> doOnConnect,
-										 Consumer<? super Connection> doOnConnected,
-										 Consumer<? super Connection> doOnDisconnected) {
+			Consumer<? super Connection> doOnConnected,
+			Consumer<? super Connection> doOnDisconnected) {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
 		Objects.requireNonNull(doOnConnected, "doOnConnected");
 		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
@@ -246,12 +248,11 @@ public abstract class UdpClient {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnected(c -> {
 			if (log.isDebugEnabled()) {
-				log.debug("[UdpClient] {} handler is being applied: {}", c.channel(), handler);
+				log.debug("{} handler is being applied: {}", c.channel(), handler);
 			}
 
-			Mono.fromDirect(handler.apply((UdpInbound) c,
-					(UdpOutbound) c))
-					.subscribe(c.disposeSubscriber());
+			Mono.fromDirect(handler.apply((UdpInbound) c, (UdpOutbound) c))
+			    .subscribe(c.disposeSubscriber());
 		});
 	}
 
@@ -268,8 +269,8 @@ public abstract class UdpClient {
 	}
 
 	/**
-	 * Set a {@link ChannelOption} value for low level connection settings like SO_TIMEOUT
-	 * or SO_KEEPALIVE. This will apply to each new channel from remote peer.
+	 * Set a {@link ChannelOption} value for low level connection settings like {@code SO_TIMEOUT}
+	 * or {@code SO_KEEPALIVE}. This will apply to each new channel from remote peer.
 	 *
 	 * @param key the option key
 	 * @param value the option value
@@ -310,9 +311,8 @@ public abstract class UdpClient {
 
 	/**
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
-	 * container. Will prefer native (epoll) implementation if available unless the
-	 * environment property {@literal reactor.netty.epoll} is set to {@literal
-	 * false}.
+	 * container. Will prefer native (epoll/kqueue) implementation if available unless the
+	 * environment property {@code reactor.netty.native} is set to {@code false}.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime
 	 * expectation and returning an eventLoopGroup
@@ -329,7 +329,7 @@ public abstract class UdpClient {
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime
 	 * expectation and returning an eventLoopGroup.
-	 * @param preferNative Should the connector prefer native (epoll) if available.
+	 * @param preferNative Should the connector prefer native (epoll/kqueue) if available.
 	 *
 	 * @return a new {@link UdpClient}
 	 */
@@ -353,6 +353,7 @@ public abstract class UdpClient {
 
 	/**
 	 * Apply a wire logger configuration using {@link UdpClient} category
+	 * and {@code DEBUG} logger level
 	 *
 	 * @return a new {@link UdpClient}
 	 */
@@ -361,7 +362,8 @@ public abstract class UdpClient {
 	}
 
 	/**
-	 * Apply a wire logger configuration
+	 * Apply a wire logger configuration using the specified category
+	 * and {@code DEBUG} logger level
 	 *
 	 * @param category the logger category
 	 *
@@ -372,7 +374,8 @@ public abstract class UdpClient {
 	}
 
 	/**
-	 * Apply a wire logger configuration
+	 * Apply a wire logger configuration using the specified category
+	 * and logger level
 	 *
 	 * @param category the logger category
 	 * @param level the logger level
@@ -416,11 +419,11 @@ public abstract class UdpClient {
 
 	static final Bootstrap DEFAULT_BOOTSTRAP =
 			new Bootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-					.option(ChannelOption.AUTO_READ, false)
-					.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
-					.option(ChannelOption.SO_SNDBUF, 1024 * 1024)
-					.remoteAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
+			               .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+			               .option(ChannelOption.AUTO_READ, false)
+			               .option(ChannelOption.SO_RCVBUF, 1024 * 1024)
+			               .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
+			               .remoteAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, (ch, c, msg) -> new UdpOperations(ch, c));
@@ -431,18 +434,18 @@ public abstract class UdpClient {
 
 	static String getHost(Bootstrap b) {
 		if (b.config()
-				.remoteAddress() instanceof InetSocketAddress) {
+			 .remoteAddress() instanceof InetSocketAddress) {
 			return ((InetSocketAddress) b.config()
-					.remoteAddress()).getHostString();
+			                             .remoteAddress()).getHostString();
 		}
 		return NetUtil.LOCALHOST.getHostAddress();
 	}
 
 	static int getPort(Bootstrap b) {
 		if (b.config()
-				.remoteAddress() instanceof InetSocketAddress) {
+			 .remoteAddress() instanceof InetSocketAddress) {
 			return ((InetSocketAddress) b.config()
-					.remoteAddress()).getPort();
+			                             .remoteAddress()).getPort();
 		}
 		return DEFAULT_PORT;
 	}

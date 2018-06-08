@@ -60,17 +60,16 @@ import reactor.util.Loggers;
  * <p> Example:
  * <pre>
  * {@code
- *   TcpClient.create()
- *            .doOnConnect(connectMetrics)
- *            .doOnConnected(connectedMetrics)
- *            .doOnDisconnected(disconnectedMetrics)
- *            .host("127.0.0.1")
- *            .port(1234)
- *            .secure()
- *            .send(ByteBufFlux.fromByteArrays(pub))
- *            .block()
+ * TcpClient.create()
+ *          .doOnConnect(connectMetrics)
+ *          .doOnConnected(connectedMetrics)
+ *          .doOnDisconnected(disconnectedMetrics)
+ *          .host("127.0.0.1")
+ *          .port(1234)
+ *          .secure()
+ *          .connect()
+ *          .block()
  * }
- *
  *
  * @author Stephane Maldini
  */
@@ -168,7 +167,7 @@ public abstract class TcpClient {
 	 * {@link Connection} has been emitted and is not necessary anymore, disposing must be
 	 * done by the user via {@link Connection#dispose()}.
 	 *
-	 * If updateConfiguration phase fails, a {@link Mono#error(Throwable)} will be returned;
+	 * If update configuration phase fails, a {@link Mono#error(Throwable)} will be returned
 	 *
 	 * @return a {@link Mono} of {@link Connection}
 	 */
@@ -220,7 +219,7 @@ public abstract class TcpClient {
 		catch (IllegalStateException e) {
 			if (e.getMessage().contains("blocking read")) {
 				throw new IllegalStateException("TcpClient couldn't be started within "
-						+ timeout.toMillis() +	"ms");
+						+ timeout.toMillis() + "ms");
 			}
 			throw e;
 		}
@@ -273,8 +272,8 @@ public abstract class TcpClient {
 	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient doOnLifecycle(Consumer<? super Bootstrap> doOnConnect,
-										 Consumer<? super Connection> doOnConnected,
-										 Consumer<? super Connection> doOnDisconnected) {
+			Consumer<? super Connection> doOnConnected,
+			Consumer<? super Connection> doOnDisconnected) {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
 		Objects.requireNonNull(doOnConnected, "doOnConnected");
 		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
@@ -309,7 +308,7 @@ public abstract class TcpClient {
 			}
 
 			Mono.fromDirect(handler.apply((NettyInbound) c, (NettyOutbound) c))
-			                       .subscribe(c.disposeSubscriber());
+			    .subscribe(c.disposeSubscriber());
 		});
 	}
 
@@ -363,8 +362,8 @@ public abstract class TcpClient {
 	}
 
 	/**
-	 * Set a {@link ChannelOption} value for low level connection settings like SO_TIMEOUT
-	 * or SO_KEEPALIVE. This will apply to each new channel from remote peer.
+	 * Set a {@link ChannelOption} value for low level connection settings like {@code SO_TIMEOUT}
+	 * or {@code SO_KEEPALIVE}. This will apply to each new channel from remote peer.
 	 * Use a value of {@code null} to remove a previous set {@link ChannelOption}.
 	 *
 	 * @param key the option key
@@ -439,9 +438,9 @@ public abstract class TcpClient {
 
 	/**
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the
-	 * {@link LoopResources} container. Will prefer native (epoll) implementation if
-	 * available unless the environment property {@literal reactor.netty.epoll} is set
-	 * to {@literal false}.
+	 * {@link LoopResources} container. Will prefer native (epoll/kqueue) implementation if
+	 * available unless the environment property {@code reactor.netty.native} is set
+	 * to {@code false}.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime expectation and
 	 * returning an eventLoopGroup
@@ -458,7 +457,7 @@ public abstract class TcpClient {
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime expectation and
 	 * returning an eventLoopGroup.
-	 * @param preferNative Should the connector prefer native (epoll) if available.
+	 * @param preferNative Should the connector prefer native (epoll/kqueue) if available.
 	 *
 	 * @return a new {@link TcpClient}
 	 */
@@ -469,8 +468,8 @@ public abstract class TcpClient {
 	/**
 	 * Enable default sslContext support. The default {@link SslContext} will be
 	 * assigned to
-	 * with a default value of {@literal 10} seconds handshake timeout unless
-	 * the environment property {@literal reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * with a default value of {@code 10} seconds handshake timeout unless
+	 * the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @return a new {@link TcpClient}
 	 */
@@ -481,7 +480,7 @@ public abstract class TcpClient {
 	/**
 	 * Apply an SSL configuration customization via the passed builder. The builder
 	 * will produce the {@link SslContext} to be passed to with a default value of
-	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
+	 * {@code 10} seconds handshake timeout unless the environment property {@code
 	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
@@ -494,8 +493,8 @@ public abstract class TcpClient {
 
 	/**
 	 * Apply an SSL configuration customization via the passed {@link SslContext}.
-	 * with a default value of {@literal 10} seconds handshake timeout unless
-	 * the environment property {@literal reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * with a default value of {@code 10} seconds handshake timeout unless
+	 * the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslContext The context to set when configuring SSL
 	 *
@@ -509,7 +508,7 @@ public abstract class TcpClient {
 	 * Return the current {@link SslProvider} if that {@link TcpClient} secured via SSL
 	 * transport or null
 	 *
-	 * @return he current {@link SslProvider} if that {@link TcpClient} secured via SSL
+	 * @return the current {@link SslProvider} if that {@link TcpClient} secured via SSL
 	 * transport or null
 	 */
 	@Nullable
@@ -518,32 +517,35 @@ public abstract class TcpClient {
 	}
 
 	/**
-	 * Apply a wire logger configuration using {@link TcpServer} category
+	 * Apply a wire logger configuration using {@link TcpClient} category
+	 * and {@code DEBUG} logger level
 	 *
-	 * @return a new {@link TcpServer}
+	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient wiretap() {
 		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
 	}
 
 	/**
-	 * Apply a wire logger configuration
+	 * Apply a wire logger configuration using the specified category
+	 * and {@code DEBUG} logger level
 	 *
 	 * @param category the logger category
 	 *
-	 * @return a new {@link TcpServer}
+	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient wiretap(String category) {
 		return wiretap(category, LogLevel.DEBUG);
 	}
 
 	/**
-	 * Apply a wire logger configuration
+	 * Apply a wire logger configuration using the specified category
+	 * and logger level
 	 *
 	 * @param category the logger category
 	 * @param level the logger level
 	 *
-	 * @return a new {@link TcpServer}
+	 * @return a new {@link TcpClient}
 	 */
 	public final TcpClient wiretap(String category, LogLevel level) {
 		Objects.requireNonNull(category, "category");
@@ -562,12 +564,13 @@ public abstract class TcpClient {
 
 	static final Bootstrap DEFAULT_BOOTSTRAP =
 			new Bootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-					.option(ChannelOption.AUTO_READ, false)
-					.option(ChannelOption.SO_RCVBUF, 1024 * 1024)
-					.option(ChannelOption.SO_SNDBUF, 1024 * 1024)
-					.remoteAddress(InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST
-							.getHostAddress(), DEFAULT_PORT));
+			               .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+			               .option(ChannelOption.AUTO_READ, false)
+			               .option(ChannelOption.SO_RCVBUF, 1024 * 1024)
+			               .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
+			               .remoteAddress(
+			                   InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(),
+			                                                          DEFAULT_PORT));
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);

@@ -48,11 +48,11 @@ import reactor.util.Loggers;
  * <pre>
  * {@code
  * HttpServer.create()
- * .host("0.0.0.0")
- * .tcpConfiguration(TcpServer::secure)
- * .handle((req, res) -> res.sendString(Flux.just("hello"))
- * .bind()
- * .block();
+ *           .host("0.0.0.0")
+ *           .secure()
+ *           .handle((req, res) -> res.sendString(Flux.just("hello"))
+ *           .bind()
+ *           .block();
  * }
  *
  * @author Stephane Maldini
@@ -60,7 +60,7 @@ import reactor.util.Loggers;
 public abstract class HttpServer {
 
 	/**
-	 * Prepare a pooled {@link HttpServer}
+	 * Prepare a {@link HttpServer}
 	 *
 	 * @return a {@link HttpServer}
 	 */
@@ -69,7 +69,7 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Prepare a pooled {@link HttpServer}
+	 * Prepare a {@link HttpServer}
 	 *
 	 * @return a {@link HttpServer}
 	 */
@@ -78,14 +78,14 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Bind the {@link HttpServer} and return a {@link Mono} of {@link Connection}. If
+	 * Bind the {@link HttpServer} and return a {@link Mono} of {@link DisposableServer}. If
 	 * {@link Mono} is cancelled, the underlying binding will be aborted. Once the {@link
-	 * Connection} has been emitted and is not necessary anymore, disposing main server
-	 * loop must be done by the user via {@link Connection#dispose()}.
+	 * DisposableServer} has been emitted and is not necessary anymore, disposing main server
+	 * loop must be done by the user via {@link DisposableServer#dispose()}.
 	 *
-	 * If updateConfiguration phase fails, a {@link Mono#error(Throwable)} will be returned;
+	 * If update configuration phase fails, a {@link Mono#error(Throwable)} will be returned
 	 *
-	 * @return a {@link Mono} of {@link Connection}
+	 * @return a {@link Mono} of {@link DisposableServer}
 	 */
 	public final Mono<? extends DisposableServer> bind() {
 		return bind(tcpConfiguration());
@@ -93,8 +93,8 @@ public abstract class HttpServer {
 
 	/**
 	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
-	 * returned {@link Connection} offers simple server API, including to {@link
-	 * Connection#disposeNow()} shut it down in a blocking fashion.
+	 * returned {@link DisposableServer} offers simple server API, including to {@link
+	 * DisposableServer#disposeNow()} shut it down in a blocking fashion.
 	 *
 	 * @return a {@link Connection}
 	 */
@@ -110,7 +110,7 @@ public abstract class HttpServer {
 	 *
 	 * @param timeout max startup timeout
 	 *
-	 * @return a {@link Connection}
+	 * @return a {@link DisposableServer}
 	 */
 	public final DisposableServer bindNow(Duration timeout) {
 		Objects.requireNonNull(timeout, "timeout");
@@ -120,7 +120,7 @@ public abstract class HttpServer {
 		catch (IllegalStateException e) {
 			if (e.getMessage().contains("blocking read")) {
 				throw new IllegalStateException("HttpServer couldn't be started within "
-						+ timeout.toMillis() +	"ms");
+						+ timeout.toMillis() + "ms");
 			}
 			throw e;
 		}
@@ -140,7 +140,7 @@ public abstract class HttpServer {
 	 * @param onStart an optional callback on server start
 	 */
 	public final void bindUntilJavaShutdown(Duration timeout,
-	                                        @Nullable Consumer<DisposableServer> onStart) {
+			@Nullable Consumer<DisposableServer> onStart) {
 
 		Objects.requireNonNull(timeout, "timeout");
 		DisposableServer facade = bindNow();
@@ -169,8 +169,7 @@ public abstract class HttpServer {
 
 	/**
 	 * Enable GZip response compression if the client request presents accept encoding
-	 * headers
-	 * AND the response reaches a minimum threshold
+	 * headers AND the response reaches a minimum threshold
 	 *
 	 * @param minResponseSize compression is performed once response size exceeds given
 	 * value in byte
@@ -295,8 +294,8 @@ public abstract class HttpServer {
 	/**
 	 * Enable default sslContext support. The default {@link SslContext} will be
 	 * assigned to
-	 * with a default value of {@literal 10} seconds handshake timeout unless
-	 * the environment property {@literal reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 * with a default value of {@code 10} seconds handshake timeout unless
+	 * the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @return a new {@link HttpServer}
 	 */
@@ -307,7 +306,7 @@ public abstract class HttpServer {
 	/**
 	 * Apply an SSL configuration customization via the passed builder. The builder
 	 * will produce the {@link SslContext} to be passed to with a default value of
-	 * {@literal 10} seconds handshake timeout unless the environment property {@literal
+	 * {@code 10} seconds handshake timeout unless the environment property {@code
 	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
@@ -347,6 +346,7 @@ public abstract class HttpServer {
 
 	/**
 	 * Apply a wire logger configuration using {@link HttpServer} category
+	 * and {@code DEBUG} logger level
 	 *
 	 * @return a new {@link HttpServer}
 	 */
@@ -356,11 +356,11 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Bind the {@link HttpServer} and return a {@link Mono} of {@link Connection}
+	 * Bind the {@link HttpServer} and return a {@link Mono} of {@link DisposableServer}
 	 *
 	 * @param b the {@link TcpServer} to bind
 	 *
-	 * @return a {@link Mono} of {@link Connection}
+	 * @return a {@link Mono} of {@link DisposableServer}
 	 */
 	protected abstract Mono<? extends DisposableServer> bind(TcpServer b);
 
