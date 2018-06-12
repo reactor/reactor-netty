@@ -73,8 +73,8 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-For",
 						"[1abc:2abc:3abc::5ABC:6abc]:8080, 192.168.0.1"),
 				serverRequest -> {
-					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isEqualTo(8080);
 				});
 	}
 

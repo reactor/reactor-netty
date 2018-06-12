@@ -130,8 +130,8 @@ final class ConnectionInfo {
 		InetSocketAddress remoteAddress = channel.remoteAddress();
 		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
 		if (request.headers().contains(XFORWARDED_IP_HEADER)) {
-			String hostValue = request.headers().get(XFORWARDED_IP_HEADER).split(",")[0];
-			hostAddress = parseAddress(hostValue, hostAddress.getPort());
+			String remoteIpValue = request.headers().get(XFORWARDED_IP_HEADER).split(",")[0];
+			remoteAddress = parseAddress(remoteIpValue, remoteAddress.getPort());
 		}
 		else if(request.headers().contains(XFORWARDED_HOST_HEADER)) {
 			if(request.headers().contains(XFORWARDED_PORT_HEADER)) {
