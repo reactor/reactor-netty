@@ -1,5 +1,7 @@
 ### Following link https://pivotal.io/security should be used to report security related issues
 
+### [Gitter](https://gitter.im/reactor/reactor) should be used for questions and discussions
+
 ### Expected behavior
 
 ### Actual behavior
