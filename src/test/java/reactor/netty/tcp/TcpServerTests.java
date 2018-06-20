@@ -87,12 +87,12 @@ import static org.junit.Assert.assertTrue;
  */
 public class TcpServerTests {
 
-	final Logger log = Loggers.getLogger(TcpServerTests.class);
-	ExecutorService threadPool;
-	final int msgs    = 10;
-	final int threads = 4;
+	final Logger log     = Loggers.getLogger(TcpServerTests.class);
+	final int    msgs    = 10;
+	final int    threads = 4;
 
-	CountDownLatch latch;
+	ExecutorService threadPool;
+	CountDownLatch  latch;
 
 	@Before
 	public void loadEnv() {
@@ -111,8 +111,7 @@ public class TcpServerTests {
 		final CountDownLatch latch = new CountDownLatch(2);
 
 		SslContext clientOptions = SslContextBuilder.forClient()
-		                                            .trustManager(
-				                                            InsecureTrustManagerFactory.INSTANCE)
+		                                            .trustManager(InsecureTrustManagerFactory.INSTANCE)
 		                                            .build();
 		final TcpServer server = TcpServer.create().host("localhost").secure();
 
@@ -122,25 +121,27 @@ public class TcpServerTests {
 			in.receive()
 			  .asByteArray()
 			  .map(bb -> {
-				  try {
-					  return m.readValue(bb, Pojo.class);
-				  }
-				  catch (IOException io) {
-					  throw Exceptions.propagate(io);
-				  }
+			      try {
+			          return m.readValue(bb, Pojo.class);
+			      }
+			      catch (IOException io) {
+			          throw Exceptions.propagate(io);
+			      }
 			  })
 			  .log("conn")
 			  .subscribe(data -> {
-				  if ("John Doe".equals(data.getName())) {
-					  latch.countDown();
-				  }
+			      if ("John Doe".equals(data.getName())) {
+			          latch.countDown();
+			      }
 			  });
 
 			return out.sendString(Mono.just("Hi"))
 			          .neverComplete();
 		})
-		                                   .wiretap()
-		                                   .bindNow();
+		                                         .wiretap()
+		                                         .bindNow();
+
+		assertNotNull(connectedServer);
 
 		final TcpClient client = TcpClient.create()
 		                                  .host("localhost")
@@ -153,29 +154,30 @@ public class TcpServerTests {
 			  .asString()
 			  .log("receive")
 			  .subscribe(data -> {
-				  if (data.equals("Hi")) {
-					  latch.countDown();
-				  }
+			      if (data.equals("Hi")) {
+			          latch.countDown();
+			      }
 			  });
 
 			//out
 			return out.send(Flux.just(new Pojo("John" + " Doe"))
 			                    .map(s -> {
-				                    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-					                    m.writeValue(os, s);
-					                    return out.alloc()
-					                             .buffer()
-					                             .writeBytes(os.toByteArray());
-				                    }
-				                    catch (IOException ioe) {
-					                    throw Exceptions.propagate(ioe);
-				                    }
+			                        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+			                            m.writeValue(os, s);
+			                            return out.alloc()
+			                                      .buffer()
+			                                      .writeBytes(os.toByteArray());
+			                        }
+			                        catch (IOException ioe) {
+			                            throw Exceptions.propagate(ioe);
+			                        }
 			                    }))
 			          .neverComplete();
-//			return Mono.empty();
 		})
 		                                   .wiretap()
 		                                   .connectNow();
+
+		assertNotNull(connectedClient);
 
 		assertTrue("Latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
@@ -189,11 +191,12 @@ public class TcpServerTests {
 				HttpServer.create()
 				          .port(0)
 				          .host("0.0.0.0")
-				          .route(r -> r.get("/data", (request, response) -> {
-				                  return response.send(Mono.empty());
-				          }))
+				          .route(r -> r.get("/data", (request, response) -> response.send(Mono.empty())))
 				          .wiretap()
 				          .bindNow();
+
+		assertNotNull(httpServer);
+
 		httpServer.dispose();
 	}
 
@@ -202,27 +205,31 @@ public class TcpServerTests {
 		final int port = SocketUtils.findAvailableTcpPort();
 		final CountDownLatch latch = new CountDownLatch(1);
 
-		DisposableServer server = TcpServer.create().port(port)
-		                             .handle((in, out) -> {
+		DisposableServer server = TcpServer.create()
+		                                   .port(port)
+		                                   .handle((in, out) -> {
 
-			in.withConnection(c -> {
-				InetSocketAddress addr = c.address();
-				assertNotNull("remote address is not null", addr.getAddress());
-				latch.countDown();
-			});
+		    in.withConnection(c -> {
+		        InetSocketAddress addr = c.address();
+		        assertNotNull("remote address is not null", addr.getAddress());
+		        latch.countDown();
+		    });
 
-			                             return Flux.never();
-		                             })
-		                             .wiretap()
-		                             .bindNow();
+			return Flux.never();
+		                                   })
+		                                   .wiretap()
+		                                   .bindNow();
+
+		assertNotNull(server);
 
 		Connection client = TcpClient.create().port(port)
-		                             .handle((in, out) -> out.sendString(Flux.just(
-				                             "Hello World!")))
+		                             .handle((in, out) -> out.sendString(Flux.just("Hello World!")))
 		                             .wiretap()
-		                             .connectNow(Duration.ofDays(10));
+		                             .connectNow();
 
-		assertTrue("latch was counted down", latch.await(5, TimeUnit.DAYS));
+		assertNotNull(client);
+
+		assertTrue("Latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
 		client.dispose();
 		server.dispose();
@@ -240,28 +247,32 @@ public class TcpServerTests {
 			in.receive()
 			  .asString()
 			  .subscribe(data -> {
-				  log.info("data " + data + " on " + in);
-				  latch.countDown();
+			      log.info("data " + data + " on " + in);
+			      latch.countDown();
 			  });
 			return Flux.never();
 		};
 
 		TcpServer server = TcpServer.create()
 		                            .doOnConnection(c -> c.addHandlerLast("codec",
-				                                                new LineBasedFrameDecoder(8 * 1024)))
+		                                                                  new LineBasedFrameDecoder(8 * 1024)))
 		                            .port(port);
 
 		DisposableServer connected = server.handle(serverHandler)
-		                             .wiretap()
-		                             .bindNow();
+		                                   .wiretap()
+		                                   .bindNow();
+
+		assertNotNull(connected);
 
 		Connection clientContext =
 				client.handle((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
 				                                        .map(b -> out.alloc()
-				                                                         .buffer()
-				                                                         .writeBytes(b.getBytes(Charset.defaultCharset())))))
+				                                                     .buffer()
+				                                                     .writeBytes(b.getBytes(Charset.defaultCharset())))))
 				      .wiretap()
 				      .connectNow();
+
+		assertNotNull(clientContext);
 
 		assertTrue("Latch was counted down", latch.await(10, TimeUnit.SECONDS));
 
@@ -273,15 +284,13 @@ public class TcpServerTests {
 	@Ignore
 	public void test5() throws Exception {
 		//Hot stream of data, could be injected from anywhere
-		EmitterProcessor<String> broadcaster =
-				EmitterProcessor.create();
+		EmitterProcessor<String> broadcaster = EmitterProcessor.create();
 
 		//Get a reference to the tail of the operation pipeline (microbatching + partitioning)
 		final Processor<List<String>, List<String>> processor =
 				WorkQueueProcessor.<List<String>>builder().autoCancel(false).build();
 
 		broadcaster
-
 				//transform 10 data in a [] of 10 elements or wait up to 1 Second before emitting whatever the list contains
 				.bufferTimeout(10, Duration.ofSeconds(1))
 				.log("broadcaster")
@@ -290,22 +299,22 @@ public class TcpServerTests {
 		//on a server dispatching data on the default shared dispatcher, and serializing/deserializing as string
 		//Listen for anything exactly hitting the root URI and route the incoming connection request to the callback
 		DisposableServer s = HttpServer.create()
-		                         .port(0)
-		                         .route(r -> r.get("/", (request, response) -> {
-			                         //prepare a response header to be appended first before any reply
-			                         response.addHeader("X-CUSTOM", "12345");
-			                         //attach to the shared tail, take the most recent generated substream and merge it to the high level stream
-			                         //returning a stream of String from each microbatch merged
-			                         return response.sendString(Flux.from(processor)
-			                                                        //split each microbatch data into individual data
-			                                                        .flatMap(Flux::fromIterable)
-			                                                        .take(Duration.ofSeconds(
-					                                                        5))
-			                                                        .concatWith(Flux.just(
-					                                                        "end\n")));
-		                         }))
-		                         .wiretap()
-		                         .bindNow();
+		                               .port(0)
+		                               .route(r -> r.get("/", (request, response) -> {
+		                                   //prepare a response header to be appended first before any reply
+		                                   response.addHeader("X-CUSTOM", "12345");
+		                                   //attach to the shared tail, take the most recent generated substream and merge it to the high level stream
+		                                   //returning a stream of String from each microbatch merged
+		                                   return response.sendString(Flux.from(processor)
+		                                                                  //split each microbatch data into individual data
+		                                                                  .flatMap(Flux::fromIterable)
+		                                                                  .take(Duration.ofSeconds(5))
+		                                                                  .concatWith(Flux.just("end\n")));
+		                               }))
+		                               .wiretap()
+		                               .bindNow();
+
+		assertNotNull(s);
 
 		for (int i = 0; i < 50; i++) {
 			Thread.sleep(500);
@@ -321,33 +330,35 @@ public class TcpServerTests {
 
 		final CountDownLatch countDownLatch = new CountDownLatch(1);
 
-		DisposableServer server = TcpServer.create().port(0)
-		                             .handle((in, out) -> {
-			                             in.receive()
-			                               .log("channel")
-			                               .subscribe(trip -> {
-				                               countDownLatch.countDown();
-			                               });
-			                             return Flux.never();
-		                             })
-		                             .wiretap()
-		                             .bindNow();
+		DisposableServer server = TcpServer.create()
+		                                   .port(0)
+		                                   .handle((in, out) -> {
+		                                       in.receive()
+		                                         .log("channel")
+		                                         .subscribe(trip -> countDownLatch.countDown());
+		                                       return Flux.never();
+		                                   })
+		                                   .wiretap()
+		                                   .bindNow();
+
+		assertNotNull(server);
 
 		System.out.println("PORT +" + server.address()
 		                                    .getPort());
 
-		Connection client = TcpClient.create().port(server.address()
-		                                           .getPort())
-		                             .handle((in, out) -> out.sendString(Flux.just(
-				                             "test")))
+		Connection client = TcpClient.create()
+		                             .port(server.address()
+		                                         .getPort())
+		                             .handle((in, out) -> out.sendString(Flux.just("test")))
 		                             .wiretap()
 		                             .connectNow();
+
+		assertNotNull(client);
 
 		client.dispose();
 		server.dispose();
 
-		assertThat("countDownLatch counted down",
-				countDownLatch.await(5, TimeUnit.SECONDS));
+		assertThat("Latch was counted down", countDownLatch.await(5, TimeUnit.SECONDS));
 	}
 
 	@Test
@@ -355,11 +366,11 @@ public class TcpServerTests {
 	public void proxyTest() {
 		HttpServer server = HttpServer.create();
 		server.route(r -> r.get("/search/{search}",
-				(in, out) -> HttpClient.create()
-				                       .wiretap()
-				                       .get()
-				                       .uri("foaas.herokuapp.com/life/" + in.param("search"))
-				                       .response((repliesOut, buf) -> out.send(buf))))
+		                        (in, out) -> HttpClient.create()
+		                                               .wiretap()
+		                                               .get()
+		                                               .uri("foaas.herokuapp.com/life/" + in.param("search"))
+		                                               .response((repliesOut, buf) -> out.send(buf))))
 		      .wiretap()
 		      .bindNow()
 		      .onDispose()
@@ -371,12 +382,12 @@ public class TcpServerTests {
 	public void wsTest() {
 		HttpServer server = HttpServer.create();
 		server.route(r -> r.get("/search/{search}",
-				(in, out) -> HttpClient.create()
-				                       .wiretap()
-				                       .post()
-				                       .uri("ws://localhost:3000")
-				                       .send((requestOut, o) -> o.sendString(Mono.just("ping")))
-				                       .response((repliesOut, buf) ->  out.sendGroups(buf.window(100)))))
+		                        (in, out) -> HttpClient.create()
+		                                               .wiretap()
+		                                               .post()
+		                                               .uri("ws://localhost:3000")
+		                                               .send((requestOut, o) -> o.sendString(Mono.just("ping")))
+		                                               .response((repliesOut, buf) ->  out.sendGroups(buf.window(100)))))
 		      .wiretap()
 		      .bindNow()
 		      .onDispose()
@@ -400,17 +411,18 @@ public class TcpServerTests {
 		SslContext sslClient = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
 		DisposableServer context =
-				TcpServer.create().secure(sslServer)
+				TcpServer.create()
+				         .secure(sslServer)
 				         .handle((in, out) ->
-						         in.receive()
-						           .asString()
-						           .flatMap(word -> "GOGOGO".equals(word) ?
-								           out.sendFile(largeFile).then() :
-								           out.sendString(Mono.just("NOPE"))
-						           )
-				         )
+				                 in.receive()
+				                   .asString()
+				                   .flatMap(word -> "GOGOGO".equals(word) ?
+				                            out.sendFile(largeFile).then() :
+				                            out.sendString(Mono.just("NOPE"))))
 				         .wiretap()
 				         .bindNow();
+
+		assertNotNull(context);
 
 		MonoProcessor<String> m1 = MonoProcessor.create();
 		MonoProcessor<String> m2 = MonoProcessor.create();
@@ -420,13 +432,13 @@ public class TcpServerTests {
 				         .port(context.address().getPort())
 				         .secure(sslClient)
 				         .handle((in, out) -> {
-					         in.receive()
-					           .asString()
-					           .log("-----------------CLIENT1")
-					           .subscribe(m1::onNext);
+				             in.receive()
+				               .asString()
+				               .log("-----------------CLIENT1")
+				               .subscribe(m1::onNext);
 
-					         return out.sendString(Mono.just("gogogo"))
-							         .neverComplete();
+				             return out.sendString(Mono.just("gogogo"))
+				                       .neverComplete();
 				         })
 				         .wiretap()
 				         .connectNow();
@@ -436,18 +448,20 @@ public class TcpServerTests {
 				         .port(context.address().getPort())
 				         .secure(sslClient)
 				         .handle((in, out) -> {
-					         in.receive()
-					           .asString(StandardCharsets.UTF_8)
-					           .takeUntil(d -> d.contains("<- 1024 mark here"))
-					           .reduceWith(String::new, String::concat)
-					           .log("-----------------CLIENT2")
-					           .subscribe(m2::onNext);
+				             in.receive()
+				               .asString(StandardCharsets.UTF_8)
+				               .takeUntil(d -> d.contains("<- 1024 mark here"))
+				               .reduceWith(String::new, String::concat)
+				               .log("-----------------CLIENT2")
+				               .subscribe(m2::onNext);
 
-					         return out.sendString(Mono.just("GOGOGO"))
-					                   .neverComplete();
+				             return out.sendString(Mono.just("GOGOGO"))
+				                       .neverComplete();
 				         })
 				         .wiretap()
 				         .connectNow();
+
+		assertNotNull(client2);
 
 		String client1Response = m1.block();
 		String client2Response = m2.block();
@@ -469,13 +483,11 @@ public class TcpServerTests {
 	public void sendFileChunked() throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
-
 		assertSendFile(out -> out.sendFileChunked(largeFile, 0, fileSize));
 	}
 
 	@Test
-	public void sendZipFileChunked()
-			throws IOException {
+	public void sendZipFileChunked() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -488,68 +500,67 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void sendZipFileDefault()
-			throws IOException {
+	public void sendZipFileDefault() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 
 		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
 			Path fromZipFile = zipFs.getPath("/largeFile.txt");
 			long fileSize = Files.size(fromZipFile);
-
 			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize));
 		}
 	}
 
 	private void assertSendFile(Function<NettyOutbound, NettyOutbound> fn) {
-
-
-
 		DisposableServer context =
 				TcpServer.create()
 				         .handle((in, out) ->
-						         in.receive()
-						           .asString()
-						           .flatMap(word -> "GOGOGO".equals(word) ?
-								           fn.apply(out).then() :
-								           out.sendString(Mono.just("NOPE"))
-						           )
-				         )
+				                 in.receive()
+				                   .asString()
+				                   .flatMap(word -> "GOGOGO".equals(word) ?
+				                            fn.apply(out).then() :
+				                            out.sendString(Mono.just("NOPE"))))
 				         .wiretap()
 				         .bindNow();
+
+		assertNotNull(context);
 
 		MonoProcessor<String> m1 = MonoProcessor.create();
 		MonoProcessor<String> m2 = MonoProcessor.create();
 
 		Connection client1 =
-				TcpClient.create().port(context.address().getPort())
+				TcpClient.create()
+				         .port(context.address().getPort())
 				         .handle((in, out) -> {
-					         in.receive()
-					           .asString()
-					           .log("-----------------CLIENT1")
-					           .subscribe(m1::onNext);
+				             in.receive()
+				               .asString()
+				               .log("-----------------CLIENT1")
+				               .subscribe(m1::onNext);
 
-					         return out.sendString(Mono.just("gogogo"))
-					                   .neverComplete();
+				             return out.sendString(Mono.just("gogogo"))
+				                       .neverComplete();
 				         })
 				         .wiretap()
 				         .connectNow();
 
 		Connection client2 =
-				TcpClient.create().port(context.address().getPort())
+				TcpClient.create()
+				         .port(context.address().getPort())
 				         .handle((in, out) -> {
-					         in.receive()
-					           .asString(StandardCharsets.UTF_8)
-					           .take(2)
-					           .reduceWith(String::new, String::concat)
-					           .log("-----------------CLIENT2")
-					           .subscribe(m2::onNext);
+				             in.receive()
+				               .asString(StandardCharsets.UTF_8)
+				               .take(2)
+				               .reduceWith(String::new, String::concat)
+				               .log("-----------------CLIENT2")
+				               .subscribe(m2::onNext);
 
-					         return out.sendString(Mono.just("GOGOGO"))
-					                   .neverComplete();
+				             return out.sendString(Mono.just("GOGOGO"))
+				                       .neverComplete();
 				         })
 				         .wiretap()
 				         .connectNow();
+
+		assertNotNull(client2);
 
 		String client1Response = m1.block();
 		String client2Response = m2.block();
@@ -630,6 +641,8 @@ public class TcpServerTests {
 		                 .wiretap()
 		                 .bindNow();
 
+		assertNotNull(server);
+
 		SimpleClient client = new SimpleClient(server.address().getPort(), dataLatch, "{\"name\":\"John Doe\"}");
 		client.start();
 
@@ -680,25 +693,30 @@ public class TcpServerTests {
 				         .wiretap()
 				         .bindNow();
 
-		Connection client = TcpClient.create().port(server.address().getPort())
-		                               .handle((in, out) -> {
-			                               in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
-			                                 .receive()
-			                                 .asString()
-			                                 .log("receive")
-			                                 .map(jsonDecoder)
-			                                 .concatMap(Flux::fromArray)
-			                                 .subscribe(c -> dataLatch.countDown());
+		assertNotNull(server);
 
-			                               return out.send(Flux.range(1, 10)
-			                                                   .map(it -> new Pojo("test" + it))
-			                                                   .log("send")
-			                                                   .collectList()
-			                                                   .map(jsonEncoder))
-			                                         .neverComplete();
-		                               })
-		                               .wiretap()
-		                               .connectNow();
+		Connection client = TcpClient.create()
+		                             .port(server.address().getPort())
+		                             .handle((in, out) -> {
+		                                 in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
+		                                   .receive()
+		                                   .asString()
+		                                   .log("receive")
+		                                   .map(jsonDecoder)
+		                                   .concatMap(Flux::fromArray)
+		                                   .subscribe(c -> dataLatch.countDown());
+
+		                                 return out.send(Flux.range(1, 10)
+		                                                     .map(it -> new Pojo("test" + it))
+		                                                     .log("send")
+		                                                     .collectList()
+		                                                     .map(jsonEncoder))
+		                                           .neverComplete();
+		                             })
+		                             .wiretap()
+		                             .connectNow();
+
+		assertNotNull(client);
 
 		Assertions.assertThat(dataLatch.await(30, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(dataLatch.getCount()).isEqualTo(0);
@@ -737,37 +755,42 @@ public class TcpServerTests {
 		                                                       .asString()
 		                                                       .map(jsonDecoder)
 		                                                       .map(d -> Flux.fromArray(d)
-		                                                                         .doOnNext(pojo -> {
-		                                                                             if (j.getAndIncrement() < 2) {
-		                                                                                 throw new RuntimeException("test");
-		                                                                             }
-		                                                                         })
-		                                                                         .retry(2)
-		                                                                         .collectList()
-		                                                                         .map(jsonEncoder))
+		                                                                     .doOnNext(pojo -> {
+		                                                                         if (j.getAndIncrement() < 2) {
+		                                                                             throw new RuntimeException("test");
+		                                                                         }
+		                                                                     })
+		                                                                     .retry(2)
+		                                                                     .collectList()
+		                                                                     .map(jsonEncoder))
 		                                                       .doOnComplete(() -> System.out.println("wow"))
 		                                                       .log("flatmap-retry")))
 		                 .wiretap()
 		                 .bindNow();
 
-		Connection client = TcpClient.create().addressSupplier(server::address)
-		                               .handle((in, out) -> {
-		                                   in.receive()
-		                                     .asString()
-		                                     .map(jsonDecoder)
-		                                     .concatMap(Flux::fromArray)
-		                                     .log("receive")
-		                                     .subscribe(c -> latch.countDown());
+		assertNotNull(server);
 
-		                                   return out.send(Flux.range(1, elem)
-		                                                       .map(i -> new Pojo("test" + i))
-		                                                       .log("send")
-		                                                       .collectList()
-		                                                       .map(jsonEncoder))
-		                                             .neverComplete();
-		                               })
-		                               .wiretap()
-		                               .connectNow();
+		Connection client = TcpClient.create()
+		                             .addressSupplier(server::address)
+		                             .handle((in, out) -> {
+		                                 in.receive()
+		                                   .asString()
+		                                   .map(jsonDecoder)
+		                                   .concatMap(Flux::fromArray)
+		                                   .log("receive")
+		                                   .subscribe(c -> latch.countDown());
+
+		                                 return out.send(Flux.range(1, elem)
+		                                                     .map(i -> new Pojo("test" + i))
+		                                                     .log("send")
+		                                                     .collectList()
+		                                                     .map(jsonEncoder))
+		                                           .neverComplete();
+		                             })
+		                             .wiretap()
+		                             .connectNow();
+
+		assertNotNull(client);
 
 		Assertions.assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(latch.getCount()).isEqualTo(0);
