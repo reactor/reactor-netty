@@ -779,12 +779,12 @@ public class TcpServerTests {
 	@Test
 	public void testEchoWithLineBasedFrameDecoder() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
-		NettyContext server =
-				TcpServer.create(ops -> ops.port(0)
-				                           .afterNettyContextInit(
-				                                   c -> c.addHandlerLast("codec",
-				                                                         new LineBasedFrameDecoder(256))))
-				         .newHandler((in, out) ->
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .doOnConnection(c -> c.addHandlerLast("codec",
+				                                               new LineBasedFrameDecoder(256)))
+				         .handle((in, out) ->
 				                 out.options(o -> o.flushOnEach(false))
 				                    .sendString(in.receive()
 				                                  .asString()
@@ -794,16 +794,16 @@ public class TcpServerTests {
 				                                      }
 				                                  })
 				                                  .map(s -> s + "\n")))
-				         .block(Duration.ofSeconds(30));
+				         .bindNow();
 
 		assertNotNull(server);
 
-		NettyContext client =
-				TcpClient.create(ops -> ops.port(server.address().getPort())
-				                           .afterNettyContextInit(
-				                                   c -> c.addHandlerLast("codec",
-				                                                         new LineBasedFrameDecoder(256))))
-				         .newHandler((in, out) ->
+		Connection client =
+				TcpClient.create()
+				         .port(server.address().getPort())
+				         .doOnConnected(c -> c.addHandlerLast("codec",
+				                                              new LineBasedFrameDecoder(256)))
+				         .handle((in, out) ->
 				                 out.options(sendOptions -> sendOptions.flushOnEach(false))
 				                    .sendString(Flux.just("1\n", "2\n", "3\n", "4\n"))
 				                    .then(in.receive()
@@ -814,7 +814,7 @@ public class TcpServerTests {
 				                                }
 				                            })
 				                            .then()))
-				         .block(Duration.ofSeconds(30));
+				         .connectNow();
 
 		assertNotNull(client);
 
