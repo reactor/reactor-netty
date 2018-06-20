@@ -776,6 +776,51 @@ public class TcpServerTests {
 		client.dispose();
 	}
 
+	@Test
+	public void testEchoWithLineBasedFrameDecoder() throws Exception {
+		CountDownLatch latch = new CountDownLatch(2);
+		NettyContext server =
+				TcpServer.create(ops -> ops.port(0)
+				                           .afterNettyContextInit(
+				                                   c -> c.addHandlerLast("codec",
+				                                                         new LineBasedFrameDecoder(256))))
+				         .newHandler((in, out) ->
+				                 out.options(o -> o.flushOnEach(false))
+				                    .sendString(in.receive()
+				                                  .asString()
+				                                  .doOnNext(s -> {
+				                                      if ("4".equals(s)) {
+				                                          latch.countDown();
+				                                      }
+				                                  })
+				                                  .map(s -> s + "\n")))
+				         .block(Duration.ofSeconds(30));
+
+		assertNotNull(server);
+
+		NettyContext client =
+				TcpClient.create(ops -> ops.port(server.address().getPort())
+				                           .afterNettyContextInit(
+				                                   c -> c.addHandlerLast("codec",
+				                                                         new LineBasedFrameDecoder(256))))
+				         .newHandler((in, out) ->
+				                 out.options(sendOptions -> sendOptions.flushOnEach(false))
+				                    .sendString(Flux.just("1\n", "2\n", "3\n", "4\n"))
+				                    .then(in.receive()
+				                            .asString()
+				                            .doOnNext(s -> {
+				                                if ("4".equals(s)) {
+				                                    latch.countDown();
+				                                }
+				                            })
+				                            .then()))
+				         .block(Duration.ofSeconds(30));
+
+		assertNotNull(client);
+
+		latch.await(30, TimeUnit.SECONDS);
+	}
+
 	private static class SimpleClient extends Thread {
 		private final int port;
 		private final CountDownLatch latch;
