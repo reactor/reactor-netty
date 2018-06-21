@@ -37,9 +37,4 @@ public class SimpleCompressionHandler extends HttpContentCompressor {
 			super.write(ctx, msg, promise);
 		}
 	}
-
-	@Override
-	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-		super.handlerAdded(ctx);
-	}
 }
