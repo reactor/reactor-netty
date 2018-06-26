@@ -38,6 +38,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
+import static reactor.ipc.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  * @author Simon Baslé
@@ -171,7 +173,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 		if (msg instanceof CloseWebSocketFrame &&
 				((CloseWebSocketFrame)msg).isFinalFragment()) {
 			if (log.isDebugEnabled()) {
-				log.debug("CloseWebSocketFrame detected. Closing Websocket");
+				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
 			onInboundComplete();
 			CloseWebSocketFrame close = (CloseWebSocketFrame) msg;
@@ -192,7 +194,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug("Cancelling Websocket inbound. Closing Websocket");
+			log.debug(format(channel(), "Cancelling Websocket inbound. Closing Websocket"));
 		}
 		sendClose(null);
 	}
@@ -228,7 +230,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 	@Override
 	public void accept(Void aVoid, Throwable throwable) {
 		if (log.isDebugEnabled()) {
-			log.debug("Handler terminated. Closing Websocket");
+			log.debug(format(channel(), "Handler terminated. Closing Websocket"));
 		}
 		if (throwable == null) {
 			if (channel().isActive()) {

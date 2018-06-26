@@ -76,6 +76,8 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.ipc.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  * @author Simon Baslé
@@ -510,7 +512,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 		if (markSentHeaderAndBody()) {
 			if (log.isDebugEnabled()) {
-				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
+				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
+						"zero-length header"));
 			}
 			channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
@@ -523,6 +526,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if(NettyContext.isPersistent(channel()) && responseState == null){
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Outbound error happened"), err);
+			}
 			parentContext().fireContextError(err);
 			if (markSentBody()) {
 				markPersistent(false);
@@ -545,8 +551,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 			if (started) {
 				if (log.isDebugEnabled()) {
-					log.debug("{} An HttpClientOperations cannot proceed more than one response {}",
-							channel(),
+					log.debug(format(channel(), "HttpClientOperations cannot proceed more than one response {}"),
 							response.headers()
 							        .toString());
 				}
@@ -565,8 +570,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 
 			if (log.isDebugEnabled()) {
-				log.debug("{} Received response (auto-read:{}) : {}",
-						channel(),
+				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
 						channel().config()
 						         .isAutoRead(),
 						responseHeaders().entries()
@@ -586,13 +590,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (msg instanceof LastHttpContent) {
 			if (!started) {
 				if (log.isDebugEnabled()) {
-					log.debug("{} HttpClientOperations received an incorrect end " +
-							"delimiter" + "(previously used connection?)", channel());
+					log.debug(format(channel(), "HttpClientOperations received an incorrect end " +
+							"delimiter (previously used connection?)"));
 				}
 				return;
 			}
 			if (log.isDebugEnabled()) {
-				log.debug("{} Received last HTTP packet", channel());
+				log.debug(format(channel(), "Received last HTTP packet"));
 			}
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
@@ -611,9 +615,9 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 				if (msg instanceof ByteBufHolder) {
 					msg = ((ByteBufHolder) msg).content();
 				}
-				log.debug("{} HttpClientOperations received an incorrect chunk {} " +
-								"(previously used connection?)",
-						channel(), msg);
+				log.debug(format(channel(), "HttpClientOperations received an incorrect chunk {} " +
+								"(previously used connection?)"),
+						msg);
 			}
 			return;
 		}
@@ -632,7 +636,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (code >= 500) {
 			if (serverError){
 				if (log.isDebugEnabled()) {
-					log.debug("{} Received Server Error, stop reading: {}", channel(),
+					log.debug(format(channel(), "Received server error, stop reading: {}"),
 							response.toString());
 				}
 				Exception ex = new HttpClientException(uri(), response);
@@ -646,8 +650,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (code >= 400) {
 			if (clientError) {
 				if (log.isDebugEnabled()) {
-					log.debug("{} Received Request Error, stop reading: {}",
-							channel(),
+					log.debug(format(channel(), "Received request error, stop reading: {}"),
 							response.toString());
 				}
 				Exception ex = new HttpClientException(uri(), response);
@@ -659,8 +662,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		}
 		if ((code == 301 || code == 302) && isFollowRedirect()) {
 			if (log.isDebugEnabled()) {
-				log.debug("{} Received Redirect location: {}",
-						channel(),
+				log.debug(format(channel(), "Received redirect location: {}"),
 						response.headers()
 						        .entries()
 						        .toString());
@@ -738,7 +740,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			}
 		}
 		else {
-			log.error("Cannot enable websocket if headers have already been sent");
+			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
 	}

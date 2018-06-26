@@ -43,6 +43,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 
+import static reactor.ipc.netty.LogFormatter.format;
+
 /**
  * A one time-set channel pipeline callback to emit {@link NettyContext} state for clean
  * disposing. A {@link ContextHandler} is bound to a user-facing {@link MonoSink}
@@ -225,7 +227,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 				if (old != null) {
 					if (log.isDebugEnabled()) {
-						log.debug(channel.toString() + "Mixed pooled connection " + "operations between " + op + " - and a previous one " + old);
+						log.debug(format(channel, "Mixed pooled connection operations between " +
+								op + " - and a previous one " + old));
 					}
 					return null;
 				}
@@ -235,7 +238,8 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 						this.options.afterNettyContextInit().accept(op.context());
 					}
 					catch (Throwable t) {
-						log.error("Could not apply afterNettyContextInit callback {}", t.toString());
+						log.error(format(channel, "Could not apply afterNettyContextInit callback {}"),
+								t.toString());
 					}
 				}
 
@@ -273,7 +277,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		}
 		else if (AbortedException.isConnectionReset(t)) {
 			if (log.isDebugEnabled()) {
-				log.error("Connection closed remotely", t);
+				log.debug("Connection closed remotely", t);
 			}
 		}
 		else {
@@ -315,7 +319,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			if (options.onChannelInit()
 			           .test(channel)) {
 				if (log.isDebugEnabled()) {
-					log.debug("DROPPED by onChannelInit predicate {}", channel);
+					log.debug(format(channel, "DROPPED by onChannelInit predicate"));
 				}
 				doDropped(channel);
 				return;
@@ -333,8 +337,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 		}
 		catch (Exception t) {
 			if (log.isErrorEnabled()) {
-				log.error("Error while binding a channelOperation with: " + channel
-								.toString() + " on " + channel.pipeline(),
+				log.error(format(channel, "Error while binding ChannelOperation on " + channel.pipeline()),
 						t);
 			}
 		}
@@ -345,7 +348,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 			}
 		}
 		if (log.isDebugEnabled()) {
-			log.debug("After pipeline {}",
+			log.debug(format(channel, "After pipeline {}"),
 					channel.pipeline()
 					       .toString());
 		}
@@ -396,14 +399,14 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 
 		if (sslHandler != null) {
 			if (log.isDebugEnabled() && sniInfo != null) {
-				log.debug("SSL enabled using engine {} and SNI {}",
+				log.debug(format(pipeline.channel(), "SSL enabled using engine {} and SNI {}"),
 						sslHandler.engine()
 						          .getClass()
 						          .getSimpleName(),
 						sniInfo);
 			}
 			else if (log.isDebugEnabled()) {
-				log.debug("SSL enabled using engine {}",
+				log.debug(format(pipeline.channel(), "SSL enabled using engine {}"),
 						sslHandler.engine()
 						          .getClass()
 						          .getSimpleName());

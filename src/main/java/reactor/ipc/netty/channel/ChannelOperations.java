@@ -44,6 +44,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
+import static reactor.ipc.netty.LogFormatter.format;
+
 /**
  * A bridge between an immutable {@link Channel} and {@link NettyInbound} /
  * {@link NettyOutbound} semantics exposed to user
@@ -225,7 +227,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 				OUTBOUND_CLOSE.getAndSet(this, Operators.cancelledSubscription());
 		if (s == Operators.cancelledSubscription() || isDisposed()) {
 			if(log.isDebugEnabled()){
-				log.error("An outbound error could not be processed", t);
+				log.debug(format(channel(), "An outbound error could not be processed"), t);
 			}
 			return;
 		}
@@ -348,7 +350,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onOutboundComplete() {
 		if (log.isDebugEnabled()) {
-			log.debug("[{}] {} User Handler requesting close connection", formatName(), channel());
+			log.debug(format(channel(), "[{}] User handler requesting close connection"), formatName());
 		}
 		markPersistent(false);
 		onHandlerTerminate();
@@ -372,15 +374,14 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 //		channel.pipeline()
 //		       .fireUserEventTriggered(NettyPipeline.handlerStartedEvent());
 		if (log.isDebugEnabled()) {
-			log.debug("[{}] {} handler is being applied: {}", formatName(), channel
-					(), handler);
+			log.debug(format(channel(), "[{}] Handler is being applied: {}"), formatName(), handler);
 		}
 		try {
 			Mono.fromDirect(handler.apply((INBOUND) this, (OUTBOUND) this))
 			    .subscribe(this);
 		}
 		catch (Throwable t) {
-			log.error("", t);
+			log.error(format(channel(), ""), t);
 			channel.close();
 		}
 	}
@@ -391,8 +392,8 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final void onHandlerTerminate() {
 		if (replace(null)) {
 			if(log.isTraceEnabled()){
-				log.trace("{} Disposing ChannelOperation from a channel", channel(), new Exception
-						("ChannelOperation terminal stack"));
+				log.trace(format(channel(), "Disposing ChannelOperation from a channel"),
+						new Exception("ChannelOperation terminal stack"));
 			}
 			try {
 				Operators.terminate(OUTBOUND_CLOSE, this);
@@ -414,7 +415,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected final void discard(){
 		if(log.isDebugEnabled()){
-			log.debug("{} Discarding inbound content", channel);
+			log.debug(format(channel(), "Discarding inbound content"));
 		}
 		inbound.discard();
 	}

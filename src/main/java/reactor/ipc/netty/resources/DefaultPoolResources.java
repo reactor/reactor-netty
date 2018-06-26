@@ -40,6 +40,8 @@ import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.ipc.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -132,15 +134,14 @@ final class DefaultPoolResources implements PoolResources {
 				Channel c = future.get();
 				activeConnections.incrementAndGet();
 				if (log.isDebugEnabled()) {
-					log.debug("Acquired {}, now {} active connections",
-							c.toString(),
+					log.debug(format(c, "Channel acquired, now {} active connections"),
 							activeConnections);
 				}
 
 
 				if(c.attr(CLOSE_HANDLER_ADDED).setIfAbsent(true) == null) {
 					if (log.isDebugEnabled()) {
-						log.debug("Registering close event to pool release: {}", c.toString());
+						log.debug(format(c, "Registering close event to pool release"));
 					}
 					c.closeFuture()
 					 .addListener(ff -> pool.release(c));
@@ -169,8 +170,7 @@ final class DefaultPoolResources implements PoolResources {
 		public void channelReleased(Channel ch) throws Exception {
 			activeConnections.decrementAndGet();
 			if (log.isDebugEnabled()) {
-				log.debug("Released {}, now {} active connections",
-						ch.toString(),
+				log.debug(format(ch, "Channel released, now {} active connections"),
 						activeConnections);
 			}
 		}
@@ -195,8 +195,7 @@ final class DefaultPoolResources implements PoolResources {
 			 */
 
 			if (log.isDebugEnabled()) {
-				log.debug("Created new pooled channel {}, now {} active connections",
-						ch.toString(),
+				log.debug(format(ch, "Created new pooled channel, now {} active connections"),
 						activeConnections);
 			}
 			if (onChannelCreate != null) {

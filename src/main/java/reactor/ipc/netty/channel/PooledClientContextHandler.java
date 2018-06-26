@@ -37,6 +37,8 @@ import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
+import static reactor.ipc.netty.LogFormatter.format;
+
 /**
  * @param <CHANNEL> the channel type
  *
@@ -137,9 +139,8 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 		if (DISPOSED == this.future) {
 			if (log.isDebugEnabled()) {
-				log.debug("Dropping acquisition {} because of {}",
-						future,
-						"asynchronous user cancellation");
+				log.debug("Dropping acquisition {} because of asynchronous user cancellation",
+						future);
 			}
 			if (future.isSuccess()) {
 				disposeOperationThenRelease(future.get());
@@ -179,7 +180,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	final void connectOrAcquire(CHANNEL c) {
 		if (DISPOSED == this.future) {
 			if (log.isDebugEnabled()) {
-				log.debug("Dropping acquisition because of asynchronous user cancellation");
+				log.debug(format(c, "Dropping acquisition because of asynchronous user cancellation"));
 			}
 			disposeOperationThenRelease(c);
 			sink.success();
@@ -187,14 +188,15 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		}
 
 		if (!c.isActive()) {
-			log.debug("Immediately aborted pooled channel, re-acquiring new channel: {}",
-					c.toString());
+			if (log.isDebugEnabled()) {
+				log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
+			}
 			setFuture(pool.acquire());
 			return;
 		}
 
 		if (log.isDebugEnabled()) {
-			log.debug("Acquired active channel: " + c.toString());
+			log.debug(format(c, "Acquired active channel"));
 		}
 		if (createOperations(c, null) == null) {
 			setFuture(pool.acquire());
@@ -247,7 +249,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 	final void release(CHANNEL c) {
 		if (log.isDebugEnabled()) {
-			log.debug("Releasing channel: {}", c.toString());
+			log.debug(format(c, "Releasing channel"));
 		}
 
 		if (!NettyContext.isPersistent(c) && c.isActive()) {
@@ -266,7 +268,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 		pool.release(c)
 		    .addListener(f -> {
 		        if (log.isDebugEnabled() && !f.isSuccess()){
-		            log.debug("Failed cleaning the channel from pool", f.cause());
+		            log.debug(format(c, "Failed cleaning the channel from pool"), f.cause());
 		        }
 		        onReleaseEmitter.onComplete();
 		    });

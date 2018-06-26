@@ -33,6 +33,8 @@ import reactor.ipc.netty.options.NettyOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.ipc.netty.LogFormatter.format;
+
 /**
  * @param <CHANNEL> the channel type
  *
@@ -62,14 +64,14 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 	public final void operationComplete(ChannelFuture f) throws Exception {
 		if (!f.isSuccess()) {
 			if(f.isCancelled()){
-				log.debug("Cancelled {}", f.channel().toString());
+				log.debug(format(f.channel(), "Channel cancelled"));
 				return;
 			}
 			if (f.cause() != null) {
 				sink.error(f.cause());
 			}
 			else {
-				sink.error(new IOException("error while connecting to " + f.channel()
+				sink.error(new IOException("Error while connecting to " + f.channel()
 				                                                           .toString()));
 			}
 		}
@@ -86,10 +88,11 @@ abstract class CloseableContextHandler<CHANNEL extends Channel>
 			future.cancel(true);
 			return;
 		}
-		if(log.isDebugEnabled()){
-			log.debug("Connecting new channel: {}", future.toString());
-		}
 		this.f = (ChannelFuture) future;
+		if(log.isDebugEnabled()){
+			log.debug(format(f.channel(), "Connecting new channel: {}"),
+					future.toString());
+		}
 
 		if(future.isDone()){
 			try {
