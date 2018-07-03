@@ -39,6 +39,8 @@ import reactor.netty.SystemPropertiesNames;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * Helper to update configuration the main {@link Bootstrap} and
  * {@link ServerBootstrap} handlers
@@ -472,7 +474,7 @@ public abstract class BootstrapHandlers {
 			ChannelOperations.addReactiveBridge(ch, opsFactory, listener);
 
 			if (log.isDebugEnabled()) {
-				log.debug("{} Initialized pipeline {}", ch, ch.pipeline().toString());
+				log.debug(format(ch, "Initialized pipeline {}"), ch.pipeline().toString());
 			}
 		}
 

@@ -31,6 +31,8 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -69,7 +71,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		}
 
 		return FutureMono.from(future)
-		                 .doOnSuccess(v -> log.info("JOIN {}", multicastAddress));
+		                 .doOnSuccess(v -> log.info(format(future.channel(), "JOIN {}"), multicastAddress));
 	}
 
 	/**
@@ -96,7 +98,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		}
 
 		return FutureMono.from(future)
-		                 .doOnSuccess(v -> log.info("JOIN {}", multicastAddress));
+		                 .doOnSuccess(v -> log.info(format(future.channel(), "JOIN {}"), multicastAddress));
 	}
 
 	static final Logger log = Loggers.getLogger(UdpOperations.class);

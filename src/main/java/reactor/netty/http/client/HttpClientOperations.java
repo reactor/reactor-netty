@@ -77,6 +77,8 @@ import reactor.netty.http.HttpOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  * @author Simon Baslé
@@ -419,7 +421,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		if (markSentHeaderAndBody()) {
 			if (log.isDebugEnabled()) {
-				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
+				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
+						"zero-length header"));
 			}
 			channel().writeAndFlush(newFullEmptyBodyMessage());
 		}
@@ -433,6 +436,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if(isPersistent() && responseState == null){
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Outbound error happened"), err);
+			}
 			listener().onUncaughtException(this, err);
 			if (markSentBody()) {
 				markPersistent(false);
@@ -455,8 +461,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 			if (started) {
 				if (log.isDebugEnabled()) {
-					log.debug("{} An HttpClientOperations cannot proceed more than one response {}",
-							channel(),
+					log.debug(format(channel(), "HttpClientOperations cannot proceed more than one response {}"),
 							response.headers()
 							        .toString());
 				}
@@ -475,8 +480,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 
 			if (log.isDebugEnabled()) {
-				log.debug("{} Received response (auto-read:{}) : {}",
-						channel(),
+				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
 						channel().config()
 						         .isAutoRead(),
 						responseHeaders().entries()
@@ -495,13 +499,13 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (msg instanceof LastHttpContent) {
 			if (!started) {
 				if (log.isDebugEnabled()) {
-					log.debug("{} HttpClientOperations received an incorrect end " +
-							"delimiter" + "(previously used connection?)", channel());
+					log.debug(format(channel(), "HttpClientOperations received an incorrect end " +
+							"delimiter (previously used connection?)"));
 				}
 				return;
 			}
 			if (log.isDebugEnabled()) {
-				log.debug("{} Received last HTTP packet", channel());
+				log.debug(format(channel(), "Received last HTTP packet"));
 			}
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 				super.onInboundNext(ctx, msg);
@@ -520,9 +524,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				if (msg instanceof ByteBufHolder) {
 					msg = ((ByteBufHolder) msg).content();
 				}
-				log.debug("{} HttpClientOperations received an incorrect chunk {} " +
-								"(previously used connection?)",
-						channel(), msg);
+				log.debug(format(channel(), "HttpClientOperations received an incorrect chunk {} " +
+								"(previously used connection?)"),
+						msg);
 			}
 			return;
 		}
@@ -539,8 +543,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		                   .code();
 		if ((code == 301 || code == 302) && isFollowRedirect()) {
 			if (log.isDebugEnabled()) {
-				log.debug("{} Received Redirect location: {}",
-						channel(),
+				log.debug(format(channel(), "Received redirect location: {}"),
 						response.headers()
 						        .entries()
 						        .toString());
@@ -592,8 +595,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, this);
 
 			if(!rebind(ops)) {
-				log.error("Error while rebinding websocket in channel attribute: " +
-						get(channel()) + " to " + ops);
+				log.error(format(channel(), "Error while rebinding websocket in channel attribute: " +
+						get(channel()) + " to " + ops));
 			}
 		}
 	}

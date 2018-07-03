@@ -24,6 +24,8 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.BootstrapHandlers;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -45,7 +47,7 @@ final class TcpServerDoOnConnection extends TcpServerOperator implements
 				onConnection.accept(connection);
 			}
 			catch (Throwable t) {
-				log.error("", t);
+				log.error(format(connection.channel(), ""), t);
 				connection.channel()
 				          .close();
 			}

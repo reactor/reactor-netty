@@ -54,6 +54,8 @@ import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.annotation.Nullable;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -177,7 +179,7 @@ final class HttpServerBind extends HttpServer
 		ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
 
 		if (log.isDebugEnabled()) {
-			log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
+			log.debug(format(ch, "Initialized HTTP/2 pipeline {}"), ch.pipeline());
 		}
 	}
 

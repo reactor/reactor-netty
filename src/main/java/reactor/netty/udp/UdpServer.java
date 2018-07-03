@@ -44,6 +44,8 @@ import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * A UdpServer allows to build in a safe immutable way a UDP server that is materialized
  * and connecting when {@link #bind(Bootstrap)} is ultimately called.
@@ -237,7 +239,7 @@ public abstract class UdpServer {
 		Objects.requireNonNull(handler, "handler");
 		return doOnBound(c -> {
 			if (log.isDebugEnabled()) {
-				log.debug("{} handler is being applied: {}", c.channel(), handler);
+				log.debug(format(c.channel(), "Handler is being applied: {}"), handler);
 			}
 
 			Mono.fromDirect(handler.apply((UdpInbound) c, (UdpOutbound) c))

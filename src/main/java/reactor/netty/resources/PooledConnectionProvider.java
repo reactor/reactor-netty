@@ -49,6 +49,8 @@ import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -213,8 +215,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		public void channelReleased(Channel ch) {
 			activeConnections.decrementAndGet();
 			if (log.isDebugEnabled()) {
-				log.debug("Cleaned {}, now {} active connections",
-						ch.toString(),
+				log.debug(format(ch, "Channel cleaned, now {} active connections"),
 						activeConnections);
 			}
 		}
@@ -239,8 +240,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			 */
 
 			if (log.isDebugEnabled()) {
-				log.debug("Created new pooled channel {}, now {} active connections",
-						ch.toString(),
+				log.debug(format(ch, "Created new pooled channel, now {} active connections"),
 						activeConnections);
 			}
 
@@ -339,7 +339,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			log.error("Pooled Connection observed an error", error);
+			log.error(format(connection.channel(), "Pooled connection observed an error"), error);
 			owner().onUncaughtException(connection, error);
 		}
 
@@ -356,7 +356,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			log.debug("onStateChange({}, {})", connection, newState);
+			if(log.isDebugEnabled()) {
+				log.debug(format(connection.channel(), "onStateChange({}, {})"), connection, newState);
+			}
 			if (newState == State.DISCONNECTING) {
 
 				if (!isPersistent() && channel.isActive()) {
@@ -373,7 +375,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				}
 
 				if (log.isDebugEnabled()) {
-					log.debug("Releasing channel: {}", channel);
+					log.debug(format(connection.channel(), "Releasing channel"));
 				}
 
 				pool.release(channel)
@@ -480,8 +482,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 			if (current != null) {
 				if (log.isDebugEnabled()) {
-					log.debug("Acquired {}, now {} active connection(s)",
-							c,
+					log.debug(format(c, "Channel acquired, now {} active connection(s)"),
 							pool.activeConnections);
 				}
 				obs.onStateChange(conn, State.ACQUIRED);
@@ -506,8 +507,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					log.debug("Connected {}, now {} active connection(s)",
-							c,
+					log.debug(format(c, "Channel connected, now {} active connection(s)"),
 							pool.activeConnections);
 				}
 				sink.success(conn);
@@ -516,7 +516,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		void registerClose(Channel c) {
 			if (log.isDebugEnabled()) {
-				log.debug("Registering pool release on close event for channel {}", c);
+				log.debug(format(c, "Registering pool release on close event for channel"));
 			}
 			c.closeFuture()
 			 .addListener(ff -> pool.release(c));
@@ -526,7 +526,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		public final void operationComplete(Future<Channel> f) throws Exception {
 			if (!f.isSuccess()) {
 				if (f.isCancelled()) {
-					log.debug("Cancelled acquiring from pool {}", pool);
+					if (log.isDebugEnabled()) {
+						log.debug("Cancelled acquiring from pool {}", pool);
+					}
 					return;
 				}
 				if (f.cause() != null) {
@@ -541,7 +543,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 				if (!c.isActive()) {
 					//TODO is this case necessary
-					log.debug("Immediately aborted pooled channel, re-acquiring new channel: {}", c);
+					if (log.isDebugEnabled()) {
+						log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
+					}
 					disposableAcquire(sink, obs, pool);
 					return;
 				}

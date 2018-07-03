@@ -36,6 +36,8 @@ import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.LoopResources;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -137,7 +139,9 @@ final class TcpServerBind extends TcpServer {
 		public final void operationComplete(ChannelFuture f) {
 			if (!f.isSuccess()) {
 				if (f.isCancelled()) {
-					log.debug("Cancelled {}", f.channel());
+					if (log.isDebugEnabled()) {
+						log.debug(format(f.channel(), "Channel cancelled"));
+					}
 					return;
 				}
 				if (f.cause() != null) {
@@ -149,7 +153,7 @@ final class TcpServerBind extends TcpServer {
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					log.debug("Bound new server {}", f.channel());
+					log.debug(format(f.channel(), "Bound new server"));
 				}
 				sink.success(this);
 				selectorObserver.onStateChange(this, ConnectionObserver.State.CONNECTED);
@@ -167,7 +171,7 @@ final class TcpServerBind extends TcpServer {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			log.error("onUncaughtException(" + connection + ")", error);
+			log.error(format(connection.channel(), "onUncaughtException(" + connection + ")"), error);
 			connection.dispose();
 		}
 

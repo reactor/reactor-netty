@@ -36,6 +36,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -130,7 +132,9 @@ final class NewConnectionProvider implements ConnectionProvider {
 		public final void operationComplete(ChannelFuture f) {
 			if (!f.isSuccess()) {
 				if (f.isCancelled()) {
-					log.debug("Cancelled {}", f.channel());
+					if (log.isDebugEnabled()) {
+						log.debug(format(f.channel(), "Channel cancelled"));
+					}
 					return;
 				}
 				if (f.cause() != null) {
@@ -143,7 +147,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			else {
 //				new NewConnection(f.channel()).bind();
 				if (log.isDebugEnabled()) {
-					log.debug("Connected new channel {}", f.channel());
+					log.debug(format(f.channel(), "Connected new channel"));
 				}
 			}
 		}
@@ -190,7 +194,9 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			log.debug("onStateChange({}, {})", newState, connection);
+			if (log.isDebugEnabled()) {
+				log.debug(format(connection.channel(), "onStateChange({}, {})"), newState, connection);
+			}
 			if (newState == State.CONFIGURED) {
 				sink.success(connection);
 			}
@@ -204,7 +210,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void onUncaughtException(Connection c, Throwable error) {
-			log.error("onUncaughtException(" + c + ")", error);
+			log.error(format(c.channel(), "onUncaughtException(" + c + ")"), error);
 			sink.error(error);
 			obs.onUncaughtException(c, error);
 		}

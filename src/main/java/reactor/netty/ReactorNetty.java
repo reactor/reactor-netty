@@ -51,6 +51,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * Internal helpers for reactor-netty contracts
  *
@@ -89,7 +91,8 @@ final class ReactorNetty {
 
 		if (exists) {
 			if (log.isDebugEnabled()) {
-				log.debug("Handler [{}] already exists in the pipeline, decoder has been skipped", name);
+				log.debug(format(channel, "Handler [{}] already exists in the pipeline, decoder has been skipped"),
+						name);
 			}
 			return;
 		}
@@ -113,7 +116,7 @@ final class ReactorNetty {
 		registerForClose(context.isPersistent(),  name, context);
 
 		if (log.isDebugEnabled()) {
-			log.debug("Added decoder [{}] at the end of the user pipeline, full pipeline: {}",
+			log.debug(format(channel, "Added decoder [{}] at the end of the user pipeline, full pipeline: {}"),
 					name,
 					channel.pipeline().names());
 		}
@@ -143,7 +146,8 @@ final class ReactorNetty {
 
 		if (exists) {
 			if (log.isDebugEnabled()) {
-				log.debug("Handler [{}] already exists in the pipeline, encoder has been skipped", name);
+				log.debug(format(channel, "Handler [{}] already exists in the pipeline, encoder has been skipped"),
+						name);
 			}
 			return;
 		}
@@ -166,7 +170,7 @@ final class ReactorNetty {
 		registerForClose(context.isPersistent(), name, context);
 
 		if (log.isDebugEnabled()) {
-			log.debug("Added encoder [{}] at the beginning of the user pipeline, full pipeline: {}",
+			log.debug(format(channel, "Added encoder [{}] at the beginning of the user pipeline, full pipeline: {}"),
 					name,
 					channel.pipeline().names());
 		}
@@ -198,15 +202,13 @@ final class ReactorNetty {
 			channel.pipeline()
 			       .remove(name);
 			if (log.isDebugEnabled()) {
-				log.debug("{} Removed handler: {}, pipeline: {}",
-						channel,
+				log.debug(format(channel, "Removed handler: {}, pipeline: {}"),
 						name,
 						channel.pipeline());
 			}
 		}
 		else if (log.isDebugEnabled()) {
-			log.debug("{} Non Removed handler: {}, context: {}, pipeline: {}",
-					channel,
+			log.debug(format(channel, "Non Removed handler: {}, context: {}, pipeline: {}"),
 					name,
 					channel.pipeline()
 					       .context(name),
@@ -220,15 +222,13 @@ final class ReactorNetty {
 			channel.pipeline()
 			       .replace(name, name, handler);
 			if (log.isDebugEnabled()) {
-				log.debug("{} Replaced handler: {}, pipeline: {}",
-						channel,
+				log.debug(format(channel, "Replaced handler: {}, pipeline: {}"),
 						name,
 						channel.pipeline());
 			}
 		}
 		else if (log.isDebugEnabled()) {
-			log.debug("{} Non Replaced handler: {}, context: {}, pipeline: {}",
-					channel,
+			log.debug(format(channel, "Non Replaced handler: {}, context: {}, pipeline: {}"),
 					name,
 					channel.pipeline()
 					       .context(name),

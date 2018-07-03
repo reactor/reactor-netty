@@ -30,6 +30,8 @@ import io.netty.handler.codec.http2.HttpConversionUtil;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 
+import static reactor.netty.LogFormatter.format;
+
 final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
 	final boolean            readForwardHeaders;
@@ -44,7 +46,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
 		super.handlerAdded(ctx);
 		if (HttpServerOperations.log.isDebugEnabled()) {
-			HttpServerOperations.log.debug("New http2 connection, requesting read");
+			HttpServerOperations.log.debug(format(ctx.channel(), "New http2 connection, requesting read"));
 		}
 		ctx.read();
 	}

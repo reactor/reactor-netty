@@ -69,6 +69,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static reactor.netty.LogFormatter.format;
 
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}.
@@ -323,7 +324,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		catch (IOException e) {
 			if (log.isDebugEnabled()) {
-				log.debug("Path not resolved", e);
+				log.debug(format(channel(), "Path not resolved"), e);
 			}
 			return then(sendNotFound());
 		}
@@ -408,7 +409,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				addHandlerFirst(NettyPipeline.CompressionHandler, handler);
 			}
 			catch (Throwable e) {
-				log.error("", e);
+				log.error(format(channel(), ""), e);
 			}
 		}
 		return this;
@@ -454,11 +455,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		final ChannelFuture f;
 		if (log.isDebugEnabled()) {
-			log.debug("Last HTTP response frame");
+			log.debug(format(channel(), "Last HTTP response frame"));
 		}
 		if (markSentHeaderAndBody()) {
 			if (log.isDebugEnabled()) {
-				log.debug("No sendHeaders() called before complete, sending " + "zero-length header");
+				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
+						"zero-length header"));
 			}
 
 			f = channel().writeAndFlush(newFullEmptyBodyMessage());
@@ -473,7 +475,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		f.addListener(s -> {
 			discard();
 			if (!s.isSuccess() && log.isDebugEnabled()) {
-				log.error(channel()+" Failed flushing last frame", s.cause());
+				log.debug(format(channel(), "Failed flushing last frame"), s.cause());
 			}
 		});
 
@@ -498,7 +500,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 
 		if (markSentHeaders()) {
-			log.error("Error starting response. Replying error status", err);
+			log.error(format(channel(), "Error starting response. Replying error status"), err);
 
 			HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.INTERNAL_SERVER_ERROR);
@@ -511,7 +513,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 
 		markSentBody();
-		log.error("Error finishing response. Closing connection", err);
+		log.error(format(channel(), "Error finishing response. Closing connection"), err);
 		channel().writeAndFlush(EMPTY_BUFFER)
 		         .addListener(ChannelFutureListener.CLOSE);
 	}
@@ -542,7 +544,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 		}
 		else {
-			log.error("Cannot enable websocket if headers have already been sent");
+			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
 	}

@@ -28,6 +28,8 @@ import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.channel.BootstrapHandlers;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -55,15 +57,14 @@ final class TcpServerHandle extends TcpServerOperator implements ConnectionObser
 		if (newState == State.CONFIGURED) {
 			try {
 				if (log.isDebugEnabled()) {
-					log.debug("{} handler is being applied: {}",
-							connection.channel(),
+					log.debug(format(connection.channel(), "Handler is being applied: {}"),
 							handler);
 				}
 				Mono.fromDirect(handler.apply(connection.inbound(), connection.outbound()))
 				    .subscribe(connection.disposeSubscriber());
 			}
 			catch (Throwable t) {
-				log.error("", t);
+				log.error(format(connection.channel(), ""), t);
 				connection.channel()
 				          .close();
 			}

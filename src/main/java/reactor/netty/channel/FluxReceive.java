@@ -36,6 +36,8 @@ import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -146,7 +148,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			Object o;
 			while ((o = q.poll()) != null) {
 				if (log.isDebugEnabled()) {
-					log.debug("Dropping frame {}, {} in buffer", o, getPending());
+					log.debug(format(channel, "Dropping frame {}, {} in buffer"), o, getPending());
 				}
 				ReferenceCountUtil.release(o);
 			}
@@ -251,8 +253,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final void startReceiver(CoreSubscriber<? super Object> s) {
 		if (receiver == null) {
 			if (log.isDebugEnabled()) {
-				log.debug("{} Subscribing inbound receiver [pending: {}, cancelled:{}, " +
-								"inboundDone: {}]", channel.toString(), getPending(),
+				log.debug(format(channel, "Subscribing inbound receiver [pending: {}, cancelled:{}, " +
+								"inboundDone: {}]"),
+						getPending(),
 						isCancelled(),
 						inboundDone);
 			}
@@ -280,7 +283,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	final void onInboundNext(Object msg) {
 		if (inboundDone || isCancelled()) {
 			if (log.isDebugEnabled()) {
-				log.debug("Dropping frame {}, {} in buffer", msg, getPending());
+				log.debug(format(channel, "Dropping frame {}, {} in buffer"), msg, getPending());
 			}
 			ReferenceCountUtil.release(msg);
 			return;

@@ -41,6 +41,8 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.annotation.Nullable;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  * @author Simon Baslé
@@ -125,7 +127,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 		if (msg instanceof CloseWebSocketFrame &&
 				((CloseWebSocketFrame)msg).isFinalFragment()) {
 			if (log.isDebugEnabled()) {
-				log.debug("CloseWebSocketFrame detected. Closing Websocket");
+				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
 			onInboundComplete();
 			CloseWebSocketFrame close = (CloseWebSocketFrame) msg;
@@ -141,7 +143,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 	@Override
 	protected void onInboundCancel() {
 		if (log.isDebugEnabled()) {
-			log.debug("Cancelling Websocket inbound. Closing Websocket");
+			log.debug(format(channel(), "Cancelling Websocket inbound. Closing Websocket"));
 		}
 		sendCloseNow(null);
 	}

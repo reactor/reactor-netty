@@ -43,6 +43,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.util.concurrent.Queues;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
+import static reactor.netty.LogFormatter.format;
 
 /**
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
@@ -80,7 +81,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		super.handlerAdded(ctx);
 		this.ctx = ctx;
 		if (HttpServerOperations.log.isDebugEnabled()) {
-			HttpServerOperations.log.debug("New http connection, requesting read");
+			HttpServerOperations.log.debug(format(ctx.channel(), "New http connection, requesting read"));
 		}
 		ctx.read();
 	}
@@ -94,7 +95,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			DecoderResult decoderResult = request.decoderResult();
 			if (decoderResult.isFailure()) {
 				Throwable cause = decoderResult.cause();
-				HttpServerOperations.log.debug("Decoding failed: " + msg + " : ", cause);
+				HttpServerOperations.log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "),
+						cause);
 
 				HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
 				        cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
@@ -110,23 +112,23 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			if (persistentConnection) {
 				pendingResponses += 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("Increasing pending responses, now " +
-							"{}", pendingResponses);
+					HttpServerOperations.log.debug(format(ctx.channel(), "Increasing pending responses, now {}"),
+							pendingResponses);
 				}
 				persistentConnection = isKeepAlive(request);
 			}
 			else {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("dropping pipelined HTTP request, " +
-									"previous response requested connection close");
+					HttpServerOperations.log.debug(format(ctx.channel(), "Dropping pipelined HTTP request, " +
+									"previous response requested connection close"));
 				}
 				ReferenceCountUtil.release(msg);
 				return;
 			}
 			if (pendingResponses > 1) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("buffering pipelined HTTP request, " +
-									"pending response count: {}, queue: {}",
+					HttpServerOperations.log.debug(format(ctx.channel(), "Buffering pipelined HTTP request, " +
+									"pending response count: {}, queue: {}"),
 							pendingResponses,
 							pipelined != null ? pipelined.size() : 0);
 				}
@@ -151,8 +153,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		}
 		else if (persistentConnection && pendingResponses == 0) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug("Dropped HTTP content, " +
-								"Since response has been sent already:{}", msg);
+				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
+						"since response has been sent already: {}"), msg);
 			}
 			if (msg instanceof LastHttpContent) {
 				ctx.fireChannelRead(msg);
@@ -165,8 +167,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		}
 		else if (overflow) {
 			if (HttpServerOperations.log.isDebugEnabled()) {
-				HttpServerOperations.log.debug("buffering pipelined HTTP content, " +
-								"pending response count: {}, pending pipeline:{}",
+				HttpServerOperations.log.debug(format(ctx.channel(), "Buffering pipelined HTTP content, " +
+								"pending response count: {}, pending pipeline:{}"),
 						pendingResponses,
 						pipelined != null ? pipelined.size() : 0);
 			}
@@ -211,7 +213,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		if (msg instanceof LastHttpContent) {
 			if (!shouldKeepAlive()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("Detected non persistent http " + "connection," + " " + "preparing to close",
+					HttpServerOperations.log.debug(format(ctx.channel(), "Detected non persistent http " +
+									"connection, preparing to close"),
 							pendingResponses);
 				}
 				promise.addListener(ChannelFutureListener.CLOSE);
@@ -230,16 +233,15 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				mustRecycleEncoder = false;
 				pendingResponses -= 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("Decreasing pending responses, now " +
-							"{}", pendingResponses);
+					HttpServerOperations.log.debug(format(ctx.channel(), "Decreasing pending responses, now {}"),
+							pendingResponses);
 				}
 			}
 
 			if (pipelined != null && !pipelined.isEmpty()) {
 				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug("draining next pipelined " +
-									"request," + " pending response count: {}, queued: " +
-									"{}",
+					HttpServerOperations.log.debug(format(ctx.channel(), "Draining next pipelined " +
+									"request, pending response count: {}, queued: {}"),
 							pendingResponses, pipelined.size());
 				}
 				ctx.executor()

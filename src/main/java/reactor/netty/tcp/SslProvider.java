@@ -45,6 +45,8 @@ import reactor.netty.channel.BootstrapHandlers;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * SSL Provider
  *
@@ -499,7 +501,7 @@ public final class SslProvider {
 						                        sniInfo.getPort());
 
 				if (log.isDebugEnabled()) {
-					log.debug("SSL enabled using engine {} and SNI {}",
+					log.debug(format(channel, "SSL enabled using engine {} and SNI {}"),
 							sslHandler.engine().getClass().getSimpleName(),
 							sniInfo);
 				}
@@ -508,7 +510,7 @@ public final class SslProvider {
 				sslHandler = sslProvider.getSslContext().newHandler(channel.alloc());
 
 				if (log.isDebugEnabled()) {
-					log.debug("SSL enabled using engine {}",
+					log.debug(format(channel, "SSL enabled using engine {}"),
 							sslHandler.engine().getClass().getSimpleName());
 				}
 			}

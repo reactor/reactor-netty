@@ -42,6 +42,8 @@ import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}
  *
@@ -100,7 +102,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame && ((CloseWebSocketFrame) frame).isFinalFragment()) {
 			if (log.isDebugEnabled()) {
-				log.debug("CloseWebSocketFrame detected. Closing Websocket");
+				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
 			onInboundComplete();
 			CloseWebSocketFrame close = (CloseWebSocketFrame) frame;

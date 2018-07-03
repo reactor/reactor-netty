@@ -49,6 +49,8 @@ import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * A TcpClient allows to build in a safe immutable way a TCP client that
  * is materialized and connecting when {@link #connect(Bootstrap)} is ultimately called.
@@ -304,7 +306,7 @@ public abstract class TcpClient {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnected(c -> {
 			if (log.isDebugEnabled()) {
-				log.debug("{} handler is being applied: {}", c.channel(), handler);
+				log.debug(format(c.channel(), "Handler is being applied: {}"), handler);
 			}
 
 			Mono.fromDirect(handler.apply((NettyInbound) c, (NettyOutbound) c))

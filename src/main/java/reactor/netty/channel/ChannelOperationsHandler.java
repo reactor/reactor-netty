@@ -59,6 +59,8 @@ import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * Netty {@link io.netty.channel.ChannelDuplexHandler} implementation that bridge data
  * via an IPC {@link NettyOutbound}
@@ -144,15 +146,16 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					if (msg instanceof HttpResponse) {
 						DecoderResult decoderResult = ((HttpResponse) msg).decoderResult();
 						if (decoderResult.isFailure()) {
-							log.debug("Decoding failed: " + msg + " : ", decoderResult.cause());
+							log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "),
+									decoderResult.cause());
 						}
 					}
 					if (msg instanceof ByteBufHolder) {
 						loggingMsg = ((ByteBufHolder) msg).content()
 						                                  .toString(Charset.defaultCharset());
 					}
-					log.debug("{} No ChannelOperation attached. Dropping: {}", ctx
-							.channel().toString(), loggingMsg);
+					log.debug(format(ctx.channel(), "No ChannelOperation attached. Dropping: {}"),
+							loggingMsg);
 				}
 				ReferenceCountUtil.release(msg);
 			}
@@ -167,8 +170,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	public void channelWritabilityChanged(ChannelHandlerContext ctx) {
 		if (log.isDebugEnabled()) {
-			log.debug("{} Write state change {}",
-					ctx.channel(),
+			log.debug(format(ctx.channel(), "Write state change {}"),
 					ctx.channel()
 					   .isWritable());
 		}
@@ -212,11 +214,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	final public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 		if (log.isTraceEnabled()) {
-			log.trace("{} End of the pipeline, User event {}", ctx.channel(), evt);
+			log.trace(format(ctx.channel(), "End of the pipeline, User event {}"), evt);
 		}
 		if (evt instanceof NettyPipeline.SendOptionsChangeEvent) {
 			if (log.isDebugEnabled()) {
-				log.debug("{} New sending options", ctx.channel());
+				log.debug(format(ctx.channel(), "New sending options"));
 			}
 			((NettyPipeline.SendOptionsChangeEvent) evt).configurator()
 			                                            .accept(this);
@@ -230,7 +232,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@SuppressWarnings("unchecked")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (log.isDebugEnabled() && msg != ChannelOperations.TERMINATED_OPS) {
-			log.debug("{} Writing object {}", ctx.channel(), msg);
+			log.debug(format(ctx.channel(), "Writing object {}"), msg);
 		}
 
 		if (pendingWrites == null) {
@@ -295,7 +297,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				pendingBytes = Operators.addCap(pendingBytes, ((FileRegion) msg).count());
 			}
 			if (log.isTraceEnabled()) {
-				log.trace("{} Pending write size = {}", ctx.channel(), pendingBytes);
+				log.trace(format(ctx.channel(), "Pending write size = {}"), pendingBytes);
 			}
 			ChannelFuture future = ctx.write(msg, promise);
 			if (!ctx.channel().isWritable()) {
@@ -346,8 +348,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				continue;
 			}
 			if (log.isDebugEnabled()) {
-				log.debug("{} Terminated ChannelOperation. Dropping Pending Write: {}",
-						ctx.channel().toString(), v);
+				log.debug(format(ctx.channel(), "Terminated ChannelOperation. Dropping Pending Write: {}"),
+						v);
 			}
 			ReferenceCountUtil.release(v);
 			promise.tryFailure(new AbortedException("Connection has been closed"));

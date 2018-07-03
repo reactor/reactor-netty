@@ -93,6 +93,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * @author Stephane Maldini
  */
@@ -317,8 +319,8 @@ final class HttpClientConnect extends HttpClient {
 			}
 			if (newState == State.CONFIGURED && HttpClientOperations.class == connection.getClass()) {
 				if (log.isDebugEnabled()) {
-					log.debug("{} handler is being applied: {}",
-							connection.channel(), handler);
+					log.debug(format(connection.channel(), "Handler is being applied: {}"),
+							handler);
 				}
 				handler.channel(connection.channel());
 
@@ -771,7 +773,7 @@ final class HttpClientConnect extends HttpClient {
 						ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(false));
 						ChannelOperations.addReactiveBridge(ch, HTTP_OPS, listener);
 						if (log.isDebugEnabled()) {
-							log.debug("{} Initialized HTTP/2 pipeline {}", ch, ch.pipeline());
+							log.debug(format(ch, "Initialized HTTP/2 pipeline {}"), ch.pipeline());
 						}
 						upgraded.onComplete();
 					}

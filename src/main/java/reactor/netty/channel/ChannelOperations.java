@@ -48,6 +48,8 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
+import static reactor.netty.LogFormatter.format;
+
 /**
  * {@link NettyInbound} and {@link NettyOutbound}  that apply to a {@link Connection}
  *
@@ -195,7 +197,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 				OUTBOUND_CLOSE.getAndSet(this, Operators.cancelledSubscription());
 		if (s == Operators.cancelledSubscription() || isDisposed()) {
 			if (log.isDebugEnabled()) {
-				log.error("An outbound error could not be processed", t);
+				log.debug(format(channel(), "An outbound error could not be processed"), t);
 			}
 			return;
 		}
@@ -335,7 +337,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 */
 	protected void onOutboundComplete() {
 		if (log.isDebugEnabled()) {
-			log.debug("[{}] {} User Handler requesting close connection", formatName(), channel());
+			log.debug(format(channel(), "[{}] User Handler requesting close connection"), formatName());
 		}
 		markPersistent(false);
 		terminate();
@@ -358,8 +360,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final void terminate() {
 		if (rebind(connection)) {
 			if (log.isTraceEnabled()) {
-				log.trace("{} Disposing ChannelOperation from a channel",
-						channel(),
+				log.trace(format(channel(), "Disposing ChannelOperation from a channel"),
 						new Exception("ChannelOperation terminal stack"));
 			}
 
