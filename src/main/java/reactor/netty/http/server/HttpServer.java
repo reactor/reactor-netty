@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -49,7 +50,7 @@ import reactor.util.Loggers;
  * {@code
  * HttpServer.create()
  *           .host("0.0.0.0")
- *           .secure()
+ *           .secureSelfSigned()
  *           .handle((req, res) -> res.sendString(Flux.just("hello"))
  *           .bind()
  *           .block();
@@ -292,29 +293,27 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Enable default sslContext support. The default {@link SslContext} will be
-	 * assigned to
-	 * with a default value of {@code 10} seconds handshake timeout unless
-	 * the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer secure() {
-		return new HttpServerSecure(this, null);
-	}
-
-	/**
 	 * Apply an SSL configuration customization via the passed builder. The builder
 	 * will produce the {@link SslContext} to be passed to with a default value of
 	 * {@code 10} seconds handshake timeout unless the environment property {@code
 	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 *
+	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
+	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * <pre>
+	 * {@code
+	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     SslContextBuilder sslContextBuilder =
+	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
+	 * }
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 *
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		return HttpServerSecure.secure(this, sslProviderBuilder);
+		return new HttpServerSecure(this, sslProviderBuilder);
 	}
 
 	/**

@@ -22,7 +22,9 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -33,6 +35,7 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.tcp.SslProvider;
 import reactor.test.StepVerifier;
 
 /**
@@ -389,11 +392,11 @@ public class HttpTests {
 		StepVerifier.create(f)
 		            .then(() -> ep.onNext("test1"))
 		            .expectNext("test1")
-		            .thenAwait(Duration.ofMillis(300))
+		            .thenAwait(Duration.ofMillis(30))
 		            .then(() -> ep.onNext("test2"))
-		            .thenAwait(Duration.ofMillis(300))
+		            .thenAwait(Duration.ofMillis(30))
 		            .expectNext("test2")
-		            .thenAwait(Duration.ofMillis(300))
+		            .thenAwait(Duration.ofMillis(30))
 		            .then(() -> ep.onComplete())
 		            .verifyComplete();
 
@@ -464,11 +467,11 @@ public class HttpTests {
 		StepVerifier.create(f)
 		            .then(() -> ep.onNext("test1"))
 		            .expectNext("test1")
-		            .thenAwait(Duration.ofMillis(300))
+		            .thenAwait(Duration.ofMillis(30))
 		            .then(() -> ep.onNext("test2"))
-		            .thenAwait(Duration.ofMillis(300))
+		            .thenAwait(Duration.ofMillis(30))
 		            .expectNext("test2")
-		            .thenAwait(Duration.ofMillis(300))
+		            .thenAwait(Duration.ofMillis(30))
 		            .then(() -> ep.onComplete())
 		            .verifyComplete();
 
@@ -493,10 +496,13 @@ public class HttpTests {
 
 	@Test
 //	@Ignore
-	public void testHttpToHttp2Ssl() {
+	public void testHttpToHttp2Ssl() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		DisposableServer server =
 				HttpServer.create()
-				          .secure()
+				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions)
+				                                                  .defaultConfiguration(SslProvider.DefaultConfigurationType.HTTP))
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
 				          .wiretap()
 				          .bindNow();
@@ -504,14 +510,16 @@ public class HttpTests {
 		String response =
 				HttpClient.create()
 				          .port(server.port())
-						  .secure(ssl -> ssl.forClient().sslContext(s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE)))
+				          .secure(ssl -> ssl.sslContext(
+				                  SslContextBuilder.forClient()
+				                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
 				          .wiretap()
 				          .get()
 				          .uri("/")
 				          .responseContent()
 				          .aggregate()
 				          .asString()
-				          .block(Duration.ofSeconds(3000));
+				          .block(Duration.ofSeconds(30));
 
 		server.disposeNow();
 	}
@@ -519,10 +527,13 @@ public class HttpTests {
 	@Test
 	@Ignore
 	public void testHttpSsl() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		DisposableServer server =
 				HttpServer.create()
 				          .port(8080)
-				          .secure()
+				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions)
+				                                                  .defaultConfiguration(SslProvider.DefaultConfigurationType.HTTP))
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
 				          .wiretap()
 				          .bindNow();

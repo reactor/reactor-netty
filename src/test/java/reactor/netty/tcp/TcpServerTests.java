@@ -110,10 +110,15 @@ public class TcpServerTests {
 	public void tcpServerHandlesJsonPojosOverSsl() throws Exception {
 		final CountDownLatch latch = new CountDownLatch(2);
 
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		SslContext clientOptions = SslContextBuilder.forClient()
 		                                            .trustManager(InsecureTrustManagerFactory.INSTANCE)
 		                                            .build();
-		final TcpServer server = TcpServer.create().host("localhost").secure();
+		final TcpServer server =
+				TcpServer.create()
+				         .host("localhost")
+				         .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions));
 
 		ObjectMapper m = new ObjectMapper();
 

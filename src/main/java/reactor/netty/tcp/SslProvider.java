@@ -24,19 +24,22 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http2.Http2SecurityUtil;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
@@ -153,7 +156,33 @@ public final class SslProvider {
 	final Consumer<? super SslHandler> handlerConfigurator;
 
 	SslProvider(SslProvider.Build builder) {
-		this.sslContext = builder.sslContext;
+		if (builder.sslContext == null) {
+			SslContextBuilder sslContextBuilder = builder.sslCtxBuilder;
+			switch (builder.type) {
+				case TCP:
+					sslContextBuilder.sslProvider(SSL_PROVIDER);
+					break;
+				case HTTP:
+					sslContextBuilder.sslProvider(SSL_PROVIDER)
+					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
+					                     ApplicationProtocolConfig.Protocol.ALPN,
+					                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+					                     ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+					                     ApplicationProtocolNames.HTTP_2,
+					                     ApplicationProtocolNames.HTTP_1_1));
+					break;
+				case NONE: break; //no default configuration
+			}
+			try {
+				this.sslContext = sslContextBuilder.build();
+			} catch (SSLException e) {
+				throw Exceptions.propagate(e);
+			}
+		}
+		else {
+			this.sslContext = builder.sslContext;
+		}
 		this.handlerConfigurator = builder.handlerConfigurator;
 		this.handshakeTimeoutMillis = builder.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = builder.closeNotifyFlushTimeoutMillis;
@@ -212,7 +241,7 @@ public final class SslProvider {
 	}
 
 	
-	static final class Build implements SslContextSpec, Builder {
+	static final class Build implements SslContextSpec, DefaultConfigurationSpec, Builder {
 
 		/**
 		 * Default SSL handshake timeout (milliseconds), fallback to 10 seconds
@@ -222,59 +251,37 @@ public final class SslProvider {
 						SystemPropertiesNames.SSL_HANDSHAKE_TIMEOUT,
 						"10000"));
 
-		static final SelfSignedCertificate DEFAULT_SSL_CONTEXT_SELF;
-
-		static {
-			SelfSignedCertificate cert;
-			try {
-				cert = new SelfSignedCertificate();
-			}
-			catch (Exception e) {
-				cert = null;
-			}
-			DEFAULT_SSL_CONTEXT_SELF = cert;
-		}
-
 		SslContextBuilder sslCtxBuilder;
+		DefaultConfigurationType type = DefaultConfigurationType.NONE;
 		SslContext sslContext;
 		Consumer<? super SslHandler> handlerConfigurator;
 		long handshakeTimeoutMillis = DEFAULT_SSL_HANDSHAKE_TIMEOUT;
 		long closeNotifyFlushTimeoutMillis = 3000L;
 		long closeNotifyReadTimeoutMillis;
 
-		@Override
-		public final Builder forClient() {
-			this.sslCtxBuilder = SslContextBuilder.forClient();
-			return this;
-		}
-
-		@Override
-		public final Builder forServer() {
-			this.sslCtxBuilder = SslContextBuilder.forServer(
-					DEFAULT_SSL_CONTEXT_SELF.certificate(),
-					DEFAULT_SSL_CONTEXT_SELF.privateKey());
-			return this;
-		}
-
-		@Override
-		public final Builder sslContext(Consumer<? super SslContextBuilder> sslContextBuilder) {
-			Objects.requireNonNull(sslContextBuilder, "sslContextBuilder");
-			SslContext sslContext;
-			try {
-				sslContextBuilder.accept(this.sslCtxBuilder);
-				sslContext = this.sslCtxBuilder.build();
-			}
-			catch (Exception sslException) {
-				throw Exceptions.propagate(sslException);
-			}
-			return sslContext(sslContext);
-		}
+		// SslContextSpec
 
 		@Override
 		public final Builder sslContext(SslContext sslContext){
 			this.sslContext = Objects.requireNonNull(sslContext, "sslContext");
 			return this;
 		}
+
+		@Override
+		public final DefaultConfigurationSpec sslContext(SslContextBuilder sslCtxBuilder) {
+			this.sslCtxBuilder = Objects.requireNonNull(sslCtxBuilder, "sslCtxBuilder");
+			return this;
+		}
+
+		//DefaultConfigurationSpec
+
+		@Override
+		public final Builder defaultConfiguration(DefaultConfigurationType type) {
+			this.type = Objects.requireNonNull(type, "type");
+			return this;
+		}
+
+		// Builder
 
 		@Override
 		public final Builder handshakeTimeout(Duration handshakeTimeout) {
@@ -338,15 +345,6 @@ public final class SslProvider {
 	}
 
 	public interface Builder {
-
-		/**
-		 * Set a builder callback for further customization of SslContext
-		 *
-		 * @param sslContextBuilder builder callback for further customization of SslContext
-		 *
-		 * @return {@literal this}
-		 */
-		Builder sslContext(Consumer<? super SslContextBuilder> sslContextBuilder);
 
 		/**
 		 * Set a configurator callback to mutate any property from the provided
@@ -423,7 +421,7 @@ public final class SslProvider {
 	public interface SslContextSpec {
 
 		/**
-		 * The context to set when configuring SSL
+		 * The SslContext to set when configuring SSL
 		 * 
 		 * @param sslContext The context to set when configuring SSL
 		 * 
@@ -432,19 +430,49 @@ public final class SslProvider {
 		Builder sslContext(SslContext sslContext);
 
 		/**
-		 * Creates SslContextBuilder for new client-side {@link SslContext}.
-		 * 
+		 * The SslContextBuilder for building a new {@link SslContext}.
+		 *
 		 * @return {@literal this}
 		 */
-		Builder forClient();
+		DefaultConfigurationSpec sslContext(SslContextBuilder sslCtxBuilder);
+
+	}
+
+	/**
+	 * Default configuration that will be applied to the provided
+	 * {@link SslContextBuilder}
+	 */
+	public enum DefaultConfigurationType {
+		/**
+		 * There will be no default configuration
+		 */
+		NONE,
+		/**
+		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
+		 * <code>OpenSsl.isAlpnSupported()</code>
+		 */
+		TCP,
+		/**
+		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
+		 * <code>OpenSsl.isAlpnSupported()</code>,
+		 * {@link Http2SecurityUtil#CIPHERS},
+		 * ALPN support,
+		 * HTTP/1.1 and HTTP/2 support
+		 *
+		 */
+		HTTP
+	}
+
+	public interface DefaultConfigurationSpec {
 
 		/**
-		 * Creates SslContextBuilder for new server-side {@link SslContext}.
-		 * 
-		 * @return {@literal this}
+		 * Default configuration type that will be applied to the provided
+		 * {@link SslContextBuilder}
+		 *
+		 * @param type The default configuration type.
+		 * @return {@code this}
 		 */
-		Builder forServer();
-
+		Builder defaultConfiguration(DefaultConfigurationType type);
 	}
 
 	static ServerBootstrap removeSslSupport(ServerBootstrap b) {
@@ -588,52 +616,26 @@ public final class SslProvider {
 
 	static final Logger log = Loggers.getLogger(SslProvider.class);
 
-	static final SslContext DEFAULT_CLIENT_CONTEXT;
-	static final SslContext DEFAULT_SERVER_CONTEXT;
-
 	static final SslProvider DEFAULT_CLIENT_PROVIDER;
 
 	static {
-		SslContext sslContext;
+		SslProvider sslProvider;
 		try {
-			io.netty.handler.ssl.SslProvider provider =
-					OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
-							io.netty.handler.ssl.SslProvider.JDK;
-			sslContext =
-					SslContextBuilder.forClient()
-					                 .sslProvider(provider)
-					                 .build();
+			sslProvider =
+					SslProvider.builder()
+					           .sslContext(SslContextBuilder.forClient())
+					           .defaultConfiguration(DefaultConfigurationType.TCP)
+					           .build();
 		}
 		catch (Exception e) {
-			sslContext = null;
+			sslProvider = null;
 		}
-		DEFAULT_CLIENT_CONTEXT = sslContext;
-
-		SslProvider.Build builder = (SslProvider.Build) SslProvider.builder();
-		DEFAULT_CLIENT_PROVIDER = builder.sslContext(DEFAULT_CLIENT_CONTEXT)
-		                                 .build();
-
-		SelfSignedCertificate cert;
-		try {
-			cert = new SelfSignedCertificate();
-			io.netty.handler.ssl.SslProvider provider =
-					OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
-							io.netty.handler.ssl.SslProvider.JDK;
-			sslContext =
-					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
-					                 .sslProvider(provider)
-					                 .build();
-		}
-		catch (Exception e) {
-			sslContext = null;
-		}
-		DEFAULT_SERVER_CONTEXT = sslContext;
+		DEFAULT_CLIENT_PROVIDER = sslProvider;
 	}
 
-
-	static final Consumer<SslContextSpec> DEFAULT_SERVER_SPEC =
-			sslProviderBuilder -> sslProviderBuilder.sslContext(DEFAULT_SERVER_CONTEXT);
-
+	static final io.netty.handler.ssl.SslProvider SSL_PROVIDER =
+			OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+			                            io.netty.handler.ssl.SslProvider.JDK;
 }
 
 

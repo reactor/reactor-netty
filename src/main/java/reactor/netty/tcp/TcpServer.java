@@ -33,6 +33,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
@@ -65,7 +66,7 @@ import reactor.util.Loggers;
  *          .doOnUnbound(stopMetrics)
  *          .host("127.0.0.1")
  *          .port(1234)
- *          .secure()
+ *          .secureSelfSigned()
  *          .bind()
  *          .block()
  * }
@@ -431,20 +432,19 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Enable default sslContext support. The default {@link SslContext} will be assigned
-	 * to with a default value of {@code 10} seconds handshake timeout unless the
-	 * environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
-	 *
-	 * @return a new {@link TcpServer}
-	 */
-	public final TcpServer secure() {
-		return secure(SslProvider.DEFAULT_SERVER_SPEC);
-	}
-
-	/**
 	 * Apply an SSL configuration customization via the passed {@link SslContext}. with a
 	 * default value of {@code 10} seconds handshake timeout unless the environment
 	 * property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 *
+	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
+	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * <pre>
+	 * {@code
+	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     SslContextBuilder sslContextBuilder =
+	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextBuilder.build());
+	 * }
 	 *
 	 * @param sslContext The context to set when configuring SSL
 	 *
@@ -459,6 +459,16 @@ public abstract class TcpServer {
 	 * will produce the {@link SslContext} to be passed to with a default value of
 	 * {@code 10} seconds handshake timeout unless the environment property {@code
 	 * reactor.netty.tcp.sslHandshakeTimeout} is set.
+	 *
+	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
+	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * <pre>
+	 * {@code
+	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     SslContextBuilder sslContextBuilder =
+	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
+	 * }
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 *

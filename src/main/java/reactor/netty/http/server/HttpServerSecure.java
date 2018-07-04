@@ -17,16 +17,7 @@ package reactor.netty.http.server;
 
 import java.util.Objects;
 import java.util.function.Consumer;
-import javax.annotation.Nullable;
 
-import io.netty.handler.codec.http2.Http2SecurityUtil;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.OpenSsl;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 
@@ -35,54 +26,17 @@ import reactor.netty.tcp.TcpServer;
  */
 final class HttpServerSecure extends HttpServerOperator {
 
-	static HttpServer secure(HttpServer server, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
-		return new HttpServerSecure(server, sslProviderBuilder);
-	}
-
 	final Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder;
 
 	HttpServerSecure(HttpServer server,
-			@Nullable Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+			Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		super(server);
+		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
 		this.sslProviderBuilder = sslProviderBuilder;
 	}
 
 	@Override
 	protected TcpServer tcpConfiguration() {
-		if (sslProviderBuilder == null) {
-			return source.tcpConfiguration()
-			             .secure(SSL_DEFAULT_SERVER_HTTP2_SPEC);
-		}
 		return source.tcpConfiguration().secure(sslProviderBuilder);
 	}
-
-	static final SslContext DEFAULT_SERVER_HTTP2_CONTEXT;
-	static {
-		SslContext sslContext;
-		try {
-			SelfSignedCertificate cert = new SelfSignedCertificate();
-			io.netty.handler.ssl.SslProvider provider =
-					OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
-							io.netty.handler.ssl.SslProvider.JDK;
-			sslContext =
-					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
-					                 .sslProvider(provider)
-					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
-					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
-							                 ApplicationProtocolConfig.Protocol.ALPN,
-							                 ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
-							                 ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
-							                 ApplicationProtocolNames.HTTP_2,
-							                 ApplicationProtocolNames.HTTP_1_1))
-					                 .build();
-		}
-		catch (Exception e) {
-			sslContext = null;
-		}
-		DEFAULT_SERVER_HTTP2_CONTEXT = sslContext;
-	}
-
-	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SERVER_HTTP2_SPEC =
-			sslProviderBuilder -> sslProviderBuilder.sslContext(DEFAULT_SERVER_HTTP2_CONTEXT);
 }
