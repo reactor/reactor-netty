@@ -532,8 +532,7 @@ public class HttpTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(8080)
-				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions)
-				                                                  .defaultConfiguration(SslProvider.DefaultConfigurationType.HTTP))
+				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions))
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
 				          .wiretap()
 				          .bindNow();
@@ -571,9 +570,13 @@ public class HttpTests {
 
 	@Test
 	@Ignore
-	public void testHttp() throws Exception {
+	public void testH2PriorKnowledge() throws Exception {
+//		SelfSignedCertificate cert = new SelfSignedCertificate();
+//		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
 		DisposableServer server =
 				HttpServer.create()
+				          .protocol(HttpProtocol.H2C)
 				          .port(8080)
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
 				          .wiretap()
@@ -581,6 +584,90 @@ public class HttpTests {
 
 		new CountDownLatch(1).await();
 		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
+	public void testHttp1or2() throws Exception {
+//		SelfSignedCertificate cert = new SelfSignedCertificate();
+//		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
+		DisposableServer server =
+				HttpServer.create()
+				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				          .port(8080)
+				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				          .wiretap()
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
+	public void testH2Secure() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
+		DisposableServer server =
+				HttpServer.create()
+				          .protocol(HttpProtocol.H2)
+				          .secure(ssl -> ssl.sslContext(serverOptions))
+				          .port(8080)
+				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				          .wiretap()
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
+	public void testHttp1or2Secure() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
+		DisposableServer server =
+				HttpServer.create()
+				          .protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
+				          .secure(ssl -> ssl.sslContext(serverOptions))
+				          .port(8080)
+				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				          .wiretap()
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
+	@Test
+	public void testHttpNoSslH2Fails()  {
+		StepVerifier.create(
+			HttpServer.create()
+			          .protocol(HttpProtocol.H2)
+			          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+			          .wiretap()
+			          .bind()
+		).verifyErrorMessage("Configured H2 protocol without TLS. Use" +
+				" a clear-text h2 protocol via HttpServer#protocol or configure TLS" +
+				" via HttpServer#secure");
+	}
+
+	@Test
+	public void testHttpSslH2CFails()  throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
+		StepVerifier.create(
+			HttpServer.create()
+			          .protocol(HttpProtocol.H2C)
+			          .secure(ssl -> ssl.sslContext(serverOptions))
+			          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+			          .wiretap()
+			          .bind()
+		).verifyErrorMessage("Configured H2 Clear-Text protocol with TLS. Use the non clear-text h2 protocol via HttpServer#protocol or disable TLS via HttpServer#tcpConfiguration(tcp -> tcp.noSSL())");
 	}
 
 }

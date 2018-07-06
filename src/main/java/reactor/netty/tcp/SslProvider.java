@@ -149,6 +149,137 @@ public final class SslProvider {
 		return b;
 	}
 
+	public interface Builder {
+
+		/**
+		 * Set a configurator callback to mutate any property from the provided
+		 * {@link SslHandler}
+		 *
+		 * @param handlerConfigurator A callback given the generated {@link SslHandler}
+		 *
+		 * @return {@literal this}
+		 */
+		Builder handlerConfigurator(Consumer<? super SslHandler> handlerConfigurator);
+
+		/**
+		 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
+		 *
+		 * @param handshakeTimeout The timeout {@link Duration}
+		 *
+		 * @return {@literal this}
+		 */
+		Builder handshakeTimeout(Duration handshakeTimeout);
+
+		/**
+		 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
+		 *
+		 * @param handshakeTimeoutMillis The timeout in milliseconds
+		 *
+		 * @return {@literal this}
+		 */
+		Builder handshakeTimeoutMillis(long handshakeTimeoutMillis);
+
+		/**
+		 * Set the options to use for configuring SSL close_notify flush timeout. Default to 3000 ms.
+		 *
+		 * @param closeNotifyFlushTimeout The timeout {@link Duration}
+		 *
+		 * @return {@literal this}
+		 */
+		Builder closeNotifyFlushTimeout(Duration closeNotifyFlushTimeout);
+
+		/**
+		 * Set the options to use for configuring SSL close_notify flush timeout. Default to 3000 ms.
+		 *
+		 * @param closeNotifyFlushTimeoutMillis The timeout in milliseconds
+		 *
+		 * @return {@literal this}
+		 */
+		Builder closeNotifyFlushTimeoutMillis(long closeNotifyFlushTimeoutMillis);
+
+		/**
+		 * Set the options to use for configuring SSL close_notify read timeout. Default to 0 ms.
+		 *
+		 * @param closeNotifyReadTimeout The timeout {@link Duration}
+		 *
+		 * @return {@literal this}
+		 */
+		Builder closeNotifyReadTimeout(Duration closeNotifyReadTimeout);
+
+		/**
+		 * Set the options to use for configuring SSL close_notify read timeout. Default to 0 ms.
+		 *
+		 * @param closeNotifyReadTimeoutMillis The timeout in milliseconds
+		 *
+		 * @return {@literal this}
+		 */
+		Builder closeNotifyReadTimeoutMillis(long closeNotifyReadTimeoutMillis);
+
+		/**
+		 * Builds new SslProvider
+		 *
+		 * @return builds new SslProvider
+		 */
+		SslProvider build();
+	}
+
+	public interface SslContextSpec {
+
+		/**
+		 * The SslContext to set when configuring SSL
+		 *
+		 * @param sslContext The context to set when configuring SSL
+		 *
+		 * @return {@literal this}
+		 */
+		Builder sslContext(SslContext sslContext);
+
+		/**
+		 * The SslContextBuilder for building a new {@link SslContext}.
+		 *
+		 * @return {@literal this}
+		 */
+		DefaultConfigurationSpec sslContext(SslContextBuilder sslCtxBuilder);
+
+	}
+
+	/**
+	 * Default configuration that will be applied to the provided
+	 * {@link SslContextBuilder}
+	 */
+	public enum DefaultConfigurationType {
+		/**
+		 * There will be no default configuration
+		 */
+		NONE,
+		/**
+		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
+		 * <code>OpenSsl.isAlpnSupported()</code>
+		 */
+		TCP,
+		/**
+		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
+		 * <code>OpenSsl.isAlpnSupported()</code>,
+		 * {@link Http2SecurityUtil#CIPHERS},
+		 * ALPN support,
+		 * HTTP/1.1 and HTTP/2 support
+		 *
+		 */
+		HTTP
+	}
+
+	public interface DefaultConfigurationSpec {
+
+		/**
+		 * Default configuration type that will be applied to the provided
+		 * {@link SslContextBuilder}
+		 *
+		 * @param type The default configuration type.
+		 * @return {@code this}
+		 */
+		Builder defaultConfiguration(DefaultConfigurationType type);
+	}
+
 	final SslContext                   sslContext;
 	final long                         handshakeTimeoutMillis;
 	final long                         closeNotifyFlushTimeoutMillis;
@@ -223,7 +354,6 @@ public final class SslProvider {
 			handlerConfigurator.accept(sslHandler);
 		}
 	}
-
 
 	public String asSimpleString() {
 		return toString();
@@ -342,137 +472,6 @@ public final class SslProvider {
 		public SslProvider build() {
 			return new SslProvider(this);
 		}
-	}
-
-	public interface Builder {
-
-		/**
-		 * Set a configurator callback to mutate any property from the provided
-		 * {@link SslHandler}
-		 *
-		 * @param handlerConfigurator A callback given the generated {@link SslHandler}
-		 *
-		 * @return {@literal this}
-		 */
-		Builder handlerConfigurator(Consumer<? super SslHandler> handlerConfigurator);
-
-		/**
-		 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
-		 *
-		 * @param handshakeTimeout The timeout {@link Duration}
-		 *
-		 * @return {@literal this}
-		 */
-		Builder handshakeTimeout(Duration handshakeTimeout);
-
-		/**
-		 * Set the options to use for configuring SSL handshake timeout. Default to 10000 ms.
-		 *
-		 * @param handshakeTimeoutMillis The timeout in milliseconds
-		 *
-		 * @return {@literal this}
-		 */
-		Builder handshakeTimeoutMillis(long handshakeTimeoutMillis);
-
-		/**
-		 * Set the options to use for configuring SSL close_notify flush timeout. Default to 3000 ms.
-		 *
-		 * @param closeNotifyFlushTimeout The timeout {@link Duration}
-		 *
-		 * @return {@literal this}
-		 */
-		Builder closeNotifyFlushTimeout(Duration closeNotifyFlushTimeout);
-
-		/**
-		 * Set the options to use for configuring SSL close_notify flush timeout. Default to 3000 ms.
-		 *
-		 * @param closeNotifyFlushTimeoutMillis The timeout in milliseconds
-		 *
-		 * @return {@literal this}
-		 */
-		Builder closeNotifyFlushTimeoutMillis(long closeNotifyFlushTimeoutMillis);
-
-		/**
-		 * Set the options to use for configuring SSL close_notify read timeout. Default to 0 ms.
-		 *
-		 * @param closeNotifyReadTimeout The timeout {@link Duration}
-		 *
-		 * @return {@literal this}
-		 */
-		Builder closeNotifyReadTimeout(Duration closeNotifyReadTimeout);
-
-		/**
-		 * Set the options to use for configuring SSL close_notify read timeout. Default to 0 ms.
-		 *
-		 * @param closeNotifyReadTimeoutMillis The timeout in milliseconds
-		 *
-		 * @return {@literal this}
-		 */
-		Builder closeNotifyReadTimeoutMillis(long closeNotifyReadTimeoutMillis);
-
-		/**
-		 * Builds new SslProvider
-		 *
-		 * @return builds new SslProvider
-		 */
-		SslProvider build();
-	}
-
-	public interface SslContextSpec {
-
-		/**
-		 * The SslContext to set when configuring SSL
-		 * 
-		 * @param sslContext The context to set when configuring SSL
-		 * 
-		 * @return {@literal this}
-		 */
-		Builder sslContext(SslContext sslContext);
-
-		/**
-		 * The SslContextBuilder for building a new {@link SslContext}.
-		 *
-		 * @return {@literal this}
-		 */
-		DefaultConfigurationSpec sslContext(SslContextBuilder sslCtxBuilder);
-
-	}
-
-	/**
-	 * Default configuration that will be applied to the provided
-	 * {@link SslContextBuilder}
-	 */
-	public enum DefaultConfigurationType {
-		/**
-		 * There will be no default configuration
-		 */
-		NONE,
-		/**
-		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
-		 * <code>OpenSsl.isAlpnSupported()</code>
-		 */
-		TCP,
-		/**
-		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
-		 * <code>OpenSsl.isAlpnSupported()</code>,
-		 * {@link Http2SecurityUtil#CIPHERS},
-		 * ALPN support,
-		 * HTTP/1.1 and HTTP/2 support
-		 *
-		 */
-		HTTP
-	}
-
-	public interface DefaultConfigurationSpec {
-
-		/**
-		 * Default configuration type that will be applied to the provided
-		 * {@link SslContextBuilder}
-		 *
-		 * @param type The default configuration type.
-		 * @return {@code this}
-		 */
-		Builder defaultConfiguration(DefaultConfigurationType type);
 	}
 
 	static ServerBootstrap removeSslSupport(ServerBootstrap b) {

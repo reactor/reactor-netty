@@ -34,6 +34,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.BootstrapHandlers;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.Logger;
@@ -50,7 +51,6 @@ import reactor.util.Loggers;
  * {@code
  * HttpServer.create()
  *           .host("0.0.0.0")
- *           .secureSelfSigned()
  *           .handle((req, res) -> res.sendString(Flux.just("hello"))
  *           .bind()
  *           .block();
@@ -279,6 +279,17 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer observe(ConnectionObserver observer) {
 		return new HttpServerObserve(this, observer);
+	}
+
+	/**
+	 * The HTTP protocol to support. Default is {@link HttpProtocol#HTTP11}.
+	 *
+	 * @param supportedProtocols The various {@link HttpProtocol} this server will support
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer protocol(HttpProtocol... supportedProtocols) {
+		return tcpConfiguration(tcpServer -> tcpServer.bootstrap(b -> HttpServerConfiguration.protocols(b, supportedProtocols)));
 	}
 
 	/**

@@ -66,7 +66,6 @@ import reactor.util.Loggers;
  *          .doOnUnbound(stopMetrics)
  *          .host("127.0.0.1")
  *          .port(1234)
- *          .secureSelfSigned()
  *          .bind()
  *          .block()
  * }

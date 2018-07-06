@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.util.AttributeKey;
+import reactor.netty.http.HttpProtocol;
 
 /**
  * @author Stephane Maldini
@@ -32,11 +33,15 @@ final class HttpServerConfiguration {
 	static final AttributeKey<HttpServerConfiguration> CONF_KEY =
 			AttributeKey.newInstance("httpServerConf");
 
-	int                                                minCompressionSize = -1;
+	static final HttpProtocol[] HTTP11 = {HttpProtocol.HTTP11};
+
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate  = null;
-	boolean                                            forwarded          = false;
-	HttpRequestDecoderSpec                             decoder            =
-			new HttpRequestDecoderSpec();
+
+	int                    minCompressionSize = -1;
+	boolean                forwarded          = false;
+	HttpRequestDecoderSpec decoder            = new HttpRequestDecoderSpec();
+	int                    protocols          = h11;
+
 
 	static HttpServerConfiguration getAndClean(ServerBootstrap b) {
 		HttpServerConfiguration hcc = (HttpServerConfiguration) b.config()
@@ -92,6 +97,25 @@ final class HttpServerConfiguration {
 		return b;
 	}
 
+	static ServerBootstrap protocols(ServerBootstrap b, HttpProtocol... protocols) {
+		int _protocols = 0;
+
+		for (HttpProtocol p : protocols) {
+			if (p == HttpProtocol.HTTP11) {
+				_protocols |= h11;
+			}
+			else if (p == HttpProtocol.H2) {
+				_protocols |= h2;
+			}
+			else if (p == HttpProtocol.H2C) {
+				_protocols |= h2c;
+			}
+		}
+
+		getOrCreate(b).protocols = _protocols;
+		return b;
+	}
+
 	static ServerBootstrap compressPredicate(ServerBootstrap b,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate) {
 		getOrCreate(b).compressPredicate = compressPredicate;
@@ -103,4 +127,10 @@ final class HttpServerConfiguration {
 		getOrCreate(b).decoder = decoder;
 		return b;
 	}
+
+	static final int h11      = 0b100;
+	static final int h2       = 0b010;
+	static final int h2c      = 0b001;
+	static final int h11orH2c = h11 | h2c;
+	static final int h11orH2  = h11 | h2;
 }

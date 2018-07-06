@@ -31,8 +31,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http2.CleartextHttp2ServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2FrameLogger;
+import io.netty.handler.codec.http2.Http2MultiplexCodec;
 import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
@@ -110,29 +112,88 @@ final class HttpServerBind extends HttpServer
 		BootstrapHandlers.channelOperationFactory(b);
 
 		if (ssl != null) {
-			return BootstrapHandlers.updateConfiguration(b,
-					NettyPipeline.HttpInitializer,
-					new HttpServerSecuredInitializer(
-							conf.decoder.maxInitialLineLength,
-							conf.decoder.maxHeaderSize,
-							conf.decoder.maxChunkSize,
-							conf.decoder.validateHeaders,
-							conf.decoder.initialBufferSize,
-							conf.minCompressionSize,
-							compressPredicate(conf.compressPredicate, conf.minCompressionSize),
-							conf.forwarded));
+			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
+				throw new IllegalArgumentException("Configured H2 Clear-Text protocol " +
+						"with TLS. Use the non clear-text h2 protocol via " +
+						"HttpServer#protocol or disable TLS" +
+						" via HttpServer#tcpConfiguration(tcp -> tcp.noSSL())");
+			}
+			if ((conf.protocols & HttpServerConfiguration.h11orH2) == HttpServerConfiguration.h11orH2) {
+				return BootstrapHandlers.updateConfiguration(b,
+						NettyPipeline.HttpInitializer,
+						new Http1OrH2Initializer(conf.decoder.maxInitialLineLength,
+								conf.decoder.maxHeaderSize,
+								conf.decoder.maxChunkSize,
+								conf.decoder.validateHeaders,
+								conf.decoder.initialBufferSize,
+								conf.minCompressionSize,
+								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+								conf.forwarded));
+			}
+			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
+				return BootstrapHandlers.updateConfiguration(b,
+						NettyPipeline.HttpInitializer,
+						new Http1Initializer(conf.decoder.maxInitialLineLength,
+								conf.decoder.maxHeaderSize,
+								conf.decoder.maxChunkSize,
+								conf.decoder.validateHeaders,
+								conf.decoder.initialBufferSize,
+								conf.minCompressionSize,
+								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+								conf.forwarded));
+			}
+			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
+				return BootstrapHandlers.updateConfiguration(b,
+						NettyPipeline.HttpInitializer,
+						new H2Initializer(
+								conf.decoder.validateHeaders,
+								conf.minCompressionSize,
+								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+								conf.forwarded));
+			}
 		}
-		return BootstrapHandlers.updateConfiguration(b,
-				NettyPipeline.HttpInitializer,
-				new HttpServerInitializer(
-						conf.decoder.maxInitialLineLength,
-						conf.decoder.maxHeaderSize,
-						conf.decoder.maxChunkSize,
-						conf.decoder.validateHeaders,
-						conf.decoder.initialBufferSize,
-						conf.minCompressionSize,
-						compressPredicate(conf.compressPredicate, conf.minCompressionSize),
-						conf.forwarded));
+		else {
+			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
+				throw new IllegalArgumentException(
+						"Configured H2 protocol without TLS. Use" + " a clear-text h2 protocol via HttpServer#protocol or configure TLS" + " via HttpServer#secure");
+			}
+			if ((conf.protocols & HttpServerConfiguration.h11orH2c) == HttpServerConfiguration.h11orH2c) {
+				return BootstrapHandlers.updateConfiguration(b,
+						NettyPipeline.HttpInitializer,
+						new Http1OrH2CleartextInitializer(conf.decoder.maxInitialLineLength,
+								conf.decoder.maxHeaderSize,
+								conf.decoder.maxChunkSize,
+								conf.decoder.validateHeaders,
+								conf.decoder.initialBufferSize,
+								conf.minCompressionSize,
+								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+								conf.forwarded));
+			}
+			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
+				return BootstrapHandlers.updateConfiguration(b,
+						NettyPipeline.HttpInitializer,
+						new Http1Initializer(conf.decoder.maxInitialLineLength,
+								conf.decoder.maxHeaderSize,
+								conf.decoder.maxChunkSize,
+								conf.decoder.validateHeaders,
+								conf.decoder.initialBufferSize,
+								conf.minCompressionSize,
+								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+								conf.forwarded));
+			}
+			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
+				return BootstrapHandlers.updateConfiguration(b,
+						NettyPipeline.HttpInitializer,
+						new H2CleartextInitializer(
+								conf.decoder.validateHeaders,
+								conf.minCompressionSize,
+								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+								conf.forwarded));
+			}
+		}
+		throw new IllegalArgumentException("An unknown HttpServer#protocol " +
+				"configuration has been provided: "+String.format("0x%x", conf
+				.protocols));
 	}
 
 	@Nullable
@@ -183,7 +244,8 @@ final class HttpServerBind extends HttpServer
 		}
 	}
 
-	static final class HttpServerInitializer
+
+	static final class Http1Initializer
 			implements BiConsumer<ConnectionObserver, Channel>  {
 
 		final int                                                line;
@@ -195,7 +257,55 @@ final class HttpServerBind extends HttpServer
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final boolean                                            forwarded;
 
-		HttpServerInitializer(int line,
+		Http1Initializer(int line,
+				int header,
+				int chunk,
+				boolean validate,
+				int buffer,
+				int minCompressionSize,
+				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+				boolean forwarded) {
+			this.line = line;
+			this.header = header;
+			this.chunk = chunk;
+			this.validate = validate;
+			this.buffer = buffer;
+			this.minCompressionSize = minCompressionSize;
+			this.compressPredicate = compressPredicate;
+			this.forwarded = forwarded;
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			ChannelPipeline p = channel.pipeline();
+
+			p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(line, header, chunk, validate, buffer));
+
+			boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
+
+			if (alwaysCompress) {
+				p.addLast(NettyPipeline.CompressionHandler,
+						new SimpleCompressionHandler());
+			}
+
+			p.addLast(NettyPipeline.HttpTrafficHandler,
+					new HttpTrafficHandler(listener, forwarded, compressPredicate));
+		}
+	}
+
+	static final class Http1OrH2CleartextInitializer
+			implements BiConsumer<ConnectionObserver, Channel>  {
+
+		final int                                                line;
+		final int                                                header;
+		final int                                                chunk;
+		final boolean                                            validate;
+		final int                                                buffer;
+		final int                                                minCompressionSize;
+		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
+		final boolean                                            forwarded;
+
+		Http1OrH2CleartextInitializer(int line,
 				int header,
 				int chunk,
 				boolean validate,
@@ -220,11 +330,20 @@ final class HttpServerBind extends HttpServer
 			HttpServerCodec httpServerCodec =
 					new HttpServerCodec(line, header, chunk, validate, buffer);
 
-			p.addLast(NettyPipeline.HttpCodec, httpServerCodec)
-			 .addLast(new HttpServerUpgradeHandler(httpServerCodec,
-					 new UpgradeCodecFactoryImpl(this,
-							 listener,
-							 p.get(NettyPipeline.LoggingHandler) != null)));
+//			p.addLast(NettyPipeline.HttpCodec, httpServerCodec)
+//			 .addLast(new HttpServerUpgradeHandler(httpServerCodec,
+//					 new Http1OrH2CleartextCodec(this,/;poõ
+//							 listener,
+//							 p.get(NettyPipeline.LoggingHandler) != null)));
+
+			Http1OrH2CleartextCodec
+					upgrader = new Http1OrH2CleartextCodec(this, listener, p.get(NettyPipeline.LoggingHandler) != null);
+
+
+			final CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler =
+					new CleartextHttp2ServerUpgradeHandler(httpServerCodec, new HttpServerUpgradeHandler(httpServerCodec, upgrader), upgrader.multiplexCodec);
+
+			p.addLast(NettyPipeline.HttpCodec, h2cUpgradeHandler);
 
 			boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
@@ -243,17 +362,27 @@ final class HttpServerBind extends HttpServer
 	 * or cleartext upgrade
 	 */
 	@ChannelHandler.Sharable
-	static final class UpgradeCodecFactoryImpl extends ChannelInitializer<Channel>
+	static final class Http1OrH2CleartextCodec extends ChannelInitializer<Channel>
 			implements HttpServerUpgradeHandler.UpgradeCodecFactory {
 
-		final HttpServerInitializer parent;
-		final ConnectionObserver    listener;
-		final boolean               debug;
+		final Http1OrH2CleartextInitializer parent;
+		final ConnectionObserver            listener;
+		final Http2MultiplexCodec           multiplexCodec;
 
-		UpgradeCodecFactoryImpl(HttpServerInitializer parent, ConnectionObserver listener, boolean debug) {
+		Http1OrH2CleartextCodec(Http1OrH2CleartextInitializer parent, ConnectionObserver listener, boolean debug) {
 			this.parent = parent;
 			this.listener = listener;
-			this.debug = debug;
+			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
+					Http2MultiplexCodecBuilder.forServer(this)
+					                          .validateHeaders(parent.validate)
+					                          .initialSettings(Http2Settings.defaultSettings());
+
+			if (debug) {
+				http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(
+						LogLevel.DEBUG,
+						"reactor.netty.http.server.h2.cleartext"));
+			}
+			this.multiplexCodec = http2MultiplexCodecBuilder.build();
 		}
 
 		/**
@@ -269,16 +398,7 @@ final class HttpServerBind extends HttpServer
 		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
 			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME,
 					protocol)) {
-				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-						Http2MultiplexCodecBuilder.forServer(this)
-						                          .initialSettings(Http2Settings.defaultSettings());
-
-				if (debug) {
-					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(
-							LogLevel.DEBUG,
-							HttpServer.class));
-				}
-				return new Http2ServerUpgradeCodec(http2MultiplexCodecBuilder.build());
+				return new Http2ServerUpgradeCodec(multiplexCodec);
 			}
 			else {
 				return null;
@@ -286,12 +406,50 @@ final class HttpServerBind extends HttpServer
 		}
 	}
 
+	static final class H2CleartextInitializer
+			implements BiConsumer<ConnectionObserver, Channel>  {
+
+		final boolean                                            validate;
+		final int                                                minCompressionSize;
+		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
+		final boolean                                            forwarded;
+
+		H2CleartextInitializer(
+				boolean validate,
+				int minCompressionSize,
+				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+				boolean forwarded) {
+			this.validate = validate;
+			this.minCompressionSize = minCompressionSize;
+			this.compressPredicate = compressPredicate;
+			this.forwarded = forwarded;
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			ChannelPipeline p = channel.pipeline();
+
+			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
+					Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer(listener, forwarded))
+					                          .validateHeaders(validate)
+					                          .initialSettings(Http2Settings.defaultSettings());
+
+			if (p.get(NettyPipeline.LoggingHandler) != null) {
+				http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(
+						LogLevel.DEBUG,
+						"reactor.netty.http.server.h2.cleartext"));
+			}
+
+			p.addLast(NettyPipeline.HttpCodec, http2MultiplexCodecBuilder.build());
+
+			channel.read();
+		}
+	}
+
 	/**
 	 * Initialize Http1 - Http2 pipeline configuration using SSL detection
 	 */
-	@ChannelHandler.Sharable
-	static final class HttpServerSecuredInitializer extends ApplicationProtocolNegotiationHandler
-			implements BiConsumer<ConnectionObserver, Channel> {
+	static final class Http1OrH2Initializer implements BiConsumer<ConnectionObserver, Channel> {
 
 		final int                                                line;
 		final int                                                header;
@@ -302,10 +460,7 @@ final class HttpServerBind extends HttpServer
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final boolean                                            forwarded;
 
-		Http2StreamInitializer initializer;
-		ConnectionObserver listener;
-
-		HttpServerSecuredInitializer(
+		Http1OrH2Initializer(
 				int line,
 				int header,
 				int chunk,
@@ -314,7 +469,6 @@ final class HttpServerBind extends HttpServer
 				int minCompressionSize,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				boolean forwarded) {
-			super(ApplicationProtocolNames.HTTP_1_1);
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -325,11 +479,22 @@ final class HttpServerBind extends HttpServer
 			this.forwarded = forwarded;
 		}
 
-
 		@Override
 		public void accept(ConnectionObserver observer, Channel channel) {
-			listener = observer;
-			channel.pipeline().addLast(this);
+			channel.pipeline()
+			       .addLast(new Http1OrH2Codec(this, observer));
+		}
+	}
+
+	static final class Http1OrH2Codec extends ApplicationProtocolNegotiationHandler {
+
+		final ConnectionObserver listener;
+		final Http1OrH2Initializer parent;
+
+		Http1OrH2Codec(Http1OrH2Initializer parent, ConnectionObserver listener) {
+			super(ApplicationProtocolNames.HTTP_1_1);
+			this.listener = listener;
+			this.parent = parent;
 		}
 
 		@Override
@@ -340,17 +505,16 @@ final class HttpServerBind extends HttpServer
 
 				p.remove(NettyPipeline.ReactiveBridge);
 
-				initializer = new Http2StreamInitializer(this, listener);
-
 				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-						Http2MultiplexCodecBuilder.forServer(initializer)
+						Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer(listener, parent.forwarded))
 						                          .initialSettings(Http2Settings.defaultSettings());
 
 				if (p.get(NettyPipeline.LoggingHandler) != null) {
-					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpServer.class));
+					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, "reactor.netty.http.server.h2.secure"));
 				}
 
-				p.addLast(http2MultiplexCodecBuilder.build());
+				p.addLast(NettyPipeline.HttpCodec, http2MultiplexCodecBuilder.build());
+
 				return;
 			}
 
@@ -358,12 +522,12 @@ final class HttpServerBind extends HttpServer
 
 				p.addBefore(NettyPipeline.ReactiveBridge,
 						NettyPipeline.HttpCodec,
-						new HttpServerCodec(line, header, chunk, validate, buffer))
+						new HttpServerCodec(parent.line, parent.header, parent.chunk, parent.validate, parent.buffer))
 				 .addBefore(NettyPipeline.ReactiveBridge,
-						NettyPipeline.HttpTrafficHandler,
-						new HttpTrafficHandler( listener, forwarded, compressPredicate));
+						 NettyPipeline.HttpTrafficHandler,
+						 new HttpTrafficHandler( listener, parent.forwarded, parent.compressPredicate));
 
-				boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
+				boolean alwaysCompress = parent.compressPredicate == null && parent.minCompressionSize == 0;
 
 				if (alwaysCompress) {
 					p.addBefore(NettyPipeline.HttpTrafficHandler,
@@ -375,23 +539,59 @@ final class HttpServerBind extends HttpServer
 
 			throw new IllegalStateException("unknown protocol: " + protocol);
 		}
+	}
 
+	static final class H2Initializer
+			implements BiConsumer<ConnectionObserver, Channel>  {
+
+		final boolean                                            validate;
+		final int                                                minCompressionSize;
+		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
+		final boolean                                            forwarded;
+
+		H2Initializer(
+				boolean validate,
+				int minCompressionSize,
+				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
+				boolean forwarded) {
+			this.validate = validate;
+			this.minCompressionSize = minCompressionSize;
+			this.compressPredicate = compressPredicate;
+			this.forwarded = forwarded;
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			ChannelPipeline p = channel.pipeline();
+
+			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
+					Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer
+							(listener, forwarded))
+					                          .validateHeaders(validate)
+					                          .initialSettings(Http2Settings.defaultSettings());
+
+			if (p.get(NettyPipeline.LoggingHandler) != null) {
+				http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, "reactor.netty.http.server.h2.secured"));
+			}
+
+			p.addLast(NettyPipeline.HttpCodec, http2MultiplexCodecBuilder.build());
+		}
 	}
 
 	static final class Http2StreamInitializer extends ChannelInitializer<Channel> {
 
-		final HttpServerSecuredInitializer parent;
-		final ConnectionObserver           listener;
+		final boolean            forwarded;
+		final ConnectionObserver listener;
 
-		Http2StreamInitializer(HttpServerSecuredInitializer parent,
-				ConnectionObserver listener) {
-			this.parent = parent;
+		Http2StreamInitializer(ConnectionObserver listener, boolean forwarded) {
+			this.forwarded = forwarded;
 			this.listener = listener;
 		}
 
 		@Override
 		protected void initChannel(Channel ch) {
-			addStreamHandlers(ch, listener, parent.forwarded);
+			addStreamHandlers(ch, listener, forwarded);
 		}
 	}
+
 }
