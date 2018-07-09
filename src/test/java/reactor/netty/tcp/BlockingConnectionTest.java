@@ -190,6 +190,11 @@ public class BlockingConnectionTest {
 			public Mono<? extends DisposableServer> bind(ServerBootstrap b) {
 				return Mono.just(NEVER_STOP_SERVER);
 			}
+
+			@Override
+			public ServerBootstrap configure() {
+				return TcpServerBind.INSTANCE.createServerBootstrap();
+			}
 		}.bindNow();
 
 		assertThat(c).isSameAs(NEVER_STOP_SERVER);

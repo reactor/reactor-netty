@@ -403,7 +403,7 @@ public class TcpServerTests {
 	public void gettingOptionsDuplicates() {
 		TcpServer server = TcpServer.create().host("foo").port(123);
 		Assertions.assertThat(server.configure())
-		          .isNotSameAs(TcpServer.DEFAULT_BOOTSTRAP)
+		          .isNotSameAs(TcpServerBind.INSTANCE.serverBootstrap)
 		          .isNotSameAs(server.configure());
 	}
 

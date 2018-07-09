@@ -232,9 +232,7 @@ public abstract class TcpServer {
 	 *
 	 * @return a configured {@link ServerBootstrap}
 	 */
-	public ServerBootstrap configure() {
-		return DEFAULT_BOOTSTRAP.clone();
-	}
+	public abstract ServerBootstrap configure();
 
 	/**
 	 * Setup a callback called when {@link io.netty.channel.ServerChannel} is about to
@@ -563,23 +561,4 @@ public abstract class TcpServer {
 	static final int                   DEFAULT_PORT      = 0;
 	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpServer.class);
 	static final Logger                log               = Loggers.getLogger(TcpServer.class);
-
-	static final ServerBootstrap DEFAULT_BOOTSTRAP =
-			new ServerBootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-			                     .option(ChannelOption.SO_REUSEADDR, true)
-			                     .option(ChannelOption.SO_BACKLOG, 1000)
-			                     .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-			                     .childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
-			                     .childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
-			                     .childOption(ChannelOption.AUTO_READ, false)
-			                     .childOption(ChannelOption.SO_KEEPALIVE, true)
-			                     .childOption(ChannelOption.TCP_NODELAY, true)
-			                     .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-			                     .localAddress(
-			                         InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(),
-			                                                                DEFAULT_PORT));
-
-	static {
-		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);
-	}
 }
