@@ -26,7 +26,7 @@ public final class LogFormatter {
 	 * By default it will be prepended.
 	 */
 	static final boolean LOG_CHANNEL_INFO =
-			Boolean.parseBoolean(System.getProperty("reactor.netty.logChannelInfo", "true"));
+			Boolean.parseBoolean(System.getProperty(SystemPropertiesNames.LOG_CHANNEL_INFO, "true"));
 
 	private LogFormatter() {
 	}

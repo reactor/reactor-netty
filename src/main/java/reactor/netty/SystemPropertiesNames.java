@@ -73,5 +73,12 @@ public final class SystemPropertiesNames {
 	public static final String SSL_SERVER_DEBUG = "reactor.netty.tcp.ssl.server.debug";
 
 
+	/**
+	 * Specifies whether the channel ID will be prepended to the log message when possible.
+	 * By default it will be prepended.
+	 */
+	public static final String LOG_CHANNEL_INFO = "reactor.netty.logChannelInfo";
+
+
 	private SystemPropertiesNames() {}
 }
