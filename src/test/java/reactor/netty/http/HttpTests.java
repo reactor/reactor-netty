@@ -670,4 +670,10 @@ public class HttpTests {
 		).verifyErrorMessage("Configured H2 Clear-Text protocol with TLS. Use the non clear-text h2 protocol via HttpServer#protocol or disable TLS via HttpServer#tcpConfiguration(tcp -> tcp.noSSL())");
 	}
 
+	@Test(expected = IllegalArgumentException.class)
+	public void testIssue387() {
+		HttpServer.create()
+		          .secure(sslContextSpec -> System.out.println())
+		          .bindNow();
+	}
 }

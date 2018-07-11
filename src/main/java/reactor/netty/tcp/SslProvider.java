@@ -288,29 +288,35 @@ public final class SslProvider {
 
 	SslProvider(SslProvider.Build builder) {
 		if (builder.sslContext == null) {
-			SslContextBuilder sslContextBuilder = builder.sslCtxBuilder;
-			switch (builder.type) {
-				case HTTP:
-					sslContextBuilder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
-					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
-					                     ApplicationProtocolConfig.Protocol.ALPN,
-					                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
-					                     ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
-					                     ApplicationProtocolNames.HTTP_2,
-					                     ApplicationProtocolNames.HTTP_1_1));
-					// deliberate fall through
-				case TCP:
-					io.netty.handler.ssl.SslProvider sslProvider =
-							OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
-							                            io.netty.handler.ssl.SslProvider.JDK;
-					sslContextBuilder.sslProvider(sslProvider);
-					break;
-				case NONE: break; //no default configuration
+			if (builder.sslCtxBuilder != null) {
+				SslContextBuilder sslContextBuilder = builder.sslCtxBuilder;
+				switch (builder.type) {
+					case HTTP:
+						sslContextBuilder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+						                 .applicationProtocolConfig(new ApplicationProtocolConfig(
+						                     ApplicationProtocolConfig.Protocol.ALPN,
+						                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+						                     ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+						                     ApplicationProtocolNames.HTTP_2,
+						                     ApplicationProtocolNames.HTTP_1_1));
+						// deliberate fall through
+					case TCP:
+						io.netty.handler.ssl.SslProvider sslProvider =
+								OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+								                            io.netty.handler.ssl.SslProvider.JDK;
+						sslContextBuilder.sslProvider(sslProvider);
+						break;
+					case NONE:
+						break; //no default configuration
+				}
+				try {
+					this.sslContext = sslContextBuilder.build();
+				} catch (SSLException e) {
+					throw Exceptions.propagate(e);
+				}
 			}
-			try {
-				this.sslContext = sslContextBuilder.build();
-			} catch (SSLException e) {
-				throw Exceptions.propagate(e);
+			else {
+				throw new IllegalArgumentException("Neither SslContextBuilder nor SslContext is specified");
 			}
 		}
 		else {
