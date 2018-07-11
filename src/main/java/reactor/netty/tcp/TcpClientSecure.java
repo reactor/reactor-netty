@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.handler.ssl.SslContextBuilder;
 
 /**
  * @author Stephane Maldini
@@ -40,7 +41,7 @@ final class TcpClientSecure extends TcpClientOperator {
 	TcpClientSecure(TcpClient client, @Nullable SslProvider provider) {
 		super(client);
 		if (provider == null) {
-			this.sslProvider = SslProvider.DEFAULT_CLIENT_PROVIDER;
+			this.sslProvider = DEFAULT_CLIENT_PROVIDER;
 		}
 		else {
 			this.sslProvider = Objects.requireNonNull(provider, "provider");
@@ -57,4 +58,21 @@ final class TcpClientSecure extends TcpClientOperator {
 		return this.sslProvider;
 	}
 
+
+	static final SslProvider DEFAULT_CLIENT_PROVIDER;
+
+	static {
+		SslProvider sslProvider;
+		try {
+			sslProvider =
+					SslProvider.builder()
+					           .sslContext(SslContextBuilder.forClient())
+					           .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP)
+					           .build();
+		}
+		catch (Exception e) {
+			sslProvider = null;
+		}
+		DEFAULT_CLIENT_PROVIDER = sslProvider;
+	}
 }

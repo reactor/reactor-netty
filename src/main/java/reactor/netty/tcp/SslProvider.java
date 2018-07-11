@@ -86,7 +86,7 @@ public final class SslProvider {
 	 * @return default client ssl provider
 	 */
 	public static SslProvider defaultClientProvider() {
-		return DEFAULT_CLIENT_PROVIDER;
+		return TcpClientSecure.DEFAULT_CLIENT_PROVIDER;
 	}
 
 	/**
@@ -290,18 +290,20 @@ public final class SslProvider {
 		if (builder.sslContext == null) {
 			SslContextBuilder sslContextBuilder = builder.sslCtxBuilder;
 			switch (builder.type) {
-				case TCP:
-					sslContextBuilder.sslProvider(SSL_PROVIDER);
-					break;
 				case HTTP:
-					sslContextBuilder.sslProvider(SSL_PROVIDER)
-					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+					sslContextBuilder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
 					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
 					                     ApplicationProtocolConfig.Protocol.ALPN,
 					                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
 					                     ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
 					                     ApplicationProtocolNames.HTTP_2,
 					                     ApplicationProtocolNames.HTTP_1_1));
+					// deliberate fall through
+				case TCP:
+					io.netty.handler.ssl.SslProvider sslProvider =
+							OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+							                            io.netty.handler.ssl.SslProvider.JDK;
+					sslContextBuilder.sslProvider(sslProvider);
 					break;
 				case NONE: break; //no default configuration
 			}
@@ -614,27 +616,6 @@ public final class SslProvider {
 	}
 
 	static final Logger log = Loggers.getLogger(SslProvider.class);
-
-	static final SslProvider DEFAULT_CLIENT_PROVIDER;
-
-	static {
-		SslProvider sslProvider;
-		try {
-			sslProvider =
-					SslProvider.builder()
-					           .sslContext(SslContextBuilder.forClient())
-					           .defaultConfiguration(DefaultConfigurationType.TCP)
-					           .build();
-		}
-		catch (Exception e) {
-			sslProvider = null;
-		}
-		DEFAULT_CLIENT_PROVIDER = sslProvider;
-	}
-
-	static final io.netty.handler.ssl.SslProvider SSL_PROVIDER =
-			OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
-			                            io.netty.handler.ssl.SslProvider.JDK;
 }
 
 

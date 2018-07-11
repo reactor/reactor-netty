@@ -28,8 +28,6 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.annotation.Nullable;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
@@ -64,7 +62,6 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -201,7 +198,7 @@ final class HttpClientConnect extends HttpClient {
 			if (ssl != null) {
 				SslProvider.updateSslSupport(b,
 						SslProvider.addHandlerConfigurator(ssl,
-								DEFAULT_HOSTNAME_VERIFICATION));
+								HttpClientSecure.DEFAULT_HOSTNAME_VERIFICATION));
 			}
 
 			HttpClientHandler handler = new HttpClientHandler(configuration, b.config()
@@ -230,7 +227,7 @@ final class HttpClientConnect extends HttpClient {
 				if (handler.activeURI.isSecure()) {
 					if (ssl == null) {
 						finalBootstrap = SslProvider.updateSslSupport(b.clone(),
-								DEFAULT_HTTP_SSL_PROVIDER);
+								HttpClientSecure.DEFAULT_HTTP_SSL_PROVIDER);
 					}
 					else {
 						finalBootstrap = b.clone();
@@ -803,13 +800,4 @@ final class HttpClientConnect extends HttpClient {
 
 	static final BiFunction<String, Integer, InetSocketAddress> URI_ADDRESS_MAPPER =
 			InetSocketAddressUtil::createUnresolved;
-
-	static final Consumer<? super SslHandler> DEFAULT_HOSTNAME_VERIFICATION = handler -> {
-		SSLEngine sslEngine = handler.engine();
-		SSLParameters sslParameters = sslEngine.getSSLParameters();
-		sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
-		sslEngine.setSSLParameters(sslParameters);
-	};
-
-	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER = SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), DEFAULT_HOSTNAME_VERIFICATION);
 }
