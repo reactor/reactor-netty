@@ -90,7 +90,22 @@ final class HttpServerBind extends HttpServer
 
 	@Override
 	public ServerBootstrap apply(ServerBootstrap b) {
+		HttpServerConfiguration conf = HttpServerConfiguration.getAndClean(b);
+
 		SslProvider ssl = SslProvider.findSslSupport(b);
+		if (ssl != null && ssl.getDefaultConfigurationType() == null) {
+			switch (conf.protocols) {
+				case HttpServerConfiguration.h11:
+					ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.HTTP11);
+					SslProvider.updateSslSupport(b, ssl);
+					break;
+				case HttpServerConfiguration.h2:
+					ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.H2);
+					SslProvider.updateSslSupport(b, ssl);
+					break;
+				default: break;
+			}
+		}
 
 		if (b.config()
 		     .group() == null) {
@@ -105,8 +120,6 @@ final class HttpServerBind extends HttpServer
 			b.group(selector, elg)
 			 .channel(loops.onServerChannel(elg));
 		}
-
-		HttpServerConfiguration conf = HttpServerConfiguration.getAndClean(b);
 
 		//remove any OPS since we will initialize below
 		BootstrapHandlers.channelOperationFactory(b);

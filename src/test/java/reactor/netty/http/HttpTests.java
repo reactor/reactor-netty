@@ -502,7 +502,7 @@ public class HttpTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions)
-				                                                  .defaultConfiguration(SslProvider.DefaultConfigurationType.HTTP))
+				                                                  .defaultConfiguration(SslProvider.DefaultConfigurationType.H2))
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
 				          .wiretap()
 				          .bindNow();

@@ -80,6 +80,12 @@ public final class SslProvider {
 		return new SslProvider(provider, handlerConfigurator);
 	}
 
+	public static SslProvider updateDefaultConfiguration(SslProvider provider, DefaultConfigurationType type) {
+		Objects.requireNonNull(provider, "provider");
+		Objects.requireNonNull(type, "type");
+		return new SslProvider(provider, type);
+	}
+
 	/**
 	 * Return the default client ssl provider
 	 *
@@ -259,13 +265,18 @@ public final class SslProvider {
 		TCP,
 		/**
 		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
+		 * <code>OpenSsl.isAlpnSupported()</code>
+		 */
+		HTTP11,
+		/**
+		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
 		 * <code>OpenSsl.isAlpnSupported()</code>,
 		 * {@link Http2SecurityUtil#CIPHERS},
 		 * ALPN support,
 		 * HTTP/1.1 and HTTP/2 support
 		 *
 		 */
-		HTTP
+		H2
 	}
 
 	public interface DefaultConfigurationSpec {
@@ -281,33 +292,20 @@ public final class SslProvider {
 	}
 
 	final SslContext                   sslContext;
+	final SslContextBuilder            sslContextBuilder;
+	final DefaultConfigurationType     type;
 	final long                         handshakeTimeoutMillis;
 	final long                         closeNotifyFlushTimeoutMillis;
 	final long                         closeNotifyReadTimeoutMillis;
 	final Consumer<? super SslHandler> handlerConfigurator;
 
 	SslProvider(SslProvider.Build builder) {
+		this.sslContextBuilder = builder.sslCtxBuilder;
+		this.type = builder.type;
 		if (builder.sslContext == null) {
-			if (builder.sslCtxBuilder != null) {
-				SslContextBuilder sslContextBuilder = builder.sslCtxBuilder;
-				switch (builder.type) {
-					case HTTP:
-						sslContextBuilder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
-						                 .applicationProtocolConfig(new ApplicationProtocolConfig(
-						                     ApplicationProtocolConfig.Protocol.ALPN,
-						                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
-						                     ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
-						                     ApplicationProtocolNames.HTTP_2,
-						                     ApplicationProtocolNames.HTTP_1_1));
-						// deliberate fall through
-					case TCP:
-						io.netty.handler.ssl.SslProvider sslProvider =
-								OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
-								                            io.netty.handler.ssl.SslProvider.JDK;
-						sslContextBuilder.sslProvider(sslProvider);
-						break;
-					case NONE:
-						break; //no default configuration
+			if (sslContextBuilder != null) {
+				if (type != null) {
+					updateDefaultConfiguration();
 				}
 				try {
 					this.sslContext = sslContextBuilder.build();
@@ -330,6 +328,8 @@ public final class SslProvider {
 
 	SslProvider(SslProvider from, Consumer<? super SslHandler> handlerConfigurator) {
 		this.sslContext = from.sslContext;
+		this.sslContextBuilder = from.sslContextBuilder;
+		this.type = from.type;
 		if (from.handlerConfigurator == null) {
 			this.handlerConfigurator = handlerConfigurator;
 		}
@@ -344,6 +344,49 @@ public final class SslProvider {
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
 	}
 
+	SslProvider(SslProvider from, DefaultConfigurationType type) {
+		this.sslContextBuilder = from.sslContextBuilder;
+		this.type = type;
+		if (this.sslContextBuilder != null) {
+			updateDefaultConfiguration();
+			try {
+				this.sslContext = sslContextBuilder.build();
+			} catch (SSLException e) {
+				throw Exceptions.propagate(e);
+			}
+		}
+		else {
+			this.sslContext= from.sslContext;
+		}
+		this.handlerConfigurator = from.handlerConfigurator;
+		this.handshakeTimeoutMillis = from.handshakeTimeoutMillis;
+		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
+		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
+	}
+
+	void updateDefaultConfiguration() {
+		switch (type) {
+			case H2:
+				sslContextBuilder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+				                 .applicationProtocolConfig(new ApplicationProtocolConfig(
+				                     ApplicationProtocolConfig.Protocol.ALPN,
+				                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+				                     ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+				                     ApplicationProtocolNames.HTTP_2,
+				                     ApplicationProtocolNames.HTTP_1_1));
+				// deliberate fall through
+			case HTTP11:
+				// deliberate fall through
+			case TCP:
+				io.netty.handler.ssl.SslProvider sslProvider =
+						OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+						                            io.netty.handler.ssl.SslProvider.JDK;
+				sslContextBuilder.sslProvider(sslProvider);
+				break;
+			case NONE:
+				break; //no default configuration
+		}
+	}
 
 	/**
 	 * Returns {@code SslContext} instance with configured settings.
@@ -352,6 +395,16 @@ public final class SslProvider {
 	 */
 	public SslContext getSslContext() {
 		return this.sslContext;
+	}
+
+	/**
+	 * Returns the configured default configuration type.
+	 *
+	 * @return the configured default configuration type.
+	 */
+	@Nullable
+	public DefaultConfigurationType getDefaultConfigurationType() {
+		return this.type;
 	}
 
 	public void configure(SslHandler sslHandler) {
@@ -378,7 +431,7 @@ public final class SslProvider {
 		return "SslProvider{" + asDetailedString() + "}";
 	}
 
-	
+
 	static final class Build implements SslContextSpec, DefaultConfigurationSpec, Builder {
 
 		/**
@@ -390,7 +443,7 @@ public final class SslProvider {
 						"10000"));
 
 		SslContextBuilder sslCtxBuilder;
-		DefaultConfigurationType type = DefaultConfigurationType.NONE;
+		DefaultConfigurationType type;
 		SslContext sslContext;
 		Consumer<? super SslHandler> handlerConfigurator;
 		long handshakeTimeoutMillis = DEFAULT_SSL_HANDSHAKE_TIMEOUT;
@@ -487,7 +540,7 @@ public final class SslProvider {
 		return b;
 	}
 
-	static ServerBootstrap updateSslSupport(ServerBootstrap b, SslProvider sslProvider) {
+	public static ServerBootstrap updateSslSupport(ServerBootstrap b, SslProvider sslProvider) {
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.SslHandler,
