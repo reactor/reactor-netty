@@ -58,6 +58,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.http.HttpResources;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.DisposableServerBindException;
 import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
@@ -66,6 +67,7 @@ import reactor.util.function.Tuple3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * @author Stephane Maldini
@@ -863,5 +865,30 @@ public class HttpServerTests {
 		catch(NoSuchFieldException | IllegalAccessException e) {
 			return null;
 		}
+	}
+
+	@Test
+	public void testIssue368() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(8080)
+				          .bindNow();
+		assertThat(server).isNotNull();
+
+		try {
+			HttpServer.create()
+			          .port(8080)
+			          .bindNow();
+			fail("The bind operation should fail");
+		}
+		catch (DisposableServerBindException e) {
+			assertThat(e.getMessage()).contains("Address already in use")
+			                          .contains("8080");
+		}
+		catch (Throwable t) {
+			fail("DisposableServerBindException is expected ", t);
+		}
+
+		server.dispose();
 	}
 }

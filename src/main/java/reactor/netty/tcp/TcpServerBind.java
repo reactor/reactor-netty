@@ -17,6 +17,7 @@
 package reactor.netty.tcp;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -83,7 +84,7 @@ final class TcpServerBind extends TcpServer {
 
 			ChannelFuture f = bootstrap.bind();
 
-			DisposableBind disposableServer = new DisposableBind(sink, f, obs);
+			DisposableBind disposableServer = new DisposableBind(sink, f, obs, b.config().localAddress());
 			f.addListener(disposableServer);
 			sink.onCancel(disposableServer);
 		});
@@ -142,12 +143,14 @@ final class TcpServerBind extends TcpServer {
 		final MonoSink<DisposableServer> sink;
 		final ChannelFuture              f;
 		final ConnectionObserver         selectorObserver;
+		final SocketAddress              localAddress;
 
 		DisposableBind(MonoSink<DisposableServer> sink, ChannelFuture f,
-				ConnectionObserver selectorObserver) {
+				ConnectionObserver selectorObserver, SocketAddress localAddress) {
 			this.sink = sink;
 			this.f = f;
 			this.selectorObserver = selectorObserver;
+			this.localAddress = localAddress;
 		}
 
 		@Override
@@ -179,8 +182,12 @@ final class TcpServerBind extends TcpServer {
 					}
 					return;
 				}
-				if (f.cause() != null) {
-					sink.error(f.cause());
+				Throwable t = f.cause();
+				if (t != null) {
+					if (t instanceof BindException) {
+						t = new DisposableServerBindException(t.getMessage() + " " + localAddress, localAddress);
+					}
+					sink.error(t);
 				}
 				else {
 					sink.error(new IOException("error while binding to " + f.channel()));
