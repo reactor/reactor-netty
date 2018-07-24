@@ -33,8 +33,6 @@ final class HttpServerConfiguration {
 	static final AttributeKey<HttpServerConfiguration> CONF_KEY =
 			AttributeKey.newInstance("httpServerConf");
 
-	static final HttpProtocol[] HTTP11 = {HttpProtocol.HTTP11};
-
 	BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate  = null;
 
 	int                    minCompressionSize = -1;

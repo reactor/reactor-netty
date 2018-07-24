@@ -16,7 +16,6 @@
 
 package reactor.netty.tcp;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
@@ -32,6 +31,7 @@ import io.netty.util.NetUtil;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
@@ -83,7 +83,7 @@ final class TcpServerBind extends TcpServer {
 
 			ChannelFuture f = bootstrap.bind();
 
-			DisposableBind disposableServer = new DisposableBind(sink, f, obs);
+			DisposableBind disposableServer = new DisposableBind(sink, f, obs, bootstrap);
 			f.addListener(disposableServer);
 			sink.onCancel(disposableServer);
 		});
@@ -141,11 +141,14 @@ final class TcpServerBind extends TcpServer {
 
 		final MonoSink<DisposableServer> sink;
 		final ChannelFuture              f;
+		final ServerBootstrap            bootstrap;
 		final ConnectionObserver         selectorObserver;
 
 		DisposableBind(MonoSink<DisposableServer> sink, ChannelFuture f,
-				ConnectionObserver selectorObserver) {
+				ConnectionObserver selectorObserver,
+				ServerBootstrap bootstrap) {
 			this.sink = sink;
+			this.bootstrap = bootstrap;
 			this.f = f;
 			this.selectorObserver = selectorObserver;
 		}
@@ -179,12 +182,7 @@ final class TcpServerBind extends TcpServer {
 					}
 					return;
 				}
-				if (f.cause() != null) {
-					sink.error(f.cause());
-				}
-				else {
-					sink.error(new IOException("error while binding to " + f.channel()));
-				}
+				sink.error(ChannelBindException.fail(bootstrap, f.cause()));
 			}
 			else {
 				if (log.isDebugEnabled()) {

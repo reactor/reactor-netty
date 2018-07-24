@@ -52,6 +52,7 @@ import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
@@ -777,6 +778,25 @@ public class HttpServerTests {
 				HttpServer.create()
 				          .port(0)
 				          .httpRequestDecoder(c -> c.maxInitialLineLength(20)));
+	}
+
+	@Test
+	public void portBindingException() {
+				DisposableServer d = HttpServer.create()
+				          .port(0)
+				          .bindNow();
+
+				try {
+					HttpServer.create()
+					          .port(d.port())
+					          .bindNow();
+					Assert.fail("illegal-success");
+				}
+				catch (ChannelBindException e){
+					Assert.assertEquals(e.localPort(), d.port());
+					e.printStackTrace();
+				}
+				d.dispose();
 	}
 
 	private void doTestIssue309(String path, HttpServer httpServer) {
