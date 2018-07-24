@@ -17,17 +17,18 @@
 package reactor.netty.resources;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.BootstrapHandlers;
@@ -70,7 +71,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			else {
 				f = bootstrap.bind();
 			}
-			DisposableConnect disposableConnect = new DisposableConnect(sink, f);
+			DisposableConnect disposableConnect = new DisposableConnect(sink, f, bootstrap);
 			f.addListener(disposableConnect);
 			sink.onCancel(disposableConnect);
 		});
@@ -103,11 +104,14 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 		final MonoSink<Connection> sink;
 		final ChannelFuture f;
+		final Bootstrap bootstrap;
 
 
-		DisposableConnect(MonoSink<Connection> sink, ChannelFuture f) {
+		DisposableConnect(MonoSink<Connection> sink, ChannelFuture f, Bootstrap
+				bootstrap) {
 			this.sink = sink;
 			this.f = f;
+			this.bootstrap = bootstrap;
 		}
 
 		@Override
@@ -138,7 +142,12 @@ final class NewConnectionProvider implements ConnectionProvider {
 					return;
 				}
 				if (f.cause() != null) {
-					sink.error(f.cause());
+					if (f.cause() instanceof BindException) {
+						sink.error(ChannelBindException.fail(bootstrap, f.cause()));
+					}
+					else {
+						sink.error(f.cause());
+					}
 				}
 				else {
 					sink.error(new IOException("error while connecting to " + f.channel()));
@@ -150,29 +159,6 @@ final class NewConnectionProvider implements ConnectionProvider {
 					log.debug(format(f.channel(), "Connected new channel"));
 				}
 			}
-		}
-	}
-
-	static final class NewConnection implements Connection {
-		final Channel channel;
-
-		NewConnection(Channel channel) {
-			this.channel = channel;
-		}
-
-		@Override
-		public Channel channel() {
-			return channel;
-		}
-
-		@Override
-		public boolean isPersistent() {
-			return false;
-		}
-
-		@Override
-		public String toString() {
-			return "NewConnection{" + "channel=" + channel + '}';
 		}
 	}
 
