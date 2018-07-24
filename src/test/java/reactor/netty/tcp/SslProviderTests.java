@@ -89,7 +89,7 @@ public class SslProviderTests {
 				server.protocol(HttpProtocol.H2)
 				      .secure(spec -> spec.sslContext(builder))
 				      .bindNow();
-		assertEquals(result.size(),2);
+		assertEquals(2, result.size());
 		disposableServer.dispose();
 	}
 
@@ -99,7 +99,7 @@ public class SslProviderTests {
 				server.secure(spec -> spec.sslContext(builder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
-		assertEquals(result.size(),2);
+		assertEquals(2, result.size());
 		disposableServer.dispose();
 	}
 
@@ -110,7 +110,7 @@ public class SslProviderTests {
 				      .secure(spec -> spec.sslContext(builder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
-		assertEquals(result.size(),2);
+		assertEquals(2, result.size());
 		disposableServer.dispose();
 	}
 }
