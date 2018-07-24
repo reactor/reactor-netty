@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -35,6 +36,8 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerRequest;
+import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.tcp.SslProvider;
 import reactor.test.StepVerifier;
 
@@ -616,6 +619,27 @@ public class HttpTests {
 				          .secure(ssl -> ssl.sslContext(serverOptions))
 				          .port(8080)
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				          .wiretap()
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
+	public void testIssue395() throws Exception {
+		BiFunction<HttpServerRequest, HttpServerResponse, Mono<Void>> echoHandler =
+				(req, res) -> res.send(req.receive().map(ByteBuf::retain)).then();
+
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		DisposableServer server =
+				HttpServer.create()
+				          .secure(ssl -> ssl.sslContext(serverOptions))
+				          .protocol(HttpProtocol.H2)
+				          .handle(echoHandler)
+				          .port(8080)
 				          .wiretap()
 				          .bindNow();
 
