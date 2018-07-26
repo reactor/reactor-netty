@@ -43,7 +43,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * A one time-set channel pipeline callback to emit {@link NettyContext} state for clean

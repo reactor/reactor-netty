@@ -76,7 +76,7 @@ import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini

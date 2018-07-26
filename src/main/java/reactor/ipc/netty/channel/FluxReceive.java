@@ -35,7 +35,7 @@ import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini

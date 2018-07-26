@@ -33,7 +33,7 @@ import reactor.ipc.netty.options.NettyOptions;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * @param <CHANNEL> the channel type

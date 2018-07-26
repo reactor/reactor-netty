@@ -36,11 +36,10 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import reactor.core.publisher.Mono;
-import reactor.ipc.netty.NettyPipeline;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini

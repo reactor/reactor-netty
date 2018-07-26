@@ -42,7 +42,7 @@ import reactor.ipc.netty.channel.ContextHandler;
 import reactor.util.concurrent.Queues;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra

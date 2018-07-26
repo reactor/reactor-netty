@@ -44,7 +44,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * A bridge between an immutable {@link Channel} and {@link NettyInbound} /

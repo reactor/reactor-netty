@@ -37,14 +37,12 @@ import reactor.core.publisher.Mono;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static reactor.ipc.netty.LogFormatter.format;
-
 /**
  * Internal helpers for reactor-netty contracts
  *
  * @author Stephane Maldini
  */
-final class ReactorNetty {
+public final class ReactorNetty {
 
 	static final AttributeKey<Boolean> PERSISTENT_CHANNEL = AttributeKey.newInstance("PERSISTENT_CHANNEL");
 
@@ -368,4 +366,27 @@ final class ReactorNetty {
 			extractor.accept(ctx, msg);
 		}
 	}
+
+
+	/**
+	 * Specifies whether the channel ID will be prepended to the log message when possible.
+	 * By default it will be prepended.
+	 */
+	static final boolean LOG_CHANNEL_INFO =
+			Boolean.parseBoolean(System.getProperty("reactor.netty.logChannelInfo", "true"));
+
+	public static String format(Channel channel, String msg) {
+		if (LOG_CHANNEL_INFO) {
+			String channelStr = channel.toString();
+			return new StringBuilder(channelStr.length() + 1 + msg.length())
+					.append(channel)
+					.append(' ')
+					.append(msg)
+					.toString();
+		}
+		else {
+			return msg;
+		}
+	}
+
 }

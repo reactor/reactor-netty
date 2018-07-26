@@ -38,7 +38,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini

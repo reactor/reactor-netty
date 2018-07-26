@@ -66,7 +66,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}.

@@ -37,7 +37,7 @@ import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
-import static reactor.ipc.netty.LogFormatter.format;
+import static reactor.ipc.netty.ReactorNetty.format;
 
 /**
  * @param <CHANNEL> the channel type
