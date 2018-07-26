@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -55,6 +56,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -66,50 +68,58 @@ public class TcpClientTests {
 	private final ExecutorService threadPool = Executors.newCachedThreadPool();
 	int                     echoServerPort;
 	EchoServer              echoServer;
+	Future<?>               echoServerFuture;
 	int                     abortServerPort;
 	ConnectionAbortServer   abortServer;
+	Future<?>               abortServerFuture;
 	int                     timeoutServerPort;
 	ConnectionTimeoutServer timeoutServer;
+	Future<?>               timeoutServerFuture;
 	int                     heartbeatServerPort;
 	HeartbeatServer         heartbeatServer;
+	Future<?>               heartbeatServerFuture;
 
 	@Before
 	public void setup() throws Exception {
 		echoServerPort = SocketUtils.findAvailableTcpPort();
 		echoServer = new EchoServer(echoServerPort);
-		threadPool.submit(echoServer);
+		echoServerFuture = threadPool.submit(echoServer);
 		if(!echoServer.await(10, TimeUnit.SECONDS)){
 			throw new IOException("fail to start test server");
 		}
 
 		abortServerPort = SocketUtils.findAvailableTcpPort();
 		abortServer = new ConnectionAbortServer(abortServerPort);
-		threadPool.submit(abortServer);
+		abortServerFuture = threadPool.submit(abortServer);
 		if(!abortServer.await(10, TimeUnit.SECONDS)){
 			throw new IOException("fail to start test server");
 		}
 
 		timeoutServerPort = SocketUtils.findAvailableTcpPort();
 		timeoutServer = new ConnectionTimeoutServer(timeoutServerPort);
-		threadPool.submit(timeoutServer);
+		timeoutServerFuture = threadPool.submit(timeoutServer);
 		if(!timeoutServer.await(10, TimeUnit.SECONDS)){
 			throw new IOException("fail to start test server");
 		}
 
 		heartbeatServerPort = SocketUtils.findAvailableTcpPort();
 		heartbeatServer = new HeartbeatServer(heartbeatServerPort);
-		threadPool.submit(heartbeatServer);
+		heartbeatServerFuture = threadPool.submit(heartbeatServer);
 		if(!heartbeatServer.await(10, TimeUnit.SECONDS)){
 			throw new IOException("fail to start test server");
 		}
 	}
 
 	@After
-	public void cleanup() throws InterruptedException, IOException {
+	public void cleanup() throws Exception {
 		echoServer.close();
 		abortServer.close();
 		timeoutServer.close();
 		heartbeatServer.close();
+		assertNull(echoServerFuture.get());
+		assertNull(abortServerFuture.get());
+		assertNull(timeoutServerFuture.get());
+		assertNull(heartbeatServerFuture.get());
 		threadPool.shutdown();
 		threadPool.awaitTermination(5, TimeUnit.SECONDS);
 		Thread.sleep(500);

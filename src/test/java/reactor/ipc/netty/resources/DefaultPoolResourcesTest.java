@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -134,7 +135,8 @@ public class DefaultPoolResourcesTest {
 		TcpClientTests.EchoServer echoServer = new TcpClientTests.EchoServer(echoServerPort);
 
 		List<Channel> createdChannels = new ArrayList<>();
-
+		java.util.concurrent.Future<?> f = null;
+		ScheduledFuture<Future<Void>> sf = null;
 		try {
 			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
 			ChannelPool pool = PoolResources.fixed("fixedPoolTwoAcquire", 2)
@@ -155,7 +157,7 @@ public class DefaultPoolResourcesTest {
 					.withMessageContaining("Connection refused");
 
 			//start the echo server
-			service.submit(echoServer);
+			f = service.submit(echoServer);
 			Thread.sleep(100);
 
 			//acquire 2
@@ -168,7 +170,7 @@ public class DefaultPoolResourcesTest {
 
 			//next one will block until a previous one is released
 			long start = System.currentTimeMillis();
-			service.schedule(() -> pool.release(channel1), 500, TimeUnit.MILLISECONDS);
+			sf = service.schedule(() -> pool.release(channel1), 500, TimeUnit.MILLISECONDS);
 			final Channel channel4 = pool.acquire().get();
 			long end = System.currentTimeMillis();
 
@@ -187,6 +189,10 @@ public class DefaultPoolResourcesTest {
 		}
 		finally {
 			echoServer.close();
+			assertThat(f).isNotNull();
+			assertThat(f.get()).isNull();
+			assertThat(sf).isNotNull();
+			assertThat(sf.get().isSuccess()).isTrue();
 		}
 	}
 

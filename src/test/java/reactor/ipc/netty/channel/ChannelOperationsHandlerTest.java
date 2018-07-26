@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -121,7 +122,7 @@ public class ChannelOperationsHandlerTest {
 		int abortServerPort = SocketUtils.findAvailableTcpPort();
 		ConnectionAbortServer abortServer = new ConnectionAbortServer(abortServerPort);
 
-		threadPool.submit(abortServer);
+		Future<?> f = threadPool.submit(abortServer);
 
 		if(!abortServer.await(10, TimeUnit.SECONDS)){
 			throw new IOException("Fail to start test server");
@@ -138,6 +139,8 @@ public class ChannelOperationsHandlerTest {
 		            .verify();
 
 		abortServer.close();
+
+		assertThat(f.get()).isNull();
 	}
 
 	static final Logger log = Loggers.getLogger(ChannelOperationsHandlerTest.class);
@@ -205,7 +208,7 @@ public class ChannelOperationsHandlerTest {
 		int testServerPort = SocketUtils.findAvailableTcpPort();
 		TestServer testServer = new TestServer(testServerPort);
 
-		threadPool.submit(testServer);
+		Future<?> f = threadPool.submit(testServer);
 
 		if(!testServer.await(10, TimeUnit.SECONDS)){
 			throw new IOException("Fail to start test server");
@@ -223,6 +226,8 @@ public class ChannelOperationsHandlerTest {
 		    .blockLast(Duration.ofSeconds(100));
 
 		testServer.close();
+
+		assertThat(f.get()).isNull();
 	}
 
 	private static final class TestServer extends CountDownLatch implements Runnable {
