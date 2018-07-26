@@ -48,7 +48,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * {@link NettyInbound} and {@link NettyOutbound}  that apply to a {@link Connection}

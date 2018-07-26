@@ -43,7 +43,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.util.concurrent.Queues;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra

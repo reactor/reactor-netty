@@ -42,7 +42,7 @@ import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * Conversion between Netty types  and Reactor types ({@link HttpOperations}

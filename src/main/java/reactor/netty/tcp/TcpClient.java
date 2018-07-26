@@ -49,7 +49,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * A TcpClient allows to build in a safe immutable way a TCP client that

@@ -26,7 +26,7 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.netty.SystemPropertiesNames;
+import reactor.netty.ReactorNetty;
 import reactor.netty.resources.LoopResources;
 
 /**
@@ -212,7 +212,7 @@ public class UdpResources implements LoopResources {
 	 * (but with a minimum value of 4)
 	 */
 	static final int DEFAULT_UDP_THREAD_COUNT = Integer.parseInt(System.getProperty(
-			SystemPropertiesNames.UDP_IO_THREAD_COUNT,
+			ReactorNetty.UDP_IO_THREAD_COUNT,
 			"" + Schedulers.DEFAULT_POOL_SIZE));
 
 	static {

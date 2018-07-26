@@ -41,7 +41,7 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.annotation.Nullable;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini

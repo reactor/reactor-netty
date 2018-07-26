@@ -35,11 +35,11 @@ import io.netty.handler.logging.LoggingHandler;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
-import reactor.netty.SystemPropertiesNames;
+import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * Helper to update configuration the main {@link Bootstrap} and
@@ -54,7 +54,7 @@ public abstract class BootstrapHandlers {
 	 * fallback to SSL debugging disabled
 	 */
 	static final boolean SSL_CLIENT_DEBUG =
-			Boolean.parseBoolean(System.getProperty(SystemPropertiesNames.SSL_CLIENT_DEBUG,
+			Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_CLIENT_DEBUG,
 			                                        "false"));
 
 	/**
@@ -62,7 +62,7 @@ public abstract class BootstrapHandlers {
 	 * fallback to SSL debugging disabled
 	 */
 	static final boolean SSL_SERVER_DEBUG =
-			Boolean.parseBoolean(System.getProperty(SystemPropertiesNames.SSL_SERVER_DEBUG,
+			Boolean.parseBoolean(System.getProperty(ReactorNetty.SSL_SERVER_DEBUG,
 			                                        "false"));
 
 	/**

@@ -31,7 +31,7 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini

@@ -22,7 +22,7 @@ import io.netty.channel.pool.SimpleChannelPool;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
-import reactor.netty.SystemPropertiesNames;
+import reactor.netty.ReactorNetty;
 
 /**
  * A {@link ConnectionProvider} will produce {@link Connection}
@@ -39,7 +39,7 @@ public interface ConnectionProvider extends Disposable {
 	 * available number of processors (but with a minimum value of 16)
 	 */
 	int DEFAULT_POOL_MAX_CONNECTIONS =
-			Integer.parseInt(System.getProperty(SystemPropertiesNames.POOL_MAX_CONNECTIONS,
+			Integer.parseInt(System.getProperty(ReactorNetty.POOL_MAX_CONNECTIONS,
 			"" + Math.max(Runtime.getRuntime()
 			            .availableProcessors(), 8) * 2));
 
@@ -49,7 +49,7 @@ public interface ConnectionProvider extends Disposable {
 	 * connection in an unbounded fashion. Fallback 45 seconds
 	 */
 	long DEFAULT_POOL_ACQUIRE_TIMEOUT = Long.parseLong(System.getProperty(
-			SystemPropertiesNames.POOL_ACQUIRE_TIMEOUT,
+			ReactorNetty.POOL_ACQUIRE_TIMEOUT,
 			"" + 45000));
 
 	/**

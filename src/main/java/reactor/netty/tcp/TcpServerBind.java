@@ -39,7 +39,7 @@ import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.LoopResources;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini

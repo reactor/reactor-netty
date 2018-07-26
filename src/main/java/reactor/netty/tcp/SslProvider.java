@@ -43,12 +43,12 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
-import reactor.netty.SystemPropertiesNames;
+import reactor.netty.ReactorNetty;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * SSL Provider
@@ -439,7 +439,7 @@ public final class SslProvider {
 		 */
 		static final long DEFAULT_SSL_HANDSHAKE_TIMEOUT =
 				Long.parseLong(System.getProperty(
-						SystemPropertiesNames.SSL_HANDSHAKE_TIMEOUT,
+						ReactorNetty.SSL_HANDSHAKE_TIMEOUT,
 						"10000"));
 
 		SslContextBuilder sslCtxBuilder;

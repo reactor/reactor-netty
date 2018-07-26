@@ -30,7 +30,7 @@ import io.netty.handler.codec.http2.HttpConversionUtil;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 

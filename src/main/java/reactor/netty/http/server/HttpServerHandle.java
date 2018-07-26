@@ -28,7 +28,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.tcp.TcpServer;
 
-import static reactor.netty.LogFormatter.format;
+import static reactor.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini
