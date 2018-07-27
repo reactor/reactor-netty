@@ -42,10 +42,8 @@ public class HttpClientOperationsTest {
 	public void addDecoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionObserver.emptyListener());
-
-		ops.addHandler(new JsonObjectDecoder());
+		HttpClientOperations ops = new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
+				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
 		assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extractor"));
@@ -65,10 +63,8 @@ public class HttpClientOperationsTest {
 	public void addNamedDecoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionObserver.emptyListener());
-
-		ops.addHandler("json", new JsonObjectDecoder());
+		HttpClientOperations ops = new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
+				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
 		assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
@@ -88,10 +84,8 @@ public class HttpClientOperationsTest {
 	public void addEncoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionObserver.emptyListener());
-
-		ops.addHandler(new JsonObjectDecoder());
+		HttpClientOperations ops = new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
+				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
 		assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extractor"));
@@ -111,10 +105,8 @@ public class HttpClientOperationsTest {
 	public void addNamedEncoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(() -> channel,
-				ConnectionObserver.emptyListener());
-
-		ops.addHandler("json", new JsonObjectDecoder());
+		HttpClientOperations ops = new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener())
+				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
 		assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
