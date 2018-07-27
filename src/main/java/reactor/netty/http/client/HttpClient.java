@@ -263,6 +263,17 @@ public abstract class HttpClient {
 	 * {@link Publisher#subscribe(Subscriber)}.
 	 */
 	public interface WebsocketReceiver<S extends WebsocketReceiver<?>> extends UriConfiguration<S>  {
+		/**
+		 * Negotiate a websocket upgrade and return a {@link Mono} of {@link Connection}. If
+		 * {@link Mono} is cancelled, the underlying connection will be aborted. Once the
+		 * {@link Connection} has been emitted and is not necessary anymore, disposing must be
+		 * done by the user via {@link Connection#dispose()}.
+		 *
+		 * If update configuration phase fails, a {@link Mono#error(Throwable)} will be returned
+		 *
+		 * @return a {@link Mono} of {@link Connection}
+		 */
+		Mono<? extends Connection> connect();
 
 		/**
 		 * Negotiate a websocket upgrade and extract a flux from the given
