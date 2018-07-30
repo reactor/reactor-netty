@@ -137,10 +137,12 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		                                             .allMatch(AtomicBoolean::get);
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, Pool pool) {
 		Future<Channel> f = pool.acquire();
 		DisposableAcquire disposableAcquire =
 				new DisposableAcquire(sink, f, pool, obs);
+		// Returned value is deliberately ignored
 		f.addListener(disposableAcquire);
 		sink.onCancel(disposableAcquire);
 	}
@@ -412,11 +414,13 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public final void dispose() {
 			if (isDisposed()) {
 				return;
 			}
 
+			// Returned value is deliberately ignored
 			f.removeListener(this);
 
 			if (!f.isDone()) {

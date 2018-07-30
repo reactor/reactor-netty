@@ -115,11 +115,13 @@ final class NewConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public final void dispose() {
 			if (isDisposed()) {
 				return;
 			}
 
+			// Returned value is deliberately ignored
 			f.removeListener(this);
 
 			if (!f.isDone()) {

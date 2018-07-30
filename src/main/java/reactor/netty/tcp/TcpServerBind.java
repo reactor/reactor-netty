@@ -155,6 +155,7 @@ final class TcpServerBind extends TcpServer {
 
 		@Override
 		public final void dispose() {
+			// Returned value is deliberately ignored
 			f.removeListener(this);
 
 			if (f.channel()

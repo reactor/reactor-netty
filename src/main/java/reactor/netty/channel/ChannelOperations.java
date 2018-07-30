@@ -374,6 +374,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 				channel().writeAndFlush(TERMINATED_OPS, this);
 			}
 			else {
+				// Returned value is deliberately ignored
 				setSuccess(null);
 			}
 		}
@@ -415,13 +416,17 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public ChannelPromise setSuccess() {
+		// Returned value is deliberately ignored
 		setSuccess(null);
 		return this;
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public ChannelPromise setSuccess(Void result) {
+		// Returned value is deliberately ignored
 		super.setSuccess(result);
 		return this;
 	}
@@ -442,31 +447,41 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public ChannelPromise setFailure(Throwable cause) {
+		// Returned value is deliberately ignored
 		super.setFailure(cause);
 		return this;
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+		// Returned value is deliberately ignored
 		super.addListener(listener);
 		return this;
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
+		// Returned value is deliberately ignored
 		super.addListeners(listeners);
 		return this;
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+		// Returned value is deliberately ignored
 		super.removeListener(listener);
 		return this;
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
+		// Returned value is deliberately ignored
 		super.removeListeners(listeners);
 		return this;
 	}
