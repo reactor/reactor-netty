@@ -416,7 +416,9 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					if (!future.isDone() && hasPendingWriteBytes()) {
 						ctx.flush();
 						if (!future.isDone() && hasPendingWriteBytes()) {
-							pendingWriteOffer.test(future, v);
+							if (!pendingWriteOffer.test(future, v) && future instanceof ChannelPromise) {
+								((ChannelPromise) future).setFailure(new IllegalStateException("Send Queue full?!"));
+							}
 						}
 					}
 					if (last && WIP.decrementAndGet(this) == 0) {
@@ -571,10 +573,16 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				if (!f.isDone() && (parent.hasPendingWriteBytes() || !lastThreadInEventLoop)) {
 					EventLoop eventLoop = parent.ctx.channel().eventLoop();
 					if (eventLoop.inEventLoop()) {
-						parent.pendingWriteOffer.test(f, PENDING_WRITES);
+						if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+							((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
+						}
 					}
 					else {
-						eventLoop.execute(() -> parent.pendingWriteOffer.test(f, PENDING_WRITES));
+						eventLoop.execute(() -> {
+							if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+								((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
+							}
+						});
 					}
 				}
 				f.addListener(this);
@@ -615,10 +623,16 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				if (!f.isDone() && (parent.hasPendingWriteBytes() || !lastThreadInEventLoop)) {
 					EventLoop eventLoop = parent.ctx.channel().eventLoop();
 					if (eventLoop.inEventLoop()) {
-						parent.pendingWriteOffer.test(f, PENDING_WRITES);
+						if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+							((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
+						}
 					}
 					else {
-						eventLoop.execute(() -> parent.pendingWriteOffer.test(f, PENDING_WRITES));
+						eventLoop.execute(() -> {
+							if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+								((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
+							}
+						});
 					}
 				}
 				f.addListener(future -> {
