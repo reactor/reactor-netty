@@ -244,7 +244,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked", "FutureReturnValueIgnored"})
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (log.isDebugEnabled()) {
 			log.debug(format(ctx.channel(), "Writing object {}"), msg);
@@ -257,6 +257,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 
 		if (!pendingWriteOffer.test(promise, msg)) {
+			// Returned value is deliberately ignored
 			promise.setFailure(new IllegalStateException("Send Queue full?!"));
 		}
 	}
@@ -368,7 +369,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked", "FutureReturnValueIgnored"})
 	void drain() {
 		if (WIP.getAndIncrement(this) == 0) {
 
@@ -417,6 +418,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						ctx.flush();
 						if (!future.isDone() && hasPendingWriteBytes()) {
 							if (!pendingWriteOffer.test(future, v) && future instanceof ChannelPromise) {
+								// Returned value is deliberately ignored
 								((ChannelPromise) future).setFailure(new IllegalStateException("Send Queue full?!"));
 							}
 						}
@@ -440,16 +442,19 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 								vr = supplier.call();
 							}
 							catch (Throwable e) {
+								// Returned value is deliberately ignored
 								promise.setFailure(e);
 								continue;
 							}
 	
 							if (vr == null) {
+								// Returned value is deliberately ignored
 								promise.setSuccess();
 								continue;
 							}
 	
 							if (inner.unbounded) {
+								// Returned value is deliberately ignored
 								doWrite(vr, promise, null);
 							}
 							else {
@@ -465,6 +470,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						}
 					}
 					else {
+						// Returned value is deliberately ignored
 						doWrite(v, promise, null);
 					}
 				}
@@ -539,6 +545,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onComplete() {
 			if (parent.ctx.pipeline().get(NettyPipeline.CompressionHandler) != null) {
 				parent.ctx.pipeline()
@@ -563,6 +570,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						}
 					}
 					else {
+						// Returned value is deliberately ignored
 						promise.setFailure(new AbortedException("Connection has been closed"));
 						return;
 					}
@@ -574,12 +582,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					EventLoop eventLoop = parent.ctx.channel().eventLoop();
 					if (eventLoop.inEventLoop()) {
 						if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+							// Returned value is deliberately ignored
 							((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
 						}
 					}
 					else {
 						eventLoop.execute(() -> {
 							if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+								// Returned value is deliberately ignored
 								((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
 							}
 						});
@@ -590,12 +600,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			else {
 				produced = 0L;
 				produced(p);
+				// Returned value is deliberately ignored
 				promise.setSuccess();
 				parent.drain();
 			}
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onError(Throwable t) {
 			long p = produced;
 			ChannelFuture f = lastWrite;
@@ -614,6 +626,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					}
 				}
 				else {
+					// Returned value is deliberately ignored
 					promise.setFailure(new AbortedException("Connection has been closed"));
 					return;
 				}
@@ -624,12 +637,14 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					EventLoop eventLoop = parent.ctx.channel().eventLoop();
 					if (eventLoop.inEventLoop()) {
 						if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+							// Returned value is deliberately ignored
 							((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
 						}
 					}
 					else {
 						eventLoop.execute(() -> {
 							if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+								// Returned value is deliberately ignored
 								((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
 							}
 						});
@@ -639,15 +654,18 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					produced = 0L;
 					produced(p);
 					if (!future.isSuccess()) {
+						// Returned value is deliberately ignored
 						promise.setFailure(Exceptions.addSuppressed(future.cause(), t));
 						return;
 					}
+					// Returned value is deliberately ignored
 					promise.setFailure(t);
 				});
 			}
 			else {
 				produced = 0L;
 				produced(p);
+				// Returned value is deliberately ignored
 				promise.setFailure(t);
 				parent.drain();
 			}
@@ -670,9 +688,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			lastWrite = newPromise;
 		}
 
+		@SuppressWarnings("FutureReturnValueIgnored")
 		private void onNextInternal(Object t, ChannelPromise promise) {
 			produced++;
 
+			// Returned value is deliberately ignored
 			parent.doWrite(t, promise, this);
 
 			if (parent.ctx.channel()
@@ -714,14 +734,17 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void operationComplete(ChannelFuture future) {
 			long p = produced;
 			produced = 0L;
 			produced(p);
 			if (future.isSuccess()) {
+				// Returned value is deliberately ignored
 				promise.setSuccess();
 			}
 			else {
+				// Returned value is deliberately ignored
 				promise.setFailure(future.cause());
 			}
 		}

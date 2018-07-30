@@ -166,6 +166,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public final void subscribe(final CoreSubscriber<? super Void> s) {
 			if(future.isDone()){
 				if(future.isSuccess()){
@@ -178,6 +179,7 @@ public abstract class FutureMono extends Mono<Void> {
 			}
 
 			FutureSubscription<F> fs = new FutureSubscription<>(future, s);
+			// Returned value is deliberately ignored
 			future.addListener(fs);
 			s.onSubscribe(fs);
 		}
@@ -193,6 +195,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void subscribe(CoreSubscriber<? super Void> s) {
 			F f = deferredFuture.get();
 
@@ -215,6 +218,7 @@ public abstract class FutureMono extends Mono<Void> {
 
 			FutureSubscription<F> fs = new FutureSubscription<>(f, s);
 			s.onSubscribe(fs);
+			// Returned value is deliberately ignored
 			f.addListener(fs);
 		}
 	}
@@ -229,6 +233,7 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void subscribe(CoreSubscriber<? super Void> s) {
 			F f = deferredFuture.apply(s.currentContext());
 
@@ -251,6 +256,7 @@ public abstract class FutureMono extends Mono<Void> {
 
 			FutureSubscription<F> fs = new FutureSubscription<>(f, s);
 			s.onSubscribe(fs);
+			// Returned value is deliberately ignored
 			f.addListener(fs);
 		}
 	}
@@ -279,7 +285,9 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void cancel() {
+			// Returned value is deliberately ignored
 			future.removeListener(this);
 		}
 
@@ -361,8 +369,10 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public ChannelPromise setSuccess(Void result) {
 			this.ioActual = null;
+			// Returned value is deliberately ignored
 			super.setSuccess(result);
 			actual.onComplete();
 			return this;
@@ -377,8 +387,10 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public ChannelPromise setFailure(Throwable cause) {
 			this.ioActual = null;
+			// Returned value is deliberately ignored
 			super.setFailure(cause);
 			actual.onError(cause);
 			return this;

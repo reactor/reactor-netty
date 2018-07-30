@@ -93,7 +93,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked", "FutureReturnValueIgnored"})
 	public void setFuture(Future<?> future) {
 		Objects.requireNonNull(future, "future");
 
@@ -119,6 +119,7 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 					future,
 					pool.toString());
 		}
+		// Returned value is deliberately ignored
 		((Future<CHANNEL>) future).addListener(this);
 	}
 
