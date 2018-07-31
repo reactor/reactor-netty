@@ -39,11 +39,6 @@ public class HttpToH2Operations extends HttpServerOperations {
 		super(c, listener, null, request, connectionInfo);
 
 		this.http2Headers = headers;
-		// Temporary workaround while waiting for a fix in Netty
-		// https://github.com/netty/netty/pull/8147
-		c.channel()
-		 .config()
-		 .setAutoRead(true);
 	}
 
 	@Override
