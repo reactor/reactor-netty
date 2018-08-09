@@ -351,9 +351,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				log.debug("Failed cleaning the channel from pool", future.cause());
 			}
 			onTerminate.onComplete();
-			channel.attr(OWNER)
-			       .getAndSet(ConnectionObserver.emptyListener())
-			       .onStateChange(this, State.RELEASED);
 		}
 
 		@Override
@@ -380,6 +377,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					log.debug(format(connection.channel(), "Releasing channel"));
 				}
 
+				channel.attr(OWNER)
+						.getAndSet(ConnectionObserver.emptyListener())
+						.onStateChange(this, State.RELEASED);
 				pool.release(channel)
 				    .addListener(this);
 				return;
