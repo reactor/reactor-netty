@@ -59,7 +59,7 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 	}
 
 	@SuppressWarnings("unchecked")
-	Mono<WebsocketClientOperations> connect() {
+	public Mono<WebsocketClientOperations> connect() {
 		return (Mono<WebsocketClientOperations>)cachedConfiguration.connect();
 	}
 
