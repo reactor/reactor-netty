@@ -64,6 +64,7 @@ import reactor.netty.tcp.ProxyProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -217,6 +218,33 @@ public class HttpClientTest {
 		x.dispose();
 		pool.dispose();
 		Assert.fail("Not aborted");
+	}
+
+	@Test
+	public void testClientReuseIssue405(){
+		DisposableServer c = HttpServer.create()
+				.port(0)
+				.handle((in,out)->out.sendString(Flux.just("hello")))
+				.wiretap()
+				.bindNow();
+
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+		HttpClient httpClient = HttpClient.create(pool)
+				.port(c.address().getPort()).wiretap();
+
+		Mono<String> mono1 = httpClient.get()
+				.responseSingle((r, buf) -> buf.asString())
+				.log("mono1");
+
+		Mono<String> mono2 = httpClient.get()
+                .responseSingle((r, buf) -> buf.asString())
+				.log("mono1");
+
+		StepVerifier.create(Flux.zip(mono1,mono2))
+				.expectNext(Tuples.of("hello","hello")).expectComplete().verify(Duration.ofSeconds(2000));
+		
+		c.dispose();
+		pool.dispose();
 	}
 
 	@Test
