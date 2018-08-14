@@ -37,6 +37,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 
 import static reactor.netty.ReactorNetty.format;
@@ -163,6 +164,10 @@ final class TcpServerBind extends TcpServer {
 
 				f.channel()
 				 .close();
+
+				HttpResources.get()
+				             .disposeWhen(bootstrap.config()
+				                                   .localAddress());
 			}
 			else if (!f.isDone()) {
 				f.cancel(true);

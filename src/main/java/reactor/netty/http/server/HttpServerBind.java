@@ -16,6 +16,7 @@
 
 package reactor.netty.http.server;
 
+import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
@@ -66,6 +67,8 @@ final class HttpServerBind extends HttpServer
 
 	static final HttpServerBind INSTANCE = new HttpServerBind();
 
+	static final Function<DisposableServer, DisposableServer> CLEANUP_GLOBAL_RESOURCE = DisposableBind::new;
+
 	final TcpServer tcpServer;
 
 	HttpServerBind() {
@@ -85,7 +88,8 @@ final class HttpServerBind extends HttpServer
 	@SuppressWarnings("unchecked")
 	public Mono<? extends DisposableServer> bind(TcpServer delegate) {
 		return delegate.bootstrap(this)
-		               .bind();
+		               .bind()
+		               .map(CLEANUP_GLOBAL_RESOURCE);
 	}
 
 	@Override
@@ -257,6 +261,29 @@ final class HttpServerBind extends HttpServer
 		}
 	}
 
+
+	static final class DisposableBind implements DisposableServer {
+
+		final DisposableServer server;
+
+		DisposableBind(DisposableServer server) {
+			this.server = server;
+		}
+
+		@Override
+		public void dispose() {
+			server.dispose();
+			InetSocketAddress addr = InetSocketAddress.createUnresolved(server.host(), server.port());
+
+			HttpResources.get()
+			             .disposeWhen(addr);
+		}
+
+		@Override
+		public Channel channel() {
+			return server.channel();
+		}
+	}
 
 	static final class Http1Initializer
 			implements BiConsumer<ConnectionObserver, Channel>  {

@@ -100,11 +100,11 @@ public class HttpResourcesTest {
 		try {
 			assertThat(newHttpResources).isSameAs(testResources);
 
-			HttpResources.shutdownLater();
+			HttpResources.disposeLoopsAndConnectionsLater();
 			assertThat(newHttpResources.isDisposed()).isFalse();
 
-			HttpResources.shutdownLater().block();
-			assertThat(newHttpResources.isDisposed()).as("shutdownLater completion").isTrue();
+			HttpResources.disposeLoopsAndConnectionsLater().block();
+			assertThat(newHttpResources.isDisposed()).as("disposeLoopsAndConnectionsLater completion").isTrue();
 
 			assertThat(HttpResources.httpResources.get()).isNull();
 		}

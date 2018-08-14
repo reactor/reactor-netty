@@ -16,6 +16,7 @@
 
 package reactor.netty.tcp;
 
+import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import javax.annotation.Nullable;
@@ -29,6 +30,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.util.annotation.NonNull;
 
 /**
  * Hold the default Tcp resources
@@ -71,7 +73,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 * @return the global HTTP resources
 	 */
 	public static TcpResources reset() {
-		shutdown();
+		disposeLoopsAndConnections();
 		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
 	}
 
@@ -79,7 +81,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 * Shutdown the global {@link TcpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones.
 	 */
-	public static void shutdown() {
+	public static void disposeLoopsAndConnections() {
 		TcpResources resources = tcpResources.getAndSet(null);
 		if (resources != null) {
 			resources._dispose();
@@ -91,9 +93,9 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 * effectively cleaning up associated resources without creating new ones. This only
 	 * occurs when the returned {@link Mono} is subscribed to.
 	 *
-	 * @return a {@link Mono} triggering the {@link #shutdown()} when subscribed to.
+	 * @return a {@link Mono} triggering the {@link #disposeLoopsAndConnections()} when subscribed to.
 	 */
-	public static Mono<Void> shutdownLater() {
+	public static Mono<Void> disposeLoopsAndConnectionsLater() {
 		return Mono.defer(() -> {
 			TcpResources resources = tcpResources.getAndSet(null);
 			if (resources != null) {
@@ -125,7 +127,6 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	/**
 	 * Dispose underlying resources
 	 */
-	//TODO make public?
 	protected void _dispose(){
 		defaultProvider.dispose();
 		defaultLoops.dispose();
@@ -143,6 +144,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	@Override
 	public boolean isDisposed() {
 		return defaultLoops.isDisposed() && defaultProvider.isDisposed();
+	}
+
+	@Override
+	public void disposeWhen(@NonNull SocketAddress address) {
+		defaultProvider.disposeWhen(address);
 	}
 
 	@Override
@@ -189,6 +195,8 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	public boolean daemon() {
 		return defaultLoops.daemon();
 	}
+
+
 
 	/**
 	 * Safely check if existing resource exist and proceed to update/cleanup if new
