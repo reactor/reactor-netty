@@ -16,6 +16,8 @@
 
 package reactor.netty.resources;
 
+import java.net.SocketAddress;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
@@ -23,6 +25,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
+import reactor.util.annotation.NonNull;
 
 /**
  * A {@link ConnectionProvider} will produce {@link Connection}
@@ -153,6 +156,10 @@ public interface ConnectionProvider extends Disposable {
 	 * @return an existing or new {@link Mono} of {@link Connection}
 	 */
 	Mono<? extends Connection> acquire(Bootstrap bootstrap);
+
+
+	default void disposeWhen(@NonNull SocketAddress address) {
+	}
 
 	@Override
 	default void dispose() {

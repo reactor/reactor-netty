@@ -107,11 +107,11 @@ public class TcpResourcesTest {
 		try {
 			assertThat(newTcpResources).isSameAs(tcpResources);
 
-			TcpResources.shutdownLater();
+			TcpResources.disposeLoopsAndConnectionsLater();
 			assertThat(newTcpResources.isDisposed()).isFalse();
 
-			TcpResources.shutdownLater().block();
-			assertThat(newTcpResources.isDisposed()).as("shutdownLater completion").isTrue();
+			TcpResources.disposeLoopsAndConnectionsLater().block();
+			assertThat(newTcpResources.isDisposed()).as("disposeLoopsAndConnectionsLater completion").isTrue();
 
 			assertThat(TcpResources.tcpResources.get()).isNull();
 		}

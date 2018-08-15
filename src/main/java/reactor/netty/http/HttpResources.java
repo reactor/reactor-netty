@@ -65,7 +65,7 @@ public final class HttpResources extends TcpResources {
 	 * @return the global HTTP resources
 	 */
 	public static HttpResources reset() {
-		shutdown();
+		disposeLoopsAndConnections();
 		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
 	}
 
@@ -73,7 +73,7 @@ public final class HttpResources extends TcpResources {
 	 * Shutdown the global {@link HttpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones.
 	 */
-	public static void shutdown() {
+	public static void disposeLoopsAndConnections() {
 		HttpResources resources = httpResources.getAndSet(null);
 		if (resources != null) {
 			resources._dispose();
@@ -81,13 +81,13 @@ public final class HttpResources extends TcpResources {
 	}
 
 	/**
-	 * Prepare to shutdown the global {@link TcpResources} without resetting them,
+	 * Prepare to shutdown the global {@link HttpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones. This only
 	 * occurs when the returned {@link Mono} is subscribed to.
 	 *
-	 * @return a {@link Mono} triggering the {@link #shutdown()} when subscribed to.
+	 * @return a {@link Mono} triggering the {@link #disposeLoopsAndConnections()} when subscribed to.
 	 */
-	public static Mono<Void> shutdownLater() {
+	public static Mono<Void> disposeLoopsAndConnectionsLater() {
 		return Mono.defer(() -> {
 			HttpResources resources = httpResources.getAndSet(null);
 			if (resources != null) {

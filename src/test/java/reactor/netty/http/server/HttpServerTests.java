@@ -56,7 +56,6 @@ import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
-import reactor.netty.http.HttpResources;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
@@ -146,16 +145,15 @@ public class HttpServerTests {
 		                     .wiretap()
 		                     .get()
 		                     .uri("/")
-		                     .responseSingle((res, buf) -> Mono.just(res.status().code()))
+		                     .response()
+		                     .map(res -> res.status().code())
+//		                     .responseSingle((res, buf) -> Mono.just(res.status().code()))
 		                     .block();
 
 		// checking the response status, OK
 		assertThat(code).isEqualTo(200);
 		// dispose the Netty context and wait for the channel close
 		context.disposeNow();
-
-		//REQUIRED - bug pool does not detect/translate properly lifecycle
-		HttpResources.reset();
 
 		// create a totally new server instance, with a different handler that answers HTTP 201
 		context = HttpServer.create()

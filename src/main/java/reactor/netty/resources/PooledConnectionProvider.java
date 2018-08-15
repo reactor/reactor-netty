@@ -19,10 +19,13 @@ package reactor.netty.resources;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
@@ -46,6 +49,7 @@ import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.NonNull;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
@@ -71,6 +75,25 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		this.name = name;
 		this.poolFactory = poolFactory;
 		this.channelPools = PlatformDependent.newConcurrentHashMap();
+	}
+
+	@Override
+	public void disposeWhen(@NonNull SocketAddress address) {
+		List<Map.Entry<PoolKey, Pool>> toDispose;
+
+		toDispose = channelPools.entrySet()
+		                        .stream()
+		                        .filter(p -> p.getKey().holder.equals(address))
+		                        .collect(Collectors.toList());
+
+		toDispose.forEach(e -> {
+			if (channelPools.remove(e.getKey(), e.getValue())) {
+				if(log.isDebugEnabled()){
+					log.debug("Disposing pool for {}", e.getKey().fqdn);
+				}
+				e.getValue().pool.close();
+			}
+		});
 	}
 
 	@Override
@@ -292,8 +315,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 	}
 
-	final static class PooledConnection implements Connection, ConnectionObserver,
-	                                               GenericFutureListener<Future<Void>> {
+	final static class PooledConnection implements Connection, ConnectionObserver {
 
 		final Channel channel;
 		final Pool    pool;
@@ -346,14 +368,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
-		public void operationComplete(Future<Void> future) {
-			if (log.isDebugEnabled() && !future.isSuccess()) {
-				log.debug("Failed cleaning the channel from pool", future.cause());
-			}
-			onTerminate.onComplete();
-		}
-
-		@Override
 		public void onStateChange(Connection connection, State newState) {
 			if(log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "onStateChange({}, {})"), connection, newState);
@@ -377,11 +391,17 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					log.debug(format(connection.channel(), "Releasing channel"));
 				}
 
-				channel.attr(OWNER)
-						.getAndSet(ConnectionObserver.emptyListener())
-						.onStateChange(this, State.RELEASED);
+				ConnectionObserver obs = channel.attr(OWNER)
+						.getAndSet(ConnectionObserver.emptyListener());
+
 				pool.release(channel)
-				    .addListener(this);
+				    .addListener(f -> {
+					    if (log.isDebugEnabled() && !f.isSuccess()) {
+						    log.debug("Failed cleaning the channel from pool", f.cause());
+					    }
+					    onTerminate.onComplete();
+						obs.onStateChange(this, State.RELEASED);
+				    });
 				return;
 			}
 
