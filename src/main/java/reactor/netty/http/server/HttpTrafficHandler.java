@@ -97,6 +97,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				Throwable cause = decoderResult.cause();
 				HttpServerOperations.log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "),
 						cause);
+				ReferenceCountUtil.release(msg);
 
 				HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
 				        cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
