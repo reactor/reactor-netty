@@ -322,9 +322,9 @@ final class HttpClientConnect extends HttpClient {
 				handler.channel(connection.channel());
 
 //				Mono.fromDirect(initializer.upgraded)
-//				    .then(Mono.defer(() -> Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection))))
+//				    .then(Mono.defer(() -> Mono.fromDirect(handler.requestWithBody((HttpClientOperations)connection))))
 //				    .subscribe(connection.disposeSubscriber());
-				Mono.defer(() -> Mono.fromDirect(handler.requestWithbody((HttpClientOperations)connection)))
+				Mono.defer(() -> Mono.fromDirect(handler.requestWithBody((HttpClientOperations)connection)))
 				    .subscribe(connection.disposeSubscriber());
 			}
 		}
@@ -402,7 +402,7 @@ final class HttpClientConnect extends HttpClient {
 			return activeURI.getRemoteAddress();
 		}
 
-		public Publisher<Void> requestWithbody(HttpClientOperations ch) {
+		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
 				UriEndpoint uri = activeURI;
 				HttpHeaders headers = ch.getNettyRequest()
