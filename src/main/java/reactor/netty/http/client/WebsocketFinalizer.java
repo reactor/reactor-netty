@@ -58,6 +58,7 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.body(b, (req, out) -> sender.apply(req))));
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<WebsocketClientOperations> connect() {
 		return (Mono<WebsocketClientOperations>)cachedConfiguration.connect();
