@@ -133,13 +133,14 @@ public class HttpSendFileTests {
 				HttpServer.create(opt -> customizeServerOptions(opt.host("localhost")))
 				          .newHandler((req, resp) -> fn.apply(resp))
 				          .block();
-
+		assertThat(context).isNotNull();
 
 		HttpClientResponse response =
-				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(() -> context.address())
+				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(context::address)
 				                                                   .compression(compression)))
 				          .get("/foo")
 				          .block(Duration.ofSeconds(30));
+		assertThat(response).isNotNull();
 
 		context.dispose();
 		context.onClose().block();
@@ -158,7 +159,7 @@ public class HttpSendFileTests {
 		doTestSendFileAsync(1024);
 	}
 
-	protected void doTestSendFileAsync(int chunk) throws IOException, URISyntaxException {
+	private void doTestSendFileAsync(int chunk) throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		Path tempFile = Files.createTempFile(largeFile.getParent(),"temp", ".txt");
 		tempFile.toFile().deleteOnExit();
@@ -193,8 +194,10 @@ public class HttpSendFileTests {
 				                                                           .aggregate()
 				                                                           .asByteArray()))
 				          .block();
+		assertThat(context).isNotNull();
+
 		byte[] response =
-				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(() -> context.address())))
+				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(context::address)))
 				          .request(HttpMethod.POST, "/", req -> req.send(content).then())
 				          .flatMap(res -> res.receive()
 				                             .aggregate()
