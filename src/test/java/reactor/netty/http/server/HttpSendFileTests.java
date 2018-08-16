@@ -136,12 +136,12 @@ public class HttpSendFileTests {
 		HttpClient client;
 		if (compression) {
 			client = HttpClient.create()
-			                   .addressSupplier(() -> context.address())
+			                   .addressSupplier(context::address)
 			                   .compress();
 		}
 		else {
 			client = HttpClient.create()
-			                   .addressSupplier(() -> context.address());
+			                   .addressSupplier(context::address);
 		}
 		Mono<String> response =
 				customizeClientOptions(client)
@@ -166,7 +166,7 @@ public class HttpSendFileTests {
 		doTestSendFileAsync(1024);
 	}
 
-	protected void doTestSendFileAsync(int chunk) throws IOException, URISyntaxException {
+	private void doTestSendFileAsync(int chunk) throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		Path tempFile = Files.createTempFile(largeFile.getParent(),"temp", ".txt");
 		tempFile.toFile().deleteOnExit();
@@ -205,14 +205,13 @@ public class HttpSendFileTests {
 
 		try {
 			byte[] response = customizeClientOptions(HttpClient.create()
-			                                                   .addressSupplier(() -> context.address())).request(
-					HttpMethod.POST)
-			                                                                                             .uri("/")
-			                                                                                             .send(content)
-			                                                                                             .responseContent()
-			                                                                                             .aggregate()
-			                                                                                             .asByteArray()
-			                                                                                             .block();
+			                                                   .addressSupplier(context::address)).request(HttpMethod.POST)
+			                                                                                      .uri("/")
+			                                                                                      .send(content)
+			                                                                                      .responseContent()
+			                                                                                      .aggregate()
+			                                                                                      .asByteArray()
+			                                                                                      .block();
 
 			assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
 		}
@@ -257,9 +256,7 @@ public class HttpSendFileTests {
 			}
 			else {
 				try {
-					if (channel != null) {
-						channel.close();
-					}
+					channel.close();
 				}
 				catch (IOException ignored) {
 				}
@@ -270,9 +267,7 @@ public class HttpSendFileTests {
 		@Override
 		public void failed(Throwable exc, ByteBuffer dataBuffer) {
 			try {
-				if (channel != null) {
-					channel.close();
-				}
+				channel.close();
 			}
 			catch (IOException ignored) {
 			}
