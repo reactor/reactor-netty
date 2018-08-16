@@ -31,6 +31,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -68,7 +69,7 @@ public class HttpSendFileTests {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 		assertSendFile(out -> out.sendFileChunked(largeFile, 1024, fileSize - 1024),
-		               false,
+		               false, (req, res) -> false,
 		               body -> assertThat(body).startsWith("<- 1024 mark here")
 		                                       .endsWith("End of File"));
 	}
@@ -110,16 +111,31 @@ public class HttpSendFileTests {
 			Path fromZipFile = zipFs.getPath("/largeFile.txt");
 			long fileSize = Files.size(fromZipFile);
 
-			assertSendFile(out -> out.compression(true).sendFile(fromZipFile, 0, fileSize), true);
+			assertSendFile(out -> out.compression(true).sendFile(fromZipFile, 0, fileSize), true, (req, res) -> false);
+		}
+	}
+
+	@Test
+	public void sendZipFileCompressionPredicate() throws IOException {
+		Path path = Files.createTempFile(null, ".zip");
+		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
+		path.toFile().deleteOnExit();
+
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+			Path fromZipFile = zipFs.getPath("/largeFile.txt");
+			long fileSize = Files.size(fromZipFile);
+
+			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize), true, (req, res) -> true);
 		}
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn) {
-		assertSendFile(fn, false);
+		assertSendFile(fn, false, (req, res) -> false);
 	}
 
-	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression) {
-		assertSendFile(fn, compression,
+	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression,
+			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate) {
+		assertSendFile(fn, compression, compressionPredicate,
 		               body ->
 		                   assertThat(body).startsWith("This is an UTF-8 file that is larger than 1024 bytes. "
 		                                               + "It contains accents like é.")
@@ -127,9 +143,11 @@ public class HttpSendFileTests {
 		                                   .endsWith("End of File"));
 	}
 
-	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression, Consumer<String> bodyAssertion) {
+	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression,
+			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate, Consumer<String> bodyAssertion) {
 		DisposableServer context =
-				customizeServerOptions(HttpServer.create())
+				customizeServerOptions(HttpServer.create()
+				                                 .compress(compressionPredicate))
 				          .handle((req, resp) -> fn.apply(resp))
 				          .bindNow();
 
