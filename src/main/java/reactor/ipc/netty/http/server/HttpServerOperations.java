@@ -310,6 +310,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public NettyOutbound sendFile(Path file, long position, long count) {
+		if (compressionPredicate != null && compressionPredicate.test(this, this)) {
+			compression(true);
+		}
+		return super.sendFile(file, position, count);
+	}
+
+	@Override
 	public Mono<Void> sendNotFound() {
 		return this.status(HttpResponseStatus.NOT_FOUND)
 		           .send();
