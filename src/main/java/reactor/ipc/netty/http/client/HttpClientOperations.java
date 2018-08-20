@@ -547,6 +547,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			            .isFailure()) {
 				onInboundError(response.decoderResult()
 				                       .cause());
+				ReferenceCountUtil.release(msg);
 				return;
 			}
 			if (started) {
@@ -555,6 +556,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 							response.headers()
 							        .toString());
 				}
+				ReferenceCountUtil.release(msg);
 				return;
 			}
 			started = true;
@@ -593,6 +595,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					log.debug(format(channel(), "HttpClientOperations received an incorrect end " +
 							"delimiter (previously used connection?)"));
 				}
+				ReferenceCountUtil.release(msg);
 				return;
 			}
 			if (log.isDebugEnabled()) {
@@ -619,6 +622,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 								"(previously used connection?)"),
 						msg);
 			}
+			ReferenceCountUtil.release(msg);
 			return;
 		}
 		super.onInboundNext(ctx, msg);
