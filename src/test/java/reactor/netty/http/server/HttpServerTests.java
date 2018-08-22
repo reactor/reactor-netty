@@ -24,6 +24,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -275,7 +276,9 @@ public class HttpServerTests {
 		                                .asString();
 
 		StepVerifier.create(client)
-		            .expectNextSequence(test.toIterable())
+		            .expectNextSequence(
+		                    Objects.requireNonNull(test.collectList()
+		                                               .block()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 

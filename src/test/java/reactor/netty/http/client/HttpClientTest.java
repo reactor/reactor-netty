@@ -1008,9 +1008,11 @@ public class HttpClientTest {
 				Flux.range(1, 10)
 				    .concatMap(i -> ws.take(2)
 				                      .log()))
-				    .expectNextSequence(Flux.range(1, 20)
-				                            .map(v -> "test")
-				                            .toIterable())
+				    .expectNextSequence(
+				            Objects.requireNonNull(Flux.range(1, 20)
+				                                       .map(v -> "test")
+				                                       .collectList()
+				                                       .block()))
 				    .expectComplete()
 				    .verify();
 

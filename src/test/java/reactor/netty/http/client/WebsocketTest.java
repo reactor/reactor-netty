@@ -19,6 +19,7 @@ package reactor.netty.http.client;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,6 +42,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -73,7 +75,7 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res =
+		String res = Objects.requireNonNull(
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .wiretap()
@@ -83,8 +85,7 @@ public class WebsocketTest {
 				          .handle((i, o) -> i.receive().asString())
 				          .log("client")
 				          .collectList()
-				          .block()
-				          .get(0);
+				          .block()).get(0);
 
 		Assert.assertThat(res, is("test"));
 	}
@@ -157,7 +158,7 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.options(opt -> opt.flushOnEach())
+				                       (i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
 				                                  .sendString(
 						                                  Mono.just("test")
 						                                      .delayElement(Duration.ofMillis(100))
@@ -176,9 +177,11 @@ public class WebsocketTest {
 
 		StepVerifier.create(ws.take(c)
 		                      .log())
-		            .expectNextSequence(Flux.range(1, c)
-		                                    .map(v -> "test")
-		                                    .toIterable())
+		            .expectNextSequence(
+		                    Objects.requireNonNull(Flux.range(1, c)
+		                                               .map(v -> "test")
+		                                               .collectList()
+		                                               .block()))
 		            .expectComplete()
 		            .verify();
 	}
@@ -195,7 +198,7 @@ public class WebsocketTest {
 					          System.out.println(req.requestHeaders().get("test"));
 					          return res.header("content-type", "text/plain")
 					                    .sendWebsocket((in, out) ->
-							                    out.options(c -> c.flushOnEach())
+							                    out.options(NettyPipeline.SendOptions::flushOnEach)
 							                       .sendString(in.receive()
 							                                     .asString()
 							                                     .publishOn(Schedulers.single())
@@ -216,7 +219,7 @@ public class WebsocketTest {
 				      .websocket() //TODO investigate why get not working
 				      .uri("/test/World")
 				      .handle((i, o) -> {
-					      o.options(c -> c.flushOnEach());
+					      o.options(NettyPipeline.SendOptions::flushOnEach);
 
 					      o.sendString(Flux.range(1, 1000)
 					                       .log("client-send")
@@ -253,7 +256,7 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.options(opt -> opt.flushOnEach())
+				                       (i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
 				                                  .sendByteArray(
 						                                  Mono.just("test".getBytes(Charset.defaultCharset()))
 						                                      .delayElement(Duration.ofMillis(100))
@@ -271,9 +274,11 @@ public class WebsocketTest {
 
 		StepVerifier.create(ws.take(c)
 		                      .log())
-		            .expectNextSequence(Flux.range(1, c)
-		                                    .map(v -> "test")
-		                                    .toIterable())
+		            .expectNextSequence(
+		                    Objects.requireNonNull(Flux.range(1, c)
+		                                               .map(v -> "test")
+		                                               .collectList()
+		                                               .block()))
 		            .expectComplete()
 		            .verify();
 	}
@@ -314,7 +319,7 @@ public class WebsocketTest {
 		          .headers(h -> h.add("Authorization", auth))
 		          .websocket()
 		          .uri("/test")
-		          .handle((i, o) -> o.options(opt -> opt.flushOnEach())
+		          .handle((i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
 		                             .sendString(i.receive()
 		                                          .asString()
 		                                          .subscribeWith(client)))
@@ -378,18 +383,18 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.create()
-		                       .port(httpServer.address()
-		                                       .getPort())
-		                       .wiretap()
-		                       .headers(h -> h.add("Authorization", auth))
-		                       .websocket("SUBPROTOCOL,OTHER")
-		                       .uri("/test")
-		                       .handle((i, o) -> i.receive().asString())
-		                       .log()
-		                       .collectList()
-		                       .block(Duration.ofSeconds(30))
-		                       .get(0);
+		String res = Objects.requireNonNull(
+				HttpClient.create()
+				          .port(httpServer.address()
+				                          .getPort())
+				          .wiretap()
+				          .headers(h -> h.add("Authorization", auth))
+				          .websocket("SUBPROTOCOL,OTHER")
+				          .uri("/test")
+				          .handle((i, o) -> i.receive().asString())
+				          .log()
+				          .collectList()
+				          .block(Duration.ofSeconds(30))).get(0);
 
 		Assert.assertThat(res, is("test"));
 	}
@@ -405,20 +410,19 @@ public class WebsocketTest {
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.create()
-		                       .port(httpServer.address().getPort())
-		                       .tcpConfiguration(tcpClient -> tcpClient.noSSL())
-		                       .wiretap()
-		                       .headers(h -> h.add("Authorization", auth))
-		                       .websocket("Common,OTHER")
-		                       .uri("/test")
-		                       .handle((in, out) -> in.receive()
-		                                              .asString()
-		                                              .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
-		                       .log()
-		                       .collectList()
-		                       .block(Duration.ofSeconds(30))
-		                       .get(0);
+		String res = Objects.requireNonNull(
+				HttpClient.create()
+				          .port(httpServer.address().getPort())
+				          .wiretap()
+				          .headers(h -> h.add("Authorization", auth))
+				          .websocket("Common,OTHER")
+				          .uri("/test")
+				          .handle((in, out) -> in.receive()
+				                                 .asString()
+				                                 .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
+				          .log()
+				          .collectList()
+				          .block(Duration.ofSeconds(30))).get(0);
 
 		Assert.assertThat(res, is("CLIENT:Common-SERVER:Common"));
 	}
@@ -428,22 +432,22 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
-				                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
+		                               Mono.just("SERVER:" + o.selectedSubprotocol()))))
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.create()
-		                       .port(httpServer.address().getPort())
-		                       .headers(h -> h.add("Authorization", auth))
-		                       .websocket()
-		                       .uri("/test")
-		                       .handle((in, out) -> in.receive()
-		                                        .asString()
-		                                        .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
-		                       .log()
-		                       .collectList()
-		                       .block(Duration.ofSeconds(30))
-		                       .get(0);
+		String res = Objects.requireNonNull(
+				HttpClient.create()
+				          .port(httpServer.address().getPort())
+				          .headers(h -> h.add("Authorization", auth))
+				          .websocket()
+				          .uri("/test")
+				          .handle((in, out) -> in.receive()
+				                                 .asString()
+				                                 .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
+				          .log()
+				          .collectList()
+				          .block(Duration.ofSeconds(30))).get(0);
 
 		Assert.assertThat(res, is("CLIENT:null-SERVER:null"));
 	}
@@ -453,22 +457,22 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket("proto2,*", (i, o) -> o.sendString(
-				                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
+		                               Mono.just("SERVER:" + o.selectedSubprotocol()))))
 		                       .wiretap()
 		                       .bindNow();
 
-		String res = HttpClient.create()
-		                       .port(httpServer.address().getPort())
-		                       .headers(h -> h.add("Authorization", auth))
-		                       .websocket("proto1, proto2")
-		                       .uri("/test")
-		                       .handle((in, out) -> in.receive()
-		                                        .asString()
-		                                        .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
-		                       .log()
-		                       .collectList()
-		                       .block(Duration.ofSeconds(30))
-		                       .get(0);
+		String res = Objects.requireNonNull(
+				HttpClient.create()
+				          .port(httpServer.address().getPort())
+				          .headers(h -> h.add("Authorization", auth))
+				          .websocket("proto1, proto2")
+				          .uri("/test")
+				          .handle((in, out) -> in.receive()
+				                                 .asString()
+				                                 .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
+				          .log()
+				          .collectList()
+				          .block(Duration.ofSeconds(30))).get(0);
 
 		Assert.assertThat(res, is("CLIENT:proto1-SERVER:proto1"));
 	}
@@ -520,7 +524,7 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.options(opt -> opt.flushOnEach())
+				                       (i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
 				                                  .sendString(
 						                                  Mono.just("test")
 						                                      .delayElement(Duration.ofMillis(100))
@@ -539,11 +543,12 @@ public class WebsocketTest {
 		StepVerifier.create(
 				Flux.range(1, 10)
 				    .concatMap(i -> ws.take(2)
-				                      .log())
-		)
-		            .expectNextSequence(Flux.range(1, 20)
-		                                    .map(v -> "test")
-		                                    .toIterable())
+				                      .log()))
+		            .expectNextSequence(
+		                    Objects.requireNonNull(Flux.range(1, 20)
+		                                               .map(v -> "test")
+		                                               .collectList()
+		                                               .block()))
 		            .expectComplete()
 		            .verify();
 
@@ -609,7 +614,7 @@ public class WebsocketTest {
 	@Test
 	public void testConnectionAliveWhenTransformationErrors_1() {
 		doTestConnectionAliveWhenTransformationErrors((in, out) ->
-		        out.options(sendOptions -> sendOptions.flushOnEach())
+		        out.options(NettyPipeline.SendOptions::flushOnEach)
 		           .sendObject(in.aggregateFrames()
 		                         .receiveFrames()
 		                         .map(WebSocketFrame::content)
@@ -626,7 +631,7 @@ public class WebsocketTest {
 	@Test
 	public void testConnectionAliveWhenTransformationErrors_2() {
 		doTestConnectionAliveWhenTransformationErrors((in, out) ->
-		        out.options(sendOptions -> sendOptions.flushOnEach())
+		        out.options(NettyPipeline.SendOptions::flushOnEach)
 		           .sendObject(in.aggregateFrames()
 		                         .receiveFrames()
 		                         .map(WebSocketFrame::content)
@@ -674,7 +679,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				              res.options(sendOptions -> sendOptions.flushOnEach())
+				              res.options(NettyPipeline.SendOptions::flushOnEach)
 				                 .sendWebsocket((in, out) ->
 				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
 				                                        .map(l -> l + ""))))
@@ -693,20 +698,19 @@ public class WebsocketTest {
 				              System.out.println("context.dispose()");
 				              latch.countDown();
 			              });
-		              in.withConnection(conn -> {
+		              in.withConnection(conn ->
 		                  conn.onDispose()
-		                         .subscribe(
-		                                 c -> { // no-op
-		                                 },
-		                                 t -> {
-		                                     t.printStackTrace();
-		                                     error.set(true);
-		                                 },
-		                                 () -> {
-		                                     System.out.println("context.onClose() completed");
-		                                     latch.countDown();
-		                                 });
-		              });
+		                      .subscribe(
+		                              c -> { // no-op
+		                              },
+		                              t -> {
+		                                  t.printStackTrace();
+		                                  error.set(true);
+		                              },
+		                              () -> {
+		                                  System.out.println("context.onClose() completed");
+		                                  latch.countDown();
+		                              }));
 		                  Mono.delay(Duration.ofSeconds(3))
 		                      .repeat(() -> {
 		                          AtomicBoolean disposed = new AtomicBoolean(false);
@@ -737,7 +741,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				              res.options(sendOptions -> sendOptions.flushOnEach())
+				              res.options(NettyPipeline.SendOptions::flushOnEach)
 				                 .sendWebsocket((in, out) ->
 				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
 				                                        .map(l -> l + ""))))
