@@ -17,6 +17,8 @@ package reactor.netty.http.server;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
@@ -35,8 +37,10 @@ public class HttpToH2Operations extends HttpServerOperations {
 			ConnectionObserver listener,
 			HttpRequest request,
 			Http2Headers headers,
-			ConnectionInfo connectionInfo) {
-		super(c, listener, null, request, connectionInfo);
+			ConnectionInfo connectionInfo,
+			ServerCookieEncoder encoder,
+			ServerCookieDecoder decoder) {
+		super(c, listener, null, request, connectionInfo, encoder, decoder);
 
 		this.http2Headers = headers;
 	}

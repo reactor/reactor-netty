@@ -50,6 +50,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
@@ -84,6 +85,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final Cookies     cookieHolder;
 	final HttpRequest nettyRequest;
 	final ConnectionInfo connectionInfo;
+	final ServerCookieEncoder cookieEncoder;
+	final ServerCookieDecoder cookieDecoder;
 
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 
@@ -98,20 +101,26 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.paramsResolver = replaced.paramsResolver;
 		this.nettyRequest = replaced.nettyRequest;
 		this.compressionPredicate = replaced.compressionPredicate;
+		this.cookieEncoder = replaced.cookieEncoder;
+		this.cookieDecoder = replaced.cookieDecoder;
 	}
 
 	HttpServerOperations(Connection c,
 			ConnectionObserver listener,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			HttpRequest nettyRequest,
-			ConnectionInfo connectionInfo) {
+			ConnectionInfo connectionInfo,
+			ServerCookieEncoder encoder,
+			ServerCookieDecoder decoder) {
 		super(c, listener);
 		this.nettyRequest = nettyRequest;
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		this.compressionPredicate = compressionPredicate;
-		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders());
+		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders(), decoder);
 		this.connectionInfo = connectionInfo;
+		this.cookieEncoder = encoder;
+		this.cookieDecoder = decoder;
 	}
 
 	@Override
@@ -151,7 +160,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public HttpServerResponse addCookie(Cookie cookie) {
 		if (!hasSentHeaders()) {
 			this.responseHeaders.add(HttpHeaderNames.SET_COOKIE,
-					ServerCookieEncoder.STRICT.encode(cookie));
+					cookieEncoder.encode(cookie));
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");

@@ -20,6 +20,8 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.Http2DataFrame;
@@ -36,10 +38,16 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
 	final boolean            readForwardHeaders;
 	final ConnectionObserver listener;
+	final ServerCookieEncoder cookieEncoder;
+	final ServerCookieDecoder cookieDecoder;
 
-	Http2StreamBridgeHandler(ConnectionObserver listener, boolean readForwardHeaders) {
+	Http2StreamBridgeHandler(ConnectionObserver listener, boolean readForwardHeaders,
+			ServerCookieEncoder encoder,
+			ServerCookieDecoder decoder) {
 		this.readForwardHeaders = readForwardHeaders;
 		this.listener = listener;
+		this.cookieEncoder = encoder;
+		this.cookieDecoder = decoder;
 	}
 
 	@Override
@@ -74,7 +82,8 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 					ConnectionInfo.from(ctx.channel()
 					                       .parent(),
 							readForwardHeaders,
-							request)).bind();
+							request),
+					cookieEncoder, cookieDecoder).bind();
 		}
 		ctx.fireChannelRead(msg);
 	}

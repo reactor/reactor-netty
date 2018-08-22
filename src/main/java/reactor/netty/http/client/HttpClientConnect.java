@@ -47,6 +47,8 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2FrameLogger;
@@ -143,8 +145,9 @@ final class HttpClientConnect extends HttpClient {
 		@Override
 		public Mono<? extends Connection> connect(Bootstrap b) {
 			channelFactoryAndLoops(b);
-			BootstrapHandlers.channelOperationFactory(b, HTTP_OPS);
 			HttpClientConfiguration conf = HttpClientConfiguration.getAndClean(b);
+			BootstrapHandlers.channelOperationFactory(b,
+					(ch, c, msg) -> new HttpClientOperations(ch, c, conf.cookieEncoder, conf.cookieDecoder));
 
 			if (conf.deferredUri != null) {
 				return conf.deferredUri.flatMap(uri ->
@@ -172,9 +175,6 @@ final class HttpClientConnect extends HttpClient {
 		}
 	}
 
-
-	static final ChannelOperations.OnSetup HTTP_OPS =
-			(ch, c, msg) -> new HttpClientOperations(ch, c);
 
 	static final class MonoHttpConnect extends Mono<Connection> {
 
@@ -343,6 +343,9 @@ final class HttpClientConnect extends HttpClient {
 		final UriEndpointFactory uriEndpointFactory;
 		final String             websocketProtocols;
 
+		final ClientCookieEncoder cookieEncoder;
+		final ClientCookieDecoder cookieDecoder;
+
 		volatile UriEndpoint        activeURI;
 		volatile Supplier<String>[] redirectedFrom;
 
@@ -352,6 +355,8 @@ final class HttpClientConnect extends HttpClient {
 			this.compress = configuration.acceptGzip;
 			this.followRedirect = configuration.followRedirect;
 			this.chunkedTransfer = configuration.chunkedTransfer;
+			this.cookieEncoder = configuration.cookieEncoder;
+			this.cookieDecoder = configuration.cookieDecoder;
 
 			HttpHeaders defaultHeaders = configuration.headers;
 			if (compress) {
@@ -668,7 +673,7 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public ChannelOperations<?, ?> create(Connection c, ConnectionObserver listener, @Nullable Object msg) {
-			return new HttpClientOperations(c, listener);
+			return new HttpClientOperations(c, listener, handler.cookieEncoder, handler.cookieDecoder);
 		}
 
 		@Override
@@ -735,7 +740,7 @@ final class HttpClientConnect extends HttpClient {
 
 				p.addLast(http2MultiplexCodecBuilder.build());
 
-				openStream(ctx.channel(), listener, parent.upgraded, parent);
+				openStream(ctx.channel(), listener, parent);
 
 				return;
 			}
@@ -762,22 +767,26 @@ final class HttpClientConnect extends HttpClient {
 	}
 
 	static void openStream(Channel ch, ConnectionObserver listener,
-			DirectProcessor<Void> upgraded, GenericFutureListener<Future<Http2StreamChannel>> onStreamOpen) {
+			HttpClientInitializer initializer) {
 		Http2StreamChannelBootstrap http2StreamChannelBootstrap =
 				new Http2StreamChannelBootstrap(ch).handler(new ChannelInitializer() {
 					@Override
 					protected void initChannel(Channel ch) {
 						ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(false));
-						ChannelOperations.addReactiveBridge(ch, HTTP_OPS, listener);
+						ChannelOperations.addReactiveBridge(ch,
+								(conn, l, msg) -> new HttpClientOperations(conn, l,
+										initializer.handler.cookieEncoder,
+										initializer.handler.cookieDecoder),
+								listener);
 						if (log.isDebugEnabled()) {
 							log.debug(format(ch, "Initialized HTTP/2 pipeline {}"), ch.pipeline());
 						}
-						upgraded.onComplete();
+						initializer.upgraded.onComplete();
 					}
 				});
 
 		http2StreamChannelBootstrap.open()
-		                           .addListener(onStreamOpen);
+		                           .addListener(initializer);
 	}
 
 	static final class Http2StreamInitializer extends ChannelInitializer<Channel> {

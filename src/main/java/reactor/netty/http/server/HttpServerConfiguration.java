@@ -20,6 +20,8 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AttributeKey;
 import reactor.netty.http.HttpProtocol;
 
@@ -38,6 +40,8 @@ final class HttpServerConfiguration {
 	int                    minCompressionSize = -1;
 	boolean                forwarded          = false;
 	HttpRequestDecoderSpec decoder            = new HttpRequestDecoderSpec();
+	ServerCookieEncoder    cookieEncoder      = ServerCookieEncoder.STRICT;
+	ServerCookieDecoder    cookieDecoder      = ServerCookieDecoder.STRICT;
 	int                    protocols          = h11;
 
 
@@ -123,6 +127,14 @@ final class HttpServerConfiguration {
 	static ServerBootstrap decoder(ServerBootstrap b,
 			HttpRequestDecoderSpec decoder) {
 		getOrCreate(b).decoder = decoder;
+		return b;
+	}
+
+	static ServerBootstrap cookieCodec(ServerBootstrap b,
+			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
+		HttpServerConfiguration conf = getOrCreate(b);
+		conf.cookieEncoder = encoder;
+		conf.cookieDecoder = decoder;
 		return b;
 	}
 

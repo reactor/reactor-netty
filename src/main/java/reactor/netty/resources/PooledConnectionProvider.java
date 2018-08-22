@@ -108,7 +108,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 			NewConnectionProvider.convertLazyRemoteAddress(bootstrap);
 			PoolKey holder = new PoolKey(bootstrap.config()
-			                                      .remoteAddress(), opsFactory);
+			                                      .remoteAddress());
 
 			Pool pool;
 			for (; ; ) {
@@ -588,11 +588,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		final SocketAddress             holder;
 		final String                    fqdn;
-		final ChannelOperations.OnSetup opsFactory;
 
-		PoolKey(SocketAddress holder, ChannelOperations.OnSetup opsFactory) {
+		PoolKey(SocketAddress holder) {
 			this.holder = holder;
-			this.opsFactory = opsFactory;
 			this.fqdn = holder instanceof InetSocketAddress ? holder.toString() : null;
 		}
 
@@ -608,14 +606,13 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			PoolKey that = (PoolKey) o;
 
 			return holder.equals(that.holder) && (fqdn != null ? fqdn.equals(that.fqdn) :
-					that.fqdn == null) && opsFactory.equals(that.opsFactory);
+					that.fqdn == null);
 		}
 
 		@Override
 		public int hashCode() {
 			int result = holder.hashCode();
 			result = 31 * result + (fqdn != null ? fqdn.hashCode() : 0);
-			result = 31 * result + opsFactory.hashCode();
 			return result;
 		}
 	}

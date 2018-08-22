@@ -25,6 +25,8 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -247,6 +249,36 @@ public abstract class HttpServer {
 		return tcpConfiguration(
 				requestDecoderOptions.apply(new HttpRequestDecoderSpec())
 				                     .build());
+	}
+
+	/**
+	 * Configure the
+	 * {@link ServerCookieEncoder}, {@link ServerCookieDecoder} will be
+	 * chosen based on the encoder
+	 *
+	 * @param encoder the preferred ServerCookieEncoder
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer cookieCodec(ServerCookieEncoder encoder) {
+		ServerCookieDecoder decoder = encoder == ServerCookieEncoder.LAX ?
+				ServerCookieDecoder.LAX : ServerCookieDecoder.STRICT;
+		return tcpConfiguration(tcp -> tcp.bootstrap(
+				b -> HttpServerConfiguration.cookieCodec(b, encoder, decoder)));
+	}
+
+	/**
+	 * Configure the
+	 * {@link ServerCookieEncoder} and {@link ServerCookieDecoder}
+	 *
+	 * @param encoder the preferred ServerCookieEncoder
+	 * @param decoder the preferred ServerCookieDecoder
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer cookieCodec(ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
+		return tcpConfiguration(tcp -> tcp.bootstrap(
+				b -> HttpServerConfiguration.cookieCodec(b, encoder, decoder)));
 	}
 
 	/**

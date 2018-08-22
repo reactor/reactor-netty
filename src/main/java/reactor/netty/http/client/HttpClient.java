@@ -31,6 +31,8 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
@@ -609,6 +611,36 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		return HttpClientSecure.secure(this, sslProviderBuilder);
+	}
+
+	/**
+	 * Configure the
+	 * {@link ClientCookieEncoder}, {@link ClientCookieDecoder} will be
+	 * chosen based on the encoder
+	 *
+	 * @param encoder the preferred ClientCookieEncoder
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient cookieCodec(ClientCookieEncoder encoder) {
+		ClientCookieDecoder decoder = encoder == ClientCookieEncoder.LAX ?
+				ClientCookieDecoder.LAX : ClientCookieDecoder.STRICT;
+		return tcpConfiguration(tcp -> tcp.bootstrap(
+				b -> HttpClientConfiguration.cookieCodec(b, encoder, decoder)));
+	}
+
+	/**
+	 * Configure the
+	 * {@link ClientCookieEncoder} and {@link ClientCookieDecoder}
+	 *
+	 * @param encoder the preferred ClientCookieEncoder
+	 * @param decoder the preferred ClientCookieDecoder
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient cookieCodec(ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
+		return tcpConfiguration(tcp -> tcp.bootstrap(
+				b -> HttpClientConfiguration.cookieCodec(b, encoder, decoder)));
 	}
 
 	/**

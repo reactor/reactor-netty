@@ -50,6 +50,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
@@ -90,6 +91,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final boolean               isSecure;
 	final HttpRequest           nettyRequest;
 	final HttpHeaders           requestHeaders;
+	final ClientCookieEncoder   cookieEncoder;
+	final ClientCookieDecoder   cookieDecoder;
 
 	volatile ResponseState responseState;
 
@@ -106,9 +109,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.responseState = replaced.responseState;
 		this.redirectable = replaced.redirectable;
 		this.requestHeaders = replaced.requestHeaders;
+		this.cookieEncoder = replaced.cookieEncoder;
+		this.cookieDecoder = replaced.cookieDecoder;
 	}
 
-	HttpClientOperations(Connection c, ConnectionObserver listener) {
+	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
 		super(c, listener);
 		this.isSecure = c.channel()
 		                 .pipeline()
@@ -120,13 +125,15 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.nettyRequest =
 				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
+		this.cookieEncoder = encoder;
+		this.cookieDecoder = decoder;
 	}
 
 	@Override
 	public HttpClientRequest addCookie(Cookie cookie) {
 		if (!hasSentHeaders()) {
 			this.requestHeaders.add(HttpHeaderNames.COOKIE,
-					ClientCookieEncoder.STRICT.encode(cookie));
+					cookieEncoder.encode(cookie));
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -586,7 +593,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		ResponseState state = responseState;
 		if (state == null) {
 			this.responseState =
-					new ResponseState(nettyResponse, nettyResponse.headers());
+					new ResponseState(nettyResponse, nettyResponse.headers(), cookieDecoder);
 		}
 	}
 
@@ -611,10 +618,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		final HttpHeaders  headers;
 		final Cookies      cookieHolder;
 
-		ResponseState(HttpResponse response, HttpHeaders headers) {
+		ResponseState(HttpResponse response, HttpHeaders headers, ClientCookieDecoder decoder) {
 			this.response = response;
 			this.headers = headers;
-			this.cookieHolder = Cookies.newClientResponseHolder(headers);
+			this.cookieHolder = Cookies.newClientResponseHolder(headers, decoder);
 		}
 	}
 

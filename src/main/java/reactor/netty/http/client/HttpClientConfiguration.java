@@ -23,6 +23,8 @@ import javax.annotation.Nullable;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -47,6 +49,9 @@ final class HttpClientConfiguration {
 	HttpHeaders  headers               = null;
 	HttpMethod   method                = HttpMethod.GET;
 	String       websocketSubprotocols = null;
+
+	ClientCookieEncoder cookieEncoder = ClientCookieEncoder.STRICT;
+	ClientCookieDecoder cookieDecoder = ClientCookieDecoder.STRICT;
 
 	BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 			body;
@@ -171,6 +176,13 @@ final class HttpClientConfiguration {
 
 	static Bootstrap websocketSubprotocols(Bootstrap b, String websocketSubprotocols) {
 		getOrCreate(b).websocketSubprotocols = websocketSubprotocols;
+		return b;
+	}
+
+	static Bootstrap cookieCodec(Bootstrap b, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
+		HttpClientConfiguration conf = getOrCreate(b);
+		conf.cookieEncoder = encoder;
+		conf.cookieDecoder = decoder;
 		return b;
 	}
 }

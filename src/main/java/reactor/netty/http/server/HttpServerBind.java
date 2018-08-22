@@ -32,6 +32,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http2.CleartextHttp2ServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2FrameLogger;
@@ -145,7 +147,9 @@ final class HttpServerBind extends HttpServer
 								conf.decoder.initialBufferSize,
 								conf.minCompressionSize,
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
-								conf.forwarded));
+								conf.forwarded,
+								conf.cookieEncoder,
+								conf.cookieDecoder));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -157,7 +161,9 @@ final class HttpServerBind extends HttpServer
 								conf.decoder.initialBufferSize,
 								conf.minCompressionSize,
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
-								conf.forwarded));
+								conf.forwarded,
+								conf.cookieEncoder,
+								conf.cookieDecoder));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -166,7 +172,9 @@ final class HttpServerBind extends HttpServer
 								conf.decoder.validateHeaders,
 								conf.minCompressionSize,
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
-								conf.forwarded));
+								conf.forwarded,
+								conf.cookieEncoder,
+								conf.cookieDecoder));
 			}
 		}
 		else {
@@ -184,7 +192,9 @@ final class HttpServerBind extends HttpServer
 								conf.decoder.initialBufferSize,
 								conf.minCompressionSize,
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
-								conf.forwarded));
+								conf.forwarded,
+								conf.cookieEncoder,
+								conf.cookieDecoder));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -196,7 +206,9 @@ final class HttpServerBind extends HttpServer
 								conf.decoder.initialBufferSize,
 								conf.minCompressionSize,
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
-								conf.forwarded));
+								conf.forwarded,
+								conf.cookieEncoder,
+								conf.cookieDecoder));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -205,7 +217,9 @@ final class HttpServerBind extends HttpServer
 								conf.decoder.validateHeaders,
 								conf.minCompressionSize,
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
-								conf.forwarded));
+								conf.forwarded,
+								conf.cookieEncoder,
+								conf.cookieDecoder));
 			}
 		}
 		throw new IllegalArgumentException("An unknown HttpServer#protocol " +
@@ -249,9 +263,10 @@ final class HttpServerBind extends HttpServer
 		return lengthPredicate;
 	}
 
-	static void addStreamHandlers(Channel ch, ConnectionObserver listener, boolean readForwardHeaders) {
+	static void addStreamHandlers(Channel ch, ConnectionObserver listener, boolean readForwardHeaders,
+			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		ch.pipeline()
-		  .addLast(new Http2StreamBridgeHandler(listener, readForwardHeaders))
+		  .addLast(new Http2StreamBridgeHandler(listener, readForwardHeaders, encoder, decoder))
 		  .addLast(new Http2StreamFrameToHttpObjectCodec(true));
 
 		ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
@@ -296,6 +311,8 @@ final class HttpServerBind extends HttpServer
 		final int                                                minCompressionSize;
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final boolean                                            forwarded;
+		final ServerCookieEncoder                                cookieEncoder;
+		final ServerCookieDecoder                                cookieDecoder;
 
 		Http1Initializer(int line,
 				int header,
@@ -304,7 +321,9 @@ final class HttpServerBind extends HttpServer
 				int buffer,
 				int minCompressionSize,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				boolean forwarded) {
+				boolean forwarded,
+				ServerCookieEncoder encoder,
+				ServerCookieDecoder decoder) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -313,6 +332,8 @@ final class HttpServerBind extends HttpServer
 			this.minCompressionSize = minCompressionSize;
 			this.compressPredicate = compressPredicate;
 			this.forwarded = forwarded;
+			this.cookieEncoder = encoder;
+			this.cookieDecoder = decoder;
 		}
 
 		@Override
@@ -329,7 +350,7 @@ final class HttpServerBind extends HttpServer
 			}
 
 			p.addLast(NettyPipeline.HttpTrafficHandler,
-					new HttpTrafficHandler(listener, forwarded, compressPredicate));
+					new HttpTrafficHandler(listener, forwarded, compressPredicate, cookieEncoder, cookieDecoder));
 		}
 	}
 
@@ -344,6 +365,8 @@ final class HttpServerBind extends HttpServer
 		final int                                                minCompressionSize;
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final boolean                                            forwarded;
+		final ServerCookieEncoder                                cookieEncoder;
+		final ServerCookieDecoder                                cookieDecoder;
 
 		Http1OrH2CleartextInitializer(int line,
 				int header,
@@ -352,7 +375,9 @@ final class HttpServerBind extends HttpServer
 				int buffer,
 				int minCompressionSize,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				boolean forwarded) {
+				boolean forwarded,
+				ServerCookieEncoder encoder,
+				ServerCookieDecoder decoder) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -361,6 +386,8 @@ final class HttpServerBind extends HttpServer
 			this.minCompressionSize = minCompressionSize;
 			this.compressPredicate = compressPredicate;
 			this.forwarded = forwarded;
+			this.cookieEncoder = encoder;
+			this.cookieDecoder = decoder;
 		}
 
 		@Override
@@ -393,7 +420,7 @@ final class HttpServerBind extends HttpServer
 			}
 
 			p.addLast(NettyPipeline.HttpTrafficHandler,
-					new HttpTrafficHandler(listener, forwarded, compressPredicate));
+					new HttpTrafficHandler(listener, forwarded, compressPredicate, cookieEncoder, cookieDecoder));
 		}
 	}
 
@@ -430,7 +457,7 @@ final class HttpServerBind extends HttpServer
 		 */
 		@Override
 		protected void initChannel(Channel ch) {
-			addStreamHandlers(ch, listener, parent.forwarded);
+			addStreamHandlers(ch, listener, parent.forwarded, parent.cookieEncoder, parent.cookieDecoder);
 		}
 
 		@Override
@@ -453,16 +480,22 @@ final class HttpServerBind extends HttpServer
 		final int                                                minCompressionSize;
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final boolean                                            forwarded;
+		final ServerCookieEncoder                                cookieEncoder;
+		final ServerCookieDecoder                                cookieDecoder;
 
 		H2CleartextInitializer(
 				boolean validate,
 				int minCompressionSize,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				boolean forwarded) {
+				boolean forwarded,
+				ServerCookieEncoder encoder,
+				ServerCookieDecoder decoder) {
 			this.validate = validate;
 			this.minCompressionSize = minCompressionSize;
 			this.compressPredicate = compressPredicate;
 			this.forwarded = forwarded;
+			this.cookieEncoder = encoder;
+			this.cookieDecoder = decoder;
 		}
 
 		@Override
@@ -470,7 +503,7 @@ final class HttpServerBind extends HttpServer
 			ChannelPipeline p = channel.pipeline();
 
 			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-					Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer(listener, forwarded))
+					Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer(listener, forwarded, cookieEncoder, cookieDecoder))
 					                          .validateHeaders(validate)
 					                          .initialSettings(Http2Settings.defaultSettings());
 
@@ -499,6 +532,8 @@ final class HttpServerBind extends HttpServer
 		final int                                                minCompressionSize;
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final boolean                                            forwarded;
+		final ServerCookieEncoder                                cookieEncoder;
+		final ServerCookieDecoder                                cookieDecoder;
 
 		Http1OrH2Initializer(
 				int line,
@@ -508,7 +543,9 @@ final class HttpServerBind extends HttpServer
 				int buffer,
 				int minCompressionSize,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				boolean forwarded) {
+				boolean forwarded,
+				ServerCookieEncoder encoder,
+				ServerCookieDecoder decoder) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -517,6 +554,8 @@ final class HttpServerBind extends HttpServer
 			this.minCompressionSize = minCompressionSize;
 			this.compressPredicate = compressPredicate;
 			this.forwarded = forwarded;
+			this.cookieEncoder = encoder;
+			this.cookieDecoder = decoder;
 		}
 
 		@Override
@@ -546,7 +585,9 @@ final class HttpServerBind extends HttpServer
 				p.remove(NettyPipeline.ReactiveBridge);
 
 				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-						Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer(listener, parent.forwarded))
+						Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer(listener, parent.forwarded,
+						                                                                parent.cookieEncoder,
+						                                                                parent.cookieDecoder))
 						                          .initialSettings(Http2Settings.defaultSettings());
 
 				if (p.get(NettyPipeline.LoggingHandler) != null) {
@@ -565,7 +606,7 @@ final class HttpServerBind extends HttpServer
 						new HttpServerCodec(parent.line, parent.header, parent.chunk, parent.validate, parent.buffer))
 				 .addBefore(NettyPipeline.ReactiveBridge,
 						 NettyPipeline.HttpTrafficHandler,
-						 new HttpTrafficHandler( listener, parent.forwarded, parent.compressPredicate));
+						 new HttpTrafficHandler(listener, parent.forwarded, parent.compressPredicate, parent.cookieEncoder, parent.cookieDecoder));
 
 				boolean alwaysCompress = parent.compressPredicate == null && parent.minCompressionSize == 0;
 
@@ -588,16 +629,22 @@ final class HttpServerBind extends HttpServer
 		final int                                                minCompressionSize;
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final boolean                                            forwarded;
+		final ServerCookieEncoder                                cookieEncoder;
+		final ServerCookieDecoder                                cookieDecoder;
 
 		H2Initializer(
 				boolean validate,
 				int minCompressionSize,
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
-				boolean forwarded) {
+				boolean forwarded,
+				ServerCookieEncoder encoder,
+				ServerCookieDecoder decoder) {
 			this.validate = validate;
 			this.minCompressionSize = minCompressionSize;
 			this.compressPredicate = compressPredicate;
 			this.forwarded = forwarded;
+			this.cookieEncoder = encoder;
+			this.cookieDecoder = decoder;
 		}
 
 		@Override
@@ -606,7 +653,7 @@ final class HttpServerBind extends HttpServer
 
 			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
 					Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer
-							(listener, forwarded))
+							(listener, forwarded, cookieEncoder, cookieDecoder))
 					                          .validateHeaders(validate)
 					                          .initialSettings(Http2Settings.defaultSettings());
 
@@ -620,17 +667,21 @@ final class HttpServerBind extends HttpServer
 
 	static final class Http2StreamInitializer extends ChannelInitializer<Channel> {
 
-		final boolean            forwarded;
-		final ConnectionObserver listener;
+		final boolean             forwarded;
+		final ConnectionObserver  listener;
+		final ServerCookieEncoder cookieEncoder;
+		final ServerCookieDecoder cookieDecoder;
 
-		Http2StreamInitializer(ConnectionObserver listener, boolean forwarded) {
+		Http2StreamInitializer(ConnectionObserver listener, boolean forwarded, ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 			this.forwarded = forwarded;
 			this.listener = listener;
+			this.cookieEncoder = encoder;
+			this.cookieDecoder = decoder;
 		}
 
 		@Override
 		protected void initChannel(Channel ch) {
-			addStreamHandlers(ch, listener, forwarded);
+			addStreamHandlers(ch, listener, forwarded, cookieEncoder, cookieDecoder);
 		}
 	}
 

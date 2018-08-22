@@ -36,6 +36,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.netty.Connection;
@@ -57,6 +59,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	final ConnectionObserver listener;
 	final boolean            readForwardHeaders;
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compress;
+	final ServerCookieEncoder cookieEncoder;
+	final ServerCookieDecoder cookieDecoder;
 
 	boolean persistentConnection = true;
 	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
@@ -70,10 +74,14 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	boolean mustRecycleEncoder;
 
 	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders,
-			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress) {
+			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
+			ServerCookieEncoder encoder,
+			ServerCookieDecoder decoder) {
 		this.listener = listener;
 		this.readForwardHeaders = readForwardHeaders;
 		this.compress = compress;
+		this.cookieEncoder = encoder;
+		this.cookieDecoder = decoder;
 	}
 
 	@Override
@@ -143,7 +151,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						compress,
-						request, ConnectionInfo.from(ctx.channel(), readForwardHeaders, request))
+						request, ConnectionInfo.from(ctx.channel(), readForwardHeaders, request),
+						cookieEncoder, cookieDecoder)
 						.chunkedTransfer(true)
 						.bind();
 
@@ -277,7 +286,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						compress,
-						nextRequest, ConnectionInfo.from(ctx.channel(), readForwardHeaders, nextRequest))
+						nextRequest, ConnectionInfo.from(ctx.channel(), readForwardHeaders, nextRequest),
+						cookieEncoder, cookieDecoder)
 						.chunkedTransfer(true)
 						.bind();
 			}

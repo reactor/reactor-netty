@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.cookie.CookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 
 /**
@@ -42,8 +43,8 @@ public final class Cookies {
 	 * @param headers client response headers
 	 * @return a new cookies holder from client response headers
 	 */
-	public static Cookies newClientResponseHolder(HttpHeaders headers) {
-		return new Cookies(headers, HttpHeaderNames.SET_COOKIE, true);
+	public static Cookies newClientResponseHolder(HttpHeaders headers, ClientCookieDecoder decoder) {
+		return new Cookies(headers, HttpHeaderNames.SET_COOKIE, true, decoder);
 	}
 
 	/**
@@ -51,8 +52,8 @@ public final class Cookies {
 	 * @param headers server request headers
 	 * @return a new cookies holder from server request headers
 	 */
-	public static Cookies newServerRequestHolder(HttpHeaders headers) {
-		return new Cookies(headers, HttpHeaderNames.COOKIE, false);
+	public static Cookies newServerRequestHolder(HttpHeaders headers, ServerCookieDecoder decoder) {
+		return new Cookies(headers, HttpHeaderNames.COOKIE, false, decoder);
 	}
 
 
@@ -65,16 +66,20 @@ public final class Cookies {
 
 	final boolean      isClientChannel;
 
+	final CookieDecoder decoder;
+
 	Map<CharSequence, Set<Cookie>> cachedCookies;
 	volatile     int                                state = 0;
 
 	static final AtomicIntegerFieldUpdater<Cookies> STATE =
 			AtomicIntegerFieldUpdater.newUpdater(Cookies.class, "state");
 
-	private Cookies(HttpHeaders nettyHeaders, CharSequence cookiesHeaderName, boolean isClientChannel) {
+	private Cookies(HttpHeaders nettyHeaders, CharSequence cookiesHeaderName, boolean isClientChannel,
+					CookieDecoder decoder) {
 		this.nettyHeaders = nettyHeaders;
 		this.cookiesHeaderName = cookiesHeaderName;
 		this.isClientChannel = isClientChannel;
+		this.decoder = decoder;
 		cachedCookies = Collections.emptyMap();
 	}
 
@@ -96,7 +101,7 @@ public final class Cookies {
 		for (String aCookieHeader : allCookieHeaders) {
 			Set<Cookie> decode;
 			if (isClientChannel) {
-				final Cookie c = ClientCookieDecoder.STRICT.decode(aCookieHeader);
+				final Cookie c = ((ClientCookieDecoder) decoder).decode(aCookieHeader);
 				Set<Cookie> existingCookiesOfName = cookies.get(c.name());
 				if (null == existingCookiesOfName) {
 					existingCookiesOfName = new HashSet<>();
@@ -105,7 +110,7 @@ public final class Cookies {
 				existingCookiesOfName.add(c);
 			}
 			else {
-				decode = ServerCookieDecoder.STRICT.decode(aCookieHeader);
+				decode = ((ServerCookieDecoder) decoder).decode(aCookieHeader);
 				for (Cookie cookie : decode) {
 					Set<Cookie> existingCookiesOfName = cookies.get(cookie.name());
 					if (null == existingCookiesOfName) {

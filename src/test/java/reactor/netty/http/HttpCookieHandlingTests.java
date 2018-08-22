@@ -19,8 +19,12 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -47,21 +51,54 @@ public class HttpCookieHandlingTests {
 
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .wiretap()
 				          .get()
 				          .uri("/test")
 				          .responseSingle((res, buf) -> Mono.just(res.cookies()))
-				          .doOnSuccess(m -> System.out.println(m))
+				          .doOnSuccess(System.out::println)
 				          .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
 
 		StepVerifier.create(cookieResponse)
 				    .expectNextMatches(l -> {
 				        Set<Cookie> cookies = l.get("cookie1");
-				        return cookies.stream().filter(e -> e.value().equals("test_value")).findFirst().isPresent();
+				        return cookies.stream().anyMatch(e -> e.value().equals("test_value"));
 				    })
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
+
+		server.dispose();
+	}
+
+	@Test
+	public void customCookieEncoderDecoder() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .cookieCodec(ServerCookieEncoder.LAX, ServerCookieDecoder.LAX)
+				          .handle((req, res) -> res.addCookie(new DefaultCookie("cookie1", "test_value"))
+				                                   .sendString(Mono.just("test")))
+				          .wiretap()
+				          .bindNow();
+
+		Mono<Map<CharSequence, Set<Cookie>>> response =
+				HttpClient.create()
+				          .port(server.port())
+				          .cookieCodec(ClientCookieEncoder.LAX, ClientCookieDecoder.LAX)
+				          .wiretap()
+				          .get()
+				          .uri("/")
+				          .responseSingle((res, bytes) -> Mono.just(res.cookies()))
+				          .doOnSuccess(System.out::println)
+				          .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
+
+		StepVerifier.create(response)
+		            .expectNextMatches(map -> {
+		                Set<Cookie> cookies = map.get("cookie1");
+		                return cookies.stream().anyMatch(e -> e.value().equals("test_value"));
+		            })
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 
 		server.dispose();
 	}
