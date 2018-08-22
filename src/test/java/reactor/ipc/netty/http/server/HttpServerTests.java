@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,6 +54,7 @@ import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.client.HttpClient;
+import reactor.ipc.netty.http.client.HttpClientRequest;
 import reactor.ipc.netty.http.client.HttpClientResponse;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.BlockingNettyContext;
@@ -93,7 +95,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void releaseInboundChannelOnNonKeepAliveRequest() throws Exception {
+	public void releaseInboundChannelOnNonKeepAliveRequest() {
 		NettyContext c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> req.receive().then(resp.status(200).send()))
 		                           .block();
@@ -101,6 +103,7 @@ public class HttpServerTests {
 		Flux<ByteBuf> src = Flux.range(0, 3)
 		                        .map(n -> Unpooled.wrappedBuffer(Integer.toString(n)
 		                                                                .getBytes(Charset.defaultCharset())));
+		assertThat(c).isNotNull();
 
 		Flux.range(0, 100)
 		    .concatMap(n -> HttpClient.create(c.address()
@@ -149,8 +152,10 @@ public class HttpServerTests {
 		                                 .newHandler((req, resp) -> resp.status(200)
 		                                                                .send().log())
 		                                 .block();
+		assertThat(context).isNotNull();
 
 		HttpClientResponse response = HttpClient.create(8080).get("/").block();
+		assertThat(response).isNotNull();
 
 		// checking the response status, OK
 		assertThat(response.status().code()).isEqualTo(200);
@@ -165,8 +170,10 @@ public class HttpServerTests {
 		// create a totally new server instance, with a different handler that answers HTTP 201
 		context = HttpServer.create(8080)
 		                    .newHandler((req, resp) -> resp.status(201).send()).block();
+		assertThat(context).isNotNull();
 
 		response = HttpClient.create(8080).get("/").block();
+		assertThat(response).isNotNull();
 
 		// fails, response status is 200 and debugging shows the the previous handler is called
 		assertThat(response.status().code()).isEqualTo(201);
@@ -176,15 +183,17 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void errorResponseAndReturn() throws Exception {
+	public void errorResponseAndReturn() {
 		NettyContext c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> Mono.error(new Exception("returnError")))
 		                           .block();
+		assertThat(c).isNotNull();
 
 		HttpClientResponse res =
 				HttpClient.create(c.address().getPort())
 				          .get("/return", r -> r.failOnServerError(false))
 				          .block();
+		assertThat(res).isNotNull();
 		assertThat(res.status().code()).isEqualTo(500);
 		res.dispose();
 
@@ -211,6 +220,7 @@ public class HttpServerTests {
 				"/plaintext");
 
 		CountDownLatch latch = new CountDownLatch(6);
+		assertThat(server).isNotNull();
 
 		NettyContext client = TcpClient.create(server.address()
 		                                             .getPort())
@@ -236,6 +246,7 @@ public class HttpServerTests {
 			                                             .neverComplete();
 		                               })
 		                               .block(Duration.ofSeconds(30));
+		assertThat(client).isNotNull();
 
 		Assert.assertTrue(latch.await(45, TimeUnit.SECONDS));
 
@@ -252,16 +263,19 @@ public class HttpServerTests {
 		NettyContext c = HttpServer.create(0)
 		                           .newHandler((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
 		                           .block(Duration.ofSeconds(30));
+		assertThat(c).isNotNull();
 
-		Flux<String> client = HttpClient.create(c.address()
-		                                         .getPort())
-		                                .get("/", out -> out.context(ctx -> ctx.addHandler(new LineBasedFrameDecoder(10))))
-		                                .block(Duration.ofSeconds(30))
-		                                .receive()
-		                                .asString();
+		Flux<String> client = Objects.requireNonNull(
+				HttpClient.create(c.address()
+				                   .getPort())
+				          .get("/", out -> out.context(ctx -> ctx.addHandler(new LineBasedFrameDecoder(10))))
+				          .block(Duration.ofSeconds(30))).receive()
+				                                         .asString();
 
 		StepVerifier.create(client)
-		            .expectNextSequence(test.toIterable())
+		            .expectNextSequence(
+		                    Objects.requireNonNull(test.collectList()
+		                                               .block()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
@@ -274,6 +288,7 @@ public class HttpServerTests {
 		NettyContext c = HttpServer.create(0)
 		                           .newRouter(routes -> routes.directory("/test", resource))
 		                           .block(Duration.ofSeconds(30));
+		assertThat(c).isNotNull();
 
 		HttpResources.set(PoolResources.fixed("http", 1));
 
@@ -281,36 +296,43 @@ public class HttpServerTests {
 		                                                  .getPort())
 		                                         .get("/test/index.html")
 		                                         .block(Duration.ofSeconds(30));
+		assertThat(response0).isNotNull();
 
 		HttpClientResponse response1 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test.css")
 		                                         .block(Duration.ofSeconds(30));
+		assertThat(response1).isNotNull();
 
 		HttpClientResponse response2 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test1.css")
 		                                         .block(Duration.ofSeconds(30));
+		assertThat(response2).isNotNull();
 
 		HttpClientResponse response3 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test2.css")
 		                                         .block(Duration.ofSeconds(30));
+		assertThat(response3).isNotNull();
 
 		HttpClientResponse response4 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test3.css")
 		                                         .block(Duration.ofSeconds(30));
+		assertThat(response4).isNotNull();
 
 		HttpClientResponse response5 = HttpClient.create(c.address()
 		                                                  .getPort())
 		                                         .get("/test/test4.css")
 		                                         .block(Duration.ofSeconds(30));
+		assertThat(response5).isNotNull();
 
 		HttpClientResponse response6 = HttpClient.create(opts -> opts.port(c.address().getPort())
 		                                                             .disablePool())
 		                                         .get("/test/test5.css")
 		                                         .block(Duration.ofSeconds(30));
+		assertThat(response6).isNotNull();
 
 		Assert.assertEquals(response0.channel(), response1.channel());
 		Assert.assertEquals(response0.channel(), response2.channel());
@@ -359,12 +381,14 @@ public class HttpServerTests {
 					HttpClient.create(facade.getPort())
 					          .get("/hello")
 					          .block();
+			assertThat(res).isNotNull();
 			assertThat(res.status().code()).isEqualTo(200);
 			res.dispose();
 
 			res = HttpClient.create(facade.getPort())
 			                .get("/helloMan", req -> req.failOnClientError(false))
 			                .block();
+			assertThat(res).isNotNull();
 			assertThat(res.status().code()).isEqualTo(404);
 			res.dispose();
 		}
@@ -412,6 +436,7 @@ public class HttpServerTests {
 				                                                           .sendHeaders())
 				                           .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
 				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
 
 		checkResponse("/204-1", server.address());
 		checkResponse("/204-2", server.address());
@@ -490,6 +515,7 @@ public class HttpServerTests {
 				                                                })
 				                           )
 				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
 
 		doTestContentLengthHeadRequest("/1", server.address(), HttpMethod.GET, true, false);
 		doTestContentLengthHeadRequest("/1", server.address(), HttpMethod.HEAD, true, false);
@@ -511,7 +537,7 @@ public class HttpServerTests {
 			HttpMethod method, boolean chunk, boolean close) {
 		Mono<Tuple2<HttpHeaders, String>> response =
 				HttpClient.create(ops -> ops.connectAddress(() -> address))
-				          .request(method, url, req -> req.send())
+				          .request(method, url, HttpClientRequest::send)
 				          .flatMap(res -> Mono.zip(Mono.just(res.responseHeaders()),
 				                                   res.receive()
 				                                      .aggregate()
@@ -558,9 +584,10 @@ public class HttpServerTests {
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.status(200).send())
 				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
 
 		HttpClient client =
-				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
+				HttpClient.create(ops -> ops.connectAddress(server::address)
 						                    .poolResources(PoolResources.fixed("test", 1)));
 
 		try {
@@ -586,7 +613,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testConnectionCloseOnServerError() throws Exception {
+	public void testConnectionCloseOnServerError() {
 		Flux<String> content =
 				Flux.range(1, 3)
 				    .doOnNext(i -> {
@@ -600,11 +627,13 @@ public class HttpServerTests {
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.sendString(content))
 				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
 
 		HttpClientResponse r =
 				HttpClient.create(ops -> ops.port(server.address().getPort()))
 				          .get("/")
 				          .block(Duration.ofSeconds(30));
+		assertThat(r).isNotNull();
 
 		ByteBufFlux response = r.receive();
 
@@ -626,9 +655,10 @@ public class HttpServerTests {
 				HttpServer.create(0)
 				          .newHandler((req, res) -> res.status(200).send())
 				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
 
 		HttpClient client =
-				HttpClient.create(ops -> ops.connectAddress(() -> server.address())
+				HttpClient.create(ops -> ops.connectAddress(server::address)
 				                            .poolResources(PoolResources.fixed("test", 1)));
 
 		try {
@@ -712,7 +742,7 @@ public class HttpServerTests {
 	}*/
 
 	@Test
-	public void testIssue309() throws Exception {
+	public void testIssue309() {
 		doTestIssue309("/somethingtooolooong",
 				ops -> ops.port(0)
 				          .maxInitialLineLength(20));
@@ -727,6 +757,7 @@ public class HttpServerTests {
 				HttpServer.create(ops)
 				          .newHandler((req, res) -> res.sendString(Mono.just("Should not be reached")))
 				          .block();
+		assertThat(server).isNotNull();
 
 		Mono<HttpResponseStatus> status =
 				HttpClient.create(server.address().getPort())
