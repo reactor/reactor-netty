@@ -71,7 +71,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	ChannelHandlerContext ctx;
 
 	boolean overflow;
-	boolean mustRecycleEncoder;
+	boolean nonInformationalResponse;
 
 	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
@@ -203,7 +203,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		// modify message on way out to add headers if needed
 		if (msg instanceof HttpResponse) {
 			final HttpResponse response = (HttpResponse) msg;
-			trackResponse(response);
+			nonInformationalResponse = !isInformational(response);
 			// Assume the response writer knows if they can persist or not and sets isKeepAlive on the response
 			if (!isKeepAlive(response) || !isSelfDefinedMessageLength(response)) {
 				// No longer keep alive as the client can't tell when the message is done unless we close connection
@@ -239,8 +239,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				return;
 			}
 
-			if (mustRecycleEncoder) {
-				mustRecycleEncoder = false;
+			if (nonInformationalResponse) {
+				nonInformationalResponse = false;
 				pendingResponses -= 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
 					HttpServerOperations.log.debug(format(ctx.channel(), "Decreasing pending responses, now {}"),
@@ -263,10 +263,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			return;
 		}
 		ctx.write(msg, promise);
-	}
-
-	void trackResponse(HttpResponse response) {
-		mustRecycleEncoder = !isInformational(response);
 	}
 
 	@Override
