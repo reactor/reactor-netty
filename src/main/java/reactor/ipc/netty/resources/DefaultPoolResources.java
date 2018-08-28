@@ -94,6 +94,7 @@ final class DefaultPoolResources implements PoolResources {
 		final EventLoopGroup            defaultGroup;
 
 		final AtomicInteger activeConnections = new AtomicInteger();
+		final AtomicInteger inactiveConnections = new AtomicInteger();
 
 		final Future<Boolean> HEALTHY;
 		final Future<Boolean> UNHEALTHY;
@@ -132,9 +133,10 @@ final class DefaultPoolResources implements PoolResources {
 			if (future.isSuccess() ){
 				Channel c = future.get();
 				activeConnections.incrementAndGet();
+				inactiveConnections.decrementAndGet();
 				if (log.isDebugEnabled()) {
-					log.debug(format(c, "Channel acquired, now {} active connections"),
-							activeConnections);
+					log.debug(format(c, "Channel acquired, now {} active connections and {} inactive connections"),
+							activeConnections, inactiveConnections);
 				}
 
 
@@ -143,7 +145,14 @@ final class DefaultPoolResources implements PoolResources {
 						log.debug(format(c, "Registering close event to pool release"));
 					}
 					c.closeFuture()
-					 .addListener(ff -> pool.release(c));
+					 .addListener(ff -> {
+					     inactiveConnections.decrementAndGet();
+					     if (log.isDebugEnabled()) {
+					         log.debug(format(c, "Channel closed, now {} active connections and {} inactive connections"),
+					                 activeConnections, inactiveConnections);
+					     }
+					     pool.release(c);
+					 });
 				}
 			}
 		}
@@ -168,9 +177,10 @@ final class DefaultPoolResources implements PoolResources {
 		@Override
 		public void channelReleased(Channel ch) throws Exception {
 			activeConnections.decrementAndGet();
+			inactiveConnections.incrementAndGet();
 			if (log.isDebugEnabled()) {
-				log.debug(format(ch, "Channel released, now {} active connections"),
-						activeConnections);
+				log.debug(format(ch, "Channel released, now {} active connections and {} inactive connections"),
+						activeConnections, inactiveConnections);
 			}
 		}
 
@@ -193,9 +203,10 @@ final class DefaultPoolResources implements PoolResources {
 				see https://github.com/reactor/reactor-netty/issues/289
 			 */
 
+			inactiveConnections.incrementAndGet();
 			if (log.isDebugEnabled()) {
-				log.debug(format(ch, "Created new pooled channel, now {} active connections"),
-						activeConnections);
+				log.debug(format(ch, "Created new pooled channel, now {} active connections and {} inactive connections"),
+						activeConnections, inactiveConnections);
 			}
 			if (onChannelCreate != null) {
 				onChannelCreate.accept(ch);
@@ -205,7 +216,11 @@ final class DefaultPoolResources implements PoolResources {
 		@Override
 		public String toString() {
 			return pool.getClass()
-			           .getSimpleName() + "{" + "activeConnections=" + activeConnections + '}';
+			           .getSimpleName() + '{' +
+			                              "activeConnections=" + activeConnections +
+			                              ", " +
+			                              "inactiveConnections=" + inactiveConnections +
+			                              '}';
 		}
 	}
 
