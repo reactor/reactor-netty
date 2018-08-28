@@ -184,6 +184,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final ChannelOperations.OnSetup opsFactory;
 
 		final AtomicInteger activeConnections = new AtomicInteger();
+		final AtomicInteger inactiveConnections = new AtomicInteger();
 
 		final Future<Boolean> HEALTHY;
 		final Future<Boolean> UNHEALTHY;
@@ -239,9 +240,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		@Override
 		public void channelReleased(Channel ch) {
 			activeConnections.decrementAndGet();
+			inactiveConnections.incrementAndGet();
 			if (log.isDebugEnabled()) {
-				log.debug(format(ch, "Channel cleaned, now {} active connections"),
-						activeConnections);
+				log.debug(format(ch, "Channel cleaned, now {} active connections and {} inactive connections"),
+						activeConnections, inactiveConnections);
 			}
 		}
 
@@ -264,9 +266,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				see https://github.com/reactor/reactor-netty/issues/289
 			 */
 
+			inactiveConnections.incrementAndGet();
 			if (log.isDebugEnabled()) {
-				log.debug(format(ch, "Created new pooled channel, now {} active connections"),
-						activeConnections);
+				log.debug(format(ch, "Created new pooled channel, now {} active connections and {} inactive connections"),
+						activeConnections, inactiveConnections);
 			}
 
 			PooledConnection pooledConnection = new PooledConnection(ch, this);
@@ -284,7 +287,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public String toString() {
-			return "{ bootstrap=" + bootstrap + ", activeConnections=" + activeConnections + '}';
+			return "{ bootstrap=" + bootstrap +
+					", activeConnections=" + activeConnections +
+					", inactiveConnections=" + inactiveConnections +
+					'}';
 		}
 	}
 
@@ -476,6 +482,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		public void run() {
 			Channel c = f.getNow();
 			pool.activeConnections.incrementAndGet();
+			pool.inactiveConnections.decrementAndGet();
 
 
 			ConnectionObserver current = c.attr(OWNER)
@@ -506,8 +513,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 			if (current != null) {
 				if (log.isDebugEnabled()) {
-					log.debug(format(c, "Channel acquired, now {} active connection(s)"),
-							pool.activeConnections);
+					log.debug(format(c, "Channel acquired, now {} active connections and {} inactive connections"),
+							pool.activeConnections, pool.inactiveConnections);
 				}
 				obs.onStateChange(conn, State.ACQUIRED);
 
@@ -531,8 +538,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					log.debug(format(c, "Channel connected, now {} active connection(s)"),
-							pool.activeConnections);
+					log.debug(format(c, "Channel connected, now {} active connections and {} inactive connections"),
+							pool.activeConnections, pool.inactiveConnections);
 				}
 				sink.success(conn);
 			}
