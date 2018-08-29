@@ -271,12 +271,12 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	final static ChannelInboundHandler HTTP_EXTRACTOR = NettyPipeline.inboundHandler(
 			(ctx, msg) -> {
 				if (msg instanceof ByteBufHolder) {
-					ByteBuf bb = ((ByteBufHolder) msg).content();
 					if(msg instanceof FullHttpMessage){
 						// TODO convert into 2 messages if FullHttpMessage
 						ctx.fireChannelRead(msg);
 					}
 					else {
+						ByteBuf bb = ((ByteBufHolder) msg).content();
 						ctx.fireChannelRead(bb);
 						if (msg instanceof LastHttpContent) {
 							ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
