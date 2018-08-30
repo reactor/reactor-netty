@@ -155,6 +155,12 @@ final class DefaultPoolResources implements PoolResources {
 					 });
 				}
 			}
+			else {
+				inactiveConnections.decrementAndGet();
+				if (log.isDebugEnabled()) {
+					log.debug("Cannot acquire channel", future.cause());
+				}
+			}
 		}
 
 		@Override
