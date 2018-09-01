@@ -18,8 +18,10 @@ package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -36,6 +38,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -46,6 +49,7 @@ import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.ContextHandler;
+import reactor.ipc.netty.channel.TimeoutHandler;
 import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServerResponse;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
@@ -413,6 +417,14 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 				pipeline.addAfter(NettyPipeline.HttpCodec,
 						NettyPipeline.HttpDecompressor,
 						new HttpContentDecompressor());
+			}
+
+			Duration responseTimeout = options.responseTimeout();
+			if (responseTimeout != null) {
+				pipeline.addLast(NettyPipeline.ReadTimeoutHandler, new ReadTimeoutHandler(responseTimeout.toNanos(),
+						TimeUnit.NANOSECONDS));
+				pipeline.addAfter(NettyPipeline.ReadTimeoutHandler, NettyPipeline.TimeoutHandler,
+						new TimeoutHandler("Response took longer than timeout: ", responseTimeout));
 			}
 		}
 	}
