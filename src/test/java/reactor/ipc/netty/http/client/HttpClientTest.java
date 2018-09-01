@@ -549,6 +549,27 @@ public class HttpClientTest {
 	}
 
 	@Test
+	public void timeoutTest() {
+		NettyContext x =
+				TcpServer.create("localhost", 0)
+						.newHandler((in, out) -> {
+							return out.context(c ->
+									c.addHandlerFirst(new HttpResponseEncoder()))
+									.sendObject(Mono.delay(Duration.ofSeconds(5))
+											.map(t -> new DefaultFullHttpResponse(
+													HttpVersion.HTTP_1_1,
+													HttpResponseStatus.PROCESSING)))
+									.neverComplete();
+						})
+						.block(Duration.ofSeconds(30));
+
+		StepVerifier.create(HttpClient.create(opts -> opts.connectAddress(x::address)
+				.responseTimeout(Duration.ofSeconds(1)))
+				.get("/"))
+				.verifyError(TimeoutException.class);
+	}
+
+	@Test
 	public void prematureCancel() {
 		DirectProcessor<Void> signal = DirectProcessor.create();
 		NettyContext x =
