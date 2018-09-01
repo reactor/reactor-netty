@@ -164,7 +164,7 @@ public final class HttpClientOptions extends ClientOptions {
 
 	@Override
 	public String asDetailedString() {
-		return super.asDetailedString() + ", acceptGzip=" + acceptGzip + ", readTimeout=" + responseTimeout;
+		return super.asDetailedString() + ", acceptGzip=" + acceptGzip + ", responseTimeout=" + responseTimeout;
 	}
 
 	@Override
