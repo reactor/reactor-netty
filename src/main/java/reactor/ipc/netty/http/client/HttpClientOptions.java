@@ -19,6 +19,7 @@ package reactor.ipc.netty.http.client;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -57,10 +58,12 @@ public final class HttpClientOptions extends ClientOptions {
 	}
 
 	private final boolean acceptGzip;
+	private final Duration responseTimeout;
 
 	private HttpClientOptions(HttpClientOptions.Builder builder) {
 		super(builder);
 		this.acceptGzip = builder.acceptGzip;
+		this.responseTimeout = builder.responseTimeout;
 	}
 
 	@Override
@@ -95,6 +98,15 @@ public final class HttpClientOptions extends ClientOptions {
 		sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
 		sslEngine.setSSLParameters(sslParameters);
 		return handler;
+	}
+
+	/**
+	 * Returns the response timeout set for this request
+	 *
+	 * @return returns the response timeout for this request if it has been set, null otherwise
+	 */
+	public Duration responseTimeout() {
+		return this.responseTimeout;
 	}
 
 	/**
@@ -146,12 +158,13 @@ public final class HttpClientOptions extends ClientOptions {
 
 	@Override
 	public String asSimpleString() {
-		return super.asSimpleString() + (acceptGzip ? " with gzip" : "");
+		return super.asSimpleString() + (acceptGzip ? " with gzip" : "") +
+				(responseTimeout != null ? " with response timeout" : "");
 	}
 
 	@Override
 	public String asDetailedString() {
-		return super.asDetailedString() + ", acceptGzip=" + acceptGzip;
+		return super.asDetailedString() + ", acceptGzip=" + acceptGzip + ", responseTimeout=" + responseTimeout;
 	}
 
 	@Override
@@ -183,6 +196,7 @@ public final class HttpClientOptions extends ClientOptions {
 
 	public static final class Builder extends ClientOptions.Builder<Builder> {
 		private boolean acceptGzip;
+		private Duration responseTimeout;
 
 		private Builder() {
 			super(new Bootstrap());
@@ -196,6 +210,16 @@ public final class HttpClientOptions extends ClientOptions {
 		 */
 		public final Builder compression(boolean enabled) {
 			this.acceptGzip = enabled;
+			return get();
+		}
+
+		/**
+		 * Set a response timeout for the request. Smallest unit of precision is nanoseconds.
+		 * @param duration of the timeout
+		 * @return {@code this}
+		 */
+		public final Builder responseTimeout(Duration duration) {
+			this.responseTimeout = duration;
 			return get();
 		}
 

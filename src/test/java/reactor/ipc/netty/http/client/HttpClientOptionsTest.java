@@ -22,6 +22,7 @@ import reactor.ipc.netty.options.ClientProxyOptions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.function.Function;
 
 public class HttpClientOptionsTest {
@@ -57,28 +58,35 @@ public class HttpClientOptionsTest {
 	public void asDetailedString() {
 		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=null, proxy=null")
-				.endsWith(", acceptGzip=false");
+				.endsWith(", acceptGzip=false, responseTimeout=null");
 
 		//proxy
 		this.builder.proxy(proxyOptions);
 		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=null, proxy=SOCKS4(http://proxy")
 				.contains(":456)")
-				.endsWith(", acceptGzip=false");
+				.endsWith(", acceptGzip=false, responseTimeout=null");
 
 		//address
 		this.builder.host("http://google.com").port(123);
 		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
 				.contains(":456)")
-				.endsWith(", acceptGzip=false");
+				.endsWith(", acceptGzip=false, responseTimeout=null");
 
 		//gzip
 		this.builder.compression(true);
 		assertThat(this.builder.build().asDetailedString())
 				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
 				.contains(":456)")
-				.endsWith(", acceptGzip=true");
+				.endsWith(", acceptGzip=true, responseTimeout=null");
+
+		//timeout
+		this.builder.responseTimeout(Duration.ofSeconds(10));
+		assertThat(this.builder.build().asDetailedString())
+				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.contains(":456)")
+				.endsWith(", acceptGzip=true, responseTimeout=PT10S");
 	}
 
 	@Test
@@ -86,11 +94,12 @@ public class HttpClientOptionsTest {
 		this.builder.host("http://google.com")
 		            .port(123)
 		            .proxy(proxyOptions)
-		            .compression(true);
+		            .compression(true)
+					.responseTimeout(Duration.ofSeconds(10));
 		assertThat(this.builder.build().toString())
 				.startsWith("HttpClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
 				.contains(":456)")
-				.endsWith(", acceptGzip=true}");
+				.endsWith(", acceptGzip=true, responseTimeout=PT10S}");
 	}
 
 	@Test
