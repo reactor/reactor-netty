@@ -556,6 +556,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		@Override
 		public final void operationComplete(Future<Channel> f) throws Exception {
 			if (!f.isSuccess()) {
+				pool.inactiveConnections.decrementAndGet();
 				if (f.isCancelled()) {
 					if (log.isDebugEnabled()) {
 						log.debug("Cancelled acquiring from pool {}", pool);
