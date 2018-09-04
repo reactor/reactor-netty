@@ -234,6 +234,9 @@ public final class HttpServer
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(HttpServer.class);
 
+	static final boolean ACCESS_LOG_ENABLED =
+			Boolean.parseBoolean(System.getProperty("reactor.netty.http.server.accessLogEnabled", "false"));
+
 	static BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate(
 			HttpServerOptions options) {
 
@@ -309,17 +312,21 @@ public final class HttpServer
 			                     .autoCreateOperations(false);
 		}
 
-        @Override
-        public void accept(ChannelPipeline p, ContextHandler<Channel> c) {
-            p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(
-            		options.httpCodecMaxInitialLineLength(),
-		            options.httpCodecMaxHeaderSize(),
-		            options.httpCodecMaxChunkSize(),
-		            options.httpCodecValidateHeaders(),
-		            options.httpCodecInitialBufferSize()));
+		@Override
+		public void accept(ChannelPipeline p, ContextHandler<Channel> c) {
+			p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(
+			        options.httpCodecMaxInitialLineLength(),
+			        options.httpCodecMaxHeaderSize(),
+			        options.httpCodecMaxChunkSize(),
+			        options.httpCodecValidateHeaders(),
+			        options.httpCodecInitialBufferSize()));
 
-            p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(c));
-        }
+			if (ACCESS_LOG_ENABLED) {
+				p.addLast(NettyPipeline.AccessLogHandler, new AccessLogHandler());
+			}
+
+			p.addLast(NettyPipeline.HttpServerHandler, new HttpServerHandler(c));
+		}
 
 		@Override
 		protected LoggingHandler loggingHandler() {

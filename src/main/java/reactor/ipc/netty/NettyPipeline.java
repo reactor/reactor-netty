@@ -59,9 +59,9 @@ public interface NettyPipeline {
 	String ReactiveBridge     = RIGHT + "reactiveBridge";
 	String HttpCodec          = LEFT + "httpCodec";
 	String HttpDecompressor   = LEFT + "decompressor";
-	String HttpCompressor     = LEFT + "compressor";
 	String HttpAggregator     = LEFT + "httpAggregator";
 	String HttpServerHandler  = LEFT + "httpServerHandler";
+	String AccessLogHandler   = LEFT + "accessLogHandler";
 	String OnChannelWriteIdle = LEFT + "onChannelWriteIdle";
 	String OnChannelReadIdle  = LEFT + "onChannelReadIdle";
 	String ChunkedWriter      = LEFT + "chunkedWriter";

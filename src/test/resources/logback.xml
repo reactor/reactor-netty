@@ -32,8 +32,22 @@
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+    <!-- Access Log configuration
+    <appender name="accessLog" class="ch.qos.logback.core.FileAppender">
+        <file>access_log.log</file>
+        <encoder>
+            <pattern>%msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="accessLog" />
+    </appender>
 
-	<!--<logger name="reactor" level="DEBUG"/>-->
+    <logger name="reactor.netty.http.server.AccessLog" level="INFO" additivity="false">
+        <appender-ref ref="async"/>
+    </logger> -->
+
+    <!--<logger name="reactor" level="DEBUG"/>-->
     <!--<logger name="reactor" level="INFO"/>-->
     <logger name="reactor.ipc.netty" level="DEBUG" />
     <!--<logger name="reactor.ipc.netty.http.client.HttpClient" level="DEBUG" />-->
