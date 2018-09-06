@@ -15,7 +15,6 @@
  */
 package reactor.ipc.netty.tcp;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -38,7 +37,6 @@ import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class TcpResourcesTest {
@@ -93,7 +91,7 @@ public class TcpResourcesTest {
 		tcpResources = new TcpResources(loopResources, poolResources);
 	}
 
-	@Test
+	/*@Test
 	public void disposeLaterDefers() {
 		assertThat(tcpResources.isDisposed()).isFalse();
 
@@ -105,7 +103,7 @@ public class TcpResourcesTest {
 		            .subscribe();
 		//not immediately disposed when subscribing
 		assertThat(tcpResources.isDisposed()).as("immediate status on disposeLater subscribe").isFalse();
-	}
+	}*/
 
 	@Test
 	public void shutdownLaterDefers() {
