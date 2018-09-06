@@ -85,20 +85,6 @@ public class HttpResourcesTest {
 	}
 
 	@Test
-	public void disposeLaterDefers() {
-		assertThat(testResources.isDisposed()).isFalse();
-
-		testResources.disposeLater();
-		assertThat(testResources.isDisposed()).isFalse();
-
-		testResources.disposeLater()
-		             .doOnSuccess(c -> assertThat(testResources.isDisposed()).isTrue())
-		             .subscribe();
-		//not immediately disposed when subscribing
-		assertThat(testResources.isDisposed()).as("immediate status on disposeLater subscribe").isFalse();
-	}
-
-	@Test
 	public void shutdownLaterDefers() {
 		HttpResources oldHttpResources = HttpResources.httpResources.getAndSet(testResources);
 		HttpResources newHttpResources = HttpResources.httpResources.get();
