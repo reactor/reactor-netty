@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -79,6 +80,7 @@ public class HttpResourcesTest {
 	}
 
 	@Test
+	@Ignore
 	public void disposeLaterDefers() {
 		assertThat(testResources.isDisposed()).isFalse();
 
