@@ -382,8 +382,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 				if (!isPersistent() && channel.isActive()) {
 					//will be released by closeFuture internals
-					owner().onStateChange(connection, State.DISCONNECTING);
 					channel.close();
+					owner().onStateChange(connection, State.DISCONNECTING);
 					return;
 				}
 

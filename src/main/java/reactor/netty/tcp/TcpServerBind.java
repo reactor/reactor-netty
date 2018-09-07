@@ -60,7 +60,7 @@ final class TcpServerBind extends TcpServer {
 		SslProvider ssl = SslProvider.findSslSupport(b);
 		if (ssl != null && ssl.getDefaultConfigurationType() == null) {
 			ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.TCP);
-			SslProvider.updateSslSupport(b, ssl);
+			SslProvider.setBootstrap(b, ssl);
 		}
 
 		if (b.config()

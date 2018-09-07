@@ -74,6 +74,7 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
+import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
@@ -115,25 +116,6 @@ final class HttpClientConnect extends HttpClient {
 		return defaultClient;
 	}
 
-	static void channelFactoryAndLoops(Bootstrap b) {
-		if (b.config()
-		     .group() == null) {
-
-			LoopResources loops = HttpResources.get();
-
-			SslProvider ssl = SslProvider.findSslSupport(b);
-			SslContext sslContext = ssl != null ? ssl.getSslContext() : null;
-
-			boolean useNative =
-					LoopResources.DEFAULT_NATIVE && !(sslContext instanceof JdkSslContext);
-
-			EventLoopGroup elg = loops.onClient(useNative);
-
-			b.group(elg)
-			 .channel(loops.onChannel(elg));
-		}
-	}
-
 	static final class HttpTcpClient extends TcpClient {
 
 		final TcpClient defaultClient;
@@ -144,17 +126,53 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public Mono<? extends Connection> connect(Bootstrap b) {
-			channelFactoryAndLoops(b);
+			SslProvider ssl = SslProvider.findSslSupport(b);
+
+			if (b.config()
+			     .group() == null) {
+
+				LoopResources loops = HttpResources.get();
+
+				SslContext sslContext = ssl != null ? ssl.getSslContext() : null;
+
+				boolean useNative =
+						LoopResources.DEFAULT_NATIVE && !(sslContext instanceof JdkSslContext);
+
+				EventLoopGroup elg = loops.onClient(useNative);
+
+				b.group(elg)
+				 .channel(loops.onChannel(elg));
+			}
+
 			HttpClientConfiguration conf = HttpClientConfiguration.getAndClean(b);
 			BootstrapHandlers.channelOperationFactory(b,
 					(ch, c, msg) -> new HttpClientOperations(ch, c, conf.cookieEncoder, conf.cookieDecoder));
 
-			if (conf.deferredUri != null) {
-				return conf.deferredUri.flatMap(uri ->
-						new MonoHttpConnect(b, new HttpClientConfiguration(conf, uri), defaultClient));
+			if (ssl != null) {
+				ssl = SslProvider.addHandlerConfigurator(ssl,
+						HttpClientSecure.DEFAULT_HOSTNAME_VERIFICATION);
+
+				if (ssl.getDefaultConfigurationType() == null) {
+					switch (conf.protocols) {
+						case HttpClientConfiguration.h11:
+							ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.TCP);
+							break;
+						case HttpClientConfiguration.h2:
+							ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.H2);
+							break;
+					}
+				}
+				SslProvider.setBootstrap(b, ssl);
 			}
 
-			return new MonoHttpConnect(b, conf, defaultClient);
+			SslProvider defaultSsl = ssl;
+
+			if (conf.deferredUri != null) {
+				return conf.deferredUri.flatMap(uri ->
+						new MonoHttpConnect(b, new HttpClientConfiguration(conf, uri), defaultClient, defaultSsl));
+			}
+
+			return new MonoHttpConnect(b, conf, defaultClient, defaultSsl);
 		}
 
 		@Override
@@ -181,12 +199,15 @@ final class HttpClientConnect extends HttpClient {
 		final Bootstrap               bootstrap;
 		final HttpClientConfiguration configuration;
 		final TcpClient               tcpClient;
+		final SslProvider             sslProvider;
 
 		MonoHttpConnect(Bootstrap bootstrap,
 				HttpClientConfiguration configuration,
-				TcpClient tcpClient) {
+				TcpClient tcpClient,
+				@Nullable SslProvider               sslProvider) {
 			this.bootstrap = bootstrap;
 			this.configuration = configuration;
+			this.sslProvider = sslProvider;
 			this.tcpClient = tcpClient;
 		}
 
@@ -194,39 +215,90 @@ final class HttpClientConnect extends HttpClient {
 		public void subscribe(CoreSubscriber<? super Connection> actual) {
 			final Bootstrap b = bootstrap.clone();
 
-			SslProvider ssl = SslProvider.findSslSupport(b);
-			if (ssl != null) {
-				SslProvider.updateSslSupport(b,
-						SslProvider.addHandlerConfigurator(ssl,
-								HttpClientSecure.DEFAULT_HOSTNAME_VERIFICATION));
-			}
-
 			HttpClientHandler handler = new HttpClientHandler(configuration, b.config()
-			                                                                  .remoteAddress(), ssl);
+			                                                                  .remoteAddress(), sslProvider);
 
 			b.remoteAddress(handler);
 
-			BootstrapHandlers.updateConfiguration(b,
-					NettyPipeline.HttpInitializer,
-					(listener, channel) -> {
-						channel.pipeline()
-						       .addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
+			if (sslProvider != null) {
+				if ((configuration.protocols & HttpClientConfiguration.h2c) == HttpClientConfiguration.h2c) {
+					Operators.error(actual, new IllegalArgumentException("Configured" +
+							" H2 Clear-Text protocol " +
+							"with TLS. Use the non clear-text h2 protocol via " +
+							"HttpClient#protocol or disable TLS" +
+							" via HttpClient#tcpConfiguration(tcp -> tcp.noSSL())"));
+					return;
+				}
+				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
+					BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer,
+							new Http1Initializer(handler));
+//					return;
+				}
+//				if ((configuration.protocols & HttpClientConfiguration.h2) == HttpClientConfiguration.h2) {
+//					BootstrapHandlers.updateConfiguration(b,
+//							NettyPipeline.HttpInitializer,
+//							new H2Initializer(
+//									configuration.decoder.validateHeaders,
+//									configuration.minCompressionSize,
+//									compressPredicate(configuration.compressPredicate, configuration.minCompressionSize),
+//									configuration.forwarded));
+//					return;
+//				}
+			}
+			else {
+				if ((configuration.protocols & HttpClientConfiguration.h2) == HttpClientConfiguration.h2) {
+					Operators.error(actual, new IllegalArgumentException(
+							"Configured H2 protocol without TLS. Use" + " a clear-text " + "h2 protocol via HttpClient#protocol or configure TLS" + " via HttpClient#secure"));
+					return;
+				}
+//				if ((configuration.protocols & HttpClientConfiguration.h11orH2c) == HttpClientConfiguration.h11orH2c) {
+//					BootstrapHandlers.updateConfiguration(b,
+//							NettyPipeline.HttpInitializer,
+//							new Http1OrH2CleartextInitializer(configuration.decoder.maxInitialLineLength,
+//									configuration.decoder.maxHeaderSize,
+//									configuration.decoder.maxChunkSize,
+//									configuration.decoder.validateHeaders,
+//									configuration.decoder.initialBufferSize,
+//									configuration.minCompressionSize,
+//									compressPredicate(configuration.compressPredicate, configuration.minCompressionSize),
+//									configuration.forwarded));
+//					return;
+//				}
+				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
+					BootstrapHandlers.updateConfiguration(b,
+							NettyPipeline.HttpInitializer,
+							new Http1Initializer(handler));
+//					return;
+				}
+//				if ((configuration.protocols & HttpClientConfiguration.h2c) == HttpClientConfiguration.h2c) {
+//					BootstrapHandlers.updateConfiguration(b,
+//							NettyPipeline.HttpInitializer,
+//							new H2CleartextInitializer(
+//									conf.decoder.validateHeaders,
+//									conf.minCompressionSize,
+//									compressPredicate(conf.compressPredicate, conf.minCompressionSize),
+//									conf.forwarded));
+//					return;
+//				}
+			}
 
-						if (handler.compress) {
-							channel.pipeline()
-							       .addAfter(NettyPipeline.HttpCodec,
-							                 NettyPipeline.HttpDecompressor,
-							                 new HttpContentDecompressor());
-						}
-
-					});
+//			Operators.error(actual, new IllegalArgumentException("An unknown " +
+//					"HttpClient#protocol " + "configuration has been provided: "+String.format("0x%x", configuration.protocols)));
 
 			Mono.<Connection>create(sink -> {
 				Bootstrap finalBootstrap;
 				//append secure handler if needed
 				if (handler.activeURI.isSecure()) {
-					if (ssl == null) {
-						finalBootstrap = SslProvider.updateSslSupport(b.clone(),
+					if (sslProvider == null) {
+						if ((configuration.protocols & HttpClientConfiguration.h2c) == HttpClientConfiguration.h2c) {
+							sink.error(new IllegalArgumentException("Configured H2 " +
+									"Clear-Text" + " protocol" + " without TLS while " +
+									"trying to redirect to a secure address."));
+							return;
+						}
+						//should not need to handle H2 case already checked outside of
+						// this callback
+						finalBootstrap = SslProvider.setBootstrap(b.clone(),
 								HttpClientSecure.DEFAULT_HTTP_SSL_PROVIDER);
 					}
 					else {
@@ -234,7 +306,7 @@ final class HttpClientConnect extends HttpClient {
 					}
 				}
 				else {
-					if (ssl != null) {
+					if (sslProvider != null) {
 						finalBootstrap = SslProvider.removeSslSupport(b.clone());
 					}
 					else {
@@ -471,7 +543,7 @@ final class HttpClientConnect extends HttpClient {
 			}
 		}
 
-		private static String resolveHostHeaderValue(@Nullable InetSocketAddress remoteAddress) {
+		static String resolveHostHeaderValue(@Nullable InetSocketAddress remoteAddress) {
 			if (remoteAddress != null) {
 				String host = remoteAddress.getHostString();
 				if (VALID_IPV6_PATTERN.matcher(host)
@@ -503,7 +575,7 @@ final class HttpClientConnect extends HttpClient {
 		}
 
 		@SuppressWarnings("unchecked")
-		private static Supplier<String>[] addToRedirectedFromArray(@Nullable Supplier<String>[] redirectedFrom,
+		static Supplier<String>[] addToRedirectedFromArray(@Nullable Supplier<String>[] redirectedFrom,
 				UriEndpoint from) {
 			Supplier<String> fromUrlSupplier = from::toExternalForm;
 			if (redirectedFrom == null) {
@@ -617,6 +689,55 @@ final class HttpClientConnect extends HttpClient {
 			throw new IllegalStateException("Impossible");
 		}
 	}
+
+	static final class Http1Initializer
+			implements BiConsumer<ConnectionObserver, Channel>  {
+
+		final HttpClientHandler handler;
+
+		Http1Initializer(HttpClientHandler handler) {
+			this.handler = handler;
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			channel.pipeline()
+			       .addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
+
+			if (handler.compress) {
+				channel.pipeline()
+				       .addAfter(NettyPipeline.HttpCodec,
+						       NettyPipeline.HttpDecompressor,
+						       new HttpContentDecompressor());
+			}
+		}
+	}
+
+//	static final class H2Initializer
+//			implements BiConsumer<ConnectionObserver, Channel>  {
+//
+//		final HttpClientHandler handler;
+//
+//		H2Initializer(HttpClientHandler handler) {
+//			this.handler = handler;
+//		}
+//
+//		@Override
+//		public void accept(ConnectionObserver listener, Channel channel) {
+//			ChannelPipeline p = channel.pipeline();
+//
+//			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
+//					Http2MultiplexCodecBuilder.forClient(new Http2StreamInitializer(listener, forwarded))
+//					                          .validateHeaders(validate)
+//					                          .initialSettings(Http2Settings.defaultSettings());
+//
+//			if (p.get(NettyPipeline.LoggingHandler) != null) {
+//				http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, "reactor.netty.http.client.h2.secured"));
+//			}
+//
+//			p.addLast(NettyPipeline.HttpCodec, http2MultiplexCodecBuilder.build());
+//		}
+//	}
 
 	@ChannelHandler.Sharable
 	static final class HttpClientInitializer

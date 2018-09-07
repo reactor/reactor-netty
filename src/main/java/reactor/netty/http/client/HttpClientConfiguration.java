@@ -29,6 +29,7 @@ import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.NettyOutbound;
+import reactor.netty.http.HttpProtocol;
 
 /**
  * @author Stephane Maldini
@@ -49,6 +50,7 @@ final class HttpClientConfiguration {
 	HttpHeaders  headers               = null;
 	HttpMethod   method                = HttpMethod.GET;
 	String       websocketSubprotocols = null;
+	int                    protocols         = h11;
 
 	ClientCookieEncoder cookieEncoder = ClientCookieEncoder.STRICT;
 	ClientCookieDecoder cookieDecoder = ClientCookieDecoder.STRICT;
@@ -174,6 +176,25 @@ final class HttpClientConfiguration {
 		return b;
 	}
 
+	static Bootstrap protocols(Bootstrap b, HttpProtocol... protocols) {
+		int _protocols = 0;
+
+		for (HttpProtocol p : protocols) {
+			if (p == HttpProtocol.HTTP11) {
+				_protocols |= h11;
+			}
+			else if (p == HttpProtocol.H2) {
+				_protocols |= h2;
+			}
+			else if (p == HttpProtocol.H2C) {
+				_protocols |= h2c;
+			}
+		}
+
+		getOrCreate(b).protocols = _protocols;
+		return b;
+	}
+
 	static Bootstrap websocketSubprotocols(Bootstrap b, String websocketSubprotocols) {
 		getOrCreate(b).websocketSubprotocols = websocketSubprotocols;
 		return b;
@@ -185,4 +206,9 @@ final class HttpClientConfiguration {
 		conf.cookieDecoder = decoder;
 		return b;
 	}
+
+	static final int h11      = 0b100;
+	static final int h2       = 0b010;
+	static final int h2c      = 0b001;
+	static final int h11orH2c = h11 | h2c;
 }

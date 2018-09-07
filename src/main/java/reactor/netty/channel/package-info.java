@@ -15,7 +15,14 @@
  */
 
 /**
- * Components for writing TCP-based clients and servers using Reactor abstractions.
+ * Netty <-> Reactive Streams bridge via channel handler.
+ * <p>
+ * {@link reactor.netty.channel.ChannelOperations} will be exposed as the user edge API
+ * and extended by various protocols such as HTTP. It will convert incoming read into
+ * {@link reactor.netty.NettyInbound#receive()} and apply read backpressure.
+ * <p>
+ * {@link reactor.netty.channel.ChannelOperationsHandler} will tail the
+ * channel pipeline and convert {@link org.reactivestreams.Publisher} to outgoing write.
  */
 @NonNullApi
 package reactor.netty.channel;

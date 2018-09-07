@@ -15,7 +15,9 @@
  */
 
 /**
- * Components for writing TCP-based clients and servers using Reactor abstractions.
+ * Contracts for managing connections via
+ * {@link reactor.netty.resources.ConnectionProvider} and event-loop resources via
+ * {@link reactor.netty.resources.LoopResources}
  */
 @NonNullApi
 package reactor.netty.resources;

@@ -45,6 +45,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
 import reactor.netty.channel.BootstrapHandlers;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -546,15 +547,6 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * HTTP POST to connect the {@link HttpClient}.
-	 *
-	 * @return a {@link RequestSender} ready to finalize request and consume for response
-	 */
-	public final RequestSender post() {
-		return request(HttpMethod.POST);
-	}
-
-	/**
 	 * The port to which this client should connect.
 	 *
 	 * @param port The port to connect to.
@@ -564,6 +556,28 @@ public abstract class HttpClient {
 	public final HttpClient port(int port) {
 		return tcpConfiguration(tcpClient -> tcpClient.port(port));
 	}
+
+	/**
+	 * HTTP POST to connect the {@link HttpClient}.
+	 *
+	 * @return a {@link RequestSender} ready to finalize request and consume for response
+	 */
+	public final RequestSender post() {
+		return request(HttpMethod.POST);
+	}
+
+
+	/**
+	 * The HTTP protocol to support. Default is {@link HttpProtocol#HTTP11}.
+	 *
+	 * @param supportedProtocols The various {@link HttpProtocol} this server will support
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient protocol(HttpProtocol... supportedProtocols) {
+		return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> HttpClientConfiguration.protocols(b, supportedProtocols)));
+	}
+
 
 	/**
 	 * HTTP PUT to connect the {@link HttpClient}.

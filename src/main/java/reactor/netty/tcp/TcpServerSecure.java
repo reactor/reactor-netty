@@ -40,7 +40,7 @@ final class TcpServerSecure extends TcpServerOperator {
 
 	@Override
 	public ServerBootstrap configure() {
-		return SslProvider.updateSslSupport(source.configure(), sslProvider);
+		return SslProvider.setBootstrap(source.configure(), sslProvider);
 	}
 
 	@Override

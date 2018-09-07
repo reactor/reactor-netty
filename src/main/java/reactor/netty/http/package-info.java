@@ -15,7 +15,8 @@
  */
 
 /**
- * Components for writing HTTP-based clients and servers using Reactor abstractions.
+ * Common components for writing HTTP-based clients and servers using Reactor
+ * abstractions.
  */
 @NonNullApi
 package reactor.netty.http;

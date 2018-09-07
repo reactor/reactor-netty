@@ -32,6 +32,7 @@ import org.junit.Test;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
@@ -529,6 +530,53 @@ public class HttpTests {
 
 	@Test
 	@Ignore
+	public void testNettyOom() throws Exception {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < 1000; i++) {
+			sb.append("test");
+		}
+
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		DisposableServer server =
+				HttpServer.create()
+				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions))
+				          .handle((req, res) -> res.sendString(Mono.just("Hello "+Mono.just(sb.toString()))
+				                                                   .delayElement
+						                                                   (Duration.ofMillis(500))))
+				          .wiretap()
+				          .bindNow();
+
+		Mono<String> res =
+				HttpClient.create()
+				          .port(server.port())
+				          .secure(ssl -> ssl.sslContext(
+						          SslContextBuilder.forClient()
+						                           .trustManager
+								                           (InsecureTrustManagerFactory
+										                           .INSTANCE))
+				                            .defaultConfiguration(SslProvider
+						                            .DefaultConfigurationType.TCP)
+				                            .handshakeTimeoutMillis(30000))
+				          .wiretap()
+				          .post()
+				          .uri("/")
+				          .send(ByteBufFlux.fromString(Mono.just(sb.toString())))
+				          .responseContent()
+				          .aggregate()
+				          .asString();
+
+		Mono.just(1)
+		    .repeat()
+			.flatMap(i -> res.subscribeOn(Schedulers.elastic()))
+			.blockLast();
+
+		server.disposeNow();
+	}
+
+
+	@Test
+	@Ignore
 	public void testHttpSsl() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
@@ -544,32 +592,33 @@ public class HttpTests {
 		server.disposeNow();
 	}
 
-	@Test
-	@Ignore
-	public void testHttpToHttp2ClearText() {
-		DisposableServer server =
-				HttpServer.create()
-				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap()
-				          .bindNow();
-
-		StepVerifier.create(
-				HttpClient.create()
-				          .port(server.port())
-				          .wiretap()
-				          .post()
-				          .uri("/")
-//				          .send((req, out) -> out.sendString(Mono.just("World")))
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-		)
-		            .expectNext("Hello")
-		            .verifyComplete();
-
-
-		server.disposeNow();
-	}
+//	@Test
+//	public void testHttpToHttp2ClearText() {
+//		DisposableServer server =
+//				HttpServer.create()
+//				          .protocol(HttpProtocol.H2C)
+//				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+//				          .wiretap()
+//				          .bindNow();
+//
+//		StepVerifier.create(
+//				HttpClient.create()
+//				          .port(server.port())
+//				          .protocol(HttpProtocol.H2C)
+//				          .wiretap()
+//				          .post()
+//				          .uri("/")
+////				          .send((req, out) -> out.sendString(Mono.just("World")))
+//				          .responseContent()
+//				          .aggregate()
+//				          .asString()
+//		)
+//		            .expectNext("Hello")
+//		            .verifyComplete();
+//
+//
+//		server.disposeNow();
+//	}
 
 	@Test
 	@Ignore

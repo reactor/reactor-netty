@@ -85,26 +85,6 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 		return connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp)));
 	}
 
-	static ByteBufFlux content(TcpClient cachedConfiguration, Function<ChannelOperations<?, ?>, Publisher<ByteBuf>> contentReceiver) {
-		Bootstrap b;
-		try {
-			b = cachedConfiguration.configure();
-		}
-		catch (Throwable t) {
-			Exceptions.throwIfFatal(t);
-			return ByteBufFlux.fromInbound(Mono.error(t));
-		}
-		@SuppressWarnings("unchecked")
-		ByteBufAllocator alloc = (ByteBufAllocator) b.config()
-		                                             .options()
-		                                             .getOrDefault(ChannelOption.ALLOCATOR, ByteBufAllocator.DEFAULT);
-
-		@SuppressWarnings("unchecked")
-		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) cachedConfiguration.connect(b);
-
-		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
-	}
-
 	@Override
 	public ByteBufFlux responseContent() {
 		return content(cachedConfiguration, contentReceiver);
@@ -117,11 +97,6 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 				    .aggregate()).doFinally(s -> dispose(resp)));
 	}
 
-	static void dispose(HttpClientOperations c) {
-		if (!c.isDisposed() && !c.isInboundDisposed()) {
-			c.channel().eventLoop().execute(c::dispose);
-		}
-	}
 
 
 	// RequestSender methods
@@ -148,12 +123,37 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 		});
 	}
 
+	static ByteBufFlux content(TcpClient cachedConfiguration, Function<ChannelOperations<?, ?>, Publisher<ByteBuf>> contentReceiver) {
+		Bootstrap b;
+		try {
+			b = cachedConfiguration.configure();
+		}
+		catch (Throwable t) {
+			Exceptions.throwIfFatal(t);
+			return ByteBufFlux.fromInbound(Mono.error(t));
+		}
+		@SuppressWarnings("unchecked")
+		ByteBufAllocator alloc = (ByteBufAllocator) b.config()
+		                                             .options()
+		                                             .getOrDefault(ChannelOption.ALLOCATOR, ByteBufAllocator.DEFAULT);
+
+		@SuppressWarnings("unchecked")
+		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) cachedConfiguration.connect(b);
+
+		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver).log(), alloc);
+	}
 
 	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {
 		//defer the dispose to avoid over disposing on receive
 		dispose(ops);
 		return ops;
 	};
+
+	static void dispose(HttpClientOperations c) {
+		if (!c.isDisposed() && !c.isInboundDisposed()) {
+			c.channel().eventLoop().execute(c::dispose);
+		}
+	}
 
 	static final Function<ChannelOperations<?, ?>, Publisher<ByteBuf>> contentReceiver = ChannelOperations::receive;
 }

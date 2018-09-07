@@ -102,14 +102,13 @@ final class HttpServerBind extends HttpServer
 		if (ssl != null && ssl.getDefaultConfigurationType() == null) {
 			switch (conf.protocols) {
 				case HttpServerConfiguration.h11:
-					ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.HTTP11);
-					SslProvider.updateSslSupport(b, ssl);
+					ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.TCP);
+					SslProvider.setBootstrap(b, ssl);
 					break;
 				case HttpServerConfiguration.h2:
 					ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.H2);
-					SslProvider.updateSslSupport(b, ssl);
+					SslProvider.setBootstrap(b, ssl);
 					break;
-				default: break;
 			}
 		}
 

@@ -101,7 +101,7 @@ public final class SslProvider {
 	 *
 	 * @return an enriched bootstrap
 	 */
-	public static Bootstrap updateSslSupport(Bootstrap b, SslProvider sslProvider) {
+	public static Bootstrap setBootstrap(Bootstrap b, SslProvider sslProvider) {
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.SslHandler,
 				new DeferredSslSupport(sslProvider));
@@ -265,11 +265,6 @@ public final class SslProvider {
 		TCP,
 		/**
 		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
-		 * <code>OpenSsl.isAlpnSupported()</code>
-		 */
-		HTTP11,
-		/**
-		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
 		 * <code>OpenSsl.isAlpnSupported()</code>,
 		 * {@link Http2SecurityUtil#CIPHERS},
 		 * ALPN support,
@@ -374,8 +369,6 @@ public final class SslProvider {
 				                     ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
 				                     ApplicationProtocolNames.HTTP_2,
 				                     ApplicationProtocolNames.HTTP_1_1));
-				// deliberate fall through
-			case HTTP11:
 				// deliberate fall through
 			case TCP:
 				io.netty.handler.ssl.SslProvider sslProvider =
@@ -540,7 +533,7 @@ public final class SslProvider {
 		return b;
 	}
 
-	public static ServerBootstrap updateSslSupport(ServerBootstrap b, SslProvider sslProvider) {
+	public static ServerBootstrap setBootstrap(ServerBootstrap b, SslProvider sslProvider) {
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.SslHandler,

@@ -15,7 +15,7 @@
  */
 
 /**
- * Components for writing TCP-based clients and servers using Reactor abstractions.
+ * Main Reactor Netty Contracts used by all client and server implementations
  */
 @NonNullApi
 package reactor.netty;
