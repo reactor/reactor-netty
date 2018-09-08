@@ -414,6 +414,7 @@ final class HttpClientConnect extends HttpClient {
 		final Boolean            chunkedTransfer;
 		final UriEndpointFactory uriEndpointFactory;
 		final String             websocketProtocols;
+		final int                maxFramePayloadLength;
 
 		final ClientCookieEncoder cookieEncoder;
 		final ClientCookieDecoder cookieDecoder;
@@ -470,6 +471,7 @@ final class HttpClientConnect extends HttpClient {
 					new UriEndpointFactory(addressSupplier, sslProvider != null, URI_ADDRESS_MAPPER);
 
 			this.websocketProtocols = configuration.websocketSubprotocols;
+			this.maxFramePayloadLength = configuration.websocketMaxFramePayloadLength;
 			this.handler = configuration.body;
 			this.activeURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketSubprotocols != null);
 		}
@@ -522,7 +524,7 @@ final class HttpClientConnect extends HttpClient {
 
 				if (handler != null) {
 					if (websocketProtocols != null) {
-						WebsocketUpgradeOutbound wuo = new WebsocketUpgradeOutbound(ch, websocketProtocols);
+						WebsocketUpgradeOutbound wuo = new WebsocketUpgradeOutbound(ch, websocketProtocols, maxFramePayloadLength);
 						return Flux.concat(handler.apply(ch, wuo), wuo.then());
 					}
 					else {
@@ -531,7 +533,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 				else {
 					if (websocketProtocols != null) {
-						return Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols));
+						return Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, maxFramePayloadLength));
 					}
 					else {
 						return ch.send();
@@ -628,10 +630,10 @@ final class HttpClientConnect extends HttpClient {
 		final Mono<Void>           m;
 		final String               websocketProtocols;
 
-		WebsocketUpgradeOutbound(HttpClientOperations ch, String websocketProtocols) {
+		WebsocketUpgradeOutbound(HttpClientOperations ch, String websocketProtocols, int websocketMaxFramePayloadLength) {
 			this.ch = ch;
 			this.websocketProtocols = websocketProtocols;
-			this.m = Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols));
+			this.m = Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, websocketMaxFramePayloadLength));
 		}
 
 		@Override

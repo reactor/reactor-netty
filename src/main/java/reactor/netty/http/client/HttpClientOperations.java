@@ -597,13 +597,13 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 	}
 
-	final void withWebsocketSupport(String protocols) {
+	final void withWebsocketSupport(String protocols, int maxFramePayloadLength) {
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, this);
+			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, maxFramePayloadLength, this);
 
 			if(!rebind(ops)) {
 				log.error(format(channel(), "Error while rebinding websocket in channel attribute: " +

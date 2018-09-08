@@ -56,6 +56,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	WebsocketClientOperations(URI currentURI,
 			String protocols,
+			int maxFramePayloadLength,
 			HttpClientOperations replaced) {
 		super(replaced);
 		Channel channel = channel();
@@ -65,7 +66,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 					protocols.isEmpty() ? null : protocols,
 					true,
 					replaced.requestHeaders()
-					        .remove(HttpHeaderNames.HOST));
+					        .remove(HttpHeaderNames.HOST),
+					maxFramePayloadLength);
 
 		handshaker.handshake(channel)
 		          .addListener(f -> {

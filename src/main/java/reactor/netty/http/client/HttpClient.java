@@ -703,11 +703,35 @@ public abstract class HttpClient {
 	 * @return a {@link WebsocketSender} ready to consume for response
 	 */
 	public final WebsocketSender websocket(String subprotocols) {
-		Objects.requireNonNull(subprotocols, "subprotocols");
-		TcpClient tcpConfiguration = tcpConfiguration().bootstrap(b -> HttpClientConfiguration.websocketSubprotocols(b, subprotocols));
-		return new WebsocketFinalizer(tcpConfiguration);
+		return websocket(subprotocols, 65536);
 	}
 
+	/**
+	 * HTTP Websocket to connect the {@link HttpClient}.
+	 *
+	 * @param maxFramePayloadLength maximum allowable frame payload length
+	 *
+	 * @return a {@link WebsocketSender} ready to consume for response
+	 */
+	public final WebsocketSender websocket(int maxFramePayloadLength) {
+		return websocket("", maxFramePayloadLength);
+	}
+
+	/**
+	 * HTTP Websocket to connect the {@link HttpClient}.
+	 *
+	 * @param subprotocols a websocket subprotocol comma separated list
+	 * @param maxFramePayloadLength maximum allowable frame payload length
+	 *
+	 * @return a {@link WebsocketSender} ready to consume for response
+	 */
+	public final WebsocketSender websocket(String subprotocols, int maxFramePayloadLength) {
+		Objects.requireNonNull(subprotocols, "subprotocols");
+		TcpClient tcpConfiguration = tcpConfiguration()
+				.bootstrap(b -> HttpClientConfiguration.websocketSubprotocols(b, subprotocols))
+				.bootstrap(b -> HttpClientConfiguration.websocketMaxFramePayloadLength(b, maxFramePayloadLength));
+		return new WebsocketFinalizer(tcpConfiguration);
+	}
 
 	/**
 	 * Get a TcpClient from the parent {@link HttpClient} chain to use with {@link
