@@ -50,6 +50,7 @@ final class HttpClientConfiguration {
 	HttpHeaders  headers               = null;
 	HttpMethod   method                = HttpMethod.GET;
 	String       websocketSubprotocols = null;
+	int          websocketMaxFramePayloadLength = 65536;
 	int                    protocols         = h11;
 
 	ClientCookieEncoder cookieEncoder = ClientCookieEncoder.STRICT;
@@ -70,6 +71,7 @@ final class HttpClientConfiguration {
 		this.headers = from.headers;
 		this.method = from.method;
 		this.websocketSubprotocols = from.websocketSubprotocols;
+		this.websocketMaxFramePayloadLength = from.websocketMaxFramePayloadLength;
 		this.body = from.body;
 	}
 
@@ -197,6 +199,11 @@ final class HttpClientConfiguration {
 
 	static Bootstrap websocketSubprotocols(Bootstrap b, String websocketSubprotocols) {
 		getOrCreate(b).websocketSubprotocols = websocketSubprotocols;
+		return b;
+	}
+
+	static Bootstrap websocketMaxFramePayloadLength(Bootstrap b, int websocketMaxFramePayloadLength) {
+		getOrCreate(b).websocketMaxFramePayloadLength = websocketMaxFramePayloadLength;
 		return b;
 	}
 
