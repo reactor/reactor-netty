@@ -17,7 +17,9 @@ package reactor.ipc.netty.channel;
 
 import java.time.Duration;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,6 +71,51 @@ public class FluxReceiveTest {
 				                                     .delayElement(Duration.ofMillis(50))
 				                                     .flatMap(response -> response.receive().aggregate().asString())
 				                                     .timeout(Duration.ofMillis(50))
+				                                     .then()))
+				          .block(Duration.ofSeconds(30));
+		assertNotNull(server2);
+
+		Flux.range(0, 50)
+		    .flatMap(i -> HttpClient.create(server2.address().getPort())
+		                            .get("/forward")
+		                            .log()
+		                            .onErrorResume(t -> Mono.empty()))
+		    .blockLast(Duration.ofSeconds(30));
+
+		server1.dispose();
+		server2.dispose();
+	}
+
+	@Test
+	public void testByteBufsReleasedWhenTimeoutUsingHandlers() {
+		byte[] content = new byte[1024*8];
+		Random rndm = new Random();
+		rndm.nextBytes(content);
+
+		NettyContext server1 =
+				HttpServer.create(0)
+				          .newRouter(routes ->
+				                     routes.get("/target", (req, res) ->
+				                           res.sendByteArray(Flux.just(content)
+				                                                 .delayElements(Duration.ofMillis(100)))))
+				          .block(Duration.ofSeconds(30));
+		assertNotNull(server1);
+
+		NettyContext server2 =
+				HttpServer.create(0)
+				          .newRouter(routes ->
+				                     routes.get("/forward", (req, res) ->
+				                           HttpClient.create(
+				                                         ops -> ops.port(server1.address().getPort())
+				                                                   .onChannelInit(ch -> {
+				                                                       ch.pipeline()
+				                                                         .addLast(new ReadTimeoutHandler(50, TimeUnit.MILLISECONDS));
+				                                                       return false;
+				                                                   }))
+				                                     .get("/target")
+				                                     .log()
+				                                     .delayElement(Duration.ofMillis(50))
+				                                     .flatMap(response -> response.receive().aggregate().asString())
 				                                     .then()))
 				          .block(Duration.ofSeconds(30));
 		assertNotNull(server2);
