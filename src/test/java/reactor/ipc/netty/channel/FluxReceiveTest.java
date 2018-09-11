@@ -18,6 +18,8 @@ package reactor.ipc.netty.channel;
 import java.time.Duration;
 import java.util.Random;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import io.netty.util.ResourceLeakDetector;
@@ -28,12 +30,22 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.http.client.HttpClient;
 import reactor.ipc.netty.http.server.HttpServer;
 
+import static org.junit.Assert.assertNotNull;
+
 public class FluxReceiveTest {
+
+	@Before
+	public void setUp() {
+		ResourceLeakDetector.setLevel(Level.PARANOID);
+	}
+
+	@After
+	public void tearDown() {
+		ResourceLeakDetector.setLevel(Level.SIMPLE);
+	}
 
 	@Test
 	public void testByteBufsReleasedWhenTimeout() {
-		ResourceLeakDetector.setLevel(Level.PARANOID);
-
 		byte[] content = new byte[1024*8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
@@ -45,6 +57,7 @@ public class FluxReceiveTest {
 				                           res.sendByteArray(Flux.just(content)
 				                                                 .delayElements(Duration.ofMillis(100)))))
 				          .block(Duration.ofSeconds(30));
+		assertNotNull(server1);
 
 		NettyContext server2 =
 				HttpServer.create(0)
@@ -58,6 +71,7 @@ public class FluxReceiveTest {
 				                                     .timeout(Duration.ofMillis(50))
 				                                     .then()))
 				          .block(Duration.ofSeconds(30));
+		assertNotNull(server2);
 
 		Flux.range(0, 50)
 		    .flatMap(i -> HttpClient.create(server2.address().getPort())
@@ -68,7 +82,5 @@ public class FluxReceiveTest {
 
 		server1.dispose();
 		server2.dispose();
-
-		ResourceLeakDetector.setLevel(Level.SIMPLE);
 	}
 }
