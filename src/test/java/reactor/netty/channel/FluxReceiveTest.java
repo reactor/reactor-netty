@@ -17,9 +17,13 @@ package reactor.netty.channel;
 
 import java.time.Duration;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -29,10 +33,18 @@ import reactor.netty.http.server.HttpServer;
 
 public class FluxReceiveTest {
 
+	@Before
+	public void setUp() {
+		ResourceLeakDetector.setLevel(Level.PARANOID);
+	}
+
+	@After
+	public void tearDown() {
+		ResourceLeakDetector.setLevel(Level.SIMPLE);
+	}
+
 	@Test
 	public void testByteBufsReleasedWhenTimeout() {
-		ResourceLeakDetector.setLevel(Level.PARANOID);
-
 		byte[] content = new byte[1024*8];
 		Random rndm = new Random();
 		rndm.nextBytes(content);
@@ -42,7 +54,9 @@ public class FluxReceiveTest {
 				          .port(0)
 				          .route(routes ->
 				                     routes.get("/target", (req, res) ->
-				                           req.receive().thenMany(res.sendByteArray(Flux.just(content).delayElements(Duration.ofMillis(100))))))
+				                           req.receive()
+				                              .thenMany(res.sendByteArray(Flux.just(content)
+				                                                              .delayElements(Duration.ofMillis(100))))))
 				          .bindNow();
 
 		DisposableServer server2 =
@@ -74,8 +88,55 @@ public class FluxReceiveTest {
 
 		server1.dispose();
 		server2.dispose();
+	}
 
-		ResourceLeakDetector.setLevel(Level.SIMPLE);
+	@Test
+	public void testByteBufsReleasedWhenTimeoutUsingHandlers() {
+		byte[] content = new byte[1024*8];
+		Random rndm = new Random();
+		rndm.nextBytes(content);
+
+		DisposableServer server1 =
+				HttpServer.create()
+				          .port(0)
+				          .route(routes ->
+				                     routes.get("/target", (req, res) ->
+				                           req.receive()
+				                              .thenMany(res.sendByteArray(Flux.just(content)
+				                                                              .delayElements(Duration.ofMillis(100))))))
+				          .bindNow();
+
+		DisposableServer server2 =
+				HttpServer.create()
+				          .port(0)
+				          .route(routes ->
+				                     routes.get("/forward", (req, res) ->
+				                           HttpClient.create()
+				                                     .port(server1.address().getPort())
+				                                     .tcpConfiguration(tcpClient ->
+				                                         tcpClient.doOnConnected(c ->
+				                                             c.addHandlerFirst(new ReadTimeoutHandler(50, TimeUnit.MILLISECONDS))))
+				                                     .get()
+				                                     .uri("/target")
+				                                     .responseContent()
+				                                     .aggregate()
+				                                     .asString()
+				                                     .log()
+				                                     .then()))
+				          .bindNow();
+
+		Flux.range(0, 50)
+		    .flatMap(i -> HttpClient.create()
+		                            .port(server2.address().getPort())
+		                            .get()
+		                            .uri("/forward")
+		                            .responseContent()
+		                            .log()
+		                            .onErrorResume(t -> Mono.empty()))
+		    .blockLast(Duration.ofSeconds(15));
+
+		server1.dispose();
+		server2.dispose();
 	}
 
 	/*static final Logger logger = Loggers.getLogger(FluxReceiveTest.class);
