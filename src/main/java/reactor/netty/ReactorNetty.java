@@ -700,4 +700,11 @@ public final class ReactorNetty {
 	 * fallback to SSL debugging disabled
 	 */
 	public static final String SSL_SERVER_DEBUG = "reactor.netty.tcp.ssl.server.debug";
+
+
+	/**
+	 * Specifies whether the Http Server access log will be enabled.
+	 * By default it is disabled.
+	 */
+	public static final String ACCESS_LOG_ENABLED = "reactor.netty.http.server.accessLogEnabled";
 }

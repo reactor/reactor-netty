@@ -59,6 +59,7 @@ import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.annotation.Nullable;
 
+import static reactor.netty.ReactorNetty.ACCESS_LOG_ENABLED;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -70,6 +71,9 @@ final class HttpServerBind extends HttpServer
 	static final HttpServerBind INSTANCE = new HttpServerBind();
 
 	static final Function<DisposableServer, DisposableServer> CLEANUP_GLOBAL_RESOURCE = DisposableBind::new;
+
+	static final boolean ACCESS_LOG =
+			Boolean.parseBoolean(System.getProperty(ACCESS_LOG_ENABLED, "false"));
 
 	final TcpServer tcpServer;
 
@@ -179,7 +183,9 @@ final class HttpServerBind extends HttpServer
 		else {
 			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
 				throw new IllegalArgumentException(
-						"Configured H2 protocol without TLS. Use" + " a clear-text h2 protocol via HttpServer#protocol or configure TLS" + " via HttpServer#secure");
+						"Configured H2 protocol without TLS. Use" +
+								" a clear-text h2 protocol via HttpServer#protocol or configure TLS" +
+								" via HttpServer#secure");
 			}
 			if ((conf.protocols & HttpServerConfiguration.h11orH2c) == HttpServerConfiguration.h11orH2c) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -340,6 +346,10 @@ final class HttpServerBind extends HttpServer
 			ChannelPipeline p = channel.pipeline();
 
 			p.addLast(NettyPipeline.HttpCodec, new HttpServerCodec(line, header, chunk, validate, buffer));
+
+			if (ACCESS_LOG) {
+				p.addLast(NettyPipeline.AccessLogHandler, new AccessLogHandler());
+			}
 
 			boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
@@ -606,6 +616,11 @@ final class HttpServerBind extends HttpServer
 				 .addBefore(NettyPipeline.ReactiveBridge,
 						 NettyPipeline.HttpTrafficHandler,
 						 new HttpTrafficHandler(listener, parent.forwarded, parent.compressPredicate, parent.cookieEncoder, parent.cookieDecoder));
+
+				if (ACCESS_LOG) {
+					p.addAfter(NettyPipeline.HttpCodec,
+							NettyPipeline.AccessLogHandler, new AccessLogHandler());
+				}
 
 				boolean alwaysCompress = parent.compressPredicate == null && parent.minCompressionSize == 0;
 
