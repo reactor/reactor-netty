@@ -313,12 +313,29 @@ public interface HttpServerRoutes extends
 	@SuppressWarnings("unchecked")
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			String protocols) {
+			@Nullable String protocols) {
+		return ws(condition, handler, protocols, 65536);
+	}
+
+	/**
+	 * Listen for WebSocket with the given route predicate to invoke the matching handlers
+	 *
+	 * @param condition a predicate given each inbound request
+	 * @param handler an handler to invoke for the given condition
+	 * @param protocols sub-protocol to use in WS handshake signature
+	 *
+	 * @return a new handler
+	 */
+	@SuppressWarnings("unchecked")
+	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+			@Nullable String protocols,
+			int maxFramePayloadLength) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
 			       .contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), protocols, handler);
+				return ops.withWebsocketSupport(req.uri(), protocols, maxFramePayloadLength, handler);
 			}
 			return resp.sendNotFound();
 		});
