@@ -60,6 +60,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	WebsocketServerOperations(String wsUrl,
 			@Nullable String protocols,
+			int maxFramePayloadLength,
 			HttpServerOperations replaced) {
 		super(replaced);
 
@@ -67,7 +68,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory =
-				new WebSocketServerHandshakerFactory(wsUrl, protocols, true);
+				new WebSocketServerHandshakerFactory(wsUrl, protocols, true, maxFramePayloadLength);
 		handshaker = wsFactory.newHandshaker(replaced.nettyRequest);
 		if (handshaker == null) {
 			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel);
