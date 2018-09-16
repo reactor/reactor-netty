@@ -26,8 +26,45 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasEntry;
+import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.assertTrue;
 
 public class UriPathTemplateTest {
+
+    @Test
+    public void patternShouldMatchPathWithOnlyLetters() {
+        UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/{order}");
+        // works as expected
+        assertThat(uriPathTemplate.match("/test/1").get("order"), is("1"));
+    }
+
+    @Test
+    public void patternShouldMatchPathWithDots() {
+        UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/{order}");
+        // does not match, the dot in the segment parameter breaks matching
+        // expected: a map containing {"order": "2.0"}, found: empty map
+        assertThat(uriPathTemplate.match("/test/2.0").get("order"), is("2.0"));
+    }
+
+    @Test
+    public void staticPatternShouldMatchPathWithQueryParams() {
+        UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/3");
+        // does not match, the query parameter breaks matching
+        // expected: true, found: false
+	    assertTrue(uriPathTemplate.matches("/test/3?q=reactor"));
+//        assertThat(uriPathTemplate.matches("/test/3?q=reactor"), is(true));
+    }
+
+    @Test
+    public void parameterizedPatternShouldMatchPathWithQueryParams() {
+        UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/{order}");
+        // does not match, the query parameter breaks matching
+        // expected: a map containing {"order": "3"}, found: a map containing {"order": "3?q=reactor"}
+	    assertEquals("3",
+			    uriPathTemplate.match("/test/3?q=reactor")
+			                   .get("order"));
+//        assertThat(uriPathTemplate.match("/test/3?q=reactor").get("order"), is("3"));
+    }
 
     @Test
     public void staticPathShouldBeMatched() {
