@@ -49,7 +49,7 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 
 			accessLog = new AccessLog()
 			        .address(((SocketChannel) ctx.channel()).remoteAddress().getHostString())
-              .port(((SocketChannel) ctx.channel()).localAddress().getPort())
+			        .port(((SocketChannel) ctx.channel()).localAddress().getPort())
 			        .method(request.method().name())
 			        .uri(request.uri())
 			        .protocol(request.protocolVersion().text());
@@ -122,10 +122,10 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 			return this;
 		}
 
-    AccessLog port(int port) {
-      this.port = port;
-      return this;
-    }
+		AccessLog port(int port) {
+			this.port = port;
+			return this;
+		}
 
 		AccessLog method(String method) {
 			this.method = Objects.requireNonNull(method, "method");
