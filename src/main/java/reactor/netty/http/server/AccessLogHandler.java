@@ -49,6 +49,7 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 
 			accessLog = new AccessLog()
 			        .address(((SocketChannel) ctx.channel()).remoteAddress().getHostString())
+              .port(((SocketChannel) ctx.channel()).localAddress().getPort())
 			        .method(request.method().name())
 			        .uri(request.uri())
 			        .protocol(request.protocolVersion().text());
@@ -96,7 +97,7 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 		static final DateTimeFormatter DATE_TIME_FORMATTER =
 				DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
 		static final String COMMON_LOG_FORMAT =
-				"{} - {} [{}] \"{} {} {}\" {} {}";
+				"{} - {} [{}] \"{} {} {}\" {} {} {} {} ms";
 		static final String MISSING = "-";
 
 		final String zonedDateTime;
@@ -109,6 +110,8 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 		int status;
 		long contentLength;
 		boolean chunked;
+		long startTime = System.currentTimeMillis();
+		int port;
 
 		AccessLog() {
 			this.zonedDateTime = ZonedDateTime.now().format(DATE_TIME_FORMATTER);
@@ -118,6 +121,11 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 			this.address = Objects.requireNonNull(address, "address");
 			return this;
 		}
+
+    AccessLog port(int port) {
+      this.port = port;
+      return this;
+    }
 
 		AccessLog method(String method) {
 			this.method = Objects.requireNonNull(method, "method");
@@ -156,10 +164,14 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 			return this;
 		}
 
+		long duration() {
+			return System.currentTimeMillis() - startTime;
+		}
+
 		void log() {
 			if (log.isInfoEnabled()) {
 				log.info(COMMON_LOG_FORMAT, address, user, zonedDateTime,
-						method, uri, protocol, status, (contentLength > -1 ? contentLength : MISSING));
+						method, uri, protocol, status, (contentLength > -1 ? contentLength : MISSING), port, duration());
 			}
 		}
 	}
