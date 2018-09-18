@@ -27,13 +27,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
-import reactor.util.Logger;
-import reactor.util.Loggers;
-
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
-import java.util.Objects;
 
 /**
  * @author Violeta Georgieva
@@ -46,10 +39,11 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		if (msg instanceof HttpRequest) {
 			final HttpRequest request = (HttpRequest) msg;
+			final SocketChannel channel = (SocketChannel) ctx.channel();
 
 			accessLog = new AccessLog()
-			        .address(((SocketChannel) ctx.channel()).remoteAddress().getHostString())
-			        .port(((SocketChannel) ctx.channel()).localAddress().getPort())
+			        .address(channel.remoteAddress().getHostString())
+			        .port(channel.localAddress().getPort())
 			        .method(request.method().name())
 			        .uri(request.uri())
 			        .protocol(request.protocolVersion().text());
@@ -61,13 +55,15 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof HttpResponse) {
 			final HttpResponse response = (HttpResponse) msg;
-			HttpResponseStatus status = response.status();
+			final HttpResponseStatus status = response.status();
+
 			if (status.equals(HttpResponseStatus.CONTINUE)) {
 				ctx.write(msg, promise);
 				return;
 			}
-			boolean chunked = HttpUtil.isTransferEncodingChunked(response);
-			accessLog.status(status.code())
+
+			final boolean chunked = HttpUtil.isTransferEncodingChunked(response);
+			accessLog.status(status.codeAsText())
 			         .chunked(chunked);
 			if (!chunked) {
 				accessLog.contentLength(HttpUtil.getContentLength(response, -1));
@@ -90,89 +86,5 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 			accessLog.increaseContentLength(((ByteBufHolder) msg).content().readableBytes());
 		}
 		ctx.write(msg, promise);
-	}
-
-	static final class AccessLog {
-		static final Logger log = Loggers.getLogger("reactor.netty.http.server.AccessLog");
-		static final DateTimeFormatter DATE_TIME_FORMATTER =
-				DateTimeFormatter.ofPattern("dd/MMM/yyyy:HH:mm:ss Z", Locale.US);
-		static final String COMMON_LOG_FORMAT =
-				"{} - {} [{}] \"{} {} {}\" {} {} {} {} ms";
-		static final String MISSING = "-";
-
-		final String zonedDateTime;
-
-		String address;
-		String method;
-		String uri;
-		String protocol;
-		String user = MISSING;
-		int status;
-		long contentLength;
-		boolean chunked;
-		long startTime = System.currentTimeMillis();
-		int port;
-
-		AccessLog() {
-			this.zonedDateTime = ZonedDateTime.now().format(DATE_TIME_FORMATTER);
-		}
-
-		AccessLog address(String address) {
-			this.address = Objects.requireNonNull(address, "address");
-			return this;
-		}
-
-		AccessLog port(int port) {
-			this.port = port;
-			return this;
-		}
-
-		AccessLog method(String method) {
-			this.method = Objects.requireNonNull(method, "method");
-			return this;
-		}
-
-		AccessLog uri(String uri) {
-			this.uri = Objects.requireNonNull(uri, "uri");
-			return this;
-		}
-
-		AccessLog protocol(String protocol) {
-			this.protocol = Objects.requireNonNull(protocol, "protocol");
-			return this;
-		}
-
-		AccessLog status(int status) {
-			this.status = status;
-			return this;
-		}
-
-		AccessLog contentLength(long contentLength) {
-			this.contentLength = contentLength;
-			return this;
-		}
-
-		AccessLog increaseContentLength(long contentLength) {
-			if (chunked) {
-				this.contentLength += contentLength;
-			}
-			return this;
-		}
-
-		AccessLog chunked(boolean chunked) {
-			this.chunked = chunked;
-			return this;
-		}
-
-		long duration() {
-			return System.currentTimeMillis() - startTime;
-		}
-
-		void log() {
-			if (log.isInfoEnabled()) {
-				log.info(COMMON_LOG_FORMAT, address, user, zonedDateTime,
-						method, uri, protocol, status, (contentLength > -1 ? contentLength : MISSING), port, duration());
-			}
-		}
 	}
 }
