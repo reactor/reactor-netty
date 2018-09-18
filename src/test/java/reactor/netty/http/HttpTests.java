@@ -374,7 +374,7 @@ public class HttpTests {
 		String content =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .compress()
+				          .compress(true)
 				          .post()
 				          .uri("/hi")
 				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
@@ -386,7 +386,7 @@ public class HttpTests {
 
 		Flux<String> f = HttpClient.create()
 		                           .port(server.address().getPort())
-		                           .compress()
+		                           .compress(true)
 		                           .get()
 		                           .uri("/stream")
 		                           .responseContent()
@@ -409,7 +409,7 @@ public class HttpTests {
 		content =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .compress()
+				          .compress(true)
 				          .post()
 				          .uri("/hi")
 				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
@@ -431,7 +431,7 @@ public class HttpTests {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .compress()
+				          .compress(true)
 				          .route(r -> r.post("/hi", (req, res) -> req.receive()
 				                                                     .aggregate()
 				                                                     .asString()
@@ -449,7 +449,7 @@ public class HttpTests {
 		String content =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .compress()
+				          .compress(true)
 				          .post()
 				          .uri("/hi")
 				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
@@ -461,7 +461,7 @@ public class HttpTests {
 
 		Flux<String> f = HttpClient.create()
 		                           .port(server.address().getPort())
-		                           .compress()
+		                           .compress(true)
 		                           .get()
 		                           .uri("/stream")
 		                           .responseContent()
@@ -484,7 +484,7 @@ public class HttpTests {
 		content =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .compress()
+				          .compress(true)
 				          .post()
 				          .uri("/hi")
 				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))

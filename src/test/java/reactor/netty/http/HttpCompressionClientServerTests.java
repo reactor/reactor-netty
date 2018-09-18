@@ -47,7 +47,7 @@ public class HttpCompressionClientServerTests {
 
 		HttpServer server = HttpServer.create()
 		                              .port(0)
-		                              .compress();
+		                              .compress(true);
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -57,7 +57,7 @@ public class HttpCompressionClientServerTests {
 		HttpClient client = HttpClient.create()
 		                              .addressSupplier(() -> address(runningServer))
 		                              .wiretap()
-		                              .compress();
+		                              .compress(true);
 		ByteBuf res =
 				client.headers(h -> Assert.assertTrue(h.contains("Accept-Encoding", "gzip", true)))
 				      .get()
@@ -104,7 +104,7 @@ public class HttpCompressionClientServerTests {
 	public void serverCompressionDisabled() {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
-		                              .noCompression();
+		                              .compress(false);
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -137,7 +137,7 @@ public class HttpCompressionClientServerTests {
 	public void serverCompressionAlwaysEnabled() throws Exception {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
-		                              .compress();
+		                              .compress(true);
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -147,7 +147,7 @@ public class HttpCompressionClientServerTests {
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
-		                              .noCompression()
+		                              .compress(false)
 				                      .wiretap();
 		Tuple2<byte[], HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
@@ -349,7 +349,7 @@ public class HttpCompressionClientServerTests {
 	public void compressionServerEnabledClientDisabledIsNone() {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
-		                              .compress();
+		                              .compress(true);
 
 		String serverReply = "reply";
 		DisposableServer runningServer =
@@ -360,7 +360,7 @@ public class HttpCompressionClientServerTests {
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap()
-				                      .noCompression();
+				                      .compress(false);
 
 		Tuple2<String, HttpHeaders> resp =
 				client.get()
@@ -413,7 +413,7 @@ public class HttpCompressionClientServerTests {
 
 		HttpServer server = HttpServer.create()
 		                              .port(0)
-		                              .compress();
+		                              .compress(true);
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap()
@@ -421,7 +421,7 @@ public class HttpCompressionClientServerTests {
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 				                      .wiretap()
-				                      .compress();
+				                      .compress(true);
 
 		ByteBuf resp =
 				client.headers(h -> zip.set(h.get("accept-encoding")))
@@ -480,7 +480,7 @@ public class HttpCompressionClientServerTests {
 		Mono<String> response =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .compress()
+				          .compress(true)
 				          .wiretap()
 				          .get()
 				          .uri("/")
@@ -496,7 +496,7 @@ public class HttpCompressionClientServerTests {
 		response = HttpClient.create()
 		                     .port(server.address().getPort())
 		                     .wiretap()
-		                     .compress()
+		                     .compress(true)
 		                     .get()
 		                     .uri("/")
 		                     .responseContent()

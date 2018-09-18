@@ -379,30 +379,49 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Enable gzip compression
+	 * Specifies whether gzip compression is enabled
 	 *
+	 * @param compressionEnabled if true gzip compression is enabled otherwise disabled
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient compress() {
-		return tcpConfiguration(COMPRESS_ATTR_CONFIG).headers(COMPRESS_HEADERS);
+	public final HttpClient compress(boolean compressionEnabled) {
+		if (compressionEnabled) {
+			return tcpConfiguration(COMPRESS_ATTR_CONFIG).headers(COMPRESS_HEADERS);
+		}
+		else {
+			return tcpConfiguration(COMPRESS_ATTR_DISABLE).headers(COMPRESS_HEADERS_DISABLE);
+		}
 	}
 
 	/**
-	 * Enable http status 301/302 auto-redirect support
+	 * Specifies whether http status 301/302 auto-redirect support is enabled
 	 *
+	 * @param followRedirect if true http status 301/302 auto-redirect support
+	 *                       is enabled otherwise disabled
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient followRedirect() {
-		return tcpConfiguration(FOLLOW_REDIRECT_ATTR_CONFIG);
+	public final HttpClient followRedirect(boolean followRedirect) {
+		if (followRedirect) {
+			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_CONFIG);
+		}
+		else {
+			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
+		}
 	}
 
 	/**
-	 * Enable transfer-encoding
+	 * Specified whether transfer-encoding is enabled
 	 *
+	 * @param chunkedEnabled if true transfer-encoding is enabled otherwise disabled.
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient chunkedTransfer() {
-		return tcpConfiguration(CHUNKED_ATTR_CONFIG);
+	public final HttpClient chunkedTransfer(boolean chunkedEnabled) {
+		if (chunkedEnabled) {
+			return tcpConfiguration(CHUNKED_ATTR_CONFIG);
+		}
+		else {
+			return tcpConfiguration(CHUNKED_ATTR_DISABLE);
+		}
 	}
 
 	/**
@@ -487,33 +506,6 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient headers(Consumer<? super HttpHeaders> headerBuilder) {
 		return new HttpClientHeaders(this, headerBuilder);
-	}
-
-	/**
-	 * Disable gzip compression
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient noCompression() {
-		return tcpConfiguration(COMPRESS_ATTR_DISABLE).headers(COMPRESS_HEADERS_DISABLE);
-	}
-
-	/**
-	 * Disable http status 301/302 auto-redirect support
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient noRedirection() {
-		return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
-	}
-
-	/**
-	 * Disable transfer-encoding
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient noChunkedTransfer() {
-		return tcpConfiguration(CHUNKED_ATTR_DISABLE);
 	}
 
 	/**

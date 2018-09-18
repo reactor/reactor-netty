@@ -324,7 +324,7 @@ public class HttpClientTest {
 		                                                                   .host("127.0.0.1")
 		                                                                   .port(8888)))
 		          .wiretap()
-		          .followRedirect()
+		          .followRedirect(true)
 		          .get()
 		          .uri("https://projectreactor.io")
 		          .responseContent()
@@ -345,7 +345,7 @@ public class HttpClientTest {
 				                                                                   .port(8888)
 				                                                                   .nonProxyHosts("spring.io")))
 				          .wiretap();
-		Mono<String> remote1 = client.followRedirect()
+		Mono<String> remote1 = client.followRedirect(true)
 		                             .get()
 		                             .uri("https://projectreactor.io")
 		                             .responseContent()
@@ -353,7 +353,7 @@ public class HttpClientTest {
 		                             .asString()
 		                             .limitRate(1)
 		                             .reduce(String::concat);
-		Mono<String> remote2 = client.followRedirect()
+		Mono<String> remote2 = client.followRedirect(true)
 		                             .get()
 		                             .uri("https://spring.io")
 		                             .responseContent()
@@ -391,7 +391,7 @@ public class HttpClientTest {
 		Integer res = HttpClient.create()
 		                        .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 		                        .wiretap()
-		                        .followRedirect()
+		                        .followRedirect(true)
 		                        .get()
 		                        .uri("/search")
 		                        .responseSingle((r, out) -> Mono.just(r.status().code()))
@@ -422,7 +422,7 @@ public class HttpClientTest {
 	}
 
 	private void doSimpleTest404(HttpClient client) {
-		Integer res = client.followRedirect()
+		Integer res = client.followRedirect(true)
 				            .get()
 				            .uri("/unsupportedURI")
 				            .responseSingle((r, buf) -> Mono.just(r.status().code()))
@@ -441,7 +441,7 @@ public class HttpClientTest {
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
-				          .noChunkedTransfer()
+				          .chunkedTransfer(false)
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
 				          .send(ByteBufFlux.fromString(Flux.just("hello")))
@@ -460,7 +460,7 @@ public class HttpClientTest {
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
-				          .noChunkedTransfer()
+				          .chunkedTransfer(false)
 				          .doOnRequest((req, c) -> req.keepAlive(false))
 				          .get()
 				          .uri("/unsupportedURI")
@@ -514,7 +514,7 @@ public class HttpClientTest {
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
 				                                                  .noSSL())
 				          .wiretap()
-				          .noChunkedTransfer()
+				          .chunkedTransfer(false)
 				          .get()
 				          .uri("/unsupportedURI")
 				          .responseConnection((res, conn) -> Mono.just(res.status())
@@ -529,7 +529,7 @@ public class HttpClientTest {
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
 				                                                  .noSSL())
 				          .wiretap()
-				          .noChunkedTransfer()
+				          .chunkedTransfer(false)
 				          .get()
 				          .uri("/unsupportedURI")
 				          .responseConnection((res, conn) -> Mono.just(conn.channel())
@@ -624,7 +624,7 @@ public class HttpClientTest {
 
 		DisposableServer c =
 				HttpServer.create()
-				          .compress()
+				          .compress(true)
 				          .port(0)
 				          .handle((req, res) -> res.sendString(Mono.just(content)))
 				          .bindNow();
@@ -636,7 +636,7 @@ public class HttpClientTest {
 				          .wiretap()
 				          .headers(h -> h.add("Accept-Encoding", "gzip")
 				                         .add("Accept-Encoding", "deflate"))
-				          .followRedirect()
+				          .followRedirect(true)
 				          .get()
 				          .response((r, buf) -> buf.aggregate()
 				                                   .asString()
@@ -656,7 +656,7 @@ public class HttpClientTest {
 				HttpClient.create()
 				          .port(c.address().getPort())
 				          .wiretap()
-				          .followRedirect()
+				          .followRedirect(true)
 				          .doOnRequest((req, conn) -> {
 				                  req.addHeader("Accept-Encoding", "gzip")
 				                     .addHeader("Accept-Encoding", "deflate");
@@ -702,7 +702,7 @@ public class HttpClientTest {
 		                              .port(server.address().getPort())
 		                              .wiretap();
 		if (gzipEnabled){
-			client = client.compress();
+			client = client.compress(true);
 		}
 
 		StepVerifier.create(client.get()
@@ -753,7 +753,7 @@ public class HttpClientTest {
 		                              .tcpConfiguration(tcpClient -> tcpClient.host("foo"))
 		                              .wiretap()
 		                              .port(123)
-		                              .compress();
+		                              .compress(true);
 		assertThat(client.tcpConfiguration())
 		        .isNotSameAs(HttpClient.DEFAULT_TCP_CLIENT)
 		        .isNotSameAs(client.tcpConfiguration());

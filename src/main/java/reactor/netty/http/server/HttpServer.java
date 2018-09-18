@@ -161,13 +161,20 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Enable GZip response compression if the client request presents accept encoding
-	 * headers.
+	 * Specifies whether GZip response compression is enabled if the client request
+	 * presents accept encoding headers.
 	 *
+	 * @param compressionEnabled if true GZip response compression is enabled if the client
+	 *                           request presents accept encoding headers, otherwise disabled.
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer compress() {
-		return tcpConfiguration(COMPRESS_ATTR_CONFIG);
+	public final HttpServer compress(boolean compressionEnabled) {
+		if (compressionEnabled) {
+			return tcpConfiguration(COMPRESS_ATTR_CONFIG);
+		}
+		else {
+			return tcpConfiguration(COMPRESS_ATTR_DISABLE);
+		}
 	}
 
 	/**
@@ -204,13 +211,21 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Enable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
-	 * HTTP request headers for deriving information about the connection.
+	 * Specifies whether support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 * HTTP request headers for deriving information about the connection is enabled.
 	 *
+	 * @param forwardedEnabled if true support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
+	 *                         HTTP request headers for deriving information about the connection is enabled,
+	 *                         otherwise disabled.
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer forwarded() {
-		return tcpConfiguration(FORWARD_ATTR_CONFIG);
+	public final HttpServer forwarded(boolean forwardedEnabled) {
+		if (forwardedEnabled) {
+			return tcpConfiguration(FORWARD_ATTR_CONFIG);
+		}
+		else {
+			return tcpConfiguration(FORWARD_ATTR_DISABLE);
+		}
 	}
 
 	/**
@@ -279,25 +294,6 @@ public abstract class HttpServer {
 	public final HttpServer cookieCodec(ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		return tcpConfiguration(tcp -> tcp.bootstrap(
 				b -> HttpServerConfiguration.cookieCodec(b, encoder, decoder)));
-	}
-
-	/**
-	 * Disable gzip compression
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer noCompression() {
-		return tcpConfiguration(COMPRESS_ATTR_DISABLE);
-	}
-
-	/**
-	 * Disable support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
-	 * HTTP request headers.
-	 *
-	 * @return a new {@link HttpServer}
-	 */
-	public final HttpServer noForwarded() {
-		return tcpConfiguration(FORWARD_ATTR_DISABLE);
 	}
 
 	/**

@@ -365,7 +365,7 @@ public class HttpServerTests {
 		HttpServer server = HttpServer.create()
 		                              .port(123)
 		                              .host(("foo"))
-		                              .compress();
+		                              .compress(true);
 		assertThat(server.tcpConfiguration().configure())
 		          .isNotSameAs(HttpServer.DEFAULT_TCP_SERVER)
 		          .isNotSameAs(server.tcpConfiguration().configure());

@@ -188,7 +188,7 @@ public class ConnectionInfoTests {
 
 		this.connection =
 				HttpServer.create()
-				          .forwarded()
+				          .forwarded(true)
 				          .port(0)
 				          .handle((req, res) -> {
 				              try {

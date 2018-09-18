@@ -155,7 +155,7 @@ public class HttpSendFileTests {
 		if (compression) {
 			client = HttpClient.create()
 			                   .addressSupplier(context::address)
-			                   .compress();
+			                   .compress(true);
 		}
 		else {
 			client = HttpClient.create()
