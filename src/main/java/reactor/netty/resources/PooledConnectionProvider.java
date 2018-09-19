@@ -406,7 +406,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 						    log.debug("Failed cleaning the channel from pool", f.cause());
 					    }
 					    onTerminate.onComplete();
-						obs.onStateChange(this, State.RELEASED);
+						obs.onStateChange(connection, State.RELEASED);
 				    });
 				return;
 			}

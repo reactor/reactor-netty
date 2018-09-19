@@ -51,7 +51,8 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 
 	@Override
 	public Bootstrap apply(Bootstrap bootstrap) {
-		BootstrapHandlers.connectionObserver(bootstrap, this);
+		ConnectionObserver observer = BootstrapHandlers.connectionObserver(bootstrap);
+		BootstrapHandlers.connectionObserver(bootstrap, observer.then(this));
 		return bootstrap;
 	}
 
