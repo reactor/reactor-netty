@@ -270,6 +270,10 @@ final class HttpServerBind extends HttpServer
 
 	static void addStreamHandlers(Channel ch, ConnectionObserver listener, boolean readForwardHeaders,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
+		if (ACCESS_LOG) {
+			ch.pipeline()
+			  .addLast(NettyPipeline.AccessLogHandler, new AccessLogHandlerH2());
+		}
 		ch.pipeline()
 		  .addLast(new Http2StreamBridgeHandler(listener, readForwardHeaders, encoder, decoder))
 		  .addLast(new Http2StreamFrameToHttpObjectCodec(true));
@@ -420,6 +424,10 @@ final class HttpServerBind extends HttpServer
 					new CleartextHttp2ServerUpgradeHandler(httpServerCodec, new HttpServerUpgradeHandler(httpServerCodec, upgrader), upgrader.multiplexCodec);
 
 			p.addLast(NettyPipeline.HttpCodec, h2cUpgradeHandler);
+
+			if (ACCESS_LOG) {
+				p.addLast(NettyPipeline.AccessLogHandler, new AccessLogHandler());
+			}
 
 			boolean alwaysCompress = compressPredicate == null && minCompressionSize == 0;
 
