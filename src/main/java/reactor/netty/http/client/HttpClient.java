@@ -499,13 +499,23 @@ public abstract class HttpClient {
 	/**
 	 * Apply headers configuration.
 	 *
-	 * @param headerBuilder the header {@link Consumer} to invoke before sending
-	 * websocket handshake
+	 * @param headerBuilder the header {@link Consumer} to invoke before requesting
 	 *
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient headers(Consumer<? super HttpHeaders> headerBuilder) {
 		return new HttpClientHeaders(this, headerBuilder);
+	}
+
+	/**
+	 * Apply headers configuration emitted by the returned Mono before requesting.
+	 *
+	 * @param headerBuilder the header {@link Function} to invoke before sending
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient headersWhen(Function<? super HttpHeaders, Mono<? extends HttpHeaders>> headerBuilder) {
+		return new HttpClientHeadersWhen(this, headerBuilder);
 	}
 
 	/**
@@ -713,7 +723,7 @@ public abstract class HttpClient {
 	 * HTTP Websocket to connect the {@link HttpClient}.
 	 *
 	 * @param subprotocols a websocket subprotocol comma separated list
-	 * @param maxFramePayloadLength maximum allowable frame payload length
+	 * @param maxFramePayloadLength maximum allowable frame payload lengthf
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response
 	 */
@@ -734,7 +744,6 @@ public abstract class HttpClient {
 	protected TcpClient tcpConfiguration() {
 		return DEFAULT_TCP_CLIENT;
 	}
-
 
 	static String reactorNettyVersion() {
 		return Optional.ofNullable(HttpClient.class.getPackage()

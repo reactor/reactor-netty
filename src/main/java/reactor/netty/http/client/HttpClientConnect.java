@@ -167,9 +167,10 @@ final class HttpClientConnect extends HttpClient {
 
 			SslProvider defaultSsl = ssl;
 
-			if (conf.deferredUri != null) {
-				return conf.deferredUri.flatMap(uri ->
-						new MonoHttpConnect(b, new HttpClientConfiguration(conf, uri), defaultClient, defaultSsl));
+			if (conf.deferredConf != null) {
+				return Mono.fromCallable(() -> new HttpClientConfiguration(conf))
+				           .transform(conf.deferredConf)
+				           .flatMap(c -> new MonoHttpConnect(b, c, defaultClient, defaultSsl));
 			}
 
 			return new MonoHttpConnect(b, conf, defaultClient, defaultSsl);

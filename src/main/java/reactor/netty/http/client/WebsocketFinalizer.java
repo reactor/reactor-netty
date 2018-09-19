@@ -48,7 +48,7 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 
 	@Override
 	public WebsocketSender uri(Mono<String> uri) {
-		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredUri(b, uri)));
+		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredConf(b, conf -> uri.map(conf::uri))));
 	}
 
 	// WebsocketSender methods

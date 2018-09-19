@@ -46,13 +46,6 @@ public interface HttpClientRequest extends HttpInfos {
 	HttpClientRequest addHeader(CharSequence name, CharSequence value);
 
 	/**
-	 * Return  true if headers and status have been sent to the client
-	 *
-	 * @return true if headers and status have been sent to the client
-	 */
-	boolean hasSentHeaders();
-
-	/**
 	 * Set an outbound header, replacing any pre-existing value.
 	 *
 	 * @param name headers key

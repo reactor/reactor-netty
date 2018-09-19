@@ -41,20 +41,21 @@ final class HttpClientConfiguration {
 	static final AttributeKey<HttpClientConfiguration> CONF_KEY =
 			AttributeKey.newInstance("httpClientConf");
 
-	boolean      acceptGzip            = false;
-	boolean      followRedirect        = false;
-	Boolean      chunkedTransfer       = null;
-	Mono<String> deferredUri           = null;
-	String       uri                   = null;
-	String       baseUrl               = null;
-	HttpHeaders  headers               = null;
-	HttpMethod   method                = HttpMethod.GET;
-	String       websocketSubprotocols = null;
-	int          websocketMaxFramePayloadLength = 65536;
-	int                    protocols         = h11;
+	boolean                       acceptGzip                     = false;
+	boolean                       followRedirect                 = false;
+	Boolean                       chunkedTransfer                = null;
+	String                        uri                            = null;
+	String                        baseUrl                        = null;
+	HttpHeaders                   headers                        = null;
+	HttpMethod                    method                         = HttpMethod.GET;
+	String                        websocketSubprotocols          = null;
+	int                           websocketMaxFramePayloadLength = 65536;
+	int                           protocols                      = h11;
 
 	ClientCookieEncoder cookieEncoder = ClientCookieEncoder.STRICT;
 	ClientCookieDecoder cookieDecoder = ClientCookieDecoder.STRICT;
+
+	Function<Mono<HttpClientConfiguration>, Mono<HttpClientConfiguration>> deferredConf                   = null;
 
 	BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 			body;
@@ -62,8 +63,8 @@ final class HttpClientConfiguration {
 	HttpClientConfiguration() {
 	}
 
-	HttpClientConfiguration(HttpClientConfiguration from, String uri) {
-		this.uri = uri;
+	HttpClientConfiguration(HttpClientConfiguration from) {
+		this.uri = from.uri;
 		this.acceptGzip = from.acceptGzip;
 		this.followRedirect = from.followRedirect;
 		this.chunkedTransfer = from.chunkedTransfer;
@@ -140,19 +141,35 @@ final class HttpClientConfiguration {
 		return b;
 	}
 
+	HttpClientConfiguration uri(String uri) {
+		this.uri = uri;
+		return this;
+	}
+
 	static Bootstrap baseUrl(Bootstrap b, String baseUrl) {
 		getOrCreate(b).baseUrl = baseUrl;
 		return b;
 	}
 
-	static Bootstrap deferredUri(Bootstrap b, Mono<String> uri) {
-		getOrCreate(b).deferredUri = uri;
+	static Bootstrap deferredConf(Bootstrap b, Function<HttpClientConfiguration, Mono<HttpClientConfiguration>> deferrer) {
+		HttpClientConfiguration c = getOrCreate(b);
+		if (c.deferredConf != null){
+			c.deferredConf = c.deferredConf.andThen(deferredConf -> deferredConf.flatMap(deferrer));
+		}
+		else {
+			c.deferredConf = deferredConf -> deferredConf.flatMap(deferrer);
+		}
 		return b;
 	}
 
 	static Bootstrap headers(Bootstrap b, HttpHeaders headers) {
 		getOrCreate(b).headers = headers;
 		return b;
+	}
+
+	HttpClientConfiguration headers(HttpHeaders headers) {
+		this.headers = headers;
+		return this;
 	}
 
 	@Nullable

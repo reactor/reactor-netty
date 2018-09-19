@@ -993,6 +993,32 @@ public class HttpClientTest {
 	}
 
 	@Test
+	public void testDeferredHeader() {
+		DisposableServer context =
+				HttpServer.create()
+				          .host("localhost")
+				          .route(r -> r.get("/201", (req, res) -> res.addHeader
+						          ("Content-Length", "0")
+				                                                     .status(HttpResponseStatus.CREATED)
+				                                                     .sendHeaders()))
+				          .bindNow();
+
+		AtomicInteger i = new AtomicInteger();
+		HttpClient.create()
+		          .addressSupplier(context::address)
+		          .headersWhen(h -> Mono.just(h.set("test", "test")).delayElement(Duration.ofSeconds(2)))
+		          .wiretap()
+		          .observe((c, s) -> System.out.println(s + "" + c))
+		          .get()
+		          .uri("/201")
+		          .responseContent()
+		          .repeat(4)
+		          .blockLast();
+
+		context.dispose();
+	}
+
+	@Test
 	public void closePool() {
 		ConnectionProvider pr = ConnectionProvider.fixed("wstest", 1);
 		DisposableServer httpServer =

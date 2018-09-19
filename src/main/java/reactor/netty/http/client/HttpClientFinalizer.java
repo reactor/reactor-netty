@@ -58,7 +58,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 
 	@Override
 	public HttpClient.RequestSender uri(Mono<String> uri) {
-		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredUri(b, uri)));
+		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredConf(b, conf -> uri.map(conf::uri))));
 	}
 
 	// ResponseReceiver methods
