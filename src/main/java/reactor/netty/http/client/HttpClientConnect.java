@@ -315,7 +315,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				BootstrapHandlers.connectionObserver(finalBootstrap,
-						BootstrapHandlers.connectionObserver(finalBootstrap).then(new HttpObserver(sink, handler)));
+						new HttpObserver(sink, handler).then(BootstrapHandlers.connectionObserver(finalBootstrap)));
 
 				tcpClient.connect(finalBootstrap)
 				         .subscribe(new TcpClientSubscriber(sink));
@@ -926,8 +926,7 @@ final class HttpClientConnect extends HttpClient {
 
 	static final HttpClientConnect INSTANCE = new HttpClientConnect();
 	static final AsciiString       ALL      = new AsciiString("*/*");
-	static final Logger            log      =
-			Loggers.getLogger(HttpClientFinalizer.class);
+	static final Logger            log      = Loggers.getLogger(HttpClientConnect.class);
 
 
 	static final BiFunction<String, Integer, InetSocketAddress> URI_ADDRESS_MAPPER =

@@ -281,7 +281,7 @@ public final class ReactorNetty {
 		}
 
 		if (otherObservers != null) {
-			System.arraycopy(otherObservers, pos,
+			System.arraycopy(otherObservers, 0,
 					newObservers, pos,
 					otherObservers.length);
 		}

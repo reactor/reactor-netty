@@ -933,12 +933,20 @@ public class HttpClientTest {
 		        .blockLast();
 
 		createHttpClientForContext(context)
+				.doOnRequest((r, c) -> System.out.println("onReq: "+r))
+				.doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
+				.doOnResponse((r, c) -> System.out.println("onResp: "+r))
+				.doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
 		          .put()
 		          .uri("/204")
 		          .responseContent()
 		          .blockLast(Duration.ofSeconds(30));
 
 		createHttpClientForContext(context)
+				.doOnRequest((r, c) -> System.out.println("onReq: "+r))
+				.doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
+				.doOnResponse((r, c) -> System.out.println("onResp: "+r))
+				.doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
 		          .get()
 		          .uri("/200")
 		          .responseContent()
@@ -1049,8 +1057,7 @@ public class HttpClientTest {
 
 	private HttpClient createHttpClientForContext(DisposableServer context) {
 		return HttpClient.create()
-		                 .addressSupplier(context::address)
-		                 .wiretap();
+		                 .addressSupplier(context::address);
 	}
 
 	@Test

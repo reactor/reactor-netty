@@ -440,7 +440,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
 		public final void dispose() {
 			if (isDisposed()) {
 				return;
@@ -523,8 +522,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					ChannelOperations<?, ?> ops = pool.opsFactory.create(con, con, null);
 					if (ops != null) {
 						ops.bind();
-						sink.success(ops);
 						obs.onStateChange(ops, State.CONFIGURED);
+						sink.success(ops);
 					}
 					else {
 						//already configured, just forward the connection
