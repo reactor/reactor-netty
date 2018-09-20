@@ -117,12 +117,10 @@ public class HttpServerTests {
 		                              .port(c.address().getPort())
 		                              .tcpConfiguration(TcpClient::noSSL)
 		                              .wiretap()
+		                              .keepAlive(false)
 		                              .post()
 		                              .uri("/return")
-		                              .send((r, out) -> {
-		                                  r.keepAlive(false);
-		                                  return out.send(src);
-		                              })
+		                              .send(src)
 		                              .responseSingle((res, buf) -> Mono.just(res.status().code())))
 		    .collectList()
 		    .block();

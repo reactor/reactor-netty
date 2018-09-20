@@ -460,8 +460,8 @@ public class HttpClientTest {
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap()
+				          .keepAlive(false)
 				          .chunkedTransfer(false)
-				          .doOnRequest((req, c) -> req.keepAlive(false))
 				          .get()
 				          .uri("/unsupportedURI")
 				          .responseSingle((res, conn) -> Mono.just(res.status())
@@ -657,11 +657,11 @@ public class HttpClientTest {
 				          .port(c.address().getPort())
 				          .wiretap()
 				          .followRedirect(true)
-				          .doOnRequest((req, conn) -> {
-				                  req.addHeader("Accept-Encoding", "gzip")
-				                     .addHeader("Accept-Encoding", "deflate");
-				                  conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
-				          })
+				          .headers(h -> h.add("Accept-Encoding", "gzip")
+				                         .add("Accept-Encoding", "deflate"))
+				          .doOnRequest((req, conn) ->
+				                  conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor())
+				          )
 				          .get()
 				          .response((r, buf) -> buf.aggregate()
 				                                   .asString()
@@ -1013,6 +1013,35 @@ public class HttpClientTest {
 		          .uri("/201")
 		          .responseContent()
 		          .repeat(4)
+		          .blockLast();
+
+		context.dispose();
+	}
+
+	@Test
+	public void testCookie() {
+		DisposableServer context = HttpServer.create()
+		                                     .host("localhost")
+		                                     .route(r -> r.get("/201",
+				                                     (req, res) -> res.addHeader("test",
+						                                     req.cookies()
+						                                        .get("test")
+						                                        .stream()
+						                                        .findFirst()
+						                                        .get()
+						                                        .value())
+				                                                      .status(HttpResponseStatus.CREATED)
+				                                                      .sendHeaders()))
+		                                     .bindNow();
+
+		AtomicInteger i = new AtomicInteger();
+		HttpClient.create()
+		          .addressSupplier(context::address)
+		          .cookie("test", c -> c.setValue("lol"))
+		          .wiretap()
+		          .get()
+		          .uri("/201")
+		          .responseContent()
 		          .blockLast();
 
 		context.dispose();

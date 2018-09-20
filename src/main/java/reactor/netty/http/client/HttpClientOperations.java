@@ -122,11 +122,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		                                .attr(REDIRECT_ATTR_KEY)
 		                                .get();
 		this.redirectedFrom = redirects == null ? EMPTY_REDIRECTIONS : redirects;
-		this.nettyRequest =
-				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+		this.nettyRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
-		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
+		this.cookieEncoder = encoder;
 	}
 
 	@Override
@@ -222,7 +221,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public Map<CharSequence, Set<Cookie>> cookies() {
 		ResponseState responseState = this.responseState;
-		if (responseState != null) {
+		if (responseState != null && responseState.cookieHolder != null) {
 			return responseState.cookieHolder.getCachedCookies();
 		}
 		return Collections.emptyMap();
@@ -305,12 +304,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	public boolean isWebsocket() {
 		ChannelOperations<?, ?> ops = get(channel());
 		return ops != null && ops.getClass().equals(WebsocketClientOperations.class);
-	}
-
-	@Override
-	public HttpClientRequest keepAlive(boolean keepAlive) {
-		HttpUtil.setKeepAlive(nettyRequest, keepAlive);
-		return this;
 	}
 
 	@Override

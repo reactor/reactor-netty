@@ -62,15 +62,13 @@ public class WebsocketClientOperationsTest {
 
 		Flux<String> response =
 			HttpClient.create()
-			          .port(httpServer.address().getPort())
+			          .port(httpServer.port())
 			          .wiretap()
+			          .headersWhen(h -> login(httpServer.port()).map(token -> h.set(
+					          "Authorization",
+					          token)))
 			          .websocket(clientSubprotocol)
 			          .uri("/ws")
-			          .send(request ->
-			              Mono.just(request)
-			                  .transform(req -> doLoginFirst(req, httpServer.address().getPort()))
-					          .then()
-			          )
 			          .handle((i, o) -> i.receive().asString())
 			          .log()
 			          .switchIfEmpty(Mono.error(new Exception()));

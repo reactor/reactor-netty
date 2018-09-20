@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
+import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
@@ -382,6 +383,7 @@ public abstract class HttpClient {
 	 * Specifies whether gzip compression is enabled
 	 *
 	 * @param compressionEnabled if true gzip compression is enabled otherwise disabled
+	 * (default: false)
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient compress(boolean compressionEnabled) {
@@ -394,25 +396,10 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Specifies whether http status 301/302 auto-redirect support is enabled
-	 *
-	 * @param followRedirect if true http status 301/302 auto-redirect support
-	 *                       is enabled otherwise disabled
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient followRedirect(boolean followRedirect) {
-		if (followRedirect) {
-			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_CONFIG);
-		}
-		else {
-			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
-		}
-	}
-
-	/**
-	 * Specified whether transfer-encoding is enabled
+	 * Specifies whether transfer-encoding is enabled
 	 *
 	 * @param chunkedEnabled if true transfer-encoding is enabled otherwise disabled.
+	 * (default: true)
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient chunkedTransfer(boolean chunkedEnabled) {
@@ -422,6 +409,68 @@ public abstract class HttpClient {
 		else {
 			return tcpConfiguration(CHUNKED_ATTR_DISABLE);
 		}
+	}
+
+	/**
+	 * Apply cookies configuration.
+	 *
+	 * @param cookie a cookie to append to the request(s)
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient cookie(Cookie cookie) {
+		return new HttpClientCookie(this, cookie);
+	}
+
+	/**
+	 * Apply cookies configuration.
+	 *
+	 * @param cookieBuilder the header {@link Consumer} to invoke before requesting
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient cookie(String name, Consumer<? super Cookie> cookieBuilder) {
+		return new HttpClientCookie(this, name, cookieBuilder);
+	}
+
+	/**
+	 * Apply cookies configuration emitted by the returned Mono before requesting.
+	 *
+	 * @param cookieBuilder the cookies {@link Function} to invoke before sending
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient cookiesWhen(String name, Function<? super Cookie, Mono<? extends Cookie>> cookieBuilder) {
+		return new HttpClientCookieWhen(this, name, cookieBuilder);
+	}
+
+	/**
+	 * Configure the
+	 * {@link ClientCookieEncoder}, {@link ClientCookieDecoder} will be
+	 * chosen based on the encoder
+	 *
+	 * @param encoder the preferred ClientCookieEncoder
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient cookieCodec(ClientCookieEncoder encoder) {
+		ClientCookieDecoder decoder = encoder == ClientCookieEncoder.LAX ?
+				ClientCookieDecoder.LAX : ClientCookieDecoder.STRICT;
+		return cookieCodec(encoder, decoder);
+	}
+
+	/**
+	 * Configure the
+	 * {@link ClientCookieEncoder} and {@link ClientCookieDecoder}
+	 *
+	 * @param encoder the preferred ClientCookieEncoder
+	 * @param decoder the preferred ClientCookieDecoder
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient cookieCodec(ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
+		return tcpConfiguration(tcp -> tcp.bootstrap(
+				b -> HttpClientConfiguration.cookieCodec(b, encoder, decoder)));
 	}
 
 	/**
@@ -516,6 +565,38 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient headersWhen(Function<? super HttpHeaders, Mono<? extends HttpHeaders>> headerBuilder) {
 		return new HttpClientHeadersWhen(this, headerBuilder);
+	}
+
+	/**
+	 * Enable or Disable Keep-Alive support for the outgoing request.
+	 *
+	 * @param keepAlive true if keepAlive should be enabled (default: true)
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient keepAlive(boolean keepAlive) {
+		if (keepAlive) {
+			return tcpConfiguration(KEEPALIVE_ATTR_CONFIG);
+		}
+		else {
+			return tcpConfiguration(KEEPALIVE_ATTR_DISABLE);
+		}
+	}
+
+	/**
+	 * Specifies whether http status 301/302 auto-redirect support is enabled
+	 *
+	 * @param followRedirect if true http status 301/302 auto-redirect support
+	 *                       is enabled otherwise disabled (default: true)
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient followRedirect(boolean followRedirect) {
+		if (followRedirect) {
+			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_CONFIG);
+		}
+		else {
+			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
+		}
 	}
 
 	/**
@@ -630,36 +711,6 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Configure the
-	 * {@link ClientCookieEncoder}, {@link ClientCookieDecoder} will be
-	 * chosen based on the encoder
-	 *
-	 * @param encoder the preferred ClientCookieEncoder
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient cookieCodec(ClientCookieEncoder encoder) {
-		ClientCookieDecoder decoder = encoder == ClientCookieEncoder.LAX ?
-				ClientCookieDecoder.LAX : ClientCookieDecoder.STRICT;
-		return tcpConfiguration(tcp -> tcp.bootstrap(
-				b -> HttpClientConfiguration.cookieCodec(b, encoder, decoder)));
-	}
-
-	/**
-	 * Configure the
-	 * {@link ClientCookieEncoder} and {@link ClientCookieDecoder}
-	 *
-	 * @param encoder the preferred ClientCookieEncoder
-	 * @param decoder the preferred ClientCookieDecoder
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient cookieCodec(ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
-		return tcpConfiguration(tcp -> tcp.bootstrap(
-				b -> HttpClientConfiguration.cookieCodec(b, encoder, decoder)));
-	}
-
-	/**
 	 * Apply {@link Bootstrap} configuration given mapper taking currently configured one
 	 * and returning a new one to be ultimately used for socket binding. <p> Configuration
 	 * will apply during {@link #tcpConfiguration()} phase.
@@ -761,26 +812,32 @@ public abstract class HttpClient {
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);
 
-	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG         =
+	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_COMPRESS);
 
-	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE        =
+	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_COMPRESS);
 
-	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_CONFIG          =
+	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_CHUNKED);
 
-	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_DISABLE         =
+	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_CONFIG =
+			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_KEEPALIVE);
+
+	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_DISABLE =
+			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_KEEPALIVE);
+
+	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_CHUNKED);
 
-	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_CONFIG  =
+	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_REDIRECT);
 
 	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_REDIRECT);
 
-	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS = h ->
-			h.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
+	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS =
+			h -> h.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
 
 	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS_DISABLE = h -> {
 		if (isCompressing(h)) {
