@@ -507,10 +507,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				registerClose(c);
 			}
 
-			Connection conn = Connection.from(c);
-
 
 			if (current != null) {
+				Connection conn = Connection.from(c);
 				if (log.isDebugEnabled()) {
 					log.debug(format(c, "Channel acquired, now {} active connections and {} inactive connections"),
 							pool.activeConnections, pool.inactiveConnections);
@@ -534,13 +533,17 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					//already bound, just forward the connection
 					sink.success(conn);
 				}
+				return;
 			}
-			else {
-				if (log.isDebugEnabled()) {
-					log.debug(format(c, "Channel connected, now {} active connections and {} inactive connections"),
-							pool.activeConnections, pool.inactiveConnections);
-				}
-				sink.success(conn);
+			//Connected, leave onStateChange forward the event if factory
+
+			if (log.isDebugEnabled()) {
+				log.debug(format(c, "Channel connected, now {} active " +
+								"connections and {} inactive connections"),
+						pool.activeConnections, pool.inactiveConnections);
+			}
+			if (pool.opsFactory == ChannelOperations.OnSetup.empty()) {
+				sink.success(Connection.from(c));
 			}
 		}
 

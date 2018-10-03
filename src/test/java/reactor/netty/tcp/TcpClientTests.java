@@ -47,16 +47,15 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.resources.LoopResources;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * @author Stephane Maldini
@@ -156,6 +155,26 @@ public class TcpClientTests {
 		client.dispose();
 
 		assertThat("latch was counted down", latch.getCount(), is(0L));
+	}
+
+
+	@Test
+	public void testTcpClient1ThreadAcquire() {
+
+		LoopResources resources = LoopResources.create("test", 1, true);
+
+
+		Connection client = TcpClient.create()
+		                             .host("localhost")
+		                             .port(echoServerPort)
+		                             .runOn(resources)
+		                             .wiretap()
+		                             .connectNow();
+
+		client.dispose();
+		resources.dispose();
+
+		assertThat("client was configured", client instanceof ChannelOperations);
 	}
 
 	@Test
