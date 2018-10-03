@@ -577,9 +577,11 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					}
 					else {
 						eventLoop.execute(() -> {
-							if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
-								// Returned value is deliberately ignored
-								((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
+							if (!f.isDone() && parent.hasPendingWriteBytes()) {
+								if (!parent.pendingWriteOffer.test(f, PENDING_WRITES) && f instanceof ChannelPromise) {
+									// Returned value is deliberately ignored
+									((ChannelPromise) f).setFailure(new IllegalStateException("Send Queue full?!"));
+								}
 							}
 						});
 					}
