@@ -17,6 +17,7 @@
 package reactor.netty.channel;
 
 import java.io.IOException;
+import java.net.SocketException;
 
 /**
  * An exception marking prematurely or unexpectedly closed inbound
@@ -39,10 +40,14 @@ public class AbortedException extends RuntimeException {
 	 * @return true if connection has been simply aborted on a tcp level
 	 */
 	public static boolean isConnectionReset(Throwable err) {
-		return err.getClass()
-		          .equals(AbortedException.class) || (err instanceof IOException && (err.getMessage() == null || err.getMessage()
-		                                                                                                            .contains("Broken pipe") || err.getMessage()
-		                                                                                                                                           .contains(
-				                                                                                                                                           "Connection reset by peer")));
+		return err instanceof AbortedException ||
+		       (err instanceof IOException && (err.getMessage() == null ||
+		                                       err.getMessage()
+		                                          .contains("Broken pipe") ||
+		                                       err.getMessage()
+		                                          .contains("Connection reset by peer"))) ||
+		       (err instanceof SocketException && err.getMessage() != null &&
+		                                          err.getMessage()
+		                                             .contains("Connection reset by peer"));
 	}
 }

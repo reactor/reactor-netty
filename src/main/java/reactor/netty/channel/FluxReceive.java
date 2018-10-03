@@ -354,7 +354,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		this.inboundDone = true;
 
 		if(channel.isActive()){
-			channel.close();
+			parent.markPersistent(false);
 		}
 		if (receiverFastpath && receiver != null) {
 			//parent.listener.onReceiveError(channel, err);
