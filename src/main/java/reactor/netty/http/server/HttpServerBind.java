@@ -297,10 +297,9 @@ final class HttpServerBind extends HttpServer
 		@Override
 		public void dispose() {
 			server.dispose();
-			InetSocketAddress addr = InetSocketAddress.createUnresolved(server.host(), server.port());
 
 			HttpResources.get()
-			             .disposeWhen(addr);
+			             .disposeWhen(server.address());
 		}
 
 		@Override

@@ -17,6 +17,7 @@
 package reactor.netty.resources;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
@@ -83,7 +84,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		toDispose = channelPools.entrySet()
 		                        .stream()
-		                        .filter(p -> p.getKey().holder.equals(address))
+		                        .filter(p -> compareAddresses(p.getKey().holder, address))
 		                        .collect(Collectors.toList());
 
 		toDispose.forEach(e -> {
@@ -94,6 +95,23 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				e.getValue().pool.close();
 			}
 		});
+	}
+
+	private boolean compareAddresses(SocketAddress origin, SocketAddress target) {
+		if (origin.equals(target)) {
+			return true;
+		}
+		else if (origin instanceof InetSocketAddress &&
+				target instanceof InetSocketAddress) {
+			InetSocketAddress isaOrigin = (InetSocketAddress) origin;
+			InetSocketAddress isaTarget = (InetSocketAddress) target;
+			InetAddress iaTarget = isaTarget.getAddress();
+			if (iaTarget != null && iaTarget.isAnyLocalAddress() &&
+					isaOrigin.getPort() == isaTarget.getPort()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override

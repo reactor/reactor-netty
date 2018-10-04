@@ -131,23 +131,31 @@ public class HttpServerTests {
 	//from https://github.com/reactor/reactor-netty/issues/90
 	@Test
 	public void testRestart() {
-		// start a first server with a handler that answers HTTP 200 OK
-		DisposableServer context = HttpServer.create()
-		                                     .port(8080)
-		                                     .handle((req, resp) -> resp.status(200)
-		                                                                .send().log())
-		                                     .wiretap()
-		                                     .bindNow();
+		doTestRestart(HttpServer.create()
+		                        .port(8080),
+		              HttpClient.create()
+		                        .port(8080));
+		doTestRestart(HttpServer.create()
+		                        // Any local address
+		                        .tcpConfiguration(tcpServer -> tcpServer.addressSupplier(() -> new InetSocketAddress(8080))),
+		              HttpClient.create()
+		                        .port(8080));
+	}
 
-		int code = HttpClient.create()
-		                     .port(8080)
-		                     .wiretap()
-		                     .get()
-		                     .uri("/")
-		                     .response()
-		                     .map(res -> res.status().code())
-//		                     .responseSingle((res, buf) -> Mono.just(res.status().code()))
-		                     .block();
+	private void doTestRestart(HttpServer server, HttpClient client) {
+		// start a first server with a handler that answers HTTP 200 OK
+		DisposableServer context = server.handle((req, resp) -> resp.status(200)
+		                                                            .send().log())
+		                                 .wiretap()
+		                                 .bindNow();
+
+		int code = client.wiretap()
+		                 .get()
+		                 .uri("/")
+		                 .response()
+		                 .map(res -> res.status().code())
+//		                 .responseSingle((res, buf) -> Mono.just(res.status().code()))
+		                 .block();
 
 		// checking the response status, OK
 		assertThat(code).isEqualTo(200);
@@ -155,19 +163,15 @@ public class HttpServerTests {
 		context.disposeNow();
 
 		// create a totally new server instance, with a different handler that answers HTTP 201
-		context = HttpServer.create()
-		                    .port(8080)
-		                    .handle((req, resp) -> resp.status(201).send())
-		                    .wiretap()
-		                    .bindNow();
+		context = server.handle((req, resp) -> resp.status(201).send())
+		                .wiretap()
+		                .bindNow();
 
-		code = HttpClient.create()
-		                 .port(8080)
-		                 .wiretap()
-		                 .get()
-		                 .uri("/")
-		                 .responseSingle((res, buf) -> Mono.just(res.status().code()))
-		                 .block();
+		code = client.wiretap()
+		             .get()
+		             .uri("/")
+		             .responseSingle((res, buf) -> Mono.just(res.status().code()))
+		             .block();
 
 		// fails, response status is 200 and debugging shows the the previous handler is called
 		assertThat(code).isEqualTo(201);
