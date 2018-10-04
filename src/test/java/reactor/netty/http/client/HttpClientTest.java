@@ -1003,7 +1003,6 @@ public class HttpClientTest {
 				                                                     .sendHeaders()))
 				          .bindNow();
 
-		AtomicInteger i = new AtomicInteger();
 		HttpClient.create()
 		          .addressSupplier(context::address)
 		          .headersWhen(h -> Mono.just(h.set("test", "test")).delayElement(Duration.ofSeconds(2)))
@@ -1034,7 +1033,6 @@ public class HttpClientTest {
 				                                                      .sendHeaders()))
 		                                     .bindNow();
 
-		AtomicInteger i = new AtomicInteger();
 		HttpClient.create()
 		          .addressSupplier(context::address)
 		          .cookie("test", c -> c.setValue("lol"))
@@ -1179,6 +1177,58 @@ public class HttpClientTest {
 				          .uri("wss://" + server.host() + ":" + server.port())
 				          .handle((in, out) -> Mono.empty()))
 				    .expectErrorMatches(t -> t.getCause() instanceof CertificateException)
+				.verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
+	}
+
+	public void testIssue407() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverSslContextBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .secure(spec -> spec.sslContext(serverSslContextBuilder))
+				          .handle((req, res) -> res.sendString(Mono.just("test")))
+				          .wiretap()
+				          .bindNow(Duration.ofSeconds(30));
+
+		SslContextBuilder clientSslContextBuilder =
+				SslContextBuilder.forClient()
+				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		HttpClient client =
+				HttpClient.create()
+				          .addressSupplier(server::address)
+				          .secure(spec -> spec.sslContext(clientSslContextBuilder));
+
+		StepVerifier.create(client.get()
+				                  .uri("/1")
+				                  .responseContent()
+				                  .aggregate()
+				                  .asString())
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.post()
+				                  .uri("/2")
+				                  .send(ByteBufFlux.fromString(Mono.just("test")))
+				                  .responseContent()
+				                  .aggregate()
+				                  .asString())
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(
+				client.secure(spec -> spec.sslContext(SslContextBuilder.forClient()))
+				      .wiretap()
+				      .post()
+				      .uri("/3")
+				      .responseContent()
+				      .aggregate()
+				      .asString())
+				    .expectError()
 				    .verify(Duration.ofSeconds(30));
 
 		server.disposeNow();

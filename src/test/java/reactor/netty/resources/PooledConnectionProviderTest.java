@@ -93,7 +93,7 @@ public class PooledConnectionProviderTest {
 		//"register" our fake Pool
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
-						InetSocketAddress.createUnresolved("localhost", 80)),
+						InetSocketAddress.createUnresolved("localhost", 80), -1),
 				pool);
 
 		Mono<Void> disposer = poolResources.disposeLater();
@@ -115,7 +115,7 @@ public class PooledConnectionProviderTest {
 		//"register" our fake Pool
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
-						InetSocketAddress.createUnresolved("localhost", 80)),
+						InetSocketAddress.createUnresolved("localhost", 80), -1),
 				pool);
 
 		poolResources.dispose();
