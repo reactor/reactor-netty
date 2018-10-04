@@ -293,6 +293,7 @@ public final class SslProvider {
 	final long                         closeNotifyFlushTimeoutMillis;
 	final long                         closeNotifyReadTimeoutMillis;
 	final Consumer<? super SslHandler> handlerConfigurator;
+	final int                          builderHashCode;
 
 	SslProvider(SslProvider.Build builder) {
 		this.sslContextBuilder = builder.sslCtxBuilder;
@@ -319,6 +320,7 @@ public final class SslProvider {
 		this.handshakeTimeoutMillis = builder.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = builder.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = builder.closeNotifyReadTimeoutMillis;
+		this.builderHashCode = builder.hashCode();
 	}
 
 	SslProvider(SslProvider from, Consumer<? super SslHandler> handlerConfigurator) {
@@ -337,6 +339,7 @@ public final class SslProvider {
 		this.handshakeTimeoutMillis = from.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
+		this.builderHashCode = from.builderHashCode;
 	}
 
 	SslProvider(SslProvider from, DefaultConfigurationType type) {
@@ -357,6 +360,7 @@ public final class SslProvider {
 		this.handshakeTimeoutMillis = from.handshakeTimeoutMillis;
 		this.closeNotifyFlushTimeoutMillis = from.closeNotifyFlushTimeoutMillis;
 		this.closeNotifyReadTimeoutMillis = from.closeNotifyReadTimeoutMillis;
+		this.builderHashCode = from.builderHashCode;
 	}
 
 	void updateDefaultConfiguration() {
@@ -424,6 +428,22 @@ public final class SslProvider {
 		return "SslProvider{" + asDetailedString() + "}";
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		SslProvider that = (SslProvider) o;
+		return builderHashCode == that.builderHashCode;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(builderHashCode);
+	}
 
 	static final class Build implements SslContextSpec, DefaultConfigurationSpec, Builder {
 
@@ -526,6 +546,30 @@ public final class SslProvider {
 		public SslProvider build() {
 			return new SslProvider(this);
 		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			Build build = (Build) o;
+			return handshakeTimeoutMillis == build.handshakeTimeoutMillis &&
+					closeNotifyFlushTimeoutMillis == build.closeNotifyFlushTimeoutMillis &&
+					closeNotifyReadTimeoutMillis == build.closeNotifyReadTimeoutMillis &&
+					Objects.equals(sslCtxBuilder, build.sslCtxBuilder) &&
+					type == build.type &&
+					Objects.equals(sslContext, build.sslContext) &&
+					Objects.equals(handlerConfigurator, build.handlerConfigurator);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(sslCtxBuilder, type, sslContext, handlerConfigurator,
+					handshakeTimeoutMillis, closeNotifyFlushTimeoutMillis, closeNotifyReadTimeoutMillis);
+		}
 	}
 
 	static ServerBootstrap removeSslSupport(ServerBootstrap b) {
@@ -553,6 +597,23 @@ public final class SslProvider {
 		@Override
 		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
 			return new SslSupportConsumer(sslProvider, bootstrap.config().remoteAddress());
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			DeferredSslSupport that = (DeferredSslSupport) o;
+			return Objects.equals(sslProvider, that.sslProvider);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(sslProvider);
 		}
 	}
 

@@ -231,7 +231,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
 					BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer,
-							new Http1Initializer(handler));
+							new Http1Initializer(handler, configuration.protocols));
 //					return;
 				}
 //				if ((configuration.protocols & HttpClientConfiguration.h2) == HttpClientConfiguration.h2) {
@@ -267,7 +267,7 @@ final class HttpClientConnect extends HttpClient {
 				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
 					BootstrapHandlers.updateConfiguration(b,
 							NettyPipeline.HttpInitializer,
-							new Http1Initializer(handler));
+							new Http1Initializer(handler, configuration.protocols));
 //					return;
 				}
 //				if ((configuration.protocols & HttpClientConfiguration.h2c) == HttpClientConfiguration.h2c) {
@@ -680,9 +680,11 @@ final class HttpClientConnect extends HttpClient {
 			implements BiConsumer<ConnectionObserver, Channel>  {
 
 		final HttpClientHandler handler;
+		final int protocols;
 
-		Http1Initializer(HttpClientHandler handler) {
+		Http1Initializer(HttpClientHandler handler, int protocols) {
 			this.handler = handler;
+			this.protocols = protocols;
 		}
 
 		@Override
@@ -696,6 +698,24 @@ final class HttpClientConnect extends HttpClient {
 						       NettyPipeline.HttpDecompressor,
 						       new HttpContentDecompressor());
 			}
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			Http1Initializer that = (Http1Initializer) o;
+			return handler.compress == that.handler.compress &&
+					protocols == that.protocols;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(handler.compress, protocols);
 		}
 	}
 

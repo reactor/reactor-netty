@@ -173,6 +173,27 @@ public final class ProxyProvider {
 		return "ProxyProvider{" + asDetailedString() + "}";
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		ProxyProvider that = (ProxyProvider) o;
+		return Objects.equals(username, that.username) &&
+				Objects.equals(password, that.password) &&
+				Objects.equals(getAddress(), that.getAddress()) &&
+				Objects.equals(getNonProxyHosts(), that.getNonProxyHosts()) &&
+				getType() == that.getType();
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(username, password, getAddress(), getNonProxyHosts(), getType());
+	}
+
 	static final class Build implements TypeSpec, AddressSpec, Builder {
 		String username;
 		Function<? super String, ? extends String> password;

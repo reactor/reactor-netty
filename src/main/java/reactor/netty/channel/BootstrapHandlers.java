@@ -31,6 +31,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
@@ -428,24 +429,7 @@ public abstract class BootstrapHandlers {
 
 	static BiConsumer<ConnectionObserver, ? super Channel> logConfiguration(LoggingHandler handler, boolean debugSsl) {
 		Objects.requireNonNull(handler, "loggingHandler");
-		return (listener, channel) -> {
-			if (channel.pipeline().get(NettyPipeline.SslHandler) != null) {
-				if (debugSsl) {
-					channel.pipeline()
-							.addBefore(NettyPipeline.SslHandler,
-									NettyPipeline.SslLoggingHandler,
-									new LoggingHandler("reactor.netty.tcp.ssl"));
-				}
-				channel.pipeline()
-						.addAfter(NettyPipeline.SslHandler,
-						          NettyPipeline.LoggingHandler,
-						          handler);
-			}
-			else {
-				channel.pipeline()
-						.addFirst(NettyPipeline.LoggingHandler, handler);
-			}
-		};
+		return new LoggingHandlerSupportConsumer(handler, debugSsl);
 	}
 
 	@ChannelHandler.Sharable
@@ -510,6 +494,24 @@ public abstract class BootstrapHandlers {
 			this.deferredConsumer = deferredConsumer;
 		}
 
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			PipelineConfiguration that = (PipelineConfiguration) o;
+			return Objects.equals(consumer, that.consumer) &&
+					Objects.equals(name, that.name) &&
+					Objects.equals(deferredConsumer, that.deferredConsumer);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(consumer, name, deferredConsumer);
+		}
 	}
 
 	static final class BootstrapPipelineHandler extends ArrayList<PipelineConfiguration>
@@ -554,4 +556,51 @@ public abstract class BootstrapHandlers {
 	static final ChannelOption<ChannelOperations.OnSetup> OPS_OPTION = ChannelOption.newInstance("ops_factory");
 	static final ChannelOption<ConnectionObserver> OBSERVER_OPTION = ChannelOption.newInstance("connectionObserver");
 
+
+	static final class LoggingHandlerSupportConsumer
+			implements BiConsumer<ConnectionObserver, Channel> {
+
+		final ChannelHandler handler;
+		final boolean debugSsl;
+
+		LoggingHandlerSupportConsumer(ChannelHandler handler, boolean debugSsl) {
+			this.handler = handler;
+			this.debugSsl = debugSsl;
+		}
+
+		@Override
+		public void accept(ConnectionObserver connectionObserver, Channel channel) {
+			ChannelPipeline pipeline = channel.pipeline();
+			if (pipeline.get(NettyPipeline.SslHandler) != null) {
+				if (debugSsl) {
+					pipeline.addBefore(NettyPipeline.SslHandler,
+									NettyPipeline.SslLoggingHandler,
+									new LoggingHandler("reactor.netty.tcp.ssl"));
+				}
+				pipeline.addAfter(NettyPipeline.SslHandler,
+								NettyPipeline.LoggingHandler,
+								handler);
+			}
+			else {
+				pipeline.addFirst(NettyPipeline.LoggingHandler, handler);
+			}
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			LoggingHandlerSupportConsumer that = (LoggingHandlerSupportConsumer) o;
+			return Objects.equals(handler, that.handler);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(handler);
+		}
+	}
 }

@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,6 +32,7 @@ import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
@@ -125,8 +127,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
 
 			NewConnectionProvider.convertLazyRemoteAddress(bootstrap);
-			PoolKey holder = new PoolKey(bootstrap.config()
-			                                      .remoteAddress());
+			ChannelHandler handler = bootstrap.config().handler();
+			PoolKey holder = new PoolKey(bootstrap.config().remoteAddress(),
+					handler != null ? handler.hashCode() : -1);
 
 			Pool pool;
 			for (; ; ) {
@@ -622,12 +625,14 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	final static class PoolKey {
 
-		final SocketAddress             holder;
-		final String                    fqdn;
+		final SocketAddress holder;
+		final int pipelineKey;
+		final String fqdn;
 
-		PoolKey(SocketAddress holder) {
+		PoolKey(SocketAddress holder, int pipelineKey) {
 			this.holder = holder;
 			this.fqdn = holder instanceof InetSocketAddress ? holder.toString() : null;
+			this.pipelineKey = pipelineKey;
 		}
 
 		@Override
@@ -638,18 +643,15 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			if (o == null || getClass() != o.getClass()) {
 				return false;
 			}
-
-			PoolKey that = (PoolKey) o;
-
-			return holder.equals(that.holder) && (fqdn != null ? fqdn.equals(that.fqdn) :
-					that.fqdn == null);
+			PoolKey poolKey = (PoolKey) o;
+			return pipelineKey == poolKey.pipelineKey &&
+					Objects.equals(holder, poolKey.holder) &&
+					Objects.equals(fqdn, poolKey.fqdn);
 		}
 
 		@Override
 		public int hashCode() {
-			int result = holder.hashCode();
-			result = 31 * result + (fqdn != null ? fqdn.hashCode() : 0);
-			return result;
+			return Objects.hash(holder, pipelineKey, fqdn);
 		}
 	}
 }
