@@ -223,15 +223,30 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	default NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file);
-		if ((context().channel().pipeline().get(SslHandler.class) != null) ||
-				context().channel().pipeline().get(NettyPipeline.CompressionHandler) != null ||
-				(!(context().channel().eventLoop() instanceof NioEventLoop) &&
-						!"file".equals(file.toUri().getScheme()))) {
-			return sendFileChunked(file, position, count);
-		}
 
 		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
-				fc -> FutureMono.from(context().channel().writeAndFlush(new DefaultFileRegion(fc, position, count))),
+				fc -> {
+					if ((context().channel().pipeline().get(SslHandler.class) != null) ||
+							context().channel().pipeline().get(NettyPipeline.CompressionHandler) != null ||
+							(!(context().channel().eventLoop() instanceof NioEventLoop) &&
+									!"file".equals(file.toUri().getScheme()))) {
+						final FileChunkedStrategy<?> strategy = getFileChunkedStrategy();
+						strategy.preparePipeline(context());
+
+						try {
+							// TODO: tune the chunk size
+							ChunkedInput<?> message = strategy.chunkFile(fc, position, count, 1024);
+							return FutureMono.from(context().channel().writeAndFlush(message));
+						}
+						catch (Exception e) {
+							return Mono.error(e);
+						}
+					}
+					else {
+						return FutureMono.from(context().channel()
+						                                .writeAndFlush(new DefaultFileRegion(fc, position, count)));
+					}
+				},
 				fc -> {
 					try {
 						fc.close();
@@ -243,10 +258,10 @@ public interface NettyOutbound extends Publisher<Void> {
 	default NettyOutbound sendFileChunked(Path file, long position, long count) {
 		Objects.requireNonNull(file);
 		final FileChunkedStrategy<?> strategy = getFileChunkedStrategy();
-		strategy.preparePipeline(context());
 
 		return then(Mono.using(() -> FileChannel.open(file, StandardOpenOption.READ),
 				fc -> {
+					strategy.preparePipeline(context());
 						try {
 							// TODO: tune the chunk size
 							ChunkedInput<?> message = strategy.chunkFile(fc, position, count, 1024);

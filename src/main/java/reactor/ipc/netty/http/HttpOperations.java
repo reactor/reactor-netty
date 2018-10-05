@@ -145,7 +145,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	protected abstract HttpMessage newFullEmptyBodyMessage();
 
 	@Override
-	public NettyOutbound sendFile(Path file, long position, long count) {
+	public final NettyOutbound sendFile(Path file, long position, long count) {
 		Objects.requireNonNull(file);
 
 		if (hasSentHeaders()) {
