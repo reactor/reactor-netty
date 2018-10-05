@@ -117,7 +117,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
-	public void sendZipFileCompressionPredicate() throws IOException {
+	public void sendZipFileCompressionPredicate_1() throws IOException {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
@@ -127,6 +127,36 @@ public class HttpSendFileTests {
 			long fileSize = Files.size(fromZipFile);
 
 			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize), true, (req, res) -> true);
+		}
+	}
+
+	@Test
+	public void sendZipFileCompressionPredicate_2() throws IOException {
+		Path path = Files.createTempFile(null, ".zip");
+		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
+		path.toFile().deleteOnExit();
+
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+			Path fromZipFile = zipFs.getPath("/largeFile.txt");
+			long fileSize = Files.size(fromZipFile);
+
+			assertSendFile(out -> out.addHeader("test", "test").sendFile(fromZipFile, 0, fileSize), true,
+					(req, res) -> res.responseHeaders().contains("test"));
+		}
+	}
+
+	@Test
+	public void sendZipFileCompressionPredicate_3() throws IOException {
+		Path path = Files.createTempFile(null, ".zip");
+		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
+		path.toFile().deleteOnExit();
+
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+			Path fromZipFile = zipFs.getPath("/largeFile.txt");
+			long fileSize = Files.size(fromZipFile);
+
+			assertSendFile(out -> out.addHeader("test", "test").sendFile(fromZipFile, 0, fileSize), true,
+					(req, res) -> !res.responseHeaders().contains("test"));
 		}
 	}
 
