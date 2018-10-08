@@ -178,6 +178,14 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		                                             .allMatch(AtomicBoolean::get);
 	}
 
+	@Override
+	public String toString() {
+		return "PooledConnectionProvider {" +
+				"name=" + name +
+				", poolFactory=" + poolFactory +
+				'}';
+	}
+
 	@SuppressWarnings("FutureReturnValueIgnored")
 	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, Pool pool) {
 		Future<Channel> f = pool.acquire();

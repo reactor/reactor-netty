@@ -159,6 +159,16 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return clientLoops;
 	}
 
+	@Override
+	public String toString() {
+		return "DefaultLoopResources {" +
+				"prefix=" + prefix +
+				", daemon=" + daemon +
+				", selectCount=" + selectCount +
+				", workerCount=" + workerCount +
+				'}';
+	}
+
 	EventLoopGroup cacheNativeSelectLoops() {
 		if (cacheNativeSelectLoops == cacheNativeServerLoops) {
 			return cacheNativeServerLoops();

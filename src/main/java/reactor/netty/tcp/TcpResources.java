@@ -30,6 +30,8 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.annotation.NonNull;
 
 /**
@@ -222,13 +224,23 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 			if (resources == null || loops != null || provider != null) {
 				update = create(resources, loops, provider, name, onNew);
 				if (ref.compareAndSet(resources, update)) {
-					if(resources != null){
-						if(loops != null){
+					if(resources != null) {
+						if(loops != null) {
+							log.warn("[{}] resources will use a new LoopResources: {}," +
+									"the previous LoopResources will be disposed", name, loops);
 							resources.defaultLoops.dispose();
 						}
-						if(provider != null){
+						if(provider != null) {
+							log.warn("[{}] resources will use a new ConnectionProvider: {}," +
+									"the previous ConnectionProvider will be disposed", name, provider);
 							resources.defaultProvider.dispose();
 						}
+					}
+					else {
+						String loopType = loops == null ? "default" : "provided";
+						log.warn("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						String poolType = provider == null ? "default" : "provided";
+						log.warn("[{}] resources will use the {} ConnectionProvider: {}", name, poolType, update.defaultProvider);
 					}
 					return update;
 				}
@@ -242,6 +254,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		}
 	}
 
+	static final Logger                                                      log = Loggers.getLogger(TcpResources.class);
 	static final AtomicReference<TcpResources>                               tcpResources;
 	static final BiFunction<LoopResources, ConnectionProvider, TcpResources> ON_TCP_NEW;
 
