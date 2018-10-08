@@ -16,9 +16,11 @@
 package reactor.ipc.netty.resources;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.ipc.netty.tcp.TcpResources;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,4 +57,40 @@ public class DefaultLoopResourcesTest {
 		assertThat(secondInvocation).isLessThan(firstInvocation);
 	}
 
+	@Test
+	public void testIssue416() {
+		TestResources resources = TestResources.get();
+
+		TestResources.set(PoolResources.fixed("test"));
+		assertThat(resources.pools.isDisposed()).isTrue();
+		assertThat(resources.loops.isDisposed()).isFalse();
+
+		TestResources.set(LoopResources.create("test"));
+		assertThat(resources.loops.isDisposed()).isTrue();
+
+		assertThat(resources.isDisposed()).isTrue();
+	}
+
+	static final class TestResources extends TcpResources {
+		final LoopResources loops;
+		final PoolResources pools;
+
+		TestResources(LoopResources defaultLoops, PoolResources defaultPools) {
+			super(defaultLoops, defaultPools);
+			this.loops = defaultLoops;
+			this.pools = defaultPools;
+		}
+
+		public static TestResources get() {
+			return getOrCreate(testResources, null, null, TestResources::new,  "test");
+		}
+		public static TestResources set(LoopResources loops) {
+			return getOrCreate(testResources, loops, null, TestResources::new, "test");
+		}
+		public static TestResources set(PoolResources pools) {
+			return getOrCreate(testResources, null, pools, TestResources::new, "test");
+		}
+
+		static final AtomicReference<TestResources> testResources = new AtomicReference<>();
+	}
 }

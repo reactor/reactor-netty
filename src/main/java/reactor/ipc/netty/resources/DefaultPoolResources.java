@@ -85,6 +85,14 @@ final class DefaultPoolResources implements PoolResources {
 		}
 	}
 
+	@Override
+	public String toString() {
+		return "DefaultPoolResources {" +
+				"name=" + name +
+				", provider=" + provider +
+				'}';
+	}
+
 	final static class Pool extends AtomicBoolean
 			implements ChannelPoolHandler, ChannelPool, ChannelHealthChecker,
 			           GenericFutureListener<Future<Channel>> {

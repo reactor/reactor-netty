@@ -31,6 +31,8 @@ import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.resources.LoopResources;
 import reactor.ipc.netty.resources.PoolResources;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * Hold the default Tcp resources
@@ -219,13 +221,23 @@ public class TcpResources implements PoolResources, LoopResources {
 			if (resources == null || loops != null || pools != null) {
 				update = create(resources, loops, pools, name, onNew);
 				if (ref.compareAndSet(resources, update)) {
-					if(resources != null){
-						if(loops != null){
+					if(resources != null) {
+						if(loops != null) {
+							log.warn("[{}] resources will use a new LoopResources: {}," +
+									"the previous LoopResources will be disposed", name, loops);
 							resources.defaultLoops.dispose();
 						}
-						if(pools != null){
+						if(pools != null) {
+							log.warn("[{}] resources will use a new PoolResources: {}," +
+									"the previous PoolResources will be disposed", name, pools);
 							resources.defaultPools.dispose();
 						}
+					}
+					else {
+						String loopType = loops == null ? "default" : "provided";
+						log.warn("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						String poolType = pools == null ? "default" : "provided";
+						log.warn("[{}] resources will use the {} PoolResources: {}", name, poolType, update.defaultPools);
 					}
 					return update;
 				}
@@ -239,6 +251,7 @@ public class TcpResources implements PoolResources, LoopResources {
 		}
 	}
 
+	static final Logger                                                 log = Loggers.getLogger(TcpResources.class);
 	static final AtomicReference<TcpResources>                          tcpResources;
 	static final BiFunction<LoopResources, PoolResources, TcpResources> ON_TCP_NEW;
 

@@ -26,6 +26,8 @@ import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.ipc.netty.resources.LoopResources;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * Hold the default UDP resources
@@ -185,10 +187,14 @@ public class UdpResources implements LoopResources {
 			if (resources == null || loops != null) {
 				update = create(resources, loops, name, onNew);
 				if (udpResources.compareAndSet(resources, update)) {
-					if(resources != null){
-						if(loops != null){
-							resources.defaultLoops.dispose();
-						}
+					if(resources != null) {
+						log.warn("[{}] resources will use a new LoopResources: {}," +
+								"the previous LoopResources will be disposed", name, loops);
+						resources.defaultLoops.dispose();
+					}
+					else {
+						String loopType = loops == null ? "default" : "provided";
+						log.warn("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
 					}
 					return update;
 				}
@@ -202,6 +208,7 @@ public class UdpResources implements LoopResources {
 		}
 	}
 
+	static final Logger                                log = Loggers.getLogger(UdpResources.class);
 	static final AtomicReference<UdpResources>         udpResources;
 	static final Function<LoopResources, UdpResources> ON_UDP_NEW;
 
