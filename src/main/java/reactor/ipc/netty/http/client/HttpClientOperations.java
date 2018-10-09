@@ -722,10 +722,13 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			if (replace(ops)) {
 				Mono<Void> handshake =
 						FutureMono.from(ops.handshakerResult)
-						                   .then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops))));
-				if (websocketHandler != noopHandler()) {
-					handshake = handshake.doAfterSuccessOrError(ops);
-				}
+						          .doOnSuccess(aVoid -> {
+						              Mono<Void> result = Mono.from(websocketHandler.apply(ops, ops));
+						              if (websocketHandler != noopHandler()) {
+						                  result = result.doAfterSuccessOrError(ops);
+						              }
+						              result.subscribe();
+						          });
 				return handshake;
 			}
 		}
