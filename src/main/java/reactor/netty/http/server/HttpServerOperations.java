@@ -544,14 +544,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			if (rebind(ops)) {
 				return FutureMono.from(ops.handshakerResult)
-				                 .then(Mono.defer(() -> {
-					                 //skip handler if no matching subprotocol
-					                 if (protocols != null && ops.selectedSubprotocol() == null) {
-						                 return Mono.empty();
-					                 }
-					                 return Mono.fromDirect(websocketHandler.apply(ops, ops));
-				                 }))
-				                 .doAfterSuccessOrError(ops);
+				                 .doOnSuccess(aVoid -> {
+				                     //skip handler if no matching subprotocol
+				                     if (protocols == null || ops.selectedSubprotocol() != null) {
+				                         Mono.fromDirect(websocketHandler.apply(ops, ops))
+				                             .doAfterSuccessOrError(ops)
+				                             .subscribe();
+				                     }
+				                 });
 			}
 		}
 		else {
