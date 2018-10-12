@@ -720,28 +720,26 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
 			if (replace(ops)) {
-				Mono<Void> handshake =
-						FutureMono.from(ops.handshakerResult)
-						          .doOnSuccess(aVoid -> {
-						              Mono<Void> result = Mono.from(websocketHandler.apply(ops, ops));
-						              if (websocketHandler != noopHandler()) {
-						                  result = result.doAfterSuccessOrError(ops);
-						              }
-						              result.subscribe();
-						          });
-				return handshake;
+				return FutureMono.from(ops.handshakerResult)
+						         .doOnSuccess(aVoid -> {
+						             Mono<Void> result = Mono.from(websocketHandler.apply(ops, ops));
+						             if (websocketHandler != noopHandler()) {
+						                 result = result.doAfterSuccessOrError(ops);
+						             }
+						             result.subscribe();
+						         });
 			}
 		}
 		else if (isWebsocket()) {
-			HttpClientWSOperations ops =
-					(HttpClientWSOperations) get(channel());
+			HttpClientWSOperations ops = (HttpClientWSOperations) get(channel());
 			if(ops != null) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
 
 				if (websocketHandler != noopHandler()) {
 					handshake =
-							handshake.then(Mono.defer(() -> Mono.from(websocketHandler.apply(ops, ops)))
-							         .doAfterSuccessOrError(ops));
+							handshake.doOnSuccess(aVoid -> Mono.from(websocketHandler.apply(ops, ops))
+							                                   .doAfterSuccessOrError(ops)
+							                                   .subscribe());
 				}
 				return handshake;
 			}
