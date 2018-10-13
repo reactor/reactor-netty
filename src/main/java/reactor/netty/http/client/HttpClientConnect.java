@@ -455,7 +455,7 @@ final class HttpClientConnect extends HttpClient {
 
 			if (baseUrl != null && uri.startsWith("/")) {
 				if (baseUrl.endsWith("/")) {
-					baseUrl = baseUrl.substring(0, baseUrl.length() - 2);
+					baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
 				}
 				uri = baseUrl + uri;
 			}
