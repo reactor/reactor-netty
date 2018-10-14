@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -938,5 +939,29 @@ public class WebsocketTest {
 		latch.await(30, TimeUnit.SECONDS);
 
 		Assertions.assertThat(error.get()).isFalse();
+	}
+
+	@Test
+	public void testIssue460() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .host("::1")
+				          .wiretap()
+				          .handle((req, res) -> res.sendWebsocket((in, out) -> Mono.never()))
+				          .bindNow();
+
+		HttpClient httpClient =
+				HttpClient.create()
+				          .addressSupplier(server::address)
+				          .wiretap()
+				          .headers(h -> h.add(HttpHeaderNames.HOST, "[::1"));
+
+		StepVerifier.create(httpClient.websocket()
+		                              .connect())
+		                              .expectError()
+		                              .verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
 	}
 }

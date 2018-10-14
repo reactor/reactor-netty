@@ -376,7 +376,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 		}
 		catch (URISyntaxException e) {
-			throw Exceptions.bubble(e);
+			throw new IllegalArgumentException(e);
 		}
 		return uri;
 	}
