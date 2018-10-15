@@ -59,7 +59,7 @@ public class SslProviderTests {
 				      .secure(spec -> spec.sslContext(builder))
 				      .bindNow();
 		assertTrue(result.isEmpty());
-		disposableServer.dispose();
+		disposableServer.disposeNow();
 	}
 
 	@Test
@@ -69,7 +69,7 @@ public class SslProviderTests {
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
 		assertTrue(result.isEmpty());
-		disposableServer.dispose();
+		disposableServer.disposeNow();
 	}
 
 	@Test
@@ -80,7 +80,7 @@ public class SslProviderTests {
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
 		assertTrue(result.isEmpty());
-		disposableServer.dispose();
+		disposableServer.disposeNow();
 	}
 
 	@Test
@@ -90,7 +90,7 @@ public class SslProviderTests {
 				      .secure(spec -> spec.sslContext(builder))
 				      .bindNow();
 		assertEquals(2, result.size());
-		disposableServer.dispose();
+		disposableServer.disposeNow();
 	}
 
 	@Test
@@ -100,7 +100,7 @@ public class SslProviderTests {
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
 		assertEquals(2, result.size());
-		disposableServer.dispose();
+		disposableServer.disposeNow();
 	}
 
 	@Test
@@ -111,6 +111,6 @@ public class SslProviderTests {
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
 		assertEquals(2, result.size());
-		disposableServer.dispose();
+		disposableServer.disposeNow();
 	}
 }

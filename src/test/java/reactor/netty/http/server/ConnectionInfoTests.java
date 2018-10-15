@@ -221,7 +221,7 @@ public class ConnectionInfoTests {
 
 	@After
 	public void tearDown() {
-		this.connection.dispose();
+		this.connection.disposeNow();
 	}
 
 }

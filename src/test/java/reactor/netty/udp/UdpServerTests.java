@@ -119,7 +119,7 @@ public class UdpServerTests {
 		                                   .block(Duration.ofSeconds(30));
 
 		assertThat("latch was counted down", latch.await(10, TimeUnit.SECONDS));
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -200,7 +200,7 @@ public class UdpServerTests {
 				latch.getCount() == 0);
 
 		for (Connection s : servers) {
-			s.dispose();
+			s.disposeNow();
 		}
 	}
 

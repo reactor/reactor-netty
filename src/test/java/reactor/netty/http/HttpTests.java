@@ -77,7 +77,7 @@ public class HttpTests {
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(5000));
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -117,7 +117,7 @@ public class HttpTests {
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -251,7 +251,7 @@ public class HttpTests {
 		            .expectNext(500)
 		            .verifyComplete();
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 /*	@Test
@@ -347,7 +347,7 @@ public class HttpTests {
 
 		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -420,7 +420,7 @@ public class HttpTests {
 				          .block();
 
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 
@@ -495,7 +495,7 @@ public class HttpTests {
 				          .block();
 
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test

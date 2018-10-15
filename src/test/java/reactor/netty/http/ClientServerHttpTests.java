@@ -241,7 +241,7 @@ public class ClientServerHttpTests {
 
 	@After
 	public void clean() {
-		httpServer.dispose();
+		httpServer.disposeNow();
 	}
 
 	public Set<Integer> findDuplicates(List<Integer> listContainingDuplicates) {

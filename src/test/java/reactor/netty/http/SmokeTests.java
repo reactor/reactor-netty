@@ -103,7 +103,7 @@ public class SmokeTests {
 	@After
 	public void clean() {
 		processor.onComplete();
-		httpServer.dispose();
+		httpServer.disposeNow();
 	}
 
 	public Sender newSender() {

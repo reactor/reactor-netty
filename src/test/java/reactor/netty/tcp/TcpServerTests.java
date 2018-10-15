@@ -186,8 +186,8 @@ public class TcpServerTests {
 
 		assertTrue("Latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
-		connectedClient.dispose();
-		connectedServer.dispose();
+		connectedClient.disposeNow();
+		connectedServer.disposeNow();
 	}
 
 	@Test(timeout = 10000)
@@ -202,7 +202,7 @@ public class TcpServerTests {
 
 		assertNotNull(httpServer);
 
-		httpServer.dispose();
+		httpServer.disposeNow();
 	}
 
 	@Test
@@ -236,8 +236,8 @@ public class TcpServerTests {
 
 		assertTrue("Latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
-		client.dispose();
-		server.dispose();
+		client.disposeNow();
+		server.disposeNow();
 	}
 
 	@Test
@@ -281,8 +281,8 @@ public class TcpServerTests {
 
 		assertTrue("Latch was counted down", latch.await(10, TimeUnit.SECONDS));
 
-		connected.dispose();
-		clientContext.dispose();
+		connected.disposeNow();
+		clientContext.disposeNow();
 	}
 
 	@Test
@@ -326,7 +326,7 @@ public class TcpServerTests {
 			broadcaster.onNext(System.currentTimeMillis() + "\n");
 		}
 
-		s.dispose();
+		s.disposeNow();
 
 	}
 
@@ -360,8 +360,8 @@ public class TcpServerTests {
 
 		assertNotNull(client);
 
-		client.dispose();
-		server.dispose();
+		client.disposeNow();
+		server.disposeNow();
 
 		assertThat("Latch was counted down", countDownLatch.await(5, TimeUnit.SECONDS));
 	}
@@ -660,7 +660,7 @@ public class TcpServerTests {
 		Assertions.assertThat(new String(client.data.array(), Charset.defaultCharset()))
 		          .isEqualTo("{\"name\":\"Jane Doe\"}");
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -726,8 +726,8 @@ public class TcpServerTests {
 		Assertions.assertThat(dataLatch.await(30, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(dataLatch.getCount()).isEqualTo(0);
 
-		server.dispose();
-		client.dispose();
+		server.disposeNow();
+		client.disposeNow();
 	}
 
 	@Test
@@ -800,8 +800,8 @@ public class TcpServerTests {
 		Assertions.assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
 		Assertions.assertThat(latch.getCount()).isEqualTo(0);
 
-		server.dispose();
-		client.dispose();
+		server.disposeNow();
+		client.disposeNow();
 	}
 
 	@Test

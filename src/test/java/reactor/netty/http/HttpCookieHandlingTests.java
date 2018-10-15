@@ -67,7 +67,7 @@ public class HttpCookieHandlingTests {
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -100,6 +100,6 @@ public class HttpCookieHandlingTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		server.dispose();
+		server.disposeNow();
 	}
 }

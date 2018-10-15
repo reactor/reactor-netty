@@ -90,7 +90,7 @@ public class ChannelOperationsHandlerTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test

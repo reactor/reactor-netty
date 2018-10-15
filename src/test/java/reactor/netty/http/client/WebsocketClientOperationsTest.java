@@ -77,7 +77,7 @@ public class WebsocketClientOperationsTest {
 		            .expectError(WebSocketHandshakeException.class)
 		            .verify();
 
-		httpServer.dispose();
+		httpServer.disposeNow();
 	}
 
 	private Mono<HttpClientRequest> doLoginFirst(Mono<HttpClientRequest> request, int port) {

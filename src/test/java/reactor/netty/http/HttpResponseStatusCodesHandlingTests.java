@@ -57,6 +57,6 @@ public class HttpResponseStatusCodesHandlingTests {
 				    .expectNext(404)
 				    .verifyComplete();
 
-		server.dispose();
+		server.disposeNow();
 	}
 }

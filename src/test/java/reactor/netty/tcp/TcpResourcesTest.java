@@ -164,6 +164,6 @@ public class TcpResourcesTest {
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 
 		client.dispose();
-		server.dispose();
+		server.disposeNow();
 	}
 }

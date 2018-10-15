@@ -463,7 +463,7 @@ public class HttpCompressionClientServerTests {
 		            .expectComplete()
 		            .verify();
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -508,6 +508,6 @@ public class HttpCompressionClientServerTests {
 		            .expectComplete()
 		            .verify();
 
-		server.dispose();
+		server.disposeNow();
 	}
 }

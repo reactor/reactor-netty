@@ -120,7 +120,7 @@ public class HttpClientTest {
 		          .log()
 		          .blockLast(Duration.ofSeconds(30));
 
-		x.dispose();
+		x.disposeNow();
 
 		pool.dispose();
 	}
@@ -173,7 +173,7 @@ public class HttpClientTest {
 
 		latch.await();
 		pool.dispose();
-		serverContext.dispose();
+		serverContext.disposeNow();
 		System.out.println("Local Addresses used: " + localAddresses);
 	}
 
@@ -215,7 +215,7 @@ public class HttpClientTest {
 			return;
 		}
 
-		x.dispose();
+		x.disposeNow();
 		pool.dispose();
 		Assert.fail("Not aborted");
 	}
@@ -243,7 +243,7 @@ public class HttpClientTest {
 		StepVerifier.create(Flux.zip(mono1,mono2))
 				.expectNext(Tuples.of("hello","hello")).expectComplete().verify(Duration.ofSeconds(2000));
 		
-		c.dispose();
+		c.disposeNow();
 		pool.dispose();
 	}
 
@@ -276,7 +276,7 @@ public class HttpClientTest {
 		page.block(Duration.ofSeconds(30));
 		cancelledPage.block(Duration.ofSeconds(30));
 		page.block(Duration.ofSeconds(30));
-		c.dispose();
+		c.disposeNow();
 	}
 
 	@Test
@@ -313,7 +313,7 @@ public class HttpClientTest {
 		          .block();
 
 		latch.await();
-		c.dispose();
+		c.disposeNow();
 	}
 
 	@Test
@@ -675,7 +675,7 @@ public class HttpClientTest {
 				    })
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
-		c.dispose();
+		c.disposeNow();
 	}
 
 	@Test
@@ -714,7 +714,7 @@ public class HttpClientTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -744,7 +744,7 @@ public class HttpClientTest {
 		          .responseContent()
 		          .blockLast();
 
-		c.dispose();
+		c.disposeNow();
 	}
 
 	@Test
@@ -952,7 +952,7 @@ public class HttpClientTest {
 		          .responseContent()
 		          .blockLast(Duration.ofSeconds(30));
 
-		context.dispose();
+		context.disposeNow();
 	}
 
 	@Test
@@ -989,7 +989,7 @@ public class HttpClientTest {
 		          .repeat(4)
 		          .blockLast();
 
-		context.dispose();
+		context.disposeNow();
 	}
 
 	@Test
@@ -1015,7 +1015,7 @@ public class HttpClientTest {
 		          .repeat(4)
 		          .blockLast();
 
-		context.dispose();
+		context.disposeNow();
 	}
 
 	@Test
@@ -1044,7 +1044,7 @@ public class HttpClientTest {
 		          .responseContent()
 		          .blockLast();
 
-		context.dispose();
+		context.disposeNow();
 	}
 
 	@Test
@@ -1079,7 +1079,7 @@ public class HttpClientTest {
 				    .expectComplete()
 				    .verify();
 
-		httpServer.dispose();
+		httpServer.disposeNow();
 		pr.dispose();
 	}
 
@@ -1107,7 +1107,7 @@ public class HttpClientTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	private HttpClient createHttpClientForContext(DisposableServer context) {
@@ -1156,7 +1156,7 @@ public class HttpClientTest {
 
 		assertThat(response).isEqualTo("test");
 
-		server.dispose();
+		server.disposeNow();
 		connectionProvider.dispose();
 	}
 }

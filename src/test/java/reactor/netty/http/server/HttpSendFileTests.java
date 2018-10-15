@@ -266,7 +266,7 @@ public class HttpSendFileTests {
 			assertThat(response).isEqualTo(Files.readAllBytes(tempFile));
 		}
 		finally {
-			context.dispose();
+			context.disposeNow();
 		}
 	}
 

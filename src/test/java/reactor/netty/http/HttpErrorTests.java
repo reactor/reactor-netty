@@ -54,6 +54,6 @@ public class HttpErrorTests {
 		                             .collectList())
 		            .verifyError(IOException.class);
 
-		server.dispose();
+		server.disposeNow();
 	}
 }

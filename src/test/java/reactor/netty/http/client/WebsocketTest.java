@@ -65,7 +65,7 @@ public class WebsocketTest {
 	@After
 	public void disposeHttpServer() {
 		if (httpServer != null)
-			httpServer.dispose();
+			httpServer.disposeNow();
 	}
 
 	@Test
@@ -192,7 +192,7 @@ public class WebsocketTest {
 		AtomicInteger clientRes = new AtomicInteger();
 		AtomicInteger serverRes = new AtomicInteger();
 
-		DisposableServer server =
+		httpServer =
 				HttpServer.create()
 				          .port(0)
 				          .route(r -> r.get("/test/{param}", (req, res) -> {
@@ -211,7 +211,7 @@ public class WebsocketTest {
 				          .bindNow(Duration.ofSeconds(5));
 
 		HttpClient client = HttpClient.create()
-		                              .port(server.address().getPort())
+		                              .port(httpServer.address().getPort())
 		                              .wiretap();
 
 		Mono<List<String>> response =
@@ -247,8 +247,6 @@ public class WebsocketTest {
 		            .verify();
 
 		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
-
-		server.dispose();
 	}
 
 	@Test

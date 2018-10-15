@@ -125,7 +125,7 @@ public class HttpServerTests {
 		    .collectList()
 		    .block();
 
-		c.dispose();
+		c.disposeNow();
 	}
 
 	//from https://github.com/reactor/reactor-netty/issues/90
@@ -196,7 +196,7 @@ public class HttpServerTests {
 				          .block();
 		assertThat(code).isEqualTo(500);
 
-		c.dispose();
+		c.disposeNow();
 
 	}
 
@@ -251,8 +251,8 @@ public class HttpServerTests {
 
 		Assert.assertTrue(latch.await(45, TimeUnit.SECONDS));
 
-		server.dispose();
-		client.dispose();
+		server.disposeNow();
+		client.disposeNow();
 	}
 
 	@Test
@@ -284,7 +284,7 @@ public class HttpServerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		c.dispose();
+		c.disposeNow();
 	}
 
 	@Test
@@ -359,7 +359,7 @@ public class HttpServerTests {
 		Assert.assertEquals(response0, response5);
 
 		p.dispose();
-		s.dispose();
+		s.disposeNow();
 	}
 
 	@Test
@@ -460,7 +460,7 @@ public class HttpServerTests {
 		checkResponse("/304-1", server.address());
 		checkResponse("/304-2", server.address());
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	private void checkResponse(String url, InetSocketAddress address) {
@@ -548,7 +548,7 @@ public class HttpServerTests {
 		doTestContentLengthHeadRequest("/8", server.address(), HttpMethod.HEAD, false, true);
 		doTestContentLengthHeadRequest("/9", server.address(), HttpMethod.HEAD, false, false);
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
@@ -616,7 +616,7 @@ public class HttpServerTests {
 			doTestIssue186(client);
 		}
 		finally {
-			server.dispose();
+			server.disposeNow();
 		}
 
 	}
@@ -667,7 +667,7 @@ public class HttpServerTests {
 
 		FutureMono.from(ch.get().closeFuture()).block(Duration.ofSeconds(30));
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -703,7 +703,7 @@ public class HttpServerTests {
 			assertThat(context.get().get("Hello").equals("World")).isTrue();
 		}
 		finally {
-			server.dispose();
+			server.disposeNow();
 		}
 
 	}
@@ -799,7 +799,7 @@ public class HttpServerTests {
 					Assert.assertEquals(e.localPort(), d.port());
 					e.printStackTrace();
 				}
-				d.dispose();
+				d.disposeNow();
 	}
 
 	private void doTestIssue309(String path, HttpServer httpServer) {
@@ -819,7 +819,7 @@ public class HttpServerTests {
 		            .expectComplete()
 		            .verify();
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test

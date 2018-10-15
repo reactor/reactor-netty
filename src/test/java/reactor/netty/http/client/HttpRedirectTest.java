@@ -82,7 +82,7 @@ public class HttpRedirectTest {
 			    .blockLast(Duration.ofSeconds(30));
 		}
 		finally {
-			server.dispose();
+			server.disposeNow();
 		}
 
 	}
@@ -146,7 +146,7 @@ public class HttpRedirectTest {
 		              .block(Duration.ofSeconds(30));
 		Assertions.assertThat(value).isNull();
 
-		server.dispose();
+		server.disposeNow();
 	}
 
 	@Test
@@ -210,7 +210,7 @@ public class HttpRedirectTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		server1.dispose();
-		server2.dispose();
+		server1.disposeNow();
+		server2.disposeNow();
 	}
 }

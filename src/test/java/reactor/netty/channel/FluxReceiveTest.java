@@ -86,8 +86,8 @@ public class FluxReceiveTest {
 		                            .onErrorResume(t -> Mono.empty()))
 		    .blockLast(Duration.ofSeconds(15));
 
-		server1.dispose();
-		server2.dispose();
+		server1.disposeNow();
+		server2.disposeNow();
 	}
 
 	@Test
@@ -135,8 +135,8 @@ public class FluxReceiveTest {
 		                            .onErrorResume(t -> Mono.empty()))
 		    .blockLast(Duration.ofSeconds(15));
 
-		server1.dispose();
-		server2.dispose();
+		server1.disposeNow();
+		server2.disposeNow();
 	}
 
 	/*static final Logger logger = Loggers.getLogger(FluxReceiveTest.class);

@@ -97,9 +97,9 @@ public class UdpClientTest {
 				         .block(Duration.ofSeconds(30));
 
 		assertTrue(latch.await(30, TimeUnit.SECONDS));
-		server.dispose();
-		client1.dispose();
-		client2.dispose();
+		server.disposeNow();
+		client1.disposeNow();
+		client2.disposeNow();
 	}
 
 	@Test

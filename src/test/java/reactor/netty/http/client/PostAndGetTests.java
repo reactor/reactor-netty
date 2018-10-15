@@ -114,7 +114,7 @@ public class PostAndGetTests {
 
 	@After
 	public void teardown() {
-		httpServer.dispose();
+		httpServer.disposeNow();
 	}
 
 	@Test

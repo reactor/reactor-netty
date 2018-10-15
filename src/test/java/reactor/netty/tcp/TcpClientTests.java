@@ -152,7 +152,7 @@ public class TcpClientTests {
 
 		latch.await(30, TimeUnit.SECONDS);
 
-		client.dispose();
+		client.disposeNow();
 
 		assertThat("latch was counted down", latch.getCount(), is(0L));
 	}
@@ -171,7 +171,7 @@ public class TcpClientTests {
 		                             .wiretap()
 		                             .connectNow();
 
-		client.dispose();
+		client.disposeNow();
 		resources.dispose();
 
 		assertThat("client was configured", client instanceof ChannelOperations);
@@ -196,7 +196,7 @@ public class TcpClientTests {
 
 		latch.await(5, TimeUnit.SECONDS);
 
-		s.dispose();
+		s.disposeNow();
 
 		assertThat("latch was counted down", latch.getCount(), is(0L));
 	}
@@ -447,7 +447,7 @@ public class TcpClientTests {
 		             .connectNow();
 
 		assertTrue("Cancel not propagated", connectionLatch.await(30, TimeUnit.SECONDS));
-		c.dispose();
+		c.disposeNow();
 	}
 
 	@Ignore
@@ -481,7 +481,7 @@ public class TcpClientTests {
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 		assertTrue("close was counted down", close.await(30, TimeUnit.SECONDS));
 		assertThat("totalDelay was >500ms", totalDelay.get(), greaterThanOrEqualTo(500L));
-		s.dispose();
+		s.disposeNow();
 	}
 
 	@Test
@@ -507,7 +507,7 @@ public class TcpClientTests {
 		long duration = System.currentTimeMillis() - start;
 
 		assertThat(duration, is(greaterThanOrEqualTo(500L)));
-		s.dispose();
+		s.disposeNow();
 	}
 
 	@Test
@@ -541,7 +541,7 @@ public class TcpClientTests {
 		long duration = System.currentTimeMillis() - start;
 
 		assertThat(duration, is(greaterThanOrEqualTo(500L)));
-		client.dispose();
+		client.disposeNow();
 	}
 
 	@Test
