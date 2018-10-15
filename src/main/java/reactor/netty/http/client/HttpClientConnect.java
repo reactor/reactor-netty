@@ -25,8 +25,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
@@ -46,6 +44,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
@@ -548,11 +547,7 @@ final class HttpClientConnect extends HttpClient {
 
 		static String resolveHostHeaderValue(@Nullable InetSocketAddress remoteAddress) {
 			if (remoteAddress != null) {
-				String host = remoteAddress.getHostString();
-				if (VALID_IPV6_PATTERN.matcher(host)
-				                      .matches()) {
-					host = "[" + host + "]";
-				}
+				String host = HttpUtil.formatHostnameForHttp(remoteAddress);
 				int port = remoteAddress.getPort();
 				if (port != 80 && port != 443) {
 					host = host + ':' + port;
@@ -678,18 +673,6 @@ final class HttpClientConnect extends HttpClient {
 		@Override
 		public Mono<Void> then() {
 			return m;
-		}
-	}
-
-	static final Pattern VALID_IPV6_PATTERN;
-
-	static {
-		try {
-			VALID_IPV6_PATTERN = Pattern.compile("([0-9a-f]{1,4}:){7}([0-9a-f]){1,4}",
-			                                     Pattern.CASE_INSENSITIVE);
-		}
-		catch (PatternSyntaxException e) {
-			throw new IllegalStateException("Impossible");
 		}
 	}
 
