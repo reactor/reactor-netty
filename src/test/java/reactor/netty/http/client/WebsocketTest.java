@@ -302,10 +302,10 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
-				                       i.receive()
-				                        .asString()
-				                        .take(c)
-				                        .subscribeWith(server))))
+		                               i.receive()
+		                                .asString()
+		                                .take(c)
+		                                .subscribeWith(server))))
 		                       .wiretap()
 		                       .bindNow();
 
@@ -315,7 +315,7 @@ public class WebsocketTest {
 
 		HttpClient.create()
 		          .port(httpServer.address().getPort())
-		          .headers(h -> h.add("Authorization", auth))
+		          .wiretap()
 		          .websocket()
 		          .uri("/test")
 		          .handle((i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
@@ -323,7 +323,7 @@ public class WebsocketTest {
 		                                          .asString()
 		                                          .subscribeWith(client)))
 		          .log()
-		          .blockLast();
+		          .subscribe();
 
 		Assert.assertTrue(serverLatch.await(10, TimeUnit.SECONDS));
 		Assert.assertTrue(clientLatch.await(10, TimeUnit.SECONDS));
