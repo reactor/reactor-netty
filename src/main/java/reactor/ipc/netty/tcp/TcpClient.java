@@ -19,17 +19,21 @@ package reactor.ipc.netty.tcp;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.ipc.netty.NettyConnector;
@@ -194,7 +198,31 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				contextHandler.setFuture(b.connect());
 			}
 			else {
-				contextHandler.setFuture(pool.acquire());
+				contextHandler.setFuture(pool.acquire()
+				                             .addListener(f -> {
+					                             if (f.isSuccess()) {
+						                             Channel c = (Channel) f.getNow();
+						                             if (!c.isOpen()) return;
+
+						                             c.attr(ACTIVE)
+						                              .get()
+						                              .subscribe(null, null, () -> {
+							                              if (c.eventLoop()
+							                                   .inEventLoop()) {
+								                              contextHandler.createOperations(
+										                              c,
+										                              null);
+							                              }
+							                              else {
+								                              c.eventLoop()
+								                               .execute(() -> contextHandler.createOperations(
+										                               c,
+										                               null));
+							                              }
+						                              });
+
+					}
+				}));
 			}
 		});
 	}
@@ -216,7 +244,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 			SocketAddress providedAddress,
 			ChannelPool pool,
 			Consumer<? super Channel> onSetup) {
-		return ContextHandler.newClientContext(sink,
+		ContextHandler<SocketChannel> h = ContextHandler.newClientContext(sink,
 				options,
 				loggingHandler,
 				secure,
@@ -224,12 +252,34 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				pool,
 				handler == null ? EMPTY :
 						(ch, c, msg) -> ChannelOperations.bind(ch, handler, c));
+
+		if (handler == null) {
+			h.onPipeline(ACTIVE_CONFIGURATOR);
+		}
+
+		return h;
 	}
 
-	protected static final ChannelOperations.OnNew<SocketChannel> EMPTY = (a,b,c) -> null;
 
 	static final LoggingHandler loggingHandler = new LoggingHandler(TcpClient.class);
 
+
+	static final AttributeKey<DirectProcessor<Void>> ACTIVE = AttributeKey.valueOf(
+			"$POOLED_ACTIVE_EVENT_DISPATCHER");
+
+	protected static final BiConsumer<ChannelPipeline, ContextHandler<Channel>> ACTIVE_CONFIGURATOR =	(p, h) -> {
+		p.channel()
+		 .attr(ACTIVE)
+		 .compareAndSet(null, DirectProcessor.create());
+	};
+
+	protected static final ChannelOperations.OnNew<SocketChannel> EMPTY = (a,b,c) -> {
+		a.attr(ACTIVE)
+		 .get()
+		 .onComplete();
+
+		return null;
+	};
 
 	public static final class Builder {
 		private Consumer<? super ClientOptions.Builder<?>> options;
