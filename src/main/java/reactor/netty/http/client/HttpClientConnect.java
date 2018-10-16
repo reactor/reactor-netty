@@ -70,7 +70,6 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.DirectProcessor;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 import reactor.core.publisher.Operators;
@@ -525,7 +524,15 @@ final class HttpClientConnect extends HttpClient {
 				if (handler != null) {
 					if (websocketProtocols != null) {
 						WebsocketUpgradeOutbound wuo = new WebsocketUpgradeOutbound(ch, websocketProtocols, maxFramePayloadLength);
-						return Flux.concat(handler.apply(ch, wuo), wuo.then());
+						return wuo.then()
+						          .doOnSuccess(aVoid ->
+						              Mono.from(handler.apply(ch, wuo))
+						                  .subscribe(null, t -> {
+						                      ChannelOperations<?, ?> ops = ChannelOperations.get(ch.channel());
+						                      if (ops instanceof WebsocketClientOperations) {
+						                          ((WebsocketClientOperations) ops).onOutboundError(t);
+						                      }
+						                  }));
 					}
 					else {
 						return handler.apply(ch, ch);
