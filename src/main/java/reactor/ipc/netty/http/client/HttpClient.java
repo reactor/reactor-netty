@@ -38,7 +38,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.logging.LoggingHandler;
-
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -405,7 +404,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 				SocketAddress providedAddress,
 				ChannelPool pool,
 				Consumer<? super Channel> onSetup) {
-			return ContextHandler.<SocketChannel>newClientContext(sink,
+			ContextHandler<SocketChannel> h = ContextHandler.newClientContext(sink,
 					options,
 					loggingHandler,
 					secure,
@@ -416,7 +415,15 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 							onSetup.accept(ch);
 						}
 						return HttpClientOperations.bindHttp(ch, handler, c);
-					} : EMPTY).onPipeline(this);
+					} : EMPTY);
+
+			if (handler == null) {
+				h.onPipeline(ACTIVE_CONFIGURATOR.andThen(this));
+			}
+			else {
+				h.onPipeline(this);
+			}
+			return h;
 		}
 
 		@Override
