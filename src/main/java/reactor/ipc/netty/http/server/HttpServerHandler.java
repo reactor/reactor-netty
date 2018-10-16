@@ -299,12 +299,16 @@ final class HttpServerHandler extends ChannelDuplexHandler
 	 */
 	static boolean isSelfDefinedMessageLength(HttpResponse response) {
 		return isContentLengthSet(response) || isTransferEncodingChunked(response) || isMultipart(
-				response) || isInformational(response);
+				response) || isInformational(response) || isNotModified(response);
 	}
 
 	static boolean isInformational(HttpResponse response) {
 		return response.status()
 		               .codeClass() == HttpStatusClass.INFORMATIONAL;
+	}
+
+	static boolean isNotModified(HttpResponse response) {
+		return HttpResponseStatus.NOT_MODIFIED.equals(response.status());
 	}
 
 	static boolean isMultipart(HttpResponse response) {
