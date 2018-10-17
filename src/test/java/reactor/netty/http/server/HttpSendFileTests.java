@@ -37,6 +37,7 @@ import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -69,7 +70,7 @@ public class HttpSendFileTests {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		long fileSize = Files.size(largeFile);
 		assertSendFile(out -> out.sendFileChunked(largeFile, 1024, fileSize - 1024),
-		               false, (req, res) -> false,
+		               false, -1, (req, res) -> false,
 		               body -> assertThat(body).startsWith("<- 1024 mark here")
 		                                       .endsWith("End of File"));
 	}
@@ -111,7 +112,67 @@ public class HttpSendFileTests {
 			Path fromZipFile = zipFs.getPath("/largeFile.txt");
 			long fileSize = Files.size(fromZipFile);
 
-			assertSendFile(out -> out.compression(true).sendFile(fromZipFile, 0, fileSize), true, (req, res) -> false);
+			assertSendFile(out -> out.compression(true).sendFile(fromZipFile, 0, fileSize), true, -1, (req, res) -> false);
+		}
+	}
+
+	@Test
+	public void sendZipFileCompressionSize_1() throws IOException {
+		Path path = Files.createTempFile(null, ".zip");
+		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
+		path.toFile().deleteOnExit();
+
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+			Path fromZipFile = zipFs.getPath("/largeFile.txt");
+			long fileSize = Files.size(fromZipFile);
+
+			assertSendFile(out -> out.addHeader(HttpHeaderNames.CONTENT_LENGTH, "1245")
+			                         .sendFile(fromZipFile, 0, fileSize), true, 2048, null);
+		}
+	}
+
+	@Test
+	public void sendZipFileCompressionSize_2() throws IOException {
+		Path path = Files.createTempFile(null, ".zip");
+		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
+		path.toFile().deleteOnExit();
+
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+			Path fromZipFile = zipFs.getPath("/largeFile.txt");
+			long fileSize = Files.size(fromZipFile);
+
+			assertSendFile(out -> out.addHeader(HttpHeaderNames.CONTENT_LENGTH, "1245")
+			                         .sendFile(fromZipFile, 0, fileSize), true, 2048, (req, res) -> true);
+		}
+	}
+
+	@Test
+	public void sendZipFileCompressionSize_3() throws IOException {
+		Path path = Files.createTempFile(null, ".zip");
+		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
+		path.toFile().deleteOnExit();
+
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+			Path fromZipFile = zipFs.getPath("/largeFile.txt");
+			long fileSize = Files.size(fromZipFile);
+
+			assertSendFile(out -> out.addHeader(HttpHeaderNames.CONTENT_LENGTH, "1245")
+			                         .sendFile(fromZipFile, 0, fileSize), true, 512, null);
+		}
+	}
+
+	@Test
+	public void sendZipFileCompressionSize_4() throws IOException {
+		Path path = Files.createTempFile(null, ".zip");
+		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
+		path.toFile().deleteOnExit();
+
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+			Path fromZipFile = zipFs.getPath("/largeFile.txt");
+			long fileSize = Files.size(fromZipFile);
+
+			assertSendFile(out -> out.addHeader(HttpHeaderNames.CONTENT_LENGTH, "1245")
+			                         .sendFile(fromZipFile, 0, fileSize), true, 512, (req, res) -> false);
 		}
 	}
 
@@ -125,7 +186,7 @@ public class HttpSendFileTests {
 			Path fromZipFile = zipFs.getPath("/largeFile.txt");
 			long fileSize = Files.size(fromZipFile);
 
-			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize), true, (req, res) -> true);
+			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize), true, -1, (req, res) -> true);
 		}
 	}
 
@@ -140,7 +201,7 @@ public class HttpSendFileTests {
 			long fileSize = Files.size(fromZipFile);
 
 			assertSendFile(out -> out.addHeader("test", "test").sendFile(fromZipFile, 0, fileSize), true,
-					(req, res) -> res.responseHeaders().contains("test"));
+					-1, (req, res) -> res.responseHeaders().contains("test"));
 		}
 	}
 
@@ -155,17 +216,17 @@ public class HttpSendFileTests {
 			long fileSize = Files.size(fromZipFile);
 
 			assertSendFile(out -> out.addHeader("test", "test").sendFile(fromZipFile, 0, fileSize), true,
-					(req, res) -> !res.responseHeaders().contains("test"));
+					-1, (req, res) -> !res.responseHeaders().contains("test"));
 		}
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn) {
-		assertSendFile(fn, false, (req, res) -> false);
+		assertSendFile(fn, false, -1, (req, res) -> false);
 	}
 
 	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression,
-			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate) {
-		assertSendFile(fn, compression, compressionPredicate,
+			int compressionSize, BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate) {
+		assertSendFile(fn, compression, compressionSize, compressionPredicate,
 		               body ->
 		                   assertThat(body).startsWith("This is an UTF-8 file that is larger than 1024 bytes. "
 		                                               + "It contains accents like é.")
@@ -173,11 +234,17 @@ public class HttpSendFileTests {
 		                                   .endsWith("End of File"));
 	}
 
-	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression,
+	private void assertSendFile(Function<HttpServerResponse, NettyOutbound> fn, boolean compression, int compressionSize,
 			BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate, Consumer<String> bodyAssertion) {
+		HttpServer server = HttpServer.create();
+		if (compressionPredicate != null) {
+			server = server.compress(compressionPredicate);
+		}
+        if (compressionSize > -1) {
+			server = server.compress(compressionSize);
+		}
 		DisposableServer context =
-				customizeServerOptions(HttpServer.create()
-				                                 .compress(compressionPredicate))
+				customizeServerOptions(server)
 				          .handle((req, resp) -> fn.apply(resp))
 				          .wiretap()
 				          .bindNow();
