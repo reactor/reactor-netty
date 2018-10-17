@@ -252,6 +252,13 @@ public interface NettyOutbound extends Publisher<Void> {
 						fc.close();
 					}
 					catch (IOException ioe) {/*IGNORE*/}
+					finally {
+						if (context().channel()
+						             .pipeline()
+						             .get(NettyPipeline.ChunkedWriter) != null) {
+							getFileChunkedStrategy().cleanupPipeline(context());
+						}
+					}
 				}));
 	}
 
