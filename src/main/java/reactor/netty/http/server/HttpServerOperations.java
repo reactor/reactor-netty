@@ -452,6 +452,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				nettyResponse)) {
 			markPersistent(false);
 		}
+		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
+			               .remove(HttpHeaderNames.CONTENT_LENGTH);
+		}
 		if (compressionPredicate != null && compressionPredicate.test(this, this)) {
 			compression(true);
 		}
