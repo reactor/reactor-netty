@@ -449,7 +449,9 @@ public class HttpServerTests {
 				                       .get("/205-2", (req, res) -> res.status(HttpResponseStatus.RESET_CONTENT))
 				                       .get("/304-1", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
 				                                                       .sendHeaders())
-				                       .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)))
+				                       .get("/304-2", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED))
+				                       .get("/304-3", (req, res) -> res.status(HttpResponseStatus.NOT_MODIFIED)
+				                                                       .send()))
 				          .wiretap()
 				          .bindNow();
 
@@ -459,6 +461,7 @@ public class HttpServerTests {
 		checkResponse("/205-2", server.address());
 		checkResponse("/304-1", server.address());
 		checkResponse("/304-2", server.address());
+		checkResponse("/304-3", server.address());
 
 		server.disposeNow();
 	}

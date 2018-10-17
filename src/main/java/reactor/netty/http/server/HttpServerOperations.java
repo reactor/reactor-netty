@@ -145,13 +145,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
 
 		if (!HttpMethod.HEAD.equals(method())) {
-			res.headers()
-			   .set(responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-			                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
+				responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+			}
 		}
-		else {
-			res.headers().set(responseHeaders);
-		}
+
+		res.headers().set(responseHeaders);
+
 		markPersistent(true);
 		return res;
 	}
