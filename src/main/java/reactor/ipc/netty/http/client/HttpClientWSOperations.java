@@ -35,6 +35,9 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import reactor.core.publisher.Mono;
+import reactor.ipc.netty.FutureMono;
+import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
@@ -177,7 +180,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 			}
 			onInboundComplete();
 			CloseWebSocketFrame close = (CloseWebSocketFrame) msg;
-			sendClose(new CloseWebSocketFrame(true,
+			sendCloseNow(new CloseWebSocketFrame(true,
 					close.rsv(),
 					close.content()));
 		}
@@ -196,7 +199,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 		if (log.isDebugEnabled()) {
 			log.debug(format(channel(), "Cancelling Websocket inbound. Closing Websocket"));
 		}
-		sendClose(null);
+		sendCloseNow(null);
 	}
 
 	@Override
@@ -211,19 +214,53 @@ final class HttpClientWSOperations extends HttpClientOperations
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if (channel().isActive()) {
-			sendClose(new CloseWebSocketFrame(1002, "Client internal error"));
+			sendCloseNow(new CloseWebSocketFrame(1002, "Client internal error"));
 		}
 	}
 
-	void sendClose(CloseWebSocketFrame frame) {
+	@Override
+	public Mono<Void> sendClose() {
+		return sendClose(new CloseWebSocketFrame());
+	}
+
+	@Override
+	public Mono<Void> sendClose(int rsv) {
+		return sendClose(new CloseWebSocketFrame(true, rsv));
+	}
+
+	@Override
+	public Mono<Void> sendClose(int statusCode, String reasonText) {
+		return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
+	}
+
+	@Override
+	public Mono<Void> sendClose(int rsv, int statusCode, String reasonText) {
+		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
+	}
+
+	Mono<Void> sendClose(CloseWebSocketFrame frame) {
+		if (CLOSE_SENT.get(this) == 0) {
+			return FutureMono.deferFuture(() -> {
+				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+					discard();
+					channel().pipeline().remove(NettyPipeline.ReactiveBridge);
+					return channel().writeAndFlush(frame)
+					                .addListener(ChannelFutureListener.CLOSE);
+				}
+				return channel().newSucceededFuture();
+			});
+		}
+		return Mono.empty();
+	}
+
+	void sendCloseNow(CloseWebSocketFrame frame) {
 		if (frame != null && !frame.isFinalFragment()) {
 			channel().writeAndFlush(frame);
 			return;
 		}
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
-			ChannelFuture f = channel().writeAndFlush(
-					frame == null ? new CloseWebSocketFrame() : frame);
-			f.addListener(ChannelFutureListener.CLOSE);
+			channel().writeAndFlush(frame == null ? new CloseWebSocketFrame() : frame)
+			         .addListener(ChannelFutureListener.CLOSE);
 		}
 	}
 
@@ -234,7 +271,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 		}
 		if (throwable == null) {
 			if (channel().isActive()) {
-				sendClose(null);
+				sendCloseNow(null);
 			}
 		}
 		else {

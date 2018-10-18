@@ -54,6 +54,7 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
@@ -421,6 +422,36 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			@Override
 			public String selectedSubprotocol() {
 				return null;
+			}
+
+			@Override
+			public Mono<Void> sendClose() {
+				return sendClose(new CloseWebSocketFrame());
+			}
+
+			@Override
+			public Mono<Void> sendClose(int rsv) {
+				return sendClose(new CloseWebSocketFrame(true, rsv));
+			}
+
+			@Override
+			public Mono<Void> sendClose(int statusCode, String reasonText) {
+				return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
+			}
+
+			@Override
+			public Mono<Void> sendClose(int rsv, int statusCode, String reasonText) {
+				return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
+			}
+
+			Mono<Void> sendClose(CloseWebSocketFrame frame) {
+				if (isWebsocket()) {
+					HttpClientWSOperations ops = (HttpClientWSOperations) get(channel());
+					return ops.sendClose(frame);
+				}
+				else {
+					return Mono.empty();
+				}
 			}
 
 			@Override

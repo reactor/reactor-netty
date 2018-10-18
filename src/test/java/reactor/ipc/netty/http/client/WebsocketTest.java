@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -678,5 +679,45 @@ public class WebsocketTest {
 		latch.await(30, TimeUnit.SECONDS);
 
 		Assertions.assertThat(error.get()).isFalse();
+	}
+
+	@Test
+	public void testIssue444() throws InterruptedException {
+		doTestIssue444((in, out) ->
+				out.sendObject(Flux.error(new Throwable())
+				                   .onErrorResume(ex -> out.sendClose(1001, "Going Away"))
+				                   .cast(WebSocketFrame.class)));
+		doTestIssue444((in, out) ->
+				out.options(o -> o.flushOnEach(false))
+				   .send(Flux.range(0, 10)
+				             .map(i -> {
+				                 if (i == 5) {
+				                     out.sendClose(1001, "Going Away").subscribe();
+				                 }
+				                 return Unpooled.copiedBuffer((i + "").getBytes(Charset.defaultCharset()));
+				             })));
+		doTestIssue444((in, out) ->
+				out.sendObject(Flux.error(new Throwable())
+				                   .onErrorResume(ex -> Flux.empty())
+				                   .cast(WebSocketFrame.class))
+				   .then(Mono.defer(() -> out.sendObject(
+				           new CloseWebSocketFrame(1001, "Going Away")).then())));
+	}
+
+	private void doTestIssue444(BiFunction<WebsocketInbound, WebsocketOutbound, Publisher<Void>> fn) {
+		httpServer = HttpServer.create(ops -> ops.host("localhost")
+		                                         .port(0))
+		                       .newHandler((req, res) -> res.sendWebsocket(null, fn))
+		                       .block(Duration.ofSeconds(30));
+		assertNotNull(httpServer);
+
+		StepVerifier.create(
+		        HttpClient.create(ops -> ops.connectAddress(() -> httpServer.address()))
+		                  .ws("/")
+		                  .flatMapMany(res -> res.receiveWebsocket()
+		                                     .receiveFrames()
+		                                     .then()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 }

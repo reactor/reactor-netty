@@ -146,6 +146,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * (complete|error). <p>A new {@link NettyOutbound} type (or the same) for typed send
 	 * sequences. An implementor can therefore specialize the Outbound after a first after
 	 * a prepending data publisher.
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param dataStream the dataStream publishing OUT items to write on this channel
 	 *
@@ -160,6 +161,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * Send bytes to the peer, listen for any error on write and close on terminal
 	 * signal (complete|error). If more than one publisher is attached (multiple calls to
 	 * send()) completion occurs after all publishers complete.
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param dataStream the dataStream publishing Buffer items to write on this channel
 	 *
@@ -184,6 +186,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * <p>
 	 * Note: this will emit {@link io.netty.channel.FileRegion} in the outbound
 	 * {@link io.netty.channel.ChannelPipeline}
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param file the file Path
 	 *
@@ -213,6 +216,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * <p>
 	 * Note: this will emit {@link io.netty.channel.FileRegion} in the outbound
 	 * {@link io.netty.channel.ChannelPipeline}
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param file the file Path
 	 * @param position where to start
@@ -262,6 +266,16 @@ public interface NettyOutbound extends Publisher<Void> {
 				}));
 	}
 
+	/**
+	 * Note: Nesting any send* method is not supported.
+	 *
+	 * @param file the file Path
+	 * @param position where to start
+	 * @param count how much to transfer
+	 *
+	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
+	 * error during write
+	 */
 	default NettyOutbound sendFileChunked(Path file, long position, long count) {
 		Objects.requireNonNull(file);
 		final FileChunkedStrategy<?> strategy = getFileChunkedStrategy();
@@ -293,6 +307,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * Send data to the peer, listen for any error on write and close on terminal signal
 	 * (complete|error).Each individual {@link Publisher} completion will flush
 	 * the underlying IO runtime.
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param dataStreams the dataStream publishing OUT items to write on this channel
 	 *
@@ -309,6 +324,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * Send Object to the peer, listen for any error on write and close on terminal signal
 	 * (complete|error). If more than one publisher is attached (multiple calls to send())
 	 * completion occurs after all publishers complete.
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param dataStream the dataStream publishing Buffer items to write on this channel
 	 *
@@ -322,6 +338,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	/**
 	 * Send data to the peer, listen for any error on write and close on terminal signal
 	 * (complete|error).
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param msg the object to publish
 	 *
@@ -337,6 +354,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * Send String to the peer, listen for any error on write and close on terminal signal
 	 * (complete|error). If more than one publisher is attached (multiple calls to send())
 	 * completion occurs after all publishers complete.
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param dataStream the dataStream publishing Buffer items to write on this channel
 	 *
@@ -351,6 +369,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * Send String to the peer, listen for any error on write and close on terminal signal
 	 * (complete|error). If more than one publisher is attached (multiple calls to send())
 	 * completion occurs after all publishers complete.
+	 * Note: Nesting any send* method is not supported.
 	 *
 	 * @param dataStream the dataStream publishing Buffer items to write on this channel
 	 * @param charset the encoding charset
