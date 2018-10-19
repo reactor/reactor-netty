@@ -140,7 +140,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 		@SuppressWarnings("unchecked")
 		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) cachedConfiguration.connect(b);
 
-		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver).log(), alloc);
+		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
 	}
 
 	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {
