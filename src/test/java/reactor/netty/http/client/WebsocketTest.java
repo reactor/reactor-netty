@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -963,5 +964,49 @@ public class WebsocketTest {
 		                              .verify(Duration.ofSeconds(30));
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void testIssue444() throws InterruptedException {
+		doTestIssue444((in, out) ->
+				out.sendObject(Flux.error(new Throwable())
+				                   .onErrorResume(ex -> out.sendClose(1001, "Going Away"))
+				                   .cast(WebSocketFrame.class)));
+		doTestIssue444((in, out) ->
+				out.options(o -> o.flushOnEach(false))
+				   .send(Flux.range(0, 10)
+				             .map(i -> {
+				                 if (i == 5) {
+				                     out.sendClose(1001, "Going Away").subscribe();
+				                 }
+				                 return Unpooled.copiedBuffer((i + "").getBytes(Charset.defaultCharset()));
+				             })));
+		doTestIssue444((in, out) ->
+				out.sendObject(Flux.error(new Throwable())
+				                   .onErrorResume(ex -> Flux.empty())
+				                   .cast(WebSocketFrame.class))
+				   .then(Mono.defer(() -> out.sendObject(
+				       new CloseWebSocketFrame(1001, "Going Away")).then())));
+	}
+
+	private void doTestIssue444(BiFunction<WebsocketInbound, WebsocketOutbound, Publisher<Void>> fn) {
+		httpServer =
+				HttpServer.create()
+				          .host("localhost")
+				          .port(0)
+				          .handle((req, res) -> res.sendWebsocket(null, fn))
+				          .wiretap()
+				          .bindNow();
+
+		StepVerifier.create(
+				HttpClient.create()
+				          .addressSupplier(() -> httpServer.address())
+				          .wiretap()
+				          .websocket()
+				          .uri("/")
+				          .handle((i, o) -> i.receiveFrames()
+				                             .then()))
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
 	}
 }

@@ -37,6 +37,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.annotation.Nullable;
@@ -190,6 +191,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 		if (CLOSE_SENT.get(this) == 0) {
 			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
+					discard();
+					channel().pipeline().remove(NettyPipeline.ReactiveBridge);
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
@@ -205,9 +208,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 			return;
 		}
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
-			ChannelFuture f = channel().writeAndFlush(
-					frame == null ? new CloseWebSocketFrame() : frame);
-			f.addListener(ChannelFutureListener.CLOSE);
+			channel().writeAndFlush(frame == null ? new CloseWebSocketFrame() : frame)
+			         .addListener(ChannelFutureListener.CLOSE);
 		}
 	}
 
