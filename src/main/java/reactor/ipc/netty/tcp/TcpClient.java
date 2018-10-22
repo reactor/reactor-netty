@@ -40,6 +40,7 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.options.ClientOptions;
@@ -202,29 +203,53 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 				                             .addListener(f -> {
 					                             if (f.isSuccess()) {
 						                             Channel c = (Channel) f.getNow();
-						                             if (!c.isOpen()) return;
+
+						                             ActiveChannelOperationFactory acof =
+								                             new ActiveChannelOperationFactory(contextHandler, c, sink);
 
 						                             c.attr(ACTIVE)
 						                              .get()
-						                              .subscribe(null, null, () -> {
-							                              if (c.eventLoop()
-							                                   .inEventLoop()) {
-								                              contextHandler.createOperations(
-										                              c,
-										                              null);
-							                              }
-							                              else {
-								                              c.eventLoop()
-								                               .execute(() -> contextHandler.createOperations(
-										                               c,
-										                               null));
-							                              }
-						                              });
+						                              .subscribe(null, acof, acof);
 
 					}
 				}));
 			}
 		});
+	}
+
+	static final class ActiveChannelOperationFactory implements Runnable,
+	                                                            Consumer<Throwable> {
+
+		final ContextHandler<SocketChannel> contextHandler;
+		final Channel c;
+		final MonoSink<NettyContext> sink;
+
+		ActiveChannelOperationFactory(ContextHandler<SocketChannel> contextHandler,
+				Channel c,
+				MonoSink<NettyContext> sink) {
+			this.sink = sink;
+			this.contextHandler = contextHandler;
+			this.c = c;
+		}
+
+		@Override
+		public void accept(Throwable throwable) {
+			sink.error(throwable);
+		}
+
+		@Override
+		public void run() {
+			if (c.eventLoop()
+			     .inEventLoop()) {
+				if (contextHandler.createOperations(c, null) == null) {
+					sink.error(new AbortedException("Connection has been closed"));
+				}
+			}
+			else {
+				c.eventLoop()
+				 .execute(this);
+			}
+		}
 	}
 
 	/**
