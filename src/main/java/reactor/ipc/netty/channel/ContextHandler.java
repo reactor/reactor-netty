@@ -243,8 +243,13 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 					}
 				}
 
-				channel.pipeline()
-				       .get(ChannelOperationsHandler.class).lastContext = this;
+				ChannelOperationsHandler h = channel.pipeline()
+				                                    .get(ChannelOperationsHandler.class);
+
+				if (h == null) {
+					return null;
+				}
+				h.lastContext = this;
 
 				channel.eventLoop().execute(op::onHandlerStart);
 			}
@@ -300,7 +305,7 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	}
 
 	@Override
-	protected void initChannel(CHANNEL ch) throws Exception {
+	protected void initChannel(CHANNEL ch) {
 		accept(ch);
 	}
 
