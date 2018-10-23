@@ -18,6 +18,8 @@ package reactor.ipc.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -197,7 +199,18 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<HttpClientResponse> newHandler(BiFunction<? super HttpClientResponse, ? super HttpClientRequest, ? extends Publisher<Void>> ioHandler) {
-		return (Mono<HttpClientResponse>) client.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) ioHandler);
+		if (Objects.isNull(options.getAddress())) {
+			try {
+				return (Mono<HttpClientResponse>) client.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) ioHandler,
+						options.getRemoteAddress(new URI("https://localhost")), true, null);
+			}
+			catch (URISyntaxException e) {
+				return Mono.error(e);
+			}
+		}
+		else {
+			return (Mono<HttpClientResponse>) client.newHandler((BiFunction<NettyInbound, NettyOutbound, Publisher<Void>>) ioHandler);
+		}
 	}
 
 	/**
@@ -378,7 +391,7 @@ public class HttpClient implements NettyConnector<HttpClientResponse, HttpClient
 		}
 
 		@Override
-		protected Mono<NettyContext> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+		protected Mono<? extends NettyContext> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 				InetSocketAddress address,
 				boolean secure,
 				Consumer<? super Channel> onSetup) {

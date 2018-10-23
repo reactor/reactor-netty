@@ -134,6 +134,9 @@ public final class HttpClientOptions extends ClientOptions {
 					return scheme + "localhost" + url;
 				}
 			}
+			else if (url.equals("")) {
+				return scheme + "localhost";
+			}
 			else {
 				//consider absolute URL
 				return scheme + url;

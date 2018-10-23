@@ -162,7 +162,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 	 *
 	 * @return a new Mono to connect on subscribe
 	 */
-	protected Mono<NettyContext> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
+	protected Mono<? extends NettyContext> newHandler(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler,
 			InetSocketAddress address,
 			boolean secure,
 			Consumer<? super Channel> onSetup) {

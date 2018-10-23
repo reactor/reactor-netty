@@ -17,6 +17,7 @@
 package reactor.ipc.netty.http.client;
 
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -977,5 +978,31 @@ public class HttpClientTest {
 
 		server.dispose();
 		fixedPool.dispose();
+	}
+
+	@Test
+	public void testConnectAddressNotSpecifiedNewHandler() {
+		StepVerifier.create(
+				HttpClient.create()
+				          .newHandler((res, req) -> Mono.empty()))
+				    .expectError(ConnectException.class)
+				    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testConnectAddressNotSpecifiedGetRequest1() {
+		StepVerifier.create(
+				HttpClient.create()
+				          .get(""))
+				    .expectError(ConnectException.class)
+				    .verify(Duration.ofSeconds(30));
+	}
+	@Test
+	public void testConnectAddressNotSpecifiedGetRequest2() {
+		StepVerifier.create(
+				HttpClient.create()
+				          .get("/"))
+				    .expectError(ConnectException.class)
+				    .verify(Duration.ofSeconds(30));
 	}
 }
