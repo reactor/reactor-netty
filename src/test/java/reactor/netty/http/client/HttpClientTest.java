@@ -1159,4 +1159,28 @@ public class HttpClientTest {
 		server.disposeNow();
 		connectionProvider.dispose();
 	}
+
+	@Test
+	public void testIssue473() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverSslContextBuilder =
+				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap()
+				          .secure(spec -> spec.sslContext(serverSslContextBuilder))
+				          .bindNow();
+
+		StepVerifier.create(
+				HttpClient.create(ConnectionProvider.newConnection())
+				          .secure()
+				          .websocket()
+				          .uri("wss://" + server.host() + ":" + server.port())
+				          .handle((in, out) -> Mono.empty()))
+				    .expectErrorMatches(t -> t.getCause() instanceof CertificateException)
+				    .verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
+	}
 }

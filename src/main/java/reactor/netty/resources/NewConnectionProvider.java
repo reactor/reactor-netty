@@ -58,6 +58,11 @@ final class NewConnectionProvider implements ConnectionProvider {
 
 			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
 
+			if (bootstrap.config()
+			             .remoteAddress() != null) {
+				convertLazyRemoteAddress(bootstrap);
+			}
+
 			BootstrapHandlers.finalizeHandler(bootstrap,
 					factory,
 					new NewConnectionObserver(sink, obs));
@@ -65,7 +70,6 @@ final class NewConnectionProvider implements ConnectionProvider {
 			ChannelFuture f;
 			if (bootstrap.config()
 			             .remoteAddress() != null) {
-				convertLazyRemoteAddress(bootstrap);
 				f = bootstrap.connect();
 			}
 			else {
