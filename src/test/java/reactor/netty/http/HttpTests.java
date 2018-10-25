@@ -54,13 +54,13 @@ public class HttpTests {
 				          .port(0)
 				          .route(r ->
 				              r.post("/test/{param}", (req, res) -> Mono.empty()))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .wiretap();
+				          .wiretap(true);
 
 		Mono<ByteBuf> content =
 				client.headers(h -> h.add("Content-Type", "text/plain"))
@@ -92,13 +92,13 @@ public class HttpTests {
 				                                    .log("server-received")
 				                                    .map(it -> it + ' ' + req.param("param") + '!')
 				                                    .log("server-reply"))))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .wiretap();
+				          .wiretap(true);
 
 		Mono<String> content =
 				client.headers(h -> h.add("Content-Type", "text/plain"))
@@ -169,13 +169,13 @@ public class HttpTests {
 						                                                      .then()
 						                                                      .log("send-5")
 						                                                      .doOnError(t -> errored5.countDown())))
-						  .wiretap()
+						  .wiretap(true)
 						  .bindNow();
 
 		HttpClient client =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .wiretap();
+				          .wiretap(true);
 
 		Mono<Integer> code =
 				client.get()
@@ -328,7 +328,7 @@ public class HttpTests {
 					                                       return res.sendString(Mono.just(s))
 					                                                 .then();
 				                                       }))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		String content =
@@ -367,7 +367,7 @@ public class HttpTests {
 						                              .then(res.compression(true)
 						                                       .options(op -> op.flushOnEach())
 						                                       .sendString(ep.log()).then())))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 
@@ -442,7 +442,7 @@ public class HttpTests {
 						                           req.receive()
 						                              .then(res.options(op -> op.flushOnEach())
 						                                       .sendString(ep.log()).then())))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 
@@ -508,7 +508,7 @@ public class HttpTests {
 				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions)
 				                                                  .defaultConfiguration(SslProvider.DefaultConfigurationType.H2))
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		String response =
@@ -517,7 +517,7 @@ public class HttpTests {
 				          .secure(ssl -> ssl.sslContext(
 				                  SslContextBuilder.forClient()
 				                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
-				          .wiretap()
+				          .wiretap(true)
 				          .get()
 				          .uri("/")
 				          .responseContent()
@@ -544,7 +544,7 @@ public class HttpTests {
 				          .handle((req, res) -> res.sendString(Mono.just("Hello "+Mono.just(sb.toString()))
 				                                                   .delayElement
 						                                                   (Duration.ofMillis(500))))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		Mono<String> res =
@@ -558,7 +558,7 @@ public class HttpTests {
 				                            .defaultConfiguration(SslProvider
 						                            .DefaultConfigurationType.TCP)
 				                            .handshakeTimeoutMillis(30000))
-				          .wiretap()
+				          .wiretap(true)
 				          .post()
 				          .uri("/")
 				          .send(ByteBufFlux.fromString(Mono.just(sb.toString())))
@@ -585,7 +585,7 @@ public class HttpTests {
 				          .port(8080)
 				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions))
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		new CountDownLatch(1).await();
@@ -631,7 +631,7 @@ public class HttpTests {
 				          .protocol(HttpProtocol.H2C)
 				          .port(8080)
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		new CountDownLatch(1).await();
@@ -649,7 +649,7 @@ public class HttpTests {
 				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
 				          .port(8080)
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		new CountDownLatch(1).await();
@@ -668,7 +668,7 @@ public class HttpTests {
 				          .secure(ssl -> ssl.sslContext(serverOptions))
 				          .port(8080)
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		new CountDownLatch(1).await();
@@ -689,7 +689,7 @@ public class HttpTests {
 				          .protocol(HttpProtocol.H2)
 				          .handle(echoHandler)
 				          .port(8080)
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		new CountDownLatch(1).await();
@@ -708,7 +708,7 @@ public class HttpTests {
 				          .secure(ssl -> ssl.sslContext(serverOptions))
 				          .port(8080)
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		new CountDownLatch(1).await();
@@ -721,7 +721,7 @@ public class HttpTests {
 			HttpServer.create()
 			          .protocol(HttpProtocol.H2)
 			          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-			          .wiretap()
+			          .wiretap(true)
 			          .bind()
 		).verifyErrorMessage("Configured H2 protocol without TLS. Use" +
 				" a clear-text h2 protocol via HttpServer#protocol or configure TLS" +
@@ -738,7 +738,7 @@ public class HttpTests {
 			          .protocol(HttpProtocol.H2C)
 			          .secure(ssl -> ssl.sslContext(serverOptions))
 			          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-			          .wiretap()
+			          .wiretap(true)
 			          .bind()
 		).verifyErrorMessage("Configured H2 Clear-Text protocol with TLS. Use the non clear-text h2 protocol via HttpServer#protocol or disable TLS via HttpServer#tcpConfiguration(tcp -> tcp.noSSL())");
 	}

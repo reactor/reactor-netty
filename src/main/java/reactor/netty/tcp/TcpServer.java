@@ -26,7 +26,6 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -35,7 +34,6 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AttributeKey;
-import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
@@ -44,6 +42,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
+import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
@@ -525,9 +524,28 @@ public abstract class TcpServer {
 	 * and {@code DEBUG} logger level
 	 *
 	 * @return a new {@link TcpServer}
+	 * @deprecated Use {@link TcpServer#wiretap(boolean)}
 	 */
+	@Deprecated
 	public final TcpServer wiretap() {
 		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
+	}
+
+	/**
+	 * Apply or remove a wire logger configuration using {@link TcpServer} category
+	 * and {@code DEBUG} logger level
+	 *
+	 * @param enable Specifies whether the wire logger configuration will be added to
+	 *               the pipeline
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer wiretap(boolean enable) {
+		if (enable) {
+			return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
+		}
+		else {
+			return bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.LoggingHandler));
+		}
 	}
 
 	/**

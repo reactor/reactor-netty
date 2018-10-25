@@ -86,7 +86,7 @@ public class ProxyClientIssue {
 				                 .header("Content-type", "application/octet-stream")
 				                 .header("Connection", "Close")
 				                 .sendByteArray(Flux.just(content))))
-				.wiretap()
+				.wiretap(true)
 				.bindNow();
 
 	}
@@ -103,7 +103,7 @@ public class ProxyClientIssue {
 			Mono<Void> currentRequestFlow = Mono.empty();
 			for (int j = 0; j < requestCount; j++) {
 				currentRequestFlow = currentRequestFlow.then(HttpClient.create()
-				                                                       .wiretap()
+				                                                       .wiretap(true)
 				                                                       .get()
 				                                                       .uri("http://localhost:" + PROXY_PORT + "/0/content/" + ThreadLocalRandom.current()
 				                                                                                                                                .nextInt(
@@ -138,13 +138,13 @@ public class ProxyClientIssue {
 		                              .host("0.0.0.0");
 
 		server.route(routes -> routes.get("/0/**", this::proxy))
-		      .wiretap()
+		      .wiretap(true)
 		      .bindNow();
 	}
 
 	private Mono<Void> proxy(HttpServerRequest request, HttpServerResponse response) {
 		return HttpClient.create()
-		                 .wiretap()
+		                 .wiretap(true)
 		                 .headers(h -> h.add(filterRequestHeaders(request.requestHeaders())))
 		                 .get()
 		                 .uri(URI.create("http://localhost:" + CONTENT_SERVER_PORT +

@@ -201,13 +201,13 @@ public class ConnectionInfoTests {
 				                            .sendString(Mono.just(e.getMessage()));
 				              }
 				          })
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		String response =
 				HttpClient.create()
 				          .port(this.connection.address().getPort())
-				          .wiretap()
+				          .wiretap(true)
 				          .headers(clientRequestHeadersConsumer)
 				          .get()
 				          .uri("/test")

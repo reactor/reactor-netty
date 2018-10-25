@@ -39,6 +39,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
@@ -358,9 +359,28 @@ public abstract class UdpClient {
 	 * and {@code DEBUG} logger level
 	 *
 	 * @return a new {@link UdpClient}
+	 * @deprecated Use {@link UdpClient#wiretap(boolean)}
 	 */
+	@Deprecated
 	public final UdpClient wiretap() {
 		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
+	}
+
+	/**
+	 * Apply or remove a wire logger configuration using {@link UdpClient} category
+	 * and {@code DEBUG} logger level
+	 *
+	 * @param enable Specifies whether the wire logger configuration will be added to
+	 *               the pipeline
+	 * @return a new {@link UdpClient}
+	 */
+	public final UdpClient wiretap(boolean enable) {
+		if (enable) {
+			return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
+		}
+		else {
+			return bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.LoggingHandler));
+		}
 	}
 
 	/**

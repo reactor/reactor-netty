@@ -45,6 +45,7 @@ import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
+import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
@@ -734,9 +735,30 @@ public abstract class HttpClient {
 	 * and {@code DEBUG} logger level
 	 *
 	 * @return a new {@link HttpClient}
+	 * @deprecated Use {@link HttpClient#wiretap(boolean)}
 	 */
+	@Deprecated
 	public final HttpClient wiretap() {
-		return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
+		return tcpConfiguration(tcpClient -> tcpClient.bootstrap(
+		        b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
+	}
+
+	/**
+	 * Apply or remove a wire logger configuration using {@link HttpClient} category
+	 * and {@code DEBUG} logger level
+	 *
+	 * @param enable Specifies whether the wire logger configuration will be added to
+	 *               the pipeline
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient wiretap(boolean enable) {
+		if (enable) {
+			return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
+		}
+		else {
+			return tcpConfiguration(tcpClient -> tcpClient.bootstrap(
+			        b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.LoggingHandler)));
+		}
 	}
 
 	/**

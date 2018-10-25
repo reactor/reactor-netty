@@ -295,7 +295,7 @@ public class SmokeTests {
 							                                                        response
 							                                                               .alloc())));
 		                       })
-		                       .wiretap()
+		                       .wiretap(true)
 		                       .bindNow();
 
 	}
@@ -304,7 +304,7 @@ public class SmokeTests {
 		HttpClient httpClient =
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
-				          .wiretap();
+				          .wiretap(true);
 
 		Mono<List<String>> content = httpClient.get()
 		                                       .uri("/data")

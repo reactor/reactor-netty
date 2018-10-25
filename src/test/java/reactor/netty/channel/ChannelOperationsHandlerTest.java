@@ -68,7 +68,7 @@ public class ChannelOperationsHandlerTest {
 				                     .asString()
 				                     .doOnNext(System.err::println)
 				                     .then(res.status(200).sendHeaders().then()))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		Flux<String> flux = Flux.range(1, 257).map(count -> count + "");
@@ -78,7 +78,7 @@ public class ChannelOperationsHandlerTest {
 		Mono<Integer> code =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .wiretap()
+				          .wiretap(true)
 				          .post()
 				          .uri("/")
 				          .send(ByteBufFlux.fromString(flux))
@@ -136,7 +136,7 @@ public class ChannelOperationsHandlerTest {
 		ByteBufFlux response =
 				HttpClient.create()
 				          .port(abortServerPort)
-				          .wiretap()
+				          .wiretap(true)
 				          .request(HttpMethod.GET)
 				          .uri("/")
 				          .send((req, out) -> out.sendString(Flux.just("a", "b", "c")))
@@ -222,7 +222,7 @@ public class ChannelOperationsHandlerTest {
 		HttpClient client =
 		        HttpClient.newConnection()
 		                  .port(testServerPort)
-		                  .wiretap();
+		                  .wiretap(true);
 
 		Flux.range(0, 2)
 		    .concatMap(i -> client.get()

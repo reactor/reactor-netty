@@ -37,13 +37,13 @@ public class HttpResponseStatusCodesHandlingTests {
 				          .port(0)
 				          .route(r -> r.post("/test", (req, res) -> res.send(req.receive()
 				                                                                .log("server-received"))))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create()
 				          .port(server.address().getPort())
-				          .wiretap();
+				          .wiretap(true);
 
 		Mono<Integer> content = client.headers(h -> h.add("Content-Type", "text/plain"))
 				                      .request(HttpMethod.GET)

@@ -43,6 +43,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
+import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
@@ -523,9 +524,28 @@ public abstract class TcpClient {
 	 * and {@code DEBUG} logger level
 	 *
 	 * @return a new {@link TcpClient}
+	 * @deprecated Use {@link TcpClient#wiretap(boolean)}
 	 */
+	@Deprecated
 	public final TcpClient wiretap() {
 		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
+	}
+
+	/**
+	 * Apply or remove a wire logger configuration using {@link TcpClient} category
+	 * and {@code DEBUG} logger level
+	 *
+	 * @param enable Specifies whether the wire logger configuration will be added to
+	 *               the pipeline
+	 * @return a new {@link TcpClient}
+	 */
+	public final TcpClient wiretap(boolean enable) {
+		if (enable) {
+			return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
+		}
+		else {
+			return bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.LoggingHandler));
+		}
 	}
 
 	/**

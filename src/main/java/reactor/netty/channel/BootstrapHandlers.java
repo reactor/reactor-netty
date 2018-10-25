@@ -162,10 +162,11 @@ public abstract class BootstrapHandlers {
 	 * @param b a server bootstrap
 	 * @param name a configuration name
 	 */
-	public static void removeConfiguration(ServerBootstrap b, String name) {
+	public static ServerBootstrap removeConfiguration(ServerBootstrap b, String name) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(name, "name");
 		b.childHandler(removeConfiguration(b.config().childHandler(), name));
+		return b;
 	}
 
 	/**
@@ -175,13 +176,13 @@ public abstract class BootstrapHandlers {
 	 * @param b a bootstrap
 	 * @param name a configuration name
 	 */
-	public static void removeConfiguration(Bootstrap b, String name) {
+	public static Bootstrap removeConfiguration(Bootstrap b, String name) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(name, "name");
-		if (b.config().handler() == null) {
-			return;
+		if (b.config().handler() != null) {
+			b.handler(removeConfiguration(b.config().handler(), name));
 		}
-		b.handler(removeConfiguration(b.config().handler(), name));
+		return b;
 	}
 
 	/**
