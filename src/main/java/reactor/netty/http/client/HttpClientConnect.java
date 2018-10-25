@@ -148,9 +148,6 @@ final class HttpClientConnect extends HttpClient {
 					(ch, c, msg) -> new HttpClientOperations(ch, c, conf.cookieEncoder, conf.cookieDecoder));
 
 			if (ssl != null) {
-				ssl = SslProvider.addHandlerConfigurator(ssl,
-						HttpClientSecure.DEFAULT_HOSTNAME_VERIFICATION);
-
 				if (ssl.getDefaultConfigurationType() == null) {
 					switch (conf.protocols) {
 						case HttpClientConfiguration.h11:

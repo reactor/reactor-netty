@@ -28,14 +28,17 @@ final class TcpServerSecure extends TcpServerOperator {
 
 	final SslProvider sslProvider;
 
-	TcpServerSecure(TcpServer server, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		super(server);
+	static TcpServerSecure secure(TcpServer server, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
-
 
 		SslProvider.Build builder = (SslProvider.Build) SslProvider.builder();
 		sslProviderBuilder.accept(builder);
-		this.sslProvider = builder.build();
+		return new TcpServerSecure(server, builder.build());
+	}
+
+	TcpServerSecure(TcpServer server, SslProvider sslProvider) {
+		super(server);
+		this.sslProvider = Objects.requireNonNull(sslProvider, "sslProvider");
 	}
 
 	@Override

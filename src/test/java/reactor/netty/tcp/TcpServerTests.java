@@ -151,7 +151,7 @@ public class TcpServerTests {
 		final TcpClient client = TcpClient.create()
 		                                  .host("localhost")
 		                                  .port(connectedServer.address().getPort())
-		                                  .secure(clientOptions);
+		                                  .secure(spec -> spec.sslContext(clientOptions));
 
 		Connection connectedClient = client.handle((in, out) -> {
 			//in
@@ -417,7 +417,7 @@ public class TcpServerTests {
 
 		DisposableServer context =
 				TcpServer.create()
-				         .secure(sslServer)
+				         .secure(spec -> spec.sslContext(sslServer))
 				         .handle((in, out) ->
 				                 in.receive()
 				                   .asString()
@@ -435,7 +435,7 @@ public class TcpServerTests {
 		Connection client1 =
 				TcpClient.create()
 				         .port(context.address().getPort())
-				         .secure(sslClient)
+				         .secure(spec -> spec.sslContext(sslClient))
 				         .handle((in, out) -> {
 				             in.receive()
 				               .asString()
@@ -451,7 +451,7 @@ public class TcpServerTests {
 		Connection client2 =
 				TcpClient.create()
 				         .port(context.address().getPort())
-				         .secure(sslClient)
+				         .secure(spec -> spec.sslContext(sslClient))
 				         .handle((in, out) -> {
 				             in.receive()
 				               .asString(StandardCharsets.UTF_8)

@@ -26,17 +26,20 @@ import reactor.netty.tcp.TcpServer;
  */
 final class HttpServerSecure extends HttpServerOperator {
 
-	final Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder;
+	final SslProvider sslProvider;
 
 	HttpServerSecure(HttpServer server,
 			Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		super(server);
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
-		this.sslProviderBuilder = sslProviderBuilder;
+
+		SslProvider.SslContextSpec builder = SslProvider.builder();
+		sslProviderBuilder.accept(builder);
+		this.sslProvider = ((SslProvider.Builder) builder).build();
 	}
 
 	@Override
 	protected TcpServer tcpConfiguration() {
-		return source.tcpConfiguration().secure(this.sslProviderBuilder);
+		return source.tcpConfiguration().secure(this.sslProvider);
 	}
 }
