@@ -56,7 +56,7 @@ public class UdpClientTest {
 				                                            }
 				                                    })
 				                                    .flatMap(out::sendObject))
-				         .wiretap()
+				         .wiretap(true)
 				         .bind()
 				         .block(Duration.ofSeconds(30));
 
@@ -74,7 +74,7 @@ public class UdpClientTest {
 				                                            .then(out.sendString(Mono.just("ping2")))
 				                                            .neverComplete();
 				         })
-				         .wiretap()
+				         .wiretap(true)
 				         .connect()
 				         .block(Duration.ofSeconds(30));
 
@@ -92,7 +92,7 @@ public class UdpClientTest {
 				                                            .then(out.sendString(Mono.just("ping4")))
 				                                            .neverComplete();
 				         })
-				         .wiretap()
+				         .wiretap(true)
 				         .connect()
 				         .block(Duration.ofSeconds(30));
 

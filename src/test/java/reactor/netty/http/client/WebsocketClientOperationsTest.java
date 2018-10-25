@@ -57,13 +57,13 @@ public class WebsocketClientOperationsTest {
 						return res.sendWebsocket(serverSubprotocol, (i, o) -> o.sendString(Mono.just("test")));
 					})
 			)
-		                                  .wiretap()
+		                                  .wiretap(true)
 		                                  .bindNow();
 
 		Flux<String> response =
 			HttpClient.create()
 			          .port(httpServer.port())
-			          .wiretap()
+			          .wiretap(true)
 			          .headersWhen(h -> login(httpServer.port()).map(token -> h.set(
 					          "Authorization",
 					          token)))
@@ -92,7 +92,7 @@ public class WebsocketClientOperationsTest {
 	private Mono<String> login(int port) {
 		return HttpClient.create()
 		                 .port(port)
-		                 .wiretap()
+		                 .wiretap(true)
 		                 .post()
 		                 .uri("/login")
 		                 .responseSingle((res, buf) -> Mono.just(res.status().code() + ""));

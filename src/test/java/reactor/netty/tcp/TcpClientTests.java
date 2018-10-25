@@ -147,7 +147,7 @@ public class TcpClientTests {
 			                               return out.sendString(Flux.just("Hello World!"))
 			                                  .neverComplete();
 		                               })
-		                             .wiretap()
+		                             .wiretap(true)
 		                             .connectNow();
 
 		latch.await(30, TimeUnit.SECONDS);
@@ -168,7 +168,7 @@ public class TcpClientTests {
 		                             .host("localhost")
 		                             .port(echoServerPort)
 		                             .runOn(resources)
-		                             .wiretap()
+		                             .wiretap(true)
 		                             .connectNow();
 
 		client.disposeNow();
@@ -191,7 +191,7 @@ public class TcpClientTests {
 			return out.sendString(Flux.just("Hello"))
 			   .neverComplete();
 		})
-		                     .wiretap()
+		                     .wiretap(true)
 		                     .connectNow(Duration.ofSeconds(5));
 
 		latch.await(5, TimeUnit.SECONDS);
@@ -226,7 +226,7 @@ public class TcpClientTests {
 						                     latch.countDown();
 					                     }).then())
 				         )
-				         .wiretap()
+				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(15));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
@@ -288,7 +288,7 @@ public class TcpClientTests {
 						                     latch.countDown();
 					                     }).then())
 				         )
-				         .wiretap()
+				         .wiretap(true)
 				         .connectNow(Duration.ofSeconds(30));
 
 		System.out.println("Connected");
@@ -311,7 +311,7 @@ public class TcpClientTests {
 				         .port(abortServerPort);
 
 		client.handle((in, out) -> Mono.empty())
-		      .wiretap()
+		      .wiretap(true)
 		      .connectNow()
 		      .disposeNow();
 	}
@@ -323,7 +323,7 @@ public class TcpClientTests {
 		final AtomicLong totalDelay = new AtomicLong();
 
 		client.handle((in, out) -> Mono.never())
-		         .wiretap()
+		         .wiretap(true)
 		         .connect()
 		         .retryWhen(errors -> errors.zipWith(Flux.range(1, 4), (a, b) -> b)
 		                                    .flatMap(attempt -> {
@@ -393,7 +393,7 @@ public class TcpClientTests {
 				  .subscribe();
 				return Flux.never();
 			})
-			.wiretap()
+			.wiretap(true)
 			.connect();
 
 			handler.log()
@@ -475,7 +475,7 @@ public class TcpClientTests {
 			           .then()
 			           .log();
 		})
-		                     .wiretap()
+		                     .wiretap(true)
 		                     .connectNow();
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
@@ -498,7 +498,7 @@ public class TcpClientTests {
 			in.withConnection(c -> c.onReadIdle(500, latch::countDown));
 			return Flux.never();
 		})
-		                     .wiretap()
+		                     .wiretap(true)
 		                     .connectNow();
 
 		assertTrue(latch.await(15, TimeUnit.SECONDS));
@@ -531,7 +531,7 @@ public class TcpClientTests {
 			                               }
 			                               return Flux.merge(allWrites);
 		                               })
-		                             .wiretap()
+		                             .wiretap(true)
 		                             .connectNow();
 
 		System.out.println("Started");
@@ -547,7 +547,7 @@ public class TcpClientTests {
 	@Test
 	public void nettyNetChannelAcceptsNettyChannelHandlers() throws InterruptedException {
 		HttpClient client = HttpClient.create()
-		                              .wiretap();
+		                              .wiretap(true);
 
 		final CountDownLatch latch = new CountDownLatch(1);
 		System.out.println(client.get()

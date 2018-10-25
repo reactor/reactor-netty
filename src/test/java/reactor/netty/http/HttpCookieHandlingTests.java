@@ -46,13 +46,13 @@ public class HttpCookieHandlingTests {
 				                            resp.addCookie(new DefaultCookie("cookie1", "test_value"))
 				                                .send(req.receive()
 				                                         .log("server received"))))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
 				HttpClient.create()
 				          .port(server.port())
-				          .wiretap()
+				          .wiretap(true)
 				          .get()
 				          .uri("/test")
 				          .responseSingle((res, buf) -> Mono.just(res.cookies()))
@@ -78,14 +78,14 @@ public class HttpCookieHandlingTests {
 				          .cookieCodec(ServerCookieEncoder.LAX, ServerCookieDecoder.LAX)
 				          .handle((req, res) -> res.addCookie(new DefaultCookie("cookie1", "test_value"))
 				                                   .sendString(Mono.just("test")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		Mono<Map<CharSequence, Set<Cookie>>> response =
 				HttpClient.create()
 				          .port(server.port())
 				          .cookieCodec(ClientCookieEncoder.LAX, ClientCookieDecoder.LAX)
-				          .wiretap()
+				          .wiretap(true)
 				          .get()
 				          .uri("/")
 				          .responseSingle((res, bytes) -> Mono.just(res.cookies()))

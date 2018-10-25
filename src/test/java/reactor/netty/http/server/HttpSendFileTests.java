@@ -246,7 +246,7 @@ public class HttpSendFileTests {
 		DisposableServer context =
 				customizeServerOptions(server)
 				          .handle((req, resp) -> fn.apply(resp))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client;
@@ -261,7 +261,7 @@ public class HttpSendFileTests {
 		}
 		Mono<String> response =
 				customizeClientOptions(client)
-				          .wiretap()
+				          .wiretap(true)
 				          .get()
 				          .uri("/foo")
 				          .responseSingle((res, byteBufMono) -> byteBufMono.asString(StandardCharsets.UTF_8));

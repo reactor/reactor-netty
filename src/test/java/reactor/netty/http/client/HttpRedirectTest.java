@@ -63,7 +63,7 @@ public class HttpRedirectTest {
 				                            .send();
 				              }
 				          })
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
@@ -93,7 +93,7 @@ public class HttpRedirectTest {
 				HttpServer.create()
 				          .port(9991)
 				          .host("localhost")
-				          .wiretap()
+				          .wiretap(true)
 				          .route(r -> r.get("/1",
 				                                   (req, res) -> res.sendRedirect("http://localhost:9991/3"))
 				                       .get("/2",
@@ -103,13 +103,13 @@ public class HttpRedirectTest {
 				                       .get("/3",
 				                                   (req, res) -> res.status(200)
 				                                                    .sendString(Mono.just("OK"))))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client =
 				HttpClient.create()
 				          .addressSupplier(() -> server.address())
-				          .wiretap();
+				          .wiretap(true);
 
 		String value =
 				client.followRedirect(true)
@@ -159,7 +159,7 @@ public class HttpRedirectTest {
 				                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:8888/3"))
 				                       .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
 				                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:8889/1")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		DisposableServer server2 =
@@ -167,7 +167,7 @@ public class HttpRedirectTest {
 				          .host("localhost")
 				          .port(8889)
 				          .route(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client = HttpClient.create()

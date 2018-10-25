@@ -51,12 +51,12 @@ public class HttpCompressionClientServerTests {
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create()
 		                              .addressSupplier(() -> address(runningServer))
-		                              .wiretap()
+		                              .wiretap(true)
 		                              .compress(true);
 		ByteBuf res =
 				client.headers(h -> Assert.assertTrue(h.contains("Accept-Encoding", "gzip", true)))
@@ -77,12 +77,12 @@ public class HttpCompressionClientServerTests {
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
-				                      .wiretap();
+				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
 				      .get()
@@ -108,13 +108,13 @@ public class HttpCompressionClientServerTests {
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
-				                      .wiretap();
+				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
@@ -141,14 +141,14 @@ public class HttpCompressionClientServerTests {
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
 		                              .compress(false)
-				                      .wiretap();
+				                      .wiretap(true);
 		Tuple2<byte[], HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
@@ -221,7 +221,7 @@ public class HttpCompressionClientServerTests {
 		HttpServer server = HttpServer.create()
 		                              .port(0)
 		                              .compress((req, res) -> true)
-				.wiretap();
+		                              .wiretap(true);
 
 		DisposableServer connection =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
@@ -233,7 +233,7 @@ public class HttpCompressionClientServerTests {
 		Tuple2<HttpHeaders, byte[]> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
-				      .wiretap()
+				      .wiretap(true)
 				      .get()
 				      .uri("/test")
 				      .responseSingle((res, byteBufMono) -> Mono.just(res.responseHeaders())
@@ -272,13 +272,13 @@ public class HttpCompressionClientServerTests {
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
-				                      .wiretap();
+				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
@@ -309,13 +309,13 @@ public class HttpCompressionClientServerTests {
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
-				                      .wiretap();
+				                      .wiretap(true);
 		Tuple2<byte[], HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("accept-encoding", "gzip"))
@@ -354,12 +354,12 @@ public class HttpCompressionClientServerTests {
 		String serverReply = "reply";
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just(serverReply)))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
-				                      .wiretap()
+				                      .wiretap(true)
 				                      .compress(false);
 
 		Tuple2<String, HttpHeaders> resp =
@@ -385,12 +385,12 @@ public class HttpCompressionClientServerTests {
 
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
-				                      .wiretap();
+				                      .wiretap(true);
 
 		Tuple2<String, HttpHeaders> resp =
 				client.get()
@@ -416,11 +416,11 @@ public class HttpCompressionClientServerTests {
 		                              .compress(true);
 		DisposableServer runningServer =
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
-				      .wiretap()
+				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 		HttpClient client = HttpClient.create()
 				                      .addressSupplier(() -> address(runningServer))
-				                      .wiretap()
+				                      .wiretap(true)
 				                      .compress(true);
 
 		ByteBuf resp =
@@ -472,7 +472,7 @@ public class HttpCompressionClientServerTests {
 				HttpServer.create()
 				          .compress(10)
 				          .port(0)
-				          .wiretap()
+				          .wiretap(true)
 				          .handle((req, res) ->
 				                  res.sendHeaders().sendString(Flux.just("test", "test", "test", "test")))
 				          .bindNow();
@@ -481,7 +481,7 @@ public class HttpCompressionClientServerTests {
 				HttpClient.create()
 				          .port(server.address().getPort())
 				          .compress(true)
-				          .wiretap()
+				          .wiretap(true)
 				          .get()
 				          .uri("/")
 				          .responseContent()
@@ -495,7 +495,7 @@ public class HttpCompressionClientServerTests {
 
 		response = HttpClient.create()
 		                     .port(server.address().getPort())
-		                     .wiretap()
+		                     .wiretap(true)
 		                     .compress(true)
 		                     .get()
 		                     .uri("/")

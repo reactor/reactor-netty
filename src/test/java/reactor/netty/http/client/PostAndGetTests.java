@@ -59,7 +59,7 @@ public class PostAndGetTests {
 			                       routes.get("/get/{name}", getHandler())
 			                             .post("/post", postHandler());
 		                       })
-		                       .wiretap()
+		                       .wiretap(true)
 		                       .bindNow();
 	}
 

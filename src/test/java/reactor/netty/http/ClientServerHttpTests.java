@@ -278,7 +278,7 @@ public class ClientServerHttpTests {
 				                                                    .map(new DummyListEncoder(
 						                                                    resp.alloc()
 				                                                    )))))
-		                       .wiretap()
+		                       .wiretap(true)
 		                       .bindNow();
 	}
 
@@ -290,7 +290,7 @@ public class ClientServerHttpTests {
 		HttpClient httpClient =
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
-				          .wiretap();
+				          .wiretap(true);
 
 		return httpClient.get()
 		                 .uri("/data")

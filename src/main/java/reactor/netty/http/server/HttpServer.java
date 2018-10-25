@@ -35,6 +35,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
+import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.tcp.SslProvider;
@@ -387,10 +388,31 @@ public abstract class HttpServer {
 	 * and {@code DEBUG} logger level
 	 *
 	 * @return a new {@link HttpServer}
+	 * @deprecated Use {@link HttpServer#wiretap(boolean)}
 	 */
+	@Deprecated
 	public final HttpServer wiretap() {
 		return tcpConfiguration(tcpServer ->
 		        tcpServer.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
+	}
+
+	/**
+	 * Apply or remove a wire logger configuration using {@link HttpServer} category
+	 * and {@code DEBUG} logger level
+	 *
+	 * @param enable Specifies whether the wire logger configuration will be added to
+	 *               the pipeline
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer wiretap(boolean enable) {
+		if (enable) {
+			return tcpConfiguration(tcpServer ->
+			        tcpServer.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
+		}
+		else {
+			return tcpConfiguration(tcpServer ->
+			        tcpServer.bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.LoggingHandler)));
+		}
 	}
 
 	/**

@@ -150,11 +150,11 @@ public class ByteBufFluxTest {
         DisposableServer c = server.handle((req, res) ->
                                        res.send(ByteBufFlux.fromPath(path))
                                           .then())
-                                   .wiretap()
+                                   .wiretap(true)
                                    .bindNow();
 
         AtomicLong counter = new AtomicLong(0);
-        client.wiretap()
+        client.wiretap(true)
               .get()
               .uri("/download")
               .responseContent()
