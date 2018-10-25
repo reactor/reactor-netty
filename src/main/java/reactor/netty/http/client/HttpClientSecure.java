@@ -39,24 +39,27 @@ final class HttpClientSecure extends HttpClientOperator {
 
 	static HttpClient secure(HttpClient client, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
-		return new HttpClientSecure(client, sslProviderBuilder);
+
+		SslProvider.SslContextSpec builder = SslProvider.builder();
+		sslProviderBuilder.accept(builder);
+		return new HttpClientSecure(client, ((SslProvider.Builder) builder).build());
 	}
 
-	final Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder;
+	final SslProvider sslProvider;
 
-	HttpClientSecure(HttpClient client,
-			@Nullable Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+	HttpClientSecure(HttpClient client, @Nullable SslProvider sslProvider) {
 		super(client);
-		this.sslProviderBuilder = sslProviderBuilder;
+		this.sslProvider = sslProvider;
 	}
 
 	@Override
 	protected TcpClient tcpConfiguration() {
-		if (sslProviderBuilder == null) {
+		if (sslProvider == null) {
 			return source.tcpConfiguration()
-			             .secure();
+			             .secure(DEFAULT_HTTP_SSL_PROVIDER);
 		}
-		return source.tcpConfiguration().secure(sslProviderBuilder);
+		return source.tcpConfiguration().secure(
+				SslProvider.addHandlerConfigurator(sslProvider, DEFAULT_HOSTNAME_VERIFICATION));
 	}
 
 	static final Consumer<? super SslHandler> DEFAULT_HOSTNAME_VERIFICATION = handler -> {

@@ -446,7 +446,9 @@ public abstract class TcpServer {
 	 * @param sslContext The context to set when configuring SSL
 	 *
 	 * @return a new {@link TcpServer}
+	 * @deprecated Use {@link TcpServer#secure(Consumer)}
 	 */
+	@Deprecated
 	public final TcpServer secure(SslContext sslContext) {
 		return secure(sslProviderBuilder -> sslProviderBuilder.sslContext(sslContext));
 	}
@@ -472,7 +474,28 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		return new TcpServerSecure(this, sslProviderBuilder);
+		return TcpServerSecure.secure(this, sslProviderBuilder);
+	}
+
+	/**
+	 * Apply an SSL configuration via the passed {@link SslProvider}.
+	 *
+	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
+	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
+	 * <pre>
+	 * {@code
+	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
+	 *     SslContextBuilder sslContextBuilder =
+	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
+	 * }
+	 *
+	 * @param sslProvider The provider to set when configuring SSL
+	 *
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer secure(SslProvider sslProvider) {
+		return new TcpServerSecure(this, sslProvider);
 	}
 
 	/**

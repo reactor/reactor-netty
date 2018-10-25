@@ -61,6 +61,7 @@ import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.ProxyProvider;
+import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
@@ -1182,26 +1183,28 @@ public class HttpClientTest {
 		server.disposeNow();
 	}
 
+	@Test
 	public void testIssue407() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverSslContextBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .secure(spec -> spec.sslContext(serverSslContextBuilder))
+				          .secure(spec -> spec.sslContext(
+				                  SslContextBuilder.forServer(cert.certificate(), cert.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
 				          .wiretap()
 				          .bindNow(Duration.ofSeconds(30));
 
-		SslContextBuilder clientSslContextBuilder =
-				SslContextBuilder.forClient()
-				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		HttpClient client =
 				HttpClient.create()
 				          .addressSupplier(server::address)
-				          .secure(spec -> spec.sslContext(clientSslContextBuilder));
+				          .secure(spec -> spec.sslContext(
+				                  SslContextBuilder.forClient()
+				                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)));
 
-		StepVerifier.create(client.get()
+		AtomicReference<Channel> ch1 = new AtomicReference<>();
+		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch1.set(c.channel())))
+				                  .get()
 				                  .uri("/1")
 				                  .responseContent()
 				                  .aggregate()
@@ -1210,7 +1213,9 @@ public class HttpClientTest {
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(client.post()
+		AtomicReference<Channel> ch2 = new AtomicReference<>();
+		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch2.set(c.channel())))
+				                  .post()
 				                  .uri("/2")
 				                  .send(ByteBufFlux.fromString(Mono.just("test")))
 				                  .responseContent()
@@ -1220,16 +1225,24 @@ public class HttpClientTest {
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
 
+		AtomicReference<Channel> ch3 = new AtomicReference<>();
 		StepVerifier.create(
-				client.secure(spec -> spec.sslContext(SslContextBuilder.forClient()))
-				      .wiretap()
+				client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch3.set(c.channel())))
+				      .secure(spec -> spec.sslContext(
+				              SslContextBuilder.forClient()
+				                               .trustManager(InsecureTrustManagerFactory.INSTANCE))
+				                          .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP))
 				      .post()
 				      .uri("/3")
 				      .responseContent()
 				      .aggregate()
 				      .asString())
-				    .expectError()
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
+
+		assertThat(ch1.get()).isSameAs(ch2.get());
+		assertThat(ch1.get()).isNotSameAs(ch3.get());
 
 		server.disposeNow();
 	}

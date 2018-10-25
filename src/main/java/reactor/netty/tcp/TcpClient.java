@@ -501,9 +501,22 @@ public abstract class TcpClient {
 	 * @param sslContext The context to set when configuring SSL
 	 *
 	 * @return a new {@link TcpClient}
+	 * @deprecated Use {@link TcpClient#secure(Consumer)}
 	 */
+	@Deprecated
 	public final TcpClient secure(SslContext sslContext) {
 		return secure(sslProviderBuilder -> sslProviderBuilder.sslContext(sslContext));
+	}
+
+	/**
+	 * Apply an SSL configuration via the passed {@link SslProvider}.
+	 *
+	 * @param sslProvider The provider to set when configuring SSL
+	 *
+	 * @return a new {@link TcpClient}
+	 */
+	public final TcpClient secure(SslProvider sslProvider) {
+		return new TcpClientSecure(this, sslProvider);
 	}
 
 	/**
