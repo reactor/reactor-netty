@@ -190,9 +190,9 @@ final class PooledClientContextHandler<CHANNEL extends Channel>
 
 		if (!c.isActive()) {
 			if (log.isDebugEnabled()) {
-				log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
+				log.debug(format(c, "Immediately aborted pooled channel"));
 			}
-			setFuture(pool.acquire());
+//			setFuture(pool.acquire());
 			return;
 		}
 
