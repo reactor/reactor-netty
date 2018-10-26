@@ -40,6 +40,7 @@ import reactor.ipc.netty.NettyConnector;
 import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyInbound;
 import reactor.ipc.netty.NettyOutbound;
+import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.channel.ChannelOperations;
 import reactor.ipc.netty.channel.ContextHandler;
 import reactor.ipc.netty.options.ClientOptions;
@@ -233,7 +234,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 
 		@Override
 		public void accept(Throwable throwable) {
-			sink.success();
+			sink.error(throwable);
 		}
 
 		@Override
@@ -241,7 +242,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 			if (c.eventLoop()
 			     .inEventLoop()) {
 				if (contextHandler.createOperations(c, null) == null) {
-					sink.success();
+					sink.error(new AbortedException("Failed to acquire"));
 				}
 			}
 			else {
