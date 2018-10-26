@@ -1192,7 +1192,7 @@ public class HttpClientTest {
 				          .secure(spec -> spec.sslContext(
 				                  SslContextBuilder.forServer(cert.certificate(), cert.privateKey())))
 				          .handle((req, res) -> res.sendString(Mono.just("test")))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
 		HttpClient client =
