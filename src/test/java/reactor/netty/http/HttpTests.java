@@ -683,7 +683,7 @@ public class HttpTests {
 
 		DisposableServer server =
 				HttpServer.create()
-				          .protocol(HttpProtocol.H2)
+				          .protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
 				          .secure(ssl -> ssl.sslContext(serverOptions))
 				          .port(8080)
 				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
