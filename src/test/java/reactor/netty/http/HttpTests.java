@@ -677,6 +677,25 @@ public class HttpTests {
 
 	@Test
 	@Ignore
+	public void testH2OrH1Secure() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+
+		DisposableServer server =
+				HttpServer.create()
+				          .protocol(HttpProtocol.H2)
+				          .secure(ssl -> ssl.sslContext(serverOptions))
+				          .port(8080)
+				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				          .wiretap(true)
+				          .bindNow();
+
+		new CountDownLatch(1).await();
+		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
 	public void testIssue395() throws Exception {
 		BiFunction<HttpServerRequest, HttpServerResponse, Mono<Void>> echoHandler =
 				(req, res) -> res.send(req.receive().map(ByteBuf::retain)).then();
