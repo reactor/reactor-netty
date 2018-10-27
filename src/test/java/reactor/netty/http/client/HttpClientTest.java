@@ -64,6 +64,7 @@ import reactor.netty.tcp.ProxyProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
+import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
@@ -1244,6 +1245,48 @@ public class HttpClientTest {
 		assertThat(ch1.get()).isSameAs(ch2.get());
 		assertThat(ch1.get()).isNotSameAs(ch3.get());
 
+		server.disposeNow();
+	}
+
+
+	@Test
+	public void clientContext()  {
+		AtomicInteger i = new AtomicInteger(0);
+
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.send(req.receive().retain()))
+				          .wiretap(true)
+				          .bindNow();
+
+		StepVerifier.create(
+				HttpClient.create(ConnectionProvider.newConnection())
+				          .port(server.port())
+				          .doOnRequest((req, c) -> {
+				          	if (req.currentContext().hasKey("test")) {
+					            i.incrementAndGet();
+				            }
+				          })
+				          .doOnResponse((res, c) -> {
+					          if (res.currentContext().hasKey("test")) {
+						          i.incrementAndGet();
+					          }
+				          })
+				          .post()
+				          .send((req, out) ->
+				          	out.sendString(Mono.subscriberContext()
+				                               .map(ctx -> ctx.getOrDefault("test", "fail")))
+				          )
+				          .responseContent()
+				          .asString()
+				          .subscriberContext(Context.of("test", "success"))
+		)
+		            .expectNext("success")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(i.get()).isEqualTo(2);
 		server.disposeNow();
 	}
 }

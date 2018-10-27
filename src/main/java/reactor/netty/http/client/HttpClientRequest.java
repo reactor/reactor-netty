@@ -19,6 +19,7 @@ package reactor.netty.http.client;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
 import reactor.netty.http.HttpInfos;
+import reactor.util.context.Context;
 
 /**
  * An Http Reactive client metadata contract for outgoing requests. It inherits several
@@ -65,6 +66,14 @@ public interface HttpClientRequest extends HttpInfos {
 	 * @return this outbound
 	 */
 	HttpClientRequest headers(HttpHeaders headers);
+
+	/**
+	 * Return the current {@link Context} associated with the Mono/Flux exposed
+	 * via {@link HttpClient.ResponseReceiver#response()} or related terminating API.
+	 *
+	 * @return the current user {@link Context}
+	 */
+	Context currentContext();
 
 	/**
 	 * Return true  if redirected will be followed
