@@ -15,6 +15,9 @@
  */
 package reactor.netty.tcp;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.Before;
@@ -22,9 +25,6 @@ import org.junit.Test;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -90,6 +90,7 @@ public class SslProviderTests {
 				      .secure(spec -> spec.sslContext(builder))
 				      .bindNow();
 		assertEquals(2, result.size());
+		assertTrue(result.contains("h2"));
 		disposableServer.disposeNow();
 	}
 
@@ -100,6 +101,7 @@ public class SslProviderTests {
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
 		assertEquals(2, result.size());
+		assertTrue(result.contains("h2"));
 		disposableServer.disposeNow();
 	}
 
@@ -111,6 +113,7 @@ public class SslProviderTests {
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
 		assertEquals(2, result.size());
+		assertTrue(result.contains("h2"));
 		disposableServer.disposeNow();
 	}
 }

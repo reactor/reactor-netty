@@ -34,7 +34,6 @@ final class HttpServerSecure extends HttpServerOperator {
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
 
 		SslProvider.SslContextSpec builder = SslProvider.builder();
-		((SslProvider.DefaultConfigurationSpec)builder).defaultConfiguration(SslProvider.DefaultConfigurationType.H2);
 		sslProviderBuilder.accept(builder);
 		this.sslProvider = ((SslProvider.Builder) builder).build();
 	}

@@ -16,7 +16,6 @@
 
 package reactor.netty.http.server;
 
-import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
@@ -104,15 +103,15 @@ final class HttpServerBind extends HttpServer
 
 		SslProvider ssl = SslProvider.findSslSupport(b);
 		if (ssl != null && ssl.getDefaultConfigurationType() == null) {
-			switch (conf.protocols) {
-				case HttpServerConfiguration.h11:
-					ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.TCP);
-					SslProvider.setBootstrap(b, ssl);
-					break;
-				case HttpServerConfiguration.h2:
-					ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.H2);
-					SslProvider.setBootstrap(b, ssl);
-					break;
+			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
+				ssl = SslProvider.updateDefaultConfiguration(ssl,
+						SslProvider.DefaultConfigurationType.H2);
+				SslProvider.setBootstrap(b, ssl);
+			}
+			else {
+				ssl = SslProvider.updateDefaultConfiguration(ssl,
+						SslProvider.DefaultConfigurationType.TCP);
+				SslProvider.setBootstrap(b, ssl);
 			}
 		}
 
