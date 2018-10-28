@@ -20,7 +20,6 @@ import java.net.URI;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -108,7 +107,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 				try {
 					handshaker.finishHandshake(channel(), response);
-					listener().onStateChange(this, RESPONSE_RECEIVED);
+					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
 				catch (WebSocketHandshakeException wshe) {
 					onInboundError(wshe);

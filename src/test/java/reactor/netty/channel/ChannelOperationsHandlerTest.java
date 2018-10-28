@@ -143,7 +143,7 @@ public class ChannelOperationsHandlerTest {
 				          .responseContent();
 
 		StepVerifier.create(response.log())
-		            .expectErrorMessage("Connection closed prematurely")
+		            .expectError(IOException.class)
 		            .verify();
 
 		abortServer.close();

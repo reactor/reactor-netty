@@ -1289,4 +1289,68 @@ public class HttpClientTest {
 		assertThat(i.get()).isEqualTo(2);
 		server.disposeNow();
 	}
+
+	@Test
+	public void doOnError() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) -> {
+				          	if (req.requestHeaders().contains("during")) {
+					            return resp.sendString(Mono.just("test"))
+					                       .then(Mono.error(new RuntimeException("test")));
+				            }
+				            throw new RuntimeException("test");
+				          })
+				          .bindNow();
+
+		AtomicInteger requestError = new AtomicInteger();
+		AtomicInteger responseError = new AtomicInteger();
+
+		Mono<String> content =
+				HttpClient.create()
+				          .port(server.address().getPort())
+				          .headers(h -> h.add("before", "test"))
+				          .doOnRequestError((req, err) ->
+					          requestError.incrementAndGet()
+				          )
+				          .doOnResponseError((res, err) ->
+					          responseError.incrementAndGet()
+				          )
+				          .get()
+				          .uri("/")
+				          .responseContent()
+				          .aggregate()
+				          .asString();
+
+		StepVerifier.create(content)
+		            .verifyError(HttpClientOperations.PrematureCloseException.class);
+
+		assertThat(requestError.getAndSet(0)).isEqualTo(1);
+		assertThat(responseError.getAndSet(0)).isEqualTo(0);
+
+		content =
+				HttpClient.create()
+				          .port(server.address().getPort())
+				          .headers(h -> h.add("during", "test"))
+				          .doOnError((req, err) ->
+					          requestError.incrementAndGet()
+						          ,(res, err) ->
+					          responseError.incrementAndGet()
+				          )
+				          .get()
+				          .uri("/")
+				          .responseContent()
+				          .aggregate()
+				          .asString();
+
+		StepVerifier.create(content)
+		            .verifyError(HttpClientOperations.PrematureCloseException.class);
+
+
+		assertThat(requestError.getAndSet(0)).isEqualTo(0);
+		assertThat(responseError.getAndSet(0)).isEqualTo(1);
+
+		server.disposeNow();
+	}
 }

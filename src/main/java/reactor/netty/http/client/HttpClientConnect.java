@@ -379,7 +379,7 @@ final class HttpClientConnect extends HttpClient {
 		@Override
 		@SuppressWarnings("unchecked")
 		public void onStateChange(Connection connection, State newState) {
-			if (newState == HttpClientOperations.RESPONSE_RECEIVED) {
+			if (newState == HttpClientState.RESPONSE_RECEIVED) {
 				sink.success(connection);
 				return;
 			}

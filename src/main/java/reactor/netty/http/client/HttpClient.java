@@ -484,6 +484,27 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Setup a callback called when {@link HttpClientRequest} has not been sent and when {@link HttpClientResponse} has not been fully
+	 * received.
+	 * <p>
+	 * Note that some mutation of {@link HttpClientRequest} performed late in lifecycle
+	 * {@link #doOnRequest(BiConsumer)} or {@link RequestSender#send(BiFunction)} might
+	 * not be visible if the error results from a connection failure.
+	 *
+	 * @param doOnRequest a consumer observing connected events
+	 * @param doOnResponse a consumer observing response failures
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient doOnError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequest,
+			BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponse) {
+		Objects.requireNonNull(doOnRequest, "doOnRequest");
+		Objects.requireNonNull(doOnResponse, "doOnResponse");
+		return new HttpClientDoOnError(this, doOnRequest, doOnResponse);
+	}
+
+
+	/**
 	 * Setup a callback called when {@link HttpClientRequest} is about to be sent.
 	 *
 	 * @param doOnRequest a consumer observing connected events
@@ -491,7 +512,23 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doOnRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest) {
+		Objects.requireNonNull(doOnRequest, "doOnRequest");
 		return new HttpClientDoOn(this, doOnRequest, null, null, null);
+	}
+
+	/**
+	 * Setup a callback called when {@link HttpClientRequest} has not been sent.
+	 * Note that some mutation of {@link HttpClientRequest} performed late in lifecycle
+	 * {@link #doOnRequest(BiConsumer)} or {@link RequestSender#send(BiFunction)} might
+	 * not be visible if the error results from a connection failure.
+	 *
+	 * @param doOnRequest a consumer observing connected events
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient doOnRequestError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequest) {
+		Objects.requireNonNull(doOnRequest, "doOnRequest");
+		return new HttpClientDoOnError(this, doOnRequest, null);
 	}
 
 	/**
@@ -502,6 +539,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doAfterRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest) {
+		Objects.requireNonNull(doAfterRequest, "doAfterRequest");
 		return new HttpClientDoOn(this, null, doAfterRequest, null, null);
 	}
 
@@ -514,7 +552,21 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doOnResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse) {
+		Objects.requireNonNull(doOnResponse, "doOnResponse");
 		return new HttpClientDoOn(this, null, null, doOnResponse, null);
+	}
+
+	/**
+	 * Setup a callback called when {@link HttpClientResponse} has not been fully
+	 * received.
+	 *
+	 * @param doOnResponse a consumer observing response failures
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient doOnResponseError(BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponse) {
+		Objects.requireNonNull(doOnResponse, "doOnResponse");
+		return new HttpClientDoOnError(this, null, doOnResponse);
 	}
 
 	/**
@@ -525,6 +577,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doAfterResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponse) {
+		Objects.requireNonNull(doAfterResponse, "doAfterResponse");
 		return new HttpClientDoOn(this, null, null, null, doAfterResponse);
 	}
 
@@ -870,4 +923,5 @@ public abstract class HttpClient {
 	static boolean isCompressing(HttpHeaders h){
 		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true);
 	}
+
 }

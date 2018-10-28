@@ -244,11 +244,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (isInboundCancelled() || isInboundDisposed()) {
 			return;
 		}
+		listener().onStateChange(this, HttpClientState.RESPONSE_INCOMPLETE);
 		if (responseState == null) {
-			listener().onUncaughtException(this, new IOException("Connection closed prematurely"));
+			listener().onUncaughtException(this, PrematureCloseException.BEFORE_RESPONSE);
 			return;
 		}
-		super.onInboundError(new IOException("Connection closed prematurely"));
+		super.onInboundError(PrematureCloseException.DURING_RESPONSE);
 	}
 
 	@Override
@@ -429,7 +430,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		else if (markSentBody()) {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
-		listener().onStateChange(this, REQUEST_SENT);
+		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
 		channel().read();
 	}
 
@@ -490,7 +491,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 
 			if (notRedirected(response)) {
-				listener().onStateChange(this, RESPONSE_RECEIVED);
+				listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 			}
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
@@ -729,18 +730,21 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	static final AttributeKey<Supplier<String>[]> REDIRECT_ATTR_KEY  =
 			AttributeKey.newInstance("httpRedirects");
 
-	static final ConnectionObserver.State REQUEST_SENT = new ConnectionObserver.State() {
-		@Override
-		public String toString() {
-			return "[request_sent]";
-		}
-	};
-	static final ConnectionObserver.State RESPONSE_RECEIVED = new ConnectionObserver.State
-			() {
-		@Override
-		public String toString() {
-			return "[response_received]";
-		}
-	};
+	static final class PrematureCloseException extends IOException {
 
+		static final PrematureCloseException BEFORE_RESPONSE =
+				new PrematureCloseException("Connection prematurely closed BEFORE response");
+
+		static final PrematureCloseException DURING_RESPONSE =
+				new PrematureCloseException("Connection prematurely closed DURING response");
+
+		PrematureCloseException(String message) {
+			super(message);
+		}
+
+		@Override
+		public synchronized Throwable fillInStackTrace() {
+			return this;
+		}
+	}
 }

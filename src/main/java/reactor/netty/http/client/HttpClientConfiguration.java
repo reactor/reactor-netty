@@ -108,6 +108,20 @@ final class HttpClientConfiguration {
 		return hcc;
 	}
 
+	@SuppressWarnings("unchecked")
+	static HttpClientConfiguration get(Bootstrap b) {
+
+		HttpClientConfiguration hcc = (HttpClientConfiguration) b.config()
+		                                                         .attrs()
+		                                                         .get(CONF_KEY);
+
+		if (hcc == null) {
+			return DEFAULT;
+		}
+
+		return hcc;
+	}
+
 	static final Function<Bootstrap, Bootstrap> MAP_KEEPALIVE = b -> {
 		HttpClientConfiguration c = getOrCreate(b);
 		if ( c.headers == null ) {
