@@ -397,6 +397,19 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Intercept the connection lifecycle and allows to delay, transform or inject a
+	 * context.
+	 *
+	 * @param connector A bi function mapping the default connection and configured
+	 * bootstrap to a target connection.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient mapConnect(BiFunction<? super Mono<? extends Connection>, ? super Bootstrap, ? extends Mono<? extends Connection>> connector) {
+		return new HttpClientOnConnectMap(this, connector);
+	}
+
+	/**
 	 * Specifies whether transfer-encoding is enabled
 	 *
 	 * @param chunkedEnabled if true transfer-encoding is enabled otherwise disabled.

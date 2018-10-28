@@ -1353,4 +1353,39 @@ public class HttpClientTest {
 
 		server.disposeNow();
 	}
+
+	@Test
+	public void withConnector() {
+		DisposableServer server = HttpServer.create()
+		                                    .port(0)
+		                                    .handle((req, resp) -> {
+			                                    return resp.sendString(Mono.just(req.requestHeaders()
+			                                                                        .get("test")));
+		                                    })
+		                                    .bindNow();
+
+		Mono<String> content = HttpClient.create()
+		                                 .port(server.address()
+		                                             .getPort())
+		                                 .mapConnect((c, b) -> c.subscriberContext(Context.of("test", "success")))
+		                                 .post()
+		                                 .uri("/")
+		                                 .send((req, out) -> {
+			                                 req.requestHeaders()
+			                                    .set("test",
+					                                    req.currentContext()
+					                                       .getOrDefault("test", "fail"));
+			                                 return Mono.empty();
+		                                 })
+		                                 .responseContent()
+		                                 .aggregate()
+		                                 .asString();
+
+		StepVerifier.create(content)
+		            .expectNext("success")
+		            .verifyComplete();
+
+
+		server.disposeNow();
+	}
 }

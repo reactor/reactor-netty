@@ -164,8 +164,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		}
 	}
 
-	static final class OnErrorTcpClient extends TcpClient
-			implements ConnectionObserver {
+	static final class OnErrorTcpClient extends TcpClient implements ConnectionObserver {
 
 		final TcpClient                                                 sourceTcp;
 		final BiConsumer<? super HttpClientRequest, ? super Throwable>  onRequestError;
