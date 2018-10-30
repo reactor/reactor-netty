@@ -46,7 +46,7 @@ ext {
   gradleVersion = '3.3'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.1.11.RELEASE"
+  reactorCoreVersion = "3.1.12.BUILD-SNAPSHOT"
 
   // Languages
   groovyVersion = '2.4.1'
@@ -58,7 +58,7 @@ ext {
   assertJVersion = '3.6.1'
 
   // Libraries
-  nettyVersion = '4.1.30.Final'
+  nettyVersion = '4.1.29.Final'
   jacksonDatabindVersion = '2.5.1'
 
   // Testing
