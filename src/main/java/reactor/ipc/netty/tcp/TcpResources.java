@@ -235,9 +235,9 @@ public class TcpResources implements PoolResources, LoopResources {
 					}
 					else {
 						String loopType = loops == null ? "default" : "provided";
-						log.warn("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						log.debug("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
 						String poolType = pools == null ? "default" : "provided";
-						log.warn("[{}] resources will use the {} PoolResources: {}", name, poolType, update.defaultPools);
+						log.debug("[{}] resources will use the {} PoolResources: {}", name, poolType, update.defaultPools);
 					}
 					return update;
 				}

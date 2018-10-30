@@ -194,7 +194,7 @@ public class UdpResources implements LoopResources {
 					}
 					else {
 						String loopType = loops == null ? "default" : "provided";
-						log.warn("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						log.debug("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
 					}
 					return update;
 				}
