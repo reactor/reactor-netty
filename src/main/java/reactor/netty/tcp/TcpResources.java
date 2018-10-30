@@ -238,9 +238,9 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 					}
 					else {
 						String loopType = loops == null ? "default" : "provided";
-						log.warn("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						log.debug("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
 						String poolType = provider == null ? "default" : "provided";
-						log.warn("[{}] resources will use the {} ConnectionProvider: {}", name, poolType, update.defaultProvider);
+						log.debug("[{}] resources will use the {} ConnectionProvider: {}", name, poolType, update.defaultProvider);
 					}
 					return update;
 				}
