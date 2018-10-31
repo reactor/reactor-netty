@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
@@ -724,7 +725,7 @@ public class WebsocketTest {
 
 
 	@Test
-	public void testContext() {
+	public void testContextServer() {
 		httpServer = HttpServer.create(0)
 		                       .newHandler((in, out) -> out.sendWebsocket((i, o) ->
 						                       o.sendString(Mono.subscriberContext()
@@ -748,4 +749,35 @@ public class WebsocketTest {
 		            .expectNext("success")
 		            .verifyComplete();
 	}
+	@Test
+	public void testContextClient() {
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o.send(i.receive().retain())))
+		                       .block(Duration.ofSeconds(30));
+		assertNotNull(httpServer);
+
+		AtomicInteger success = new AtomicInteger(0);
+
+		StepVerifier.create(HttpClient.create(httpServer.address()
+		                                                .getPort())
+		                              .ws("/test")
+		                              .flatMapMany(in -> in.receiveWebsocket((win, out) -> out.sendString(
+				                              Mono.subscriberContext()
+				                                  .map(ctx -> ctx.getOrDefault("test",
+						                                  "fail"))
+				                                  .doOnNext(
+						                                  data -> {
+							                                  if (data.equals(
+									                                  "success")) {
+								                                  success.incrementAndGet();
+							                                  }
+						                                  }))
+
+		                              ))
+		                              .subscriberContext(Context.of("test", "success")))
+		            .verifyComplete();
+
+			Assert.assertTrue("WTF", success.get() == 1);
+	}
+
 }
