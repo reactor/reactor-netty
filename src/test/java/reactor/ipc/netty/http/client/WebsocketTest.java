@@ -46,6 +46,7 @@ import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.test.StepVerifier;
+import reactor.util.context.Context;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNotNull;
@@ -682,7 +683,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue444() throws InterruptedException {
+	public void testIssue444() {
 		doTestIssue444((in, out) ->
 				out.sendObject(Flux.error(new Throwable())
 				                   .onErrorResume(ex -> out.sendClose(1001, "Going Away"))
@@ -719,5 +720,32 @@ public class WebsocketTest {
 		                                     .then()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+
+	@Test
+	public void testContext() {
+		httpServer = HttpServer.create(0)
+		                       .newHandler((in, out) -> out.sendWebsocket((i, o) ->
+						                       o.sendString(Mono.subscriberContext()
+						                                        .map(ctx -> ctx.getOrDefault(
+								                                        "test",
+								                                        "fail")))
+				                       ).subscriberContext(Context.of("test", "success"))
+		                       )
+		                       .block(Duration.ofSeconds(30));
+		assertNotNull(httpServer);
+
+		StepVerifier.create(
+		HttpClient.create(httpServer.address()
+		                            .getPort())
+		          .ws("/test")
+		          .flatMapMany(in -> in.receiveWebsocket()
+		                               .receive()
+		                               .aggregate()
+		                               .asString())
+		)
+		            .expectNext("success")
+		            .verifyComplete();
 	}
 }
