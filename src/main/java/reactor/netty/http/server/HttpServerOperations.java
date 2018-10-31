@@ -54,6 +54,8 @@ import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -68,6 +70,7 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static reactor.netty.ReactorNetty.format;
@@ -549,13 +552,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 			if (rebind(ops)) {
 				return FutureMono.from(ops.handshakerResult)
-				                 .doOnSuccess(aVoid -> {
-				                     //skip handler if no matching subprotocol
-				                     if (protocols == null || ops.selectedSubprotocol() != null) {
-				                         Mono.fromDirect(websocketHandler.apply(ops, ops))
-				                             .doAfterSuccessOrError(ops)
-				                             .subscribe();
-				                     }
+				                 .doOnEach(signal -> {
+				                 	if(!signal.hasError() && (protocols == null || ops.selectedSubprotocol() != null)) {
+					                    websocketHandler.apply(ops, ops)
+					                                    .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
+				                    }
 				                 });
 			}
 		}
@@ -563,6 +564,49 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
+	}
+
+	static final class WebsocketSubscriber implements CoreSubscriber<Void>, ChannelFutureListener {
+		final WebsocketServerOperations ops;
+		final Context                context;
+
+		WebsocketSubscriber(WebsocketServerOperations ops, Context context) {
+			this.ops = ops;
+			this.context = context;
+		}
+
+		@Override
+		public void onSubscribe(Subscription s) {
+			s.request(Long.MAX_VALUE);
+		}
+
+		@Override
+		public void onNext(Void aVoid) {
+
+		}
+
+		@Override
+		public void onError(Throwable t) {
+			ops.onOutboundError(t);
+		}
+
+		@Override
+		public void operationComplete(ChannelFuture future)  {
+			ops.terminate();
+		}
+
+		@Override
+		public void onComplete() {
+			if (ops.channel()
+			       .isActive()) {
+				ops.sendCloseNow(null, this);
+			}
+		}
+
+		@Override
+		public Context currentContext() {
+			return context;
+		}
 	}
 
 	static final Logger log = Loggers.getLogger(HttpServerOperations.class);

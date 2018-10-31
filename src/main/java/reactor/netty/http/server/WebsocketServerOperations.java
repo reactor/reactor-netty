@@ -17,7 +17,6 @@
 package reactor.netty.http.server;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.BiConsumer;
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
@@ -51,7 +50,7 @@ import static reactor.netty.ReactorNetty.format;
  * @author Simon Baslé
  */
 final class WebsocketServerOperations extends HttpServerOperations
-		implements WebsocketInbound, WebsocketOutbound, BiConsumer<Void, Throwable> {
+		implements WebsocketInbound, WebsocketOutbound {
 
 	final WebSocketServerHandshaker handshaker;
 	final ChannelPromise            handshakerResult;
@@ -124,18 +123,6 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	@Override
 	protected void onOutboundComplete() {
-	}
-
-	@Override
-	public void accept(Void aVoid, Throwable throwable) {
-		if (throwable == null) {
-			if (channel().isActive()) {
-				sendCloseNow(null, f -> terminate());
-			}
-		}
-		else {
-			onOutboundError(throwable);
-		}
 	}
 
 	@Override

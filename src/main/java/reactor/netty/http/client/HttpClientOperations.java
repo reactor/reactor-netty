@@ -60,6 +60,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.Exceptions;
@@ -77,6 +78,7 @@ import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
 
