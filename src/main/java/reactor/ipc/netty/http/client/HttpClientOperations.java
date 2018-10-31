@@ -59,6 +59,7 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -76,6 +77,7 @@ import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.context.Context;
 
 import static reactor.ipc.netty.ReactorNetty.format;
 
@@ -768,9 +770,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 
 				if (websocketHandler != noopHandler()) {
 					handshake =
-							handshake.doOnSuccess(aVoid -> Mono.from(websocketHandler.apply(ops, ops))
-							                                   .doAfterSuccessOrError(ops)
-							                                   .subscribe());
+							handshake.doOnEach(signal -> {
+								if(!signal.hasError()) {
+									websocketHandler.apply(ops, ops)
+									                .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
+								}
+							});
 				}
 				return handshake;
 			}
@@ -779,6 +784,44 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
+	}
+
+	static final class WebsocketSubscriber implements CoreSubscriber<Void> {
+		final HttpClientWSOperations ops;
+		final Context                context;
+
+		WebsocketSubscriber(HttpClientWSOperations ops, Context context) {
+			this.ops = ops;
+			this.context = context;
+		}
+
+		@Override
+		public void onSubscribe(Subscription s) {
+			s.request(Long.MAX_VALUE);
+		}
+
+		@Override
+		public void onNext(Void aVoid) {
+
+		}
+
+		@Override
+		public void onError(Throwable t) {
+			ops.onOutboundError(t);
+		}
+
+		@Override
+		public void onComplete() {
+			if (ops.channel()
+			       .isActive()) {
+				ops.sendCloseNow(null);
+			}
+		}
+
+		@Override
+		public Context currentContext() {
+			return context;
+		}
 	}
 
 	static final class ResponseState {
