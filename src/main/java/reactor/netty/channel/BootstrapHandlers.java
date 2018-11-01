@@ -575,12 +575,17 @@ public abstract class BootstrapHandlers {
 			if (pipeline.get(NettyPipeline.SslHandler) != null) {
 				if (debugSsl) {
 					pipeline.addBefore(NettyPipeline.SslHandler,
-									NettyPipeline.SslLoggingHandler,
-									new LoggingHandler("reactor.netty.tcp.ssl"));
+							NettyPipeline.SslLoggingHandler,
+							new LoggingHandler("reactor.netty.tcp.ssl"));
 				}
 				pipeline.addAfter(NettyPipeline.SslHandler,
-								NettyPipeline.LoggingHandler,
-								handler);
+						NettyPipeline.LoggingHandler,
+						handler);
+			}
+			else if (pipeline.get(NettyPipeline.ProxyHandler) != null) {
+				pipeline.addAfter(NettyPipeline.ProxyHandler,
+						NettyPipeline.LoggingHandler,
+						handler);
 			}
 			else {
 				pipeline.addFirst(NettyPipeline.LoggingHandler, handler);
