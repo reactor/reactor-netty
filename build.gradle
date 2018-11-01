@@ -59,7 +59,7 @@ ext {
   assertJVersion = '3.6.1'
 
   // Libraries
-  nettyVersion = '4.1.29.Final'
+  nettyVersion = '4.1.31.Final'
   jacksonDatabindVersion = '2.5.1'
 
   // Testing
@@ -237,7 +237,7 @@ configure(rootProject) { project ->
 			"org.testng:testng:6.8.5"
 
 	// Needed for HTTP/2 testing
-	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.14.Final" + os_suffix
+	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.19.Final" + os_suffix
   }
 
 
