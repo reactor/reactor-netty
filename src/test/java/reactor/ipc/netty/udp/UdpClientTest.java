@@ -94,11 +94,16 @@ public class UdpClientTest {
 
 	@Test
 	public void testIssue192() {
-		UdpServer.Builder serverBuilder = UdpServer.builder();
-		UdpClient.Builder clientBuilder = UdpClient.builder();
-		assertThat(Thread.getAllStackTraces().keySet().stream().allMatch(t -> !t.getName().startsWith("udp"))).isTrue();
-		serverBuilder.build();
-		clientBuilder.build();
+		UdpServer.Builder serverBuilder = UdpServer.builder()
+		                                           .options(ops -> ops.port(7000));
+		UdpClient.Builder clientBuilder = UdpClient.builder()
+		                                           .options(ops -> ops.port(7000));
+		assertThat(Thread.getAllStackTraces().keySet().stream().noneMatch(t -> t.getName().startsWith("udp"))).isTrue();
+
+		serverBuilder.build()
+		             .startAndAwait((in, out) -> Mono.empty());
+		clientBuilder.build()
+		             .startAndAwait((in, out) -> Mono.empty());;
 		assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("udp"))).isTrue();
 	}
 }

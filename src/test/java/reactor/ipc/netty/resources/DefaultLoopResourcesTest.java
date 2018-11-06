@@ -43,13 +43,19 @@ public class DefaultLoopResourcesTest {
 	public void disposeLaterSubsequentIsQuick() {
 		DefaultLoopResources loopResources = new DefaultLoopResources(
 				"test", 0, false);
+		loopResources.onServer(true);
 
 		assertThat(loopResources.isDisposed()).isFalse();
 
 		Duration firstInvocation = StepVerifier.create(loopResources.disposeLater())
 		                                       .verifyComplete();
 		assertThat(loopResources.isDisposed()).isTrue();
-		assertThat(loopResources.serverLoops.isTerminated()).isTrue();
+		if (!loopResources.preferNative()) {
+			assertThat(loopResources.serverLoops.get().isTerminated()).isTrue();
+		}
+		else {
+			assertThat(loopResources.cacheNativeServerLoops.get().isTerminated()).isTrue();
+		}
 
 		Duration secondInvocation = StepVerifier.create(loopResources.disposeLater())
 		                                        .verifyComplete();
