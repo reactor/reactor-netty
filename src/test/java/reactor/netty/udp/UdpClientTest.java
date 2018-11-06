@@ -59,6 +59,7 @@ public class UdpClientTest {
 				         .wiretap(true)
 				         .bind()
 				         .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
 
 		Connection client1 =
 				UdpClient.create()
@@ -77,6 +78,7 @@ public class UdpClientTest {
 				         .wiretap(true)
 				         .connect()
 				         .block(Duration.ofSeconds(30));
+		assertThat(client1).isNotNull();
 
 		Connection client2 =
 				UdpClient.create()
@@ -95,6 +97,7 @@ public class UdpClientTest {
 				         .wiretap(true)
 				         .connect()
 				         .block(Duration.ofSeconds(30));
+		assertThat(client2).isNotNull();
 
 		assertTrue(latch.await(30, TimeUnit.SECONDS));
 		server.disposeNow();
@@ -106,7 +109,7 @@ public class UdpClientTest {
 	public void testIssue192() {
 		UdpServer server = UdpServer.create();
 		UdpClient client = UdpClient.create();
-		assertThat(Thread.getAllStackTraces().keySet().stream().allMatch(t -> !t.getName().startsWith("udp"))).isTrue();
+		assertThat(Thread.getAllStackTraces().keySet().stream().noneMatch(t -> t.getName().startsWith("udp"))).isTrue();
 		server.bind();
 		client.connect();
 		assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("udp"))).isTrue();
