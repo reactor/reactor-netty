@@ -260,7 +260,7 @@ public final class SslProvider {
 		NONE,
 		/**
 		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
-		 * <code>OpenSsl.isAlpnSupported()</code>
+		 * <code>OpenSsl.isAvailable()</code>
 		 */
 		TCP,
 		/**
@@ -366,19 +366,23 @@ public final class SslProvider {
 	void updateDefaultConfiguration() {
 		switch (type) {
 			case H2:
-				sslContextBuilder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+				sslContextBuilder.sslProvider(
+				                     OpenSsl.isAlpnSupported() ?
+				                             io.netty.handler.ssl.SslProvider.OPENSSL :
+				                             io.netty.handler.ssl.SslProvider.JDK)
+				                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
 				                 .applicationProtocolConfig(new ApplicationProtocolConfig(
 				                     ApplicationProtocolConfig.Protocol.ALPN,
 				                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
 				                     ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
 				                     ApplicationProtocolNames.HTTP_2,
 				                     ApplicationProtocolNames.HTTP_1_1));
-				// deliberate fall through
+				break;
 			case TCP:
-				io.netty.handler.ssl.SslProvider sslProvider =
-						OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
-						                            io.netty.handler.ssl.SslProvider.JDK;
-				sslContextBuilder.sslProvider(sslProvider);
+				sslContextBuilder.sslProvider(
+				                     OpenSsl.isAvailable() ?
+				                             io.netty.handler.ssl.SslProvider.OPENSSL :
+				                             io.netty.handler.ssl.SslProvider.JDK);
 				break;
 			case NONE:
 				break; //no default configuration
