@@ -495,9 +495,10 @@ final class HttpClientConnect extends HttpClient {
 					headers.set(HttpHeaderNames.USER_AGENT, USER_AGENT);
 				}
 
-				if (!headers.contains(HttpHeaderNames.HOST)) {
+				SocketAddress remoteAddress = uri.getRemoteAddress();
+				if (!headers.contains(HttpHeaderNames.HOST) && remoteAddress instanceof InetSocketAddress) {
 					headers.set(HttpHeaderNames.HOST,
-					            resolveHostHeaderValue(ch.address()));
+					            resolveHostHeaderValue((InetSocketAddress) remoteAddress));
 				}
 
 				if (!headers.contains(HttpHeaderNames.ACCEPT)) {
