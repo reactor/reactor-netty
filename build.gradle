@@ -63,6 +63,7 @@ ext {
 
   // Testing
   mockitoVersion = '1.10.19'
+  hoverflyJavaVersion = '0.11.1'
 
   javadocLinks = ["http://docs.oracle.com/javase/7/docs/api/",
 				  "http://docs.oracle.com/javaee/6/api/",
@@ -226,7 +227,8 @@ configure(rootProject) { project ->
 	// Testing
 	testCompile "org.hamcrest:hamcrest-library:1.3",
 			"org.assertj:assertj-core:$assertJVersion",
-			"org.testng:testng:6.8.5"
+			"org.testng:testng:6.8.5",
+			"io.specto:hoverfly-java:${hoverflyJavaVersion}"
   }
 
 

@@ -284,65 +284,6 @@ public class HttpClientTest {
 
 	@Test
 	@Ignore
-	public void proxy() {
-		Mono<HttpClientResponse> remote =
-				HttpClient.create(o -> o.proxy(ops -> ops.type(Proxy.HTTP)
-				                                         .host("127.0.0.1")
-				                                         .port(8888)))
-				          .get("https://projectreactor.io", c -> c.followRedirect()
-				                                                  .sendHeaders());
-
-		Mono<String> page = remote
-				.flatMapMany(r -> r.receive()
-				                   .retain()
-				                   .asString()
-				                   .limitRate(1))
-				.reduce(String::concat);
-
-		page.block(Duration.ofSeconds(30));
-	}
-
-	@Test
-	@Ignore
-	public void nonProxyHosts() {
-		HttpClient client = HttpClient.create(o -> o.proxy(ops -> ops.type(Proxy.HTTP)
-		                                                             .host("127.0.0.1")
-		                                                             .port(8888)
-		                                                             .nonProxyHosts("spring.io")));
-		Mono<HttpClientResponse> remote1 = client.get("https://projectreactor.io",
-		                                                 c -> c.followRedirect()
-		                                                       .sendHeaders());
-		Mono<HttpClientResponse> remote2 = client.get("https://spring.io",
-		                                                 c -> c.followRedirect()
-		                                                       .sendHeaders());
-
-		Mono<String> page1 = remote1
-				.flatMapMany(r -> r.receive()
-				                   .retain()
-				                   .asString()
-				                   .limitRate(1))
-				.reduce(String::concat);
-
-		Mono<String> page2 = remote2
-				.flatMapMany(r -> r.receive()
-				                   .retain()
-				                   .asString()
-				                   .limitRate(1))
-				.reduce(String::concat);
-
-		StepVerifier.create(page1)
-		            .expectNextMatches(s -> s.contains("<title>Project Reactor</title>"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		StepVerifier.create(page2)
-		            .expectNextMatches(s -> s.contains("<title>Spring</title>"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-	}
-
-	@Test
-	@Ignore
 	public void postUpload() {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
 		HttpClient.create("google.com")
