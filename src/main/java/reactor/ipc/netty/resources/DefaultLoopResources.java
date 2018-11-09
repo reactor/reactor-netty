@@ -232,7 +232,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 			DefaultLoop defaultLoop = DefaultLoopNativeDetector.getInstance();
 			EventLoopGroup newEventLoopGroup = defaultLoop.newEventLoopGroup(
 					workerCount,
-					threadFactory(this, "server-" + defaultLoop.getName()));
+					threadFactory(this, defaultLoop.getName()));
 			if (!cacheNativeServerLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}
@@ -244,11 +244,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	EventLoopGroup cacheNativeClientLoops() {
 		EventLoopGroup eventLoopGroup = cacheNativeClientLoops.get();
 		if (null == eventLoopGroup) {
-			DefaultLoop defaultLoop = DefaultLoopNativeDetector.getInstance();
-			EventLoopGroup newEventLoopGroup = defaultLoop.newEventLoopGroup(
-					workerCount,
-					threadFactory(this, "client-" + defaultLoop.getName()));
-			newEventLoopGroup = LoopResources.colocate(newEventLoopGroup);
+			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNativeServerLoops());
 			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
 				newEventLoopGroup.shutdownGracefully();
 			}
