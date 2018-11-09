@@ -134,7 +134,11 @@ public final class ProxyProvider {
 	 * @return true if of type {@link InetSocketAddress} and hostname candidate to proxy
 	 */
 	public boolean shouldProxy(SocketAddress address) {
-		return address instanceof InetSocketAddress && shouldProxy(((InetSocketAddress) address).getHostString());
+		SocketAddress addr = address;
+		if (address instanceof TcpUtils.SocketAddressSupplier) {
+			addr = ((TcpUtils.SocketAddressSupplier) address).get();
+		}
+		return addr instanceof InetSocketAddress && shouldProxy(((InetSocketAddress) addr).getHostString());
 	}
 
 	/**

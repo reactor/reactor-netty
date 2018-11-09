@@ -320,63 +320,6 @@ public class HttpClientTest {
 
 	@Test
 	@Ignore
-	public void proxy() {
-		HttpClient.create()
-		          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-		                                                                   .host("127.0.0.1")
-		                                                                   .port(8888)))
-		          .wiretap(true)
-		          .followRedirect(true)
-		          .get()
-		          .uri("https://projectreactor.io")
-		          .responseContent()
-		          .retain()
-		          .asString()
-		          .limitRate(1)
-		          .reduce(String::concat)
-		          .block(Duration.ofSeconds(30));
-	}
-
-	@Test
-	@Ignore
-	public void nonProxyHosts() {
-		HttpClient client =
-				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-				                                                                   .host("127.0.0.1")
-				                                                                   .port(8888)
-				                                                                   .nonProxyHosts("spring.io")))
-				          .wiretap(true);
-		Mono<String> remote1 = client.followRedirect(true)
-		                             .get()
-		                             .uri("https://projectreactor.io")
-		                             .responseContent()
-		                             .retain()
-		                             .asString()
-		                             .limitRate(1)
-		                             .reduce(String::concat);
-		Mono<String> remote2 = client.followRedirect(true)
-		                             .get()
-		                             .uri("https://spring.io")
-		                             .responseContent()
-		                             .retain()
-		                             .asString()
-		                             .limitRate(1)
-		                             .reduce(String::concat);
-
-		StepVerifier.create(remote1)
-		            .expectNextMatches(s -> s.contains("<title>Project Reactor</title>"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-
-		StepVerifier.create(remote2)
-		            .expectNextMatches(s -> s.contains("<title>Spring</title>"))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-	}
-
-	@Test
-	@Ignore
 	public void postUpload() {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
 		HttpClient.create()
