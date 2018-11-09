@@ -69,12 +69,12 @@ final class HttpServerBind extends HttpServer
 
 	static final HttpServerBind INSTANCE = new HttpServerBind();
 
-	static final Function<DisposableServer, DisposableServer> CLEANUP_GLOBAL_RESOURCE = DisposableBind::new;
-
 	static final boolean ACCESS_LOG =
 			Boolean.parseBoolean(System.getProperty(ACCESS_LOG_ENABLED, "false"));
 
 	final TcpServer tcpServer;
+
+	DisposableBind disposableBind;
 
 	HttpServerBind() {
 		this(DEFAULT_TCP_SERVER);
@@ -94,11 +94,15 @@ final class HttpServerBind extends HttpServer
 	public Mono<? extends DisposableServer> bind(TcpServer delegate) {
 		return delegate.bootstrap(this)
 		               .bind()
-		               .map(CLEANUP_GLOBAL_RESOURCE);
+		               .map(s -> {
+		                   disposableBind.server = s;
+		                   return disposableBind;
+		               });
 	}
 
 	@Override
 	public ServerBootstrap apply(ServerBootstrap b) {
+		disposableBind = new DisposableBind();
 		HttpServerConfiguration conf = HttpServerConfiguration.getAndClean(b);
 
 		SslProvider ssl = SslProvider.findSslSupport(b);
@@ -118,6 +122,7 @@ final class HttpServerBind extends HttpServer
 		if (b.config()
 		     .group() == null) {
 			LoopResources loops = HttpResources.get();
+			disposableBind.globalResources = true;
 
 			boolean useNative =
 					LoopResources.DEFAULT_NATIVE || (ssl != null && !(ssl.getSslContext() instanceof JdkSslContext));
@@ -287,18 +292,15 @@ final class HttpServerBind extends HttpServer
 
 	static final class DisposableBind implements DisposableServer {
 
-		final DisposableServer server;
-
-		DisposableBind(DisposableServer server) {
-			this.server = server;
-		}
+		DisposableServer server;
+		boolean globalResources;
 
 		@Override
 		public void dispose() {
 			server.dispose();
-
-			HttpResources.get()
-			             .disposeWhen(server.address());
+			if (globalResources) {
+				HttpResources.disposeLoopsAndConnections();
+			}
 		}
 
 		@Override

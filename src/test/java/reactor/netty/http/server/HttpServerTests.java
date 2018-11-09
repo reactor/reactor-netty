@@ -52,6 +52,7 @@ import org.junit.Test;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
@@ -867,6 +868,35 @@ public class HttpServerTests {
 
 		assertThat(chunkSize.get()).as("line length").isEqualTo(789);
 		assertThat(validate.get()).as("validate headers").isFalse();
+	}
+
+	@Test
+	public void testIssue495() {
+		MonoProcessor<Void> serverConnDisposed = MonoProcessor.create();
+
+		DisposableServer boundServer =
+				HttpServer.create()
+				          .port(0)
+				          .tcpConfiguration(tcpServer -> tcpServer.doOnConnection(serverConnection ->
+				                  serverConnection.onDispose()
+				                                  .subscribe(serverConnDisposed)))
+				          .handle((request, res) -> res.sendString(Mono.just("test")))
+				          .wiretap(true)
+				          .bindNow();
+
+		String response =
+				HttpClient.create()
+				          .addressSupplier(boundServer::address)
+				          .wiretap(true)
+				          .get()
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .block();
+
+		assertThat(response).isEqualTo("test");
+		boundServer.disposeNow();
+		serverConnDisposed.block(Duration.ofSeconds(30));
 	}
 
 	private Object getValueReflection(Object obj, String fieldName, int superLevel) {

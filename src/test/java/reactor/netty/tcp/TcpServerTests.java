@@ -74,10 +74,12 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -360,10 +362,10 @@ public class TcpServerTests {
 
 		assertNotNull(client);
 
+		assertThat("Latch was counted down", countDownLatch.await(5, TimeUnit.SECONDS));
+
 		client.disposeNow();
 		server.disposeNow();
-
-		assertThat("Latch was counted down", countDownLatch.await(5, TimeUnit.SECONDS));
 	}
 
 	@Test
@@ -847,6 +849,49 @@ public class TcpServerTests {
 		assertNotNull(client);
 
 		latch.await(30, TimeUnit.SECONDS);
+	}
+
+	@Test
+	public void testIssue495_1() throws InterruptedException {
+		CountDownLatch latch = new CountDownLatch(1);
+		doTestIssue495_1(latch, null);
+		assertTrue(latch.await(5, TimeUnit.SECONDS));
+	}
+
+	@Test
+	public void testIssue495_2() throws InterruptedException {
+		CountDownLatch latch = new CountDownLatch(1);
+		LoopResources loop = LoopResources.create("test");
+		doTestIssue495_1(latch, loop);
+
+		assertFalse(latch.await(5, TimeUnit.SECONDS));
+
+		loop.dispose();
+
+		assertTrue(latch.await(5, TimeUnit.SECONDS));
+	}
+
+	private void doTestIssue495_1(CountDownLatch latch, LoopResources loop) {
+		TcpServer tcpServer =
+				TcpServer.create()
+				         .port(0)
+				         .doOnConnection(serverConnection ->
+				                 serverConnection.onDispose()
+				                                 .subscribe(null, null, latch::countDown))
+				         .wiretap(true);
+
+		if (loop != null) {
+			tcpServer = tcpServer.runOn(loop);
+		}
+
+		DisposableServer boundServer = tcpServer.bindNow();
+
+		TcpClient.create()
+		         .addressSupplier(boundServer::address)
+		         .wiretap(true)
+		         .connectNow();
+
+		boundServer.disposeNow();
 	}
 
 	private static class SimpleClient extends Thread {

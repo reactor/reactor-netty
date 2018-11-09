@@ -38,6 +38,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.HttpResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.Logger;
@@ -65,6 +66,8 @@ public abstract class HttpServer {
 
 	/**
 	 * Prepare a {@link HttpServer}
+	 * Note: When using the server with the default {@link HttpResources},
+	 * they will be disposed when the server is disposed.
 	 *
 	 * @return a {@link HttpServer}
 	 */

@@ -75,6 +75,8 @@ public abstract class TcpServer {
 
 	/**
 	 * Prepare a {@link TcpServer}
+	 * Note: When using the server with the default {@link TcpResources},
+	 * they will be disposed when the server is disposed.
 	 *
 	 * @return a {@link TcpServer}
 	 */
@@ -389,6 +391,8 @@ public abstract class TcpServer {
 
 	/**
 	 * Run IO loops on the given {@link EventLoopGroup}.
+	 * Note: When using the server with the default {@link TcpResources},
+	 * they will be disposed when the server is disposed.
 	 *
 	 * @param eventLoopGroup an eventLoopGroup to share
 	 *
@@ -403,6 +407,8 @@ public abstract class TcpServer {
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
 	 * container. Will prefer native (epoll/kqueue) implementation if available unless the
 	 * environment property {@code reactor.netty.native} is set to {@code false}.
+	 * Note: When using the server with the default {@link TcpResources},
+	 * they will be disposed when the server is disposed.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime
 	 * expectation and returning an eventLoopGroup
@@ -416,6 +422,8 @@ public abstract class TcpServer {
 	/**
 	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
 	 * container.
+	 * Note: When using the server with the default {@link TcpResources},
+	 * they will be disposed when the server is disposed.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime
 	 * expectation and returning an eventLoopGroup.

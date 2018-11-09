@@ -37,7 +37,6 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
-import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 
 import static reactor.netty.ReactorNetty.format;
@@ -63,14 +62,16 @@ final class TcpServerBind extends TcpServer {
 			SslProvider.setBootstrap(b, ssl);
 		}
 
-		if (b.config()
-		     .group() == null) {
-
-			TcpServerRunOn.configure(b, LoopResources.DEFAULT_NATIVE, TcpResources.get());
-		}
-
 		return Mono.create(sink -> {
 			ServerBootstrap bootstrap = b.clone();
+
+			boolean globalResources = false;
+			if (bootstrap.config()
+			             .group() == null) {
+
+				globalResources = true;
+				TcpServerRunOn.configure(bootstrap, LoopResources.DEFAULT_NATIVE, TcpResources.get());
+			}
 
 			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
 			ConnectionObserver childObs =
@@ -84,7 +85,7 @@ final class TcpServerBind extends TcpServer {
 
 			ChannelFuture f = bootstrap.bind();
 
-			DisposableBind disposableServer = new DisposableBind(sink, f, obs, bootstrap);
+			DisposableBind disposableServer = new DisposableBind(sink, f, obs, bootstrap, globalResources);
 			f.addListener(disposableServer);
 			sink.onCancel(disposableServer);
 		});
@@ -144,14 +145,17 @@ final class TcpServerBind extends TcpServer {
 		final ChannelFuture              f;
 		final ServerBootstrap            bootstrap;
 		final ConnectionObserver         selectorObserver;
+		final boolean globalResources;
 
 		DisposableBind(MonoSink<DisposableServer> sink, ChannelFuture f,
 				ConnectionObserver selectorObserver,
-				ServerBootstrap bootstrap) {
+				ServerBootstrap bootstrap,
+				boolean globalResources) {
 			this.sink = sink;
 			this.bootstrap = bootstrap;
 			this.f = f;
 			this.selectorObserver = selectorObserver;
+			this.globalResources = globalResources;
 		}
 
 		@Override
@@ -165,9 +169,9 @@ final class TcpServerBind extends TcpServer {
 				f.channel()
 				 .close();
 
-				HttpResources.get()
-				             .disposeWhen(bootstrap.config()
-				                                   .localAddress());
+				if (globalResources) {
+					TcpResources.disposeLoopsAndConnections();
+				}
 			}
 			else if (!f.isDone()) {
 				f.cancel(true);
