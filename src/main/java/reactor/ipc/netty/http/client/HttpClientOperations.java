@@ -753,37 +753,35 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			HttpClientWSOperations ops = new HttpClientWSOperations(url, protocols, this);
 
 			if (replace(ops)) {
-				return FutureMono.from(ops.handshakerResult)
-						         .doOnSuccess(aVoid -> {
-						             Mono<Void> result = Mono.from(websocketHandler.apply(ops, ops));
-						             if (websocketHandler != noopHandler()) {
-						                 result = result.doAfterSuccessOrError(ops);
-						             }
-						             result.subscribe();
-						         });
+				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
+				return applyWebsocketHandler(ops, handshake, websocketHandler);
 			}
 		}
 		else if (isWebsocket()) {
 			HttpClientWSOperations ops = (HttpClientWSOperations) get(channel());
 			if(ops != null) {
 				Mono<Void> handshake = FutureMono.from(ops.handshakerResult);
-
-				if (websocketHandler != noopHandler()) {
-					handshake =
-							handshake.doOnEach(signal -> {
-								if(!signal.hasError()) {
-									websocketHandler.apply(ops, ops)
-									                .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
-								}
-							});
-				}
-				return handshake;
+				return applyWebsocketHandler(ops, handshake, websocketHandler);
 			}
 		}
 		else {
 			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
 		}
 		return Mono.error(new IllegalStateException("Failed to upgrade to websocket"));
+	}
+
+	private Mono<Void> applyWebsocketHandler(HttpClientWSOperations ops, Mono<Void> handshake,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		if (websocketHandler != noopHandler()) {
+			handshake =
+					handshake.doOnEach(signal -> {
+						if(!signal.hasError()) {
+							websocketHandler.apply(ops, ops)
+							                .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
+						}
+					});
+		}
+		return handshake;
 	}
 
 	static final class WebsocketSubscriber implements CoreSubscriber<Void> {
