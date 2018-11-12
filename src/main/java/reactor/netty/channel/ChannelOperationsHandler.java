@@ -276,9 +276,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			pendingBytes = 0L;
 
 			ChannelFuture future = ctx.write(msg, promise);
-			if (flushOnEachWithEventLoop &&
-					!(inner == null && pendingWrites.isEmpty()) &&
-					ctx.channel().isWritable()) {
+			if (flushOnEachWithEventLoop && ctx.channel().isWritable()) {
 				scheduleFlush();
 			}
 			else {
