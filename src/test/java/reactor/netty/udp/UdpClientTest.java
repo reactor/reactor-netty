@@ -48,7 +48,8 @@ public class UdpClientTest {
 				                                                DatagramPacket received = (DatagramPacket) o;
 				                                                System.out.println("Server received " + received.content().toString(CharsetUtil.UTF_8));
 				                                                ByteBuf buf1 = Unpooled.copiedBuffer("echo ", CharsetUtil.UTF_8);
-				                                                ByteBuf buf2 = Unpooled.copiedBuffer(buf1, received.content().retain());
+				                                                ByteBuf buf2 = Unpooled.copiedBuffer(buf1, received.content());
+				                                                buf1.release();
 				                                                return new DatagramPacket(buf2, received.sender());
 				                                            }
 				                                            else {
