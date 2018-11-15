@@ -22,10 +22,9 @@ import java.util.concurrent.TimeUnit;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import io.netty.util.ResourceLeakDetector;
-import io.netty.util.ResourceLeakDetector.Level;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.NettyContext;
@@ -36,17 +35,8 @@ import static org.junit.Assert.assertNotNull;
 
 public class FluxReceiveTest {
 
-	@Before
-	public void setUp() {
-		ResourceLeakDetector.setLevel(Level.PARANOID);
-	}
-
-	@After
-	public void tearDown() {
-		ResourceLeakDetector.setLevel(Level.SIMPLE);
-	}
-
 	@Test
+	@Ignore
 	public void testByteBufsReleasedWhenTimeout() {
 		byte[] content = new byte[1024*8];
 		Random rndm = new Random();

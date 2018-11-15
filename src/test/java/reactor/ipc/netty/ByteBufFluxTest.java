@@ -73,7 +73,6 @@ public class ByteBufFluxTest {
 
         // Use the ByteBufFlux to read the file in chunks of 3 bytes max and write them into a ByteArrayOutputStream for verification
         final Iterator<ByteBuf> it = ByteBufFlux.fromPath(tmpFile, chunkSize)
-                                                .retain()
                                                 .toIterable()
                                                 .iterator();
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
