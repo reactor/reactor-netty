@@ -778,4 +778,27 @@ public class HttpServerTests {
 
 		server.dispose();
 	}
+
+	@Test
+	public void testIssue508() {
+		NettyContext server =
+				HttpServer.create(ops -> ops.port(0))
+				          .newHandler((req, res) -> res.header("Content-Length", "0")
+				                                       .sendString(Flux.just("1", "2", "3")))
+				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
+
+		String response =
+				HttpClient.create(ops -> ops.port(server.address()
+				                                        .getPort()))
+				          .get("/", req -> req.addHeader("Connection", "close"))
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asString()
+				                             .switchIfEmpty(Mono.just("Empty")))
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("Empty");
+		server.dispose();
+	}
 }
