@@ -349,7 +349,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 			ByteBufAllocator alloc = channel().alloc();
 			return then(Flux.from(source)
-			                .doOnNext(ByteBuf::retain)
 			                .collect(alloc::buffer, ByteBuf::writeBytes)
 			                .flatMapMany(agg -> {
 			                        if (!hasSentHeaders() &&
