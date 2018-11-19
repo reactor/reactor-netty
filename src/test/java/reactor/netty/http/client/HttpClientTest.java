@@ -60,7 +60,6 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
-import reactor.netty.tcp.ProxyProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -1301,10 +1300,9 @@ public class HttpClientTest {
 	public void withConnector() {
 		DisposableServer server = HttpServer.create()
 		                                    .port(0)
-		                                    .handle((req, resp) -> {
-			                                    return resp.sendString(Mono.just(req.requestHeaders()
-			                                                                        .get("test")));
-		                                    })
+		                                    .handle((req, resp) ->
+			                                    resp.sendString(Mono.just(req.requestHeaders()
+			                                                                 .get("test"))))
 		                                    .bindNow();
 
 		Mono<String> content = HttpClient.create()
