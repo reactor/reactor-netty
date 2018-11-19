@@ -190,7 +190,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		if (null == eventLoopGroup) {
 			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNioServerLoops());
 			if (!clientLoops.compareAndSet(null, newEventLoopGroup)) {
-				newEventLoopGroup.shutdownGracefully();
+				// Do not shutdown newEventLoopGroup as this will shutdown the server loops
 			}
 			eventLoopGroup = cacheNioClientLoops();
 		}
@@ -246,7 +246,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		if (null == eventLoopGroup) {
 			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNativeServerLoops());
 			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
-				newEventLoopGroup.shutdownGracefully();
+				// Do not shutdown newEventLoopGroup as this will shutdown the server loops
 			}
 			eventLoopGroup = cacheNativeClientLoops();
 		}
