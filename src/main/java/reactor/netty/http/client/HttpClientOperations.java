@@ -24,7 +24,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -345,19 +347,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
-			ByteBufAllocator alloc = channel().alloc();
-			return then(Flux.from(source)
-			                .collect(alloc::buffer, ByteBuf::writeBytes)
-			                .flatMapMany(agg -> {
-			                        if (!hasSentHeaders() &&
-			                                !HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) &&
-			                                !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-			                            outboundHttpMessage().headers()
-			                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH,
-			                                                         agg.readableBytes());
-			                        }
-			                        return super.send(Mono.just(agg)).then();
-			                }));
+			return new GetOrHeadAggregateOutbound(this, source, outboundHttpMessage());
 		}
 		return super.send(source);
 	}
@@ -744,6 +734,61 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		@Override
 		public synchronized Throwable fillInStackTrace() {
 			return this;
+		}
+	}
+
+	static final class GetOrHeadAggregateOutbound implements NettyOutbound {
+
+		final HttpOperations<?, ?>         parent;
+		final HttpMessage                  request;
+		final Publisher<? extends ByteBuf> source;
+
+		 GetOrHeadAggregateOutbound(HttpOperations<?, ?> parent,
+				Publisher<? extends ByteBuf> source,
+				 HttpMessage request) {
+			this.parent = parent;
+			this.source = source;
+			this.request = request;
+		}
+
+		@Override
+		public ByteBufAllocator alloc() {
+			return parent.alloc();
+		}
+
+		@Override
+		public NettyOutbound sendObject(Publisher<?> dataStream) {
+			return parent.sendObject(dataStream);
+		}
+
+		@Override
+		public NettyOutbound sendObject(Object message) {
+			return parent.sendObject(message);
+		}
+
+		@Override
+		public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+				BiFunction<? super Connection, ? super S, ?> mappedInput, Consumer<? super S> sourceCleanup) {
+			return parent.sendUsing(sourceInput, mappedInput, sourceCleanup);
+		}
+
+		@Override
+		public Mono<Void> then() {
+			ByteBufAllocator alloc = parent.channel().alloc();
+			return Flux.from(source)
+			           .collect(alloc::heapBuffer, ByteBuf::writeBytes)
+			           .flatMap(agg -> {
+				           if (!HttpUtil.isTransferEncodingChunked(request) && !HttpUtil.isContentLengthSet(request)) {
+					           request.headers()
+					                  .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
+				           }
+				           return parent.then().thenEmpty(sendObject(Mono.just(agg)));
+			           });
+		}
+
+		@Override
+		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+			return parent.withConnection(withConnection);
 		}
 	}
 }
