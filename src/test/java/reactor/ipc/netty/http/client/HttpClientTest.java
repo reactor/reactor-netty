@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.Unpooled;
@@ -51,6 +52,7 @@ import io.netty.util.CharsetUtil;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -59,7 +61,6 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -954,5 +955,57 @@ public class HttpClientTest {
 				          .get("/"))
 				    .expectError(ConnectException.class)
 				    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testTransferEncodingInPlaceWhenSendBody() {
+		// NettyOutbound.send
+		doTestTransferEncodingInPlaceWhenSendBody(
+				req -> req.send(Mono.just(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset())))));
+
+		// NettyOutbound.sendByteArray
+		doTestTransferEncodingInPlaceWhenSendBody(
+				req -> req.sendByteArray(Mono.just("test".getBytes(Charset.defaultCharset()))));
+
+		// NettyOutbound.sendObject
+		doTestTransferEncodingInPlaceWhenSendBody(
+				req -> req.sendObject(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset()))));
+
+		// NettyOutbound.sendObject
+		doTestTransferEncodingInPlaceWhenSendBody(
+				req -> req.sendObject(Mono.just(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset())))));
+
+		// NettyOutbound.sendGroups
+		doTestTransferEncodingInPlaceWhenSendBody(
+				req -> req.sendGroups(
+						Mono.just(Mono.just(Unpooled.wrappedBuffer("test".getBytes(Charset.defaultCharset()))))));
+
+		// NettyOutbound.sendString
+		doTestTransferEncodingInPlaceWhenSendBody(
+				req -> req.sendString(Mono.just("test")));
+	}
+
+	private void doTestTransferEncodingInPlaceWhenSendBody(
+			Function<? super HttpClientRequest, ? extends Publisher<Void>> clientIOHandler) {
+		NettyContext server =
+				HttpServer.create(0)
+				          .newHandler((req, res) ->
+				              res.sendString(req.receive()
+				                                .aggregate()
+				                                .asString(Charset.defaultCharset())))
+				          .block(Duration.ofSeconds(300));
+		assertThat(server).isNotNull();
+
+		String response =
+				HttpClient.create(server.address().getPort())
+				          .get("/", clientIOHandler)
+				          .flatMap(res -> res.receive()
+				                             .aggregate()
+				                             .asString(Charset.defaultCharset()))
+				          .block(Duration.ofSeconds(300));
+
+		assertThat(response).isNotNull();
+		assertThat(response).isEqualTo("test");
+		server.dispose();
 	}
 }

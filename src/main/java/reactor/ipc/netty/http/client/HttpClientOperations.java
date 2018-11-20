@@ -278,14 +278,30 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	}
 
 	@Override
+	public NettyOutbound sendGroups(Publisher<? extends Publisher<? extends ByteBuf>> dataStreams) {
+		checkContentHeaders();
+		return super.sendGroups(dataStreams);
+	}
+
+	@Override
+	public NettyOutbound sendObject(Object msg) {
+		checkContentHeaders();
+		return super.sendObject(msg);
+	}
+
+	@Override
 	public NettyOutbound sendObject(Publisher<?> dataStream) {
+		checkContentHeaders();
+		return super.sendObject(dataStream);
+	}
+
+	private void checkContentHeaders() {
 		if (!HttpUtil.isTransferEncodingChunked(nettyRequest) &&
 				!HttpUtil.isContentLengthSet(nettyRequest) &&
 				!method().equals(HttpMethod.HEAD) &&
 				!hasSentHeaders()) {
 			HttpUtil.setTransferEncodingChunked(nettyRequest, true);
 		}
-		return super.sendObject(dataStream);
 	}
 
 	@Override
@@ -389,6 +405,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
 			return new GetOrHeadAggregateOutbound(this, source, outboundHttpMessage());
 		}
+		checkContentHeaders();
 		return super.send(source);
 	}
 
