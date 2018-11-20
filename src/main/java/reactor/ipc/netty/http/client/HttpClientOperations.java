@@ -953,7 +953,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					           request.headers()
 					                  .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
 				           }
-				           return parent.then().thenEmpty(sendObject(Mono.just(agg)));
+				           return parent.then().thenEmpty(FutureMono.disposableWriteAndFlush(context().channel(), Mono.just(agg)));
 			           });
 		}
 	}
