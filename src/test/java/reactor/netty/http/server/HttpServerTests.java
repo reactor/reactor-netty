@@ -890,4 +890,31 @@ public class HttpServerTests {
 			return null;
 		}
 	}
+
+	@Test
+	public void testIssue508() {
+		DisposableServer disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.header("Content-Length", "0")
+				                                   .sendString(Flux.just("1", "2", "3")))
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(30));
+
+		String response =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .wiretap(true)
+				          .headers(h -> h.add("Connection", "close"))
+				          .get()
+				          .uri("/")
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .switchIfEmpty(Mono.just("Empty"))
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("Empty");
+		disposableServer.disposeNow();
+	}
 }
