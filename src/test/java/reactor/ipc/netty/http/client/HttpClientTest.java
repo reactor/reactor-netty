@@ -997,6 +997,7 @@ public class HttpClientTest {
 				    .expectError(ConnectException.class)
 				    .verify(Duration.ofSeconds(30));
 	}
+
 	@Test
 	public void testConnectAddressNotSpecifiedGetRequest2() {
 		StepVerifier.create(
