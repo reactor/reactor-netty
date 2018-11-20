@@ -162,9 +162,11 @@ final class WebsocketServerOperations extends HttpServerOperations
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
+				frame.release();
 				return channel().newSucceededFuture();
 			});
 		}
+		frame.release();
 		return Mono.empty();
 	}
 
@@ -177,6 +179,9 @@ final class WebsocketServerOperations extends HttpServerOperations
 			ChannelFuture f = channel().writeAndFlush(
 					frame == null ? new CloseWebSocketFrame() : frame);
 			f.addListener(listener);
+		}
+		else if (frame != null) {
+			frame.release();
 		}
 	}
 
