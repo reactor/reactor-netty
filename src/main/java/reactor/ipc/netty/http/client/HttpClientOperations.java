@@ -387,19 +387,7 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
 		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
-			ByteBufAllocator alloc = channel().alloc();
-			return then(Flux.from(source)
-			                .collect(alloc::buffer, ByteBuf::writeBytes)
-			                .flatMapMany(agg -> {
-			                        if (!hasSentHeaders() &&
-			                                !HttpUtil.isTransferEncodingChunked(outboundHttpMessage()) &&
-			                                !HttpUtil.isContentLengthSet(outboundHttpMessage())) {
-			                            outboundHttpMessage().headers()
-			                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH,
-			                                                         agg.readableBytes());
-			                        }
-			                        return super.send(Mono.just(agg)).then();
-			                }));
+			return new GetOrHeadAggregateOutbound(this, source, outboundHttpMessage());
 		}
 		return super.send(source);
 	}
@@ -935,4 +923,38 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			Loggers.getLogger(HttpClientOperations.class);
 	static final AttributeKey<String[]> REDIRECT_ATTR_KEY  =
 			AttributeKey.newInstance("httpRedirects");
+
+	static final class GetOrHeadAggregateOutbound implements NettyOutbound {
+
+		final HttpOperations<?, ?>         parent;
+		final HttpMessage                  request;
+		final Publisher<? extends ByteBuf> source;
+
+		 GetOrHeadAggregateOutbound(HttpOperations<?, ?> parent,
+				Publisher<? extends ByteBuf> source,
+				 HttpMessage request) {
+			this.parent = parent;
+			this.source = source;
+			this.request = request;
+		}
+
+		@Override
+		public NettyContext context() {
+			return parent.context();
+		}
+
+		@Override
+		public Mono<Void> then() {
+			ByteBufAllocator alloc = parent.channel().alloc();
+			return Flux.from(source)
+			           .collect(alloc::heapBuffer, ByteBuf::writeBytes)
+			           .flatMap(agg -> {
+				           if (!HttpUtil.isTransferEncodingChunked(request) && !HttpUtil.isContentLengthSet(request)) {
+					           request.headers()
+					                  .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
+				           }
+				           return parent.then().thenEmpty(sendObject(Mono.just(agg)));
+			           });
+		}
+	}
 }
