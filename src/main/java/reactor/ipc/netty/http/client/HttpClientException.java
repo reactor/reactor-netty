@@ -16,6 +16,7 @@
 
 package reactor.ipc.netty.http.client;
 
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -58,6 +59,9 @@ public class HttpClientException extends AbortedException {
 
 	/**
 	 * Return the netty HTTP response message
+	 * Note: When the message is of type
+	 * {@link FullHttpResponse} then {@link FullHttpResponse#release()}
+	 * has to be invoked after consuming the response.
 	 *
 	 * @return the HTTP response message
 	 */

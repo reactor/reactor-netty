@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpResponse;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import reactor.core.publisher.EmitterProcessor;
@@ -163,7 +165,17 @@ public class HttpTests {
 				      .log("received-status-1");
 
 		StepVerifier.create(code)
-				    .expectError(HttpClientException.class)
+				    .expectErrorMatches(t -> {
+				        if (t instanceof HttpClientException) {
+				            HttpClientException throwable = (HttpClientException) t;
+				            HttpResponse response = throwable.message();
+				            if (response instanceof FullHttpResponse) {
+				                ((FullHttpResponse) response).release();
+				            }
+				            return true;
+				        }
+				        return false;
+				    })
 				    .verify(Duration.ofSeconds(30));
 
 		Mono<ByteBuf> content =
@@ -225,7 +237,17 @@ public class HttpTests {
 				     .next();
 
 		StepVerifier.create(code)
-				    .expectError(HttpClientException.class)
+				    .expectErrorMatches(t -> {
+				        if (t instanceof HttpClientException) {
+				            HttpClientException throwable = (HttpClientException) t;
+				            HttpResponse response = throwable.message();
+				            if (response instanceof FullHttpResponse) {
+				                ((FullHttpResponse) response).release();
+				            }
+				            return true;
+				        }
+				        return false;
+				    })
 				    .verify(Duration.ofSeconds(30));
 
 		server.dispose();

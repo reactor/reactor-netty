@@ -36,8 +36,10 @@ import javax.net.ssl.SSLException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -339,8 +341,14 @@ public class HttpClientTest {
 				            })
 				            .log()
 				            .onErrorResume(HttpClientException.class,
-				                    e -> Mono.just(e.status()
-				                                    .code()))
+				                    e -> {
+				                        HttpResponse msg = e.message();
+				                        if (msg instanceof FullHttpResponse) {
+				                            ((FullHttpResponse) msg).release();
+				                        }
+				                        return Mono.just(e.status()
+				                                          .code());
+				                    })
 				            .block(Duration.ofSeconds(30));
 
 		assertThat(res).isNotNull();

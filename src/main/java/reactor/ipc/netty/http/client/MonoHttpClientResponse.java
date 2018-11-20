@@ -25,8 +25,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import io.netty.channel.Channel;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import org.reactivestreams.Publisher;
@@ -184,6 +186,10 @@ final class MonoHttpClientResponse extends Mono<HttpClientResponse> {
 			if (throwable instanceof RedirectClientException) {
 				RedirectClientException re = (RedirectClientException) throwable;
 				redirect(re.location);
+				HttpResponse response = re.message();
+				if (response instanceof FullHttpResponse) {
+					((FullHttpResponse) response).release();
+				}
 				return true;
 			}
 			if (AbortedException.isConnectionReset(throwable) && !retried) {
