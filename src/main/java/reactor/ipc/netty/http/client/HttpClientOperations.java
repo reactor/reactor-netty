@@ -450,9 +450,8 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 					HttpClientWSOperations ops = (HttpClientWSOperations) get(channel());
 					return ops.sendClose(frame);
 				}
-				else {
-					return Mono.empty();
-				}
+				frame.release();
+				return Mono.empty();
 			}
 
 			@Override

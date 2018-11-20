@@ -247,9 +247,11 @@ final class HttpClientWSOperations extends HttpClientOperations
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
+				frame.release();
 				return channel().newSucceededFuture();
 			});
 		}
+		frame.release();
 		return Mono.empty();
 	}
 
@@ -261,6 +263,9 @@ final class HttpClientWSOperations extends HttpClientOperations
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 			channel().writeAndFlush(frame == null ? new CloseWebSocketFrame() : frame)
 			         .addListener(ChannelFutureListener.CLOSE);
+		}
+		else if (frame != null) {
+			frame.release();
 		}
 	}
 
