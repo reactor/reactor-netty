@@ -97,6 +97,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					outboundHttpMessage().headers()
 							.remove(HttpHeaderNames.TRANSFER_ENCODING);
 					if (HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0) {
+						markSentBody();
 						msg = newFullEmptyBodyMessage();
 					}
 					else {
