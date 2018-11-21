@@ -782,7 +782,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					           request.headers()
 					                  .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
 				           }
-				           return parent.then().thenEmpty(sendObject(Mono.just(agg)));
+				           return parent.then().thenEmpty(FutureMono.disposableWriteAndFlush(parent.channel(), Mono.just(agg)));
 			           });
 		}
 
