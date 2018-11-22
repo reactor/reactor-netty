@@ -47,7 +47,7 @@ ext {
   gradleVersion = '3.3'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.2.3.RELEASE"
+  reactorCoreVersion = "3.2.4.BUILD-SNAPSHOT"
 
   // Languages
   groovyVersion = '2.4.1'
