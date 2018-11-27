@@ -16,6 +16,7 @@
 
 package reactor.netty.http.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.GZIPOutputStream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -41,6 +43,7 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -916,5 +919,47 @@ public class HttpServerTests {
 
 		assertThat(response).isEqualTo("Empty");
 		disposableServer.disposeNow();
+	}
+
+	@Test
+	public void testIssue525() {
+		DisposableServer disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .tcpConfiguration(tcpServer ->
+				                  tcpServer.doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor())))
+				          .handle((req, res) -> res.send(req.receive()
+				                                            .retain()))
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(30));
+
+		byte[] bytes = "test".getBytes(Charset.defaultCharset());
+		String response =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .wiretap(true)
+				          .headers(h -> h.add("Content-Encoding", "gzip"))
+				          .post()
+				          .uri("/")
+				          .send(Mono.just(Unpooled.wrappedBuffer(compress(bytes))))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("test");
+		disposableServer.disposeNow();
+	}
+
+	private static byte[] compress(byte[] body) {
+		try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
+			try (GZIPOutputStream zipStream = new GZIPOutputStream(byteStream)) {
+				zipStream.write(body);
+			}
+			return byteStream.toByteArray();
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

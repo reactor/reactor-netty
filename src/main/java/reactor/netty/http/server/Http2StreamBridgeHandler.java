@@ -75,7 +75,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 								headersFrame.headers(),
 								false);
 			}
-			new HttpToH2Operations(Connection.from(ctx.channel()),
+			HttpToH2Operations ops = new HttpToH2Operations(Connection.from(ctx.channel()),
 					listener,
 					request,
 					headersFrame.headers(),
@@ -83,7 +83,9 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 					                       .parent(),
 							readForwardHeaders,
 							request),
-					cookieEncoder, cookieDecoder).bind();
+					cookieEncoder, cookieDecoder);
+			ops.bind();
+			listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 		}
 		ctx.fireChannelRead(msg);
 	}

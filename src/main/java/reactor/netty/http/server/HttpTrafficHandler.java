@@ -148,13 +148,14 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			else {
 				overflow = false;
 
-				new HttpServerOperations(Connection.from(ctx.channel()),
+				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						compress,
 						request, ConnectionInfo.from(ctx.channel(), readForwardHeaders, request),
 						cookieEncoder, cookieDecoder)
-						.chunkedTransfer(true)
-						.bind();
+						.chunkedTransfer(true);
+				ops.bind();
+				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 
 				ctx.fireChannelRead(msg);
 				return;
@@ -279,13 +280,14 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 					return;
 				}
 				nextRequest = (HttpRequest)next;
-				new HttpServerOperations(Connection.from(ctx.channel()),
+				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						compress,
 						nextRequest, ConnectionInfo.from(ctx.channel(), readForwardHeaders, nextRequest),
 						cookieEncoder, cookieDecoder)
-						.chunkedTransfer(true)
-						.bind();
+						.chunkedTransfer(true);
+				ops.bind();
+				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}
 			ctx.fireChannelRead(pipelined.poll());
 		}

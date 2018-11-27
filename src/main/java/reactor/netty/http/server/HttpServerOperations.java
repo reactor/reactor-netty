@@ -431,7 +431,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
-			listener().onStateChange(this, ConnectionObserver.State.CONFIGURED);
 			if (msg instanceof FullHttpRequest) {
 				super.onInboundNext(ctx, msg);
 			}
