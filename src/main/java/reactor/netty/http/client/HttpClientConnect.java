@@ -197,6 +197,7 @@ final class HttpClientConnect extends HttpClient {
 		final HttpClientConfiguration configuration;
 		final TcpClient               tcpClient;
 		final SslProvider             sslProvider;
+		final ProxyProvider           proxyProvider;
 
 		MonoHttpConnect(Bootstrap bootstrap,
 				HttpClientConfiguration configuration,
@@ -206,6 +207,7 @@ final class HttpClientConnect extends HttpClient {
 			this.configuration = configuration;
 			this.sslProvider = sslProvider;
 			this.tcpClient = tcpClient;
+			this.proxyProvider = ProxyProvider.findProxySupport(bootstrap);
 		}
 
 		@Override
@@ -213,7 +215,7 @@ final class HttpClientConnect extends HttpClient {
 			final Bootstrap b = bootstrap.clone();
 
 			HttpClientHandler handler = new HttpClientHandler(configuration, b.config()
-			                                                                  .remoteAddress(), sslProvider);
+			                                                                  .remoteAddress(), sslProvider, proxyProvider);
 
 			b.remoteAddress(handler);
 
@@ -416,17 +418,21 @@ final class HttpClientConnect extends HttpClient {
 		final ClientCookieEncoder cookieEncoder;
 		final ClientCookieDecoder cookieDecoder;
 
+		final ProxyProvider proxyProvider;
+
 		volatile UriEndpoint        activeURI;
 		volatile Supplier<String>[] redirectedFrom;
 
 		@SuppressWarnings("unchecked")
-		HttpClientHandler(HttpClientConfiguration configuration, @Nullable SocketAddress address, @Nullable SslProvider sslProvider) {
+		HttpClientHandler(HttpClientConfiguration configuration, @Nullable SocketAddress address,
+				@Nullable SslProvider sslProvider, @Nullable ProxyProvider proxyProvider) {
 			this.method = configuration.method;
 			this.compress = configuration.acceptGzip;
 			this.followRedirect = configuration.followRedirect;
 			this.chunkedTransfer = configuration.chunkedTransfer;
 			this.cookieEncoder = configuration.cookieEncoder;
 			this.cookieDecoder = configuration.cookieDecoder;
+			this.proxyProvider = proxyProvider;
 
 			HttpHeaders defaultHeaders = configuration.headers;
 			if (compress) {
@@ -475,7 +481,13 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public SocketAddress get() {
-			return activeURI.getRemoteAddress();
+			SocketAddress address = activeURI.getRemoteAddress();
+			if (proxyProvider != null && !proxyProvider.shouldProxy(address) &&
+					address instanceof InetSocketAddress) {
+				address = InetSocketAddressUtil.replaceWithResolved((InetSocketAddress) address);
+			}
+
+			return address;
 		}
 
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {

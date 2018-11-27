@@ -99,17 +99,37 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	public void nonProxyHosts() {
+	public void nonProxyHosts_1() {
 		StepVerifier.create(
 				HttpClient.create()
 				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-				                                                  .host("localhost")
-				                                                  .port(hoverflyRule.getProxyPort())
-				                                                  .nonProxyHosts("127.0.0.1")))
+				                                                                   .host("localhost")
+				                                                                   .port(hoverflyRule.getProxyPort())
+				                                                                   .nonProxyHosts("127.0.0.1")))
 				          .addressSupplier(server::address)
 				          .wiretap(true)
 				          .get()
 				          .uri("/")
+				          .responseSingle((response, body) -> Mono.zip(body.asString(),
+				                  Mono.just(response.responseHeaders()))))
+				    .expectNextMatches(t ->
+				            !t.getT2().contains("Hoverfly") &&
+				                "test".equals(t.getT1()))
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void nonProxyHosts_2() {
+		StepVerifier.create(
+				HttpClient.create()
+				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+				                                                                   .host("localhost")
+				                                                                   .port(hoverflyRule.getProxyPort())
+				                                                                   .nonProxyHosts("localhost")))
+				          .wiretap(true)
+				          .get()
+				          .uri("http://localhost:7000/")
 				          .responseSingle((response, body) -> Mono.zip(body.asString(),
 				                  Mono.just(response.responseHeaders()))))
 				    .expectNextMatches(t ->

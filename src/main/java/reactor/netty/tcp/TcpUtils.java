@@ -19,19 +19,14 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelPipeline;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.NetUtil;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
@@ -46,7 +41,7 @@ final class TcpUtils {
 	static Bootstrap updateProxySupport(Bootstrap b, ProxyProvider proxyOptions) {
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.ProxyHandler,
-				new ProxySupportConsumer(b, proxyOptions));
+				new ProxyProvider.DeferredProxySupport(proxyOptions));
 
 		if (b.config().resolver() == DefaultAddressResolverGroup.INSTANCE) {
 			return b.resolver(NoopAddressResolverGroup.INSTANCE);
@@ -122,47 +117,4 @@ final class TcpUtils {
 			(ch, c, msg) -> new ChannelOperations<>(ch, c);
 
 
-	static final class ProxySupportConsumer
-			implements BiConsumer<ConnectionObserver, io.netty.channel.Channel> {
-
-		final Bootstrap bootstrap;
-		final ProxyProvider proxyProvider;
-
-		ProxySupportConsumer(Bootstrap bootstrap, ProxyProvider proxyProvider) {
-			this.bootstrap = bootstrap;
-			this.proxyProvider = proxyProvider;
-		}
-
-		@Override
-		public void accept(ConnectionObserver connectionObserver, Channel channel) {
-			if (proxyProvider.shouldProxy(bootstrap.config()
-			                                       .remoteAddress())) {
-
-				ChannelPipeline pipeline = channel.pipeline();
-				pipeline.addFirst(NettyPipeline.ProxyHandler,
-								proxyProvider.newProxyHandler());
-
-				if (log.isDebugEnabled()) {
-					pipeline.addFirst(new LoggingHandler("reactor.netty.proxy"));
-				}
-			}
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) {
-				return true;
-			}
-			if (o == null || getClass() != o.getClass()) {
-				return false;
-			}
-			ProxySupportConsumer that = (ProxySupportConsumer) o;
-			return Objects.equals(proxyProvider, that.proxyProvider);
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(proxyProvider);
-		}
-	}
 }
