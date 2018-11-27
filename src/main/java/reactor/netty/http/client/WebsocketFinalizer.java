@@ -71,7 +71,8 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 
 	@Override
 	public <V> Flux<V> handle(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver) {
-		return connect().flatMapMany(c -> Flux.from(receiver.apply(c, c)));
+		return connect().flatMapMany(c -> Flux.from(receiver.apply(c, c))
+		                                      .doFinally(s -> HttpClientFinalizer.discard(c)));
 	}
 }
 

@@ -77,7 +77,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	@Override
 	public <V> Flux<V> response(BiFunction<? super HttpClientResponse, ? super ByteBufFlux, ? extends Publisher<V>> receiver) {
 		return connect().flatMapMany(resp -> Flux.from(receiver.apply(resp, resp.receive()))
-		                                          .doFinally(s -> dispose(resp)));
+		                                          .doFinally(s -> discard(resp)));
 	}
 
 	@Override
@@ -94,7 +94,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	public <V> Mono<V> responseSingle(BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<V>> receiver) {
 		return connect().flatMap(resp -> receiver.apply(resp,
 				resp.receive()
-				    .aggregate()).doFinally(s -> dispose(resp)));
+				    .aggregate()).doFinally(s -> discard(resp)));
 	}
 
 
@@ -145,13 +145,13 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 
 	static final Function<HttpClientOperations, HttpClientResponse> RESPONSE_ONLY = ops -> {
 		//defer the dispose to avoid over disposing on receive
-		dispose(ops);
+		discard(ops);
 		return ops;
 	};
 
-	static void dispose(HttpClientOperations c) {
-		if (!c.isDisposed() && !c.isInboundDisposed()) {
-			c.channel().eventLoop().execute(c::dispose);
+	static void discard(HttpClientOperations c) {
+		if (!c.isInboundDisposed()) {
+			c.discard();
 		}
 	}
 

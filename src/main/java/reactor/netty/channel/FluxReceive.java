@@ -89,12 +89,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		return receiverCancel == CANCELLED;
 	}
 
-	final void discard() {
-		inboundDone = true;
-		receiverCancel = CANCELLED;
-		drainReceiver();
-	}
-
 	@Override
 	public void dispose() {
 		cancel();
@@ -385,6 +379,13 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		if(isCancelled()) {
 			parent.onInboundCancel();
 		}
+	}
+
+	@Override
+	public String toString() {
+		return "FluxReceive{receiverQueueSize" +
+				"=" + (receiverQueue != null ? receiverQueue.size() : 0) + ", inboundDone=" + inboundDone
+				+ ",inboundError=" + inboundError + '}';
 	}
 
 	@SuppressWarnings("rawtypes")
