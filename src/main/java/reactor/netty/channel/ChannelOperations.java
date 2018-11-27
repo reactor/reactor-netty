@@ -283,6 +283,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
+	 * Drop pending content and complete inbound
+	 */
+	public final void discard(){
+		inbound.cancel();
+	}
+
+	/**
 	 * Return true if inbound traffic is not expected anymore
 	 *
 	 * @return true if inbound traffic is not expected anymore
@@ -378,13 +385,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 				setSuccess(null);
 			}
 		}
-	}
-
-	/**
-	 * Drop pending content and complete inbound
-	 */
-	protected final void discard(){
-		inbound.discard();
 	}
 
 	/**
