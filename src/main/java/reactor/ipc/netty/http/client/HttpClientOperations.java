@@ -271,7 +271,12 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return;
 		}
 		if (responseState == null) {
-			parentContext().fireContextError(new IOException("Connection closed prematurely"));
+			if (markSentBody()) {
+				parentContext().fireContextError(new IOException("Connection has been closed, while sending request body"));
+			}
+			else {
+				parentContext().fireContextError(new IOException("Connection closed prematurely"));
+			}
 			return;
 		}
 		super.onInboundError(new IOException("Connection closed prematurely"));
