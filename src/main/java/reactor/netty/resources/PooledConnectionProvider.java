@@ -398,7 +398,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			log.error(format(connection.channel(), "Pooled connection observed an error"), error);
 			owner().onUncaughtException(connection, error);
 		}
 
