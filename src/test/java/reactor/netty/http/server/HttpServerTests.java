@@ -39,6 +39,8 @@ import java.util.zip.GZIPOutputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -48,6 +50,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectDecoder;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
@@ -961,5 +964,41 @@ public class HttpServerTests {
 		catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Test
+	public void testCustomHandlerInvokedBeforeIOHandler() {
+		DisposableServer disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .tcpConfiguration(tcpServer ->
+				                  tcpServer.doOnConnection(c -> c.addHandlerFirst("custom", new ChannelInboundHandlerAdapter() {
+				                      @Override
+				                      public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+				                          if (msg instanceof HttpRequest) {
+				                              ((HttpRequest) msg).headers().add("test", "test");
+				                          }
+				                          super.channelRead(ctx, msg);
+				                      }
+				                  })))
+				          .handle((req, res) -> res.sendString(
+				                  Mono.just(req.requestHeaders().get("test", "not found"))))
+				          .wiretap(true)
+				          .bindNow();
+
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .addressSupplier(disposableServer::address)
+		                  .wiretap(true)
+		                  .get()
+		                  .uri("/")
+		                  .responseContent()
+		                  .aggregate()
+		                  .asString())
+		            .expectNextMatches("test"::equals)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		disposableServer.disposeNow();
 	}
 }

@@ -54,7 +54,7 @@ final class HttpServerHandle extends HttpServerOperator implements ConnectionObs
 	@Override
 	@SuppressWarnings("unchecked")
 	public void onStateChange(Connection connection, State newState) {
-		if (newState == State.CONFIGURED) {
+		if (newState == HttpServerState.REQUEST_RECEIVED) {
 			try {
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "Handler is being applied: {}"), handler);

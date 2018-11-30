@@ -56,6 +56,7 @@ public class HttpToH2Operations extends HttpServerOperations {
 			return;
 		}
 		else if(msg instanceof Http2HeadersFrame) {
+			listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
 			if (((Http2HeadersFrame) msg).isEndStream()) {
 				super.onInboundNext(ctx, msg);
 			}
