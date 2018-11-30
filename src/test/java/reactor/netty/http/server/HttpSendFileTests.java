@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.Channel;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -311,23 +312,15 @@ public class HttpSendFileTests {
 		}
 
 		ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
-		AsynchronousFileChannel channel =
-				AsynchronousFileChannel.open(tempFile, StandardOpenOption.READ);
 
-		Flux<ByteBuf> content = Flux.create(fluxSink -> {
-			fluxSink.onDispose(() -> {
-				try {
-					if (channel != null) {
-						channel.close();
-					}
-				}
-				catch (IOException ignored) {
-				}
-			});
-
-			ByteBuffer buf = ByteBuffer.allocate(chunk);
-			channel.read(buf, 0, buf, new TestCompletionHandler(channel, fluxSink, allocator, chunk));
-		});
+		Flux<ByteBuf> content =
+				Flux.using(
+				        () -> AsynchronousFileChannel.open(tempFile, StandardOpenOption.READ),
+				        ch -> Flux.create(fluxSink -> {
+				                ByteBuffer buf = ByteBuffer.allocate(chunk);
+				                ch.read(buf, 0, buf, new TestCompletionHandler(ch, fluxSink, allocator, chunk));
+				        }),
+				        this::closeChannel);
 
 		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
@@ -345,10 +338,7 @@ public class HttpSendFileTests {
 					    .responseContent()
 					    .aggregate()
 					    .asByteArray()
-					    .onErrorReturn(t ->
-					        t instanceof IOException &&
-					            "Connection has been closed BEFORE response, while sending request body".equals(t.getMessage())
-					        ,
+					    .onErrorReturn(IOException.class,
 					        "error".getBytes(Charset.defaultCharset()))
 					    .block();
 
@@ -356,6 +346,16 @@ public class HttpSendFileTests {
 		}
 		finally {
 			context.disposeNow();
+		}
+	}
+
+	private void closeChannel(Channel channel) {
+		if (channel != null && channel.isOpen()) {
+			try {
+				channel.close();
+			}
+			catch (IOException ignored) {
+			}
 		}
 	}
 
