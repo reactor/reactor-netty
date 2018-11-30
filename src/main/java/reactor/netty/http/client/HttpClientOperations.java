@@ -248,7 +248,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		listener().onStateChange(this, HttpClientState.RESPONSE_INCOMPLETE);
 		if (responseState == null) {
-			listener().onUncaughtException(this, PrematureCloseException.BEFORE_RESPONSE);
+			if (markSentBody()) {
+				listener().onUncaughtException(this, PrematureCloseException.BEFORE_RESPONSE_SENDING_REQUEST);
+			}
+			else {
+				listener().onUncaughtException(this, PrematureCloseException.BEFORE_RESPONSE);
+			}
 			return;
 		}
 		super.onInboundError(PrematureCloseException.DURING_RESPONSE);
@@ -720,6 +725,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			AttributeKey.newInstance("httpRedirects");
 
 	static final class PrematureCloseException extends IOException {
+
+		static final PrematureCloseException BEFORE_RESPONSE_SENDING_REQUEST =
+				new PrematureCloseException("Connection has been closed BEFORE response, while sending request body");
 
 		static final PrematureCloseException BEFORE_RESPONSE =
 				new PrematureCloseException("Connection prematurely closed BEFORE response");

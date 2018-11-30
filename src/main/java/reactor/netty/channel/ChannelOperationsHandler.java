@@ -679,6 +679,17 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 		@SuppressWarnings("FutureReturnValueIgnored")
 		private void onNextInternal(Object t, ChannelPromise promise) {
+			if (!parent.ctx.channel()
+			               .isActive()) {
+				cancel();
+				if (log.isDebugEnabled()) {
+					log.debug(format(parent.ctx.channel(), "Dropping pending write, " +
+							"since connection has been closed: {}"), t);
+				}
+				ReferenceCountUtil.release(t);
+				return;
+			}
+
 			produced++;
 
 			// Returned value is deliberately ignored
