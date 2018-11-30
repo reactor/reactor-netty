@@ -154,12 +154,12 @@ final class DefaultPoolResources implements PoolResources {
 					}
 					c.closeFuture()
 					 .addListener(ff -> {
+					     pool.release(c);
 					     inactiveConnections.decrementAndGet();
 					     if (log.isDebugEnabled()) {
 					         log.debug(format(c, "Channel closed, now {} active connections and {} inactive connections"),
 					                 activeConnections, inactiveConnections);
 					     }
-					     pool.release(c);
 					 });
 				}
 			}
