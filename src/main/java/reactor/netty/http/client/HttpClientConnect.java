@@ -375,10 +375,10 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			if (error instanceof RedirectClientException) {
+			if (error instanceof RedirectClientException && log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "The request will be redirected"));
 			}
-			else if (AbortedException.isConnectionReset(error)) {
+			else if (AbortedException.isConnectionReset(error) && log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "The connection observed an error, " +
 						"the request will be retried"), error);
 			}
