@@ -645,10 +645,12 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					if (!future.isSuccess()) {
 						// Returned value is deliberately ignored
 						promise.setFailure(Exceptions.addSuppressed(future.cause(), t));
+						parent.drain();
 						return;
 					}
 					// Returned value is deliberately ignored
 					promise.setFailure(t);
+					parent.drain();
 				});
 			}
 			else {
@@ -747,6 +749,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				// Returned value is deliberately ignored
 				promise.setFailure(future.cause());
 			}
+			parent.drain();
 		}
 
 		@Override
