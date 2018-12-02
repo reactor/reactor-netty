@@ -44,6 +44,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
@@ -282,14 +283,17 @@ public class HttpSendFileTests {
 		doTestSendFileAsync((req, resp) -> resp.sendByteArray(req.receive()
 				                                                 .aggregate()
 				                                                 .asByteArray()),
-				4096, null);
+				4096, null, null);
 	}
 
 	@Test
 	public void sendFileAsync4096Negative() throws IOException, URISyntaxException {
-		doTestSendFileAsync((req, resp) -> resp.status(500)
-				                               .header(HttpHeaderNames.CONNECTION, "close"),
-				4096, "error".getBytes(Charset.defaultCharset()));
+		DirectProcessor<Void> processor = DirectProcessor.create();
+		doTestSendFileAsync((req, resp) -> processor.then(
+				                               resp.status(500)
+				                                   .header(HttpHeaderNames.CONNECTION, "close")
+				                                   .then()),
+				4096, "error".getBytes(Charset.defaultCharset()), processor);
 	}
 
 	@Test
@@ -297,11 +301,12 @@ public class HttpSendFileTests {
 		doTestSendFileAsync((req, resp) -> resp.sendByteArray(req.receive()
 				                                                 .aggregate()
 				                                                 .asByteArray()),
-				1024, null);
+				1024, null, null);
 	}
 
 	private void doTestSendFileAsync(BiFunction<? super HttpServerRequest, ? super
-			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, byte[] expectedContent) throws IOException, URISyntaxException {
+			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, byte[] expectedContent,
+			DirectProcessor<Void> processor) throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		Path tempFile = Files.createTempFile(largeFile.getParent(),"temp", ".txt");
 		tempFile.toFile().deleteOnExit();
@@ -329,12 +334,17 @@ public class HttpSendFileTests {
 				          .bindNow();
 
 		try {
+			AtomicLong counter = new AtomicLong(0);
 			byte[] response =
 					customizeClientOptions(HttpClient.create()
 					                                 .addressSupplier(context::address))
 					    .request(HttpMethod.POST)
 					    .uri("/")
-					    .send(content)
+					    .send(content.doOnNext(byteBuf -> {
+					        if (processor != null && !processor.isTerminated() && counter.incrementAndGet() > 5) {
+					            processor.onComplete();
+					        }
+					    }))
 					    .responseContent()
 					    .aggregate()
 					    .asByteArray()
