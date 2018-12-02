@@ -44,7 +44,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.ipc.netty.NettyContext;
@@ -276,17 +275,17 @@ public class HttpSendFileTests {
 		doTestSendFileAsync((req, resp) -> resp.sendByteArray(req.receive()
 				                               .aggregate()
 				                               .asByteArray()),
-				4096, null, null);
+				4096, null);
 	}
 
 	@Test
 	public void sendFileAsync4096Negative() throws IOException, URISyntaxException {
-		DirectProcessor<Void> processor = DirectProcessor.create();
-		doTestSendFileAsync((req, resp) -> processor.then(
-				                               resp.status(500)
-				                                   .header(HttpHeaderNames.CONNECTION, "close")
-				                                   .then()),
-				4096, "error".getBytes(Charset.defaultCharset()), processor);
+		doTestSendFileAsync((req, resp) -> req.receive()
+				                              .take(1)
+				                              .doOnNext(b -> resp.status(500)
+				                                                 .header(HttpHeaderNames.CONNECTION, "close"))
+				                              .then(),
+				4096, "error".getBytes(Charset.defaultCharset()));
 	}
 
 	@Test
@@ -294,12 +293,11 @@ public class HttpSendFileTests {
 		doTestSendFileAsync((req, resp) -> resp.sendByteArray(req.receive()
 				                               .aggregate()
 				                               .asByteArray()),
-				1024, null, null);
+				1024, null);
 	}
 
 	private void doTestSendFileAsync(BiFunction<? super HttpServerRequest, ? super
-			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, byte[] expectedContent,
-			DirectProcessor<Void> processor) throws IOException, URISyntaxException {
+			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, byte[] expectedContent) throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
 		Path tempFile = Files.createTempFile(largeFile.getParent(),"temp", ".txt");
 		tempFile.toFile().deleteOnExit();
@@ -329,11 +327,7 @@ public class HttpSendFileTests {
 		byte[] response =
 				HttpClient.create(opt -> customizeClientOptions(opt.connectAddress(context::address)))
 				          .request(HttpMethod.POST, "/",
-				                  req -> req.send(content.doOnNext(byteBuf -> {
-				                      if (processor != null && !processor.isTerminated()) {
-				                          processor.onComplete();
-				                      }
-				          })))
+				                  req -> req.send(content))
 				          .flatMap(res -> res.receive()
 				                             .aggregate()
 				                             .asByteArray())
