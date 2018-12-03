@@ -59,7 +59,7 @@ ext {
   assertJVersion = '3.6.1'
 
   // Libraries
-  nettyVersion = '4.1.31.Final'
+  nettyVersion = '4.1.32.Final'
   jacksonDatabindVersion = '2.5.1'
 
   // Testing
@@ -240,7 +240,7 @@ configure(rootProject) { project ->
 			"io.specto:hoverfly-java:${hoverflyJavaVersion}"
 
 	// Needed for HTTP/2 testing
-	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.19.Final" + os_suffix
+	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.20.Final" + os_suffix
   }
 
 
