@@ -546,7 +546,7 @@ final class HttpClientConnect extends HttpClient {
 
 				if (handler != null) {
 					if (websocketProtocols != null) {
-						WebsocketUpgradeOutbound wuo = new WebsocketUpgradeOutbound(ch, websocketProtocols, maxFramePayloadLength);
+						WebsocketUpgradeOutbound wuo = new WebsocketUpgradeOutbound(ch, websocketProtocols, maxFramePayloadLength, compress);
 						return Flux.concat(handler.apply(ch, wuo), wuo.then());
 					}
 					else {
@@ -555,7 +555,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 				else {
 					if (websocketProtocols != null) {
-						return Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, maxFramePayloadLength));
+						return Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, maxFramePayloadLength, compress));
 					}
 					else {
 						return ch.send();
@@ -648,10 +648,11 @@ final class HttpClientConnect extends HttpClient {
 		final Mono<Void>           m;
 		final String               websocketProtocols;
 
-		WebsocketUpgradeOutbound(HttpClientOperations ch, String websocketProtocols, int websocketMaxFramePayloadLength) {
+		WebsocketUpgradeOutbound(HttpClientOperations ch, String websocketProtocols, int websocketMaxFramePayloadLength,
+				boolean compress) {
 			this.ch = ch;
 			this.websocketProtocols = websocketProtocols;
-			this.m = Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, websocketMaxFramePayloadLength));
+			this.m = Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, websocketMaxFramePayloadLength, compress));
 		}
 
 		@Override

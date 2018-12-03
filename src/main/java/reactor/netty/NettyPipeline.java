@@ -68,6 +68,7 @@ public interface NettyPipeline {
 	String ChunkedWriter      = LEFT + "chunkedWriter";
 	String LoggingHandler     = LEFT + "loggingHandler";
 	String CompressionHandler = LEFT + "compressionHandler";
+	String WsCompressionHandler = LEFT + "wsCompressionHandler";
 
 	/**
 	 * A builder for sending strategy, similar prefixed methods being mutually exclusive

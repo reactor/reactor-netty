@@ -162,11 +162,13 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Specifies whether GZip response compression is enabled if the client request
-	 * presents accept encoding headers.
+	 * Specifies whether GZip response compression/websocket compression
+	 * extension is enabled if the client request
+	 * presents accept encoding/websocket extensions headers.
 	 *
-	 * @param compressionEnabled if true GZip response compression is enabled if the client
-	 *                           request presents accept encoding headers, otherwise disabled.
+	 * @param compressionEnabled if true GZip response compression/websocket compression
+	 *                             extension is enabled if the client request presents
+	 *                             accept encoding/websocket extensions headers, otherwise disabled.
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer compress(boolean compressionEnabled) {

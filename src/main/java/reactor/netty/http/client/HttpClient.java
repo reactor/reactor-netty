@@ -382,10 +382,11 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Specifies whether gzip compression is enabled
+	 * Specifies whether GZip compression/websocket compression
+	 * extension is enabled.
 	 *
-	 * @param compressionEnabled if true gzip compression is enabled otherwise disabled
-	 * (default: false)
+	 * @param compressionEnabled if true GZip compression/websocket compression extension
+	 *                              is enabled otherwise disabled (default: false)
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient compress(boolean compressionEnabled) {

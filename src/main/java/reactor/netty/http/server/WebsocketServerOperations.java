@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
@@ -83,6 +84,23 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 			request.headers()
 			       .set(replaced.nettyRequest.headers());
+
+			if (channel().pipeline()
+			             .get(NettyPipeline.CompressionHandler) != null) {
+				removeHandler(NettyPipeline.CompressionHandler);
+
+				WebSocketServerCompressionHandler wsServerCompressionHandler =
+						new WebSocketServerCompressionHandler();
+				try {
+					wsServerCompressionHandler.channelRead(channel.pipeline()
+					                                              .context(NettyPipeline.ReactiveBridge),
+							request);
+
+					addHandlerFirst(NettyPipeline.WsCompressionHandler, wsServerCompressionHandler);
+				} catch (Throwable e) {
+					log.error(format(channel(), ""), e);
+				}
+			}
 
 			handshaker.handshake(channel,
 					request,

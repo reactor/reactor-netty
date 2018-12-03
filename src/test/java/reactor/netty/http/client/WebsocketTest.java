@@ -34,7 +34,6 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
-import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -51,7 +50,9 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 
 /**
@@ -603,7 +604,7 @@ public class WebsocketTest {
 								.then()))
 				.blockLast(Duration.ofSeconds(30));
 
-		Assertions.assertThat(output.collectList().block(Duration.ofSeconds(30)))
+		assertThat(output.collectList().block(Duration.ofSeconds(30)))
 				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
 	}
 
@@ -758,7 +759,7 @@ public class WebsocketTest {
 		                                                               .then()))
 		          .blockLast(Duration.ofSeconds(30));
 
-		Assertions.assertThat(output.collectList().block(Duration.ofSeconds(30)))
+		assertThat(output.collectList().block(Duration.ofSeconds(30)))
 		          .isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
 
 	}
@@ -822,7 +823,7 @@ public class WebsocketTest {
 
 		latch.await(30, TimeUnit.SECONDS);
 
-		Assertions.assertThat(error.get()).isFalse();
+		assertThat(error.get()).isFalse();
 	}
 
 	@Test
@@ -885,7 +886,7 @@ public class WebsocketTest {
 
 		latch.await(30, TimeUnit.SECONDS);
 
-		Assertions.assertThat(error.get()).isFalse();
+		assertThat(error.get()).isFalse();
 	}
 
 	@Test
@@ -939,7 +940,7 @@ public class WebsocketTest {
 
 		latch.await(30, TimeUnit.SECONDS);
 
-		Assertions.assertThat(error.get()).isFalse();
+		assertThat(error.get()).isFalse();
 	}
 
 	@Test
@@ -967,7 +968,7 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue444() throws InterruptedException {
+	public void testIssue444() {
 		doTestIssue444((in, out) ->
 				out.sendObject(Flux.error(new Throwable())
 				                   .onErrorResume(ex -> out.sendClose(1001, "Going Away"))
@@ -1008,5 +1009,104 @@ public class WebsocketTest {
 				                             .then()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testIssue507_1() {
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .compress(true)
+				          .handle((req, res) ->
+				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
+				          .wiretap(true)
+				          .bindNow();
+
+		AtomicBoolean clientHandler = new AtomicBoolean();
+		HttpClient client =
+				HttpClient.create()
+				          .addressSupplier(httpServer::address)
+				          .tcpConfiguration(tcpClient ->
+				              tcpClient.doOnConnected(c ->
+				                  clientHandler.set(c.channel()
+				                                     .pipeline()
+				                                     .get(NettyPipeline.WsCompressionHandler) != null)))
+				          .wiretap(true);
+
+		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
+				(in, out) -> {
+				    String header = in.headers()
+				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+				    return in.receive()
+				             .aggregate()
+				             .asString()
+				             .zipWith(Mono.just(header == null ? "null" : header));
+				};
+
+		StepVerifier.create(client.websocket()
+		                          .uri("/")
+		                          .handle(receiver))
+		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+		assertThat(clientHandler.get()).isFalse();
+
+		StepVerifier.create(client.compress(true)
+		                          .websocket()
+		                          .uri("/")
+		                          .handle(receiver))
+		            .expectNextMatches(t -> "test".equals(t.getT1()) && !"null".equals(t.getT2()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+		assertThat(clientHandler.get()).isTrue();
+	}
+
+	@Test
+	public void testIssue507_2() {
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) ->
+				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
+				          .wiretap(true)
+				          .bindNow();
+
+		AtomicBoolean clientHandler = new AtomicBoolean();
+		HttpClient client =
+				HttpClient.create()
+				          .addressSupplier(httpServer::address)
+				          .tcpConfiguration(tcpClient ->
+				              tcpClient.doOnConnected(c ->
+				                  clientHandler.set(c.channel()
+				                                     .pipeline()
+				                                     .get(NettyPipeline.WsCompressionHandler) != null)))
+				          .wiretap(true);
+
+		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
+				(in, out) -> {
+				    String header = in.headers()
+				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+				    return in.receive()
+				             .aggregate()
+				             .asString()
+				             .zipWith(Mono.just(header == null ? "null" : header));
+				};
+
+		StepVerifier.create(client.websocket()
+		                          .uri("/")
+		                          .handle(receiver))
+		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+		assertThat(clientHandler.get()).isFalse();
+
+		StepVerifier.create(client.compress(true)
+		                          .websocket()
+		                          .uri("/")
+		                          .handle(receiver))
+		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+		assertThat(clientHandler.get()).isTrue();
 	}
 }

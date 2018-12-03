@@ -59,6 +59,7 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
@@ -587,12 +588,21 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	final void withWebsocketSupport(String protocols, int maxFramePayloadLength) {
+	final void withWebsocketSupport(String protocols, int maxFramePayloadLength, boolean compress) {
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
 			// Returned value is deliberately ignored
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+
+			if (compress) {
+				requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
+				// Returned value is deliberately ignored
+				removeHandler(NettyPipeline.HttpDecompressor);
+				// Returned value is deliberately ignored
+				addHandlerFirst(NettyPipeline.WsCompressionHandler,
+				                WebSocketClientCompressionHandler.INSTANCE);
+			}
 
 			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, maxFramePayloadLength, this);
 
