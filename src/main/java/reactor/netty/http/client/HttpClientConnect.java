@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -418,7 +419,6 @@ final class HttpClientConnect extends HttpClient {
 		final HttpHeaders        defaultHeaders;
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 		                         handler;
-		final boolean            followRedirect;
 		final boolean            compress;
 		final Boolean            chunkedTransfer;
 		final UriEndpointFactory uriEndpointFactory;
@@ -427,6 +427,8 @@ final class HttpClientConnect extends HttpClient {
 
 		final ClientCookieEncoder cookieEncoder;
 		final ClientCookieDecoder cookieDecoder;
+
+		final BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 
 		final ProxyProvider proxyProvider;
 
@@ -438,7 +440,7 @@ final class HttpClientConnect extends HttpClient {
 				@Nullable SslProvider sslProvider, @Nullable ProxyProvider proxyProvider) {
 			this.method = configuration.method;
 			this.compress = configuration.acceptGzip;
-			this.followRedirect = configuration.followRedirect;
+			this.followRedirectPredicate = configuration.followRedirectPredicate;
 			this.chunkedTransfer = configuration.chunkedTransfer;
 			this.cookieEncoder = configuration.cookieEncoder;
 			this.cookieDecoder = configuration.cookieDecoder;
@@ -527,7 +529,7 @@ final class HttpClientConnect extends HttpClient {
 					headers.set(HttpHeaderNames.ACCEPT, ALL);
 				}
 
-				ch.followRedirect(followRedirect);
+				ch.followRedirectPredicate(followRedirectPredicate);
 
 				if (Objects.equals(method, HttpMethod.GET) ||
 						Objects.equals(method, HttpMethod.HEAD) ||

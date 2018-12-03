@@ -137,7 +137,7 @@ public class HttpClientOperationsTest {
 		HttpClientOperations ops1 = new HttpClientOperations(() -> channel,
 				ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
-		ops1.followRedirect(true);
+		ops1.followRedirectPredicate((req, res) -> true);
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
 
@@ -147,7 +147,7 @@ public class HttpClientOperationsTest {
 		assertSame(ops1.isSecure, ops2.isSecure);
 		assertSame(ops1.nettyRequest, ops2.nettyRequest);
 		assertSame(ops1.responseState, ops2.responseState);
-		assertSame(ops1.redirectable, ops2.redirectable);
+		assertSame(ops1.followRedirectPredicate, ops2.followRedirectPredicate);
 		assertSame(ops1.requestHeaders, ops2.requestHeaders);
 	}
 }

@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -100,7 +101,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	boolean started;
 
-	boolean redirectable;
+	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
@@ -109,7 +110,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.isSecure = replaced.isSecure;
 		this.nettyRequest = replaced.nettyRequest;
 		this.responseState = replaced.responseState;
-		this.redirectable = replaced.redirectable;
+		this.followRedirectPredicate = replaced.followRedirectPredicate;
 		this.requestHeaders = replaced.requestHeaders;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
@@ -231,8 +232,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return Collections.emptyMap();
 	}
 
-	public void followRedirect(boolean redirectable) {
-		this.redirectable = redirectable;
+	void followRedirectPredicate(BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
+		this.followRedirectPredicate = predicate;
 	}
 
 	@Override
@@ -298,7 +299,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public boolean isFollowRedirect() {
-		return redirectable && redirectedFrom.length <= MAX_REDIRECTS;
+		return followRedirectPredicate != null && redirectedFrom.length <= MAX_REDIRECTS;
 	}
 
 	@Override
@@ -540,9 +541,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	final boolean notRedirected(HttpResponse response) {
-		int code = response.status()
-		                   .code();
-		if ((code == 301 || code == 302) && isFollowRedirect()) {
+		if (isFollowRedirect() && followRedirectPredicate.test(this, this)) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received redirect location: {}"),
 						response.headers()

@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -651,7 +652,7 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Specifies whether http status 301/302 auto-redirect support is enabled
+	 * Specifies whether http status 301|302|307|308 auto-redirect support is enabled
 	 *
 	 * @param followRedirect if true http status 301/302 auto-redirect support
 	 *                       is enabled otherwise disabled (default: true)
@@ -664,6 +665,23 @@ public abstract class HttpClient {
 		else {
 			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
 		}
+	}
+
+	/**
+	 * Enables auto-redirect support if the passed
+	 * {@link java.util.function.Predicate} matches.
+	 * <p>
+	 *     note the passed {@link HttpClientRequest} and {@link HttpClientResponse}
+	 *     should be considered read-only and the implement SHOULD NOT consume or
+	 *     write the request/response in this predicate.
+	 *
+	 * @param predicate that returns true to enable auto-redirect support.
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
+		Objects.requireNonNull(predicate, "predicate");
+		return tcpConfiguration(tcp -> tcp.bootstrap(
+				b -> HttpClientConfiguration.followRedirectPredicate(b, predicate)));
 	}
 
 	/**

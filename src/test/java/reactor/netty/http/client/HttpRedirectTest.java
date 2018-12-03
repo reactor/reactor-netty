@@ -27,6 +27,7 @@ import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
+import reactor.netty.SocketUtils;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
@@ -70,7 +71,7 @@ public class HttpRedirectTest {
 
 		HttpClient client =
 				HttpClient.create(pool)
-				          .addressSupplier(() -> server.address());
+				          .addressSupplier(server::address);
 
 		try {
 			Flux.range(0, this.numberOfTests)
@@ -89,16 +90,18 @@ public class HttpRedirectTest {
 
 	@Test
 	public void testIssue253() {
+		final int serverPort1 = SocketUtils.findAvailableTcpPort();
+
 		DisposableServer server =
 				HttpServer.create()
-				          .port(9991)
+				          .port(serverPort1)
 				          .host("localhost")
 				          .wiretap(true)
 				          .route(r -> r.get("/1",
-				                                   (req, res) -> res.sendRedirect("http://localhost:9991/3"))
+				                                   (req, res) -> res.sendRedirect("http://localhost:" + serverPort1 + "/3"))
 				                       .get("/2",
 				                                   (req, res) -> res.status(301)
-				                                                    .header(HttpHeaderNames.LOCATION, "http://localhost:9991/3")
+				                                                    .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort1 + "/3")
 				                                                    .send())
 				                       .get("/3",
 				                                   (req, res) -> res.status(200)
@@ -108,7 +111,7 @@ public class HttpRedirectTest {
 
 		HttpClient client =
 				HttpClient.create()
-				          .addressSupplier(() -> server.address())
+				          .addressSupplier(server::address)
 				          .wiretap(true);
 
 		String value =
@@ -151,27 +154,30 @@ public class HttpRedirectTest {
 
 	@Test
 	public void testIssue278() {
+		final int serverPort1 = SocketUtils.findAvailableTcpPort();
+		final int serverPort2 = SocketUtils.findAvailableTcpPort();
+
 		DisposableServer server1 =
 				HttpServer.create()
 				          .host("localhost")
-				          .port(8888)
+				          .port(serverPort1)
 				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
-				                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:8888/3"))
+				                       .get("/2", (req, res) -> res.sendRedirect("http://localhost:" + serverPort1 + "/3"))
 				                       .get("/3", (req, res) -> res.sendString(Mono.just("OK")))
-				                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:8889/1")))
+				                       .get("/4", (req, res) -> res.sendRedirect("http://localhost:" + serverPort2 + "/1")))
 				          .wiretap(true)
 				          .bindNow();
 
 		DisposableServer server2 =
 				HttpServer.create()
 				          .host("localhost")
-				          .port(8889)
+				          .port(serverPort2)
 				          .route(r -> r.get("/1", (req, res) -> res.sendString(Mono.just("Other"))))
 				          .wiretap(true)
 				          .bindNow();
 
 		HttpClient client = HttpClient.create()
-		                              .baseUrl("http://localhost:8888");
+		                              .baseUrl("http://localhost:" + serverPort1);
 
 		Mono<String> response =
 				client.followRedirect(true)
@@ -182,7 +188,7 @@ public class HttpRedirectTest {
 				      .asString();
 
 		StepVerifier.create(response)
-		            .expectNextMatches(s -> "OK".equals(s))
+		            .expectNextMatches("OK"::equals)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
@@ -194,7 +200,7 @@ public class HttpRedirectTest {
 		                 .asString();
 
 		StepVerifier.create(response)
-		            .expectNextMatches(s -> "OK".equals(s))
+		            .expectNextMatches("OK"::equals)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
@@ -206,11 +212,108 @@ public class HttpRedirectTest {
 		                 .asString();
 
 		StepVerifier.create(response)
-		            .expectNextMatches(s -> "Other".equals(s))
+		            .expectNextMatches("Other"::equals)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
 		server1.disposeNow();
 		server2.disposeNow();
+	}
+
+	@Test
+	public void testIssue522() {
+		final int serverPort = SocketUtils.findAvailableTcpPort();
+
+		DisposableServer server =
+				HttpServer.create()
+				          .port(serverPort)
+				          .host("localhost")
+				          .route(r -> r.get("/301", (req, res) ->
+				                          res.status(301)
+				                             .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort + "/redirect"))
+				                       .get("/302", (req, res) ->
+				                          res.status(302)
+				                             .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort + "/redirect"))
+				                       .get("/304", (req, res) -> res.status(304))
+				                       .get("/307", (req, res) ->
+				                          res.status(307)
+				                             .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort + "/redirect"))
+				                       .get("/308", (req, res) ->
+				                          res.status(308)
+				                             .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort + "/redirect"))
+				                       .get("/predicate", (req, res) ->
+				                          res.header("test", "test")
+				                             .status(302)
+				                             .header(HttpHeaderNames.LOCATION, "http://localhost:" + serverPort + "/redirect"))
+				                       .get("/redirect", (req, res) -> res.sendString(Mono.just("OK"))))
+				          .wiretap(true)
+				          .bindNow();
+
+		HttpClient client =
+				HttpClient.create()
+				          .addressSupplier(server::address)
+				          .wiretap(true);
+
+		StepVerifier.create(client.followRedirect(true)
+		                          .get()
+		                          .uri("/301")
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString())
+		            .expectNextMatches("OK"::equals)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.followRedirect(true)
+		                          .get()
+		                          .uri("/302")
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString())
+		            .expectNextMatches("OK"::equals)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.followRedirect(true)
+		                          .get()
+		                          .uri("/307")
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString())
+		            .expectNextMatches("OK"::equals)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.followRedirect(true)
+		                          .get()
+		                          .uri("/308")
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString())
+		            .expectNextMatches("OK"::equals)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.followRedirect((req, res) -> res.responseHeaders()
+		                                                           .contains("test"))
+		                          .get()
+		                          .uri("/predicate")
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString())
+		            .expectNextMatches("OK"::equals)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.followRedirect(true)
+		                          .get()
+		                          .uri("/304")
+		                          .responseSingle((res, bytes) -> Mono.just(res.status()
+		                                                                       .code())))
+		            .expectNextMatches(i -> i == 304)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
 	}
 }
