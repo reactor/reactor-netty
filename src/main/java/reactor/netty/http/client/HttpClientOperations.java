@@ -173,7 +173,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public HttpClientOperations addHandler(String name, ChannelHandler handler) {
+		// Returned value is deliberately ignored
 		super.addHandler(name, handler);
 		return this;
 	}
@@ -585,10 +587,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	final void withWebsocketSupport(String protocols, int maxFramePayloadLength) {
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
+			// Returned value is deliberately ignored
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
 			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, maxFramePayloadLength, this);
@@ -646,7 +650,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		void _subscribe(CoreSubscriber<? super Void> s) {
 			if (!parent.markSentHeaders()) {
 				Operators.error(s,
-						new IllegalStateException("headers have already " + "been sent"));
+						new IllegalStateException("headers have already been sent"));
 				return;
 			}
 
@@ -668,6 +672,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					parent.chunkedTransfer(false);
 				}
 
+				// Returned value is deliberately ignored
 				parent.addHandlerFirst(NettyPipeline.ChunkedWriter, new ChunkedWriteHandler());
 
 				boolean chunked = HttpUtil.isTransferEncodingChunked(parent.nettyRequest);
