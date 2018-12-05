@@ -318,7 +318,7 @@ public abstract class FutureMono extends Mono<Void> {
 		@Override
 		public void subscribe(CoreSubscriber<? super Void> s) {
 			if (!channel.isActive()) {
-				Operators.error(s, new AbortedException("Cannot publish the content" +
+				Operators.error(s, new AbortedException("Cannot publish the content " +
 						dataStream + ", the connection has been closed"));
 				return;
 			}
