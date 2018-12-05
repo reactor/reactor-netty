@@ -281,7 +281,7 @@ public class HttpSendFileTests {
 	@Test
 	public void sendFileAsync4096Negative() throws IOException, URISyntaxException {
 		doTestSendFileAsync((req, resp) -> req.receive()
-				                              .take(1)
+				                              .take(10)
 				                              .doOnNext(b -> resp.status(500)
 				                                                 .header(HttpHeaderNames.CONNECTION, "close"))
 				                              .then(),
