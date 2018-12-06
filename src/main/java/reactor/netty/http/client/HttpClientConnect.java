@@ -531,16 +531,16 @@ final class HttpClientConnect extends HttpClient {
 
 				ch.followRedirectPredicate(followRedirectPredicate);
 
-				if (Objects.equals(method, HttpMethod.GET) ||
-						Objects.equals(method, HttpMethod.HEAD) ||
-								Objects.equals(method, HttpMethod.DELETE)) {
-					ch.chunkedTransfer(false);
+				if (chunkedTransfer == null) {
+					if (Objects.equals(method, HttpMethod.GET) ||
+							Objects.equals(method, HttpMethod.HEAD) ||
+							Objects.equals(method, HttpMethod.DELETE)) {
+						ch.chunkedTransfer(false);
+					} else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+						ch.chunkedTransfer(true);
+					}
 				}
 				else {
-					ch.chunkedTransfer(true);
-				}
-
-				if (chunkedTransfer != null) {
 					ch.chunkedTransfer(chunkedTransfer);
 				}
 

@@ -1329,4 +1329,38 @@ public class HttpClientTest {
 
 		server.disposeNow();
 	}
+
+	@Test
+	public void testPreferContentLengthWhenPost() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) ->
+				                  res.header(HttpHeaderNames.CONTENT_LENGTH,
+				                             req.requestHeaders()
+				                                .get(HttpHeaderNames.CONTENT_LENGTH))
+				                     .send(req.receive()
+				                              .aggregate()
+				                              .retain()))
+				          .bindNow();
+
+		StepVerifier.create(
+				HttpClient.create()
+				          .addressSupplier(server::address)
+				          .chunkedTransfer(false)
+				          .wiretap(true)
+				          .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, 5))
+				          .post()
+				          .uri("/")
+				          .send(Mono.just(Unpooled.wrappedBuffer("hello".getBytes())))
+				          .responseContent()
+				          .aggregate()
+				          .asString())
+				    .expectNextMatches("hello"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
+	}
 }
