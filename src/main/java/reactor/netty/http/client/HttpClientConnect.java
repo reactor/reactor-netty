@@ -339,7 +339,7 @@ final class HttpClientConnect extends HttpClient {
 
 			@Override
 			public void onNext(Connection connection) {
-
+				sink.onCancel(connection);
 			}
 
 			@Override
