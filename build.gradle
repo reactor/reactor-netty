@@ -17,7 +17,7 @@ import org.gradle.api.internal.plugins.osgi.OsgiHelper
 
 buildscript {
   repositories {
-	maven { url "http://repo.spring.io/plugins-release" }
+	maven { url "https://repo.spring.io/plugins-release" }
   }
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
@@ -66,13 +66,13 @@ ext {
   mockitoVersion = '1.10.19'
   hoverflyJavaVersion = '0.11.1'
 
-  javadocLinks = ["http://docs.oracle.com/javase/7/docs/api/",
-				  "http://docs.oracle.com/javaee/6/api/",
-				  "http://fasterxml.github.io/jackson-databind/javadoc/2.5/",
-				  "http://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/",
-				  "http://projectreactor.io/docs/core/release/api/",
-				  "http://netty.io/4.1/api/",
-				  "http://projectreactor.io/docs/netty/release/api/",] as String[]
+  javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
+				  "https://docs.oracle.com/javaee/6/api/",
+				  "https://fasterxml.github.io/jackson-databind/javadoc/2.5/",
+				  "https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/",
+				  "https://projectreactor.io/docs/core/release/api/",
+				  "https://netty.io/4.1/api/",
+				  "https://projectreactor.io/docs/netty/release/api/",] as String[]
 }
 
 
@@ -192,10 +192,10 @@ configure(rootProject) { project ->
 	  } else {
 		println 'Bamboo CI detected, avoiding use of mavenLocal()'
 	  }
-	  maven { url 'http://repo.spring.io/libs-snapshot' }
+	  maven { url 'https://repo.spring.io/libs-snapshot' }
 	}
-	maven { url 'http://repo.spring.io/libs-milestone' }
-	maven { url 'http://repo.spring.io/libs-release' }
+	maven { url 'https://repo.spring.io/libs-milestone' }
+	maven { url 'https://repo.spring.io/libs-release' }
 	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
 	jcenter()
   }
@@ -248,7 +248,7 @@ configure(rootProject) { project ->
 	apply plugin: 'spring-io'
 
 	repositories {
-	  maven { url 'http://repo.spring.io/libs-snapshot' }
+	  maven { url 'https://repo.spring.io/libs-snapshot' }
 	}
 
 	dependencyManagement {
