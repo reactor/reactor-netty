@@ -34,6 +34,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.ReactorNetty;
 import reactor.ipc.netty.http.HttpOperations;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
@@ -144,6 +145,7 @@ final class HttpServerWSOperations extends HttpServerOperations
 
 	Mono<Void> sendClose(CloseWebSocketFrame frame) {
 		if (CLOSE_SENT.get(this) == 0) {
+			context().onClose(() -> ReactorNetty.safeRelease(frame));
 			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 					discard();

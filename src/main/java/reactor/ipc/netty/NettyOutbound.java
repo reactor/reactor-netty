@@ -346,6 +346,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * any error during write
 	 */
 	default NettyOutbound sendObject(Object msg) {
+		context().onClose(() -> ReactorNetty.safeRelease(msg));
 		return then(FutureMono.deferFuture(() -> context().channel()
 		                                                  .writeAndFlush(msg)));
 	}

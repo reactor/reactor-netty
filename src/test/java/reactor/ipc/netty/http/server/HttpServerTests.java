@@ -32,9 +32,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -45,7 +48,9 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -780,18 +785,75 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue508() {
+	public void testDropPublisherConnectionClose() {
+		ByteBuf data =
+				ByteBufAllocator.DEFAULT
+				                .buffer()
+				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		doTestDropData(
+				(req, res) -> res.header("Content-Length", "0")
+				                 .send(Mono.fromRunnable(() -> Flux.just(data, data.retain(), data.retain())))
+				                 .then()
+				                 .doOnCancel(() -> ReferenceCountUtil.release(data)),
+				req -> req.addHeader("Connection", "close"));
+		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+	}
+
+	@Test
+	public void testDropMessageConnectionClose() {
+		ByteBuf data =
+				ByteBufAllocator.DEFAULT
+				                .buffer()
+				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		doTestDropData(
+				(req, res) -> res.header("Content-Length", "0")
+				                 .sendObject(data),
+				req -> req.addHeader("Connection", "close"));
+		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+	}
+
+	@Test
+	public void testDropPublisher() {
+		ByteBuf data =
+				ByteBufAllocator.DEFAULT
+				                .buffer()
+				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		doTestDropData(
+				(req, res) -> res.header("Content-Length", "0")
+				                 .send(Mono.fromRunnable(() -> Flux.just(data, data.retain(), data.retain())))
+				                 .then()
+				                 .doOnCancel(() -> ReferenceCountUtil.release(data)),
+				req -> req);
+		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+	}
+
+	@Test
+	public void testDropMessage() {
+		ByteBuf data =
+				ByteBufAllocator.DEFAULT
+				                .buffer()
+				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		doTestDropData(
+				(req, res) -> res.header("Content-Length", "0")
+				                 .sendObject(data),
+				req -> req);
+		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+	}
+
+	private void doTestDropData(
+			BiFunction<? super HttpServerRequest, ? super
+					HttpServerResponse, ? extends Publisher<Void>> serverFn,
+			Function<? super HttpClientRequest, ? extends Publisher<Void>> clientFn) {
 		NettyContext server =
 				HttpServer.create(ops -> ops.port(0))
-				          .newHandler((req, res) -> res.header("Content-Length", "0")
-				                                       .sendString(Flux.just("1", "2", "3")))
+				          .newHandler(serverFn)
 				          .block(Duration.ofSeconds(30));
 		assertThat(server).isNotNull();
 
 		String response =
 				HttpClient.create(ops -> ops.port(server.address()
 				                                        .getPort()))
-				          .get("/", req -> req.addHeader("Connection", "close"))
+				          .get("/", clientFn)
 				          .flatMap(res -> res.receive()
 				                             .aggregate()
 				                             .asString()

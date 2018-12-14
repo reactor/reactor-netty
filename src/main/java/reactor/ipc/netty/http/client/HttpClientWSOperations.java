@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiConsumer;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -38,6 +37,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.core.publisher.Mono;
 import reactor.ipc.netty.FutureMono;
 import reactor.ipc.netty.NettyPipeline;
+import reactor.ipc.netty.ReactorNetty;
 import reactor.ipc.netty.http.websocket.WebsocketInbound;
 import reactor.ipc.netty.http.websocket.WebsocketOutbound;
 
@@ -240,6 +240,7 @@ final class HttpClientWSOperations extends HttpClientOperations
 
 	Mono<Void> sendClose(CloseWebSocketFrame frame) {
 		if (CLOSE_SENT.get(this) == 0) {
+			context().onClose(() -> ReactorNetty.safeRelease(frame));
 			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 					discard();
