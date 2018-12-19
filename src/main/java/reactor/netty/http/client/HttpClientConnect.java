@@ -80,6 +80,7 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
@@ -668,6 +669,7 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public NettyOutbound sendObject(Object message) {
+			ch.onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(message));
 			return then(FutureMono.deferFuture(() -> ch.channel()
 			                                           .writeAndFlush(message)));
 		}

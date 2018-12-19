@@ -36,7 +36,6 @@ import reactor.core.publisher.FluxOperator;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoOperator;
 import reactor.core.publisher.Operators;
-import reactor.netty.channel.AbortedException;
 import reactor.util.context.Context;
 
 /**
@@ -317,12 +316,6 @@ public abstract class FutureMono extends Mono<Void> {
 
 		@Override
 		public void subscribe(CoreSubscriber<? super Void> s) {
-			if (!channel.isActive()) {
-				Operators.error(s, new AbortedException("Cannot publish the content " +
-						dataStream + ", the connection has been closed"));
-				return;
-			}
-
 			ChannelFutureSubscription cfs = new ChannelFutureSubscription(channel, s);
 
 			s.onSubscribe(cfs);

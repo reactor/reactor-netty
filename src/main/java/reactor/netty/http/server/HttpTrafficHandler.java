@@ -228,8 +228,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 									"connection, preparing to close"),
 							pendingResponses);
 				}
-				promise.addListener(ChannelFutureListener.CLOSE);
-				ctx.write(msg, promise);
+				ctx.write(msg, promise)
+				   .addListener(this)
+				   .addListener(ChannelFutureListener.CLOSE);
 				return;
 			}
 

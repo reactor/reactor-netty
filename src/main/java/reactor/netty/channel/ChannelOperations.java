@@ -44,6 +44,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
@@ -233,6 +234,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public NettyOutbound sendObject(Object message) {
+		onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(message));
 		return then(FutureMono.deferFuture(() -> connection.channel()
 		                                                   .writeAndFlush(message)));
 	}

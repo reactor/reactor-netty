@@ -38,6 +38,7 @@ import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketSe
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
+import reactor.netty.ReactorNetty;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -173,6 +174,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	Mono<Void> sendClose(CloseWebSocketFrame frame) {
 		if (CLOSE_SENT.get(this) == 0) {
+			onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
 			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 					discard();

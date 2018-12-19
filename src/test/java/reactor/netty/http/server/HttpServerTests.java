@@ -34,9 +34,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.zip.GZIPOutputStream;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -54,7 +56,9 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -63,7 +67,9 @@ import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
+import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
@@ -898,12 +904,75 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testIssue508() {
+	public void testDropPublisherConnectionClose() {
+		ByteBuf data =
+				ByteBufAllocator.DEFAULT
+				                .buffer()
+				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		doTestDropData(
+				(req, res) -> res.header("Content-Length", "0")
+				                 .send(Mono.fromRunnable(() -> Flux.just(data, data.retain(), data.retain())))
+				                 .then()
+				                 .doOnCancel(() -> ReferenceCountUtil.release(data)),
+				(req, out) -> {
+					req.addHeader("Connection", "close");
+					return out;
+				});
+		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+	}
+
+	@Test
+	public void testDropMessageConnectionClose() {
+		ByteBuf data =
+				ByteBufAllocator.DEFAULT
+				                .buffer()
+				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		doTestDropData(
+				(req, res) -> res.header("Content-Length", "0")
+				                 .sendObject(data),
+				(req, out) -> {
+					req.addHeader("Connection", "close");
+					return out;
+				});
+		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+	}
+
+	@Test
+	public void testDropPublisher() {
+		ByteBuf data =
+				ByteBufAllocator.DEFAULT
+				                .buffer()
+				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		doTestDropData(
+				(req, res) -> res.header("Content-Length", "0")
+				                 .send(Mono.fromRunnable(() -> Flux.just(data, data.retain(), data.retain())))
+				                 .then()
+				                 .doOnCancel(() -> ReferenceCountUtil.release(data)),
+				(req, out) -> out);
+		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+	}
+
+	@Test
+	public void testDropMessage() {
+		ByteBuf data =
+				ByteBufAllocator.DEFAULT
+				                .buffer()
+				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		doTestDropData(
+				(req, res) -> res.header("Content-Length", "0")
+				                 .sendObject(data),
+				(req, out) -> out);
+		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
+	}
+
+	private void doTestDropData(
+			BiFunction<? super HttpServerRequest, ? super
+					HttpServerResponse, ? extends Publisher<Void>> serverFn,
+			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> clientFn) {
 		DisposableServer disposableServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((req, res) -> res.header("Content-Length", "0")
-				                                   .sendString(Flux.just("1", "2", "3")))
+				          .handle(serverFn)
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
@@ -911,9 +980,9 @@ public class HttpServerTests {
 				HttpClient.create()
 				          .port(disposableServer.port())
 				          .wiretap(true)
-				          .headers(h -> h.add("Connection", "close"))
-				          .get()
+				          .request(HttpMethod.GET)
 				          .uri("/")
+				          .send(clientFn)
 				          .responseContent()
 				          .aggregate()
 				          .asString()

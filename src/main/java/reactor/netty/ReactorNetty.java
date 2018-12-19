@@ -41,6 +41,7 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCounted;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.BaseSubscriber;
@@ -643,6 +644,21 @@ public final class ReactorNetty {
 		}
 		else {
 			return msg;
+		}
+	}
+
+
+	/**
+	 * Try to call {@link ReferenceCounted#release()} if the specified message implements {@link ReferenceCounted}.
+	 * If the specified message doesn't implement {@link ReferenceCounted} or it is already released,
+	 * this method does nothing.
+	 */
+	public static void safeRelease(Object msg) {
+		if (msg instanceof ReferenceCounted) {
+			ReferenceCounted referenceCounted = (ReferenceCounted) msg;
+			if (referenceCounted.refCnt() > 0) {
+				referenceCounted.release();
+			}
 		}
 	}
 
