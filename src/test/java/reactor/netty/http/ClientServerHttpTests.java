@@ -375,8 +375,9 @@ public class ClientServerHttpTests {
 					buf.append(n);
 				}
 			}
-			String data = buf.toString();
-			return alloc.buffer().writeBytes(data.getBytes(Charset.defaultCharset()));
+			ByteBuf buffer = alloc.buffer();
+			buffer.writeCharSequence(buf.toString(), Charset.defaultCharset());
+			return buffer;
 		}
 	}
 }

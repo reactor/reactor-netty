@@ -151,8 +151,8 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 						}
 					}
 					if (msg instanceof ByteBufHolder && ((ByteBufHolder)msg).content() != Unpooled.EMPTY_BUFFER) {
-						loggingMsg = ((ByteBufHolder) msg).content()
-						                                  .toString(Charset.defaultCharset());
+						ByteBuf buffer = ((ByteBufHolder) msg).content();
+						loggingMsg = buffer.readCharSequence(buffer.readableBytes(), Charset.defaultCharset()).toString();
 					}
 					log.debug(format(ctx.channel(), "No ChannelOperation attached. Dropping: {}"),
 							loggingMsg);

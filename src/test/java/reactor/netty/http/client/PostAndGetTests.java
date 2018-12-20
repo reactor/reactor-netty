@@ -101,7 +101,8 @@ public class PostAndGetTests {
 			                          .flatMap(data -> {
 				                          final StringBuilder response =
 						                          new StringBuilder().append("hello ")
-						                                             .append(data.toString(
+						                                             .append(data.readCharSequence(
+						                                                     data.readableBytes(),
 								                                             Charset.defaultCharset()));
 				                          System.out.println(String.format(
 						                          "%s from thread %s",

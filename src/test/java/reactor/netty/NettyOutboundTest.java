@@ -154,7 +154,7 @@ public class NettyOutboundTest {
 					@Override
 					protected void encode(ChannelHandlerContext ctx, ByteBuf msg,
 							List<Object> out) {
-						clearMessages.add(msg.toString(CharsetUtil.UTF_8));
+						clearMessages.add(msg.readCharSequence(msg.readableBytes(), CharsetUtil.UTF_8));
 						out.add(msg.retain()); //the encoder will release the buffer, make sure it is retained for SslHandler
 					}
 				},
@@ -242,7 +242,7 @@ public class NettyOutboundTest {
 					@Override
 					protected void encode(ChannelHandlerContext ctx, ByteBuf msg,
 							List<Object> out) {
-						out.add(msg.toString(CharsetUtil.UTF_8));
+						out.add(msg.readCharSequence(msg.readableBytes(), CharsetUtil.UTF_8));
 					}
 				},
 				//transform the ChunkedFile into ByteBuf chunks:

@@ -584,7 +584,8 @@ public class WebsocketTest {
 										.sendObject(in.aggregateFrames()
 												.receiveFrames()
 												.map(WebSocketFrame::content)
-												.map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+												.map(byteBuf ->
+														byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 												.map(TextWebSocketFrame::new))))
 						.wiretap(true)
 						.bindNow();
@@ -598,7 +599,8 @@ public class WebsocketTest {
 						.then(in.aggregateFrames()
 								.receiveFrames()
 								.map(WebSocketFrame::content)
-								.map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+								.map(byteBuf ->
+										byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 								.take(count)
 								.subscribeWith(output)
 								.then()))
@@ -712,7 +714,8 @@ public class WebsocketTest {
 		                         //.share()
 		                         .publish()
 		                         .autoConnect()
-		                         .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+		                         .map(byteBuf ->
+		                             byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                         .map(Integer::parseInt)
 		                         .map(i -> new TextWebSocketFrame(i + ""))
 		                         .retry()),
@@ -728,7 +731,8 @@ public class WebsocketTest {
 		                         .map(WebSocketFrame::content)
 		                         .concatMap(content ->
 		                             Mono.just(content)
-		                                 .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+		                                 .map(byteBuf ->
+		                                     byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                 .map(Integer::parseInt)
 		                                 .map(i -> new TextWebSocketFrame(i + ""))
 		                                 .onErrorResume(t -> Mono.just(new TextWebSocketFrame("error"))))),
@@ -753,7 +757,8 @@ public class WebsocketTest {
 		                                                       .then(in.aggregateFrames()
 		                                                               .receiveFrames()
 		                                                               .map(WebSocketFrame::content)
-		                                                               .map(byteBuf -> byteBuf.toString(Charset.defaultCharset()))
+		                                                               .map(byteBuf ->
+		                                                                   byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                                               .take(count)
 		                                                               .subscribeWith(output)
 		                                                               .then()))

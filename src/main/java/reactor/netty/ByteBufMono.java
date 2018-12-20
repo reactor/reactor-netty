@@ -90,7 +90,7 @@ public final class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 	public final Mono<String> asString(Charset charset) {
 		return handle((bb, sink) -> {
 			try {
-				sink.next(bb.toString(charset));
+				sink.next(bb.readCharSequence(bb.readableBytes(), charset).toString());
 			}
 			catch (IllegalReferenceCountException e) {
 				sink.complete();

@@ -84,10 +84,14 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 
 	public static ByteBufFlux fromString(Publisher<? extends String> source, Charset charset, ByteBufAllocator allocator) {
 		Objects.requireNonNull(allocator, "allocator");
-		return new ByteBufFlux(Flux.from(source)
-		                           .map(s -> allocator.buffer()
-		                                              .writeBytes(s.getBytes(charset))),
-		                       allocator);
+		return new ByteBufFlux(
+				Flux.from(source)
+				    .map(s -> {
+				        ByteBuf buffer = allocator.buffer();
+				        buffer.writeCharSequence(s, charset);
+				        return buffer;
+				    }),
+				allocator);
 	}
 
 	/**
@@ -237,7 +241,7 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	public final Flux<String> asString(Charset charset) {
 		return handle((bb, sink) -> {
 			try {
-				sink.next(bb.toString(charset));
+				sink.next(bb.readCharSequence(bb.readableBytes(), charset).toString());
 			}
 			catch (IllegalReferenceCountException e) {
 				sink.complete();

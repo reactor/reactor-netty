@@ -286,9 +286,12 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	default NettyOutbound sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
-		return sendObject(ReactorNetty.publisherOrScalarMap(dataStream, s -> alloc()
-				.buffer()
-				.writeBytes(s.getBytes(charset))));
+		return sendObject(ReactorNetty.publisherOrScalarMap(
+				dataStream, s -> {
+				    ByteBuf buffer = alloc().buffer();
+				    buffer.writeCharSequence(s, charset);
+				    return buffer;
+				}));
 	}
 
 	/**

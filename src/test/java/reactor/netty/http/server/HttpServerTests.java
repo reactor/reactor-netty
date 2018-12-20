@@ -905,10 +905,8 @@ public class HttpServerTests {
 
 	@Test
 	public void testDropPublisherConnectionClose() {
-		ByteBuf data =
-				ByteBufAllocator.DEFAULT
-				                .buffer()
-				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
+		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Mono.fromRunnable(() -> Flux.just(data, data.retain(), data.retain())))
@@ -923,10 +921,8 @@ public class HttpServerTests {
 
 	@Test
 	public void testDropMessageConnectionClose() {
-		ByteBuf data =
-				ByteBufAllocator.DEFAULT
-				                .buffer()
-				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
+		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .sendObject(data),
@@ -939,10 +935,8 @@ public class HttpServerTests {
 
 	@Test
 	public void testDropPublisher() {
-		ByteBuf data =
-				ByteBufAllocator.DEFAULT
-				                .buffer()
-				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
+		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Mono.fromRunnable(() -> Flux.just(data, data.retain(), data.retain())))
@@ -954,10 +948,8 @@ public class HttpServerTests {
 
 	@Test
 	public void testDropMessage() {
-		ByteBuf data =
-				ByteBufAllocator.DEFAULT
-				                .buffer()
-				                .writeBytes("test".getBytes(Charset.defaultCharset()));
+		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
+		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .sendObject(data),

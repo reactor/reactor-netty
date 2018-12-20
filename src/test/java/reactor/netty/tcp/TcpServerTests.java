@@ -270,10 +270,7 @@ public class TcpServerTests {
 		assertNotNull(connected);
 
 		Connection clientContext =
-				client.handle((in, out) -> out.send(Flux.just("Hello World!\n", "Hello 11!\n")
-				                                        .map(b -> out.alloc()
-				                                                     .buffer()
-				                                                     .writeBytes(b.getBytes(Charset.defaultCharset())))))
+				client.handle((in, out) -> out.sendString(Flux.just("Hello World!\n", "Hello 11!\n")))
 				      .wiretap(true)
 				      .connectNow();
 

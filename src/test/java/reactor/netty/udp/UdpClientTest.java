@@ -46,9 +46,10 @@ public class UdpClientTest {
 				                                    .map(o -> {
 				                                            if (o instanceof DatagramPacket) {
 				                                                DatagramPacket received = (DatagramPacket) o;
-				                                                System.out.println("Server received " + received.content().toString(CharsetUtil.UTF_8));
+				                                                ByteBuf buffer = received.content();
+				                                                System.out.println("Server received " + buffer.readCharSequence(buffer.readableBytes(), CharsetUtil.UTF_8));
 				                                                ByteBuf buf1 = Unpooled.copiedBuffer("echo ", CharsetUtil.UTF_8);
-				                                                ByteBuf buf2 = Unpooled.copiedBuffer(buf1, received.content());
+				                                                ByteBuf buf2 = Unpooled.copiedBuffer(buf1, buffer);
 				                                                buf1.release();
 				                                                return new DatagramPacket(buf2, received.sender());
 				                                            }
@@ -69,7 +70,7 @@ public class UdpClientTest {
 				         .handle((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
-				                                        System.out.println("Client1 received " + b.toString(CharsetUtil.UTF_8));
+				                                        System.out.println("Client1 received " + b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8));
 				                                        latch.countDown();
 				                                    });
 				                                  return out.sendString(Mono.just("ping1"))
@@ -88,7 +89,7 @@ public class UdpClientTest {
 				         .handle((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
-				                                        System.out.println("Client2 received " + b.toString(CharsetUtil.UTF_8));
+				                                        System.out.println("Client2 received " + b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8));
 				                                        latch.countDown();
 				                                    });
 				                                  return out.sendString(Mono.just("ping3"))
