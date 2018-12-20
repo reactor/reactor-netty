@@ -122,7 +122,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @param name the connection pool name
 	 * @param maxConnections the maximum number of connections before starting pending
-	 * @param acquireTimeout the maximum time in millis to wait for aquiring
+	 * @param acquireTimeout the maximum time in millis to wait for acquiring
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
