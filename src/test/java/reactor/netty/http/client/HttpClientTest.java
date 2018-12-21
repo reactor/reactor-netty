@@ -1353,7 +1353,7 @@ public class HttpClientTest {
 				          .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, 5))
 				          .post()
 				          .uri("/")
-				          .send(Mono.just(Unpooled.wrappedBuffer("hello".getBytes())))
+				          .send(Mono.just(Unpooled.wrappedBuffer("hello".getBytes(Charset.defaultCharset()))))
 				          .responseContent()
 				          .aggregate()
 				          .asString())
