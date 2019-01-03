@@ -102,6 +102,12 @@ public interface ConnectionObserver {
 		State CONFIGURED = ReactorNetty.CONFIGURED;
 
 		/**
+		 * Propagated when a connection is bound to a channelOperation but still
+		 * allowing for observers' configuration.
+		 */
+		State CONFIGURED_ALMOST = ReactorNetty.CONFIGURED_ALMOST;
+
+		/**
 		 * Propagated when a connection has been reused / acquired
 		 * (keep-alive or pooling)
 		 */

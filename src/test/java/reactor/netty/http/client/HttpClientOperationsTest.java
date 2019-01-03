@@ -19,13 +19,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.CharsetUtil;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 
@@ -39,6 +43,33 @@ import static org.junit.Assert.assertThat;
  * @author Simon Baslé
  */
 public class HttpClientOperationsTest {
+
+	//see https://github.com/reactor/reactor-netty/issues/558
+	@Test
+	public void postMutatesHeaders() {
+		HttpClient client = HttpClient.create()
+				.doOnRequest((req, con) -> req.header("foo", "dufafa"))
+				.baseUrl("https://postman-echo.com/");
+
+		String resp =
+				client.post()
+						.uri("/post")
+						.send((req, outbound) -> {
+							String foo = req.requestHeaders().get("foo");
+							if (foo != null) {
+								req.header("foo", foo+"bar");
+							}
+							else {
+								req.header("foo", "baz");
+							}
+							return outbound.sendString(Flux.just("post"));
+						})
+						.response((res, byteBufFlux) -> byteBufFlux.asString())
+						.blockFirst();
+
+		//check what the echo server saw as headers
+		Assertions.assertThat(resp).contains("\"foo\":\"dufafabar\"");
+	}
 
 	@Test
 	public void addDecoderReplaysLastHttp() {

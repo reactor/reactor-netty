@@ -467,6 +467,13 @@ public final class ReactorNetty {
 		}
 	};
 
+	final static ConnectionObserver.State CONFIGURED_ALMOST = new ConnectionObserver.State() {
+		@Override
+		public String toString() {
+			return "[almost_configured]";
+		}
+	};
+
 	final static ConnectionObserver.State CONFIGURED = new ConnectionObserver.State() {
 		@Override
 		public String toString() {

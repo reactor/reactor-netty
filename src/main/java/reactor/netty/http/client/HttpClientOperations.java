@@ -32,6 +32,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
+import com.sun.tools.internal.ws.wsdl.document.http.HTTPOperation;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
@@ -127,6 +128,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		                                .get();
 		this.redirectedFrom = redirects == null ? EMPTY_REDIRECTIONS : redirects;
 		this.nettyRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+//		listener().onStateChange(this, HttpClientState.REQUEST_BEFORE);
 		this.requestHeaders = nettyRequest.headers();
 		this.cookieDecoder = decoder;
 		this.cookieEncoder = encoder;

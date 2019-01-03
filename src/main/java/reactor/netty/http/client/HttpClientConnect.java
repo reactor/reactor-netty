@@ -316,6 +316,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				BootstrapHandlers.connectionObserver(finalBootstrap,
+
 						new HttpObserver(sink, handler).then(BootstrapHandlers.connectionObserver(finalBootstrap)));
 
 				tcpClient.connect(finalBootstrap)
@@ -794,6 +795,7 @@ final class HttpClientConnect extends HttpClient {
 		public void channelActive(ChannelHandlerContext ctx) {
 			ChannelOperations<?, ?> ops = Connection.from(ctx.channel()).as(ChannelOperations.class);
 			if (ops != null) {
+				ops.listener().onStateChange(ops, ConnectionObserver.State.CONFIGURED_ALMOST);
 				ops.listener().onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}
 			ctx.fireChannelActive();

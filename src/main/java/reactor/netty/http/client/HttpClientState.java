@@ -25,6 +25,15 @@ import reactor.netty.ConnectionObserver;
  */
 public enum HttpClientState implements ConnectionObserver.State {
 	/**
+	 * The request has not yet been sent
+	 */
+	REQUEST_BEFORE() {
+		@Override
+		public String toString() {
+			return "[request_before]";
+		}
+	},
+	/**
 	 * The request has been sent
 	 */
 	REQUEST_SENT() {

@@ -549,6 +549,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					ChannelOperations<?, ?> ops = pool.opsFactory.create(con, con, null);
 					if (ops != null) {
 						ops.bind();
+						obs.onStateChange(ops, State.CONFIGURED_ALMOST);
 						obs.onStateChange(ops, State.CONFIGURED);
 						sink.success(ops);
 					}

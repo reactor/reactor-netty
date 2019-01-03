@@ -29,8 +29,8 @@ import reactor.netty.tcp.TcpClient;
 /**
  * @author Stephane Maldini
  */
-final class HttpClientDoOn extends HttpClientOperator implements ConnectionObserver,
-                                                           Function<Bootstrap, Bootstrap> {
+final class HttpClientDoOn extends HttpClientOperator implements
+		ConnectionObserver, Function<Bootstrap, Bootstrap> {
 
 	final BiConsumer<? super HttpClientRequest, ? super Connection>  onRequest;
 	final BiConsumer<? super HttpClientRequest, ? super Connection>  afterRequest;
@@ -56,17 +56,16 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 		return bootstrap;
 	}
 
-	@Override
-	public void onStateChange(Connection connection, State newState) {
-		if (onRequest != null && newState == State.CONFIGURED) {
+	public void onStateChange(Connection connection, ConnectionObserver.State newState) {
+		if (onRequest != null && newState == State.CONFIGURED_ALMOST) {
 			onRequest.accept(connection.as(HttpClientOperations.class), connection);
-			return;
 		}
+
 		if (afterResponse != null) {
-			if (newState == State.RELEASED){
+			if (newState == ConnectionObserver.State.RELEASED){
 				afterResponse.accept(connection.as(HttpClientOperations.class), connection);
 			}
-			else if (newState == State.DISCONNECTING) {
+			else if (newState == ConnectionObserver.State.DISCONNECTING) {
 				connection.onDispose(() -> afterResponse.accept(connection.as(HttpClientOperations.class), connection));
 			}
 			return;
