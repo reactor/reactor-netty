@@ -103,6 +103,21 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
+	public void xForwardedForHostAndPort() {
+		testClientRequest(
+				clientRequestHeaders -> {
+                    clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
+					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com");
+					clientRequestHeaders.add("X-Forwarded-Port", "8080");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1") ;
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+				});
+	}
+
+	@Test
 	public void forwardedMultipleHosts() {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",

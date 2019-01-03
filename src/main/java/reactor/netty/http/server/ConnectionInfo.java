@@ -133,7 +133,7 @@ final class ConnectionInfo {
 			String remoteIpValue = request.headers().get(XFORWARDED_IP_HEADER).split(",")[0];
 			remoteAddress = parseAddress(remoteIpValue, remoteAddress.getPort());
 		}
-		else if(request.headers().contains(XFORWARDED_HOST_HEADER)) {
+		if(request.headers().contains(XFORWARDED_HOST_HEADER)) {
 			if(request.headers().contains(XFORWARDED_PORT_HEADER)) {
 				hostAddress = InetSocketAddressUtil.createUnresolved(
 						request.headers().get(XFORWARDED_HOST_HEADER).split(",")[0].trim(),
