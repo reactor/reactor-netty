@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2018 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,7 +148,7 @@ public class TcpResourcesTest {
 		                               })
 		                               .block(Duration.ofSeconds(30));
 
-		NettyContext client = TcpClient.create(port)
+		NettyContext client = TcpClient.create(opts -> opts.port(port).disablePool())
 		                               .newHandler((in, out) -> {
 		                               	try {
 			                                out.sendString(Flux.just("Hello World!"))
@@ -159,7 +159,7 @@ public class TcpResourcesTest {
 			                                latch.countDown();
 			                                throw e;
 		                                }
-		                               	    return Mono.empty();
+		                               	    return Mono.never();
 		                               })
 		                               .block(Duration.ofSeconds(30));
 
