@@ -157,7 +157,7 @@ public class TcpResourcesTest {
 			                                latch.countDown();
 			                                throw e;
 		                                }
-		                               	    return Mono.empty();
+		                               	    return Mono.never();
 		                               })
 		                             .connectNow();
 
