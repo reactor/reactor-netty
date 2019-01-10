@@ -212,16 +212,22 @@ public final class ProxyProvider {
 			return false;
 		}
 		ProxyProvider that = (ProxyProvider) o;
+
 		return Objects.equals(username, that.username) &&
-				Objects.equals(password, that.password) &&
-				Objects.equals(getAddress(), that.getAddress()) &&
+				Objects.equals(getPasswordValue(), that.getPasswordValue()) &&
+				Objects.equals(getAddress().get(), that.getAddress().get()) &&
 				Objects.equals(getNonProxyHosts(), that.getNonProxyHosts()) &&
 				getType() == that.getType();
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(username, password, getAddress(), getNonProxyHosts(), getType());
+		return Objects.hash(username, getPasswordValue(), getAddress().get(), getNonProxyHosts(), getType());
+	}
+
+	@Nullable
+	private String getPasswordValue() {
+		return null == password ? null : password.apply(username);
 	}
 
 	static final class Build implements TypeSpec, AddressSpec, Builder {
