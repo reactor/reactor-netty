@@ -212,7 +212,6 @@ public final class ProxyProvider {
 			return false;
 		}
 		ProxyProvider that = (ProxyProvider) o;
-
 		return Objects.equals(username, that.username) &&
 				Objects.equals(getPasswordValue(), that.getPasswordValue()) &&
 				Objects.equals(getAddress().get(), that.getAddress().get()) &&
