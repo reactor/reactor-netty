@@ -27,6 +27,7 @@ public class ProxyProviderTest {
 
     private static final Function<String, String> PASSWORD_1 = username -> "123";
     private static final Function<String, String> PASSWORD_2 = username -> "456";
+
     private static final InetSocketAddress ADDRESS_1 = InetSocketAddress.createUnresolved("localhost", 80);
     private static final InetSocketAddress ADDRESS_2 = InetSocketAddress.createUnresolved("example.com", 80);
 
@@ -37,6 +38,12 @@ public class ProxyProviderTest {
     }
 
     @Test
+    public void equalProxyProvidersNoAuth() {
+        assertEquals(createNoAuthProxy(ADDRESS_1), createNoAuthProxy(ADDRESS_1));
+        assertEquals(createNoAuthProxy(ADDRESS_1).hashCode(), createNoAuthProxy(ADDRESS_1).hashCode());
+    }
+
+    @Test
     public void differentAddresses() {
         assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_2, PASSWORD_1));
         assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1).hashCode(), createProxy(ADDRESS_2, PASSWORD_1).hashCode());
@@ -44,8 +51,8 @@ public class ProxyProviderTest {
 
     @Test
     public void differentPasswords() {
-        assertNotEquals(createProxy(ADDRESS_1, PASSWORD_2), createProxy(ADDRESS_2, PASSWORD_2));
-        assertNotEquals(createProxy(ADDRESS_1, PASSWORD_2).hashCode(), createProxy(ADDRESS_2, PASSWORD_2).hashCode());
+        assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_1, PASSWORD_2));
+        assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1).hashCode(), createProxy(ADDRESS_1, PASSWORD_2).hashCode());
     }
 
     private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
@@ -53,8 +60,16 @@ public class ProxyProviderTest {
                 .builder()
                 .type(ProxyProvider.Proxy.SOCKS5)
                 .address(address)
-                .port(80)
+                .username("netty")
                 .password(passwordFunc)
+                .build();
+    }
+
+    private ProxyProvider createNoAuthProxy(InetSocketAddress address) {
+        return ProxyProvider
+                .builder()
+                .type(ProxyProvider.Proxy.SOCKS5)
+                .address(address)
                 .build();
     }
 }

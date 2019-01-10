@@ -226,7 +226,10 @@ public final class ProxyProvider {
 
 	@Nullable
 	private String getPasswordValue() {
-		return null == password ? null : password.apply(username);
+		if (username == null || password == null) {
+			return null;
+		}
+		return password.apply(username);
 	}
 
 	static final class Build implements TypeSpec, AddressSpec, Builder {
