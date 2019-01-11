@@ -881,7 +881,7 @@ public abstract class HttpClient {
 	 * HTTP Websocket to connect the {@link HttpClient}.
 	 *
 	 * @param subprotocols a websocket subprotocol comma separated list
-	 * @param maxFramePayloadLength maximum allowable frame payload lengthf
+	 * @param maxFramePayloadLength maximum allowable frame payload length
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response
 	 */

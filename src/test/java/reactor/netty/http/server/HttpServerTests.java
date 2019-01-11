@@ -686,7 +686,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void contextShouldBeTransferredFromDownStreamToUpsream() {
+	public void contextShouldBeTransferredFromDownStreamToUpStream() {
 		AtomicReference<Context> context = new AtomicReference<>();
 		DisposableServer server =
 				HttpServer.create()

@@ -28,7 +28,7 @@ public interface DisposableServer extends DisposableChannel {
 
 	/**
 	 * Return the server's host String. That is, the hostname or in case the server was bound
-	 * to a literal IP adress, the IP string representation (rather than performing a reverse-DNS
+	 * to a literal IP address, the IP string representation (rather than performing a reverse-DNS
 	 * lookup).
 	 *
 	 * @return the host string, without reverse DNS lookup
