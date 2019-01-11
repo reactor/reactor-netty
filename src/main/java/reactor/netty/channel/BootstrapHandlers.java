@@ -355,7 +355,7 @@ public abstract class BootstrapHandlers {
 	 * @param b the bootstrap to setup
 	 * @param handler the logging handler to setup
 	 *
-	 * @return a mutated {@link Bootstrap#handler}
+	 * @return a mutated {@link Bootstrap}
 	 */
 	public static Bootstrap updateLogSupport(Bootstrap b, LoggingHandler handler) {
 		updateConfiguration(b, NettyPipeline.LoggingHandler, logConfiguration(handler, SSL_CLIENT_DEBUG));
@@ -368,7 +368,7 @@ public abstract class BootstrapHandlers {
 	 * @param b the bootstrap to setup
 	 * @param handler the logging handler to setup
 	 *
-	 * @return a mutated {@link ServerBootstrap#childHandler}
+	 * @return a mutated {@link ServerBootstrap}
 	 */
 	public static ServerBootstrap updateLogSupport(ServerBootstrap b,
 												   LoggingHandler handler) {
