@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2018 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1361,6 +1361,43 @@ public class HttpClientTest {
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
 
+		server.disposeNow();
+	}
+
+	@Test
+	public void testExplicitEmptyBodyOnGetWorks() throws Exception {
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+		                                        .build();
+
+
+		SslContext sslClient = SslContextBuilder.forClient()
+		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+		                                        .build();
+
+		DisposableServer server =
+				HttpServer.create()
+				          .secure(ssl -> ssl.sslContext(sslServer))
+				          .port(0)
+				          .handle((req, res) -> res.send(req.receive().retain()))
+				          .bindNow();
+
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+
+		for (int i = 0; i < 4; i++) {
+			StepVerifier.create(HttpClient.create(pool)
+			                              .secure(ssl -> ssl.sslContext(sslClient))
+			                              .addressSupplier(server::address)
+			                              .wiretap(true)
+			                              .request(HttpMethod.GET)
+			                              .uri("/")
+			                              .send((req, out) -> out.send(Flux.empty()))
+			                              .responseContent())
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
+		}
+
+		pool.dispose();
 		server.disposeNow();
 	}
 }
