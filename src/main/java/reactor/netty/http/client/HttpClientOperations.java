@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2018 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -804,7 +804,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					           request.headers()
 					                  .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
 				           }
-				           return parent.then().thenEmpty(FutureMono.disposableWriteAndFlush(parent.channel(), Mono.just(agg)));
+				           if (agg.readableBytes() > 0) {
+				               return parent.then().thenEmpty(FutureMono.disposableWriteAndFlush(parent.channel(), Mono.just(agg)));
+				           }
+				           agg.release();
+				           return parent.then();
 			           });
 		}
 
