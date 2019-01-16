@@ -35,6 +35,7 @@ import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpResources;
@@ -210,7 +211,15 @@ final class TcpServerBind extends TcpServer {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			log.error(format(connection.channel(), "onUncaughtException(" + connection + ")"), error);
+			ChannelOperations ops = ChannelOperations.get(connection.channel());
+			if (ops == null && AbortedException.isConnectionReset(error)) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(connection.channel(), "onUncaughtException(" + connection + ")"), error);
+				}
+			}
+			else {
+				log.error(format(connection.channel(), "onUncaughtException(" + connection + ")"), error);
+			}
 			connection.dispose();
 		}
 
