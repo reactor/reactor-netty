@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,6 +39,7 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -48,6 +50,7 @@ import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.MonoSink;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.FutureMono;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
@@ -174,6 +177,29 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		});
 	}
 
+	/**
+	 * Returns a Mono that triggers the disposal of underlying connection when subscribed to.
+	 * All connections will be disposed - active and inactive.
+	 * For active connections' disposal, {@link EventExecutorGroup#shutdownGracefully} will
+	 * be used with the specified defaults for {@code quietPeriod} and {@code timeout}.
+	 *
+	 * @return a Mono representing the completion of connections disposal.
+	 */
+	@Override
+	public Mono<Void> disposeAllLater() {
+		return Mono.defer(() -> {
+			List<Mono<Void>> closeables = new ArrayList<>();
+			Pool pool;
+			for (PoolKey key : channelPools.keySet()) {
+				pool = channelPools.remove(key);
+				if (pool != null) {
+					closeables.add(pool.disposeLater());
+				}
+			}
+			return Mono.whenDelayError(closeables);
+		});
+	}
+
 	@Override
 	public boolean isDisposed() {
 		return channelPools.isEmpty() || channelPools.values()
@@ -259,6 +285,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			return pool.release(channel, promise);
 		}
 
+		/**
+		 * Closes only the inactive connections
+		 */
 		@Override
 		public void close() {
 			if (compareAndSet(false, true)) {
@@ -312,6 +341,24 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			ch.pipeline()
 			  .addFirst(bootstrap.config()
 			                     .handler());
+		}
+
+		/**
+		 * Closes the inactive and active connections
+		 */
+		@SuppressWarnings("unchecked")
+		public Mono<Void> disposeLater() {
+			return Mono.defer(() -> {
+				Mono<Void> result = Mono.empty();
+				if (compareAndSet(false, true)) {
+					pool.close();
+					result = FutureMono.from(
+							(Future) bootstrap.config()
+							                  .group()
+							                  .shutdownGracefully());
+				}
+				return result;
+			});
 		}
 
 		@Override

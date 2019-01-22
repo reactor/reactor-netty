@@ -168,11 +168,22 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
-	 * Returns a Mono that triggers the disposal of underlying resources when subscribed to.
+	 * Returns a Mono that triggers the disposal of underlying resources
+	 * (inactive) when subscribed to.
 	 *
 	 * @return a Mono representing the completion of resources disposal.
 	 **/
 	default Mono<Void> disposeLater() {
+		return Mono.empty(); //noop default
+	}
+
+	/**
+	 * Returns a Mono that triggers the disposal of underlying resources
+	 * (active and inactive) when subscribed to.
+	 *
+	 * @return a Mono representing the completion of resources disposal.
+	 **/
+	default Mono<Void> disposeAllLater() {
 		return Mono.empty(); //noop default
 	}
 }

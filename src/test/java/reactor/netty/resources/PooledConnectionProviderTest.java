@@ -17,12 +17,14 @@ package reactor.netty.resources;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 
@@ -34,12 +36,17 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.PooledConnectionProvider.PooledConnection;
 import reactor.netty.tcp.TcpClientTests;
 import reactor.test.StepVerifier;
@@ -130,6 +137,67 @@ public class PooledConnectionProviderTest {
 	}
 
 	@Test
+	public void disposeLaterClosesAllConnections() {
+		LoopResources loopResources = LoopResources.create("disposeLater");
+		AtomicBoolean disposed1 = new AtomicBoolean();
+		AtomicBoolean disposed2 = new AtomicBoolean();
+		AtomicBoolean disposed3 = new AtomicBoolean();
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .tcpConfiguration(tcpServer -> tcpServer.runOn(loopResources))
+				          .route(r -> r.get("/never", (req, res) -> {
+				                          req.withConnection(conn -> conn.onDispose(() -> disposed1.set(true)));
+				                          return res.sendString(Mono.never());
+				                      })
+				                       .get("/delay10", (req, res) -> {
+				                          req.withConnection(conn -> conn.onDispose(() -> disposed2.set(true)));
+				                          return res.sendString(Mono.just("test").delayElement(Duration.ofSeconds(10)));
+				                      })
+				                       .get("/delay1", (req, res) -> {
+				                          req.withConnection(conn -> conn.onDispose(() -> disposed3.set(true)));
+				                          return res.sendString(Mono.just("test").delayElement(Duration.ofSeconds(1)));
+				                      }))
+				          .wiretap(true)
+				          .bindNow();
+
+		ConnectionProvider connectionProvider = ConnectionProvider.elastic("disposeLater");
+		HttpClient client = HttpClient.create(connectionProvider)
+		                              .addressSupplier(server::address)
+		                              .tcpConfiguration(tcpClient -> tcpClient.runOn(loopResources))
+		                              .wiretap(true);
+
+		Flux.range(0, 3)
+		    .flatMap(i -> {
+		        String uri;
+		        if (i == 0) {
+		            uri = "/never";
+		        }
+		        else if (i == 1) {
+		            uri = "/delay10";
+		        }
+		        else {
+		            uri = "/delay1";
+		        }
+		        return client.get()
+		                     .uri(uri)
+		                     .responseContent()
+		                     .aggregate()
+		                     .asString();
+		    })
+		    .subscribe();
+
+		Mono.delay(Duration.ofSeconds(5))
+		    .then(connectionProvider.disposeAllLater()
+		                            .doOnTerminate(() -> {
+		                                Assertions.assertThat(disposed1.get()).isTrue();
+		                                Assertions.assertThat(disposed2.get()).isTrue();
+		                                Assertions.assertThat(disposed3.get()).isTrue();
+		                            }))
+		    .block(Duration.ofSeconds(30));
+	}
+
+	@Test
 	public void fixedPoolTwoAcquire()
 			throws ExecutionException, InterruptedException, IOException {
 		final ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
@@ -161,8 +229,10 @@ public class PooledConnectionProviderTest {
 			//acquire 2
 			final PooledConnection c1 = (PooledConnection) pool.acquire(bootstrap)
 			                                                   .block();
+			Assertions.assertThat(c1).isNotNull();
 			final PooledConnection c2 = (PooledConnection) pool.acquire(bootstrap)
 			                                                   .block();
+			Assertions.assertThat(c2).isNotNull();
 
 			//make room for 1 more
 			c2.disposeNow();
@@ -170,6 +240,7 @@ public class PooledConnectionProviderTest {
 
 			final PooledConnection c3 = (PooledConnection) pool.acquire(bootstrap)
 			                                                   .block();
+			Assertions.assertThat(c3).isNotNull();
 
 			//next one will block until a previous one is released
 			long start = System.currentTimeMillis();
@@ -179,6 +250,7 @@ public class PooledConnectionProviderTest {
 
 			final PooledConnection c4 = (PooledConnection) pool.acquire(bootstrap)
 			                                                   .block();
+			Assertions.assertThat(c4).isNotNull();
 
 			long end = System.currentTimeMillis();
 
