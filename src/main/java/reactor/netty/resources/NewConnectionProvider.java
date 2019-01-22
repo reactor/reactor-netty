@@ -147,12 +147,17 @@ final class NewConnectionProvider implements ConnectionProvider {
 					}
 					return;
 				}
-				if (f.cause() != null) {
-					if (f.cause() instanceof BindException) {
-						sink.error(ChannelBindException.fail(bootstrap, f.cause()));
+				Throwable cause = f.cause();
+				if (cause != null) {
+					if (cause instanceof BindException ||
+							// With epoll/kqueue transport it is
+							// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
+							(cause instanceof IOException && cause.getMessage() != null &&
+									cause.getMessage().contains("Address already in use"))) {
+						sink.error(ChannelBindException.fail(bootstrap, null));
 					}
 					else {
-						sink.error(f.cause());
+						sink.error(cause);
 					}
 				}
 				else {
