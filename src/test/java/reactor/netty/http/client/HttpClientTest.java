@@ -94,32 +94,25 @@ public class HttpClientTest {
 
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
-		HttpClient.create(pool)
-		          .port(x.address().getPort())
-		          .wiretap(true)
-		          .get()
-		          .uri("/")
-		          .responseSingle((r, buf) -> Mono.just(r.status().code()))
-		          .log()
-		          .block(Duration.ofSeconds(30));
+		HttpClient client = createHttpClientForContextWithPort(x, pool);
 
-		HttpClient.create(pool)
-		          .port(x.address().getPort())
-		          .wiretap(true)
-		          .get()
-		          .uri("/")
-		          .responseContent()
-		          .log()
-		          .blockLast(Duration.ofSeconds(30));
+		client.get()
+		      .uri("/")
+		      .responseSingle((r, buf) -> Mono.just(r.status().code()))
+		      .log()
+		      .block(Duration.ofSeconds(30));
 
-		HttpClient.create(pool)
-		          .port(x.address().getPort())
-		          .wiretap(true)
-		          .get()
-		          .uri("/")
-		          .responseContent()
-		          .log()
-		          .blockLast(Duration.ofSeconds(30));
+		client.get()
+		      .uri("/")
+		      .responseContent()
+		      .log()
+		      .blockLast(Duration.ofSeconds(30));
+
+		client.get()
+		      .uri("/")
+		      .responseContent()
+		      .log()
+		      .blockLast(Duration.ofSeconds(30));
 
 		x.disposeNow();
 
@@ -154,10 +147,8 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		final HttpClient client =
-				HttpClient.create(pool)
-				          .addressSupplier(serverContext::address)
-				          .wiretap(true);
+		final HttpClient client = createHttpClientForContextWithAddress(serverContext, pool);
+
 		Flux.just("1", "2", "3")
 		    .concatMap(data ->
 		            client.doOnResponse((res, conn) ->
@@ -167,8 +158,7 @@ public class HttpClientTest {
 		                  .post()
 		                  .uri("/")
 		                  .send(ByteBufFlux.fromString(Flux.just(data)))
-		                  .responseContent()
-		    )
+		                  .responseContent())
 		    .subscribe();
 
 
@@ -194,23 +184,19 @@ public class HttpClientTest {
 
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
-		HttpClient.create(pool)
-		          .addressSupplier(x::address)
-		          .wiretap(true)
-		          .get()
-		          .uri("/")
-		          .responseSingle((r, buf) -> buf.thenReturn(r.status().code()))
-		          .log()
-		          .block(Duration.ofSeconds(30));
+		HttpClient client = createHttpClientForContextWithAddress(x, pool);
+
+		client.get()
+		      .uri("/")
+		      .responseSingle((r, buf) -> buf.thenReturn(r.status().code()))
+		      .log()
+		      .block(Duration.ofSeconds(30));
 
 		try {
-			HttpClient.create(pool)
-			          .addressSupplier(x::address)
-			          .wiretap(true)
-			          .get()
-			          .uri("/")
-			          .responseContent()
-			          .blockLast(Duration.ofSeconds(30));
+			client.get()
+			      .uri("/")
+			      .responseContent()
+			      .blockLast(Duration.ofSeconds(30));
 		}
 		catch (AbortedException ae) {
 			return;
@@ -223,27 +209,31 @@ public class HttpClientTest {
 
 	@Test
 	public void testClientReuseIssue405(){
-		DisposableServer c = HttpServer.create()
-				.port(0)
-				.handle((in,out)->out.sendString(Flux.just("hello")))
-				.wiretap(true)
-				.bindNow();
+		DisposableServer c =
+				HttpServer.create()
+				          .port(0)
+				          .handle((in,out)->out.sendString(Flux.just("hello")))
+				          .wiretap(true)
+				          .bindNow();
 
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
-		HttpClient httpClient = HttpClient.create(pool)
-				.port(c.address().getPort()).wiretap(true);
+		HttpClient httpClient = createHttpClientForContextWithPort(c, pool);
 
-		Mono<String> mono1 = httpClient.get()
-				.responseSingle((r, buf) -> buf.asString())
-				.log("mono1");
+		Mono<String> mono1 =
+				httpClient.get()
+				          .responseSingle((r, buf) -> buf.asString())
+				          .log("mono1");
 
-		Mono<String> mono2 = httpClient.get()
-                .responseSingle((r, buf) -> buf.asString())
-				.log("mono1");
+		Mono<String> mono2 =
+				httpClient.get()
+				          .responseSingle((r, buf) -> buf.asString())
+				          .log("mono1");
 
 		StepVerifier.create(Flux.zip(mono1,mono2))
-				.expectNext(Tuples.of("hello","hello")).expectComplete().verify(Duration.ofSeconds(2000));
-		
+		            .expectNext(Tuples.of("hello","hello"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(20));
+
 		c.disposeNow();
 		pool.dispose();
 	}
@@ -258,12 +248,10 @@ public class HttpClientTest {
 		                               .bindNow();
 
 		ByteBufFlux remote =
-				HttpClient.create()
-				          .port(c.address().getPort())
-				          .wiretap(true)
-				          .get()
-				          .uri("/test/test.css")
-				          .responseContent();
+				createHttpClientForContextWithPort(c)
+				        .get()
+				        .uri("/test/test.css")
+				        .responseContent();
 
 		Mono<String> page = remote.asString()
 		                          .limitRate(1)
@@ -282,7 +270,6 @@ public class HttpClientTest {
 
 	@Test
 	public void serverInfiniteClientClose() throws Exception {
-
 		CountDownLatch latch = new CountDownLatch(1);
 		DisposableServer c =
 				HttpServer.create()
@@ -293,8 +280,7 @@ public class HttpClientTest {
 				                  return Flux.interval(Duration.ofSeconds(1))
 				                             .flatMap(d -> resp.withConnection(cn -> cn.channel()
 				                                                                       .config()
-				                                                                       .setAutoRead(
-				                                                                               true))
+				                                                                       .setAutoRead(true))
 				                                               .sendObject(Unpooled.EMPTY_BUFFER)
 				                                               .then()
 				                                               .doOnSuccess(x -> req.withConnection(
@@ -305,13 +291,11 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		HttpClient.create()
-		          .port(c.address().getPort())
-		          .wiretap(true)
-		          .get()
-		          .uri("/")
-		          .response()
-		          .block();
+		createHttpClientForContextWithPort(c)
+		        .get()
+		        .uri("/")
+		        .response()
+		        .block();
 
 		latch.await();
 		c.disposeNow();
@@ -321,26 +305,26 @@ public class HttpClientTest {
 	@Ignore
 	public void postUpload() {
 		InputStream f = getClass().getResourceAsStream("/public/index.html");
-		HttpClient.create()
-		          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
-		          .wiretap(true)
-		          .put()
-		          .uri("/post")
-		          .sendForm((req, form) -> form.multipart(true)
-		                                       .file("test", f)
-		                                       .attr("att1", "attr2")
-		                                       .file("test2", f))
-		          .responseSingle((r, buf) -> Mono.just(r.status().code()))
-		          .block(Duration.ofSeconds(30));
-		Integer res = HttpClient.create()
-		                        .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
-		                        .wiretap(true)
-		                        .followRedirect(true)
-		                        .get()
-		                        .uri("/search")
-		                        .responseSingle((r, out) -> Mono.just(r.status().code()))
-		                        .log()
-		                        .block(Duration.ofSeconds(30));
+		HttpClient client =
+				HttpClient.create()
+				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+				          .wiretap(true);
+
+		client.put()
+		      .uri("/post")
+		      .sendForm((req, form) -> form.multipart(true)
+		                                   .file("test", f)
+		                                   .attr("att1", "attr2")
+		                                   .file("test2", f))
+		      .responseSingle((r, buf) -> Mono.just(r.status().code()))
+		      .block(Duration.ofSeconds(30));
+
+		Integer res = client.followRedirect(true)
+		                    .get()
+		                    .uri("/search")
+		                    .responseSingle((r, out) -> Mono.just(r.status().code()))
+		                    .log()
+		                    .block(Duration.ofSeconds(30));
 
 		assertThat(res).isNotNull();
 		if (res != 200) {
@@ -356,13 +340,15 @@ public class HttpClientTest {
 
 	@Test
 	public void simpleTest404_1() {
+		ConnectionProvider pool = ConnectionProvider.fixed("http", 1);
 		HttpClient client =
-				HttpClient.create(ConnectionProvider.fixed("http", 1))
+				HttpClient.create(pool)
 				          .port(80)
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap(true);
 		doSimpleTest404(client);
 		doSimpleTest404(client);
+		pool.dispose();
 	}
 
 	private void doSimpleTest404(HttpClient client) {
@@ -395,7 +381,7 @@ public class HttpClientTest {
 
 		assertThat(r).isNotNull();
 
-		Assert.assertTrue(Objects.equals(r.getT1(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
 	}
 
 	@Test
@@ -414,7 +400,7 @@ public class HttpClientTest {
 
 		assertThat(r).isNotNull();
 
-		Assert.assertTrue(Objects.equals(r.getT1(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
 	}
 
 	@Test
@@ -446,77 +432,71 @@ public class HttpClientTest {
 
 		Assert.assertTrue(same.get());
 
-		Assert.assertTrue(Objects.equals(r,HttpResponseStatus.NOT_FOUND));
+		Assert.assertEquals(r, HttpResponseStatus.NOT_FOUND);
 		p.dispose();
 	}
 
 	@Test
 	public void disableChunkImplicitDefault() {
 		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
-		Tuple2<HttpResponseStatus, Channel> r =
+		HttpClient client =
 				HttpClient.create(p)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
-				                                                  .noSSL())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap(true)
-				          .chunkedTransfer(false)
-				          .get()
-				          .uri("/unsupportedURI")
-				          .responseConnection((res, conn) -> Mono.just(res.status())
-				                                                 .delayUntil(s -> conn.inbound().receive())
-				                                                 .zipWith(Mono.just(conn.channel())))
-				          .blockLast(Duration.ofSeconds(30));
+				          .chunkedTransfer(false);
+
+		Tuple2<HttpResponseStatus, Channel> r =
+				client.get()
+				      .uri("/unsupportedURI")
+				      .responseConnection((res, conn) -> Mono.just(res.status())
+				                                             .delayUntil(s -> conn.inbound().receive())
+				                                             .zipWith(Mono.just(conn.channel())))
+				      .blockLast(Duration.ofSeconds(30));
 
 		assertThat(r).isNotNull();
 
 		Channel r2 =
-				HttpClient.create(p)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com")
-				                                                  .noSSL())
-				          .wiretap(true)
-				          .chunkedTransfer(false)
-				          .get()
-				          .uri("/unsupportedURI")
-				          .responseConnection((res, conn) -> Mono.just(conn.channel())
-				                                                 .delayUntil(s -> conn.inbound().receive()))
-				          .blockLast(Duration.ofSeconds(30));
+				client.get()
+				      .uri("/unsupportedURI")
+				      .responseConnection((res, conn) -> Mono.just(conn.channel())
+				                                             .delayUntil(s -> conn.inbound().receive()))
+				      .blockLast(Duration.ofSeconds(30));
 
 		assertThat(r2).isNotNull();
 
 		Assert.assertSame(r.getT2(), r2);
 
-		Assert.assertTrue(Objects.equals(r.getT1(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
 		p.dispose();
 	}
 
 	@Test
 	public void contentHeader() {
 		ConnectionProvider fixed = ConnectionProvider.fixed("test", 1);
-		HttpResponseStatus r =
+		HttpClient client =
 				HttpClient.create(fixed)
 				          .wiretap(true)
-				          .headers(h -> h.add("content-length", "1"))
-				          .request(HttpMethod.GET)
-				          .uri("http://google.com")
-				          .send(ByteBufFlux.fromString(Mono.just(" ")))
-				          .responseSingle((res, buf) -> Mono.just(res.status()))
-				          .block(Duration.ofSeconds(30));
+				          .headers(h -> h.add("content-length", "1"));
 
-		HttpClient.create(fixed)
-		          .wiretap(true)
-		          .headers(h -> h.add("content-length", "1"))
-		          .request(HttpMethod.GET)
-		          .uri("http://google.com")
-		          .send(ByteBufFlux.fromString(Mono.just(" ")))
-		          .responseSingle((res, buf) -> Mono.just(res.status()))
-		          .block(Duration.ofSeconds(30));
+		HttpResponseStatus r =
+				client.request(HttpMethod.GET)
+				      .uri("http://google.com")
+				      .send(ByteBufFlux.fromString(Mono.just(" ")))
+				      .responseSingle((res, buf) -> Mono.just(res.status()))
+				      .block(Duration.ofSeconds(30));
 
-		Assert.assertTrue(Objects.equals(r, HttpResponseStatus.BAD_REQUEST));
+		client.request(HttpMethod.GET)
+		      .uri("http://google.com")
+		      .send(ByteBufFlux.fromString(Mono.just(" ")))
+		      .responseSingle((res, buf) -> Mono.just(res.status()))
+		      .block(Duration.ofSeconds(30));
+
+		Assert.assertEquals(r, HttpResponseStatus.BAD_REQUEST);
 		fixed.dispose();
 	}
 
 	@Test
 	public void simpleTestHttps() {
-
 		StepVerifier.create(HttpClient.create()
 		                              .wiretap(true)
 		                              .get()
@@ -555,10 +535,11 @@ public class HttpClientTest {
 				         .bindNow(Duration.ofSeconds(30));
 
 		StepVerifier.create(
-				createHttpClientForContext(x).get()
-				                             .uri("/")
-				                             .responseContent()
-				                             .timeout(signal))
+				createHttpClientForContextWithAddress(x)
+				        .get()
+				        .uri("/")
+				        .responseContent()
+				        .timeout(signal))
 				    .verifyError(TimeoutException.class);
 	}
 
@@ -575,18 +556,16 @@ public class HttpClientTest {
 
 		//verify gzip is negotiated (when no decoder)
 		StepVerifier.create(
-				HttpClient.create()
-				          .port(c.address().getPort())
-				          .wiretap(true)
-				          .headers(h -> h.add("Accept-Encoding", "gzip")
-				                         .add("Accept-Encoding", "deflate"))
-				          .followRedirect(true)
-				          .get()
-				          .response((r, buf) -> buf.aggregate()
-				                                   .asString()
-				                                   .zipWith(Mono.just(r.responseHeaders()
-				                                                       .get("Content-Encoding", "")))
-				                                   .zipWith(Mono.just(r))))
+				createHttpClientForContextWithPort(c)
+				        .headers(h -> h.add("Accept-Encoding", "gzip")
+				                       .add("Accept-Encoding", "deflate"))
+				        .followRedirect(true)
+				        .get()
+				        .response((r, buf) -> buf.aggregate()
+				                                 .asString()
+				                                 .zipWith(Mono.just(r.responseHeaders()
+				                                                     .get("Content-Encoding", "")))
+				                                 .zipWith(Mono.just(r))))
 				    .expectNextMatches(tuple -> {
 				            String content1 = tuple.getT1().getT1();
 				            return !content1.equals(content)
@@ -597,21 +576,18 @@ public class HttpClientTest {
 
 		//verify decoder does its job and removes the header
 		StepVerifier.create(
-				HttpClient.create()
-				          .port(c.address().getPort())
-				          .wiretap(true)
-				          .followRedirect(true)
-				          .headers(h -> h.add("Accept-Encoding", "gzip")
-				                         .add("Accept-Encoding", "deflate"))
-				          .doOnRequest((req, conn) ->
-				                  conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor())
-				          )
-				          .get()
-				          .response((r, buf) -> buf.aggregate()
-				                                   .asString()
-				                                   .zipWith(Mono.just(r.responseHeaders()
-				                                                       .get("Content-Encoding", "")))
-				                                   .zipWith(Mono.just(r))))
+				createHttpClientForContextWithPort(c)
+				        .followRedirect(true)
+				        .headers(h -> h.add("Accept-Encoding", "gzip")
+				                       .add("Accept-Encoding", "deflate"))
+				        .doOnRequest((req, conn) ->
+				                conn.addHandlerFirst("gzipDecompressor", new HttpContentDecompressor()))
+				        .get()
+				        .response((r, buf) -> buf.aggregate()
+				                                 .asString()
+				                                 .zipWith(Mono.just(r.responseHeaders()
+				                                                     .get("Content-Encoding", "")))
+				                                 .zipWith(Mono.just(r))))
 				    .expectNextMatches(tuple -> {
 				            String content1 = tuple.getT1().getT1();
 				            return content1.equals(content)
@@ -642,9 +618,8 @@ public class HttpClientTest {
 				                                                                "no gzip"))))
 				          .wiretap(true)
 				          .bindNow();
-		HttpClient client = HttpClient.create()
-		                              .port(server.address().getPort())
-		                              .wiretap(true);
+		HttpClient client = createHttpClientForContextWithPort(server);
+
 		if (gzipEnabled){
 			client = client.compress(true);
 		}
@@ -680,13 +655,11 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		HttpClient.create()
-		          .port(c.address().getPort())
-		          .wiretap(true)
-		          .get()
-		          .uri("/")
-		          .responseContent()
-		          .blockLast();
+		createHttpClientForContextWithPort(c)
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .blockLast();
 
 		c.disposeNow();
 	}
@@ -721,10 +694,8 @@ public class HttpClientTest {
 
 
 		String responseString =
-				HttpClient.create()
-				          .addressSupplier(context::address)
+				createHttpClientForContextWithAddress(context)
 				          .secure(ssl -> ssl.sslContext(sslClient))
-				          .wiretap(true)
 				          .get()
 				          .uri("/foo")
 				          .responseSingle((res, buf) -> buf.asString(CharsetUtil.UTF_8))
@@ -732,7 +703,6 @@ public class HttpClientTest {
 		context.disposeNow();
 
 		assertThat(responseString).isEqualTo("hello /foo");
-
 	}
 
 	@Test
@@ -749,14 +719,12 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		String responseString = HttpClient.create()
-		                                  .addressSupplier(context::address)
-		                                  .secure(ssl -> ssl.sslContext(sslClient))
-		                                  .wiretap(true)
-		                                  .get()
-		                                  .uri("/foo")
-		                                  .responseSingle((res, buf) -> buf.asString(CharsetUtil.UTF_8))
-		                                  .block();
+		String responseString = createHttpClientForContextWithAddress(context)
+		                                .secure(ssl -> ssl.sslContext(sslClient))
+		                                .get()
+		                                .uri("/foo")
+		                                .responseSingle((res, buf) -> buf.asString(CharsetUtil.UTF_8))
+		                                .block();
 		context.disposeNow();
 
 		assertThat(responseString).isEqualTo("hello /foo");
@@ -787,16 +755,14 @@ public class HttpClientTest {
 				          .bindNow();
 
 		Tuple2<String, Integer> response =
-				HttpClient.create()
-				          .addressSupplier(context::address)
-				          .secure(ssl -> ssl.sslContext(sslClient))
-				          .wiretap(true)
-				          .post()
-				          .uri("/upload")
-				          .send((r, out) -> out.sendFile(largeFile))
-				          .responseSingle((res, buf) -> buf.asString()
-				                                           .zipWith(Mono.just(res.status().code())))
-				          .block(Duration.ofSeconds(30));
+				createHttpClientForContextWithAddress(context)
+				        .secure(ssl -> ssl.sslContext(sslClient))
+				        .post()
+				        .uri("/upload")
+				        .send((r, out) -> out.sendFile(largeFile))
+				        .responseSingle((res, buf) -> buf.asString()
+				                                         .zipWith(Mono.just(res.status().code())))
+				        .block(Duration.ofSeconds(30));
 
 		context.disposeNow();
 
@@ -831,13 +797,13 @@ public class HttpClientTest {
 				          .bindNow();
 
 		Tuple2<String, Integer> response =
-				createHttpClientForContext(context)
-				          .post()
-				          .uri("/upload")
-				          .send((r, out) -> out.sendFile(largeFile))
-				          .responseSingle((res, buf) -> buf.asString()
-				                                           .zipWith(Mono.just(res.status().code())))
-				          .block(Duration.ofSeconds(30));
+				createHttpClientForContextWithAddress(context)
+				        .post()
+				        .uri("/upload")
+				        .send((r, out) -> out.sendFile(largeFile))
+				        .responseSingle((res, buf) -> buf.asString()
+				                                         .zipWith(Mono.just(res.status().code())))
+				        .block(Duration.ofSeconds(30));
 
 		context.disposeNow();
 
@@ -866,7 +832,7 @@ public class HttpClientTest {
 				                                                     .sendHeaders()))
 				          .bindNow();
 
-		createHttpClientForContext(context)
+		createHttpClientForContextWithAddress(context)
 		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
 		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
 		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
@@ -876,25 +842,25 @@ public class HttpClientTest {
 		        .responseContent()
 		        .blockLast();
 
-		createHttpClientForContext(context)
-				.doOnRequest((r, c) -> System.out.println("onReq: "+r))
-				.doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-				.doOnResponse((r, c) -> System.out.println("onResp: "+r))
-				.doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
-		          .put()
-		          .uri("/204")
-		          .responseContent()
-		          .blockLast(Duration.ofSeconds(30));
+		createHttpClientForContextWithAddress(context)
+		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
+		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
+		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
+		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .put()
+		        .uri("/204")
+		        .responseContent()
+		        .blockLast(Duration.ofSeconds(30));
 
-		createHttpClientForContext(context)
-				.doOnRequest((r, c) -> System.out.println("onReq: "+r))
-				.doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-				.doOnResponse((r, c) -> System.out.println("onResp: "+r))
-				.doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
-		          .get()
-		          .uri("/200")
-		          .responseContent()
-		          .blockLast(Duration.ofSeconds(30));
+		createHttpClientForContextWithAddress(context)
+		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
+		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
+		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
+		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .get()
+		        .uri("/200")
+		        .responseContent()
+		        .blockLast(Duration.ofSeconds(30));
 
 		context.disposeNow();
 	}
@@ -905,33 +871,31 @@ public class HttpClientTest {
 				HttpServer.create()
 				          .host("localhost")
 				          .route(r -> r.get("/201", (req, res) -> res.addHeader
-						          ("Content-Length", "0")
+				                  ("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)
 				                                                     .sendHeaders())
 				                       .get("/204", (req, res) -> res.status
-						                       (HttpResponseStatus.NO_CONTENT)
+				                               (HttpResponseStatus.NO_CONTENT)
 				                                                     .sendHeaders())
 				                       .get("/200", (req, res) -> res.addHeader("Content-Length", "0")
 				                                                     .sendHeaders()))
 				          .bindNow();
 
 		AtomicInteger i = new AtomicInteger();
-		HttpClient.create()
-		          .addressSupplier(context::address)
-		          .wiretap(true)
-		          .observe((c, s) -> System.out.println(s + "" + c))
-		          .get()
-		          .uri(Mono.fromCallable(() -> {
-		          	switch (i.incrementAndGet()) {
-			            case 1: return "/201";
-			            case 2: return "/204";
-			            case 3: return "/200";
-			            default: return null;
+		createHttpClientForContextWithAddress(context)
+		        .observe((c, s) -> System.out.println(s + "" + c))
+		        .get()
+		        .uri(Mono.fromCallable(() -> {
+		            switch (i.incrementAndGet()) {
+		                case 1: return "/201";
+		                case 2: return "/204";
+		                case 3: return "/200";
+		                default: return null;
 		            }
-		          }))
-		          .responseContent()
-		          .repeat(4)
-		          .blockLast();
+		        }))
+		        .responseContent()
+		        .repeat(4)
+		        .blockLast();
 
 		context.disposeNow();
 	}
@@ -942,49 +906,46 @@ public class HttpClientTest {
 				HttpServer.create()
 				          .host("localhost")
 				          .route(r -> r.get("/201", (req, res) -> res.addHeader
-						          ("Content-Length", "0")
+				                  ("Content-Length", "0")
 				                                                     .status(HttpResponseStatus.CREATED)
 				                                                     .sendHeaders()))
 				          .bindNow();
 
-		HttpClient.create()
-		          .addressSupplier(context::address)
-		          .headersWhen(h -> Mono.just(h.set("test", "test")).delayElement(Duration.ofSeconds(2)))
-		          .wiretap(true)
-		          .observe((c, s) -> System.out.println(s + "" + c))
-		          .get()
-		          .uri("/201")
-		          .responseContent()
-		          .repeat(4)
-		          .blockLast();
+		createHttpClientForContextWithAddress(context)
+		        .headersWhen(h -> Mono.just(h.set("test", "test")).delayElement(Duration.ofSeconds(2)))
+		        .observe((c, s) -> System.out.println(s + "" + c))
+		        .get()
+		        .uri("/201")
+		        .responseContent()
+		        .repeat(4)
+		        .blockLast();
 
 		context.disposeNow();
 	}
 
 	@Test
 	public void testCookie() {
-		DisposableServer context = HttpServer.create()
-		                                     .host("localhost")
-		                                     .route(r -> r.get("/201",
-				                                     (req, res) -> res.addHeader("test",
-						                                     req.cookies()
-						                                        .get("test")
-						                                        .stream()
-						                                        .findFirst()
-						                                        .get()
-						                                        .value())
-				                                                      .status(HttpResponseStatus.CREATED)
-				                                                      .sendHeaders()))
-		                                     .bindNow();
+		DisposableServer context =
+				HttpServer.create()
+				          .host("localhost")
+				          .route(r -> r.get("/201",
+				                  (req, res) -> res.addHeader("test",
+				                                              req.cookies()
+				                                                 .get("test")
+				                                                 .stream()
+				                                                 .findFirst()
+				                                                 .get()
+				                                                 .value())
+				                                   .status(HttpResponseStatus.CREATED)
+				                                   .sendHeaders()))
+				          .bindNow();
 
-		HttpClient.create()
-		          .addressSupplier(context::address)
-		          .cookie("test", c -> c.setValue("lol"))
-		          .wiretap(true)
-		          .get()
-		          .uri("/201")
-		          .responseContent()
-		          .blockLast();
+		createHttpClientForContextWithAddress(context)
+		        .cookie("test", c -> c.setValue("lol"))
+		        .get()
+		        .uri("/201")
+		        .responseContent()
+		        .blockLast();
 
 		context.disposeNow();
 	}
@@ -1002,12 +963,11 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		Flux<String> ws = HttpClient.create(pr)
-		                            .port(httpServer.address().getPort())
-		                            .get()
-		                            .uri("/")
-		                            .responseContent()
-		                            .asString();
+		Flux<String> ws = createHttpClientForContextWithPort(httpServer, pr)
+		                          .get()
+		                          .uri("/")
+		                          .responseContent()
+		                          .asString();
 
 		StepVerifier.create(
 				Flux.range(1, 10)
@@ -1035,14 +995,13 @@ public class HttpClientTest {
 				          .bindNow();
 
 		Mono<String> content =
-				HttpClient.create()
-				          .port(server.address().getPort())
-				          .request(HttpMethod.GET)
-				          .uri("/")
-				          .send(ByteBufFlux.fromInbound(Mono.defer(() -> Mono.just("Hello".getBytes(Charset.defaultCharset())))))
-				          .responseContent()
-				          .aggregate()
-				          .asString();
+				createHttpClientForContextWithPort(server)
+				        .request(HttpMethod.GET)
+				        .uri("/")
+				        .send(ByteBufFlux.fromInbound(Mono.defer(() -> Mono.just("Hello".getBytes(Charset.defaultCharset())))))
+				        .responseContent()
+				        .aggregate()
+				        .asString();
 
 		StepVerifier.create(content)
 		            .expectNextMatches("OK"::equals)
@@ -1052,9 +1011,38 @@ public class HttpClientTest {
 		server.disposeNow();
 	}
 
-	private HttpClient createHttpClientForContext(DisposableServer context) {
-		return HttpClient.create()
-		                 .addressSupplier(context::address);
+	private HttpClient createHttpClientForContextWithAddress(DisposableServer context) {
+		return createHttpClientForContextWithAddress(context, null);
+	}
+
+	private HttpClient createHttpClientForContextWithAddress(DisposableServer context,
+			ConnectionProvider pool) {
+		HttpClient client;
+		if (pool == null) {
+			client = HttpClient.create();
+		}
+		else {
+			client = HttpClient.create(pool);
+		}
+		return client.addressSupplier(context::address)
+		             .wiretap(true);
+	}
+
+	private HttpClient createHttpClientForContextWithPort(DisposableServer context) {
+		return createHttpClientForContextWithPort(context, null);
+	}
+
+	private HttpClient createHttpClientForContextWithPort(DisposableServer context,
+			ConnectionProvider pool) {
+		HttpClient client;
+		if (pool == null) {
+			client = HttpClient.create();
+		}
+		else {
+			client = HttpClient.create(pool);
+		}
+		return client.port(context.port())
+		             .wiretap(true);
 	}
 
 	@Test
@@ -1072,9 +1060,7 @@ public class HttpClientTest {
 		assertThat(server).isNotNull();
 
 		ConnectionProvider connectionProvider = ConnectionProvider.fixed("test", 1);
-		HttpClient client =
-				HttpClient.create(connectionProvider)
-				          .port(server.address().getPort());
+		HttpClient client = createHttpClientForContextWithPort(server, connectionProvider);
 
 		String response = client.post()
 		                        .uri("/")
@@ -1139,11 +1125,10 @@ public class HttpClientTest {
 				          .bindNow(Duration.ofSeconds(30));
 
 		HttpClient client =
-				HttpClient.create()
-				          .addressSupplier(server::address)
-				          .secure(spec -> spec.sslContext(
-				                  SslContextBuilder.forClient()
-				                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)));
+				createHttpClientForContextWithAddress(server)
+				        .secure(spec -> spec.sslContext(
+				                SslContextBuilder.forClient()
+				                                 .trustManager(InsecureTrustManagerFactory.INSTANCE)));
 
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch1.set(c.channel())))
@@ -1206,27 +1191,25 @@ public class HttpClientTest {
 				HttpClient.create(ConnectionProvider.newConnection())
 				          .port(server.port())
 				          .doOnRequest((req, c) -> {
-				          	if (req.currentContext().hasKey("test")) {
-					            i.incrementAndGet();
-				            }
+				              if (req.currentContext().hasKey("test")) {
+				                  i.incrementAndGet();
+				              }
 				          })
 				          .doOnResponse((res, c) -> {
-					          if (res.currentContext().hasKey("test")) {
-						          i.incrementAndGet();
-					          }
+				              if (res.currentContext().hasKey("test")) {
+				                  i.incrementAndGet();
+				              }
 				          })
 				          .post()
 				          .send((req, out) ->
-				          	out.sendString(Mono.subscriberContext()
-				                               .map(ctx -> ctx.getOrDefault("test", "fail")))
-				          )
+				              out.sendString(Mono.subscriberContext()
+				                                 .map(ctx -> ctx.getOrDefault("test", "fail"))))
 				          .responseContent()
 				          .asString()
-				          .subscriberContext(Context.of("test", "success"))
-		)
-		            .expectNext("success")
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+				          .subscriberContext(Context.of("test", "success")))
+				    .expectNext("success")
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
 
 		assertThat(i.get()).isEqualTo(2);
 		server.disposeNow();
@@ -1238,11 +1221,11 @@ public class HttpClientTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, resp) -> {
-				          	if (req.requestHeaders().contains("during")) {
-					            return resp.sendString(Mono.just("test"))
-					                       .then(Mono.error(new RuntimeException("test")));
-				            }
-				            throw new RuntimeException("test");
+				              if (req.requestHeaders().contains("during")) {
+				                  return resp.sendString(Mono.just("test"))
+				                             .then(Mono.error(new RuntimeException("test")));
+				              }
+				              throw new RuntimeException("test");
 				          })
 				          .bindNow();
 
@@ -1250,20 +1233,17 @@ public class HttpClientTest {
 		AtomicInteger responseError = new AtomicInteger();
 
 		Mono<String> content =
-				HttpClient.create()
-				          .port(server.address().getPort())
-				          .headers(h -> h.add("before", "test"))
-				          .doOnRequestError((req, err) ->
-					          requestError.incrementAndGet()
-				          )
-				          .doOnResponseError((res, err) ->
-					          responseError.incrementAndGet()
-				          )
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .aggregate()
-				          .asString();
+				createHttpClientForContextWithPort(server)
+				        .headers(h -> h.add("before", "test"))
+				        .doOnRequestError((req, err) ->
+				            requestError.incrementAndGet())
+				        .doOnResponseError((res, err) ->
+				            responseError.incrementAndGet())
+				        .get()
+				        .uri("/")
+				        .responseContent()
+				        .aggregate()
+				        .asString();
 
 		StepVerifier.create(content)
 		            .verifyError(HttpClientOperations.PrematureCloseException.class);
@@ -1272,23 +1252,20 @@ public class HttpClientTest {
 		assertThat(responseError.getAndSet(0)).isEqualTo(0);
 
 		content =
-				HttpClient.create()
-				          .port(server.address().getPort())
-				          .headers(h -> h.add("during", "test"))
-				          .doOnError((req, err) ->
-					          requestError.incrementAndGet()
-						          ,(res, err) ->
-					          responseError.incrementAndGet()
-				          )
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .aggregate()
-				          .asString();
+				createHttpClientForContextWithPort(server)
+				        .headers(h -> h.add("during", "test"))
+				        .doOnError((req, err) ->
+				            requestError.incrementAndGet()
+				            ,(res, err) ->
+				            responseError.incrementAndGet())
+				        .get()
+				        .uri("/")
+				        .responseContent()
+				        .aggregate()
+				        .asString();
 
 		StepVerifier.create(content)
 		            .verifyError(HttpClientOperations.PrematureCloseException.class);
-
 
 		assertThat(requestError.getAndSet(0)).isEqualTo(0);
 		assertThat(responseError.getAndSet(0)).isEqualTo(1);
@@ -1305,27 +1282,24 @@ public class HttpClientTest {
 			                                                                 .get("test"))))
 		                                    .bindNow();
 
-		Mono<String> content = HttpClient.create()
-		                                 .port(server.address()
-		                                             .getPort())
-		                                 .mapConnect((c, b) -> c.subscriberContext(Context.of("test", "success")))
-		                                 .post()
-		                                 .uri("/")
-		                                 .send((req, out) -> {
-			                                 req.requestHeaders()
-			                                    .set("test",
-					                                    req.currentContext()
-					                                       .getOrDefault("test", "fail"));
-			                                 return Mono.empty();
-		                                 })
-		                                 .responseContent()
-		                                 .aggregate()
-		                                 .asString();
+		Mono<String> content = createHttpClientForContextWithPort(server)
+		                               .mapConnect((c, b) -> c.subscriberContext(Context.of("test", "success")))
+		                               .post()
+		                               .uri("/")
+		                               .send((req, out) -> {
+		                                   req.requestHeaders()
+		                                      .set("test",
+		                                           req.currentContext()
+		                                              .getOrDefault("test", "fail"));
+		                                   return Mono.empty();
+		                               })
+		                               .responseContent()
+		                               .aggregate()
+		                               .asString();
 
 		StepVerifier.create(content)
 		            .expectNext("success")
 		            .verifyComplete();
-
 
 		server.disposeNow();
 	}
@@ -1346,17 +1320,15 @@ public class HttpClientTest {
 				          .bindNow();
 
 		StepVerifier.create(
-				HttpClient.create()
-				          .addressSupplier(server::address)
-				          .chunkedTransfer(false)
-				          .wiretap(true)
-				          .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, 5))
-				          .post()
-				          .uri("/")
-				          .send(Mono.just(Unpooled.wrappedBuffer("hello".getBytes(Charset.defaultCharset()))))
-				          .responseContent()
-				          .aggregate()
-				          .asString())
+				createHttpClientForContextWithAddress(server)
+				        .chunkedTransfer(false)
+				        .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, 5))
+				        .post()
+				        .uri("/")
+				        .send(Mono.just(Unpooled.wrappedBuffer("hello".getBytes(Charset.defaultCharset()))))
+				        .responseContent()
+				        .aggregate()
+				        .asString())
 				    .expectNextMatches("hello"::equals)
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -1369,7 +1341,6 @@ public class HttpClientTest {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
-
 
 		SslContext sslClient = SslContextBuilder.forClient()
 		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -1385,14 +1356,12 @@ public class HttpClientTest {
 		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
 
 		for (int i = 0; i < 4; i++) {
-			StepVerifier.create(HttpClient.create(pool)
-			                              .secure(ssl -> ssl.sslContext(sslClient))
-			                              .addressSupplier(server::address)
-			                              .wiretap(true)
-			                              .request(HttpMethod.GET)
-			                              .uri("/")
-			                              .send((req, out) -> out.send(Flux.empty()))
-			                              .responseContent())
+			StepVerifier.create(createHttpClientForContextWithAddress(server, pool)
+			                            .secure(ssl -> ssl.sslContext(sslClient))
+			                            .request(HttpMethod.GET)
+			                            .uri("/")
+			                            .send((req, out) -> out.send(Flux.empty()))
+			                            .responseContent())
 			            .expectComplete()
 			            .verify(Duration.ofSeconds(30));
 		}
