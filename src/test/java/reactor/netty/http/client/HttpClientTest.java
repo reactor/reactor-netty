@@ -16,8 +16,13 @@
 
 package reactor.netty.http.client;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -28,6 +33,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -57,6 +66,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
+import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
@@ -1368,5 +1378,87 @@ public class HttpClientTest {
 
 		pool.dispose();
 		server.disposeNow();
+	}
+
+	@Test
+	public void testRetryNotEndlessIssue587() throws Exception {
+		ExecutorService threadPool = Executors.newCachedThreadPool();
+		int serverPort = SocketUtils.findAvailableTcpPort();
+		ConnectionResetByPeerServer server = new ConnectionResetByPeerServer(serverPort);
+		Future<?> serverFuture = threadPool.submit(server);
+		if(!server.await(10, TimeUnit.SECONDS)){
+			throw new IOException("fail to start test server");
+		}
+
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .port(serverPort)
+		                  .wiretap(true)
+		                  .get()
+		                  .uri("/")
+		                  .responseContent())
+		            .expectErrorMatches(t -> t.getMessage() != null &&
+		                    t.getMessage().contains("Connection reset by peer"))
+		            .verify(Duration.ofSeconds(30));
+
+		server.close();
+		assertThat(serverFuture.get()).isNull();
+		threadPool.shutdown();
+		assertThat(threadPool.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+	}
+
+	private static final class ConnectionResetByPeerServer extends CountDownLatch implements Runnable {
+		final int port;
+		private final ServerSocketChannel server;
+		private volatile Thread thread;
+
+		private ConnectionResetByPeerServer(int port) {
+			super(1);
+			this.port = port;
+			try {
+				server = ServerSocketChannel.open();
+			}
+			catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		@Override
+		public void run() {
+			try {
+				server.configureBlocking(true);
+				server.socket()
+				      .bind(new InetSocketAddress(port));
+				countDown();
+				thread = Thread.currentThread();
+				while (true) {
+					SocketChannel ch = server.accept();
+
+					ByteBuffer buffer = ByteBuffer.allocate(1);
+					int read = ch.read(buffer);
+					if (read > 0) {
+						buffer.flip();
+					}
+
+					ch.write(buffer);
+
+					ch.close();
+				}
+			}
+			catch (Exception e) {
+				// Server closed
+			}
+		}
+
+		public void close() throws IOException {
+			Thread thread = this.thread;
+			if (thread != null) {
+				thread.interrupt();
+			}
+			ServerSocketChannel server = this.server;
+			if (server != null) {
+				server.close();
+			}
+		}
 	}
 }

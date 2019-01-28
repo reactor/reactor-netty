@@ -435,6 +435,7 @@ final class HttpClientConnect extends HttpClient {
 
 		volatile UriEndpoint        activeURI;
 		volatile Supplier<String>[] redirectedFrom;
+		volatile boolean retried;
 
 		@SuppressWarnings("unchecked")
 		HttpClientHandler(HttpClientConfiguration configuration, @Nullable SocketAddress address,
@@ -630,7 +631,8 @@ final class HttpClientConnect extends HttpClient {
 				redirect(re.location);
 				return true;
 			}
-			if (AbortedException.isConnectionReset(throwable)) {
+			if (AbortedException.isConnectionReset(throwable) && !retried) {
+				retried = true;
 				redirect(activeURI.toString());
 				return true;
 			}
