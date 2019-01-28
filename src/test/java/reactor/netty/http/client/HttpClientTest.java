@@ -1398,7 +1398,8 @@ public class HttpClientTest {
 		                  .uri("/")
 		                  .responseContent())
 		            .expectErrorMatches(t -> t.getMessage() != null &&
-		                    t.getMessage().contains("Connection reset by peer"))
+		                    (t.getMessage().contains("Connection reset by peer") ||
+		                            t.getMessage().contains("Connection prematurely closed BEFORE response")))
 		            .verify(Duration.ofSeconds(30));
 
 		server.close();
