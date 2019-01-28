@@ -186,7 +186,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 				return;
 			}
 			if (onResponseError != null && newState == HttpClientState.RESPONSE_INCOMPLETE && ops.responseState != null) {
-				onResponseError.accept(ops, HttpClientOperations.PrematureCloseException.DURING_RESPONSE);
+				onResponseError.accept(ops, PrematureCloseException.DURING_RESPONSE);
 			}
 		}
 

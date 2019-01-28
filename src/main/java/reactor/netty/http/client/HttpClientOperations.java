@@ -745,27 +745,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	static final AttributeKey<Supplier<String>[]> REDIRECT_ATTR_KEY  =
 			AttributeKey.newInstance("httpRedirects");
 
-	static final class PrematureCloseException extends IOException {
-
-		static final PrematureCloseException BEFORE_RESPONSE_SENDING_REQUEST =
-				new PrematureCloseException("Connection has been closed BEFORE response, while sending request body");
-
-		static final PrematureCloseException BEFORE_RESPONSE =
-				new PrematureCloseException("Connection prematurely closed BEFORE response");
-
-		static final PrematureCloseException DURING_RESPONSE =
-				new PrematureCloseException("Connection prematurely closed DURING response");
-
-		PrematureCloseException(String message) {
-			super(message);
-		}
-
-		@Override
-		public synchronized Throwable fillInStackTrace() {
-			return this;
-		}
-	}
-
 	static final class GetOrHeadAggregateOutbound implements NettyOutbound {
 
 		final HttpOperations<?, ?>         parent;

@@ -1256,7 +1256,7 @@ public class HttpClientTest {
 				        .asString();
 
 		StepVerifier.create(content)
-		            .verifyError(HttpClientOperations.PrematureCloseException.class);
+		            .verifyError(PrematureCloseException.class);
 
 		assertThat(requestError.getAndSet(0)).isEqualTo(1);
 		assertThat(responseError.getAndSet(0)).isEqualTo(0);
@@ -1275,7 +1275,7 @@ public class HttpClientTest {
 				        .asString();
 
 		StepVerifier.create(content)
-		            .verifyError(HttpClientOperations.PrematureCloseException.class);
+		            .verifyError(PrematureCloseException.class);
 
 		assertThat(requestError.getAndSet(0)).isEqualTo(0);
 		assertThat(responseError.getAndSet(0)).isEqualTo(1);
