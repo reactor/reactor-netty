@@ -109,11 +109,15 @@ public class UdpClientTest {
 
 	@Test
 	public void testIssue192() {
-		UdpServer server = UdpServer.create();
-		UdpClient client = UdpClient.create();
-		assertThat(Thread.getAllStackTraces().keySet().stream().noneMatch(t -> t.getName().startsWith("udp"))).isTrue();
+		LoopResources resources = LoopResources.create("testIssue192");
+		UdpServer server = UdpServer.create()
+		                            .runOn(resources);
+		UdpClient client = UdpClient.create()
+		                            .runOn(resources);
+		assertThat(Thread.getAllStackTraces().keySet().stream().noneMatch(t -> t.getName().startsWith("testIssue192"))).isTrue();
 		server.bind();
 		client.connect();
-		assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("udp"))).isTrue();
+		assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("testIssue192"))).isTrue();
+		resources.dispose();
 	}
 }
