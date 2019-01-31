@@ -22,6 +22,7 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http2.Http2DataFrame;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
+import io.netty.util.ReferenceCountUtil;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 
@@ -56,7 +57,14 @@ public class HttpToH2Operations extends HttpServerOperations {
 			return;
 		}
 		else if(msg instanceof Http2HeadersFrame) {
-			listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
+			try {
+				listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
+			}
+			catch (Exception e) {
+				onInboundError(e);
+				ReferenceCountUtil.release(msg);
+				return;
+			}
 			if (((Http2HeadersFrame) msg).isEndStream()) {
 				super.onInboundNext(ctx, msg);
 			}

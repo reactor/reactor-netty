@@ -32,7 +32,6 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
-import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
@@ -110,8 +109,8 @@ final class WebsocketClientOperations extends HttpClientOperations
 					handshaker.finishHandshake(channel(), response);
 					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
 				}
-				catch (WebSocketHandshakeException wshe) {
-					onInboundError(wshe);
+				catch (Exception e) {
+					onInboundError(e);
 				}
 				finally {
 					//Release unused content (101 status)

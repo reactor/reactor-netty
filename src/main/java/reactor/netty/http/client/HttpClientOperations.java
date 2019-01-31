@@ -489,7 +489,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 
 			if (notRedirected(response)) {
-				listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
+				try {
+					listener().onStateChange(this, HttpClientState.RESPONSE_RECEIVED);
+				}
+				catch (Exception e) {
+					onInboundError(e);
+					ReferenceCountUtil.release(msg);
+					return;
+				}
 			}
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);

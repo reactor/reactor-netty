@@ -53,6 +53,7 @@ import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AsciiString;
+import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -431,7 +432,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
-			listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
+			try {
+				listener().onStateChange(this, HttpServerState.REQUEST_RECEIVED);
+			}
+			catch (Exception e) {
+				onInboundError(e);
+				ReferenceCountUtil.release(msg);
+				return;
+			}
 			if (msg instanceof FullHttpRequest) {
 				super.onInboundNext(ctx, msg);
 			}
