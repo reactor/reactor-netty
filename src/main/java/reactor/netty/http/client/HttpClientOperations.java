@@ -795,7 +795,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				           }
 				           agg.release();
 				           return parent.then();
-			           });
+			           })
+			           .doOnDiscard(ByteBuf.class, ByteBuf::release);
 		}
 
 		@Override
