@@ -73,6 +73,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
+import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
@@ -1375,6 +1376,31 @@ public class HttpClientTest {
 			            .expectComplete()
 			            .verify(Duration.ofSeconds(30));
 		}
+
+		pool.dispose();
+		server.disposeNow();
+	}
+
+	@Test
+	public void testExplicitSendMonoErrorOnGet() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.send(req.receive().retain()))
+				          .bindNow();
+
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+
+		StepVerifier.create(
+				Flux.range(0, 1000)
+				    .flatMapDelayError(i ->
+				        createHttpClientForContextWithAddress(server, pool)
+				                .request(HttpMethod.GET)
+				                .uri("/")
+				                .send((req, out) -> out.send(Mono.error(new Exception("test"))))
+				                .responseContent(), Queues.SMALL_BUFFER_SIZE, Queues.XS_BUFFER_SIZE))
+				    .expectError()
+				    .verify(Duration.ofSeconds(30));
 
 		pool.dispose();
 		server.disposeNow();
