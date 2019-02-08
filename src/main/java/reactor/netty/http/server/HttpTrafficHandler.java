@@ -103,8 +103,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			DecoderResult decoderResult = request.decoderResult();
 			if (decoderResult.isFailure()) {
 				Throwable cause = decoderResult.cause();
-				HttpServerOperations.log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "),
-						cause);
+				if (HttpServerOperations.log.isDebugEnabled()) {
+					HttpServerOperations.log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "),
+							cause);
+				}
 				ReferenceCountUtil.release(msg);
 
 				HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,

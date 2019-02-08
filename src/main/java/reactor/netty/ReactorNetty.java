@@ -621,7 +621,9 @@ public final class ReactorNetty {
 			fc.close();
 		}
 		catch (Throwable e) {
-			log.trace("", e);
+			if (log.isTraceEnabled()) {
+				log.trace("", e);
+			}
 		}
 	};
 

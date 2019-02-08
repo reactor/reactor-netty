@@ -226,21 +226,29 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 				if (ref.compareAndSet(resources, update)) {
 					if(resources != null) {
 						if(loops != null) {
-							log.warn("[{}] resources will use a new LoopResources: {}," +
-									"the previous LoopResources will be disposed", name, loops);
+							if (log.isWarnEnabled()) {
+								log.warn("[{}] resources will use a new LoopResources: {}," +
+										"the previous LoopResources will be disposed", name, loops);
+							}
 							resources.defaultLoops.dispose();
 						}
 						if(provider != null) {
-							log.warn("[{}] resources will use a new ConnectionProvider: {}," +
-									"the previous ConnectionProvider will be disposed", name, provider);
+							if (log.isWarnEnabled()) {
+								log.warn("[{}] resources will use a new ConnectionProvider: {}," +
+										"the previous ConnectionProvider will be disposed", name, provider);
+							}
 							resources.defaultProvider.dispose();
 						}
 					}
 					else {
 						String loopType = loops == null ? "default" : "provided";
-						log.debug("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						if (log.isDebugEnabled()) {
+							log.debug("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						}
 						String poolType = provider == null ? "default" : "provided";
-						log.debug("[{}] resources will use the {} ConnectionProvider: {}", name, poolType, update.defaultProvider);
+						if (log.isDebugEnabled()) {
+							log.debug("[{}] resources will use the {} ConnectionProvider: {}", name, poolType, update.defaultProvider);
+						}
 					}
 					return update;
 				}

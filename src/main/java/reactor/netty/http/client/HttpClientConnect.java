@@ -384,7 +384,7 @@ final class HttpClientConnect extends HttpClient {
 				log.debug(format(connection.channel(), "The connection observed an error, " +
 						"the request will be retried"), error);
 			}
-			else {
+			else if (log.isWarnEnabled()) {
 				log.warn(format(connection.channel(), "The connection observed an error"), error);
 			}
 			sink.error(error);

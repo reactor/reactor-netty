@@ -190,13 +190,17 @@ public class UdpResources implements LoopResources {
 				update = create(resources, loops, name, onNew);
 				if (udpResources.compareAndSet(resources, update)) {
 					if(resources != null) {
-						log.warn("[{}] resources will use a new LoopResources: {}," +
-								"the previous LoopResources will be disposed", name, loops);
+						if (log.isWarnEnabled()) {
+							log.warn("[{}] resources will use a new LoopResources: {}," +
+									"the previous LoopResources will be disposed", name, loops);
+						}
 						resources.defaultLoops.dispose();
 					}
 					else {
 						String loopType = loops == null ? "default" : "provided";
-						log.debug("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						if (log.isDebugEnabled()) {
+							log.debug("[{}] resources will use the {} LoopResources: {}", name, loopType, update.defaultLoops);
+						}
 					}
 					return update;
 				}

@@ -71,7 +71,11 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		}
 
 		return FutureMono.from(future)
-		                 .doOnSuccess(v -> log.info(format(future.channel(), "JOIN {}"), multicastAddress));
+		                 .doOnSuccess(v -> {
+		                     if (log.isInfoEnabled()) {
+		                         log.info(format(future.channel(), "JOIN {}"), multicastAddress);
+		                     }
+		                 });
 	}
 
 	/**
@@ -98,7 +102,11 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 		}
 
 		return FutureMono.from(future)
-		                 .doOnSuccess(v -> log.info(format(future.channel(), "JOIN {}"), multicastAddress));
+		                 .doOnSuccess(v -> {
+		                     if (log.isInfoEnabled()) {
+		                         log.info(format(future.channel(), "JOIN {}"), multicastAddress);
+		                     }
+		                 });
 	}
 
 	static final Logger log = Loggers.getLogger(UdpOperations.class);
