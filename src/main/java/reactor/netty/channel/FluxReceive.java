@@ -287,12 +287,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			try {
 				if (log.isDebugEnabled()){
 					if(msg instanceof ByteBuf) {
-						((ByteBuf) msg).touch("Unbounded receiver, bypass inbound " +
-								"buffer queue");
+						((ByteBuf) msg).touch(format(channel, "Unbounded receiver, bypass inbound " +
+								"buffer queue"));
 					}
 					else if (msg instanceof ByteBufHolder){
-						((ByteBufHolder) msg).touch("Unbounded receiver, bypass inbound " +
-								"buffer queue");
+						((ByteBufHolder) msg).touch(format(channel,"Unbounded receiver, bypass inbound " +
+								"buffer queue"));
 					}
 				}
 				receiver.onNext(msg);
@@ -310,11 +310,11 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 			if (log.isDebugEnabled()){
 				if(msg instanceof ByteBuf) {
-					((ByteBuf) msg).touch("Buffered ByteBuf in Inbound Flux Queue");
+					((ByteBuf) msg).touch(format(channel,"Buffered ByteBuf in Inbound Flux Queue"));
 				}
 				else if (msg instanceof ByteBufHolder){
-					((ByteBufHolder) msg).touch("Buffered ByteBufHolder in Inbound Flux" +
-							" Queue");
+					((ByteBufHolder) msg).touch(format(channel,"Buffered ByteBufHolder in Inbound Flux" +
+							" Queue"));
 				}
 			}
 			q.offer(msg);

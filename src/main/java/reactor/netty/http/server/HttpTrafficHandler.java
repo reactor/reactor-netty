@@ -297,6 +297,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	@Override
 	public void operationComplete(ChannelFuture future) {
+		if (HttpServerOperations.log.isDebugEnabled()) {
+			HttpServerOperations.log.debug(format(future.channel(),
+					"Last Http packet was sent, terminating channel"));
+		}
 		HttpServerOperations.cleanHandlerTerminate(future.channel());
 	}
 
