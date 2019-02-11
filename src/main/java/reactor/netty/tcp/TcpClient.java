@@ -180,7 +180,7 @@ public abstract class TcpClient {
 			b = configure();
 		}
 		catch (Throwable t) {
-			Exceptions.throwIfFatal(t);
+			Exceptions.throwIfJvmFatal(t);
 			return Mono.error(t);
 		}
 		return connect(b);

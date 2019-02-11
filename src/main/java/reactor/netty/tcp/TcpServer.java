@@ -143,7 +143,7 @@ public abstract class TcpServer {
 			b = configure();
 		}
 		catch (Throwable t){
-			Exceptions.throwIfFatal(t);
+			Exceptions.throwIfJvmFatal(t);
 			return Mono.error(t);
 		}
 		return bind(b);

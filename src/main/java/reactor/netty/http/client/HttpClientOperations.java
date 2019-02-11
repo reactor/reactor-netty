@@ -725,7 +725,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			}
 			catch (Throwable e) {
-				Exceptions.throwIfFatal(e);
+				Exceptions.throwIfJvmFatal(e);
 				df.cleanRequestHttpData(parent.nettyRequest);
 				Operators.error(s, Exceptions.unwrap(e));
 			}

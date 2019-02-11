@@ -125,7 +125,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 		}
 		catch (Throwable err) {
-			Exceptions.throwIfFatal(err);
+			Exceptions.throwIfJvmFatal(err);
 			exceptionCaught(ctx, err);
 		}
 	}
@@ -161,7 +161,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			}
 		}
 		catch (Throwable err) {
-			Exceptions.throwIfFatal(err);
+			Exceptions.throwIfJvmFatal(err);
 			exceptionCaught(ctx, err);
 			ReferenceCountUtil.safeRelease(msg);
 		}

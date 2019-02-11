@@ -100,7 +100,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 			}
 		}
 		catch (Throwable t) {
-			Exceptions.throwIfFatal(t);
+			Exceptions.throwIfJvmFatal(t);
 			return Mono.error(t); //500
 		}
 

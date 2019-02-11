@@ -129,7 +129,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 			b = cachedConfiguration.configure();
 		}
 		catch (Throwable t) {
-			Exceptions.throwIfFatal(t);
+			Exceptions.throwIfJvmFatal(t);
 			return ByteBufFlux.fromInbound(Mono.error(t));
 		}
 		@SuppressWarnings("unchecked")
