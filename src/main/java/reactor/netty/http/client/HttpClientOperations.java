@@ -16,7 +16,6 @@
 
 package reactor.netty.http.client;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -61,7 +60,6 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
@@ -91,12 +89,13 @@ import static reactor.netty.ReactorNetty.format;
 class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		implements HttpClientResponse, HttpClientRequest {
 
-	final Supplier<String>[]    redirectedFrom;
 	final boolean               isSecure;
 	final HttpRequest           nettyRequest;
 	final HttpHeaders           requestHeaders;
 	final ClientCookieEncoder   cookieEncoder;
 	final ClientCookieDecoder   cookieDecoder;
+
+	Supplier<String>[]    redirectedFrom = EMPTY_REDIRECTIONS;
 
 	volatile ResponseState responseState;
 
@@ -122,10 +121,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.isSecure = c.channel()
 		                 .pipeline()
 		                 .get(NettyPipeline.SslHandler) != null;
-		Supplier<String>[] redirects = c.channel()
-		                                .attr(REDIRECT_ATTR_KEY)
-		                                .get();
-		this.redirectedFrom = redirects == null ? EMPTY_REDIRECTIONS : redirects;
 		this.nettyRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
 		this.requestHeaders = nettyRequest.headers();
 		this.cookieDecoder = decoder;
@@ -742,8 +737,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];
 	static final Logger                 log                =
 			Loggers.getLogger(HttpClientOperations.class);
-	static final AttributeKey<Supplier<String>[]> REDIRECT_ATTR_KEY  =
-			AttributeKey.newInstance("httpRedirects");
 
 	static final class GetOrHeadAggregateOutbound implements NettyOutbound {
 

@@ -629,8 +629,10 @@ final class HttpClientConnect extends HttpClient {
 		void channel(Channel channel) {
 			Supplier<String>[] redirectedFrom = this.redirectedFrom;
 			if (redirectedFrom != null) {
-				channel.attr(HttpClientOperations.REDIRECT_ATTR_KEY)
-				       .set(redirectedFrom);
+				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+				if (ops instanceof HttpClientOperations) {
+					((HttpClientOperations) ops).redirectedFrom = redirectedFrom;
+				}
 			}
 		}
 
