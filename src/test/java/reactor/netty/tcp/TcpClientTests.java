@@ -25,6 +25,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,12 +47,14 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
+import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.test.StepVerifier;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -769,4 +773,59 @@ public class TcpClientTests {
 		}
 	}
 
+
+	@Test
+	public void testIssue600_1() {
+		doTestIssue600(true);
+	}
+
+	@Test
+	public void testIssue600_2() {
+		doTestIssue600(false);
+	}
+
+	private void doTestIssue600(boolean withLoop) {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive()
+				                                           .retain()
+				                                           .delaySubscription(Duration.ofSeconds(1))))
+				         .wiretap(true)
+				         .bindNow();
+
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 10);
+		LoopResources loop = LoopResources.create("test", 4, true);
+		TcpClient client;
+		if (withLoop) {
+			client =
+					TcpClient.create(pool)
+					         .addressSupplier(server::address)
+					         .runOn(loop);
+		}
+		else {
+			client =
+					TcpClient.create(pool)
+					         .addressSupplier(server::address);
+		}
+
+		Set<String> threadNames = new ConcurrentSkipListSet<>();
+		StepVerifier.create(
+				Flux.range(1,4)
+				    .flatMap(i ->
+				            client.handle((in, out) -> {
+				                threadNames.add(Thread.currentThread().getName());
+				                return out.send(Flux.empty());
+				            })
+				            .connect()))
+		            .expectNextCount(4)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		pool.dispose();
+		loop.dispose();
+		server.disposeNow();
+
+		Assertions.assertThat(threadNames.size()).isGreaterThan(1);
+	}
 }

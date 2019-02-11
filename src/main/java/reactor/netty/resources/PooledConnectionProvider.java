@@ -73,11 +73,20 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final ConcurrentMap<PoolKey, Pool> channelPools;
 	final String                       name;
 	final PoolFactory                  poolFactory;
+	final int                          maxConnections;
 
 	PooledConnectionProvider(String name, PoolFactory poolFactory) {
 		this.name = name;
 		this.poolFactory = poolFactory;
 		this.channelPools = PlatformDependent.newConcurrentHashMap();
+		this.maxConnections = -1;
+	}
+
+	PooledConnectionProvider(String name, PoolFactory poolFactory, int maxConnections) {
+		this.name = name;
+		this.poolFactory = poolFactory;
+		this.channelPools = PlatformDependent.newConcurrentHashMap();
+		this.maxConnections = maxConnections;
 	}
 
 	@Override
@@ -179,6 +188,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		return channelPools.isEmpty() || channelPools.values()
 		                                             .stream()
 		                                             .allMatch(AtomicBoolean::get);
+	}
+
+	@Override
+	public int maxConnections() {
+		return maxConnections;
 	}
 
 	@Override

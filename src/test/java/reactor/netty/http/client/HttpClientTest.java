@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -70,6 +71,7 @@ import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -1487,5 +1489,54 @@ public class HttpClientTest {
 				server.close();
 			}
 		}
+	}
+
+	@Test
+	public void testIssue600_1() {
+		doTestIssue600(true);
+	}
+
+	@Test
+	public void testIssue600_2() {
+		doTestIssue600(false);
+	}
+
+	private void doTestIssue600(boolean withLoop) {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.send(req.receive()
+				                                            .retain()
+				                                            .delaySubscription(Duration.ofSeconds(1))))
+				          .wiretap(true)
+				          .bindNow();
+
+		ConnectionProvider pool = ConnectionProvider.fixed("test", 10);
+		LoopResources loop = LoopResources.create("test", 4, true);
+		HttpClient client;
+		if (withLoop) {
+			client = createHttpClientForContextWithAddress(server, pool)
+			            .tcpConfiguration(tcpClient -> tcpClient.runOn(loop));
+		}
+		else {
+			client = createHttpClientForContextWithAddress(server, pool);
+		}
+
+		Set<String> threadNames = new ConcurrentSkipListSet<>();
+		StepVerifier.create(
+				Flux.range(1,4)
+				    .flatMap(i -> client.request(HttpMethod.GET)
+				                        .uri("/")
+				                        .send((req, out) -> out.send(Flux.empty()))
+				                        .responseContent()
+				                        .doFinally(s -> threadNames.add(Thread.currentThread().getName()))))
+ 		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		pool.dispose();
+		loop.dispose();
+		server.disposeNow();
+
+		assertThat(threadNames.size()).isGreaterThan(1);
 	}
 }

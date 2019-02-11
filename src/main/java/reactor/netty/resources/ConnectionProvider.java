@@ -151,7 +151,8 @@ public interface ConnectionProvider extends Disposable {
 						maxConnections,
 						Integer.MAX_VALUE,
 						true,
-						false));
+						false),
+				maxConnections);
 	}
 
 	/**
@@ -180,5 +181,14 @@ public interface ConnectionProvider extends Disposable {
 	 **/
 	default Mono<Void> disposeLater() {
 		return Mono.empty(); //noop default
+	}
+
+	/**
+	 * Returns the maximum number of connections before starting pending
+	 *
+	 * @return the maximum number of connections before starting pending
+	 */
+	default int maxConnections() {
+		return -1;
 	}
 }
