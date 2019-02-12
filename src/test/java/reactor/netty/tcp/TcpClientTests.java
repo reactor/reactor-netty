@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +36,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.assertj.core.api.Assertions;
@@ -827,5 +830,51 @@ public class TcpClientTests {
 		server.disposeNow();
 
 		Assertions.assertThat(threadNames.size()).isGreaterThan(1);
+	}
+
+	@Test
+	public void testIssue585() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive()
+				                                           .retain()))
+				         .wiretap(true)
+				         .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(3);
+
+		byte[] bytes = "test".getBytes(Charset.defaultCharset());
+		ByteBuf b1 = Unpooled.wrappedBuffer(bytes);
+		ByteBuf b2 = Unpooled.wrappedBuffer(bytes);
+		ByteBuf b3 = Unpooled.wrappedBuffer(bytes);
+
+		Connection conn =
+				TcpClient.create()
+				         .addressSupplier(server::address)
+				         .wiretap(true)
+				         .handle((in, out) -> {
+				             out.sendObject(Mono.error(new RuntimeException("test")))
+				                .sendObject(b1)
+				                .then()
+				                .subscribe(null, t -> latch.countDown(), null);
+				             out.sendObject(Mono.error(new RuntimeException("test")))
+				                .sendObject(b2)
+				                .then()
+				                .subscribe(null, t -> latch.countDown(), null);
+				             out.sendObject(Mono.error(new RuntimeException("test")))
+				                .sendObject(b3)
+				                .then()
+				                .subscribe(null, t -> latch.countDown(), null);
+				             return Mono.never();
+				         })
+				         .connectNow();
+
+		latch.await(30, TimeUnit.SECONDS);
+		System.out.println("Ref CNT   " + b1.refCnt() + " " + b2.refCnt() + " " + b3.refCnt());
+		//Assertions.assertThat(buf.refCnt()).isEqualTo(0);
+
+		server.disposeNow();
+		conn.disposeNow();
 	}
 }

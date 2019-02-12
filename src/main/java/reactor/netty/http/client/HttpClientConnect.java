@@ -683,9 +683,9 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public NettyOutbound sendObject(Object message) {
-			ch.onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(message));
 			return then(FutureMono.deferFuture(() -> ch.channel()
-			                                           .writeAndFlush(message)));
+			                                           .writeAndFlush(message)),
+			            () -> ReactorNetty.safeRelease(message));
 		}
 
 		@Override
