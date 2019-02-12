@@ -17,10 +17,12 @@
 package reactor.netty.tcp;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +37,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.assertj.core.api.Assertions;
@@ -48,6 +52,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
+import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
@@ -830,5 +835,132 @@ public class TcpClientTests {
 		server.disposeNow();
 
 		Assertions.assertThat(threadNames.size()).isGreaterThan(1);
+	}
+
+	@Test
+	public void testIssue585_1() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive()
+				                                           .retain()))
+				         .wiretap(true)
+				         .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		byte[] bytes = "test".getBytes(Charset.defaultCharset());
+		ByteBuf b1 = Unpooled.wrappedBuffer(bytes);
+		ByteBuf b2 = Unpooled.wrappedBuffer(bytes);
+		ByteBuf b3 = Unpooled.wrappedBuffer(bytes);
+
+		WeakReference<ByteBuf> refCheck1 = new WeakReference<>(b1);
+		WeakReference<ByteBuf> refCheck2 = new WeakReference<>(b2);
+		WeakReference<ByteBuf> refCheck3 = new WeakReference<>(b3);
+
+		Connection conn =
+				TcpClient.create()
+				         .addressSupplier(server::address)
+				         .wiretap(true)
+				         .connectNow();
+
+		NettyOutbound out = conn.outbound();
+
+		Flux.concatDelayError(
+		        out.sendObject(Mono.error(new RuntimeException("test")))
+		           .sendObject(b1)
+		           .then(),
+		        out.sendObject(Mono.error(new RuntimeException("test")))
+		           .sendObject(b2)
+		           .then(),
+		        out.sendObject(Mono.error(new RuntimeException("test")))
+		           .sendObject(b3)
+		           .then())
+		    .doOnError(t -> latch.countDown())
+		    .subscribe(conn.disposeSubscriber());
+
+		Assertions.assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		Assertions.assertThat(b1.refCnt()).isEqualTo(0);
+		b1 = null;
+		checkReference(refCheck1);
+
+		Assertions.assertThat(b2.refCnt()).isEqualTo(0);
+		b2 = null;
+		checkReference(refCheck2);
+
+		Assertions.assertThat(b3.refCnt()).isEqualTo(0);
+		b3 = null;
+		checkReference(refCheck3);
+
+		server.disposeNow();
+		conn.disposeNow();
+	}
+
+	@Test
+	public void testIssue585_2() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive()
+				                                           .retain()))
+				         .wiretap(true)
+				         .bindNow();
+
+		byte[] bytes = "test".getBytes(Charset.defaultCharset());
+		ByteBuf b1 = Unpooled.wrappedBuffer(bytes);
+		ByteBuf b2 = Unpooled.wrappedBuffer(bytes);
+		ByteBuf b3 = Unpooled.wrappedBuffer(bytes);
+
+		WeakReference<ByteBuf> refCheck1 = new WeakReference<>(b1);
+		WeakReference<ByteBuf> refCheck2 = new WeakReference<>(b2);
+		WeakReference<ByteBuf> refCheck3 = new WeakReference<>(b3);
+
+		Connection conn =
+				TcpClient.create()
+				         .addressSupplier(server::address)
+				         .wiretap(true)
+				         .connectNow();
+
+		NettyOutbound out = conn.outbound();
+
+		out.sendObject(b1)
+		   .then()
+		   .block(Duration.ofSeconds(30));
+
+		Assertions.assertThat(b1.refCnt()).isEqualTo(0);
+		b1 = null;
+		checkReference(refCheck1);
+
+		out.sendObject(b2)
+		   .then()
+		   .block(Duration.ofSeconds(30));
+
+		Assertions.assertThat(b2.refCnt()).isEqualTo(0);
+		b2 = null;
+		checkReference(refCheck2);
+
+		out.sendObject(b3)
+		   .then()
+		   .block(Duration.ofSeconds(30));
+
+		Assertions.assertThat(b3.refCnt()).isEqualTo(0);
+		b3 = null;
+		checkReference(refCheck3);
+
+		server.disposeNow();
+		conn.disposeNow();
+	}
+
+	private void checkReference(WeakReference<ByteBuf> ref) throws Exception {
+		for (int i = 0; i < 10; i++) {
+			if (ref.get() == null) {
+				return;
+			}
+			System.gc();
+			Thread.sleep(100);
+		}
+
+		Assertions.assertThat(ref.get()).isNull();
 	}
 }
