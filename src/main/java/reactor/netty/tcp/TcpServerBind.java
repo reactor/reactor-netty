@@ -134,9 +134,7 @@ final class TcpServerBind extends TcpServer {
 				.childOption(ChannelOption.SO_KEEPALIVE, true)
 				.childOption(ChannelOption.TCP_NODELAY, true)
 				.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-				.localAddress(
-						InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(),
-								DEFAULT_PORT));
+				.localAddress(new InetSocketAddress(DEFAULT_PORT));
 	}
 
 	static final class DisposableBind
