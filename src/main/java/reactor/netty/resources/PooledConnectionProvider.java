@@ -117,10 +117,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			InetSocketAddress isaOrigin = (InetSocketAddress) origin;
 			InetSocketAddress isaTarget = (InetSocketAddress) target;
 			InetAddress iaTarget = isaTarget.getAddress();
-			if (iaTarget != null && iaTarget.isAnyLocalAddress() &&
-					isaOrigin.getPort() == isaTarget.getPort()) {
-				return true;
-			}
+			return iaTarget != null && iaTarget.isAnyLocalAddress() &&
+					isaOrigin.getPort() == isaTarget.getPort();
 		}
 		return false;
 	}
@@ -232,7 +230,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final Future<Boolean> HEALTHY;
 		final Future<Boolean> UNHEALTHY;
 
-		@SuppressWarnings("unchecked")
 		Pool(Bootstrap bootstrap,
 				PoolFactory provider,
 				ChannelOperations.OnSetup opsFactory) {
@@ -530,7 +527,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			                              .getAndSet(this);
 
 			if (current instanceof PendingConnectionObserver) {
-				@SuppressWarnings("unchecked")
 				PendingConnectionObserver pending = (PendingConnectionObserver)current;
 				PendingConnectionObserver.Pending p;
 				current = null;
@@ -594,7 +590,14 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				log.debug(format(c, "Registering pool release on close event for channel"));
 			}
 			c.closeFuture()
-			 .addListener(ff -> pool.release(c));
+			 .addListener(ff -> {
+			     pool.release(c);
+			     pool.inactiveConnections.decrementAndGet();
+			     if (log.isDebugEnabled()) {
+			         log.debug(format(c, "Channel closed, now {} active connections and {} inactive connections"),
+			                 pool.activeConnections, pool.inactiveConnections);
+			     }
+			 });
 		}
 
 		@Override
