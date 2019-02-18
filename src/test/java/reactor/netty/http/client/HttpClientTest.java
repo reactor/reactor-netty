@@ -46,6 +46,8 @@ import javax.net.ssl.SSLException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -58,6 +60,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -66,6 +69,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
+import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
@@ -1539,4 +1543,56 @@ public class HttpClientTest {
 
 		assertThat(threadNames.size()).isGreaterThan(1);
 	}
+
+	@Test
+	public void testChannelGroupClosesAllConnections() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .route(r -> r.get("/never",
+				                  (req, res) -> res.sendString(Mono.never()))
+				              .get("/delay10",
+				                  (req, res) -> res.sendString(Mono.just("test")
+				                                                   .delayElement(Duration.ofSeconds(10))))
+				              .get("/delay1",
+				                  (req, res) -> res.sendString(Mono.just("test")
+				                                                   .delayElement(Duration.ofSeconds(1)))))
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(300));
+
+		ConnectionProvider connectionProvider = ConnectionProvider.elastic("disposeLater");
+
+		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
+
+		CountDownLatch latch1 = new CountDownLatch(3);
+		CountDownLatch latch2 = new CountDownLatch(3);
+
+		HttpClient client = createHttpClientForContextWithAddress(server, connectionProvider);
+
+		Flux.just("/never", "/delay10", "/delay1")
+		    .flatMap(s ->
+		            client.tcpConfiguration(
+		                      tcpClient -> tcpClient.doOnConnected(c -> {
+		                          c.onDispose()
+		                           .subscribe(null, null, latch2::countDown);
+		                          group.add(c.channel());
+		                          latch1.countDown();
+		                      }))
+		                  .get()
+		                  .uri(s)
+		                  .responseContent()
+		                  .aggregate()
+		                  .asString())
+		    .subscribe();
+
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+
+		Mono.whenDelayError(FutureMono.from(group.close()), connectionProvider.disposeLater())
+		    .block(Duration.ofSeconds(30));
+
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+
+		server.disposeNow();
+	}
+
 }
