@@ -1558,7 +1558,7 @@ public class HttpClientTest {
 				                  (req, res) -> res.sendString(Mono.just("test")
 				                                                   .delayElement(Duration.ofSeconds(1)))))
 				          .wiretap(true)
-				          .bindNow(Duration.ofSeconds(300));
+				          .bindNow(Duration.ofSeconds(30));
 
 		ConnectionProvider connectionProvider = ConnectionProvider.elastic("disposeLater");
 

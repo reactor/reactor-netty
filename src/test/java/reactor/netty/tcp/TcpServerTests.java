@@ -46,6 +46,8 @@ import javax.net.ssl.SSLException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.ssl.SslContext;
@@ -53,6 +55,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.DefaultEventExecutor;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -69,6 +72,7 @@ import reactor.core.publisher.WorkQueueProcessor;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
+import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
@@ -844,6 +848,42 @@ public class TcpServerTests {
 		assertNotNull(client);
 
 		latch.await(30, TimeUnit.SECONDS);
+	}
+
+	@Test
+	public void testChannelGroupClosesAllConnections() throws Exception {
+		MonoProcessor<Void> serverConnDisposed = MonoProcessor.create();
+
+		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		DisposableServer boundServer =
+				TcpServer.create()
+				         .port(0)
+				         .doOnConnection(c -> {
+				             c.onDispose()
+				              .subscribe(serverConnDisposed);
+				             group.add(c.channel());
+				             latch.countDown();
+				         })
+				         .wiretap(true)
+				         .bindNow();
+
+		TcpClient.create()
+		         .addressSupplier(boundServer::address)
+		         .wiretap(true)
+		         .connect()
+		         .subscribe();
+
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
+
+		boundServer.disposeNow();
+
+		FutureMono.from(group.close())
+		          .block(Duration.ofSeconds(30));
+
+		serverConnDisposed.block(Duration.ofSeconds(5));
 	}
 
 	private static class SimpleClient extends Thread {
