@@ -17,7 +17,6 @@
 package reactor.netty.http.client;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -34,8 +33,6 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 
 public class HttpRedirectTest {
-
-	private final int numberOfTests = 1000;
 
 	@Test
 	@Ignore
@@ -75,7 +72,7 @@ public class HttpRedirectTest {
 				          .addressSupplier(server::address);
 
 		try {
-			Flux.range(0, this.numberOfTests)
+			Flux.range(0, 1000)
 			    .concatMap(i -> client.followRedirect(true)
 			                          .post()
 			                          .uri("/login")

@@ -53,6 +53,7 @@ import reactor.util.Loggers;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Stephane Maldini
@@ -300,7 +301,7 @@ public class SmokeTests {
 
 	}
 
-	private List<String> getClientDataPromise() {
+	private Mono<List<String>> getClientDataPromise() {
 		HttpClient httpClient =
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
@@ -313,8 +314,7 @@ public class SmokeTests {
 		                                       .collectList()
 		                                       .cache();
 
-		List<String> res = content.block(Duration.ofSeconds(30));
-		return res;
+		return content;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -345,7 +345,7 @@ public class SmokeTests {
 				try {
 					boolean empty = false;
 					while (true) {
-						List<String> res = getClientDataPromise();
+						List<String> res = getClientDataPromise().block(Duration.ofSeconds(30));
 						if (res == null) {
 							if (empty) {
 								break;
@@ -387,7 +387,7 @@ public class SmokeTests {
 		}
 		latch.countDown();
 
-		thread.await(500, TimeUnit.SECONDS);
+		assertTrue(thread.await(50, TimeUnit.SECONDS));
 		return datas;
 	}
 
@@ -427,7 +427,7 @@ public class SmokeTests {
 				try {
 					boolean empty = false;
 					while (true) {
-						List<String> res = getClientDataPromise();
+						List<String> res = getClientDataPromise().block(Duration.ofSeconds(30));
 						if (res == null) {
 							if (empty) {
 								break;
@@ -466,7 +466,7 @@ public class SmokeTests {
 		}
 		latch.countDown();
 
-		thread.await(500, TimeUnit.SECONDS);
+		assertTrue(thread.await(50, TimeUnit.SECONDS));
 		return counter.get();
 	}
 

@@ -306,7 +306,9 @@ public class HttpSendFileTests {
 	private void doTestSendFileAsync(BiFunction<? super HttpServerRequest, ? super
 			HttpServerResponse, ? extends Publisher<Void>> fn, int chunk, byte[] expectedContent) throws IOException, URISyntaxException {
 		Path largeFile = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-		Path tempFile = Files.createTempFile(largeFile.getParent(),"temp", ".txt");
+		Path largeFileParent = largeFile.getParent();
+		assertThat(largeFileParent).isNotNull();
+		Path tempFile = Files.createTempFile(largeFileParent,"temp", ".txt");
 		tempFile.toFile().deleteOnExit();
 
 		byte[] fileBytes = Files.readAllBytes(largeFile);
@@ -332,7 +334,6 @@ public class HttpSendFileTests {
 				          .bindNow();
 
 		try {
-			AtomicLong counter = new AtomicLong(0);
 			byte[] response =
 					customizeClientOptions(HttpClient.create()
 					                                 .addressSupplier(context::address))

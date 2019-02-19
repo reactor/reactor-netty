@@ -29,7 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
-import java.util.Objects;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -320,21 +320,22 @@ public class HttpClientTest {
 
 	@Test
 	@Ignore
-	public void postUpload() {
-		InputStream f = getClass().getResourceAsStream("/public/index.html");
+	public void postUpload() throws IOException {
 		HttpClient client =
 				HttpClient.create()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap(true);
 
-		client.put()
-		      .uri("/post")
-		      .sendForm((req, form) -> form.multipart(true)
-		                                   .file("test", f)
-		                                   .attr("att1", "attr2")
-		                                   .file("test2", f))
-		      .responseSingle((r, buf) -> Mono.just(r.status().code()))
-		      .block(Duration.ofSeconds(30));
+		try (InputStream f = getClass().getResourceAsStream("/public/index.html")) {
+			client.put()
+			      .uri("/post")
+			      .sendForm((req, form) -> form.multipart(true)
+			                                   .file("test", f)
+			                                   .attr("att1", "attr2")
+			                                   .file("test2", f))
+			      .responseSingle((r, buf) -> Mono.just(r.status().code()))
+			      .block(Duration.ofSeconds(30));
+		}
 
 		Integer res = client.followRedirect(true)
 		                    .get()
@@ -986,15 +987,18 @@ public class HttpClientTest {
 		                          .responseContent()
 		                          .asString();
 
+		List<String> expected =
+				Flux.range(1, 20)
+				    .map(v -> "test")
+				    .collectList()
+				    .block();
+		Assert.assertNotNull(expected);
+
 		StepVerifier.create(
 				Flux.range(1, 10)
 				    .concatMap(i -> ws.take(2)
 				                      .log()))
-				    .expectNextSequence(
-				            Objects.requireNonNull(Flux.range(1, 20)
-				                                       .map(v -> "test")
-				                                       .collectList()
-				                                       .block()))
+				    .expectNextSequence(expected)
 				    .expectComplete()
 				    .verify();
 

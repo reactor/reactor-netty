@@ -22,7 +22,6 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Assert;
 import org.junit.Test;
@@ -54,16 +53,15 @@ public class HttpCompressionClientServerTests {
 				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 
-		HttpClient client = HttpClient.create()
-		                              .addressSupplier(() -> address(runningServer))
-		                              .wiretap(true)
-		                              .compress(true);
-		ByteBuf res =
-				client.headers(h -> Assert.assertTrue(h.contains("Accept-Encoding", "gzip", true)))
-				      .get()
-				      .uri("/test")
-				      .responseContent()
-				      .blockLast();
+		HttpClient.create()
+		          .addressSupplier(() -> address(runningServer))
+		          .wiretap(true)
+		          .compress(true)
+		          .headers(h -> Assert.assertTrue(h.contains("Accept-Encoding", "gzip", true)))
+		          .get()
+		          .uri("/test")
+		          .responseContent()
+		          .blockLast();
 
 		runningServer.dispose();
 		runningServer.onDispose()
@@ -91,6 +89,7 @@ public class HttpCompressionClientServerTests {
 				                                 .zipWith(Mono.just(res.responseHeaders())))
 				      .blockFirst();
 
+		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isNull();
 
 		Assert.assertEquals("reply", resp.getT1());
@@ -124,6 +123,7 @@ public class HttpCompressionClientServerTests {
 				                                 .zipWith(Mono.just(res.responseHeaders())))
 				      .blockFirst();
 
+		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isNull();
 
 		Assert.assertEquals("reply", resp.getT1());
@@ -158,12 +158,13 @@ public class HttpCompressionClientServerTests {
 				                                       .zipWith(Mono.just(res.responseHeaders())))
 				      .block();
 
+		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isEqualTo("gzip");
 
 		assertThat(new String(resp.getT1(), Charset.defaultCharset())).isNotEqualTo("reply");
 
 		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(resp.getT1()));
-		byte deflatedBuf[] = new byte[1024];
+		byte[] deflatedBuf = new byte[1024];
 		int readable = gis.read(deflatedBuf);
 		gis.close();
 
@@ -202,6 +203,7 @@ public class HttpCompressionClientServerTests {
 				      .response((res, byteBufFlux) -> byteBufFlux.asString()
 				                                          .zipWith(Mono.just(res.responseHeaders())))
 				      .blockFirst();
+		assertThat(resp).isNotNull();
 
 		//check the server didn't send the gzip header, only transfer-encoding
 		HttpHeaders headers = resp.getT2();
@@ -242,6 +244,7 @@ public class HttpCompressionClientServerTests {
 						      .log())
 				      .block();
 
+		assertThat(resp).isNotNull();
 		assertThat(resp.getT1().get("content-encoding")).isEqualTo("gzip");
 
 		byte[] replyBuffer = resp.getT2();
@@ -249,7 +252,7 @@ public class HttpCompressionClientServerTests {
 		assertThat(new String(replyBuffer, Charset.defaultCharset())).isNotEqualTo("reply");
 
 		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(replyBuffer));
-		byte deflatedBuf[] = new byte[1024];
+		byte[] deflatedBuf = new byte[1024];
 		int readable = gis.read(deflatedBuf);
 		gis.close();
 
@@ -287,6 +290,7 @@ public class HttpCompressionClientServerTests {
 				      .response((res, buf) -> buf.asString()
 				                                 .zipWith(Mono.just(res.responseHeaders())))
 				      .blockFirst();
+		assertThat(resp).isNotNull();
 
 		//check the server didn't send the gzip header, only transfer-encoding
 		HttpHeaders headers = resp.getT2();
@@ -325,12 +329,13 @@ public class HttpCompressionClientServerTests {
 				                                       .zipWith(Mono.just(res.responseHeaders())))
 				      .block();
 
+		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("content-encoding")).isEqualTo("gzip");
 
 		assertThat(new String(resp.getT1(), Charset.defaultCharset())).isNotEqualTo("reply");
 
 		GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(resp.getT1()));
-		byte deflatedBuf[] = new byte[1024];
+		byte[] deflatedBuf = new byte[1024];
 		int readable = gis.read(deflatedBuf);
 		gis.close();
 
@@ -369,6 +374,7 @@ public class HttpCompressionClientServerTests {
 				                                 .zipWith(Mono.just(res.responseHeaders())))
 				      .blockFirst();
 
+		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("Content-Encoding")).isNull();
 		assertThat(resp.getT1()).isEqualTo(serverReply);
 
@@ -399,6 +405,7 @@ public class HttpCompressionClientServerTests {
 				                                 .zipWith(Mono.just(res.responseHeaders())))
 				      .blockFirst();
 
+		assertThat(resp).isNotNull();
 		assertThat(resp.getT2().get("Content-Encoding")).isNull();
 		assertThat(resp.getT1()).isEqualTo("reply");
 
@@ -418,17 +425,15 @@ public class HttpCompressionClientServerTests {
 				server.handle((in, out) -> out.sendString(Mono.just("reply")))
 				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
-		HttpClient client = HttpClient.create()
-				                      .addressSupplier(() -> address(runningServer))
-				                      .wiretap(true)
-				                      .compress(true);
-
-		ByteBuf resp =
-				client.headers(h -> zip.set(h.get("accept-encoding")))
-				      .get()
-				      .uri("/test")
-				      .responseContent()
-				      .blockLast();
+		HttpClient.create()
+		          .addressSupplier(() -> address(runningServer))
+		          .wiretap(true)
+		          .compress(true)
+		          .headers(h -> zip.set(h.get("accept-encoding")))
+		          .get()
+		          .uri("/test")
+		          .responseContent()
+		          .blockLast();
 
 		assertThat(zip.get()).isEqualTo("gzip");
 		runningServer.dispose();
@@ -459,7 +464,7 @@ public class HttpCompressionClientServerTests {
 				          .asString();
 
 		StepVerifier.create(response)
-		            .expectNextMatches(s -> "testtesttesttesttest".equals(s))
+		            .expectNextMatches("testtesttesttesttest"::equals)
 		            .expectComplete()
 		            .verify();
 
@@ -489,7 +494,7 @@ public class HttpCompressionClientServerTests {
 				          .asString();
 
 		StepVerifier.create(response)
-		            .expectNextMatches(s -> "testtesttesttest".equals(s))
+		            .expectNextMatches("testtesttesttest"::equals)
 		            .expectComplete()
 		            .verify();
 
@@ -504,7 +509,7 @@ public class HttpCompressionClientServerTests {
 		                     .asString();
 
 		StepVerifier.create(response)
-		            .expectNextMatches(s -> "testtesttesttest".equals(s))
+		            .expectNextMatches("testtesttesttest"::equals)
 		            .expectComplete()
 		            .verify();
 

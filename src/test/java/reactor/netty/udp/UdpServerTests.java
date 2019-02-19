@@ -55,6 +55,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Jon Brisbin
@@ -81,6 +82,7 @@ public class UdpServerTests {
 	@Test
 	@Ignore
 	public void supportsReceivingDatagrams() throws InterruptedException {
+		final Random rndm = new Random();
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(4);
 
@@ -108,7 +110,7 @@ public class UdpServerTests {
 						                                   port));
 
 				                                   byte[] data = new byte[1024];
-				                                   new Random().nextBytes(data);
+				                                   rndm.nextBytes(data);
 				                                   for (int i = 0; i < 4; i++) {
 					                                   udp.write(ByteBuffer.wrap(data));
 				                                   }
@@ -128,6 +130,7 @@ public class UdpServerTests {
 
 	@Test
 	public void supportsUdpMulticast() throws Exception {
+		final Random rndm = new Random();
 		final int port = SocketUtils.findAvailableUdpPort();
 		final CountDownLatch latch = new CountDownLatch(Schedulers.DEFAULT_POOL_SIZE);
 		Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
@@ -183,7 +186,7 @@ public class UdpServerTests {
 							multicastInterface);
 
 					byte[] data = new byte[1024];
-					new Random().nextBytes(data);
+					rndm.nextBytes(data);
 
 					multicast.send(new DatagramPacket(data,
 							data.length,
@@ -199,7 +202,7 @@ public class UdpServerTests {
 			          .get(5, TimeUnit.SECONDS);
 		}
 
-		latch.await(5, TimeUnit.SECONDS);
+		assertTrue(latch.await(5, TimeUnit.SECONDS));
 		assertThat("latch was not counted down enough: " + latch.getCount() + " left on " + (4 ^ 2),
 				latch.getCount() == 0);
 

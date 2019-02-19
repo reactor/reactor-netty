@@ -36,6 +36,7 @@ import org.junit.Test;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -91,8 +92,8 @@ public class ByteBufFluxTest {
     private static File createTemporaryDirectory() {
         try {
             final File tempDir = File.createTempFile("ByteBufFluxTest", "", null);
-            tempDir.delete();
-            tempDir.mkdir();
+            assertTrue(tempDir.delete());
+            assertTrue(tempDir.mkdir());
             return tempDir;
         } catch (Exception e) {
             throw new RuntimeException("Error creating the temporary directory", e);
@@ -109,7 +110,7 @@ public class ByteBufFluxTest {
                 deleteTemporaryDirectoryRecursively(childFile);
             }
         }
-        file.delete();
+        assertTrue(file.delete());
     }
 
     @Test
@@ -159,7 +160,7 @@ public class ByteBufFluxTest {
               .responseContent()
               .doOnNext(b -> counter.addAndGet(b.readableBytes()))
               .blockLast(Duration.ofSeconds(30));
-        assertTrue(counter.get() == 1245);
+        assertEquals(1245, counter.get());
         c.disposeNow();
     }
 }

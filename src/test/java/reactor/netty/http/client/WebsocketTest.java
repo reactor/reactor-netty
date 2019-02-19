@@ -19,7 +19,6 @@ package reactor.netty.http.client;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -79,7 +78,7 @@ public class WebsocketTest {
 		                       .wiretap(true)
 		                       .bindNow();
 
-		String res = Objects.requireNonNull(
+		List<String> res =
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .wiretap(true)
@@ -89,9 +88,10 @@ public class WebsocketTest {
 				          .handle((i, o) -> i.receive().asString())
 				          .log("client")
 				          .collectList()
-				          .block()).get(0);
+				          .block();
 
-		Assert.assertThat(res, is("test"));
+		Assert.assertNotNull(res);
+		Assert.assertThat(res.get(0), is("test"));
 	}
 
 	@Test
@@ -179,13 +179,16 @@ public class WebsocketTest {
 		                                                      .receive()
 		                                                      .asString());
 
+		List<String> expected =
+				Flux.range(1, c)
+				    .map(v -> "test")
+				    .collectList()
+				    .block();
+		Assert.assertNotNull(expected);
+
 		StepVerifier.create(ws.take(c)
 		                      .log())
-		            .expectNextSequence(
-		                    Objects.requireNonNull(Flux.range(1, c)
-		                                               .map(v -> "test")
-		                                               .collectList()
-		                                               .block()))
+		            .expectNextSequence(expected)
 		            .expectComplete()
 		            .verify();
 	}
@@ -274,13 +277,16 @@ public class WebsocketTest {
 		                                               .receive()
 		                                               .asString());
 
+		List<String> expected =
+				Flux.range(1, c)
+				    .map(v -> "test")
+				    .collectList()
+				    .block();
+		Assert.assertNotNull(expected);
+
 		StepVerifier.create(ws.take(c)
 		                      .log())
-		            .expectNextSequence(
-		                    Objects.requireNonNull(Flux.range(1, c)
-		                                               .map(v -> "test")
-		                                               .collectList()
-		                                               .block()))
+		            .expectNextSequence(expected)
 		            .expectComplete()
 		            .verify();
 	}
@@ -385,7 +391,7 @@ public class WebsocketTest {
 		                       .wiretap(true)
 		                       .bindNow();
 
-		String res = Objects.requireNonNull(
+		List<String> res =
 				HttpClient.create()
 				          .port(httpServer.address()
 				                          .getPort())
@@ -396,9 +402,10 @@ public class WebsocketTest {
 				          .handle((i, o) -> i.receive().asString())
 				          .log()
 				          .collectList()
-				          .block(Duration.ofSeconds(30))).get(0);
+				          .block(Duration.ofSeconds(30));
 
-		Assert.assertThat(res, is("test"));
+		Assert.assertNotNull(res);
+		Assert.assertThat(res.get(0), is("test"));
 	}
 
 	@Test
@@ -412,7 +419,7 @@ public class WebsocketTest {
 		                       .wiretap(true)
 		                       .bindNow();
 
-		String res = Objects.requireNonNull(
+		List<String> res =
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .wiretap(true)
@@ -424,9 +431,10 @@ public class WebsocketTest {
 				                                 .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
 				          .log()
 				          .collectList()
-				          .block(Duration.ofSeconds(30))).get(0);
+				          .block(Duration.ofSeconds(30));
 
-		Assert.assertThat(res, is("CLIENT:Common-SERVER:Common"));
+		Assert.assertNotNull(res);
+		Assert.assertThat(res.get(0), is("CLIENT:Common-SERVER:Common"));
 	}
 
 	@Test
@@ -438,7 +446,7 @@ public class WebsocketTest {
 		                       .wiretap(true)
 		                       .bindNow();
 
-		String res = Objects.requireNonNull(
+		List<String> res =
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .headers(h -> h.add("Authorization", auth))
@@ -449,9 +457,10 @@ public class WebsocketTest {
 				                                 .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
 				          .log()
 				          .collectList()
-				          .block(Duration.ofSeconds(30))).get(0);
+				          .block(Duration.ofSeconds(30));
 
-		Assert.assertThat(res, is("CLIENT:null-SERVER:null"));
+		Assert.assertNotNull(res);
+		Assert.assertThat(res.get(0), is("CLIENT:null-SERVER:null"));
 	}
 
 	@Test
@@ -463,7 +472,7 @@ public class WebsocketTest {
 		                       .wiretap(true)
 		                       .bindNow();
 
-		String res = Objects.requireNonNull(
+		List<String> res =
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .headers(h -> h.add("Authorization", auth))
@@ -474,9 +483,10 @@ public class WebsocketTest {
 				                                 .map(srv -> "CLIENT:" + in.selectedSubprotocol() + "-" + srv))
 				          .log()
 				          .collectList()
-				          .block(Duration.ofSeconds(30))).get(0);
+				          .block(Duration.ofSeconds(30));
 
-		Assert.assertThat(res, is("CLIENT:proto1-SERVER:proto1"));
+		Assert.assertNotNull(res);
+		Assert.assertThat(res.get(0), is("CLIENT:proto1-SERVER:proto1"));
 	}
 
 	@Test
@@ -633,15 +643,18 @@ public class WebsocketTest {
 		                            .receive()
 		                            .asString();
 
+		List<String> expected =
+				Flux.range(1, 20)
+				    .map(v -> "test")
+				    .collectList()
+				    .block();
+		Assert.assertNotNull(expected);
+
 		StepVerifier.create(
 				Flux.range(1, 10)
 				    .concatMap(i -> ws.take(2)
 				                      .log()))
-		            .expectNextSequence(
-		                    Objects.requireNonNull(Flux.range(1, 20)
-		                                               .map(v -> "test")
-		                                               .collectList()
-		                                               .block()))
+		            .expectNextSequence(expected)
 		            .expectComplete()
 		            .verify();
 
@@ -826,7 +839,7 @@ public class WebsocketTest {
 		          })
 		          .blockLast(Duration.ofSeconds(30));
 
-		latch.await(30, TimeUnit.SECONDS);
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
 		assertThat(error.get()).isFalse();
 	}
@@ -889,7 +902,7 @@ public class WebsocketTest {
 		          })
 		          .blockLast(Duration.ofSeconds(30));
 
-		latch.await(30, TimeUnit.SECONDS);
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
 		assertThat(error.get()).isFalse();
 	}
@@ -943,7 +956,7 @@ public class WebsocketTest {
 		          })
 		          .blockLast(Duration.ofSeconds(30));
 
-		latch.await(30, TimeUnit.SECONDS);
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
 		assertThat(error.get()).isFalse();
 	}

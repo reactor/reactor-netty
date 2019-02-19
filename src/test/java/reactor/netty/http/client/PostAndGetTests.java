@@ -127,7 +127,8 @@ public class PostAndGetTests {
 	private void get(String path, SocketAddress address) {
 		try {
 			StringBuilder request =
-					new StringBuilder().append(String.format("GET %s HTTP/1.1\r\n", path))
+					new StringBuilder().append(String.format("GET %s HTTP/1.1", path))
+					                   .append("\r\n")
 					                   .append("Connection: Keep-Alive\r\n")
 					                   .append("\r\n");
 			java.nio.channels.SocketChannel channel =
@@ -150,11 +151,12 @@ public class PostAndGetTests {
 	private void post(String path, String data, SocketAddress address) {
 		try {
 			StringBuilder request = new StringBuilder().append(String.format(
-					"POST %s HTTP/1.1\r\n",
+					"POST %s HTTP/1.1",
 					path))
+			                                           .append("\r\n")
 			                                           .append("Connection: Keep-Alive\r\n");
-			request.append(String.format("Content-Length: %s\r\n", data.length()))
-			       .append("\r\n")
+			request.append(String.format("Content-Length: %s", data.length()))
+			       .append("\r\n\r\n")
 			       .append(data)
 			       .append("\r\n");
 			java.nio.channels.SocketChannel channel =

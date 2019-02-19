@@ -55,6 +55,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
+import reactor.util.Loggers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -154,7 +155,7 @@ public class TcpClientTests {
 		                             .wiretap(true)
 		                             .connectNow();
 
-		latch.await(30, TimeUnit.SECONDS);
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
 
 		client.disposeNow();
 
@@ -198,7 +199,7 @@ public class TcpClientTests {
 		                     .wiretap(true)
 		                     .connectNow(Duration.ofSeconds(5));
 
-		latch.await(5, TimeUnit.SECONDS);
+		assertTrue(latch.await(5, TimeUnit.SECONDS));
 
 		s.disposeNow();
 
@@ -351,8 +352,8 @@ public class TcpClientTests {
 		                                    }))
 		         .subscribe(System.out::println);
 
-		latch.await(5, TimeUnit.SECONDS);
-		assertTrue("latch was counted down:" + latch.getCount(), latch.getCount() == 0);
+		assertTrue(latch.await(5, TimeUnit.SECONDS));
+		assertEquals("latch was counted down:" + latch.getCount(), 0, latch.getCount());
 		assertThat("totalDelay was >1.6s", totalDelay.get(), greaterThanOrEqualTo(1600L));
 	}
 
@@ -400,10 +401,12 @@ public class TcpClientTests {
 			.wiretap(true)
 			.connect();
 
-			handler.log()
-			       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
-			       .block(Duration.ofSeconds(30))
-			       .onDispose();
+			Connection c =
+					handler.log()
+					       .then(handler.doOnSuccess(s -> reconnectionLatch.countDown()))
+					       .block(Duration.ofSeconds(30));
+			assertNotNull(c);
+			c.onDispose();
 
 			assertTrue("Initial connection is made", connectionLatch.await(5, TimeUnit.SECONDS));
 			assertTrue("A reconnect attempt was made", reconnectionLatch.await(5, TimeUnit.SECONDS));
@@ -667,7 +670,7 @@ public class TcpClientTests {
 				}
 			}
 			catch (Exception e) {
-				// Server closed
+				Loggers.getLogger(this.getClass()).debug("", e);
 			}
 		}
 

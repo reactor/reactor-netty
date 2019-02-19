@@ -161,8 +161,10 @@ public class PooledConnectionProviderTest {
 			//acquire 2
 			final PooledConnection c1 = (PooledConnection) pool.acquire(bootstrap)
 			                                                   .block();
+			assertThat(c1).isNotNull();
 			final PooledConnection c2 = (PooledConnection) pool.acquire(bootstrap)
 			                                                   .block();
+			assertThat(c2).isNotNull();
 
 			//make room for 1 more
 			c2.disposeNow();
@@ -170,6 +172,7 @@ public class PooledConnectionProviderTest {
 
 			final PooledConnection c3 = (PooledConnection) pool.acquire(bootstrap)
 			                                                   .block();
+			assertThat(c3).isNotNull();
 
 			//next one will block until a previous one is released
 			long start = System.currentTimeMillis();
@@ -179,6 +182,7 @@ public class PooledConnectionProviderTest {
 
 			final PooledConnection c4 = (PooledConnection) pool.acquire(bootstrap)
 			                                                   .block();
+			assertThat(c4).isNotNull();
 
 			long end = System.currentTimeMillis();
 

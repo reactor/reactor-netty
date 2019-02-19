@@ -35,6 +35,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
+import reactor.netty.NettyPipeline;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
@@ -200,21 +201,21 @@ public class HttpTests {
 
 		Assertions.assertThat(errored1.await(30, TimeUnit.SECONDS)).isTrue();
 
-		ByteBuf content1 = client.get()
-		                         .uri("/issue231_1")
-		                         .responseContent()
-		                         .log("received-status-3")
-		                .next()
-		                .block(Duration.ofSeconds(30));
+		client.get()
+		      .uri("/issue231_1")
+		      .responseContent()
+		      .log("received-status-3")
+		      .next()
+		      .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored2.await(30, TimeUnit.SECONDS)).isTrue();
 
-		content1 = client.get()
-		                 .uri("/issue231_2")
-		                 .responseContent()
-		                 .log("received-status-4")
-		                 .next()
-		                 .block(Duration.ofSeconds(30));
+		client.get()
+		      .uri("/issue231_2")
+		      .responseContent()
+		      .log("received-status-4")
+		      .next()
+		      .block(Duration.ofSeconds(30));
 
 		Assertions.assertThat(errored3.await(30, TimeUnit.SECONDS)).isTrue();
 
@@ -365,7 +366,7 @@ public class HttpTests {
 				                       .get("/stream", (req, res) ->
 						                           req.receive()
 						                              .then(res.compression(true)
-						                                       .options(op -> op.flushOnEach())
+						                                       .options(NettyPipeline.SendOptions::flushOnEach)
 						                                       .sendString(ep.log()).then())))
 				          .wiretap(true)
 				          .bindNow();
@@ -401,23 +402,22 @@ public class HttpTests {
 		            .thenAwait(Duration.ofMillis(30))
 		            .expectNext("test2")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(() -> ep.onComplete())
+		            .then(ep::onComplete)
 		            .verifyComplete();
 
 
 
-		content =
-				HttpClient.create()
-				          .port(server.address().getPort())
-				          .compress(true)
-				          .post()
-				          .uri("/hi")
-				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .log()
-				          .block();
+		HttpClient.create()
+		          .port(server.address().getPort())
+		          .compress(true)
+		          .post()
+		          .uri("/hi")
+		          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .log()
+		          .block();
 
 
 		server.disposeNow();
@@ -440,7 +440,7 @@ public class HttpTests {
 				                                                                  .sendString(Flux.just("test")).then()))
 				                       .get("/stream", (req, res) ->
 						                           req.receive()
-						                              .then(res.options(op -> op.flushOnEach())
+						                              .then(res.options(NettyPipeline.SendOptions::flushOnEach)
 						                                       .sendString(ep.log()).then())))
 				          .wiretap(true)
 				          .bindNow();
@@ -476,23 +476,22 @@ public class HttpTests {
 		            .thenAwait(Duration.ofMillis(30))
 		            .expectNext("test2")
 		            .thenAwait(Duration.ofMillis(30))
-		            .then(() -> ep.onComplete())
+		            .then(ep::onComplete)
 		            .verifyComplete();
 
 
 
-		content =
-				HttpClient.create()
-				          .port(server.address().getPort())
-				          .compress(true)
-				          .post()
-				          .uri("/hi")
-				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .log()
-				          .block();
+		HttpClient.create()
+		          .port(server.address().getPort())
+		          .compress(true)
+		          .post()
+		          .uri("/hi")
+		          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3", "4", "5")))
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .log()
+		          .block();
 
 
 		server.disposeNow();
@@ -511,19 +510,18 @@ public class HttpTests {
 				          .wiretap(true)
 				          .bindNow();
 
-		String response =
-				HttpClient.create()
-				          .port(server.port())
-				          .secure(ssl -> ssl.sslContext(
-				                  SslContextBuilder.forClient()
-				                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
-				          .wiretap(true)
-				          .get()
-				          .uri("/")
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .block(Duration.ofSeconds(30));
+		HttpClient.create()
+		          .port(server.port())
+		          .secure(ssl -> ssl.sslContext(
+		                  SslContextBuilder.forClient()
+		                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
+		          .wiretap(true)
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .aggregate()
+		          .asString()
+		          .block(Duration.ofSeconds(30));
 
 		server.disposeNow();
 	}

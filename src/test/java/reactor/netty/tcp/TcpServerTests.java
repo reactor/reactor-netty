@@ -847,7 +847,7 @@ public class TcpServerTests {
 
 		assertNotNull(client);
 
-		latch.await(30, TimeUnit.SECONDS);
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
 	}
 
 	@Test

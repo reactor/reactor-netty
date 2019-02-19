@@ -37,7 +37,7 @@ import static io.specto.hoverfly.junit.core.SimulationSource.classpath;
 public class HttpClientProxyTest {
 
 	@ClassRule
-	public static HoverflyRule hoverflyRule =
+	public static final HoverflyRule hoverflyRule =
 			HoverflyRule.inSimulationMode(
 					classpath("simulation.json"),
 					HoverflyConfig.localConfigs()

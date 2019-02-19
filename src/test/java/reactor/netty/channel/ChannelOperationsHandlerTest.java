@@ -36,6 +36,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.SocketUtils;
@@ -104,7 +105,7 @@ public class ChannelOperationsHandlerTest {
 	}
 
 	private void doTestPrefetchSize(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
-		ChannelOperationsHandler handler = new ChannelOperationsHandler(null, null);
+		ChannelOperationsHandler handler = new ChannelOperationsHandler(ChannelOperations.EMPTY_SETUP, ConnectionObserver.emptyListener());
 
 		EmbeddedChannel channel = new EmbeddedChannel(handler);
 		channel.config()

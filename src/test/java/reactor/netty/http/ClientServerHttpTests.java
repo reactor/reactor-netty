@@ -46,6 +46,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -60,10 +61,11 @@ public class ClientServerHttpTests {
 	private Processor<String, String> broadcaster;
 
 	@Test
-	public void testSingleConsumerWithOneSession() throws Exception {
+	public void testSingleConsumerWithOneSession() {
 		Sender sender = new Sender();
 		sender.sendNext(10);
-		List<String> data = getClientData();
+		List<String> data = getClientDataPromise().block(Duration.ofSeconds(30));
+		assertNotNull(data);
 		System.out.println(data);
 		assertThat(data.size(), is(3));
 		assertThat(split(data.get(0)), contains("0", "1", "2", "3", "4"));
@@ -73,10 +75,11 @@ public class ClientServerHttpTests {
 	}
 
 	@Test
-	public void testSingleConsumerWithTwoSession() throws Exception {
+	public void testSingleConsumerWithTwoSession() {
 		Sender sender = new Sender();
 		sender.sendNext(10);
-		List<String> data1 = getClientData();
+		List<String> data1 = getClientDataPromise().block(Duration.ofSeconds(30));
+		assertNotNull(data1);
 
 		assertThat(data1.size(), is(3));
 		assertThat(split(data1.get(0)), contains("0", "1", "2", "3", "4"));
@@ -85,7 +88,8 @@ public class ClientServerHttpTests {
 		assertThat(data1.get(2), is("END\n"));
 
 		sender.sendNext(10);
-		List<String> data2 = getClientData();
+		List<String> data2 = getClientDataPromise().block(Duration.ofSeconds(30));
+		assertNotNull(data2);
 
 		// we miss batches in between client sessions so this fails
 		System.out.println(data2);
@@ -100,18 +104,17 @@ public class ClientServerHttpTests {
 	public void testSingleConsumerWithTwoSessionBroadcastAfterConnect() throws Exception {
 		Sender sender = new Sender();
 
-		final List<String> data1 = new ArrayList<String>();
+		final List<String> data1 = new ArrayList<>();
 		final CountDownLatch latch1 = new CountDownLatch(1);
-		Runnable runner1 = new Runnable() {
-			@Override
-			public void run() {
-				try {
-					Mono<List<String>> clientDataPromise1 = getClientDataPromise();
-					latch1.countDown();
-					data1.addAll(clientDataPromise1.block(Duration.ofSeconds(30)));
-				}
-				catch (Exception ie) {
-				}
+		Runnable runner1 = () -> {
+			try {
+				List<String> data = getClientDataPromise().block(Duration.ofSeconds(30));
+				assertNotNull(data);
+				latch1.countDown();
+				data1.addAll(data);
+			}
+			catch (Exception ie) {
+				log.error("", ie);
 			}
 		};
 
@@ -127,19 +130,17 @@ public class ClientServerHttpTests {
 		assertThat(data1.get(2), containsString("END"));
 		assertThat(data1.get(2), is("END\n"));
 
-		final List<String> data2 = new ArrayList<String>();
+		final List<String> data2 = new ArrayList<>();
 		final CountDownLatch latch2 = new CountDownLatch(1);
-		Runnable runner2 = new Runnable() {
-			@Override
-			public void run() {
-				try {
-					Mono<List<String>> clientDataPromise2 = getClientDataPromise();
-					latch2.countDown();
-					data2.addAll(clientDataPromise2.block(Duration.ofSeconds(30)));
-				}
-				catch (Exception ie) {
-					log.error("", ie);
-				}
+		Runnable runner2 = () -> {
+			try {
+				List<String> data = getClientDataPromise().block(Duration.ofSeconds(30));
+				assertNotNull(data);
+				latch2.countDown();
+				data2.addAll(data);
+			}
+			catch (Exception ie) {
+				log.error("", ie);
 			}
 		};
 
@@ -157,10 +158,11 @@ public class ClientServerHttpTests {
 	}
 
 	@Test
-	public void testSingleConsumerWithThreeSession() throws Exception {
+	public void testSingleConsumerWithThreeSession() {
 		Sender sender = new Sender();
 		sender.sendNext(10);
-		List<String> data1 = getClientData();
+		List<String> data1 = getClientDataPromise().block(Duration.ofSeconds(30));
+		assertNotNull(data1);
 
 		assertThat(data1.size(), is(3));
 		assertThat(split(data1.get(0)), contains("0", "1", "2", "3", "4"));
@@ -169,7 +171,8 @@ public class ClientServerHttpTests {
 		assertThat(data1.get(2), is("END\n"));
 
 		sender.sendNext(10);
-		List<String> data2 = getClientData();
+		List<String> data2 = getClientDataPromise().block(Duration.ofSeconds(30));
+		assertNotNull(data2);
 
 		assertThat(data2.size(), is(3));
 		assertThat(split(data2.get(0)), contains("10", "11", "12", "13", "14"));
@@ -178,7 +181,8 @@ public class ClientServerHttpTests {
 		assertThat(data2.get(2), is("END\n"));
 
 		sender.sendNext(10);
-		List<String> data3 = getClientData();
+		List<String> data3 = getClientDataPromise().block(Duration.ofSeconds(30));
+		assertNotNull(data3);
 
 		assertThat(data3.size(), is(3));
 		assertThat(split(data3.get(0)), contains("20", "21", "22", "23", "24"));
@@ -200,8 +204,8 @@ public class ClientServerHttpTests {
 			assertThat(clientDatas.size(), is(threads));
 
 			int total = 0;
-			List<String> numbersNoEnds = new ArrayList<String>();
-			List<Integer> numbersNoEndsInt = new ArrayList<Integer>();
+			List<String> numbersNoEnds = new ArrayList<>();
+			List<Integer> numbersNoEndsInt = new ArrayList<>();
 			for (int i = 0; i < clientDatas.size(); i++) {
 				List<String> datas = clientDatas.get(i);
 				assertThat(datas, notNullValue());
@@ -235,7 +239,7 @@ public class ClientServerHttpTests {
 	}
 
 	@Before
-	public void loadEnv() throws Exception {
+	public void loadEnv() {
 		setupFakeProtocolListener();
 	}
 
@@ -245,8 +249,8 @@ public class ClientServerHttpTests {
 	}
 
 	public Set<Integer> findDuplicates(List<Integer> listContainingDuplicates) {
-		final Set<Integer> setToReturn = new HashSet<Integer>();
-		final Set<Integer> set1 = new HashSet<Integer>();
+		final Set<Integer> setToReturn = new HashSet<>();
+		final Set<Integer> set1 = new HashSet<>();
 
 		for (Integer yourInt : listContainingDuplicates) {
 			if (!set1.add(yourInt)) {
@@ -282,10 +286,6 @@ public class ClientServerHttpTests {
 		                       .bindNow();
 	}
 
-	private List<String> getClientData() throws Exception {
-		return getClientDataPromise().block(Duration.ofSeconds(30));
-	}
-
 	private Mono<List<String>> getClientDataPromise() {
 		HttpClient httpClient =
 				HttpClient.create()
@@ -306,8 +306,8 @@ public class ClientServerHttpTests {
 			throws Exception {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final CountDownLatch promiseLatch = new CountDownLatch(threadCount);
-		final ArrayList<Thread> joins = new ArrayList<Thread>();
-		final ArrayList<List<String>> datas = new ArrayList<List<String>>();
+		final ArrayList<Thread> joins = new ArrayList<>();
+		final ArrayList<List<String>> datas = new ArrayList<>();
 
 		for (int i = 0; i < threadCount; ++i) {
 			Runnable runner = () -> {
@@ -334,6 +334,7 @@ public class ClientServerHttpTests {
 				t.join();
 			}
 			catch (InterruptedException e) {
+				log.error("", e);
 			}
 		}
 

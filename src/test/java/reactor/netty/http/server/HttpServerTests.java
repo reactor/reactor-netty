@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Objects;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -161,7 +161,7 @@ public class HttpServerTests {
 		                                 .wiretap(true)
 		                                 .bindNow();
 
-		int code = client.wiretap(true)
+		Integer code = client.wiretap(true)
 		                 .get()
 		                 .uri("/")
 		                 .response()
@@ -198,7 +198,7 @@ public class HttpServerTests {
 		                               .wiretap(true)
 		                               .bindNow();
 
-		int code =
+		Integer code =
 				HttpClient.create()
 				          .port(c.address().getPort())
 				          .wiretap(true)
@@ -270,12 +270,16 @@ public class HttpServerTests {
 	@Test
 	public void flushOnComplete() {
 
-		Flux<String> test = Flux.range(0, 100)
+		Flux<String> flux = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
+		List<String> test =
+				flux.collectList()
+				    .block();
+		assertThat(test).isNotNull();
 
 		DisposableServer c = HttpServer.create()
 		                               .port(0)
-		                               .handle((req, resp) -> resp.sendString(test.map(s -> s + "\n")))
+		                               .handle((req, resp) -> resp.sendString(flux.map(s -> s + "\n")))
 		                               .wiretap(true)
 		                               .bindNow();
 
@@ -290,9 +294,7 @@ public class HttpServerTests {
 		                                .asString();
 
 		StepVerifier.create(client)
-		            .expectNextSequence(
-		                    Objects.requireNonNull(test.collectList()
-		                                               .block()))
+		            .expectNextSequence(test)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
@@ -396,7 +398,7 @@ public class HttpServerTests {
 		                                    .bindNow();
 
 		try {
-			int code =
+			Integer code =
 					HttpClient.create()
 					          .port(facade.address().getPort())
 					          .wiretap(true)
@@ -899,7 +901,7 @@ public class HttpServerTests {
 			return field.get(obj);
 		}
 		catch(NoSuchFieldException | IllegalAccessException e) {
-			return null;
+			return new RuntimeException(e);
 		}
 	}
 
