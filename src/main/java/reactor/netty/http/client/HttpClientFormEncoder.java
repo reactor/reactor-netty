@@ -53,7 +53,6 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 
 	boolean         needNewEncoder;
 	HttpDataFactory newFactory;
-	boolean         isKey;
 	boolean         cleanOnTerminate;
 	Charset         newCharset;
 	boolean         newMultipart;
@@ -78,7 +77,6 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		super(factory, request, multipart, charset, encoderMode);
 		this.newCharset = charset;
 		this.request = request;
-		this.isKey = true;
 		this.cleanOnTerminate = true;
 		this.progressFlux = DirectProcessor.create();
 		this.newMode = encoderMode;
