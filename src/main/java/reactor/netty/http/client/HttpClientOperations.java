@@ -680,7 +680,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				df = encoder.newFactory;
 
 				if (!encoder.isMultipart()) {
-					parent.chunkedTransfer(false);
+					parent.requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 				}
 
 				// Returned value is deliberately ignored

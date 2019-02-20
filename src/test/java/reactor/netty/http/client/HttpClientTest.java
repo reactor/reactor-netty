@@ -1392,7 +1392,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testExplicitSendMonoErrorOnGet() throws Exception {
+	public void testExplicitSendMonoErrorOnGet() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -1599,4 +1599,33 @@ public class HttpClientTest {
 		server.disposeNow();
 	}
 
+	@Test
+	public void testIssue614() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .route(routes ->
+				              routes.post("/dump", (req, res) -> {
+				                  if (req.requestHeaders().contains("Transfer-Encoding")) {
+				                      return Mono.error(new Exception("Transfer-Encoding is not expected"));
+				                  }
+				                  return res.sendString(Mono.just("OK"));
+				              }))
+				          .wiretap(true)
+				          .bindNow();
+
+		StepVerifier.create(
+				createHttpClientForContextWithAddress(server)
+				        .post()
+				        .uri("/dump")
+				        .sendForm((req, form) -> form.attr("attribute", "value"))
+				        .responseContent()
+				        .aggregate()
+				        .asString())
+				    .expectNext("OK")
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
+	}
 }
