@@ -62,6 +62,7 @@ ext {
   // Libraries
   nettyVersion = '4.1.34.Final'
   jacksonDatabindVersion = '2.5.1'
+  braveVersion = "5.6.1"
 
   // Testing
   mockitoVersion = '1.10.19'
@@ -215,6 +216,9 @@ configure(rootProject) { project ->
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
 
 	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
+
+	// Tracing
+	optional "io.zipkin.brave:brave-instrumentation-http:$braveVersion"
 
 	//Default reactor-netty impl
 	//compile "io.netty:netty-all:$nettyVersion"

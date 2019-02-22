@@ -95,6 +95,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate;
 
 	Function<? super String, Map<String, String>> paramsResolver;
+	String routeName;
 
 	HttpServerOperations(HttpServerOperations replaced) {
 		super(replaced);
@@ -107,6 +108,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.compressionPredicate = replaced.compressionPredicate;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
+		this.routeName = replaced.routeName;
 	}
 
 	HttpServerOperations(Connection c,
@@ -125,6 +127,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.connectionInfo = connectionInfo;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
+		this.routeName = null;
 	}
 
 	@Override
@@ -553,6 +556,18 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	protected HttpMessage outboundHttpMessage() {
 		return nettyResponse;
+	}
+
+
+	@Override
+	public HttpServerResponse routeName(String route) {
+		this.routeName = route;
+		return this;
+	}
+
+	@Override
+	public String routeName() {
+		return routeName;
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,

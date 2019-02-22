@@ -232,5 +232,16 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 		return status(HttpResponseStatus.valueOf(status));
 	}
 
+	/**
+	 * Set a route name such as "/items/:itemId" representing an application endpoint.
+	 * @param route an application endpoint
+	 * @return this response
+	 */
+	HttpServerResponse routeName(String route);
 
+	/**
+	 * Return a route name such as "/items/:itemId"
+	 * @return a route name if present or null
+	 */
+	String routeName();
 }
