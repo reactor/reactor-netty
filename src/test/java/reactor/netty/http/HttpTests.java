@@ -275,12 +275,12 @@ public class HttpTests {
 				                                             .map(it -> it + ' ' + req.param("param") + '!')
 				                                             .log("server-reply")));
 				          }))
-				          .wiretap()
+				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(5));
 
 		HttpClient client = HttpClient.create()
 				                      .port(server.address().getPort())
-				                      .wiretap();
+				                      .wiretap(true);
 
 		Mono<List<String>> response =
 		    client.request(HttpMethod.GET)
@@ -596,14 +596,14 @@ public class HttpTests {
 //				HttpServer.create()
 //				          .protocol(HttpProtocol.H2C)
 //				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-//				          .wiretap()
+//				          .wiretap(true)
 //				          .bindNow();
 //
 //		StepVerifier.create(
 //				HttpClient.create()
 //				          .port(server.port())
 //				          .protocol(HttpProtocol.H2C)
-//				          .wiretap()
+//				          .wiretap(true)
 //				          .post()
 //				          .uri("/")
 ////				          .send((req, out) -> out.sendString(Mono.just("World")))

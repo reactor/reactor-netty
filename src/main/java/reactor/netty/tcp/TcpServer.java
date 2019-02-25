@@ -543,18 +543,6 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Apply a wire logger configuration using {@link TcpServer} category
-	 * and {@code DEBUG} logger level
-	 *
-	 * @return a new {@link TcpServer}
-	 * @deprecated Use {@link TcpServer#wiretap(boolean)}
-	 */
-	@Deprecated
-	public final TcpServer wiretap() {
-		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
-	}
-
-	/**
 	 * Apply or remove a wire logger configuration using {@link TcpServer} category
 	 * and {@code DEBUG} logger level
 	 *

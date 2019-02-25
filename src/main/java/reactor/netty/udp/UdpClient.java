@@ -355,18 +355,6 @@ public abstract class UdpClient {
 	}
 
 	/**
-	 * Apply a wire logger configuration using {@link UdpClient} category
-	 * and {@code DEBUG} logger level
-	 *
-	 * @return a new {@link UdpClient}
-	 * @deprecated Use {@link UdpClient#wiretap(boolean)}
-	 */
-	@Deprecated
-	public final UdpClient wiretap() {
-		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
-	}
-
-	/**
 	 * Apply or remove a wire logger configuration using {@link UdpClient} category
 	 * and {@code DEBUG} logger level
 	 *

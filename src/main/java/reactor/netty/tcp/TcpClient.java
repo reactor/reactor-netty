@@ -533,18 +533,6 @@ public abstract class TcpClient {
 	}
 
 	/**
-	 * Apply a wire logger configuration using {@link TcpClient} category
-	 * and {@code DEBUG} logger level
-	 *
-	 * @return a new {@link TcpClient}
-	 * @deprecated Use {@link TcpClient#wiretap(boolean)}
-	 */
-	@Deprecated
-	public final TcpClient wiretap() {
-		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
-	}
-
-	/**
 	 * Apply or remove a wire logger configuration using {@link TcpClient} category
 	 * and {@code DEBUG} logger level
 	 *

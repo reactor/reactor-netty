@@ -356,18 +356,6 @@ public abstract class UdpServer {
 	}
 
 	/**
-	 * Apply a wire logger configuration using {@link UdpServer} category
-	 * and {@code DEBUG} logger level
-	 *
-	 * @return a new {@link UdpServer}
-	 * @deprecated Use {@link UdpServer#wiretap(boolean)}
-	 */
-	@Deprecated
-	public final UdpServer wiretap() {
-		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER));
-	}
-
-	/**
 	 * Apply or remove a wire logger configuration using {@link UdpServer} category
 	 * and {@code DEBUG} logger level
 	 *

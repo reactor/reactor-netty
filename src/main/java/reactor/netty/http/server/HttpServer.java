@@ -386,19 +386,6 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Apply a wire logger configuration using {@link HttpServer} category
-	 * and {@code DEBUG} logger level
-	 *
-	 * @return a new {@link HttpServer}
-	 * @deprecated Use {@link HttpServer#wiretap(boolean)}
-	 */
-	@Deprecated
-	public final HttpServer wiretap() {
-		return tcpConfiguration(tcpServer ->
-		        tcpServer.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
-	}
-
-	/**
 	 * Apply or remove a wire logger configuration using {@link HttpServer} category
 	 * and {@code DEBUG} logger level
 	 *
