@@ -428,31 +428,6 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Apply an SSL configuration customization via the passed {@link SslContext}. with a
-	 * default value of {@code 10} seconds handshake timeout unless the environment
-	 * property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
-	 *
-	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
-	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
-	 * <pre>
-	 * {@code
-	 *     SelfSignedCertificate cert = new SelfSignedCertificate();
-	 *     SslContextBuilder sslContextBuilder =
-	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-	 *     secure(sslContextBuilder.build());
-	 * }
-	 *
-	 * @param sslContext The context to set when configuring SSL
-	 *
-	 * @return a new {@link TcpServer}
-	 * @deprecated Use {@link TcpServer#secure(Consumer)}
-	 */
-	@Deprecated
-	public final TcpServer secure(SslContext sslContext) {
-		return secure(sslProviderBuilder -> sslProviderBuilder.sslContext(sslContext));
-	}
-
-	/**
 	 * Apply an SSL configuration customization via the passed builder. The builder
 	 * will produce the {@link SslContext} to be passed to with a default value of
 	 * {@code 10} seconds handshake timeout unless the environment property {@code

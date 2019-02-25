@@ -495,21 +495,6 @@ public abstract class TcpClient {
 	}
 
 	/**
-	 * Apply an SSL configuration customization via the passed {@link SslContext}.
-	 * with a default value of {@code 10} seconds handshake timeout unless
-	 * the environment property {@code reactor.netty.tcp.sslHandshakeTimeout} is set.
-	 *
-	 * @param sslContext The context to set when configuring SSL
-	 *
-	 * @return a new {@link TcpClient}
-	 * @deprecated Use {@link TcpClient#secure(Consumer)}
-	 */
-	@Deprecated
-	public final TcpClient secure(SslContext sslContext) {
-		return secure(sslProviderBuilder -> sslProviderBuilder.sslContext(sslContext));
-	}
-
-	/**
 	 * Apply an SSL configuration via the passed {@link SslProvider}.
 	 *
 	 * @param sslProvider The provider to set when configuring SSL
