@@ -417,7 +417,10 @@ public abstract class HttpClient {
 	 * @param chunkedEnabled if true transfer-encoding is enabled otherwise disabled.
 	 * (default: true)
 	 * @return a new {@link HttpClient}
+	 * @deprecated Using {@link #headers(Consumer)} for specifying the content length
+	 * will disable the transfer-encoding
 	 */
+	@Deprecated
 	public final HttpClient chunkedTransfer(boolean chunkedEnabled) {
 		if (chunkedEnabled) {
 			return tcpConfiguration(CHUNKED_ATTR_CONFIG);
