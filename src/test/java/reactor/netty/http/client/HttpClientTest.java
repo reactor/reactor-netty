@@ -389,7 +389,6 @@ public class HttpClientTest {
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap(true)
-				          .chunkedTransfer(false)
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
 				          .send(ByteBufFlux.fromString(Flux.just("hello")))
@@ -409,7 +408,6 @@ public class HttpClientTest {
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
 				          .wiretap(true)
 				          .keepAlive(false)
-				          .chunkedTransfer(false)
 				          .get()
 				          .uri("/unsupportedURI")
 				          .responseSingle((res, conn) -> Mono.just(res.status())
@@ -460,8 +458,7 @@ public class HttpClientTest {
 		HttpClient client =
 				HttpClient.create(p)
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
-				          .wiretap(true)
-				          .chunkedTransfer(false);
+				          .wiretap(true);
 
 		Tuple2<HttpResponseStatus, Channel> r =
 				client.get()
@@ -1342,7 +1339,6 @@ public class HttpClientTest {
 
 		StepVerifier.create(
 				createHttpClientForContextWithAddress(server)
-				        .chunkedTransfer(false)
 				        .headers(h -> h.add(HttpHeaderNames.CONTENT_LENGTH, 5))
 				        .post()
 				        .uri("/")
