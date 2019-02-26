@@ -63,6 +63,9 @@ import reactor.netty.tcp.TcpClient;
  * is called to retrieve a ready to use {@link TcpClient}, then {@link
  * TcpClient#configure()} retrieve a usable {@link Bootstrap} for the final {@link
  * TcpClient#connect()} is called.
+ * {@code Transfer-Encoding: chunked} will be applied for those HTTP methods for which
+ * a request body is expected. {@code Content-Length} provided via request headers
+ * will disable {@code Transfer-Encoding: chunked}.
  * <p> Examples:
  * <pre>
  * {@code
@@ -409,25 +412,6 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient mapConnect(BiFunction<? super Mono<? extends Connection>, ? super Bootstrap, ? extends Mono<? extends Connection>> connector) {
 		return new HttpClientOnConnectMap(this, connector);
-	}
-
-	/**
-	 * Specifies whether transfer-encoding is enabled
-	 *
-	 * @param chunkedEnabled if true transfer-encoding is enabled otherwise disabled.
-	 * (default: true)
-	 * @return a new {@link HttpClient}
-	 * @deprecated Using {@link #headers(Consumer)} for specifying the content length
-	 * will disable the transfer-encoding
-	 */
-	@Deprecated
-	public final HttpClient chunkedTransfer(boolean chunkedEnabled) {
-		if (chunkedEnabled) {
-			return tcpConfiguration(CHUNKED_ATTR_CONFIG);
-		}
-		else {
-			return tcpConfiguration(CHUNKED_ATTR_DISABLE);
-		}
 	}
 
 	/**
@@ -915,17 +899,11 @@ public abstract class HttpClient {
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_COMPRESS);
 
-	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_CONFIG =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_CHUNKED);
-
 	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_KEEPALIVE);
 
 	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_KEEPALIVE);
-
-	static final Function<TcpClient, TcpClient> CHUNKED_ATTR_DISABLE =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_CHUNKED);
 
 	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_REDIRECT);

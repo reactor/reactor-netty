@@ -435,7 +435,6 @@ final class HttpClientConnect extends HttpClient {
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
 		                         handler;
 		final boolean            compress;
-		final Boolean            chunkedTransfer;
 		final UriEndpointFactory uriEndpointFactory;
 		final String             websocketProtocols;
 		final int                maxFramePayloadLength;
@@ -457,7 +456,6 @@ final class HttpClientConnect extends HttpClient {
 			this.method = configuration.method;
 			this.compress = configuration.acceptGzip;
 			this.followRedirectPredicate = configuration.followRedirectPredicate;
-			this.chunkedTransfer = configuration.chunkedTransfer;
 			this.cookieEncoder = configuration.cookieEncoder;
 			this.cookieDecoder = configuration.cookieDecoder;
 			this.proxyProvider = proxyProvider;
@@ -547,17 +545,14 @@ final class HttpClientConnect extends HttpClient {
 
 				ch.followRedirectPredicate(followRedirectPredicate);
 
-				if (chunkedTransfer == null) {
-					if (Objects.equals(method, HttpMethod.GET) ||
-							Objects.equals(method, HttpMethod.HEAD) ||
-							Objects.equals(method, HttpMethod.DELETE)) {
-						ch.chunkedTransfer(false);
-					} else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-						ch.chunkedTransfer(true);
-					}
-				}
-				else {
-					ch.chunkedTransfer(chunkedTransfer);
+				if (Objects.equals(method, HttpMethod.GET) ||
+						Objects.equals(method, HttpMethod.HEAD) ||
+						Objects.equals(method, HttpMethod.DELETE)) {
+					ch.chunkedTransfer(false);
+				} else if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+					ch.chunkedTransfer(false);
+				} else {
+					ch.chunkedTransfer(true);
 				}
 
 				if (handler != null) {

@@ -47,7 +47,6 @@ final class HttpClientConfiguration {
 			AttributeKey.newInstance("httpClientConf");
 
 	boolean                       acceptGzip                     = false;
-	Boolean                       chunkedTransfer                = null;
 	String                        uri                            = null;
 	String                        baseUrl                        = null;
 	HttpHeaders                   headers                        = null;
@@ -75,7 +74,6 @@ final class HttpClientConfiguration {
 		this.cookieEncoder = from.cookieEncoder;
 		this.cookieDecoder = from.cookieDecoder;
 		this.followRedirectPredicate = from.followRedirectPredicate;
-		this.chunkedTransfer = from.chunkedTransfer;
 		this.baseUrl = from.baseUrl;
 		this.headers = from.headers;
 		this.method = from.method;
@@ -96,7 +94,6 @@ final class HttpClientConfiguration {
 		return hcc;
 	}
 
-	@SuppressWarnings("unchecked")
 	static HttpClientConfiguration getOrCreate(Bootstrap b) {
 
 		HttpClientConfiguration hcc = (HttpClientConfiguration) b.config()
@@ -111,7 +108,6 @@ final class HttpClientConfiguration {
 		return hcc;
 	}
 
-	@SuppressWarnings("unchecked")
 	static HttpClientConfiguration get(Bootstrap b) {
 
 		HttpClientConfiguration hcc = (HttpClientConfiguration) b.config()
@@ -154,17 +150,6 @@ final class HttpClientConfiguration {
 
 	static final Function<Bootstrap, Bootstrap> MAP_NO_COMPRESS = b -> {
 		getOrCreate(b).acceptGzip = false;
-		return b;
-	};
-
-	static final Function<Bootstrap, Bootstrap> MAP_CHUNKED = b -> {
-		getOrCreate(b).chunkedTransfer = true;
-		return b;
-	};
-
-
-	static final Function<Bootstrap, Bootstrap> MAP_NO_CHUNKED = b -> {
-		getOrCreate(b).chunkedTransfer = false;
 		return b;
 	};
 
