@@ -110,7 +110,7 @@ public class ByteBufFluxTest {
                 deleteTemporaryDirectoryRecursively(childFile);
             }
         }
-        assertTrue(file.delete());
+        file.deleteOnExit();
     }
 
     @Test
