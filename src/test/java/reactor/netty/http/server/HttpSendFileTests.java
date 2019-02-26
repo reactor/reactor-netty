@@ -288,9 +288,9 @@ public class HttpSendFileTests {
 	@Test
 	public void sendFileAsync4096Negative() throws IOException, URISyntaxException {
 		doTestSendFileAsync((req, resp) -> req.receive()
-				                              .take(20)
-				                              .doOnComplete(() -> resp.status(500)
-				                                                      .header(HttpHeaderNames.CONNECTION, "close"))
+				                              .take(10)
+				                              .doOnComplete(() -> resp.withConnection(c -> c.channel()
+				                                                                            .close()))
 				                              .then(),
 				4096, "error".getBytes(Charset.defaultCharset()));
 	}
@@ -343,8 +343,7 @@ public class HttpSendFileTests {
 					    .responseContent()
 					    .aggregate()
 					    .asByteArray()
-					    .onErrorReturn(IOException.class,
-					        "error".getBytes(Charset.defaultCharset()))
+					    .onErrorReturn(IOException.class, expectedContent)
 					    .block();
 
 			assertThat(response).isEqualTo(expectedContent == null ? Files.readAllBytes(tempFile) : expectedContent);
