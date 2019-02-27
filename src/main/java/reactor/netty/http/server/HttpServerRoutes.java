@@ -333,7 +333,7 @@ public interface HttpServerRoutes extends
 			int maxFramePayloadLength) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
-			       .contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+			       .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
 				return ops.withWebsocketSupport(req.uri(), protocols, maxFramePayloadLength, handler);
 			}

@@ -29,6 +29,7 @@ import java.util.function.BiFunction;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -1126,5 +1127,31 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 		assertThat(clientHandler.get()).isTrue();
+	}
+
+	// https://bugzilla.mozilla.org/show_bug.cgi?id=691300
+	@Test
+	public void firefoxConnectionTest() {
+		httpServer = HttpServer.create()
+				.port(0)
+				.route(r -> r.ws("/ws", (in, out) -> out.sendString(Mono.just("test"))))
+				.wiretap(true)
+				.bindNow();
+
+		HttpClientResponse res =
+				HttpClient.create()
+						.port(httpServer.address().getPort())
+						.wiretap(true)
+						.headers(h -> {
+							h.add(HttpHeaderNames.CONNECTION, "keep-alive, Upgrade");
+							h.add(HttpHeaderNames.UPGRADE, "websocket");
+							h.add(HttpHeaderNames.ORIGIN, "http://localhost");
+						})
+						.get()
+						.uri("/ws")
+						.response()
+						.block();
+		Assert.assertNotNull(res);
+		Assert.assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
 	}
 }
