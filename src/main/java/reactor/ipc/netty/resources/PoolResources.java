@@ -70,7 +70,13 @@ public interface PoolResources extends Disposable {
 	 * ChannelPool}
 	 */
 	static PoolResources elastic(String name) {
-		return new DefaultPoolResources(name, SimpleChannelPool::new);
+		return new DefaultPoolResources(name,
+				(bootstrap, handler, checker) -> new SimpleChannelPool(bootstrap,
+						handler,
+						checker,
+						true,
+						false));
+
 	}
 
 	/**
@@ -136,8 +142,9 @@ public interface PoolResources extends Disposable {
 						FixedChannelPool.AcquireTimeoutAction.FAIL,
 						acquireTimeout,
 						maxConnections,
-						Integer.MAX_VALUE
-						));
+						Integer.MAX_VALUE,
+						true,
+						false));
 	}
 
 	/**
