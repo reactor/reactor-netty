@@ -1,6 +1,6 @@
 package reactor.netty.instrumentation.zipkin;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
@@ -12,7 +12,7 @@ import zipkin2.reporter.Reporter;
 class InMemoryReporter implements Reporter<Span> {
   private final AtomicBoolean once = new AtomicBoolean(false);
   private final CountDownLatch latch = new CountDownLatch(1);
-  private final List<Span> report = new LinkedList<>();
+  private final List<Span> report = new ArrayList<>();
 
   @Override
   public void report(Span span) {
