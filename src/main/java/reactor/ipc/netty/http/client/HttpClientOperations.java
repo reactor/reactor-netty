@@ -954,11 +954,15 @@ class HttpClientOperations extends HttpOperations<HttpClientResponse, HttpClient
 			return Flux.from(source)
 			           .collect(alloc::heapBuffer, ByteBuf::writeBytes)
 			           .flatMap(agg -> {
-				           if (!HttpUtil.isTransferEncodingChunked(request) && !HttpUtil.isContentLengthSet(request)) {
-					           request.headers()
-					                  .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
-				           }
-				           return parent.then().thenEmpty(FutureMono.disposableWriteAndFlush(context().channel(), Mono.just(agg)));
+			               if (!HttpUtil.isTransferEncodingChunked(request) && !HttpUtil.isContentLengthSet(request)) {
+			                   request.headers()
+			                          .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
+			               }
+			               if (agg.readableBytes() > 0) {
+			                   return parent.then().thenEmpty(FutureMono.disposableWriteAndFlush(parent.channel(), Mono.just(agg)));
+			               }
+			               agg.release();
+			               return parent.then();
 			           });
 		}
 	}

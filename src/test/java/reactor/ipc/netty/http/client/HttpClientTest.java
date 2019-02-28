@@ -954,4 +954,40 @@ public class HttpClientTest {
 				    .expectError(ConnectException.class)
 				    .verify(Duration.ofSeconds(30));
 	}
+
+	@Test
+	public void testExplicitEmptyBodyOnGetWorks() throws Exception {
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+		                                        .build();
+
+
+		SslContext sslClient = SslContextBuilder.forClient()
+		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+		                                        .build();
+
+		NettyContext server =
+				HttpServer.create(builder -> builder.port(0)
+				                                    .sslContext(sslServer))
+				          .newHandler((req, res) -> res.send(req.receive().retain()))
+				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
+
+		PoolResources pool = PoolResources.fixed("test", 1);
+
+		for (int i = 0; i < 4; i++) {
+			StepVerifier.create(
+					HttpClient.create(builder -> builder.poolResources(pool)
+					                                    .sslContext(sslClient)
+					                                    .connectAddress(server::address))
+					          .get("/", req -> req.send(Flux.empty()))
+					          .flatMap(res -> res.receive()
+					                             .aggregate()))
+			            .expectComplete()
+			            .verify(Duration.ofSeconds(30));
+		}
+
+		pool.dispose();
+		server.dispose();
+	}
 }
