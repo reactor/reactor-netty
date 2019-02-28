@@ -36,6 +36,13 @@ public class TracingContext {
   }
 
   /**
+   * Return the current context.
+   */
+  public Context ctx() {
+    return ctx;
+  }
+
+  /**
    * Create a new {@link Context} which contains a {@link Span} element.
    * @param span a current span
    */
@@ -46,9 +53,10 @@ public class TracingContext {
   /**
    * Add a {@link Span} to this {@link Context}
    * @param span a current span
+   * @return a new tracing context with a {@link Span} element
    */
-  public Context put(@NonNull Span span) {
-    return ctx.put(KEY, span);
+  public TracingContext put(@NonNull Span span) {
+    return new TracingContext(ctx.put(KEY, span));
   }
 
   /**

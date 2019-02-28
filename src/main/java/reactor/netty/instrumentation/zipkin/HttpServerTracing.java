@@ -96,7 +96,7 @@ public class HttpServerTracing {
           .doOnCancel(() -> span.annotate("cancel").finish())
           .doOnSuccess(_void -> handler.handleSend(response, null, span))
           .doOnError(err -> handler.handleSend(response, err, span))
-          .subscriberContext(ctx -> TracingContext.of(ctx).put(span));
+          .subscriberContext(ctx -> TracingContext.of(ctx).put(span).ctx());
     };
   }
 }
