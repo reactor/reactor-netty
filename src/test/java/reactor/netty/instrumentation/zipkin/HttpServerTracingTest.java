@@ -317,19 +317,17 @@ public class HttpServerTracingTest {
   }
 
   private Mono<Void> getPingDelay(HttpServerRequest request, HttpServerResponse response) {
+    Mono<String> body = Mono
+        .subscriberContext()
+        .flatMap(ctx -> Mono
+            .just("pong")
+            .delayElement(Duration.ofMillis(100))
+            .doOnNext(_ignore -> TracingContext.of(ctx).span(span -> span.annotate("response"))));
+
     return Mono
         .subscriberContext()
         .flatMap(ctx -> {
           TracingContext.of(ctx).span(s -> s.annotate("ping"));
-
-          Mono<String> body = Mono
-              .subscriberContext()
-              .flatMap(ctx1 ->
-                      Mono
-                          .just("pong")
-                          .delayElement(Duration.ofMillis(100))
-                          .doOnNext(_ignore -> TracingContext.of(ctx).span(span -> span.annotate("response"))));
-
           return response.routeName("/ping").sendString(body).then();
         });
   }
