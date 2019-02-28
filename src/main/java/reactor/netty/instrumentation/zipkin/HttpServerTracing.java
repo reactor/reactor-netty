@@ -68,6 +68,7 @@ public class HttpServerTracing {
    */
   public static HttpServerTracing create(@NonNull Tracing tracing) {
     Objects.requireNonNull(tracing, "tracing cannot be null");
+
     return new HttpServerTracing(HttpTracing.create(tracing));
   }
 
@@ -80,7 +81,7 @@ public class HttpServerTracing {
       ? super HttpServerResponse,
       ? extends Publisher<Void>
   > andThen(
-      BiFunction<
+      @NonNull BiFunction<
           ? super HttpServerRequest,
           ? super HttpServerResponse,
           ? extends Publisher<Void>

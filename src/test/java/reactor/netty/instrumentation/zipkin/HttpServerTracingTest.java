@@ -20,7 +20,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
@@ -90,8 +89,6 @@ public class HttpServerTracingTest {
     c.disposeNow();
     Span span = spanReporter.await().span(0);
 
-    assertThat(span.duration(), greaterThan(100000L));
-    assertThat(span.duration(), lessThan(200000L));
     assertThat(span.parentId(), nullValue());
     assertThat(span.remoteEndpoint(), not(nullValue()));
     assertThat(span.name(), is("get /ping"));
@@ -171,6 +168,40 @@ public class HttpServerTracingTest {
   }
 
   @Test
+  public void testNewTraceWithDelayResponse() {
+    DisposableServer c = HttpServer.create()
+        .port(0)
+        .handle(serverTracing.andThen(this::getPingDelay))
+        .bindNow();
+
+    Mono<String> client =  HttpClient.create()
+        .port(c.address().getPort())
+        .get()
+        .uri("/ping")
+        .responseContent()
+        .aggregate()
+        .asString();
+
+    StepVerifier.create(client)
+        .expectNext("pong")
+        .expectComplete()
+        .verify(Duration.ofSeconds(10));
+
+    c.disposeNow();
+    Span span = spanReporter.await().span(0);
+
+    assertThat(span.duration(), greaterThan(100000L));
+    assertThat(span.parentId(), nullValue());
+    assertThat(span.remoteEndpoint(), not(nullValue()));
+    assertThat(span.name(), is("get /ping"));
+    assertThat(span.kind(), is(Kind.SERVER));
+    assertThat(span.tags(), hasEntry("http.method", "GET"));
+    assertThat(span.tags(), hasEntry("http.path", "/ping"));
+    assertThat(annotations(span), hasItem("ping"));
+    assertThat(annotations(span), hasItem("response"));
+  }
+
+  @Test
   public void testNewTraceWithError() {
     DisposableServer c = HttpServer.create()
         .port(0)
@@ -192,7 +223,6 @@ public class HttpServerTracingTest {
     c.disposeNow();
     Span span = spanReporter.await().span(0);
 
-    assertThat(span.duration(), greaterThan(1L));
     assertThat(span.name(), is("get /boom"));
     assertThat(span.kind(), is(Kind.SERVER));
     assertThat(span.tags(), hasEntry("http.method", "GET"));
@@ -222,7 +252,6 @@ public class HttpServerTracingTest {
     c.disposeNow();
     Span span = spanReporter.await().span(0);
 
-    assertThat(span.duration(), greaterThan(1L));
     assertThat(span.name(), is("get"));
     assertThat(span.kind(), is(Kind.SERVER));
     assertThat(span.tags(), hasEntry("http.method", "GET"));
@@ -261,7 +290,6 @@ public class HttpServerTracingTest {
 
     Span serverSpan = spanReporter.await().span(0);
 
-    assertThat(serverSpan.duration(), greaterThan(100000L));
     assertThat(serverSpan.parentId(), nullValue());
     assertThat(serverSpan.remoteEndpoint(), not(nullValue()));
     assertThat(serverSpan.name(), is("get /ping"));
@@ -282,10 +310,27 @@ public class HttpServerTracingTest {
   private Mono<Void> getPing(HttpServerRequest request, HttpServerResponse response) {
     return Mono
         .subscriberContext()
-        .delayElement(Duration.ofMillis(100))
         .flatMap(ctx -> {
           TracingContext.of(ctx).span(s -> s.annotate("ping"));
           return response.routeName("/ping").sendString(Mono.just("pong")).then();
+        });
+  }
+
+  private Mono<Void> getPingDelay(HttpServerRequest request, HttpServerResponse response) {
+    return Mono
+        .subscriberContext()
+        .flatMap(ctx -> {
+          TracingContext.of(ctx).span(s -> s.annotate("ping"));
+
+          Mono<String> body = Mono
+              .subscriberContext()
+              .flatMap(ctx1 ->
+                      Mono
+                          .just("pong")
+                          .delayElement(Duration.ofMillis(100))
+                          .doOnNext(_ignore -> TracingContext.of(ctx).span(span -> span.annotate("response"))));
+
+          return response.routeName("/ping").sendString(body).then();
         });
   }
 
