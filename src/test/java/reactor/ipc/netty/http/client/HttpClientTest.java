@@ -59,7 +59,6 @@ import reactor.ipc.netty.NettyContext;
 import reactor.ipc.netty.NettyPipeline;
 import reactor.ipc.netty.channel.AbortedException;
 import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.options.ClientProxyOptions.Proxy;
 import reactor.ipc.netty.resources.PoolResources;
 import reactor.ipc.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
@@ -373,7 +372,7 @@ public class HttpClientTest {
 		                 .closeFuture())
 		          .block(Duration.ofSeconds(5));
 
-		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertEquals(r.status(), HttpResponseStatus.NOT_FOUND);
 		r.dispose();
 	}
 
@@ -393,7 +392,7 @@ public class HttpClientTest {
 		                 .closeFuture())
 		          .block(Duration.ofSeconds(5));
 
-		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertEquals(r.status(), HttpResponseStatus.NOT_FOUND);
 		r.dispose();
 	}
 
@@ -418,7 +417,7 @@ public class HttpClientTest {
 		                   .channel(), r2.context()
 		                                 .channel());
 
-		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertEquals(r.status(), HttpResponseStatus.NOT_FOUND);
 		r.dispose();
 		r2.dispose();
 		p.dispose();
@@ -445,7 +444,7 @@ public class HttpClientTest {
 		                   .channel(), r2.context()
 		                                 .channel());
 
-		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.NOT_FOUND));
+		Assert.assertEquals(r.status(), HttpResponseStatus.NOT_FOUND);
 		r.dispose();
 		r2.dispose();
 		p.dispose();
@@ -469,7 +468,7 @@ public class HttpClientTest {
 		                                  .block(Duration.ofSeconds(30));
 		assertThat(r).isNotNull();
 		assertThat(r1).isNotNull();
-		Assert.assertTrue(Objects.equals(r.status(), HttpResponseStatus.BAD_REQUEST));
+		Assert.assertEquals(r.status(), HttpResponseStatus.BAD_REQUEST);
 		r.dispose();
 		r1.dispose();
 		fixed.dispose();
