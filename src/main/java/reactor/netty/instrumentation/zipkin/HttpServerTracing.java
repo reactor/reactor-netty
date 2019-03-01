@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 import reactor.util.annotation.NonNull;
@@ -39,7 +40,7 @@ import reactor.util.annotation.NonNull;
  *   Tracing tracing = Tracing.newBuilder()
  *         ...
  *         .build();
- *   HttpServerTracing serverTracing = HttpServerTracing.create(tracing);
+ *   HttpServerTracing serverTracing = HttpServerTracing.of(tracing);
  *
  *   DisposableServer c = HttpServer.create()
  *     .port(0)
@@ -56,7 +57,7 @@ public class HttpServerTracing {
   /**
    * Create a new tracing adapter using preconfigured {@link HttpTracing} instance.
    */
-  public HttpServerTracing(@NonNull HttpTracing httpTracing) {
+  private HttpServerTracing(@NonNull HttpTracing httpTracing) {
     Objects.requireNonNull(httpTracing, "httpTracing cannot be null");
 
     this.extractor = httpTracing.tracing().propagation().extractor(GETTER);
@@ -64,9 +65,16 @@ public class HttpServerTracing {
   }
 
   /**
+   * Create a new tracing adapter using preconfigured {@link HttpTracing} instance.
+   */
+  public static HttpServerTracing of(@NonNull HttpTracing httpTracing) {
+    return new HttpServerTracing(httpTracing);
+  }
+
+  /**
    * Create a new tracing adapter.
    */
-  public static HttpServerTracing create(@NonNull Tracing tracing) {
+  public static HttpServerTracing of(@NonNull Tracing tracing) {
     Objects.requireNonNull(tracing, "tracing cannot be null");
 
     return new HttpServerTracing(HttpTracing.create(tracing));

@@ -37,7 +37,7 @@ public class ITHttpServerTracingTest extends ITHttpServer {
 
   @Override
   protected void init() {
-    HttpServerTracing serverTracing = new HttpServerTracing(httpTracing);
+    HttpServerTracing serverTracing = HttpServerTracing.of(httpTracing);
 
     HttpServerRoutes routes = HttpServerRoutes.newRoutes()
         .options("/", (req, res) ->
