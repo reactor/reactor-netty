@@ -17,14 +17,19 @@
 package reactor.netty.instrumentation.zipkin;
 
 import brave.Span;
+import brave.Tracer;
+import brave.Tracing;
+import brave.propagation.CurrentTraceContext;
 import com.sun.istack.internal.NotNull;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.function.Consumer;
 import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 /**
- * Span related methods for {@link Context}.
+ * Span related methods for reactive {@link Context}.
  */
 public class TracingContext {
   private static final String KEY = Span.class.toString();
@@ -61,6 +66,15 @@ public class TracingContext {
 
   /**
    * Consume a {@link Span} element if it exists in the current context
+   *
+   * <p></p>
+   * <code><pre>
+   *   Mono.subscriberContext()
+   *       .flatMap(ctx -> {
+   *          TracingContext.of(ctx).span(span -> span.annotate("some log message"));
+   *          return ...;
+   *       });
+   * </pre></code>
    * @param consumer a span consumer
    * @return this context
    */
@@ -74,6 +88,18 @@ public class TracingContext {
   }
 
   /**
+   * Return a current {@link Span}
+   *
+   * <p></p>
+   * <code><pre>
+   *   Mono.subscriberContext()
+   *       .flatMap(ctx -> {
+   *          try(tracer.withSpanInScope(TracingContext.of(ctx).span())) {
+   *            // invoke call
+   *          }
+   *       });
+   * </pre></code>
+   *
    * @return a current {@link Span} element or null
    */
   public @Nullable Span span() {
