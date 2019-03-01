@@ -104,8 +104,7 @@ public class HttpServerTracing {
           .doOnCancel(() -> handler.handleSend(response, null, span.annotate("cancel")))
           .doOnSuccess(_void -> handler.handleSend(response, null, span))
           .doOnError(err -> handler.handleSend(response, err, span))
-          .subscriberContext(ctx -> TracingContext.of(ctx).put(span).ctx())
-          .log();
+          .subscriberContext(ctx -> TracingContext.of(ctx).put(span).ctx());
     };
   }
 }

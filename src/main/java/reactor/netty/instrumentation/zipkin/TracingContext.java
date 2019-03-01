@@ -48,14 +48,6 @@ public class TracingContext {
   }
 
   /**
-   * Create a new {@link Context} which contains a {@link Span} element.
-   * @param span a current span
-   */
-  public static Context create(@NotNull Span span) {
-    return Context.of(KEY, span);
-  }
-
-  /**
    * Add a {@link Span} to this {@link Context}
    * @param span a current span
    * @return a new tracing context with a {@link Span} element
