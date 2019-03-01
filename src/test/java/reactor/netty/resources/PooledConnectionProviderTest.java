@@ -230,7 +230,7 @@ public class PooledConnectionProviderTest {
 			assertThat(f1.get()).isNull();
 			assertThat(f2).isNotNull();
 			assertThat(f2.get()).isNull();
-			assertThat(sf).isNotNull();
+			assertThat((Object) sf).isNotNull();
 			assertThat(sf.get()).isNull();
 		}
 	}
