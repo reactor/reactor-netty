@@ -246,6 +246,9 @@ configure(rootProject) { project ->
 
 	// Needed for HTTP/2 testing
 	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.22.Final" + os_suffix
+
+	// Tracing
+	testCompile "io.zipkin.brave:brave-instrumentation-http-tests:$braveVersion"
   }
 
 

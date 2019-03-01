@@ -93,10 +93,11 @@ public class HttpServerTracing {
 
       return Mono
           .defer(() -> Mono.from(next.apply(request, response)))
-          .doOnCancel(() -> span.annotate("cancel").finish())
+          .doOnCancel(() -> handler.handleSend(response, null, span.annotate("cancel")))
           .doOnSuccess(_void -> handler.handleSend(response, null, span))
           .doOnError(err -> handler.handleSend(response, err, span))
-          .subscriberContext(ctx -> TracingContext.of(ctx).put(span).ctx());
+          .subscriberContext(ctx -> TracingContext.of(ctx).put(span).ctx())
+          .log();
     };
   }
 }

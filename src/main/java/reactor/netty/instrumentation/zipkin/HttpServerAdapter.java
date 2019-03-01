@@ -38,12 +38,13 @@ class HttpServerAdapter extends brave.http.HttpServerAdapter<HttpServerRequest, 
 
   @Override
   public String url(HttpServerRequest request) {
-    return request.uri();
+    InetSocketAddress address = request.hostAddress();
+    return request.scheme() + "://" + address.getHostString() + ":" + address.getPort() + request.uri();
   }
 
   @Override
   public String path(HttpServerRequest request) {
-    return request.uri();
+    return "/" + request.path();
   }
 
   @Override
