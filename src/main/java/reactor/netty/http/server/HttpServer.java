@@ -56,7 +56,7 @@ import reactor.util.Loggers;
  * {@code
  * HttpServer.create()
  *           .host("0.0.0.0")
- *           .handle((req, res) -> res.sendString(Flux.just("hello"))
+ *           .handle((req, res) -> res.sendString(Flux.just("hello")))
  *           .bind()
  *           .block();
  * }
