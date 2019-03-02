@@ -24,8 +24,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.Cookie;
 
 /**
- *
- * An Http Reactive Channel with several accessor related to HTTP flow : headers, params,
+ * An Http Reactive Channel with several accessors related to HTTP flow: headers, params,
  * URI, method, websocket...
  *
  * @author Stephane Maldini
@@ -34,32 +33,37 @@ import io.netty.handler.codec.http.cookie.Cookie;
 public interface HttpInfos {
 
 	/**
-	 * Return resolved HTTP cookies
+	 * Returns resolved HTTP cookies
+	 *
 	 * @return Resolved HTTP cookies
 	 */
 	Map<CharSequence, Set<Cookie>> cookies();
 
 
 	/**
-	 * Is the request keepAlive
+	 * Is the request keep alive
+	 *
 	 * @return is keep alive
 	 */
 	boolean isKeepAlive();
 
 	/**
-	 * Return true if websocket connection (upgraded)
+	 * Returns true if websocket connection (upgraded)
+	 *
 	 * @return true if websocket connection
 	 */
 	boolean isWebsocket();
 
 	/**
-	 * Return the resolved request method (HTTP 1.1 etc)
+	 * Returns the resolved request method (HTTP 1.1 etc)
+	 *
 	 * @return the resolved request method (HTTP 1.1 etc)
 	 */
 	HttpMethod method();
 
 	/**
-	 * Return a normalized {@link #uri()} without the leading and trailing '/' if present
+	 * Returns a normalized {@link #uri()} without the leading and trailing '/' if present
+	 *
 	 * @return a normalized {@link #uri()} without the leading and trailing
 	 */
 	default String path() {
@@ -79,13 +83,15 @@ public interface HttpInfos {
 	}
 
 	/**
-	 * Return the resolved target address
+	 * Returns the resolved target address
+	 *
 	 * @return the resolved target address
 	 */
 	String uri();
 
 	/**
-	 * Return the resolved request version (HTTP 1.1 etc)
+	 * Returns the resolved request version (HTTP 1.1 etc)
+	 *
 	 * @return the resolved request version (HTTP 1.1 etc)
 	 */
 	HttpVersion version();

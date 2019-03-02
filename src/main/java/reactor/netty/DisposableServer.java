@@ -19,7 +19,7 @@ package reactor.netty;
 import java.net.InetSocketAddress;
 
 /**
- * Hold contextual information for the underlying server
+ * Holds contextual information for the underlying server
  *
  * @author Stephane Maldini
  * @since 0.8
@@ -27,7 +27,7 @@ import java.net.InetSocketAddress;
 public interface DisposableServer extends DisposableChannel {
 
 	/**
-	 * Return the server's host String. That is, the hostname or in case the server was bound
+	 * Returns the server's host string. That is, the hostname or in case the server was bound
 	 * to a literal IP address, the IP string representation (rather than performing a reverse-DNS
 	 * lookup).
 	 *
@@ -40,7 +40,7 @@ public interface DisposableServer extends DisposableChannel {
 	}
 
 	/**
-	 * Return this server's port.
+	 * Returns this server's port.
 	 * @return The port the server is bound to.
 	 */
 	default int port() {

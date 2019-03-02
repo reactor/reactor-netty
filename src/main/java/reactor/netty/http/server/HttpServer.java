@@ -46,10 +46,12 @@ import reactor.util.Loggers;
 /**
  * An HttpServer allows to build in a safe immutable way an HTTP server that is
  * materialized and connecting when {@link #bind(TcpServer)} is ultimately called.
- * <p> Internally, materialization happens in three phases, first {@link
- * #tcpConfiguration()} is called to retrieve a ready to use {@link TcpServer}, then
- * {@link HttpServer#tcpConfiguration()} ()} retrieve a usable {@link TcpServer} for the final
- * {@link #bind(TcpServer)} is called. <p> Examples:
+ * <p>Internally, materialization happens in two phases:</p>
+ * <ul>
+ * <li>first {@link #tcpConfiguration()} is called to retrieve a ready to use {@link TcpServer}</li>
+ * <li>then {@link #bind(TcpServer)} is called</li>
+ * </ul>
+ * <p>Examples:</p>
  * <pre>
  * {@code
  * HttpServer.create()
@@ -58,24 +60,25 @@ import reactor.util.Loggers;
  *           .bind()
  *           .block();
  * }
+ * </pre>
  *
  * @author Stephane Maldini
  */
 public abstract class HttpServer {
 
 	/**
-	 * Prepare a {@link HttpServer}
+	 * Prepare an {@link HttpServer}
 	 *
-	 * @return a {@link HttpServer}
+	 * @return a new {@link HttpServer}
 	 */
 	public static HttpServer create() {
 		return HttpServerBind.INSTANCE;
 	}
 
 	/**
-	 * Prepare a {@link HttpServer}
+	 * Prepare an {@link HttpServer}
 	 *
-	 * @return a {@link HttpServer}
+	 * @return a new {@link HttpServer}
 	 */
 	public static HttpServer from(TcpServer tcpServer) {
 		return new HttpServerBind(tcpServer);
@@ -96,11 +99,12 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
+	 * Start the server in a blocking fashion, and wait for it to finish initializing
+	 * or the startup timeout expires (the startup timeout is {@code 45} seconds). The
 	 * returned {@link DisposableServer} offers simple server API, including to {@link
 	 * DisposableServer#disposeNow()} shut it down in a blocking fashion.
 	 *
-	 * @return a {@link Connection}
+	 * @return a {@link DisposableServer}
 	 */
 	public final DisposableServer bindNow() {
 		return bindNow(Duration.ofSeconds(45));
@@ -108,9 +112,10 @@ public abstract class HttpServer {
 
 
 	/**
-	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
-	 * returned {@link DisposableServer} offers simple server API, including to {@link
-	 * DisposableServer#disposeNow()} shut it down in a blocking fashion.
+	 * Start the server in a blocking fashion, and wait for it to finish initializing
+	 * or the provided startup timeout expires. The returned {@link DisposableServer}
+	 * offers simple server API, including to {@link DisposableServer#disposeNow()}
+	 * shut it down in a blocking fashion.
 	 *
 	 * @param timeout max startup timeout
 	 *
@@ -131,14 +136,15 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Start a Server in a fully blocking fashion, not only waiting for it to initialize
-	 * but also blocking during the full lifecycle of the client/server. Since most
+	 * Start the server in a fully blocking fashion, not only waiting for it to initialize
+	 * but also blocking during the full lifecycle of the server. Since most
 	 * servers will be long-lived, this is more adapted to running a server out of a main
-	 * method, only allowing shutdown of the servers through sigkill.
+	 * method, only allowing shutdown of the servers through {@code sigkill}.
 	 * <p>
-	 * Note that a {@link Runtime#addShutdownHook(Thread) JVM shutdown hook} is added by
-	 * this method in order to properly disconnect the client/server upon receiving a
-	 * sigkill signal.
+	 * Note: {@link Runtime#addShutdownHook(Thread) JVM shutdown hook} is added by
+	 * this method in order to properly disconnect the server upon receiving a
+	 * {@code sigkill} signal.
+	 * </p>
 	 *
 	 * @param timeout a timeout for server shutdown
 	 * @param onStart an optional callback on server start
@@ -184,8 +190,8 @@ public abstract class HttpServer {
 	 * Enable GZip response compression if the client request presents accept encoding
 	 * headers AND the response reaches a minimum threshold
 	 *
-	 * @param minResponseSize compression is performed once response size exceeds given
-	 * value in byte
+	 * @param minResponseSize compression is performed once response size exceeds the given
+	 * value in bytes
 	 *
 	 * @return a new {@link HttpServer}
 	 */
@@ -198,11 +204,12 @@ public abstract class HttpServer {
 
 	/**
 	 * Enable GZip response compression if the client request presents accept encoding
-	 * headers and the passed {@link java.util.function.Predicate} matches.
+	 * headers and the provided {@link java.util.function.Predicate} matches.
 	 * <p>
-	 *     note the passed {@link HttpServerRequest} and {@link HttpServerResponse}
-	 *     should be considered read-only and the implement SHOULD NOT consume or
-	 *     write the request/response in this predicate.
+	 * Note: the passed {@link HttpServerRequest} and {@link HttpServerResponse}
+	 * should be considered read-only and the implement SHOULD NOT consume or
+	 * write the request/response in this predicate.
+	 * </p>
 	 *
 	 * @param predicate that returns true to compress the response.
 	 *
@@ -233,6 +240,7 @@ public abstract class HttpServer {
 
 	/**
 	 * The host to which this server should bind.
+	 * By default the server will listen on any local address.
 	 *
 	 * @param host The host to bind to.
 	 *
@@ -243,9 +251,9 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Attach an IO handler to react on connected server
+	 * Attach an I/O handler to react on a connected client
 	 *
-	 * @param handler an IO handler that can dispose underlying connection when {@link
+	 * @param handler an I/O handler that can dispose underlying connection when {@link
 	 * Publisher} terminates. Only the first registered handler will subscribe to the
 	 * returned {@link Publisher} while other will immediately cancel given a same
 	 * {@link Connection}
@@ -271,7 +279,7 @@ public abstract class HttpServer {
 
 	/**
 	 * Configure the
-	 * {@link ServerCookieEncoder}, {@link ServerCookieDecoder} will be
+	 * {@link ServerCookieEncoder}; {@link ServerCookieDecoder} will be
 	 * chosen based on the encoder
 	 *
 	 * @param encoder the preferred ServerCookieEncoder
@@ -325,6 +333,7 @@ public abstract class HttpServer {
 
 	/**
 	 * The port to which this server should bind.
+	 * By default the system will pick up an ephemeral port in the {@link #bind()} operation:
 	 *
 	 * @param port The port to bind to.
 	 *
@@ -349,8 +358,9 @@ public abstract class HttpServer {
 	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
 	 * }
+	 * </pre>
 	 *
-	 * @param sslProviderBuilder builder callback for further customization of SslContext.
+	 * @param sslProviderBuilder builder callback for further customization of {@link SslContext}.
 	 *
 	 * @return a new {@link HttpServer}
 	 */
@@ -374,10 +384,10 @@ public abstract class HttpServer {
 	/**
 	 * Apply {@link ServerBootstrap} configuration given mapper taking currently
 	 * configured one and returning a new one to be ultimately used for socket binding.
-	 * <p> Configuration will apply during {@link #tcpConfiguration()} phase.
+	 * <p>Configuration will apply during {@link #tcpConfiguration()} phase.</p>
 	 *
-	 * @param tcpMapper A tcpServer mapping function to update tcp configuration and
-	 * return an enriched tcp server to use.
+	 * @param tcpMapper A {@link TcpServer} mapping function to update tcp configuration and
+	 * return an enriched TCP server to use.
 	 *
 	 * @return a new {@link HttpServer}
 	 */
@@ -427,7 +437,7 @@ public abstract class HttpServer {
 	protected abstract Mono<? extends DisposableServer> bind(TcpServer b);
 
 	/**
-	 * Materialize a TcpServer from the parent {@link HttpServer} chain to use with
+	 * Materialize a {@link TcpServer} from the parent {@link HttpServer} chain to use with
 	 * {@link #bind(TcpServer)} or separately
 	 *
 	 * @return a configured {@link TcpServer}

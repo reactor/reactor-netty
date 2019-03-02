@@ -33,7 +33,7 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 
 /**
  *
- * An Http Reactive Channel with several accessor related to HTTP flow : headers, params,
+ * An Http Reactive Channel with several accessors related to HTTP flow: headers, params,
  * URI, method, websocket...
  *
  * @author Stephane Maldini
@@ -42,28 +42,28 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 
 	/**
-	 * Add an outbound cookie
+	 * Adds an outbound cookie
 	 *
-	 * @return this outbound
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse addCookie(Cookie cookie);
 
 	/**
-	 * Add an outbound http header, appending the value if the header already exist.
+	 * Adds an outbound HTTP header, appending the value if the header already exist.
 	 *
 	 * @param name header name
 	 * @param value header value
 	 *
-	 * @return this outbound
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse addHeader(CharSequence name, CharSequence value);
 
 	/**
-	 * Set transfer-encoding header
+	 * Sets Transfer-Encoding header
 	 *
-	 * @param chunked true if transfer-encoding:chunked
+	 * @param chunked true if Transfer-Encoding: chunked
 	 *
-	 * @return this outbound
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse chunkedTransfer(boolean chunked);
 
@@ -71,44 +71,44 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse withConnection(Consumer<? super Connection> withConnection);
 
 	/**
-	 * Enable/Disable compression handling (gzip/deflate) for the underlying response
+	 * Enables/Disables compression handling (gzip/deflate) for the underlying response
 	 *
 	 * @param compress should handle compression
 	 *
-	 * @return this outbound
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse compression(boolean compress);
 
 	/**
-	 * Return  true if headers and status have been sent to the client
+	 * Returns true if headers and status have been sent to the client
 	 *
 	 * @return true if headers and status have been sent to the client
 	 */
 	boolean hasSentHeaders();
 
 	/**
-	 * Set an outbound header, replacing any pre-existing value.
+	 * Sets an outbound HTTP header, replacing any pre-existing value.
 	 *
 	 * @param name headers key
 	 * @param value header value
 	 *
-	 * @return this outbound
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse header(CharSequence name, CharSequence value);
 
 	/**
-	 * Set outbound headers, replacing any pre-existing value for these headers.
+	 * Sets outbound HTTP headers, replacing any pre-existing value for these headers.
 	 *
 	 * @param headers netty headers map
 	 *
-	 * @return this outbound
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse headers(HttpHeaders headers);
 
 	/**
-	 * Set the request keepAlive if true otherwise remove the existing connection keep alive header
+	 * Sets the request {@code keepAlive} if true otherwise remove the existing connection keep alive header
 	 *
-	 * @return this outbound
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse keepAlive(boolean keepAlive);
 
@@ -119,13 +119,14 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	}
 
 	/**
-	 * Return headers sent back to the clients
+	 * Returns the outbound HTTP headers, sent back to the clients
+	 *
 	 * @return headers sent back to the clients
 	 */
 	HttpHeaders responseHeaders();
 
 	/**
-	 * Send headers and empty content thus delimiting a full empty body http response.
+	 * Sends the HTTP headers and empty content thus delimiting a full empty body http response.
 	 *
 	 * @return a {@link Mono} successful on committed response
 	 * @see #send(Publisher)
@@ -133,21 +134,21 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	Mono<Void> send();
 
 	/**
-	 * Return a {@link NettyOutbound} successful on committed response
+	 * Returns a {@link NettyOutbound} successful on committed response
 	 *
 	 * @return a {@link NettyOutbound} successful on committed response
 	 */
 	NettyOutbound sendHeaders();
 
 	/**
-	 * Send 404 status {@link HttpResponseStatus#NOT_FOUND}.
+	 * Sends 404 status {@link HttpResponseStatus#NOT_FOUND}.
 	 *
 	 * @return a {@link Mono} successful on flush confirmation
 	 */
 	Mono<Void> sendNotFound();
 
 	/**
-	 * Send redirect status {@link HttpResponseStatus#FOUND} along with a location
+	 * Sends redirect status {@link HttpResponseStatus#FOUND} along with a location
 	 * header to the remote client.
 	 *
 	 * @param location the location to redirect to
@@ -157,24 +158,26 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	Mono<Void> sendRedirect(String location);
 
 	/**
-	 * Upgrade connection to Websocket. Mono and Callback are invoked on handshake
-	 * success, otherwise the returned {@link Mono} fails.
+	 * Upgrades the connection to websocket. A {@link Mono} completing when the upgrade
+	 * is confirmed, then the provided callback is invoked, if the upgrade is not
+	 * successful the returned {@link Mono} fails.
 	 *
-	 * @param websocketHandler the in/out handler for ws transport
-	 * @return a {@link Mono} completing when upgrade is confirmed
+	 * @param websocketHandler the I/O handler for websocket transport
+	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
 	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return sendWebsocket(null, websocketHandler);
 	}
 
 	/**
-	 * Upgrade connection to Websocket with optional subprotocol(s). Mono and Callback
-	 * are invoked on handshake success, otherwise the returned {@link Mono} fails.
+	 * Upgrades the connection to websocket with optional subprotocol(s). A {@link Mono}
+	 * completing when the upgrade is confirmed, then the provided callback is invoked,
+	 * if the upgrade is not successful the returned {@link Mono} fails.
 	 *
 	 * @param protocols optional sub-protocol
-	 * @param websocketHandler the in/out handler for ws transport
+	 * @param websocketHandler the I/O handler for websocket transport
 	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
+	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
 	default Mono<Void> sendWebsocket(@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
@@ -182,14 +185,15 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	}
 
 	 /**
-	 * Upgrade connection to Websocket with optional subprotocol(s). Mono and Callback
-	 * are invoked on handshake success, otherwise the returned {@link Mono} fails.
+	 * Upgrades the connection to websocket with optional subprotocol(s). A {@link Mono}
+	  * completing when the upgrade is confirmed, then the provided callback is invoked,
+	  * if the upgrade is not successful the returned {@link Mono} fails.
 	 *
 	 * @param protocols optional sub-protocol
 	 * @param maxFramePayloadLength maximum allowable frame payload length
-	 * @param websocketHandler the in/out handler for ws transport
+	 * @param websocketHandler the I/O handler for websocket transport
 	 *
-	 * @return a {@link Mono} completing when upgrade is confirmed
+	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
 	Mono<Void> sendWebsocket(@Nullable String protocols,
 			int maxFramePayloadLength,
@@ -197,28 +201,32 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 
 
 	/**
-	 * Add "text/event-stream" content-type for Server-Sent Events
-	 * @return this response
+	 * Adds "text/event-stream" content-type for Server-Sent Events
+	 *
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse sse();
 
 	/**
-	 * Return the assigned HTTP status
+	 * Returns the assigned HTTP status
+	 *
 	 * @return the assigned HTTP status
 	 */
 	HttpResponseStatus status();
 
 	/**
-	 * Set an HTTP status to be sent along with the headers
+	 * Sets an HTTP status to be sent along with the headers
+	 *
 	 * @param status an HTTP status to be sent along with the headers
-	 * @return this response
+	 * @return this {@link HttpServerResponse}
 	 */
 	HttpServerResponse status(HttpResponseStatus status);
 
 	/**
-	 * Set an HTTP status to be sent along with the headers
+	 * Sets an HTTP status to be sent along with the headers
+	 *
 	 * @param status an HTTP status to be sent along with the headers
-	 * @return this response
+	 * @return this {@link HttpServerResponse}
 	 */
 	default HttpServerResponse status(int status){
 		return status(HttpResponseStatus.valueOf(status));

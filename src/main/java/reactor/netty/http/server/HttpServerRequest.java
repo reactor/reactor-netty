@@ -30,7 +30,7 @@ import reactor.netty.NettyInbound;
 import reactor.netty.http.HttpInfos;
 
 /**
- * An Http Reactive Channel with several accessor related to HTTP flow : headers, params,
+ * An Http Reactive Channel with several accessors related to HTTP flow: headers, params,
  * URI, method, websocket...
  *
  * @author Stephane Maldini
@@ -52,7 +52,7 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	String param(CharSequence key);
 
 	/**
-	 * Return the param captured key/value map
+	 * Returns the param captured key/value map
 	 *
 	 * @return the param captured key/value map
 	 */
@@ -62,12 +62,12 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	/**
 	 * @param headerResolver provide a params
 	 *
-	 * @return this request
+	 * @return this {@link HttpServerRequest}
 	 */
 	HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> headerResolver);
 
 	/**
-	 * Return a {@link Flux} of {@link HttpContent} containing received chunks
+	 * Returns a {@link Flux} of {@link HttpContent} containing received chunks
 	 *
 	 * @return a {@link Flux} of {@link HttpContent} containing received chunks
 	 */
@@ -76,28 +76,28 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	}
 
 	/**
-	 * Return the address of the host peer.
+	 * Returns the address of the host peer.
 	 *
 	 * @return the host's address
 	 */
 	InetSocketAddress hostAddress();
 
 	/**
-	 * Return the address of the remote peer.
+	 * Returns the address of the remote peer.
 	 *
 	 * @return the peer's address
 	 */
 	InetSocketAddress remoteAddress();
 
 	/**
-	 * Return inbound {@link HttpHeaders}
+	 * Returns inbound {@link HttpHeaders}
 	 *
 	 * @return inbound {@link HttpHeaders}
 	 */
 	HttpHeaders requestHeaders();
 
 	/**
-	 * Return the current scheme
+	 * Returns the current protocol scheme
 	 *
 	 * @return the protocol scheme
 	 */

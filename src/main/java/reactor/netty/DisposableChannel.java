@@ -28,7 +28,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
 /**
- * Hold contextual information for the underlying channel and provide for
+ * Holds contextual information for the underlying channel and provides
  * non-blocking resource disposing API
  *
  * @author Stephane Maldini
@@ -38,7 +38,7 @@ import reactor.core.publisher.Mono;
 public interface DisposableChannel extends Disposable {
 
 	/**
-	 * Return local server selector channel address.
+	 * Returns local server selector channel address.
 	 *
 	 * @return local {@link InetSocketAddress}
 	 */
@@ -58,8 +58,8 @@ public interface DisposableChannel extends Disposable {
 	}
 
 	/**
-	 * Return the underlying {@link Channel}. Direct interaction might be considered
-	 * insecure if that affects the underlying IO processing such as read, write or close
+	 * Returns the underlying {@link Channel}. Direct interaction might be considered
+	 * insecure if that affects the underlying I/O processing such as read, write or close
 	 * or state such as pipeline handler addition/removal.
 	 *
 	 * @return the underlying {@link Channel}
@@ -67,7 +67,7 @@ public interface DisposableChannel extends Disposable {
 	Channel channel();
 
 	/**
-	 * Release or close the underlying {@link Channel}
+	 * Releases or closes the underlying {@link Channel}
 	 */
 	@Override
 	default void dispose() {
@@ -75,15 +75,16 @@ public interface DisposableChannel extends Disposable {
 	}
 
 	/**
-	 * Release or close the underlying {@link Channel} in a blocking fashion with 3
-	 * seconds default timeout.
+	 * Releases or closes the underlying {@link Channel} in a blocking fashion with
+	 * {@code 3} seconds default timeout.
 	 */
 	default void disposeNow() {
 		disposeNow(Duration.ofSeconds(3));
 	}
 
 	/**
-	 * Release or close the underlying {@link Channel} in a blocking fashion
+	 * Releases or closes the underlying {@link Channel} in a blocking fashion with
+	 * the provided timeout.
 	 */
 	default void disposeNow(Duration timeout) {
 		if (isDisposed()) {
@@ -99,7 +100,7 @@ public interface DisposableChannel extends Disposable {
 	}
 
 	/**
-	 * Return a {@link CoreSubscriber} that will dispose on complete or error
+	 * Returns a {@link CoreSubscriber} that will dispose on complete or error
 	 */
 	default CoreSubscriber<Void> disposeSubscriber() {
 		return new ReactorNetty.ChannelDisposer(this);
@@ -111,7 +112,7 @@ public interface DisposableChannel extends Disposable {
 	}
 
 	/**
-	 * Return an observing {@link Mono} terminating with success when shutdown
+	 * Returns an observing {@link Mono} terminating with success when shutdown
 	 * successfully or error.
 	 *
 	 * @return a {@link Mono} terminating with success if shutdown successfully or error
@@ -121,7 +122,7 @@ public interface DisposableChannel extends Disposable {
 	}
 
 	/**
-	 * Assign a {@link Disposable} to be invoked when the channel is closed.
+	 * Assigns a {@link Disposable} to be invoked when the channel is closed.
 	 *
 	 * @param onDispose the close event handler
 	 *

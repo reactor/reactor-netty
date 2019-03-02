@@ -77,30 +77,30 @@ public interface NettyPipeline {
 	interface SendOptions {
 
 		/**
-		 * Make the underlying channel flush on a terminated {@link Publisher} (default).
+		 * Makes the underlying channel flushes on a terminated {@link Publisher} (default).
 		 *
-		 * @return this builder
+		 * @return this {@link SendOptions}
 		 */
 		SendOptions flushOnBoundary();
 
 		/**
-		 * Make the underlying channel flush item by item.
-		 * Flush operation will be executed at some time in the future.
+		 * Makes the underlying channel flushes item by item.
+		 * Flush operation will be scheduled and executed at some time in the future.
 		 *
-		 * @return this builder
+		 * @return this {@link SendOptions}
 		 */
 		default SendOptions flushOnEach() {
 			return flushOnEach(true);
 		}
 
 		/**
-		 * Make the underlying channel flush item by item.
-		 * Whether flush operation is executed immediately
-		 * or not is specified by <code>withEventLoop</code> parameter.
+		 * Makes the underlying channel flushes item by item.
+		 * Whether flush operation is executed immediately after the write operation
+		 * or not is specified by {@code withEventLoop} parameter.
 		 *
 		 * @param withEventLoop flag specifying whether flush operation
 		 *                      will be executed immediately or at some time in the future
-		 * @return this builder
+		 * @return this {@link SendOptions}
 		 */
 		SendOptions flushOnEach(boolean withEventLoop);
 
