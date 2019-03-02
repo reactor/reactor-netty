@@ -51,12 +51,12 @@ import reactor.util.Loggers;
 /**
  * A TcpServer allows to build in a safe immutable way a TCP server that is materialized
  * and connecting when {@link #bind(ServerBootstrap)} is ultimately called.
- * <p>
- * <p> Internally, materialization happens in two phases, first {@link #configure()} is
- * called to retrieve a ready to use {@link ServerBootstrap} then {@link #bind(ServerBootstrap)}
- * is called.
- * <p>
- * <p> Example:
+ * <p> Internally, materialization happens in two phases:</p>
+ * <ul>
+ * <li>first {@link #configure()} is called to retrieve a ready to use {@link ServerBootstrap}</li>
+ * <li>then {@link #bind(ServerBootstrap)} is called.</li>
+ * </ul>
+ * <p> Example:</p>
  * <pre>
  * {@code
  * TcpServer.create()
@@ -68,6 +68,7 @@ import reactor.util.Loggers;
  *          .bind()
  *          .block()
  * }
+ * </pre>
  *
  * @author Stephane Maldini
  */
@@ -76,7 +77,7 @@ public abstract class TcpServer {
 	/**
 	 * Prepare a {@link TcpServer}
 	 *
-	 * @return a {@link TcpServer}
+	 * @return a new {@link TcpServer}
 	 */
 	public static TcpServer create() {
 		return TcpServerBind.INSTANCE;
@@ -95,7 +96,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Inject default attribute to the future child {@link Channel} connections. They
+	 * Injects default attribute to the future child {@link Channel} connections. It
 	 * will be available via {@link Channel#attr(AttributeKey)}.
 	 * If the {@code value} is {@code null}, the attribute of the specified {@code key}
 	 * is removed.
@@ -114,9 +115,9 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Apply {@link ServerBootstrap} configuration given mapper taking currently configured one
-	 * and returning a new one to be ultimately used for socket binding. <p> Configuration
-	 * will apply during {@link #configure()} phase.
+	 * Applies {@link ServerBootstrap} configuration given mapper taking currently configured one
+	 * and returning a new one to be ultimately used for socket binding.
+	 * <p> Configuration will apply during {@link #configure()} phase.</p>
 	 *
 	 * @param bootstrapMapper A bootstrap mapping function to update configuration and return an
 	 * enriched bootstrap.
@@ -128,9 +129,9 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Bind the {@link TcpServer} and return a {@link Mono} of {@link DisposableServer}. If
+	 * Binds the {@link TcpServer} and returns a {@link Mono} of {@link DisposableServer}. If
 	 * {@link Mono} is cancelled, the underlying binding will be aborted. Once the {@link
-	 * DisposableServer} has been emitted and is not necessary anymore, disposing main server
+	 * DisposableServer} has been emitted and is not necessary anymore, disposing the main server
 	 * loop must be done by the user via {@link DisposableServer#dispose()}.
 	 *
 	 * If updateConfiguration phase fails, a {@link Mono#error(Throwable)} will be returned;
@@ -150,7 +151,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Bind the {@link TcpServer} and return a {@link Mono} of {@link DisposableServer}
+	 * Binds the {@link TcpServer} and returns a {@link Mono} of {@link DisposableServer}
 	 *
 	 * @param b the {@link ServerBootstrap} to bind
 	 *
@@ -159,10 +160,10 @@ public abstract class TcpServer {
 	public abstract Mono<? extends DisposableServer> bind(ServerBootstrap b);
 
 	/**
-	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
+	 * Starts the server in a blocking fashion, and waits for it to finish initializing
+	 * or the startup timeout expires (the startup timeout is {@code 45} seconds). The
 	 * returned {@link DisposableServer} offers simple server API, including to {@link
-	 * DisposableServer#disposeNow()} shut it down in a blocking fashion. The max startup
-	 * timeout is 45 seconds.
+	 * DisposableServer#disposeNow()} shut it down in a blocking fashion.
 	 *
 	 * @return a {@link DisposableServer}
 	 */
@@ -171,9 +172,10 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Start a Server in a blocking fashion, and wait for it to finish initializing. The
-	 * returned {@link DisposableServer} offers simple server API, including to {@link
-	 * DisposableServer#disposeNow()} shut it down in a blocking fashion.
+	 * Start the server in a blocking fashion, and wait for it to finish initializing
+	 * or the provided startup timeout expires. The returned {@link DisposableServer}
+	 * offers simple server API, including to {@link DisposableServer#disposeNow()}
+	 * shut it down in a blocking fashion.
 	 *
 	 * @param timeout max startup timeout
 	 *
@@ -194,14 +196,14 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Start a Server in a fully blocking fashion, not only waiting for it to initialize
-	 * but also blocking during the full lifecycle of the client/server. Since most
+	 * Start the server in a fully blocking fashion, not only waiting for it to initialize
+	 * but also blocking during the full lifecycle of the server. Since most
 	 * servers will be long-lived, this is more adapted to running a server out of a main
-	 * method, only allowing shutdown of the servers through sigkill.
+	 * method, only allowing shutdown of the servers through {@code sigkill}.
 	 * <p>
-	 * Note that a {@link Runtime#addShutdownHook(Thread) JVM shutdown hook} is added by
-	 * this method in order to properly disconnect the client/server upon receiving a
-	 * sigkill signal.
+	 * Note: {@link Runtime#addShutdownHook(Thread) JVM shutdown hook} is added by
+	 * this method in order to properly disconnect the server upon receiving a
+	 * {@code sigkill} signal.</p>
 	 *
 	 * @param timeout a timeout for server shutdown
 	 * @param onStart an optional callback on server start
@@ -226,15 +228,15 @@ public abstract class TcpServer {
 
 
 	/**
-	 * Materialize a ServerBootstrap from the parent {@link TcpServer} chain to use with {@link
-	 * #bind(ServerBootstrap)} or separately
+	 * Materializes a {@link ServerBootstrap} from the parent {@link TcpServer} chain to use with
+	 * {@link #bind(ServerBootstrap)} or separately
 	 *
 	 * @return a configured {@link ServerBootstrap}
 	 */
 	public abstract ServerBootstrap configure();
 
 	/**
-	 * Setup a callback called when {@link io.netty.channel.ServerChannel} is about to
+	 * Setups a callback called when {@link io.netty.channel.ServerChannel} is about to
 	 * bind.
 	 *
 	 * @param doOnBind a consumer observing server start event
@@ -248,7 +250,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Setup a callback called when {@link io.netty.channel.ServerChannel} is
+	 * Setups a callback called when {@link io.netty.channel.ServerChannel} is
 	 * bound.
 	 *
 	 * @param doOnBound a consumer observing server started event
@@ -261,7 +263,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Setup a callback called when a remote client is connected
+	 * Setups a callback called when a remote client is connected
 	 *
 	 * @param doOnConnection a consumer observing connected clients
 	 *
@@ -272,7 +274,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Setup a callback called when {@link io.netty.channel.ServerChannel} is
+	 * Setups a callback called when {@link io.netty.channel.ServerChannel} is
 	 * unbound.
 	 *
 	 * @param doOnUnbind a consumer observing server stop event
@@ -285,7 +287,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
+	 * Setups all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
 	 * has been bound and after it has been unbound.
 	 *
 	 * @param onBind a consumer observing server start event
@@ -304,10 +306,10 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Attach an IO handler to react on connected client
+	 * Attaches an I/O handler to react on a connected client
 	 *
-	 * @param handler an IO handler that can dispose underlying connection when {@link
-	 * Publisher} terminates.
+	 * @param handler an I/O handler that can dispose underlying connection when
+	 * {@link Publisher} terminates.
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -318,6 +320,7 @@ public abstract class TcpServer {
 
 	/**
 	 * The host to which this server should bind.
+	 * By default the server will listen on any local address.
 	 *
 	 * @param host The host to bind to.
 	 *
@@ -329,7 +332,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Return true if that {@link TcpServer} secured via SSL transport
+	 * Returns true if that {@link TcpServer} secured via SSL transport
 	 *
 	 * @return true if that {@link TcpServer} secured via SSL transport
 	 */
@@ -338,7 +341,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Remove any previously applied SSL configuration customization
+	 * Removes any previously applied SSL configuration customization
 	 *
 	 * @return a new {@link TcpServer}
 	 */
@@ -347,7 +350,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
+	 * Setups all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
 	 * has been connected and after it has been disconnected.
 	 *
 	 * @param observer a consumer observing state changes
@@ -359,7 +362,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Set a {@link ChannelOption} value for low level connection settings like {@code SO_TIMEOUT}
+	 * Sets a {@link ChannelOption} value for low level connection settings like {@code SO_TIMEOUT}
 	 * or {@code SO_KEEPALIVE}. This will apply to each new channel from remote peer.
 	 * Use a value of {@code null} to remove a previous set {@link ChannelOption}.
 	 *
@@ -378,6 +381,7 @@ public abstract class TcpServer {
 
 	/**
 	 * The port to which this server should bind.
+	 * By default the system will pick up an ephemeral port in the {@link #bind()} operation:
 	 *
 	 * @param port The port to bind to.
 	 *
@@ -388,7 +392,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Run IO loops on the given {@link EventLoopGroup}.
+	 * Runs I/O loops on the given {@link EventLoopGroup}.
 	 *
 	 * @param eventLoopGroup an eventLoopGroup to share
 	 *
@@ -400,7 +404,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
+	 * Runs I/O loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
 	 * container. Will prefer native (epoll/kqueue) implementation if available unless the
 	 * environment property {@code reactor.netty.native} is set to {@code false}.
 	 *
@@ -414,7 +418,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Run IO loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
+	 * Runs I/O loops on a supplied {@link EventLoopGroup} from the {@link LoopResources}
 	 * container.
 	 *
 	 * @param channelResources a {@link LoopResources} accepting native runtime
@@ -442,6 +446,7 @@ public abstract class TcpServer {
 	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
 	 * }
+	 * </pre>
 	 *
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 *
@@ -452,7 +457,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Apply an SSL configuration via the passed {@link SslProvider}.
+	 * Applies an SSL configuration via the passed {@link SslProvider}.
 	 *
 	 * If {@link SelfSignedCertificate} needs to be used, the sample below can be
 	 * used. Note that {@link SelfSignedCertificate} should not be used in production.
@@ -463,6 +468,7 @@ public abstract class TcpServer {
 	 *             SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 	 *     secure(sslContextSpec -> sslContextSpec.sslContext(sslContextBuilder));
 	 * }
+	 * </pre>
 	 *
 	 * @param sslProvider The provider to set when configuring SSL
 	 *
@@ -473,7 +479,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Inject default attribute to the future {@link io.netty.channel.ServerChannel}
+	 * Injects default attribute to the future {@link io.netty.channel.ServerChannel}
 	 * selector connection.
 	 *
 	 * @param key the attribute key
@@ -490,7 +496,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Set a {@link ChannelOption} value for low level connection settings like {@code SO_TIMEOUT}
+	 * Sets a {@link ChannelOption} value for low level connection settings like {@code SO_TIMEOUT}
 	 * or {@code SO_KEEPALIVE}. This will apply to parent selector channel.
 	 *
 	 * @param key the option key
@@ -506,7 +512,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
+	 * Returns the current {@link SslProvider} if that {@link TcpServer} secured via SSL
 	 * transport or null
 	 *
 	 * @return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
@@ -535,7 +541,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Apply a wire logger configuration using the specified category
+	 * Applies a wire logger configuration using the specified category
 	 * and {@code DEBUG} logger level
 	 *
 	 * @param category the logger category
@@ -547,7 +553,7 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Apply a wire logger configuration using the specified category
+	 * Applies a wire logger configuration using the specified category
 	 * and logger level
 	 *
 	 * @param category the logger category

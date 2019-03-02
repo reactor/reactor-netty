@@ -32,6 +32,7 @@ public interface NettyInbound {
 
 	/**
 	 * A {@link Flux} extension that allows for extra decoding operators
+	 *
 	 * @return a new {@link ByteBufFlux}
 	 */
 	ByteBufFlux receive();
@@ -45,9 +46,8 @@ public interface NettyInbound {
 	Flux<?> receiveObject();
 
 	/**
-	 * Call the passed callback with a {@link Connection} to operate on the
-	 * underlying
-	 * {@link Channel} state. This allows for chaining inbound API.
+	 * Calls the passed callback with a {@link Connection} to operate on the
+	 * underlying {@link Channel} state. This allows for chaining inbound API.
 	 *
 	 * @param withConnection connection callback
 	 *
