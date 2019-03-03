@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.server;
 
+import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
 import io.netty.handler.codec.http.HttpHeaders;
@@ -197,6 +198,61 @@ public class ConnectionInfoTests {
 				});
 	}
 
+	@Test
+	public void parseAddressForHostNameNoPort() {
+		testParseAddress("a.example.com", 8080, inetSocketAddress -> {
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("a.example.com");
+			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
+		});
+	}
+
+	@Test
+	public void parseAddressForHostNameWithPort() {
+		testParseAddress("a.example.com:443", 8080, inetSocketAddress -> {
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("a.example.com");
+			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
+		});
+	}
+
+	@Test
+	public void parseAddressForIpV4NoPort() {
+		testParseAddress("192.0.2.60", 8080, inetSocketAddress -> {
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("192.0.2.60");
+			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
+		});
+	}
+
+	@Test
+	public void parseAddressForIpV4WithPort() {
+		testParseAddress("192.0.2.60:443", 8080, inetSocketAddress -> {
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("192.0.2.60");
+			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
+		});
+	}
+
+	@Test
+	public void parseAddressForIpV6NoPortNoBrackets() {
+		testParseAddress("1abc:2abc:3abc:0:0:0:5abc:6abc", 8080, inetSocketAddress -> {
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
+		});
+	}
+
+	@Test
+	public void parseAddressForIpV6NoPortWithBrackets() {
+		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]", 8080, inetSocketAddress -> {
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
+		});
+	}
+
+	@Test
+	public void parseAddressForIpV6WithPortAndBrackets() {
+		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]:443", 8080, inetSocketAddress -> {
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
+		});
+	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
 			Consumer<HttpServerRequest> serverConsumer) {
@@ -234,9 +290,14 @@ public class ConnectionInfoTests {
 		assertThat(response).isEqualTo("OK");
 	}
 
+	private void testParseAddress(String address, int defaultPort, Consumer<InetSocketAddress> inetSocketAddressConsumer) {
+		inetSocketAddressConsumer.accept(ConnectionInfo.parseAddress(address, defaultPort));
+	}
+
 	@After
 	public void tearDown() {
-		this.connection.disposeNow();
+		if(null != this.connection)
+			this.connection.disposeNow();
 	}
 
 }
