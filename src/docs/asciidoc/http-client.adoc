@@ -1,0 +1,369 @@
+:sourcedir: ./../../main/java
+:javadoc: https://projectreactor.io/docs/netty/release/api
+
+[[http-client]]
+== HTTP Client 101
+`Reactor Netty` provides easy to use and configure
+{javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient].
+It hides most of the `Netty` functionality that is needed in order to create a `HTTP` client,
+and in addition adds `Reactive Streams` backpressure.
+
+=== Connect
+To connect the `HTTP` client to a given `HTTP` endpoint, a {javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient]
+instance has to be created and configured.
+
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()                   <1>
+                          .get()                      <2>
+                          .uri("http://example.com/") <3>
+                          .response()                 <4>
+                          .block();
+    }
+}
+----
+<1> Creates a {javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient]
+instance ready for configuring.
+<2> Specifies that `GET` method will be used.
+<3> Specifies the path.
+<4> Obtains the response {javadoc}/reactor/netty/http/client/HttpClientResponse.html[HttpClientResponse]
+
+Utilizing `websocket`
+
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.NettyPipeline;
+import reactor.netty.http.client.HttpClient;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClient.create()
+                  .websocket()
+                  .uri("wss://echo.websocket.org")
+                  .handle((inbound, outbound) -> {
+                      inbound.receive()
+                             .asString()
+                             .take(1)
+                             .subscribe(System.out::println);
+
+                      return outbound.options(NettyPipeline.SendOptions::flushOnEach)
+                                     .sendString(Mono.just("hello"))
+                                     .neverComplete();
+                  })
+                  .blockLast();
+    }
+}
+----
+
+==== Host and Port
+In order to connect to a specific `host` and `port`, the configuration below can be applied to the `HTTP` client:
+
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .tcpConfiguration(tcpClient -> tcpClient.host("example.com")) <1>
+                          .port(80)                                                     <2>
+                          .get()
+                          .uri("/")
+                          .response()
+                          .block();
+    }
+}
+----
+<1> Configures the `HTTP` host
+<2> Configures the `HTTP` port
+
+=== Writing Data
+In order to send data to a given `HTTP` endpoint, a `Publisher` can be provided using
+{javadoc}/reactor/netty/http/client/HttpClient.RequestSender.html#send-org.reactivestreams.Publisher-[send(Publisher)] method.
+By default `Transfer-Encoding: chunked` will be applied for those `HTTP` methods for which
+a request body is expected. `Content-Length` provided via request headers will disable `Transfer-Encoding: chunked`
+if this is necessary.
+
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.ByteBufFlux;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .post()
+                          .uri("http://example.com/")
+                          .send(ByteBufFlux.fromString(Mono.just("hello"))) <1>
+                          .response()
+                          .block();
+    }
+}
+----
+<1> Sends `hello` string to the given `HTTP` endpoint
+
+==== Adding Headers and other Metadata
+When sending data to a given `HTTP` endpoint, additional headers, cookies etc.
+might be necessary, the configuration below can be used.
+
+[source,java]
+----
+import io.netty.handler.codec.http.HttpHeaderNames;
+import reactor.core.publisher.Mono;
+import reactor.netty.ByteBufFlux;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .headers(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, 5)) <1>
+                          .post()
+                          .uri("http://example.com/")
+                          .send(ByteBufFlux.fromString(Mono.just("hello")))
+                          .response()
+                          .block();
+    }
+}
+----
+<1> Disables `Transfer-Encoding: chunked` and provides `Content-Length` header.
+
+===== Compression
+The `HTTP` client can be configured with compression enabled which means the request header
+`Accept-Encoding` or in case of websocket the `Sec-Websocket-Extensions` header will be added
+to the request headers.
+
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .compress(true)
+                          .get()
+                          .uri("http://example.com/")
+                          .response()
+                          .block();
+    }
+}
+----
+
+===== Auto-Redirect Support
+The `HTTP` client can be configured with auto-redirect support enabled.
+
+`Reactor Netty` provides two different strategies for auto-redirect support:
+
+* `followRedirect(boolean)` - Specifies whether http statuses `301|302|307|308` auto-redirect support is enabled
+* `followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse>)` - Enables auto-redirect support if the passed
+predicate matches.
+
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .followRedirect(true)
+                          .get()
+                          .uri("http://example.com/")
+                          .response()
+                          .block();
+    }
+}
+----
+
+=== Flushing Strategies
+`Reactor Netty` provides three different strategies for flushing the outgoing data
+{javadoc}/reactor/netty/NettyPipeline.SendOptions.html[NettyPipeline.SendOptions]
+
+* `flushOnBoundary()` - this is the default behaviour. The flush operation will be explicitly invoked on a terminated `Publisher`.
+* `flushOnEach()` - The flushing operation will be executed as soon as possible after the write operation.
+This means that the ultimate goal is a flush operation after every element that was written, however as the flush operation
+will be scheduled, the flush operation might be invoked once for several write operations.
+* `flushOnEach(boolean)` - Depending on the provided boolean, the flush operation might behave as the one described above
+(when invoked with `true`), or (when invoked with `false`) it is guaranteed that there will be a flush operation after
+every write operation.
+
+[source,java]
+----
+import reactor.core.publisher.Flux;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .post()
+                          .uri("http://example.com/")
+                          .send((request, outbound) ->
+                                  outbound.options(o -> o.flushOnEach(false)) <1>
+                                          .sendString(Flux.just("Hello", "World", "!")))
+                          .response()
+                          .block();
+    }
+}
+----
+<1> Configures the flushing strategy to flush after every element emitted by the given `Publisher`.
+The flush operation will not be scheduled, which means flush operation will be invoked after every write operation.
+
+NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
+The buffer size can be configured using the channel option `SO_SNDBUF`.
+
+=== Consuming Data
+In order to receive data from a given `HTTP` endpoint, one of the methods below can be used
+{javadoc}/reactor/netty/http/client/HttpClient.ResponseReceiver.html[HttpClient.ResponseReceiver].
+
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+
+public class Application {
+
+    public static void main(String[] args) {
+        String response =
+                HttpClient.create()
+                          .get()
+                          .uri("http://example.com/")
+                          .responseContent() <1>
+                          .aggregate()       <2>
+                          .asString()        <3>
+                          .block();
+    }
+}
+----
+<1> Receives data from a given `HTTP` endpoint
+<2> Aggregates the data
+<3> Transforms the data as string
+
+==== Reading Headers and other Metadata
+When receiving data from a given `HTTP` endpoint, response headers, status code etc.
+might need to be checked. This additional metadata can be obtained using
+{javadoc}/reactor/netty/http/client/HttpClientResponse.html[HttpClientResponse]
+
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+
+public class Application {
+
+    public static void main(String[] args) {
+        String response =
+                HttpClient.create()
+                          .get()
+                          .uri("http://example.com/")
+                          .responseSingle((resp, bytes) -> {
+                              System.out.println(resp.status()); <1>
+                              return bytes.asString();
+                          })
+                          .block();
+    }
+}
+----
+<1> Obtains the status code.
+
+=== TCP Level Configurations
+When configurations on a TCP level are needed the snippet below can be used in order
+to extend the default `TCP` client configuration:
+
+[source,java]
+----
+import io.netty.channel.ChannelOption;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .tcpConfiguration(tcpClient ->
+                                  tcpClient.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000))
+                          .get()
+                          .uri("http://example.com/")
+                          .response()
+                          .block();
+    }
+}
+----
+
+Refer to <<tcp-client.adoc>> for more details about `TCP` level configurations.
+
+==== Wire Logger
+`Reactor Netty` provides a wire logging when the traffic between the peers needs to be inspected.
+Bye default the wire logging is disabled.
+In order to be enabled it, the logger `reactor.netty.http.client.HttpClient` level has to be set to `DEBUG`
+and the configuration below to be applied.
+
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .wiretap(true) <1>
+                          .get()
+                          .uri("http://example.com/")
+                          .response()
+                          .block();
+    }
+}
+----
+<1> Enables the wire logging
+
+=== SSL/TLS
+When `SSL/TLS` is needed the configuration below can be applied.
+
+[source,java]
+----
+import io.netty.handler.ssl.SslContextBuilder;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .secure(spec -> spec.sslContext(SslContextBuilder.forClient()))
+                          .get()
+                          .uri("https://example.com/")
+                          .response()
+                          .block();
+    }
+}
+----
+
+=== Retry Strategies
+By default the `HTTP` client will retry the request once if it was aborted on a `TCP` level.
