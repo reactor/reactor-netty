@@ -17,19 +17,13 @@
 package reactor.netty.instrumentation.zipkin;
 
 import brave.Span;
-import brave.Tracer;
-import brave.Tracing;
-import brave.propagation.CurrentTraceContext;
-import com.sun.istack.internal.NotNull;
-import java.io.Closeable;
-import java.io.IOException;
 import java.util.function.Consumer;
 import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 /**
- * Span related methods for reactive {@link Context}.
+ * A reactive {@link Context} decorator, provide span related methods.
  */
 public class TracingContext {
   private static final String KEY = Span.class.toString();
@@ -41,14 +35,15 @@ public class TracingContext {
   }
 
   /**
-   * Return the current context.
+   * Return the current reactive {@link Context}.
    */
   public Context ctx() {
     return ctx;
   }
 
   /**
-   * Add a {@link Span} to this {@link Context}
+   * Add a {@link Span} to the reactive {@link Context}.
+   *
    * @param span a current span
    * @return a new tracing context with a {@link Span} element
    */
@@ -57,7 +52,7 @@ public class TracingContext {
   }
 
   /**
-   * Consume a {@link Span} element if it exists in the current context
+   * Consume a {@link Span} element if it exists in the current reactive {@link Context}
    *
    * <p></p>
    * <code><pre>
@@ -80,7 +75,7 @@ public class TracingContext {
   }
 
   /**
-   * Return a current {@link Span}
+   * Return the current {@link Span}.
    *
    * <p></p>
    * <code><pre>
@@ -100,6 +95,16 @@ public class TracingContext {
 
   /**
    * Decorate a given {@link Context}.
+   *
+   * <p></p>
+   * <code><pre>
+   *   Mono.subscriberContext()
+   *       .flatMap(ctx -> {
+   *         Span currentSpan = TracingContext.of(ctx).span();
+   *         ...
+   *       })
+   * </pre></code>
+   *
    * @param ctx a current context
    */
   public static TracingContext of(@NonNull Context ctx) {
