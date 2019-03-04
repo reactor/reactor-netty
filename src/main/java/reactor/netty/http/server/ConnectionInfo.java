@@ -115,14 +115,15 @@ final class ConnectionInfo {
 	}
 
 	static InetSocketAddress parseAddress(String address, int defaultPort) {
-		int portSeparatorIdx = address.lastIndexOf(":");
-		if (portSeparatorIdx > address.lastIndexOf("]")) {
-			return InetSocketAddressUtil.createUnresolved(address.substring(0, portSeparatorIdx),
-					Integer.parseInt(address.substring(portSeparatorIdx + 1)));
+		int separatorIdx = address.lastIndexOf(":");
+		int ipV6HostSeparatorIdx = address.lastIndexOf("]");
+		if(separatorIdx > ipV6HostSeparatorIdx) {
+			if(separatorIdx == address.indexOf(":") || ipV6HostSeparatorIdx > -1) {
+				return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx),
+					Integer.parseInt(address.substring(separatorIdx + 1)));
+			}
 		}
-		else {
-			return InetSocketAddressUtil.createUnresolved(address, defaultPort);
-		}
+		return InetSocketAddressUtil.createUnresolved(address, defaultPort);
 	}
 
 	static ConnectionInfo parseXForwardedInfo(HttpRequest request, SocketChannel channel) {
