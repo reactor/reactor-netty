@@ -863,4 +863,30 @@ public class HttpServerTests {
 		assertThat(response).isEqualTo("Empty");
 		server.dispose();
 	}
+
+	@Test
+	public void testIssue630() {
+		NettyContext server =
+				HttpServer.create(8080)
+				          .newHandler((req, res) ->
+				              res.sendString(Mono.delay(Duration.ofSeconds(3))
+				                                 .thenReturn("OK")))
+				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
+
+		Flux.range(0, 70)
+		    .flatMap(i ->
+		        HttpClient.create(ops -> ops.port(server.address()
+		                                                .getPort()))
+		                  .post("/", req -> req.sendString(Mono.just("test")))
+		                  .flatMap(res -> {
+		                      int status = res.status().code();
+		                      res.channel()
+		                         .close();
+		                      return Mono.just(status);
+		                  }))
+		    .blockLast(Duration.ofSeconds(30));
+
+		server.dispose();
+	}
 }
