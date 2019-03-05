@@ -1064,4 +1064,31 @@ public class HttpServerTests {
 
 		disposableServer.disposeNow();
 	}
+
+	@Test
+	public void testIssue630() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) ->
+				              res.sendString(Mono.delay(Duration.ofSeconds(3))
+				                                 .thenReturn("OK")))
+				          .bindNow();
+
+		Flux.range(0, 70)
+		    .flatMap(i ->
+		        HttpClient.create()
+		                  .addressSupplier(server::address)
+		                  .post()
+		                  .uri("/")
+		                  .send(ByteBufFlux.fromString(Mono.just("test")))
+		                  .responseConnection((res, conn) -> {
+		                      int status = res.status().code();
+		                      conn.dispose();
+		                      return Mono.just(status);
+		                  }))
+		    .blockLast(Duration.ofSeconds(30));
+
+		server.dispose();
+	}
 }

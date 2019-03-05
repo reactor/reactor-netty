@@ -338,6 +338,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * React on inbound close (channel closed prematurely)
 	 */
 	protected void onInboundClose() {
+		if (inbound.receiver == null) {
+			inbound.cancel();
+		}
 		terminate();
 	}
 
