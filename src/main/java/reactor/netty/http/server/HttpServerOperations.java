@@ -517,6 +517,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		((HttpServerOperations)ops).terminate();
 	}
 
+	/**
+	 * There is no need of invoking {@link #discard()}, the inbound will
+	 * be canceled on channel inactive event if there is no subscriber available
+	 *
+	 * @param err the {@link Throwable} cause
+	 */
 	@Override
 	protected void onOutboundError(Throwable err) {
 
