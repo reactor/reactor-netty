@@ -872,4 +872,42 @@ public class TcpClientTests {
 		conn.disposeNow();
 		server.disposeNow();
 	}
+
+	@Test
+	public void testReconnectWhenDisconnected() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .wiretap(true)
+				         .handle((req, res) -> res.sendString(Mono.just("test")))
+				         .bindNow();
+
+		final CountDownLatch latch = new CountDownLatch(1);
+
+		TcpClient  client =
+				TcpClient.create()
+				         .port(echoServerPort)
+				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
+				         .handle((in, out) -> out.withConnection(Connection::dispose))
+				         .wiretap(true);
+
+		connect(client, true, latch);
+
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
+
+		server.disposeNow();
+	}
+
+	private void connect(TcpClient  client, boolean reconnect, CountDownLatch latch) {
+		client.connect()
+		      .subscribe(
+		          conn -> {
+		              if (reconnect) {
+		                  conn.onTerminate()
+		                      .subscribe(null, null, () -> connect(client, false, latch));
+		              }
+		          },
+		          null,
+		          latch::countDown);
+	}
 }
