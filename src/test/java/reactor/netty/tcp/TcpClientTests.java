@@ -18,6 +18,7 @@ package reactor.netty.tcp;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -32,8 +33,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -830,5 +833,35 @@ public class TcpClientTests {
 		server.disposeNow();
 
 		Assertions.assertThat(threadNames.size()).isGreaterThan(1);
+	}
+
+	@Test
+	public void testRetryOnDifferentAddress() {
+		final AtomicBoolean connected = new AtomicBoolean(false);
+
+		Supplier<SocketAddress> addressSupplier = new Supplier<SocketAddress>() {
+			int i = 2;
+
+			@Override
+			public SocketAddress get() {
+				return new InetSocketAddress("localhost", heartbeatServerPort + i--);
+			}
+		};
+
+		Connection  conn =
+				TcpClient.create()
+				         .addressSupplier(addressSupplier)
+				         .doOnConnected(connection -> connected.set(true))
+				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
+				         .handle((in, out) -> Mono.never())
+				         .wiretap(true)
+				         .connect()
+				         .retry()
+				         .block(Duration.ofSeconds(30));
+		assertNotNull(conn);
+
+		assertTrue(connected.get());
+
+		conn.disposeNow();
 	}
 }
