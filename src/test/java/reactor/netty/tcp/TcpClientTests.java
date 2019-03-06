@@ -837,6 +837,13 @@ public class TcpClientTests {
 
 	@Test
 	public void testRetryOnDifferentAddress() {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .wiretap(true)
+				         .handle((req, res) -> res.sendString(Mono.just("test")))
+				         .bindNow();
+
 		final AtomicBoolean connected = new AtomicBoolean(false);
 
 		Supplier<SocketAddress> addressSupplier = new Supplier<SocketAddress>() {
@@ -844,7 +851,7 @@ public class TcpClientTests {
 
 			@Override
 			public SocketAddress get() {
-				return new InetSocketAddress("localhost", heartbeatServerPort + i--);
+				return new InetSocketAddress("localhost", server.port() + i--);
 			}
 		};
 
@@ -863,5 +870,6 @@ public class TcpClientTests {
 		assertTrue(connected.get());
 
 		conn.disposeNow();
+		server.disposeNow();
 	}
 }
