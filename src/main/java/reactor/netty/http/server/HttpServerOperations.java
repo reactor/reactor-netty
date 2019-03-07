@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -601,7 +601,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 		@Override
 		public void onError(Throwable t) {
-			ops.onOutboundError(t);
+			ops.onError(t);
 		}
 
 		@Override
