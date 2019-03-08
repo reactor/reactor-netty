@@ -302,9 +302,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	public boolean isKeepAlive() {
 		ResponseState rs = responseState;
 		if (rs != null) {
-			return HttpUtil.isKeepAlive(rs.response);
+			return isKeepAlive(rs.response);
 		}
-		return HttpUtil.isKeepAlive(nettyRequest);
+		return isKeepAlive(nettyRequest);
 	}
 
 	@Override
