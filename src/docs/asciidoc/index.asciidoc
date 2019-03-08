@@ -1,5 +1,5 @@
 = Reactor Netty
-Stephane Maldini;
+Stephane Maldini <https://twitter.com/smaldini[@smaldini]> ; Violeta Georgieva <https://twitter.com/violeta_g_g[@violeta_g_g]>
 :appversion: 0.5.0 (wiki)
 ifndef::host-github[:ext-relative: {outfilesuffix}]
 {appversion}
