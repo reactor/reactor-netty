@@ -51,6 +51,7 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -1623,5 +1624,34 @@ public class HttpClientTest {
 				    .verify(Duration.ofSeconds(30));
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void testIssue632() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) ->
+				              res.header(HttpHeaderNames.CONNECTION,
+				                         HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.CLOSE))
+				          .bindNow();
+		assertThat(server).isNotNull();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		createHttpClientForContextWithPort(server)
+		        .tcpConfiguration(tcpClient ->
+		            tcpClient.doOnConnected(conn ->
+		                conn.channel()
+		                    .closeFuture()
+		                    .addListener(future -> latch.countDown())))
+		        .get()
+		        .uri("/")
+		        .responseContent()
+		        .blockLast(Duration.ofSeconds(30));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		server.dispose();
 	}
 }
