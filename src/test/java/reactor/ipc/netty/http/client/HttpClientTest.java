@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLException;
@@ -39,6 +40,8 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -988,6 +991,37 @@ public class HttpClientTest {
 		}
 
 		pool.dispose();
+		server.dispose();
+	}
+
+	@Test
+	public void testIssue632() throws Exception {
+		NettyContext server =
+				HttpServer.create(0)
+				          .newHandler((req, res) ->
+				              res.header(HttpHeaderNames.CONNECTION,
+				                         HttpHeaderValues.UPGRADE + ", " + HttpHeaderValues.CLOSE))
+				          .block(Duration.ofSeconds(30));
+		assertThat(server).isNotNull();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		HttpClientResponse response =
+				HttpClient.create(server.address()
+				                        .getPort())
+				          .request(HttpMethod.GET, "/",
+				              req -> {
+				                  req.context()
+				                     .channel()
+				                     .closeFuture()
+				                     .addListener(future -> latch.countDown());
+				                  return Mono.empty();
+				              })
+				          .block(Duration.ofSeconds(30));
+		assertThat(response).isNotNull();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		response.dispose();
 		server.dispose();
 	}
 }
