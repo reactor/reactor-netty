@@ -13,30 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-buildscript {
-	repositories {
-		maven {
-			url "https://plugins.gradle.org/m2/"
-		}
-	}
-	dependencies {
-		// version 1.5.3 doesn't contain https://github.com/asciidoctor/asciidoctor-gradle-plugin/issues/222
-		classpath 'org.asciidoctor:asciidoctor-gradle-plugin:1.5.3'
-	}
-}
-
 configure(rootProject) {
   apply plugin: "java"
-  apply plugin: org.asciidoctor.gradle.AsciidoctorPlugin // use class name, plugin id not available due to https://github.com/gradle/gradle/issues/1262
+  apply plugin: 'org.asciidoctor.convert'
 
   // put asciidoctor dependendencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
   dependencies {
 	asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.16'
-	asciidoctor 'org.jruby:jruby-complete:9.1.17.0' // fixes PDF rendering on Windows
-  }
-
-  asciidoctorj {
-	  version = '1.5.6' // use more recent asciidoctorj version
+	asciidoctor 'org.jruby:jruby-complete:9.2.5.0'
   }
 
   javadoc {
@@ -71,26 +55,37 @@ configure(rootProject) {
   }
 
   asciidoctor {
+	sourceDir "$rootDir/src/docs/asciidoc/"
 	sources {
 	  include "index.asciidoc"
 	}
+	resources {
+	  from(sourceDir) {
+		include 'images/**'
+		include 'highlight/**/*'
+	  }
+	}
 	outputDir file("$buildDir/asciidoc")
 	backends = ['html5', 'pdf']
-	//logDocuments = true
+	logDocuments = true
 	options = [
 			doctype: 'book'
 	]
 	attributes docinfo: '',
 			toc2: '',
 			'compat-mode': '',
+			'allow-uri-read': '',
+			imagesdir: "images/",
 			stylesdir: "stylesheets/",
-			stylesheet: 'golo.css',
+			stylesheet: 'reactor.css',
 			appversion: "$version",
-			'source-highlighter': 'coderay'
+			'source-highlighter': 'highlightjs',
+			'highlightjsdir': "./highlight",
+			'highlightjs-theme': 'railscasts'
 
 	doLast {
 	  file("$outputDir/pdf/index.pdf").
-			  renameTo("$outputDir/pdf/netty-reference-guide-${version}.pdf")
+			  renameTo("$outputDir/pdf/reactor-netty-reference-guide-${version}.pdf")
 	}
   }
 

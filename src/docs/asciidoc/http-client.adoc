@@ -2,13 +2,13 @@
 :javadoc: https://projectreactor.io/docs/netty/release/api
 
 [[http-client]]
-== HTTP Client 101
+= HTTP Client
 `Reactor Netty` provides easy to use and configure
 {javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient].
 It hides most of the `Netty` functionality that is needed in order to create a `HTTP` client,
 and in addition adds `Reactive Streams` backpressure.
 
-=== Connect
+== Connect
 To connect the `HTTP` client to a given `HTTP` endpoint, a {javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient]
 instance has to be created and configured.
 
@@ -64,7 +64,7 @@ public class Application {
 }
 ----
 
-==== Host and Port
+=== Host and Port
 In order to connect to a specific `host` and `port`, the configuration below can be applied to the `HTTP` client:
 
 [source,java]
@@ -89,7 +89,7 @@ public class Application {
 <1> Configures the `HTTP` host
 <2> Configures the `HTTP` port
 
-=== Writing Data
+== Writing Data
 In order to send data to a given `HTTP` endpoint, a `Publisher` can be provided using
 {javadoc}/reactor/netty/http/client/HttpClient.RequestSender.html#send-org.reactivestreams.Publisher-[send(Publisher)] method.
 By default `Transfer-Encoding: chunked` will be applied for those `HTTP` methods for which
@@ -118,7 +118,7 @@ public class Application {
 ----
 <1> Sends `hello` string to the given `HTTP` endpoint
 
-==== Adding Headers and other Metadata
+=== Adding Headers and other Metadata
 When sending data to a given `HTTP` endpoint, additional headers, cookies etc.
 might be necessary, the configuration below can be used.
 
@@ -146,7 +146,7 @@ public class Application {
 ----
 <1> Disables `Transfer-Encoding: chunked` and provides `Content-Length` header.
 
-===== Compression
+==== Compression
 The `HTTP` client can be configured with compression enabled which means the request header
 `Accept-Encoding` or in case of websocket the `Sec-Websocket-Extensions` header will be added
 to the request headers.
@@ -170,7 +170,7 @@ public class Application {
 }
 ----
 
-===== Auto-Redirect Support
+==== Auto-Redirect Support
 The `HTTP` client can be configured with auto-redirect support enabled.
 
 `Reactor Netty` provides two different strategies for auto-redirect support:
@@ -198,7 +198,7 @@ public class Application {
 }
 ----
 
-=== Flushing Strategies
+== Flushing Strategies
 `Reactor Netty` provides three different strategies for flushing the outgoing data
 {javadoc}/reactor/netty/NettyPipeline.SendOptions.html[NettyPipeline.SendOptions]
 
@@ -237,7 +237,7 @@ The flush operation will not be scheduled, which means flush operation will be i
 NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
 The buffer size can be configured using the channel option `SO_SNDBUF`.
 
-=== Consuming Data
+== Consuming Data
 In order to receive data from a given `HTTP` endpoint, one of the methods below can be used
 {javadoc}/reactor/netty/http/client/HttpClient.ResponseReceiver.html[HttpClient.ResponseReceiver].
 
@@ -263,7 +263,7 @@ public class Application {
 <2> Aggregates the data
 <3> Transforms the data as string
 
-==== Reading Headers and other Metadata
+=== Reading Headers and other Metadata
 When receiving data from a given `HTTP` endpoint, response headers, status code etc.
 might need to be checked. This additional metadata can be obtained using
 {javadoc}/reactor/netty/http/client/HttpClientResponse.html[HttpClientResponse]
@@ -289,7 +289,7 @@ public class Application {
 ----
 <1> Obtains the status code.
 
-=== TCP Level Configurations
+== TCP Level Configurations
 When configurations on a TCP level are needed the snippet below can be used in order
 to extend the default `TCP` client configuration:
 
@@ -314,9 +314,9 @@ public class Application {
 }
 ----
 
-Refer to <<tcp-client.adoc>> for more details about `TCP` level configurations.
+Refer to <<tcp-client>> for more details about `TCP` level configurations.
 
-==== Wire Logger
+=== Wire Logger
 `Reactor Netty` provides a wire logging when the traffic between the peers needs to be inspected.
 Bye default the wire logging is disabled.
 In order to be enabled it, the logger `reactor.netty.http.client.HttpClient` level has to be set to `DEBUG`
@@ -342,7 +342,7 @@ public class Application {
 ----
 <1> Enables the wire logging
 
-=== SSL/TLS
+== SSL/TLS
 When `SSL/TLS` is needed the configuration below can be applied.
 
 [source,java]
@@ -365,5 +365,5 @@ public class Application {
 }
 ----
 
-=== Retry Strategies
+== Retry Strategies
 By default the `HTTP` client will retry the request once if it was aborted on a `TCP` level.

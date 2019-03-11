@@ -2,13 +2,13 @@
 :javadoc: https://projectreactor.io/docs/netty/release/api
 
 [[http-server]]
-== HTTP Server 101
+= HTTP Server
 `Reactor Netty` provides easy to use and configure
 {javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer].
 It hides most of the `Netty` functionality that is needed in order to create a `HTTP` server,
 and in addition adds `Reactive Streams` backpressure.
 
-=== Start and Stop
+== Start and Stop
 To start an HTTP server, {javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer]
 instance has to be created and configured.
 By default the `host` will be configured for any local address and the system will pick up an ephemeral port
@@ -39,7 +39,7 @@ The returned {javadoc}/reactor/netty/DisposableServer.html[DisposableServer]
 offers simple server API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[disposeNow()]
 which shuts the server down in a blocking fashion.
 
-==== Host and Port
+=== Host and Port
 To serve on a specific `host` and `port`, the configuration below can be applied to the `HTTP` server:
 
 [source,java]
@@ -61,10 +61,10 @@ public class Application {
     }
 }
 ----
-<1> Configures the HTTP host
-<2> Configures the HTTP port
+<1> Configures the `HTTP` server host
+<2> Configures the `HTTP` server port
 
-=== Routing HTTP
+== Routing HTTP
 Defining routes for the `HTTP` server is as easy as just configuring the provided
 {javadoc}/reactor/netty/http/server/HttpServerRoutes.html[HttpServerRoutes] builder.
 
@@ -102,7 +102,7 @@ public class Application {
 
 NOTE: The server routes are unique and only the first matching in order of declaration will be invoked.
 
-==== SSE
+=== SSE
 The code below shows how the `HTTP` server might be configured in order to serve `Server-Sent Events`.
 
 [source,java]
@@ -170,7 +170,7 @@ public class Application {
 }
 ----
 
-==== Static Resources
+=== Static Resources
 The code below shows how the `HTTP` server might be configured in order to serve static resources.
 
 [source,java]
@@ -192,7 +192,7 @@ public class Application {
 }
 ----
 
-=== Writing Data
+== Writing Data
 In order to send data to a connected client, an I/O handler has to be attached either using
 {javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[handle(...)] or
 {javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[route(...)] methods.
@@ -220,7 +220,7 @@ public class Application {
 ----
 <1> Sends `hello` string to the connected clients
 
-==== Adding Headers and other Metadata
+=== Adding Headers and other Metadata
 When sending data to the connected clients, additional headers, cookies, status code etc.
 might be necessary. This additional metadata can be provided using
 {javadoc}/reactor/netty/http/server/HttpServerResponse.html[HttpServerResponse]
@@ -252,7 +252,7 @@ public class Application {
 }
 ----
 
-==== Compression
+=== Compression
 The `HTTP` server can be configured to send a compressed response depending on the request header
 `Accept-Encoding` or in case of websocket the `Sec-Websocket-Extensions` header.
 
@@ -283,7 +283,7 @@ public class Application {
 }
 ----
 
-=== Flushing Strategies
+== Flushing Strategies
 `Reactor Netty` provides three different strategies for flushing the outgoing data
 {javadoc}/reactor/netty/NettyPipeline.SendOptions.html[NettyPipeline.SendOptions]
 
@@ -322,7 +322,7 @@ The flush operation will not be scheduled, which means flush operation will be i
 NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
 The buffer size can be configured using the channel option `SO_SNDBUF`.
 
-=== Consuming Data
+== Consuming Data
 In order to receive data from a connected client, an I/O handler has to be attached either using
 {javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[handle(...)] or
 {javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[route(...)] methods.
@@ -349,7 +349,7 @@ public class Application {
 ----
 <1> Receives data from the connected clients
 
-==== Reading Headers, URI Params and other Metadata
+=== Reading Headers, URI Params and other Metadata
 When receiving data from the connected clients, request headers, parameters etc.
 might need to be checked. This additional metadata can be obtained using
 {javadoc}/reactor/netty/http/server/HttpServerRequest.html[HttpServerRequest]
@@ -381,7 +381,7 @@ public class Application {
 }
 ----
 
-===== Obtaining the Remote (Client) Address
+==== Obtaining the Remote (Client) Address
 In addition to the metadata above that can be obtained from the request, the `host (server)` address, the `remote (client)`
 address and the `scheme` also can be received. Depending on the chosen factory method, the information
 can be retrieved directly from the channel or additionally using the `Forwarded` or `X-Forwarded-*` `HTTP` request headers.
@@ -414,7 +414,7 @@ public class Application {
 `HTTP` request headers if possible.
 <2> Returns the address of the remote (client) peer.
 
-==== HTTP Request Decoder
+=== HTTP Request Decoder
 By default `Netty` configures some restrictions for the incoming requests, such as:
 
 * The maximum length of the initial line.
@@ -456,7 +456,7 @@ public class Application {
 <1> The maximum length of all headers will be `16384`,
 when this value is exceeded, https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException] will be raised.
 
-=== TCP Level Configurations
+== TCP Level Configurations
 When configurations on a TCP level are needed the snippet below can be used in order
 to extend the default `TCP` server configuration:
 
@@ -481,9 +481,9 @@ public class Application {
 }
 ----
 
-Refer to <<tcp-server.adoc>> for more details about `TCP` level configurations.
+Refer to <<tcp-server>> for more details about `TCP` level configurations.
 
-==== Wire Logger
+=== Wire Logger
 `Reactor Netty` provides a wire logging when the traffic between the peers needs to be inspected.
 Bye default the wire logging is disabled.
 In order to be enabled it, the logger `reactor.netty.http.server.HttpServer` level has to be set to `DEBUG`
@@ -509,7 +509,7 @@ public class Application {
 ----
 <1> Enables the wire logging
 
-=== SSL/TLS
+== SSL/TLS
 When `SSL/TLS` is needed the configuration below can be applied.
 
 [source,java]
@@ -535,7 +535,7 @@ public class Application {
 }
 ----
 
-=== HTTP Access Log
+== HTTP Access Log
 The current support provides only https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format].
 
 `-Dreactor.netty.http.server.accessLogEnabled=true` can be used in order to enable the `HTTP` access log.
@@ -561,7 +561,7 @@ The configuration below (logback) or similar (other logging frameworks) can be u
 </logger>
 ----
 
-=== HTTP/2
+== HTTP/2
 By default the `HTTP` server supports `HTTP/1.1`, if `HTTP/2` is needed, it has to be configured.
 In addition to the protocol configuration, if `H2` is needed and not `H2C (cleartext)`, SSL also has to be configured.
 

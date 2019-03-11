@@ -2,13 +2,13 @@
 :javadoc: https://projectreactor.io/docs/netty/release/api
 
 [[tcp-server]]
-== TCP Server 101
+= TCP Server
 `Reactor Netty` provides easy to use and configure
 {javadoc}/reactor/netty/tcp/TcpServer.html[TcpServer].
 It hides most of the `Netty` functionality that is needed in order to create a `TCP` server,
 and in addition adds `Reactive Streams` backpressure.
 
-=== Start and Stop
+== Start and Stop
 To start a `TCP` server, a {javadoc}/reactor/netty/tcp/TcpServer.html[TcpServer]
 instance has to be created and configured.
 By default the `host` will be configured for any local address and the system will pick up an ephemeral port
@@ -39,7 +39,7 @@ The returned {javadoc}/reactor/netty/DisposableServer.html[DisposableServer]
 offers simple server API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[disposeNow()]
 which shuts the server down in a blocking fashion.
 
-==== Host and Port
+=== Host and Port
 In order to serve on a specific `host` and `port`, the configuration below can be applied to the `TCP` server:
 
 [source,java]
@@ -61,10 +61,10 @@ public class Application {
     }
 }
 ----
-<1> Configures the `HTTP` host
-<2> Configures the `HTTP` port
+<1> Configures the `TCP` server host
+<2> Configures the `TCP` server port
 
-=== Writing Data
+== Writing Data
 In order to send data to a connected client, an I/O handler has to be attached.
 The I/O handler has access to {javadoc}/reactor/netty/NettyOutbound.html[NettyOutbound]
 in order to be able to write data.
@@ -90,7 +90,7 @@ public class Application {
 ----
 <1> Sends `hello` string to the connected clients
 
-=== Flushing Strategies
+== Flushing Strategies
 `Reactor Netty` provides three different strategies for flushing the outgoing data
 {javadoc}/reactor/netty/NettyPipeline.SendOptions.html[NettyPipeline.SendOptions]
 
@@ -129,7 +129,7 @@ The flush operation will not be scheduled, which means flush operation will be i
 NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
 The buffer size can be configured using the channel option `SO_SNDBUF`.
 
-=== Consuming Data
+== Consuming Data
 In order to receive data from a connected client, an I/O handler has to be attached.
 The I/O handler has access to {javadoc}/reactor/netty/NettyInbound.html[NettyInbound]
 in order to be able to read data.
@@ -154,7 +154,7 @@ public class Application {
 ----
 <1> Receives data from the connected clients
 
-=== Lifecycle Callbacks
+== Lifecycle Callbacks
 The lifecycle callbacks below are provided in order to be able to extend the `TCP` server.
 
 * `doOnBind` - The callback is invoked when the server channel is about to bind.
@@ -186,9 +186,9 @@ public class Application {
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when a remote client is connected.
 
-=== TCP Level Configurations
+== TCP Level Configurations
 
-==== Channel Options
+=== Channel Options
 By default the `TCP` server is configured with the options below:
 
 [source,java,indent=0]
@@ -224,7 +224,7 @@ More about `Netty` channel options can be found on the link below:
 * https://netty.io/4.1/api/io/netty/channel/ChannelOption.html[ChannelOption]
 * https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[SocketOptions]
 
-==== Wire Logger
+=== Wire Logger
 `Reactor Netty` provides a wire logging when the traffic between the peers has to be inspected.
 By default the wire logging is disabled.
 In order to be enabled it, the logger `reactor.netty.tcp.TcpServer` level has to be set to `DEBUG`
@@ -250,7 +250,7 @@ public class Application {
 ----
 <1> Enables the wire logging
 
-==== Event Loop Group
+=== Event Loop Group
 By default the `TCP` server will use `Event Loop Group` where the number of the worker threads will be the number of
 processors available to the runtime on init (but with a minimum value of 4). When a different configuration is needed,
 one of the {javadoc}/reactor/netty/resources/LoopResources.html[LoopResource]`#create`
@@ -287,7 +287,7 @@ public class Application {
 }
 ----
 
-=== SSL/TLS
+== SSL/TLS
 When `SSL/TLS` is needed the configuration below can be applied.
 
 [source,java]

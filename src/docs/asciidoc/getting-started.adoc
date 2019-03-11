@@ -1,0 +1,187 @@
+[[getting-started]]
+= Getting Started
+
+This section contains information that should help you get going with `Reactor Netty`. It
+includes the following information:
+
+* <<getting-started-introducing-reactor-netty>>
+* <<prerequisites>>
+* <<getting-started-understanding-bom>>
+* <<getting>>
+
+[[getting-started-introducing-reactor-netty]]
+== Introducing Reactor Netty
+Suited for Microservices Architecture, `Reactor Netty` offers
+backpressure-ready network engines for `HTTP` (including Websockets), `TCP`, and `UDP`.
+
+[[prerequisites]]
+== Prerequisites
+`Reactor Netty` runs on `Java 8` and above.
+
+It has a transitive dependency on:
+
+* Reactive Streams v1.0.2
+* Reactor Core v3.x
+* Netty v4.1.x
+
+[[getting-started-understanding-bom]]
+== Understanding the BOM
+`Reactor Netty` is part of the `Project Reactor BOM` since `Aluminium` release train.
+This curated list groups artifacts that are meant to work well together, providing
+the relevant versions despite potentially divergent versioning schemes in these artifacts.
+
+The `BOM` (Bill of Materials) is itself versioned, using a release train scheme
+with a codename followed by a qualifier. Here are a few examples:
+[verse]
+Aluminium-RELEASE
+Californium-BUILD-SNAPSHOT
+Aluminium-SR1
+Bismuth-RELEASE
+Californium-SR32
+
+The codenames represent what would traditionally be the `MAJOR.MINOR` number. They (mostly)
+come from the https://en.wikipedia.org/wiki/Periodic_table#Overview[Periodic Table of
+Elements], in increasing alphabetical order.
+
+The qualifiers are (in chronological order):
+
+* `BUILD-SNAPSHOT`
+* `M1`..`N`: Milestones or developer previews
+* `RELEASE`: The first `GA` (General Availability) release in a codename series
+* `SR1`..`N`: The subsequent `GA` releases in a codename series (equivalent to `PATCH`
+number, `SR` stands for `Service Release`).
+
+[[getting]]
+== Getting Reactor Netty
+As mentioned earlier, the easiest way to use `Reactor Netty` in your core is to use the `BOM` and
+add the relevant dependencies to your project. Note that, when adding such a dependency,
+you must omit the version so that the version gets picked up from the `BOM`.
+
+However, if you want to force the use of a specific artifact's version, you can specify
+it when adding your dependency, as you usually would. You can also forgo the `BOM` entirely
+and specify dependencies by their artifact versions.
+
+=== Maven Installation
+The `BOM` concept is natively supported by `Maven`. First, you need to import the `BOM` by
+adding the following snippet to your `pom.xml`. If the top section
+(`dependencyManagement`) already exists in your pom, add only the contents.
+
+[source,xml]
+----
+<dependencyManagement> <1>
+    <dependencies>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-bom</artifactId>
+            <version>Californium-RELEASE</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+----
+<1> Notice the `dependencyManagement` tag. This is in addition to the regular
+`dependencies` section.
+
+Next, add your dependencies to the relevant reactor projects, as usual, except without a
+`<version>`, as shown here:
+
+[source,xml]
+----
+<dependencies>
+    <dependency>
+        <groupId>io.projectreactor.netty</groupId>
+        <artifactId>reactor-netty</artifactId> <1>
+        <2>
+    </dependency>
+</dependencies>
+----
+<1> Dependency to `Reactor Netty`
+<2> No version tag here
+
+=== Gradle installation
+Gradle has no core support for Maven BOMs, but you can use Spring's
+https://github.com/spring-gradle-plugins/dependency-management-plugin[gradle-dependency-management]
+plugin.
+
+First, apply the plugin from the Gradle Plugin Portal:
+
+[source,groovy]
+----
+plugins {
+    id "io.spring.dependency-management" version "1.0.7.RELEASE" <1>
+}
+----
+<1> as of this writing, `1.0.7.RELEASE` is the latest version of the plugin.
+Check for updates.
+
+Then use it to import the BOM:
+[source,groovy]
+----
+dependencyManagement {
+     imports {
+          mavenBom "io.projectreactor:reactor-bom:Californium-RELEASE"
+     }
+}
+----
+
+Finally add a dependency to your project, without a version number:
+[source,groovy]
+----
+dependencies {
+     compile 'io.projectreactor.netty:reactor-netty' <1>
+}
+----
+<1> There is no third `:` separated section for the version. It is taken from
+the `BOM`.
+
+=== Milestones and Snapshots
+Milestones and developer previews are distributed through the `Spring Milestones`
+repository rather than `Maven Central`. To add it to your build configuration
+file, use the following snippet:
+
+.Milestones in Maven
+[source,xml]
+----
+<repositories>
+	<repository>
+		<id>spring-milestones</id>
+		<name>Spring Milestones Repository</name>
+		<url>https://repo.spring.io/milestone</url>
+	</repository>
+</repositories>
+----
+
+For Gradle, use the following snippet:
+
+.Milestones in Gradle
+[source,groovy]
+----
+repositories {
+  maven { url 'https://repo.spring.io/milestone' }
+  mavenCentral()
+}
+----
+
+Similarly, snapshots are also available in a separate dedicated repository:
+
+.BUILD-SNAPSHOTs in Maven
+[source,xml]
+----
+<repositories>
+	<repository>
+		<id>spring-snapshots</id>
+		<name>Spring Snapshot Repository</name>
+		<url>https://repo.spring.io/snapshot</url>
+	</repository>
+</repositories>
+----
+
+.BUILD-SNAPSHOTs in Gradle
+[source,groovy]
+----
+repositories {
+  maven { url 'https://repo.spring.io/snapshot' }
+  mavenCentral()
+}
+----
