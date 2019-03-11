@@ -231,10 +231,23 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	 */
 	public ByteBufMono aggregate() {
 		return Mono.using(alloc::compositeBuffer,
-				b -> this.reduce(b, (prev, next) -> prev.addComponent(next.retain()))
+				b -> this.reduce(b,
+				                 (prev, next) -> {
+				                     if (prev.refCnt() > 0) {
+				                         return prev.addComponent(next.retain());
+				                     }
+				                     else {
+				                         return prev;
+				                     }
+				                 })
 				         .doOnNext(cbb -> cbb.writerIndex(cbb.capacity()))
 				         .filter(ByteBuf::isReadable),
-				ByteBuf::release).as(ByteBufMono::new);
+				b -> {
+				    if (b.refCnt() > 0) {
+				        b.release();
+				    }
+				})
+				.as(ByteBufMono::new);
 	}
 
 	/**
