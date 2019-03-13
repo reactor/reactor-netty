@@ -836,7 +836,7 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void testRetryOnDifferentAddress() {
+	public void testRetryOnDifferentAddress() throws Exception {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
@@ -844,7 +844,7 @@ public class TcpClientTests {
 				         .handle((req, res) -> res.sendString(Mono.just("test")))
 				         .bindNow();
 
-		final AtomicBoolean connected = new AtomicBoolean(false);
+		final CountDownLatch latch = new CountDownLatch(1);
 
 		Supplier<SocketAddress> addressSupplier = new Supplier<SocketAddress>() {
 			int i = 2;
@@ -858,7 +858,7 @@ public class TcpClientTests {
 		Connection  conn =
 				TcpClient.create()
 				         .addressSupplier(addressSupplier)
-				         .doOnConnected(connection -> connected.set(true))
+				         .doOnConnected(connection -> latch.countDown())
 				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
 				         .handle((in, out) -> Mono.never())
 				         .wiretap(true)
@@ -867,7 +867,7 @@ public class TcpClientTests {
 				         .block(Duration.ofSeconds(30));
 		assertNotNull(conn);
 
-		assertTrue(connected.get());
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
 
 		conn.disposeNow();
 		server.disposeNow();
