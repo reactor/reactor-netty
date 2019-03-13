@@ -344,6 +344,13 @@ public class Application {
 
 == SSL/TLS
 When `SSL/TLS` is needed the configuration below can be applied.
+By default if `OpenSSL` is available
+https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[SslProvider.html#OPENSSL]
+provider will be used as a provider, otherwise
+https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.html#JDK].
+Switching the provider can be done via
+https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[SslContextBuilder]
+or setting `-Dio.netty.handler.ssl.noOpenSsl=true`
 
 [source,java]
 ----
