@@ -3,17 +3,21 @@
 
 [[http-server]]
 = HTTP Server
-`Reactor Netty` provides easy to use and configure
-{javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer].
-It hides most of the `Netty` functionality that is needed in order to create a `HTTP` server,
-and in addition adds `Reactive Streams` backpressure.
 
-== Start and Stop
-To start an HTTP server, {javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer]
-instance has to be created and configured.
-By default the `host` will be configured for any local address and the system will pick up an ephemeral port
-when the `bind` operation is invoked:
+`Reactor Netty` provides the easy-to-use and easy-to-configure
+{javadoc}/reactor/netty/http/server/HttpServer.html[`HttpServer`] class.
+It hides most of the `Netty` functionality that is needed in order to create a `HTTP` server
+and adds `Reactive Streams` backpressure.
 
+== Starting and Stopping
+
+To start an HTTP server, you must create and configure a
+{javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer] instance.
+By default, the `host` is configured for any local address, and the system picks up an ephemeral port
+when the `bind` operation is invoked.
+The following example shows how to create an `HttpServer` instance:
+
+====
 [source,java]
 ----
 import reactor.netty.DisposableServer;
@@ -34,14 +38,17 @@ public class Application {
 <1> Creates an {javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer]
 instance ready for configuring.
 <2> Starts the server in a blocking fashion and waits for it to finish initializing.
+====
 
-The returned {javadoc}/reactor/netty/DisposableServer.html[DisposableServer]
-offers simple server API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[disposeNow()]
+The returned {javadoc}/reactor/netty/DisposableServer.html[`DisposableServer`]
+offers a simple server API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the server down in a blocking fashion.
 
 === Host and Port
-To serve on a specific `host` and `port`, the configuration below can be applied to the `HTTP` server:
 
+To serve on a specific `host` and `port`, you can apply the following configuration to the `HTTP` server:
+
+====
 [source,java]
 ----
 import reactor.netty.DisposableServer;
@@ -63,11 +70,15 @@ public class Application {
 ----
 <1> Configures the `HTTP` server host
 <2> Configures the `HTTP` server port
+====
 
 == Routing HTTP
-Defining routes for the `HTTP` server is as easy as just configuring the provided
-{javadoc}/reactor/netty/http/server/HttpServerRoutes.html[HttpServerRoutes] builder.
 
+Defining routes for the `HTTP` server requires configuring the provided
+{javadoc}/reactor/netty/http/server/HttpServerRoutes.html[`HttpServerRoutes`] builder.
+The following example shows how to do so:
+
+====
 [source,java]
 ----
 import reactor.core.publisher.Mono;
@@ -96,15 +107,18 @@ public class Application {
 }
 ----
 <1> Serves a `GET` request to `/hello` and returns `Hello World!`
-<2> Serves a `POST` request to `/echo` and returns as a response, the received request body.
+<2> Serves a `POST` request to `/echo` and returns the received request body as a response.
 <3> Serves a `GET` request to `/path/{param}` and returns the value of the path parameter.
-<4> Serves websocket to `/ws` and returns as an outgoing data, the received incoming data.
+<4> Serves websocket to `/ws` and returns the received incoming data as outgoing data.
+====
 
-NOTE: The server routes are unique and only the first matching in order of declaration will be invoked.
+NOTE: The server routes are unique and only the first matching in order of declaration is invoked.
 
 === SSE
-The code below shows how the `HTTP` server might be configured in order to serve `Server-Sent Events`.
 
+The following code shows how you can configure the `HTTP` server to serve `Server-Sent Events`:
+
+====
 [source,java]
 ----
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -169,10 +183,13 @@ public class Application {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 }
 ----
+====
 
 === Static Resources
-The code below shows how the `HTTP` server might be configured in order to serve static resources.
 
+The following code shows how you can configure the `HTTP` server to serve static resources:
+
+====
 [source,java]
 ----
 import reactor.netty.DisposableServer;
@@ -191,14 +208,17 @@ public class Application {
     }
 }
 ----
+====
 
 == Writing Data
-In order to send data to a connected client, an I/O handler has to be attached either using
-{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[handle(...)] or
-{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[route(...)] methods.
-The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerResponse.html[HttpServerResponse]
-in order to be able to write data.
 
+To send data to a connected client, you must attach an I/O handler by using either
+{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
+{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
+The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`],
+to be able to write data. The following example uses the `handle(...)` method:
+
+====
 [source,java]
 ----
 import reactor.core.publisher.Mono;
@@ -219,12 +239,17 @@ public class Application {
 }
 ----
 <1> Sends `hello` string to the connected clients
+====
 
-=== Adding Headers and other Metadata
-When sending data to the connected clients, additional headers, cookies, status code etc.
-might be necessary. This additional metadata can be provided using
-{javadoc}/reactor/netty/http/server/HttpServerResponse.html[HttpServerResponse]
+=== Adding Headers and Other Metadata
 
+When you send data to the connected clients, you may need to send additional headers,
+cookies, status code, and other metadata.
+You can provide this additional metadata by using
+{javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`].
+The following example shows how to do so:
+
+====
 [source,java]
 ----
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -251,18 +276,23 @@ public class Application {
     }
 }
 ----
+====
 
 === Compression
-The `HTTP` server can be configured to send a compressed response depending on the request header
-`Accept-Encoding` or in case of websocket the `Sec-Websocket-Extensions` header.
+
+You can configure the `HTTP` server to send a compressed response, depending on the request header
+`Accept-Encoding` or (in the case of websocket) the `Sec-Websocket-Extensions` header.
 
 `Reactor Netty` provides three different strategies for compressing the outgoing data:
 
-* `compress(boolean)` - depending on the boolean that is provided the compression will be enabled or disabled.
-* `compress(int)` - the compression will be performed once response size exceeds the given value in bytes.
-* `compress(BiPredicate<HttpServerRequest, HttpServerResponse>)` - the compression will be performed if
+* `compress(boolean)`: Depending on the boolean that is provided, the compression is enabled (`true`) or disabled (`false`).
+* `compress(int)`: The compression is performed once the response size exceeds the given value (in bytes).
+* `compress(BiPredicate<HttpServerRequest, HttpServerResponse>)`: The compression is performed if
 the predicate returns `true`.
 
+The following example uses the `compress` method (set to `true`) to enable compression:
+
+====
 [source,java]
 ----
 import reactor.netty.DisposableServer;
@@ -282,19 +312,24 @@ public class Application {
     }
 }
 ----
+====
 
 == Flushing Strategies
+
 `Reactor Netty` provides three different strategies for flushing the outgoing data
 {javadoc}/reactor/netty/NettyPipeline.SendOptions.html[NettyPipeline.SendOptions]
 
-* `flushOnBoundary()` - this is the default behaviour. The flush operation will be explicitly invoked on a terminated `Publisher`.
-* `flushOnEach()` - The flushing operation will be executed as soon as possible after the write operation.
-This means that the ultimate goal is a flush operation after every element that was written, however as the flush operation
-will be scheduled, the flush operation might be invoked once for several write operations.
-* `flushOnEach(boolean)` - Depending on the provided boolean, the flush operation might behave as the one described above
-(when invoked with `true`), or (when invoked with `false`) it is guaranteed that there will be a flush operation after
+* `flushOnBoundary()` (default): The flush operation is explicitly invoked on a terminated `Publisher`.
+* `flushOnEach()`: The flushing operation is invoked as soon as possible after the write operation.
+This means that the ultimate goal is a flush operation after every element that was written. However, as the flush operation
+is scheduled, the flush operation might be invoked once for several write operations.
+* `flushOnEach(boolean)`: When invoked with `true`, the flush operation behaves the same as `flushOnEach()`.
+When invoked with `false`, it is guaranteed to be a flush operation after
 every write operation.
 
+The following example uses `flushOnEach(false)` to set the flushing strategy:
+
+====
 [source,java]
 ----
 import reactor.core.publisher.Flux;
@@ -317,18 +352,23 @@ public class Application {
 }
 ----
 <1> Configures the flushing strategy to flush after every element emitted by the given `Publisher`.
-The flush operation will not be scheduled, which means flush operation will be invoked after every write operation.
+The flush operation is not scheduled, which means the flush operation is invoked after every write operation.
+====
 
 NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
-The buffer size can be configured using the channel option `SO_SNDBUF`.
+You can configure the buffer size by using the `SO_SNDBUF` channel option.
 
 == Consuming Data
-In order to receive data from a connected client, an I/O handler has to be attached either using
-{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[handle(...)] or
-{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[route(...)] methods.
-The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerRequest.html[HttpServerRequest]
-in order to be able to read data.
 
+To receive data from a connected client, you must attach an I/O handler by using either
+{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
+{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
+The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`],
+to be able to read data.
+
+The following example uses the `handle(...)` method:
+
+====
 [source,java]
 ----
 import reactor.netty.DisposableServer;
@@ -348,12 +388,16 @@ public class Application {
 }
 ----
 <1> Receives data from the connected clients
+====
 
-=== Reading Headers, URI Params and other Metadata
-When receiving data from the connected clients, request headers, parameters etc.
-might need to be checked. This additional metadata can be obtained using
-{javadoc}/reactor/netty/http/server/HttpServerRequest.html[HttpServerRequest]
+=== Reading Headers, URI Params, and other Metadata
 
+When you receive data from the connected clients, you might need to check request headers,
+parameters, and other metadata. You can obtain this additional metadata by using
+{javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`].
+The following example shows how to do so:
+
+====
 [source,java]
 ----
 import reactor.core.publisher.Mono;
@@ -380,12 +424,17 @@ public class Application {
     }
 }
 ----
+====
 
 ==== Obtaining the Remote (Client) Address
-In addition to the metadata above that can be obtained from the request, the `host (server)` address, the `remote (client)`
-address and the `scheme` also can be received. Depending on the chosen factory method, the information
-can be retrieved directly from the channel or additionally using the `Forwarded` or `X-Forwarded-*` `HTTP` request headers.
 
+In addition to the metadata that you can obtain from the request, you can also receive the
+`host (server)` address, the `remote (client)` address and the `scheme`. Depending on the
+chosen factory method, you can retrieve the information directly from the channel or by
+using the `Forwarded` or `X-Forwarded-*` `HTTP` request headers.
+The following example shows how to do so:
+
+====
 [source,java]
 ----
 import reactor.core.publisher.Mono;
@@ -410,29 +459,34 @@ public class Application {
     }
 }
 ----
-<1> Specifies that the information about the connection will be obtained from the `Forwarded` and `X-Forwarded-*`
-`HTTP` request headers if possible.
+<1> Specifies that the information about the connection is to be obtained from the `Forwarded` and `X-Forwarded-*`
+`HTTP` request headers, if possible.
 <2> Returns the address of the remote (client) peer.
+====
 
 === HTTP Request Decoder
-By default `Netty` configures some restrictions for the incoming requests, such as:
+
+By default, `Netty` configures some restrictions for the incoming requests, such as:
 
 * The maximum length of the initial line.
 * The maximum length of all headers.
 * The maximum length of the content or each chunk.
 
-For more information check https://netty.io/4.1/api/io/netty/handler/codec/http/HttpRequestDecoder.html[HttpRequestDecoder]
+For more information, see https://netty.io/4.1/api/io/netty/handler/codec/http/HttpRequestDecoder.html[`HttpRequestDecoder`]
 
-By default the `HTTP` server is configured with the settings below:
+By default, the `HTTP` server is configured with the following settings:
 
+====
 [source,java,indent=0]
 ./../../main/java/reactor/netty/http/server/HttpRequestDecoderSpec.java
 ----
 include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=33..37]
 ----
+====
 
-When these default settings have to be changed, the `HTTP` server can be configured as follows:
+When you need to change these default settings, you can configure the `HTTP` server as follows:
 
+====
 [source,java]
 ----
 import reactor.core.publisher.Mono;
@@ -453,13 +507,18 @@ public class Application {
     }
 }
 ----
-<1> The maximum length of all headers will be `16384`,
-when this value is exceeded, https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException] will be raised.
+<1> The maximum length of all headers will be `16384`.
+When this value is exceeded, a
+https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
+is raised.
+====
 
-== TCP Level Configurations
-When configurations on a TCP level are needed the snippet below can be used in order
+== TCP-level Configurations
+
+When you need to change configuration on the TCP level, you can use the following snippet
 to extend the default `TCP` server configuration:
 
+====
 [source,java]
 ----
 import io.netty.channel.ChannelOption;
@@ -480,15 +539,18 @@ public class Application {
     }
 }
 ----
+====
 
-Refer to <<tcp-server>> for more details about `TCP` level configurations.
+See <<tcp-server>> for more detail about TCP-level configuration.
 
 === Wire Logger
-`Reactor Netty` provides a wire logging when the traffic between the peers needs to be inspected.
-Bye default the wire logging is disabled.
-In order to be enabled it, the logger `reactor.netty.http.server.HttpServer` level has to be set to `DEBUG`
-and the configuration below to be applied.
 
+`Reactor Netty` provides wire logging for when you need to inspect the traffic between the peers.
+By default, wire logging is disabled.
+To enable it, you must set the logger `reactor.netty.http.server.HttpServer` level to `DEBUG`
+and apply the following configuration:
+
+====
 [source,java]
 ----
 import reactor.netty.DisposableServer;
@@ -508,17 +570,22 @@ public class Application {
 }
 ----
 <1> Enables the wire logging
+====
 
-== SSL/TLS
-When `SSL/TLS` is needed the configuration below can be applied.
-By default if `OpenSSL` is available
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[SslProvider.html#OPENSSL]
-provider will be used as a provider, otherwise
-https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[SslProvider.html#JDK].
-Switching the provider can be done via
-https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[SslContextBuilder]
-or setting `-Dio.netty.handler.ssl.noOpenSsl=true`
+== SSL and TLS
 
+When you need SSL or TLS, you can apply the configuration shown in the next example.
+By default, if `OpenSSL` is available,
+https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+provider is used as a provider. Otherwise
+https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
+You can switch the provider by using
+https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
+or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
+
+The following example uses `SslContextBuilder`:
+
+====
 [source,java]
 ----
 import io.netty.handler.ssl.SslContextBuilder;
@@ -541,16 +608,19 @@ public class Application {
     }
 }
 ----
+====
 
 == HTTP Access Log
-The current support provides only https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format].
 
-`-Dreactor.netty.http.server.accessLogEnabled=true` can be used in order to enable the `HTTP` access log.
-By default it is disabled.
+The current logging support provides only the https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format].
 
-The configuration below (logback) or similar (other logging frameworks) can be used to have a separate
+You can use `-Dreactor.netty.http.server.accessLogEnabled=true` to enable the `HTTP` access log.
+By default, it is disabled.
+
+You can use the following configuration (for Logback or similar logging frameworks) to have a separate
 `HTTP` access log file:
 
+====
 [source,xml]
 ----
 <appender name="accessLog" class="ch.qos.logback.core.FileAppender">
@@ -567,15 +637,19 @@ The configuration below (logback) or similar (other logging frameworks) can be u
     <appender-ref ref="async"/>
 </logger>
 ----
+====
 
 == HTTP/2
-By default the `HTTP` server supports `HTTP/1.1`, if `HTTP/2` is needed, it has to be configured.
-In addition to the protocol configuration, if `H2` is needed and not `H2C (cleartext)`, SSL also has to be configured.
 
-NOTE: As that protocol is not supported `out-of-the-box` by JDK8, an additional dependency to a native library that
-supports it might be needed as for example https://netty.io/wiki/forked-tomcat-native.html[netty-tcnative-boringssl-static]
+By default, the `HTTP` server supports `HTTP/1.1`. If you need `HTTP/2`, you can get it through configuration.
+In addition to the protocol configuration, if you need `H2` but not `H2C (cleartext)`, you must also configure SSL.
 
-Simple `H2` example:
+NOTE: As that protocol is not supported "`out-of-the-box`" by JDK8, you need an additional dependency to a native library that
+supports it -- for example, https://netty.io/wiki/forked-tomcat-native.html[`netty-tcnative-boringssl-static`].
+
+The following listing presents a simple `H2` example:
+
+====
 [source,java]
 ----
 import io.netty.handler.ssl.SslContextBuilder;
@@ -605,8 +679,11 @@ public class Application {
 ----
 <1> Configures the server to support only `HTTP/2`
 <2> Configures `SSL`
+====
 
-The application should now behave like this:
+The application should now behave as follows:
+
+====
 [source,bash]
 ----
 $ curl --http2 https://localhost:8080 -i
@@ -614,8 +691,11 @@ HTTP/2 200
 
 hello
 ----
+====
 
-Simple `H2C` example:
+The following listing presents a simple `H2C` example:
+
+====
 [source,java]
 ----
 import reactor.core.publisher.Mono;
@@ -638,8 +718,11 @@ public class Application {
     }
 }
 ----
+====
 
-The application should now behave like this:
+The application should now behave as follows:
+
+====
 [source,bash]
 ----
 $ curl --http2-prior-knowledge http://localhost:8080 -i
@@ -647,3 +730,4 @@ HTTP/2 200
 
 hello
 ----
+====

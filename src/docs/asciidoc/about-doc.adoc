@@ -1,11 +1,13 @@
 [[about-doc]]
 = About the Documentation
 :linkattrs:
+
 This section provides a brief overview of `Reactor Netty` reference documentation. You do not
 need to read this guide in a linear fashion. Each piece stands on its own, though they
 often refer to other pieces.
 
-== Latest Version & Copyright Notice
+== Latest Version and Copyright Notice
+
 The `Reactor Netty` reference guide is available as `HTML` documents. The latest copy is available
 at https://projectreactor.io/docs/netty/release/reference/index.html
 
@@ -15,26 +17,25 @@ copy contains this `Copyright Notice`, whether distributed in print or electroni
 
 == Contributing to the Documentation
 The reference guide is written in
-https://asciidoctor.org/docs/asciidoc-writers-guide/[Asciidoc]
-format and sources can be found at
-https://github.com/reactor/reactor-netty/tree/master/src/docs/asciidoc.
+https://asciidoctor.org/docs/asciidoc-writers-guide/[Asciidoc], and you can find its
+sources at https://github.com/reactor/reactor-netty/tree/master/src/docs/asciidoc.
 
 If you have an improvement, we will be happy to get a pull request from you!
 
-We recommend that you check out a local copy of the repository, so that you can
-generate the documentation using the `asciidoctor` gradle task and check the
+We recommend that you check out a local copy of the repository so that you can
+generate the documentation by using the `asciidoctor` Gradle task and checking the
 rendering. Some of the sections rely on included files, so `GitHub` rendering is
 not always complete.
 
 ifeval::["{backend}" == "html5"]
 TIP: To facilitate documentation edits, most sections have a link at the end that opens
 an edit `UI` directly on `GitHub` for the main source file for that section. These links are
-only present in the `HTML5` version of this reference guide. They look like the following
+only present in the `HTML5` version of this reference guide. They look like the following link:
 link:https://github.com/reactor/reactor-netty/edit/master/src/docs/asciidoc/about-doc.adoc[Suggest Edit^, role="fa fa-edit"] to <<about-doc>>.
 endif::[]
 
 == Getting Help
-There are several ways to reach out for help with `Reactor Netty`.
+There are several ways to reach out for help with `Reactor Netty`. You can:
 
 * Get in touch with the community on https://gitter.im/reactor/reactor[Gitter].
 * Ask a question on stackoverflow.com at
