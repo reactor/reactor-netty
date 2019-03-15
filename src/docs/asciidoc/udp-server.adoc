@@ -3,16 +3,20 @@
 
 [[udp-server]]
 = UDP Server
-`Reactor Netty` provides easy to use and configure
-{javadoc}/reactor/netty/udp/UdpServer.html[UdpServer].
-It hides most of the `Netty` functionality that is needed in order to create a `UDP` server,
-and in addition adds `Reactive Streams` backpressure.
 
-== Start and Stop
-To start a `UDP` server, a {javadoc}/reactor/netty/udp/UdpServer.html[UdpServer]
+Reactor Netty provides the easy-to-use and easy-to-configure
+{javadoc}/reactor/netty/udp/UdpServer.html[`UdpServer`].
+It hides most of the Netty functionality that is required to create a `UDP` server
+and adds `Reactive Streams` backpressure.
+
+== Starting and Stopping
+
+To start a UDP server, a {javadoc}/reactor/netty/udp/UdpServer.html[UdpServer]
 instance has to be created and configured.
-By default the `host` will be configured for `localhost` and the `port` will be `12012`:
+By default, the host is configured to be `localhost` and the port is `12012`.
+The following example shows how to create and start a UDP server:
 
+====
 [source,java]
 ----
 import reactor.netty.Connection;
@@ -31,17 +35,20 @@ public class Application {
     }
 }
 ----
-<1> Creates a {javadoc}/reactor/netty/udp/UdpServer.html[UdpServer]
-instance ready for configuring.
+<1> Creates a {javadoc}/reactor/netty/udp/UdpServer.html[`UdpServer`]
+instance that is ready for configuring.
 <2> Starts the server in a blocking fashion and waits for it to finish initializing.
+====
 
-The returned {javadoc}/reactor/netty/Connection.html[Connection]
-offers simple server API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[disposeNow()]
+The returned {javadoc}/reactor/netty/Connection.html[`Connection`]
+offers a simple server API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the server down in a blocking fashion.
 
 === Host and Port
-In order to serve on a specific `host` and `port`, the configuration below can be applied to the `UDP` server:
 
+In order to serve on a specific host and port, you can apply the following configuration to the `UDP` server:
+
+====
 [source,java]
 ----
 import reactor.netty.Connection;
@@ -64,12 +71,16 @@ public class Application {
 ----
 <1> Configures the `UDP` server host
 <2> Configures the `UDP` server port
+====
 
 == Writing Data
-In order to send data to the remote peer, an I/O handler has to be attached.
-The I/O handler has access to {javadoc}/reactor/netty/udp/UdpOutbound.html[UdpOutbound]
-in order to be able to write data.
 
+To send data to the remote peer, you must attach an I/O handler.
+The I/O handler has access to {javadoc}/reactor/netty/udp/UdpOutbound.html[`UdpOutbound`],
+to be able to write data.
+The following example shows how to send `hello`:
+
+====
 [source,java]
 ----
 import io.netty.buffer.ByteBuf;
@@ -108,20 +119,25 @@ public class Application {
     }
 }
 ----
-<1> Sends `hello` string to the remote peer
+<1> Sends a `hello` string to the remote peer
+====
 
 == Flushing Strategies
-`Reactor Netty` provides three different strategies for flushing the outgoing data
-{javadoc}/reactor/netty/NettyPipeline.SendOptions.html[NettyPipeline.SendOptions]
 
-* `flushOnBoundary()` - this is the default behaviour. The flush operation will be explicitly invoked on a terminated `Publisher`.
-* `flushOnEach()` - The flushing operation will be executed as soon as possible after the write operation.
-This means that the ultimate goal is a flush operation after every element that was written, however as the flush operation
-will be scheduled, the flush operation might be invoked once for several write operations.
-* `flushOnEach(boolean)` - Depending on the provided boolean, the flush operation might behave as the one described above
-(when invoked with `true`), or (when invoked with `false`) it is guaranteed that there will be a flush operation after
+Reactor Netty\ provides three different strategies for flushing the outgoing data with
+{javadoc}/reactor/netty/NettyPipeline.SendOptions.html[`NettyPipeline.SendOptions`]:
+
+* `flushOnBoundary()` (default): The flush operation will be explicitly invoked on a terminated `Publisher`.
+* `flushOnEach()`: The flushing operation is invoked as soon as possible after the write operation.
+This means that the ultimate goal is a flush operation after every element that was written. However, as the flush operation
+is scheduled, the flush operation might be invoked once for several write operations.
+* `flushOnEach(boolean)`: When invoked with `true`, the flush operation behaves the same as `flushOnEach()`.
+When invoked with `false`, it is guaranteed to be a flush operation after
 every write operation.
 
+The following example uses `flushOnEach(false)` to set the flushing strategy:
+
+====
 [source,java]
 ----
 import io.netty.buffer.ByteBuf;
@@ -162,16 +178,20 @@ public class Application {
 }
 ----
 <1> Configures the flushing strategy to flush after every element emitted by the given `Publisher`.
-The flush operation will not be scheduled, which means flush operation will be invoked after every write operation.
+The flush operation is not scheduled, which means flush operation is invoked after every write operation.
+====
 
 NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
-The buffer size can be configured using the channel option `SO_SNDBUF`.
+You can configure the buffer size by using the `SO_SNDBUF` channel option.
 
 == Consuming Data
-In order to receive data from a remote peer, an I/O handler has to be attached.
-The I/O handler has access to {javadoc}/reactor/netty/udp/UdpInbound.html[UdpInbound]
-in order to be able to read data.
 
+To receive data from a remote peer, you must attach an I/O handler.
+The I/O handler has access to {javadoc}/reactor/netty/udp/UdpInbound.html[`UdpInbound`],
+to be able to read data.
+The following example shows how to consume data:
+
+====
 [source,java]
 ----
 import io.netty.channel.socket.DatagramPacket;
@@ -206,15 +226,20 @@ public class Application {
 }
 ----
 <1> Receives data from the remote peer
+====
 
 == Lifecycle Callbacks
-The lifecycle callbacks below are provided in order to be able to extend the `UDP` server.
 
-* `doOnBind` - The callback is invoked when the server channel is about to bind.
-* `doOnBound` - The callback is invoked when the server channel is bound.
-* `doOnUnbound` - The callback is invoked when the server channel is unbound.
-* `doOnLifecycle` - Setups all lifecycle callbacks
+The following lifecycle callbacks are provided to let you extend the `UDP` server:
 
+* `doOnBind`: Invoked when the server channel is about to bind.
+* `doOnBound`: Invoked when the server channel is bound.
+* `doOnUnbound`: Invoked when the server channel is unbound.
+* `doOnLifecycle`: Sets up all lifecycle callbacks.
+
+The following example uses the `doOnBound` method:
+
+====
 [source,java]
 ----
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -236,20 +261,32 @@ public class Application {
 }
 ----
 <1> `Netty` pipeline is extended with `LineBasedFrameDecoder` when the server channel is bound.
+====
 
 == Connection Configurations
 
-=== Channel Options
-By default the `UDP` server is configured with the options below:
+This section describes three kinds of configuration that you can use at the TCP level:
 
+* <<server-udp-connection-configurations-channel-options>>
+* <<server-udp-connection-configurations-wire-logger>>
+* <<server-udp-connection-configurations-event-loop-group>>
+
+[[server-udp-connection-configurations-channel-options]]
+=== Channel Options
+
+By default, the `UDP` server is configured with the following options:
+
+====
 [source,java,indent=0]
 ./../../main/java/reactor/netty/udp/UdpServer.java
 ----
 include::{sourcedir}/reactor/netty/udp/UdpServer.java[lines=430..436]
 ----
+====
 
-If additional options are necessary or changes to the current options, the configuration below can be applied:
+If you need additional options or need to change the current options, you can apply the following configuration:
 
+====
 [source,java]
 ----
 import io.netty.channel.ChannelOption;
@@ -270,18 +307,22 @@ public class Application {
     }
 }
 ----
+====
 
-More about `Netty` channel options can be found on the link below:
+For more about Netty channel options, see the following links:
 
-* https://netty.io/4.1/api/io/netty/channel/ChannelOption.html[ChannelOption]
-* https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[SocketOptions]
+* https://netty.io/4.1/api/io/netty/channel/ChannelOption.html[`ChannelOption`]
+* https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
 
+[[server-udp-connection-configurations-wire-logger]]
 === Wire Logger
-`Reactor Netty` provides a wire logging when the traffic between the peers has to be inspected.
-By default the wire logging is disabled.
-In order to be enabled it, the logger `reactor.netty.udp.UdpServer` level has to be set to `DEBUG`
-and the configuration below has to be applied.
 
+Reactor Netty provides wire logging for when the traffic between the peers has to be inspected.
+By default, wire logging is disabled.
+To enable it, you must set the logger `reactor.netty.udp.UdpServer` level to `DEBUG`
+and apply the following configuration:
+
+====
 [source,java]
 ----
 import reactor.netty.Connection;
@@ -302,23 +343,29 @@ public class Application {
 }
 ----
 <1> Enables the wire logging
+====
 
+[[server-udp-connection-configurations-event-loop-group]]
 === Event Loop Group
-By default the `UDP` server will use `Event Loop Group` where the number of the worker threads will be the number of
-processors available to the runtime on init (but with a minimum value of 4). When a different configuration is needed,
-one of the {javadoc}/reactor/netty/resources/LoopResources.html[LoopResource]`#create`
-methods can be used.
 
-The default configuration for the `Event Loop Group` is the following:
+By default, the UDP server uses "`Event Loop Group,`" where the number of the worker threads equals the number of
+processors available to the runtime on initialization (but with a minimum value of 4). When you need a different configuration,
+you can use one of the {javadoc}/reactor/netty/resources/LoopResources.html[LoopResource]`#create`
+methods.
 
+The default configuration for the "`Event Loop Group`" is the following:
+
+====
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
 include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=670..690]
 ----
+====
 
-If changes to the these settings are needed, the configuration below can be applied:
+If you need changes to the these settings, you can apply the following configuration:
 
+====
 [source,java]
 ----
 import reactor.netty.Connection;
@@ -340,3 +387,4 @@ public class Application {
     }
 }
 ----
+====
