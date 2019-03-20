@@ -115,7 +115,7 @@ public class UriEndpointFactoryTest {
 				.createUriEndpoint("foo:8080/bar", true)
 				.toExternalForm();
 
-		assertThat(test1).isEqualTo("http://foo:8080/bar");
+		assertThat(test1).isEqualTo("https://foo:8080/bar");
 		assertThat(test2).isEqualTo("ws://foo:8080/bar");
 	}
 
@@ -181,7 +181,7 @@ public class UriEndpointFactoryTest {
 				.createUriEndpoint("/foo", false)
 				.toExternalForm();
 
-		assertThat(test).isEqualTo("http://google.com/foo");
+		assertThat(test).isEqualTo("https://google.com/foo");
 	}
 
 	@Test

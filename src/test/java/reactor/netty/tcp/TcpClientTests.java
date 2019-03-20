@@ -561,7 +561,7 @@ public class TcpClientTests {
 
 		final CountDownLatch latch = new CountDownLatch(1);
 		System.out.println(client.get()
-		                         .uri("http://www.google.com/?q=test%20d%20dq")
+		                         .uri("https://www.google.com/?q=test%20d%20dq")
 		                         .responseContent()
 		                         .asString()
 		                         .collectList()
