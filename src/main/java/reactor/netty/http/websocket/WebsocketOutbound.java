@@ -75,7 +75,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	 * Prepare to send a close frame on subscribe then close the underlying channel
 	 *
 	 * @param statusCode
-	 *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+	 *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
 	 *            example, <tt>1000</tt> indicates normal closure.
 	 * @param reasonText
 	 *            Reason text. Set to null if no text.
@@ -91,7 +91,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	 * @param rsv
 	 *            reserved bits used for protocol extensions
 	 * @param statusCode
-	 *            Integer status code as per <a href="http://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
+	 *            Integer status code as per <a href="https://tools.ietf.org/html/rfc6455#section-7.4">RFC 6455</a>. For
 	 *            example, <tt>1000</tt> indicates normal closure.
 	 * @param reasonText
 	 *            Reason text. Set to null if no text.
