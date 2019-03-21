@@ -25,12 +25,13 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
     }
 ```
 
-See the [`Reactor Core` reference documentation](https://projectreactor.io/docs/core/release/reference/docs/index.html#getting)
+See the [Reference documentation](https://next.projectreactor.io/docs/netty/snapshot/reference/index.html#getting)
 for more information on getting it (eg. using `Maven`, or on how to get milestones and snapshots).
 
 
 ## Getting Started
 New to `Reactor Netty`? Check this [Reactor Netty Workshop](https://violetagg.github.io/reactor-netty-workshop/)
+and the [Reference documentation](https://next.projectreactor.io/docs/netty/snapshot/reference/index.html)
 
 Here is a very simple `HTTP` server and the corresponding `HTTP` client example
 
@@ -89,7 +90,7 @@ You don't need to build from source to use `Reactor Netty` (binaries in
 greatest, `Reactor Netty` can be easily built with the
 [gradle wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html). You also need JDK 1.8.
 
-```
+```shell
 $ git clone https://github.com/reactor/reactor-netty.git
 $ cd reactor-netty
 $ ./gradlew build
@@ -97,7 +98,7 @@ $ ./gradlew build
 
 If you want to publish the artifacts to your local `Maven` repository use:
 
-```
+```shell
 $ ./gradlew install
 ```
 
@@ -105,7 +106,9 @@ $ ./gradlew install
 https://projectreactor.io/docs/netty/release/api/
 
 ## Guides
-https://violetagg.github.io/reactor-netty-workshop/
+
+* https://next.projectreactor.io/docs/netty/snapshot/reference/index.html
+* https://violetagg.github.io/reactor-netty-workshop/
 
 ## License
 Reactor Netty is Open Source Software released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
