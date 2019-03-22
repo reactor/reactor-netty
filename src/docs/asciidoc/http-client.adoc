@@ -304,6 +304,7 @@ You can obtain this additional metadata by using
 {javadoc}/reactor/netty/http/client/HttpClientResponse.html[`HttpClientResponse`].
 The following example shows how to do so.
 
+====
 [source,java]
 ----
 import reactor.netty.http.client.HttpClient;
