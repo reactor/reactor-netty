@@ -1196,8 +1196,13 @@ public class HttpClientTest {
 
 
 	@Test
-	public void clientContext()  {
-		AtomicInteger i = new AtomicInteger(0);
+	public void testClientContext() throws Exception {
+		doTestClientContext(HttpClient.create());
+		doTestClientContext(HttpClient.create(ConnectionProvider.newConnection()));
+	}
+
+	private void doTestClientContext(HttpClient client) throws Exception {
+		CountDownLatch latch = new CountDownLatch(4);
 
 		DisposableServer server =
 				HttpServer.create()
@@ -1207,30 +1212,39 @@ public class HttpClientTest {
 				          .bindNow();
 
 		StepVerifier.create(
-				HttpClient.create(ConnectionProvider.newConnection())
-				          .port(server.port())
-				          .doOnRequest((req, c) -> {
-				              if (req.currentContext().hasKey("test")) {
-				                  i.incrementAndGet();
-				              }
-				          })
-				          .doOnResponse((res, c) -> {
-				              if (res.currentContext().hasKey("test")) {
-				                  i.incrementAndGet();
-				              }
-				          })
-				          .post()
-				          .send((req, out) ->
-				              out.sendString(Mono.subscriberContext()
-				                                 .map(ctx -> ctx.getOrDefault("test", "fail"))))
-				          .responseContent()
-				          .asString()
-				          .subscriberContext(Context.of("test", "success")))
+				client.port(server.port())
+				      .doOnRequest((req, c) -> {
+				          if (req.currentContext().hasKey("test")) {
+				              latch.countDown();
+				          }
+				      })
+				      .doAfterRequest((req, c) -> {
+				          if (req.currentContext().hasKey("test")) {
+				              latch.countDown();
+				          }
+				      })
+				      .doOnResponse((res, c) -> {
+				          if (res.currentContext().hasKey("test")) {
+				              latch.countDown();
+				          }
+				      })
+				      .doAfterResponse((req, c) -> {
+				          if (req.currentContext().hasKey("test")) {
+				              latch.countDown();
+				          }
+				      })
+				      .post()
+				      .send((req, out) ->
+				          out.sendString(Mono.subscriberContext()
+				                             .map(ctx -> ctx.getOrDefault("test", "fail"))))
+				      .responseContent()
+				      .asString()
+				      .subscriberContext(Context.of("test", "success")))
 				    .expectNext("success")
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
 
-		assertThat(i.get()).isEqualTo(2);
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isEqualTo(true);
 		server.disposeNow();
 	}
 

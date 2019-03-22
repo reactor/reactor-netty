@@ -154,10 +154,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public void dispose() {
-		if (inbound.isDisposed()) {
-			return;
+		if (!inbound.isDisposed()) {
+			inbound.cancel();
 		}
-		inbound.cancel();
 		connection.dispose();
 	}
 
@@ -377,7 +376,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			}
 
 			Operators.terminate(OUTBOUND_CLOSE, this);
-			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 			// Do not call directly inbound.onInboundComplete()
 			// HttpClientOperations need to notify with error
 			// when there is no response state
@@ -433,12 +431,22 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public ChannelPromise setSuccess(Void result) {
 		// Returned value is deliberately ignored
 		super.setSuccess(result);
+		listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 		return this;
 	}
 
 	@Override
 	public boolean trySuccess() {
-		return trySuccess(null);
+		boolean result = super.trySuccess(null);
+		listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
+		return result;
+	}
+
+	@Override
+	public boolean tryFailure(Throwable cause) {
+		boolean result = super.tryFailure(cause);
+		listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
+		return result;
 	}
 
 	@Override
@@ -456,6 +464,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public ChannelPromise setFailure(Throwable cause) {
 		// Returned value is deliberately ignored
 		super.setFailure(cause);
+		listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 		return this;
 	}
 

@@ -418,7 +418,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				else if (future instanceof ChannelPromise) {
 					ChannelPromise promise = (ChannelPromise) future;
 					if (v == ChannelOperations.TERMINATED_OPS) {
-						promise.trySuccess();
+						promise.setSuccess(null);
 					}
 					else if (v instanceof Publisher) {
 						Publisher<?> p = (Publisher<?>) v;
