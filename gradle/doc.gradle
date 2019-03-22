@@ -80,7 +80,7 @@ configure(rootProject) {
 			stylesheet: 'reactor.css',
 			appversion: "$version",
 			'source-highlighter': 'highlightjs',
-			'highlightjsdir': "./highlight",
+			'highlightjsdir': "highlight/",
 			'highlightjs-theme': 'railscasts'
 
 	doLast {
