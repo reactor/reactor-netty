@@ -250,10 +250,10 @@ public abstract class BootstrapHandlers {
 				(ConnectionObserver) b.config()
 				                             .options()
 				                             .get(OBSERVER_OPTION);
-		b.option(OBSERVER_OPTION, null);
 		if (obs == null) {
 			return ConnectionObserver.emptyListener(); //will not be triggered in
 		}
+		b.option(OBSERVER_OPTION, null);
 		return obs;
 	}
 
@@ -285,10 +285,10 @@ public abstract class BootstrapHandlers {
 		ConnectionObserver obs = (ConnectionObserver) b.config()
 		                                               .childOptions()
 		                                               .get(OBSERVER_OPTION);
-		b.childOption(OBSERVER_OPTION, null);
 		if (obs == null) {
 			return ConnectionObserver.emptyListener(); //will not be triggered in
 		}
+		b.childOption(OBSERVER_OPTION, null);
 		return obs;
 	}
 
