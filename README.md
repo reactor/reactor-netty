@@ -20,8 +20,8 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
     }
 
     dependencies {
-      //compile "io.projectreactor.netty:reactor-netty:0.8.6.BUILD-SNAPSHOT"
-      compile "io.projectreactor.netty:reactor-netty:0.8.5.RELEASE"
+      //compile "io.projectreactor.netty:reactor-netty:0.8.7.BUILD-SNAPSHOT"
+      compile "io.projectreactor.netty:reactor-netty:0.8.6.RELEASE"
     }
 ```
 
