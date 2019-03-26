@@ -36,9 +36,9 @@ public class ClientProxyOptionsTests {
 		assertThat(builder.build().asSimpleString()).startsWith("proxy=HTTP" +
 				"(http://proxy").endsWith(":456)");
 
-		builder = addrSpec.address(new InetSocketAddress("http://another.proxy", 123));
+		builder = addrSpec.address(new InetSocketAddress("https://another.proxy", 123));
 		assertThat(builder.build().asSimpleString()).startsWith("proxy=HTTP" +
-				"(http://another.proxy").endsWith(":123)");
+				"(https://another.proxy").endsWith(":123)");
 	}
 
 	@Test
@@ -51,14 +51,14 @@ public class ClientProxyOptionsTests {
 				.startsWith("address=http://proxy")
 				.endsWith(":456, nonProxyHosts=null, type=HTTP");
 
-		builder = addrSpec.address(() -> new InetSocketAddress("http://another.proxy", 123));
+		builder = addrSpec.address(() -> new InetSocketAddress("https://another.proxy", 123));
 		assertThat(builder.build().asDetailedString())
-				.startsWith("address=http://another.proxy")
+				.startsWith("address=https://another.proxy")
 				.endsWith(":123, nonProxyHosts=null, type=HTTP");
 
 		builder.nonProxyHosts("localhost");
 		assertThat(builder.build().asDetailedString())
-				.startsWith("address=http://another.proxy")
+				.startsWith("address=https://another.proxy")
 				.endsWith(":123, nonProxyHosts=localhost, type=HTTP");
 	}
 

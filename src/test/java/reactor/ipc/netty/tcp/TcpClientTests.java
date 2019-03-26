@@ -505,7 +505,7 @@ public class TcpClientTests {
 		HttpClient client = HttpClient.create();
 
 		final CountDownLatch latch = new CountDownLatch(1);
-		System.out.println(client.get("http://www.google.com/?q=test%20d%20dq")
+		System.out.println(client.get("https://www.google.com/?q=test%20d%20dq")
 		                         .flatMap(r -> r.receive()
 		                                     .asString()
 		                                     .collectList())

@@ -404,13 +404,13 @@ public class HttpClientTest {
 		PoolResources p = PoolResources.fixed("test", 1);
 
 		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(p))
-		                                 .get("http://google.com/unsupportedURI",
+		                                 .get("https://google.com/unsupportedURI",
 		                                         c -> c.failOnClientError(false)
 		                                               .sendHeaders())
 		                                 .block(Duration.ofSeconds(30));
 
 		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
-		                                  .get("http://google.com/unsupportedURI",
+		                                  .get("https://google.com/unsupportedURI",
 		                                          c -> c.failOnClientError(false)
 		                                                .sendHeaders())
 		                                  .block(Duration.ofSeconds(30));
@@ -431,13 +431,13 @@ public class HttpClientTest {
 		PoolResources p = PoolResources.fixed("test", 1);
 
 		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(p))
-		                                 .get("http://google.com/unsupportedURI",
+		                                 .get("https://google.com/unsupportedURI",
 		                                         c -> c.chunkedTransfer(false)
 		                                               .failOnClientError(false))
 		                                 .block(Duration.ofSeconds(30));
 
 		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
-		                                  .get("http://google.com/unsupportedURI",
+		                                  .get("https://google.com/unsupportedURI",
 		                                         c -> c.chunkedTransfer(false)
 		                                               .failOnClientError(false))
 		                                 .block(Duration.ofSeconds(30));
@@ -457,14 +457,14 @@ public class HttpClientTest {
 	public void contentHeader() {
 		PoolResources fixed = PoolResources.fixed("test", 1);
 		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(fixed))
-		                                 .get("http://google.com",
+		                                 .get("https://google.com",
 		                                         c -> c.header("content-length", "1")
 		                                               .failOnClientError(false)
 		                                               .sendString(Mono.just(" ")))
 		                                 .block(Duration.ofSeconds(30));
 
 		HttpClientResponse r1 = HttpClient.create(opts -> opts.poolResources(fixed))
-		                                  .get("http://google.com",
+		                                  .get("https://google.com",
 		                                          c -> c.header("content-length", "1")
 		                                                .failOnClientError(false)
 		                                                .sendString(Mono.just(" ")))

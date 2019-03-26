@@ -45,8 +45,8 @@ public class ClientOptionsTest {
 		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to no base address through SOCKS4 proxy");
 
 		//address
-		this.builder.host("http://google.com").port(123);
-		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to http://google.com:123 through SOCKS4 proxy");
+		this.builder.host("https://google.com").port(123);
+		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to https://google.com:123 through SOCKS4 proxy");
 	}
 
 	@Test
@@ -61,20 +61,20 @@ public class ClientOptionsTest {
 				.contains(":456)");
 
 		//address
-		this.builder.host("http://google.com").port(123);
+		this.builder.host("https://google.com").port(123);
 		assertThat(this.builder.build().asDetailedString())
-				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.startsWith("connectAddress=https://google.com:123, proxy=SOCKS4(http://proxy")
 				.contains(":456)");
 	}
 
 	@Test
 	public void toStringContainsAsDetailedString() {
-		this.builder.host("http://google.com")
+		this.builder.host("https://google.com")
 		            .port(123)
 		            .proxy(proxyOptions)
 		            .build();
 		assertThat(this.builder.build().toString())
-				.startsWith("ClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.startsWith("ClientOptions{connectAddress=https://google.com:123, proxy=SOCKS4(http://proxy")
 				.contains(":456)")
 				.endsWith("}");
 	}

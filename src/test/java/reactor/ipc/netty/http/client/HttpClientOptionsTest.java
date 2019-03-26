@@ -45,12 +45,12 @@ public class HttpClientOptionsTest {
 		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to no base address through SOCKS4 proxy");
 
 		//address
-		this.builder.host("http://google.com").port(123);
-		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to http://google.com:123 through SOCKS4 proxy");
+		this.builder.host("https://google.com").port(123);
+		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to https://google.com:123 through SOCKS4 proxy");
 
 		//gzip
 		this.builder.compression(true);
-		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to http://google.com:123 through SOCKS4 proxy with gzip");
+		assertThat(this.builder.build().asSimpleString()).isEqualTo("connecting to https://google.com:123 through SOCKS4 proxy with gzip");
 	}
 
 	@Test
@@ -67,28 +67,28 @@ public class HttpClientOptionsTest {
 				.endsWith(", acceptGzip=false");
 
 		//address
-		this.builder.host("http://google.com").port(123);
+		this.builder.host("https://google.com").port(123);
 		assertThat(this.builder.build().asDetailedString())
-				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.startsWith("connectAddress=https://google.com:123, proxy=SOCKS4(http://proxy")
 				.contains(":456)")
 				.endsWith(", acceptGzip=false");
 
 		//gzip
 		this.builder.compression(true);
 		assertThat(this.builder.build().asDetailedString())
-				.startsWith("connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.startsWith("connectAddress=https://google.com:123, proxy=SOCKS4(http://proxy")
 				.contains(":456)")
 				.endsWith(", acceptGzip=true");
 	}
 
 	@Test
 	public void toStringContainsAsDetailedString() {
-		this.builder.host("http://google.com")
+		this.builder.host("https://google.com")
 		            .port(123)
 		            .proxy(proxyOptions)
 		            .compression(true);
 		assertThat(this.builder.build().toString())
-				.startsWith("HttpClientOptions{connectAddress=http://google.com:123, proxy=SOCKS4(http://proxy")
+				.startsWith("HttpClientOptions{connectAddress=https://google.com:123, proxy=SOCKS4(http://proxy")
 				.contains(":456)")
 				.endsWith(", acceptGzip=true}");
 	}
