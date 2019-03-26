@@ -322,13 +322,13 @@ public class HttpClientTest {
 		PoolResources p = PoolResources.fixed("test", 1);
 
 		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(p))
-		                                 .get("http://google.com/unsupportedURI",
+		                                 .get("https://google.com/unsupportedURI",
 				                                 c -> c.failOnClientError(false)
 				                                       .sendHeaders())
 		                                 .block(Duration.ofSeconds(30));
 
 		HttpClientResponse r2 = HttpClient.create(opts -> opts.poolResources(p))
-		                                  .get("http://google.com/unsupportedURI",
+		                                  .get("https://google.com/unsupportedURI",
 				                                  c -> c.failOnClientError(false)
 				                                        .sendHeaders())
 		                                  .block(Duration.ofSeconds(30));
@@ -359,14 +359,14 @@ public class HttpClientTest {
 	public void contentHeader() throws Exception {
 		PoolResources fixed = PoolResources.fixed("test", 1);
 		HttpClientResponse r = HttpClient.create(opts -> opts.poolResources(fixed))
-		                                 .get("http://google.com",
+		                                 .get("https://google.com",
 				                                 c -> c.header("content-length", "1")
 				                                       .failOnClientError(false)
 				                                       .sendString(Mono.just(" ")))
 		                                 .block(Duration.ofSeconds(30));
 
 		HttpClient.create(opts -> opts.poolResources(fixed))
-		          .get("http://google.com",
+		          .get("https://google.com",
 				          c -> c.header("content-length", "1")
 				                .failOnClientError(false)
 				                .sendString(Mono.just(" ")))
@@ -427,7 +427,7 @@ public class HttpClientTest {
 		//verify gzip is negotiated (when no decoder)
 		StepVerifier.create(
 				HttpClient.create()
-				          .get("http://www.httpwatch.com", req -> req
+				          .get("https://www.httpwatch.com", req -> req
 						          .addHeader("Accept-Encoding", "gzip")
 						          .addHeader("Accept-Encoding", "deflate")
 				          )
@@ -442,7 +442,7 @@ public class HttpClientTest {
 		//verify decoder does its job and removes the header
 		StepVerifier.create(
 				HttpClient.create()
-				          .get("http://www.httpwatch.com", req -> {
+				          .get("https://www.httpwatch.com", req -> {
 					          req.context().addHandlerFirst("gzipDecompressor", new HttpContentDecompressor());
 					          return req.addHeader("Accept-Encoding", "gzip")
 					                    .addHeader("Accept-Encoding", "deflate");
