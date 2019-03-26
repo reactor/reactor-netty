@@ -35,7 +35,7 @@ import javax.net.ServerSocketFactory;
  * @author Ben Hale
  * @author Arjen Poutsma
  * @author Gunnar Hillert
- * @see <a href="http://spring.io">Borrowed from the Spring Framework</a>
+ * @see <a href="https://spring.io">Borrowed from the Spring Framework</a>
  * */
 public final class SocketUtils {
 
