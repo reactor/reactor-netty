@@ -204,7 +204,7 @@ final class HttpPredicate
 	 * @author Arjen Poutsma
 	 * @author Juergen Hoeller
 	 * @author Jon Brisbin
-	 * @see <a href="http://bitworking.org/projects/URI-Templates/">URI Templates</a>
+	 * @see <a href="https://bitworking.org/projects/URI-Templates/">URI Templates</a>
 	 */
 	static final class UriPathTemplate {
 
