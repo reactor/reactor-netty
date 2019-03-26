@@ -62,13 +62,13 @@ import static reactor.ipc.netty.http.client.HttpClientConfiguration.*;
  * <p> Examples:
  * <pre>
  * {@code
- * HttpClient.create("http://example.com")
+ * HttpClient.create("https://example.com")
  *           .get()
  *           .response()
  *           .block();
  * }
  * {@code
- * HttpClient.create("http://example.com")
+ * HttpClient.create("https://example.com")
  *           .post()
  *           .send(Flux.just(bb1, bb2, bb3))
  *           .responseSingle((res, content) -> Mono.just(res.status().code()))
@@ -76,7 +76,7 @@ import static reactor.ipc.netty.http.client.HttpClientConfiguration.*;
  * }
  * {@code
  * HttpClient.prepare()
- *           .baseUri("http://example.com")
+ *           .baseUri("https://example.com")
  *           .post()
  *           .send(ByteBufFlux.fromString(flux))
  *           .responseSingle((res, content) -> Mono.just(res.status().code()))

@@ -456,7 +456,7 @@ public class HttpClientTest {
 				          .doOnResponse((res, c) -> ch1.set(c.channel()))
 				          .wiretap()
 				          .get()
-				          .uri("http://google.com/unsupportedURI")
+				          .uri("https://google.com/unsupportedURI")
 				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 				          .block(Duration.ofSeconds(30));
 
@@ -465,7 +465,7 @@ public class HttpClientTest {
 				          .doOnResponse((res, c) -> ch2.set(c.channel()))
 				          .wiretap()
 				          .get()
-				          .uri("http://google.com/unsupportedURI")
+				          .uri("https://google.com/unsupportedURI")
 				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 				          .block(Duration.ofSeconds(30));
 
@@ -525,7 +525,7 @@ public class HttpClientTest {
 				          .wiretap()
 				          .headers(h -> h.add("content-length", "1"))
 				          .request(HttpMethod.GET)
-				          .uri("http://google.com")
+				          .uri("https://google.com")
 				          .send(ByteBufFlux.fromString(Mono.just(" ")))
 				          .responseSingle((res, buf) -> Mono.just(res.status()))
 				          .block(Duration.ofSeconds(30));
@@ -534,7 +534,7 @@ public class HttpClientTest {
 		          .wiretap()
 		          .headers(h -> h.add("content-length", "1"))
 		          .request(HttpMethod.GET)
-		          .uri("http://google.com")
+		          .uri("https://google.com")
 		          .send(ByteBufFlux.fromString(Mono.just(" ")))
 		          .responseSingle((res, buf) -> Mono.just(res.status()))
 		          .block(Duration.ofSeconds(30));
