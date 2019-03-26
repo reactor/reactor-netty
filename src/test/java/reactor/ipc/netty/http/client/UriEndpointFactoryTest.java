@@ -166,7 +166,7 @@ public class UriEndpointFactoryTest {
 				.createUriEndpoint("/foo", false)
 				.toExternalForm();
 
-		assertThat(test).isEqualTo("http://google.com/foo");
+		assertThat(test).isEqualTo("https://google.com/foo");
 	}
 
 	@Test

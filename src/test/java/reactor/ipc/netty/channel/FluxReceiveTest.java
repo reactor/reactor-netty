@@ -101,7 +101,7 @@ public class FluxReceiveTest {
 			                                }
 		                                }))
 		      .get()
-		      .uri("http://releases.ubuntu.com/16.04.4/ubuntu-16.04.4-desktop-amd64.iso")
+		      .uri("http://old-releases.ubuntu.com/releases/16.04.4/ubuntu-16.04.4-desktop-amd64.iso")
 		      .responseContent()
 		      .log(logger.getName())
 		      .retry(IOException.class::isInstance)
