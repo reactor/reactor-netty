@@ -16,7 +16,7 @@ The project started in 2012, with a long internal incubation time. Reactor 1.x a
 
 Parallel to that work we also decided to re-align some of our Event-Driven and Task Coordination API to the increasingly popular and documented <<gettingstarted.adoc/#rx,Reactive Extensions>>.
 
-Reactor is sponsored by http://pivotal.io[Pivotal] and is https://www.apache.org/licenses/LICENSE-2.0
+Reactor is sponsored by https://pivotal.io[Pivotal] and is https://www.apache.org/licenses/LICENSE-2.0
 .html[Apache 2.0 licensed]. It is available on https://github.com/reactor/reactor-ipc[GitHub].
 
 === Requirements
