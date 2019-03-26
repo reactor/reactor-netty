@@ -591,7 +591,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 			c.closeFuture()
 			 .addListener(ff -> {
-			     pool.release(c);
+			     if (AttributeKey.exists("channelPool")) {
+			         pool.release(c);
+			     }
 			     pool.inactiveConnections.decrementAndGet();
 			     if (log.isDebugEnabled()) {
 			         log.debug(format(c, "Channel closed, now {} active connections and {} inactive connections"),

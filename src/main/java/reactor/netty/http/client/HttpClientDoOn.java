@@ -62,12 +62,11 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 			onRequest.accept(connection.as(HttpClientOperations.class), connection);
 			return;
 		}
-		if (afterResponse != null) {
-			if (newState == State.RELEASED){
-				afterResponse.accept(connection.as(HttpClientOperations.class), connection);
-			}
-			else if (newState == State.DISCONNECTING) {
-				connection.onDispose(() -> afterResponse.accept(connection.as(HttpClientOperations.class), connection));
+		if (afterResponse != null && newState == HttpClientState.RESPONSE_RECEIVED) {
+			HttpClientOperations ops = connection.as(HttpClientOperations.class);
+			if (ops != null) {
+				ops.onTerminate().subscribe(null, null,
+						() -> afterResponse.accept(connection.as(HttpClientOperations.class), connection));
 			}
 			return;
 		}
