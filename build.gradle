@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,8 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-import org.gradle.api.internal.plugins.osgi.OsgiHelper
+ */port org.gradle.api.internal.plugins.osgi.OsgiHelper
 
 buildscript {
   repositories {
@@ -46,7 +45,7 @@ ext {
   gradleVersion = '3.3'
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.1.16.BUILD-SNAPSHOT"
+  reactorCoreVersion = "3.1.16.RELEASE"
 
   // Languages
   groovyVersion = '2.4.1'
