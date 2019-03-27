@@ -380,7 +380,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// HttpClientOperations need to notify with error
 			// when there is no response state
 			onInboundComplete();
-			if (isPersistent()) {
+			if (channel().isActive() && isPersistent()) {
 				channel().writeAndFlush(TERMINATED_OPS, this);
 			}
 			else {

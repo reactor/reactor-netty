@@ -71,6 +71,7 @@ import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.WorkQueueProcessor;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
@@ -884,6 +885,50 @@ public class TcpServerTests {
 		          .block(Duration.ofSeconds(30));
 
 		serverConnDisposed.block(Duration.ofSeconds(5));
+	}
+
+	@Test
+	public void testIssue688() throws Exception {
+		CountDownLatch connected = new CountDownLatch(1);
+		CountDownLatch configured = new CountDownLatch(1);
+		CountDownLatch disconnected = new CountDownLatch(1);
+
+		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
+
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .observe((connection, newState) -> {
+				             if (newState == ConnectionObserver.State.CONNECTED) {
+				                 group.add(connection.channel());
+				                 connected.countDown();
+				             }
+				             else if (newState == ConnectionObserver.State.CONFIGURED) {
+				                 configured.countDown();
+				             }
+				             else if (newState == ConnectionObserver.State.DISCONNECTING) {
+				                 disconnected.countDown();
+				             }
+				         })
+				         .wiretap(true)
+				         .bindNow();
+
+		TcpClient.create()
+		         .addressSupplier(server::address)
+		         .wiretap(true)
+		         .connect()
+		         .subscribe();
+
+		assertTrue(connected.await(30, TimeUnit.SECONDS));
+
+		assertTrue(configured.await(30, TimeUnit.SECONDS));
+
+		FutureMono.from(group.close())
+		          .block(Duration.ofSeconds(30));
+
+		assertTrue(disconnected.await(30, TimeUnit.SECONDS));
+
+		server.disposeNow();
 	}
 
 	private static class SimpleClient extends Thread {
