@@ -158,7 +158,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				pool.close();
 			}
 
-			disposableAcquire(sink, obs, pool);
+			disposableAcquire(sink, obs, pool, false);
 
 		});
 
@@ -203,10 +203,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, Pool pool) {
+	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, Pool pool, boolean retried) {
 		Future<Channel> f = pool.acquire();
 		DisposableAcquire disposableAcquire =
-				new DisposableAcquire(sink, f, pool, obs);
+				new DisposableAcquire(sink, f, pool, obs, retried);
 		// Returned value is deliberately ignored
 		f.addListener(disposableAcquire);
 		sink.onCancel(disposableAcquire);
@@ -468,15 +468,18 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final MonoSink<Connection> sink;
 		final Pool                 pool;
 		final ConnectionObserver   obs;
+		final boolean              retried;
 
 		DisposableAcquire(MonoSink<Connection> sink,
 				Future<Channel> future,
 				Pool pool,
-				ConnectionObserver obs) {
+				ConnectionObserver obs,
+				boolean retried) {
 			this.f = future;
 			this.pool = pool;
 			this.sink = sink;
 			this.obs = obs;
+			this.retried = retried;
 		}
 
 		@Override
@@ -629,12 +632,22 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				Channel c = f.get();
 
 				if (!c.isActive()) {
-					//TODO is this case necessary
-					if (log.isDebugEnabled()) {
-						log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
+					registerClose(c);
+					if (!retried) {
+						if (log.isDebugEnabled()) {
+							log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
+						}
+						disposableAcquire(sink, obs, pool, true);
 					}
-					disposableAcquire(sink, obs, pool);
-					return;
+					else {
+						Throwable cause = f.cause();
+						if (cause != null) {
+							sink.error(cause);
+						}
+						else {
+							sink.error(new IOException("Error while acquiring from " + pool));
+						}
+					}
 				}
 				if (c.eventLoop().inEventLoop()) {
 					run();
