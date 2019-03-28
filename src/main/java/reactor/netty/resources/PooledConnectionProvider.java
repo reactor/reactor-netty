@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -484,12 +485,12 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				return;
 			}
 
-			// Returned value is deliberately ignored
-			f.removeListener(this);
-
 			if (!f.isDone()) {
 				f.cancel(true);
 			}
+
+			// Returned value is deliberately ignored
+			f.removeListener(this);
 		}
 
 		@Override
@@ -605,18 +606,23 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		@Override
 		public final void operationComplete(Future<Channel> f) throws Exception {
 			if (!f.isSuccess()) {
-				pool.inactiveConnections.decrementAndGet();
 				if (f.isCancelled()) {
+					pool.inactiveConnections.decrementAndGet();
 					if (log.isDebugEnabled()) {
 						log.debug("Cancelled acquiring from pool {}", pool);
 					}
 					return;
 				}
-				if (f.cause() != null) {
+				Throwable cause = f.cause();
+				if (cause != null) {
+					if (!(cause instanceof TimeoutException) && !(cause instanceof IllegalStateException)) {
+						pool.inactiveConnections.decrementAndGet();
+					}
 					sink.error(f.cause());
 				}
 				else {
-					sink.error(new IOException("error while acquiring from " + pool));
+					pool.inactiveConnections.decrementAndGet();
+					sink.error(new IOException("Error while acquiring from " + pool));
 				}
 			}
 			else {
