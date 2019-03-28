@@ -144,14 +144,14 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				if (pool != null) {
 					break;
 				}
-				if (log.isDebugEnabled()) {
-					log.debug("Creating new client pool [{}] for {}",
-							name,
-							bootstrap.config()
-							         .remoteAddress());
-				}
 				pool = new Pool(bootstrap, poolFactory, opsFactory);
 				if (channelPools.putIfAbsent(holder, pool) == null) {
+					if (log.isDebugEnabled()) {
+						log.debug("Creating new client pool [{}] for {}",
+								name,
+								bootstrap.config()
+										.remoteAddress());
+					}
 					break;
 				}
 				pool.close();
