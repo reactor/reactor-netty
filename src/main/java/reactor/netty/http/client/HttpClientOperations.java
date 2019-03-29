@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -777,7 +778,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		public Mono<Void> then() {
 			ByteBufAllocator alloc = parent.channel().alloc();
 			return Flux.from(source)
-			           .collect(alloc::heapBuffer, ByteBuf::writeBytes)
+			           .collect(alloc::compositeBuffer, CompositeByteBuf::addComponent)
 			           .flatMap(agg -> {
 				           if (!HttpUtil.isTransferEncodingChunked(request) && !HttpUtil.isContentLengthSet(request)) {
 					           request.headers()
