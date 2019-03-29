@@ -17,13 +17,17 @@ package reactor.netty.resources;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
 import io.netty.bootstrap.Bootstrap;
@@ -36,12 +40,16 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.Before;
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.PooledConnectionProvider.PooledConnection;
+import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientTests;
+import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -227,4 +235,79 @@ public class PooledConnectionProviderTest {
 		}
 	}
 
+	@Test
+	public void testIssue673_TimeoutException() throws InterruptedException {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((in, out) -> out.sendString(Mono.just("test")
+				                                                 .delayElement(Duration.ofMillis(100))))
+				         .wiretap(true)
+				         .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("test", 1, 20);
+		AtomicReference<PooledConnectionProvider.Pool> pool = new AtomicReference<>();
+		Flux.range(0, 5)
+		    .flatMap(i ->
+		        TcpClient.create(provider)
+		                 .port(server.port())
+		                 .doOnConnected(conn -> {
+		                     ConcurrentMap<PooledConnectionProvider.PoolKey, PooledConnectionProvider.Pool> pools = provider.channelPools;
+		                     pool.set(pools.get(pools.keySet().toArray()[0]));
+		                     conn.channel()
+		                         .closeFuture()
+		                         .addListener(future -> latch.countDown());
+		                 })
+		                 .handle((in, out) -> in.receive().then())
+		                 .wiretap(true)
+		                 .connect())
+		    .subscribe(null, t -> assertThat(t instanceof TimeoutException).isTrue());
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		assertThat(pool.get().activeConnections.get()).isEqualTo(0);
+		assertThat(pool.get().inactiveConnections.get()).isEqualTo(0);
+
+		server.disposeNow();
+		provider.dispose();
+	}
+
+	@Test
+	public void testIssue673_IllegalStateException() throws InterruptedException {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((in, out) -> out.sendString(Mono.just("test")))
+				         .wiretap(true)
+				         .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("test", 1);
+		AtomicReference<PooledConnectionProvider.Pool> pool = new AtomicReference<>();
+		Flux.range(0, 2)
+		    .flatMap(i ->
+		        TcpClient.create(provider)
+		                 .port(server.port())
+		                 .doOnConnected(conn -> {
+		                     ConcurrentMap<PooledConnectionProvider.PoolKey, PooledConnectionProvider.Pool> pools = provider.channelPools;
+		                     pool.set(pools.get(pools.keySet().toArray()[0]));
+		                     provider.disposeLater()
+		                             .block(Duration.ofSeconds(30));
+		                     conn.channel()
+		                         .closeFuture()
+		                         .addListener(future -> latch.countDown());
+		                 })
+		                 .handle((in, out) -> in.receive().then())
+		                 .wiretap(true)
+		                 .connect())
+		    .subscribe(null, t -> assertThat(t instanceof IllegalStateException).isTrue());
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		assertThat(pool.get().activeConnections.get()).isEqualTo(0);
+		assertThat(pool.get().inactiveConnections.get()).isEqualTo(0);
+
+		server.disposeNow();
+	}
 }
