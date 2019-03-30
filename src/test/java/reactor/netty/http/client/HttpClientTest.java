@@ -1672,7 +1672,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testest() {
+	public void testIssue694() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
