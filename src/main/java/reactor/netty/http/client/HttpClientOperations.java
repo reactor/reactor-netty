@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -782,7 +783,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			               if (signal.hasValue()) {
 			                   ByteBuf buf = signal.get();
 			                   if (buf != null && buf.readableBytes() > 0) {
-			                       return flux.collect(alloc::heapBuffer, ByteBuf::writeBytes)
+			                       return flux.collect(alloc::compositeBuffer, CompositeByteBuf::addComponent)
 			                                  .flatMap(agg -> {
 			                                      if (!HttpUtil.isTransferEncodingChunked(request) &&
 			                                              !HttpUtil.isContentLengthSet(request)) {

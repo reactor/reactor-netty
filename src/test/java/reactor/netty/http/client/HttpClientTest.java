@@ -44,6 +44,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLException;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.group.ChannelGroup;
@@ -1667,5 +1669,43 @@ public class HttpClientTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
 		server.dispose();
+	}
+
+	@Test
+	public void testest() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> req.receive().then())
+				          .wiretap(true)
+				          .bindNow();
+
+		HttpClient client = createHttpClientForContextWithPort(server);
+
+		ByteBufAllocator alloc =ByteBufAllocator.DEFAULT;
+
+		ByteBuf buffer1 = alloc.buffer()
+		                       .writeInt(1)
+		                       .retain(9);
+		client.request(HttpMethod.GET)
+		      .send((req, out) -> out.send(Flux.range(0, 10)
+		                                       .map(i -> buffer1)))
+		      .response()
+		      .block(Duration.ofSeconds(30));
+
+		assertThat(buffer1.refCnt()).isEqualTo(0);
+
+		ByteBuf buffer2 = alloc.buffer()
+		                       .writeInt(1)
+		                       .retain(9);
+		client.request(HttpMethod.GET)
+		      .send(Flux.range(0, 10)
+		                .map(i -> buffer2))
+		      .response()
+		      .block(Duration.ofSeconds(30));
+
+		assertThat(buffer2.refCnt()).isEqualTo(0);
+
+		server.disposeNow();
 	}
 }
