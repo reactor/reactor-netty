@@ -715,6 +715,10 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public Mono<Void> then() {
+			if (!ch.channel().isActive()) {
+				return Mono.error(new AbortedException("Connection has been closed BEFORE response"));
+			}
+
 			return m;
 		}
 	}

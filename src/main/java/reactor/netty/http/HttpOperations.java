@@ -40,6 +40,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 
 /**
@@ -86,6 +87,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	public Mono<Void> then() {
+		if (!channel().isActive()) {
+			return Mono.error(new AbortedException("Connection has been closed BEFORE response"));
+		}
+
 		if (hasSentHeaders()) {
 			return Mono.empty();
 		}

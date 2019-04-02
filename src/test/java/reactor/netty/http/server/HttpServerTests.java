@@ -56,6 +56,10 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
@@ -65,11 +69,14 @@ import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
+import reactor.netty.DisposableChannel;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientRequest;
+import reactor.netty.http.client.PrematureCloseException;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
@@ -1089,6 +1096,40 @@ public class HttpServerTests {
 		                  }))
 		    .blockLast(Duration.ofSeconds(30));
 
+		server.dispose();
+	}
+
+	@Test
+	public void testExpectErrorWhenConnectionClosed() throws Exception {
+		SelfSignedCertificate ssc = new SelfSignedCertificate();
+		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+		                                        .build();
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .secure(spec -> spec.sslContext(serverCtx))
+				          .handle((req, res) -> {
+				              res.withConnection(DisposableChannel::dispose);
+				              return res.sendString(Mono.just("OK"))
+				                        .then()
+				                        .doOnError(error::set);
+				          })
+				          .bindNow();
+
+		SslContext clientCtx = SslContextBuilder.forClient()
+		                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+		                                        .build();
+		StepVerifier.create(
+				HttpClient.create()
+				          .addressSupplier(server::address)
+				          .secure(spec -> spec.sslContext(clientCtx))
+				          .get()
+				          .uri("/")
+				          .responseContent())
+				    .verifyError(PrematureCloseException.class);
+
+		assertThat(error.get()).isInstanceOf(AbortedException.class);
 		server.dispose();
 	}
 }
