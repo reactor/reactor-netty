@@ -25,9 +25,12 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.haproxy.HAProxyMessage;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
@@ -131,6 +134,18 @@ final class HttpServerBind extends HttpServer
 
 		//remove any OPS since we will initialize below
 		BootstrapHandlers.channelOperationFactory(b);
+
+		if (conf.proxyProtocol) {
+			b = BootstrapHandlers.updateConfiguration(b,
+					NettyPipeline.ProxyProtocolDecoder,
+					(connectionObserver, channel) -> {
+						channel.pipeline()
+								.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
+						channel.pipeline()
+								.addAfter(NettyPipeline.ProxyProtocolDecoder,
+										NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
+					});
+		}
 
 		if (ssl != null) {
 			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
@@ -705,4 +720,18 @@ final class HttpServerBind extends HttpServer
 		}
 	}
 
+	static final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
+
+		@Override
+		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+			if (msg instanceof HAProxyMessage) {
+				HAProxyMessage haProxyMessage = (HAProxyMessage)msg;
+				ctx.channel().attr(ConnectionInfo.PROXY_PROTOCOL_MESSAGE).set(haProxyMessage);
+
+				ctx.channel().pipeline().remove(this);
+			} else {
+				super.channelRead(ctx, msg);
+			}
+		}
+	}
 }

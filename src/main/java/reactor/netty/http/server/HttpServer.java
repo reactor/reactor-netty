@@ -239,6 +239,24 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Specifies whether support for the {@code "HAProxy proxy protocol"}
+	 * for deriving information about the address of the remote peer is enabled.
+	 *
+	 * @param proxyProtocolEnabled if true support for the {@code "HAProxy proxy protocol"}
+	 *                         for deriving information about the address of the remote peer is enabled,
+	 *                         otherwise disabled.
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer proxyProtocol(boolean proxyProtocolEnabled) {
+		if (proxyProtocolEnabled) {
+			return tcpConfiguration(PROXY_PROTOCOL_ATTR_CONFIG);
+		}
+		else {
+			return tcpConfiguration(PROXY_PROTOCOL_ATTR_DISABLE);
+		}
+	}
+
+	/**
 	 * The host to which this server should bind.
 	 * By default the server will listen on any local address.
 	 *
@@ -449,4 +467,10 @@ public abstract class HttpServer {
 
 	static final Function<TcpServer, TcpServer> FORWARD_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_NO_FORWARDED);
+
+	static final Function<TcpServer, TcpServer> PROXY_PROTOCOL_ATTR_CONFIG =
+			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_PROXY_PROTOCOL);
+
+	static final Function<TcpServer, TcpServer> PROXY_PROTOCOL_ATTR_DISABLE =
+			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_NO_PROXY_PROTOCOL);
 }

@@ -39,6 +39,7 @@ final class HttpServerConfiguration {
 
 	int                    minCompressionSize = -1;
 	boolean                forwarded          = false;
+	boolean                proxyProtocol      = false;
 	HttpRequestDecoderSpec decoder            = new HttpRequestDecoderSpec();
 	ServerCookieEncoder    cookieEncoder      = ServerCookieEncoder.STRICT;
 	ServerCookieDecoder    cookieDecoder      = ServerCookieDecoder.STRICT;
@@ -91,6 +92,16 @@ final class HttpServerConfiguration {
 
 	static final Function<ServerBootstrap, ServerBootstrap> MAP_NO_FORWARDED = b -> {
 		getOrCreate(b).forwarded = false;
+		return b;
+	};
+
+	static final Function<ServerBootstrap, ServerBootstrap> MAP_PROXY_PROTOCOL = b -> {
+		getOrCreate(b).proxyProtocol = true;
+		return b;
+	};
+
+	static final Function<ServerBootstrap, ServerBootstrap> MAP_NO_PROXY_PROTOCOL = b -> {
+		getOrCreate(b).proxyProtocol = false;
 		return b;
 	};
 

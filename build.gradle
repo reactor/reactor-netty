@@ -223,6 +223,7 @@ configure(rootProject) { project ->
 	compile "io.netty:netty-handler-proxy:${nettyVersion}"
 	compile "io.netty:netty-codec-http:${nettyVersion}"
 	compile "io.netty:netty-codec-http2:${nettyVersion}"
+	compile "io.netty:netty-codec-haproxy:${nettyVersion}"
 	compile "io.netty:netty-transport-native-epoll:${nettyVersion}:linux-x86_64"
 	optional "io.netty:netty-transport-native-kqueue:${nettyVersion}"
 
