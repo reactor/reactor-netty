@@ -75,6 +75,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
@@ -776,6 +777,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 		@Override
 		public Mono<Void> then() {
+			if (!parent.channel().isActive()) {
+				return Mono.error(new AbortedException("Connection has been closed BEFORE response"));
+			}
+
 			ByteBufAllocator alloc = parent.channel()
 			                               .alloc();
 			return Flux.from(source)
