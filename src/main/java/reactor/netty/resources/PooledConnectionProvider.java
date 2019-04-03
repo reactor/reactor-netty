@@ -488,12 +488,12 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				return;
 			}
 
+			// Returned value is deliberately ignored
+			f.removeListener(this);
+
 			if (!f.isDone()) {
 				f.cancel(true);
 			}
-
-			// Returned value is deliberately ignored
-			f.removeListener(this);
 		}
 
 		@Override
