@@ -729,6 +729,7 @@ final class HttpServerBind extends HttpServer
 				ctx.channel().attr(ConnectionInfo.PROXY_PROTOCOL_MESSAGE).set(haProxyMessage);
 
 				ctx.channel().pipeline().remove(this);
+				ctx.read();
 			} else {
 				super.channelRead(ctx, msg);
 			}
