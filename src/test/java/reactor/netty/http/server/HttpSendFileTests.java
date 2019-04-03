@@ -32,6 +32,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -321,11 +322,14 @@ public class HttpSendFileTests {
 		Flux<ByteBuf> content =
 				Flux.using(
 				        () -> AsynchronousFileChannel.open(tempFile, StandardOpenOption.READ),
-				        ch -> Flux.create(fluxSink -> {
+				        ch -> Flux.<ByteBuf>create(fluxSink -> {
+				                TestCompletionHandler handler = new TestCompletionHandler(ch, fluxSink, allocator, chunk);
+				                fluxSink.onDispose(handler::dispose);
 				                ByteBuffer buf = ByteBuffer.allocate(chunk);
-				                ch.read(buf, 0, buf, new TestCompletionHandler(ch, fluxSink, allocator, chunk));
+				                ch.read(buf, 0, buf, handler);
 				        }),
-				        this::closeChannel);
+				        HttpSendFileTests::closeChannel)
+				    .doOnDiscard(ByteBuf.class, ByteBuf::release);
 
 		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
@@ -353,7 +357,7 @@ public class HttpSendFileTests {
 		}
 	}
 
-	private void closeChannel(Channel channel) {
+	private static void closeChannel(Channel channel) {
 		if (channel != null && channel.isOpen()) {
 			try {
 				channel.close();
@@ -375,6 +379,8 @@ public class HttpSendFileTests {
 
 		private AtomicLong position;
 
+		private final AtomicBoolean disposed = new AtomicBoolean();
+
 		TestCompletionHandler(AsynchronousFileChannel channel, FluxSink<ByteBuf> sink,
 							  ByteBufAllocator allocator, int chunk) {
 			this.channel = channel;
@@ -386,35 +392,36 @@ public class HttpSendFileTests {
 
 		@Override
 		public void completed(Integer read, ByteBuffer dataBuffer) {
-			if (read != -1) {
+			if (read != -1 && !disposed.get()) {
 				long pos = this.position.addAndGet(read);
 				dataBuffer.flip();
 				ByteBuf buf = allocator.buffer().writeBytes(dataBuffer);
 				this.sink.next(buf);
 
-				if (!this.sink.isCancelled()) {
+				if (disposed.get()) {
+					buf.release();
+					this.sink.complete();
+					closeChannel(channel);
+				}
+				else {
 					ByteBuffer newByteBuffer = ByteBuffer.allocate(chunk);
 					this.channel.read(newByteBuffer, pos, newByteBuffer, this);
 				}
 			}
 			else {
-				try {
-					channel.close();
-				}
-				catch (IOException ignored) {
-				}
 				this.sink.complete();
+				closeChannel(channel);
 			}
 		}
 
 		@Override
 		public void failed(Throwable exc, ByteBuffer dataBuffer) {
-			try {
-				channel.close();
-			}
-			catch (IOException ignored) {
-			}
 			this.sink.error(exc);
+			closeChannel(channel);
+		}
+
+		public void dispose() {
+			this.disposed.set(true);
 		}
 	}
 }
