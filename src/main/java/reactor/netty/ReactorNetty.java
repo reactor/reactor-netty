@@ -369,16 +369,36 @@ public final class ReactorNetty {
 		final NettyOutbound source;
 		final Mono<Void> thenMono;
 
+		static final Runnable EMPTY_CLEANUP = () -> {};
+
+
 		OutboundThen(NettyOutbound source, Publisher<Void> thenPublisher) {
+			this(source, thenPublisher, EMPTY_CLEANUP);
+		}
+
+		OutboundThen(NettyOutbound source, Publisher<Void> thenPublisher, Runnable onCleanup) {
 			this.source = source;
+			Objects.requireNonNull(onCleanup, "onCleanup");
 
 			Mono<Void> parentMono = source.then();
 
 			if (parentMono == Mono.<Void>empty()) {
-				this.thenMono = Mono.from(thenPublisher);
+				if (onCleanup == EMPTY_CLEANUP) {
+					this.thenMono = Mono.from(thenPublisher);
+				}
+				else {
+					this.thenMono = Mono.from(thenPublisher)
+					                    .doFinally(s -> onCleanup.run());
+				}
 			}
 			else {
-				this.thenMono = parentMono.thenEmpty(thenPublisher);
+				if (onCleanup == EMPTY_CLEANUP) {
+					this.thenMono = parentMono.thenEmpty(thenPublisher);
+				}
+				else {
+					this.thenMono = parentMono.thenEmpty(thenPublisher)
+					                          .doFinally(s -> onCleanup.run());
+				}
 			}
 		}
 
@@ -406,7 +426,8 @@ public final class ReactorNetty {
 
 		@Override
 		public NettyOutbound sendObject(Object message) {
-			return then(source.sendObject(message));
+			return then(source.sendObject(message),
+					() -> ReactorNetty.safeRelease(message));
 		}
 
 		@Override

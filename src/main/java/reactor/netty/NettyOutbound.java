@@ -334,7 +334,21 @@ public interface NettyOutbound extends Publisher<Void> {
 	}
 
 	/**
-	 * Calls the passed callback with a {@link Connection} to operate on the underlying
+	 * Append a {@link Publisher} task such as a Mono and return a new
+	 * {@link NettyOutbound} to sequence further send.
+	 *
+	 * @param other the {@link Publisher} to subscribe to when this pending outbound
+	 * {@link #then()} is complete;
+	 * @param onCleanup a cleanup hook when other has terminated or cancelled
+	 *
+	 * @return a new {@link NettyOutbound} that
+	 */
+	default NettyOutbound then(Publisher<Void> other, Runnable onCleanup) {
+		return new ReactorNetty.OutboundThen(this, other, onCleanup);
+	}
+
+	/**
+	 * Call the passed callback with a {@link Connection} to operate on the underlying
 	 * {@link Channel} state.
 	 *
 	 * @param withConnection connection callback

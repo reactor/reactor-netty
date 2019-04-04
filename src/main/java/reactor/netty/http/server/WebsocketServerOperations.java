@@ -174,7 +174,8 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	Mono<Void> sendClose(CloseWebSocketFrame frame) {
 		if (CLOSE_SENT.get(this) == 0) {
-			onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
+			//commented for now as we assume the close is always scheduled (deferFuture runs)
+			//onTerminate().subscribe(null, null, () -> ReactorNetty.safeRelease(frame));
 			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 					discard();
@@ -184,7 +185,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 				}
 				frame.release();
 				return channel().newSucceededFuture();
-			});
+			}).doOnCancel(() -> ReactorNetty.safeRelease(frame));
 		}
 		frame.release();
 		return Mono.empty();
