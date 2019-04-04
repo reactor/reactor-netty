@@ -1676,7 +1676,11 @@ public class HttpClientTest {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .handle((req, res) -> req.receive().then())
+				          .handle((req, res) -> {
+				              req.receive()
+				                 .subscribe();
+				              return Mono.empty();
+				          })
 				          .wiretap(true)
 				          .bindNow();
 
