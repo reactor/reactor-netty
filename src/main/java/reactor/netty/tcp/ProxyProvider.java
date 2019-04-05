@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -28,6 +29,8 @@ import javax.annotation.Nullable;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
@@ -71,10 +74,13 @@ public final class ProxyProvider {
 		return proxy.proxyProvider;
 	}
 
+	private static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
+
 	final String username;
 	final Function<? super String, ? extends String> password;
 	final Supplier<? extends InetSocketAddress> address;
 	final Pattern nonProxyHosts;
+	final Supplier<? extends HttpHeaders> httpHeaders;
 	final Proxy type;
 
 	ProxyProvider(ProxyProvider.Build builder) {
@@ -91,6 +97,12 @@ public final class ProxyProvider {
 		}
 		else {
 			this.nonProxyHosts = null;
+		}
+		if (Objects.isNull(builder.httpHeaders)) {
+			this.httpHeaders = NO_HTTP_HEADERS;
+		}
+		else {
+			this.httpHeaders = builder.httpHeaders;
 		}
 		this.type = builder.type;
 	}
@@ -139,8 +151,8 @@ public final class ProxyProvider {
 		switch (this.type) {
 			case HTTP:
 				return Objects.nonNull(username) && Objects.nonNull(password) ?
-						new HttpProxyHandler(proxyAddr, username, password) :
-						new HttpProxyHandler(proxyAddr);
+						new HttpProxyHandler(proxyAddr, username, password, this.httpHeaders.get()) :
+						new HttpProxyHandler(proxyAddr, this.httpHeaders.get());
 			case SOCKS4:
 				return Objects.nonNull(username) ? new Socks4ProxyHandler(proxyAddr, username) :
 						new Socks4ProxyHandler(proxyAddr);
@@ -216,12 +228,14 @@ public final class ProxyProvider {
 				Objects.equals(getPasswordValue(), that.getPasswordValue()) &&
 				Objects.equals(getAddress().get(), that.getAddress().get()) &&
 				Objects.equals(getNonProxyHosts(), that.getNonProxyHosts()) &&
+				Objects.equals(httpHeaders.get(), that.httpHeaders.get()) &&
 				getType() == that.getType();
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(username, getPasswordValue(), getAddress().get(), getNonProxyHosts(), getType());
+		return Objects.hash(
+				username, getPasswordValue(), getAddress().get(), getNonProxyHosts(), httpHeaders.get(), getType());
 	}
 
 	@Nullable
@@ -239,6 +253,7 @@ public final class ProxyProvider {
 		int port;
 		Supplier<? extends InetSocketAddress> address;
 		String nonProxyHosts;
+		Supplier<? extends HttpHeaders> httpHeaders;
 		Proxy type;
 
 		Build() {
@@ -284,6 +299,16 @@ public final class ProxyProvider {
 		@Override
 		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
 			this.nonProxyHosts = nonProxyHostsPattern;
+			return this;
+		}
+
+		@Override
+		public Builder httpHeaders(Consumer<HttpHeaders> headers) {
+			this.httpHeaders = () -> new DefaultHttpHeaders() {
+				{
+					headers.accept(this);
+				}
+			};
 			return this;
 		}
 
@@ -372,6 +397,14 @@ public final class ProxyProvider {
 		 * @return {@code this}
 		 */
 		Builder nonProxyHosts(String nonProxyHostsPattern);
+
+		/**
+		 * A consumer to add request headers for the http proxy.
+		 *
+		 * @param headers A consumer to add request headers for the http proxy.
+		 * @return {@code this}
+		 */
+		Builder httpHeaders(Consumer<HttpHeaders> headers);
 
 		/**
 		 * Builds new ProxyProvider
