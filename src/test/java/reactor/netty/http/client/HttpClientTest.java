@@ -39,6 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1709,6 +1710,42 @@ public class HttpClientTest {
 		      .block(Duration.ofSeconds(30));
 
 		assertThat(buffer2.refCnt()).isEqualTo(0);
+
+		server.disposeNow();
+	}
+
+	@Test
+	@Ignore
+	public void testIssue700() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) ->
+				                  res.options(o -> o.flushOnEach(false))
+				                     .sendString(Flux.range(0, 10)
+				                                     .map(i -> "test")
+				                                     .delayElements(Duration.ofMillis(4))))
+				          .bindNow();
+
+		HttpClient client = createHttpClientForContextWithAddress(server);
+		for(int i = 0; i < 500; ++i) {
+			try {
+				client.get()
+				      .uri("/")
+				      .responseContent()
+				      .aggregate()
+				      .asString()
+				      .timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)))
+				      .block(Duration.ofMillis(100));
+			}
+			catch (Throwable t) {}
+		}
+
+		System.gc();
+		for(int i = 0; i < 100000; ++i) {
+			int[] arr = new int[100000];
+		}
+		System.gc();
 
 		server.disposeNow();
 	}
