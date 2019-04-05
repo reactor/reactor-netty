@@ -1045,15 +1045,17 @@ public class WebsocketTest {
 		HttpClient client =
 				HttpClient.create()
 				          .addressSupplier(httpServer::address)
-				          .tcpConfiguration(tcpClient ->
-				              tcpClient.doOnConnected(c ->
-				                  clientHandler.set(c.channel()
-				                                     .pipeline()
-				                                     .get(NettyPipeline.WsCompressionHandler) != null)))
 				          .wiretap(true);
 
+		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
 		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
 				(in, out) -> {
+				    in.withConnection(conn ->
+				        clientHandler.set(conn.channel()
+				                              .pipeline()
+				                              .get(perMessageDeflateEncoder) != null)
+				    );
+
 				    String header = in.headers()
 				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 				    return in.receive()
@@ -1094,15 +1096,16 @@ public class WebsocketTest {
 		HttpClient client =
 				HttpClient.create()
 				          .addressSupplier(httpServer::address)
-				          .tcpConfiguration(tcpClient ->
-				              tcpClient.doOnConnected(c ->
-				                  clientHandler.set(c.channel()
-				                                     .pipeline()
-				                                     .get(NettyPipeline.WsCompressionHandler) != null)))
 				          .wiretap(true);
 
+		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
 		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
 				(in, out) -> {
+				    in.withConnection(conn ->
+				        clientHandler.set(conn.channel()
+				                     .pipeline()
+				                     .get(perMessageDeflateEncoder) != null)
+				    );
 				    String header = in.headers()
 				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
 				    return in.receive()
@@ -1126,7 +1129,7 @@ public class WebsocketTest {
 		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
-		assertThat(clientHandler.get()).isTrue();
+		assertThat(clientHandler.get()).isFalse();
 	}
 
 	// https://bugzilla.mozilla.org/show_bug.cgi?id=691300

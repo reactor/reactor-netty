@@ -326,7 +326,9 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				BootstrapHandlers.connectionObserver(finalBootstrap,
-						new HttpObserver(sink, handler).then(BootstrapHandlers.connectionObserver(finalBootstrap)));
+						new HttpObserver(sink, handler)
+						        .then(BootstrapHandlers.connectionObserver(finalBootstrap))
+						        .then(new HttpIOHandlerObserver(sink, handler)));
 
 				tcpClient.connect(finalBootstrap)
 				         .subscribe(new TcpClientSubscriber(sink));
@@ -405,22 +407,41 @@ final class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
-		@SuppressWarnings("unchecked")
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == HttpClientState.RESPONSE_RECEIVED) {
 				sink.success(connection);
 				return;
 			}
 			if (newState == State.CONFIGURED && HttpClientOperations.class == connection.getClass()) {
+				handler.channel(connection.channel());
+			}
+		}
+	}
+
+	final static class HttpIOHandlerObserver implements ConnectionObserver {
+
+		final MonoSink<Connection> sink;
+		final HttpClientHandler handler;
+
+		HttpIOHandlerObserver(MonoSink<Connection> sink, HttpClientHandler handler) {
+			this.sink = sink;
+			this.handler = handler;
+		}
+
+		@Override
+		public Context currentContext() {
+			return sink.currentContext();
+		}
+
+		@Override
+		public void onStateChange(Connection connection, State newState) {
+			if (newState == ConnectionObserver.State.CONFIGURED
+					&& HttpClientOperations.class == connection.getClass()) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "Handler is being applied: {}"),
 							handler);
 				}
-				handler.channel(connection.channel());
 
-//				Mono.fromDirect(initializer.upgraded)
-//				    .then(Mono.defer(() -> Mono.fromDirect(handler.requestWithBody((HttpClientOperations)connection))))
-//				    .subscribe(connection.disposeSubscriber());
 				Mono.defer(() -> Mono.fromDirect(handler.requestWithBody((HttpClientOperations)connection)))
 				    .subscribe(connection.disposeSubscriber());
 			}
