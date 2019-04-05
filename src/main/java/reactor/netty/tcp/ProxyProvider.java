@@ -74,6 +74,8 @@ public final class ProxyProvider {
 		return proxy.proxyProvider;
 	}
 
+	private static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
+
 	final String username;
 	final Function<? super String, ? extends String> password;
 	final Supplier<? extends InetSocketAddress> address;
@@ -97,7 +99,7 @@ public final class ProxyProvider {
 			this.nonProxyHosts = null;
 		}
 		if (Objects.isNull(builder.httpHeaders)) {
-			this.httpHeaders = () -> null;
+			this.httpHeaders = NO_HTTP_HEADERS;
 		}
 		else {
 			this.httpHeaders = builder.httpHeaders;
