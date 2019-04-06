@@ -158,8 +158,8 @@ final class ConnectionInfo {
 		return new ConnectionInfo(hostAddress, remoteAddress, scheme);
 	}
 
-	static InetSocketAddress getRemoteAddress(SocketChannel channel) {
-		HAProxyMessage proxyMessage = channel.attr(PROXY_PROTOCOL_MESSAGE).get();
+	private static InetSocketAddress getRemoteAddress(SocketChannel channel) {
+		HAProxyMessage proxyMessage = channel.attr(PROXY_PROTOCOL_MESSAGE).getAndSet(null);
 
 		if (proxyMessage != null && proxyMessage.sourceAddress() != null && proxyMessage.sourcePort() != 0) {
 			return new InetSocketAddress(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
