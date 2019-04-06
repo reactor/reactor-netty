@@ -166,7 +166,9 @@ public abstract class BootstrapHandlers {
 	public static ServerBootstrap removeConfiguration(ServerBootstrap b, String name) {
 		Objects.requireNonNull(b, "bootstrap");
 		Objects.requireNonNull(name, "name");
-		b.childHandler(removeConfiguration(b.config().childHandler(), name));
+		if (b.config().childHandler() != null) {
+			b.childHandler(removeConfiguration(b.config().childHandler(), name));
+		}
 		return b;
 	}
 
