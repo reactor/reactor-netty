@@ -23,6 +23,8 @@ import io.netty.handler.codec.haproxy.HAProxyMessage;
 /**
  * Consumes {@link io.netty.handler.codec.haproxy.HAProxyMessage}
  * and set it into channel attribute for later use.
+ *
+ * @author aftersss
  */
 final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 

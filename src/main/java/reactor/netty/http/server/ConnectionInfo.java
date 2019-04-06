@@ -159,10 +159,13 @@ final class ConnectionInfo {
 	}
 
 	private static InetSocketAddress getRemoteAddress(SocketChannel channel) {
-		HAProxyMessage proxyMessage = channel.attr(PROXY_PROTOCOL_MESSAGE).getAndSet(null);
+		Object attr = channel.attr(PROXY_PROTOCOL_MESSAGE).getAndSet(null);
 
-		if (proxyMessage != null && proxyMessage.sourceAddress() != null && proxyMessage.sourcePort() != 0) {
-			return new InetSocketAddress(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
+		if (attr != null) {
+			HAProxyMessage proxyMessage = (HAProxyMessage) attr;
+			if (proxyMessage.sourceAddress() != null && proxyMessage.sourcePort() != 0) {
+				return new InetSocketAddress(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
+			}
 		}
 
 		return channel.remoteAddress();
