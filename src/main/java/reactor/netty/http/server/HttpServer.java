@@ -25,6 +25,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.logging.LoggingHandler;
@@ -249,10 +250,20 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer proxyProtocol(boolean proxyProtocolEnabled) {
 		if (proxyProtocolEnabled) {
-			return tcpConfiguration(PROXY_PROTOCOL_ATTR_CONFIG);
+			return tcpConfiguration(tcpServer ->
+					tcpServer.bootstrap(b -> BootstrapHandlers.updateConfiguration(b,
+							NettyPipeline.ProxyProtocolDecoder,
+							(connectionObserver, channel) -> {
+								channel.pipeline()
+										.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
+								channel.pipeline()
+										.addAfter(NettyPipeline.ProxyProtocolDecoder,
+												NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
+							})));
 		}
 		else {
-			return tcpConfiguration(PROXY_PROTOCOL_ATTR_DISABLE);
+			return tcpConfiguration(tcpServer ->
+					tcpServer.bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyProtocolDecoder)));
 		}
 	}
 
@@ -467,10 +478,4 @@ public abstract class HttpServer {
 
 	static final Function<TcpServer, TcpServer> FORWARD_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_NO_FORWARDED);
-
-	static final Function<TcpServer, TcpServer> PROXY_PROTOCOL_ATTR_CONFIG =
-			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_PROXY_PROTOCOL);
-
-	static final Function<TcpServer, TcpServer> PROXY_PROTOCOL_ATTR_DISABLE =
-			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_NO_PROXY_PROTOCOL);
 }

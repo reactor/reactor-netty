@@ -135,18 +135,6 @@ final class HttpServerBind extends HttpServer
 		//remove any OPS since we will initialize below
 		BootstrapHandlers.channelOperationFactory(b);
 
-		if (conf.proxyProtocol) {
-			b = BootstrapHandlers.updateConfiguration(b,
-					NettyPipeline.ProxyProtocolDecoder,
-					(connectionObserver, channel) -> {
-						channel.pipeline()
-								.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
-						channel.pipeline()
-								.addAfter(NettyPipeline.ProxyProtocolDecoder,
-										NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
-					});
-		}
-
 		if (ssl != null) {
 			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
 				throw new IllegalArgumentException("Configured H2 Clear-Text protocol " +
@@ -717,22 +705,6 @@ final class HttpServerBind extends HttpServer
 		@Override
 		protected void initChannel(Channel ch) {
 			addStreamHandlers(ch, listener, forwarded, cookieEncoder, cookieDecoder);
-		}
-	}
-
-	static final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
-
-		@Override
-		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-			if (msg instanceof HAProxyMessage) {
-				HAProxyMessage haProxyMessage = (HAProxyMessage)msg;
-				ctx.channel().attr(ConnectionInfo.PROXY_PROTOCOL_MESSAGE).set(haProxyMessage);
-
-				ctx.channel().pipeline().remove(this);
-				ctx.read();
-			} else {
-				super.channelRead(ctx, msg);
-			}
 		}
 	}
 }

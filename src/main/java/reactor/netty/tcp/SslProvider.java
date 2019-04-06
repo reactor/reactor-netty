@@ -670,6 +670,13 @@ public final class SslProvider {
 						       NettyPipeline.SslHandler,
 						       sslHandler);
 			}
+			else if (channel.pipeline()
+					.get(NettyPipeline.ProxyProtocolReader) != null) {
+				channel.pipeline()
+						.addAfter(NettyPipeline.ProxyProtocolReader,
+								NettyPipeline.SslHandler,
+								sslHandler);
+			}
 			else {
 				channel.pipeline()
 				       .addFirst(NettyPipeline.SslHandler, sslHandler);
