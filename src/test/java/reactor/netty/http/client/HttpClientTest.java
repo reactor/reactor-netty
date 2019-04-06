@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -52,10 +53,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -1748,5 +1751,74 @@ public class HttpClientTest {
 		System.gc();
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void httpClientResponseConfigInjectAttributes() {
+		AtomicReference<Channel> channelRef = new AtomicReference<>();
+		AtomicReference<Boolean> validate = new AtomicReference<>();
+		AtomicReference<Integer> chunkSize = new AtomicReference<>();
+
+		DisposableServer server =
+				HttpServer.create()
+				          .handle((req, resp) -> req.receive()
+				                                    .then(resp.sendNotFound()))
+				          .wiretap(true)
+				          .bindNow();
+
+		createHttpClientForContextWithAddress(server)
+		        .httpResponseDecoder(opt -> opt.maxInitialLineLength(123)
+		                                       .maxHeaderSize(456)
+		                                       .maxChunkSize(789)
+		                                       .validateHeaders(false)
+		                                       .initialBufferSize(10)
+		                                       .failOnMissingResponse(true)
+		                                       .parseHttpAfterConnectRequest(true))
+		        .tcpConfiguration(tcp ->
+		                tcp.doOnConnected(c -> {
+		                    channelRef.set(c.channel());
+		                    HttpClientCodec codec = c.channel()
+		                                             .pipeline()
+		                                             .get(HttpClientCodec.class);
+		                    HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
+		                    chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
+		                    validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
+		                }))
+		        .post()
+		        .uri("/")
+		        .send(ByteBufFlux.fromString(Mono.just("bodysample")))
+		        .responseContent()
+		        .aggregate()
+		        .asString()
+		        .block(Duration.ofSeconds(30));
+
+		assertThat(channelRef.get()).isNotNull();
+
+		server.disposeNow();
+
+		assertThat(chunkSize.get()).as("line length").isEqualTo(789);
+		assertThat(validate.get()).as("validate headers").isFalse();
+	}
+
+	private Object getValueReflection(Object obj, String fieldName, int superLevel) {
+		try {
+			Field field;
+			if (superLevel == 1) {
+				field = obj.getClass()
+				           .getSuperclass()
+				           .getDeclaredField(fieldName);
+			}
+			else {
+				field = obj.getClass()
+				           .getSuperclass()
+				           .getSuperclass()
+				           .getDeclaredField(fieldName);
+			}
+			field.setAccessible(true);
+			return field.get(obj);
+		}
+		catch(NoSuchFieldException | IllegalAccessException e) {
+			return new RuntimeException(e);
+		}
 	}
 }

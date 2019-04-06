@@ -850,6 +850,18 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Configure the {@link io.netty.handler.codec.http.HttpClientCodec}'s response decoding options.
+	 *
+	 * @param responseDecoderOptions a function to mutate the provided Http response decoder options
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient httpResponseDecoder(Function<HttpResponseDecoderSpec, HttpResponseDecoderSpec> responseDecoderOptions) {
+		return tcpConfiguration(
+				responseDecoderOptions.apply(new HttpResponseDecoderSpec())
+				                      .build());
+	}
+
+	/**
 	 * HTTP Websocket to connect the {@link HttpClient}.
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response

@@ -445,6 +445,8 @@ final class HttpClientConnect extends HttpClient {
 
 		final BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 
+		final HttpResponseDecoderSpec decoder;
+
 		final ProxyProvider proxyProvider;
 
 		volatile UriEndpoint        activeURI;
@@ -460,6 +462,7 @@ final class HttpClientConnect extends HttpClient {
 			this.chunkedTransfer = configuration.chunkedTransfer;
 			this.cookieEncoder = configuration.cookieEncoder;
 			this.cookieDecoder = configuration.cookieDecoder;
+			this.decoder = configuration.decoder;
 			this.proxyProvider = proxyProvider;
 
 			HttpHeaders defaultHeaders = configuration.headers;
@@ -737,7 +740,14 @@ final class HttpClientConnect extends HttpClient {
 		@Override
 		public void accept(ConnectionObserver listener, Channel channel) {
 			channel.pipeline()
-			       .addLast(NettyPipeline.HttpCodec, new HttpClientCodec());
+			       .addLast(NettyPipeline.HttpCodec,
+			                new HttpClientCodec(handler.decoder.maxInitialLineLength(),
+			                                    handler.decoder.maxHeaderSize(),
+			                                    handler.decoder.maxChunkSize(),
+			                                    handler.decoder.failOnMissingResponse,
+			                                    handler.decoder.validateHeaders(),
+			                                    handler.decoder.initialBufferSize(),
+			                                    handler.decoder.parseHttpAfterConnectRequest));
 
 			if (handler.compress) {
 				channel.pipeline()
@@ -858,7 +868,14 @@ final class HttpClientConnect extends HttpClient {
 				p.addLast(new Http2ClientInitializer(listener, this));
 			}
 			else {
-				HttpClientCodec httpClientCodec = new HttpClientCodec();
+				HttpClientCodec httpClientCodec =
+						new HttpClientCodec(handler.decoder.maxInitialLineLength(),
+						                    handler.decoder.maxHeaderSize(),
+						                    handler.decoder.maxChunkSize(),
+						                    handler.decoder.failOnMissingResponse,
+						                    handler.decoder.validateHeaders(),
+						                    handler.decoder.initialBufferSize(),
+						                    handler.decoder.parseHttpAfterConnectRequest);
 
 				final Http2Connection connection = new DefaultHttp2Connection(false);
 				HttpToHttp2ConnectionHandlerBuilder h2HandlerBuilder = new
@@ -920,7 +937,14 @@ final class HttpClientConnect extends HttpClient {
 			}
 
 			if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
-				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec, new HttpClientCodec());
+				p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpCodec,
+						new HttpClientCodec(parent.handler.decoder.maxInitialLineLength(),
+						                    parent.handler.decoder.maxHeaderSize(),
+						                    parent.handler.decoder.maxChunkSize(),
+						                    parent.handler.decoder.failOnMissingResponse,
+						                    parent.handler.decoder.validateHeaders(),
+						                    parent.handler.decoder.initialBufferSize(),
+						                    parent.handler.decoder.parseHttpAfterConnectRequest));
 
 				if (parent.handler.compress) {
 					p.addAfter(NettyPipeline.HttpCodec,
