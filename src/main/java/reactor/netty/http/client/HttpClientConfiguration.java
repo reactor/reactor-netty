@@ -54,6 +54,7 @@ final class HttpClientConfiguration {
 	String                        websocketSubprotocols          = null;
 	int                           websocketMaxFramePayloadLength = 65536;
 	int                           protocols                      = h11;
+	HttpResponseDecoderSpec       decoder                        = new HttpResponseDecoderSpec();
 
 	ClientCookieEncoder cookieEncoder = ClientCookieEncoder.STRICT;
 	ClientCookieDecoder cookieDecoder = ClientCookieDecoder.STRICT;
@@ -73,6 +74,7 @@ final class HttpClientConfiguration {
 		this.acceptGzip = from.acceptGzip;
 		this.cookieEncoder = from.cookieEncoder;
 		this.cookieDecoder = from.cookieDecoder;
+		this.decoder = from.decoder;
 		this.followRedirectPredicate = from.followRedirectPredicate;
 		this.baseUrl = from.baseUrl;
 		this.headers = from.headers;
@@ -80,6 +82,8 @@ final class HttpClientConfiguration {
 		this.websocketSubprotocols = from.websocketSubprotocols;
 		this.websocketMaxFramePayloadLength = from.websocketMaxFramePayloadLength;
 		this.body = from.body;
+		this.protocols = from.protocols;
+		this.deferredConf = from.deferredConf;
 	}
 
 	static HttpClientConfiguration getAndClean(Bootstrap b) {
@@ -266,6 +270,11 @@ final class HttpClientConfiguration {
 
 	static Bootstrap followRedirectPredicate(Bootstrap b, BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
 		getOrCreate(b).followRedirectPredicate = predicate;
+		return b;
+	}
+
+	static Bootstrap decoder(Bootstrap b, HttpResponseDecoderSpec decoder) {
+		getOrCreate(b).decoder = decoder;
 		return b;
 	}
 

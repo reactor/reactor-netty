@@ -327,6 +327,61 @@ public class Application {
 <1> Obtains the status code.
 ====
 
+=== HTTP Response Decoder
+
+By default, `Netty` configures some restrictions for the incoming responses, such as:
+
+* The maximum length of the initial line.
+* The maximum length of all headers.
+* The maximum length of the content or each chunk.
+
+For more information, see https://netty.io/4.1/api/io/netty/handler/codec/http/HttpResponseDecoder.html[`HttpResponseDecoder`]
+
+By default, the `HTTP` client is configured with the following settings:
+
+====
+[source,java,indent=0]
+./../../main/java/reactor/netty/http/HttpDecoderSpec.java
+----
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..32]
+----
+====
+====
+[source,java,indent=0]
+./../../main/java/reactor/netty/http/client/HttpResponseDecoderSpec.java
+----
+include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[lines=34..36]
+----
+====
+
+When you need to change these default settings, you can configure the `HTTP` client as follows:
+
+====
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+
+public class Application {
+
+    public static void main(String[] args) {
+        String response =
+                HttpClient.create()
+                        .httpResponseDecoder(spec -> spec.maxHeaderSize(16384)) <1>
+                        .get()
+                        .uri("http://example.com/")
+                        .responseContent()
+                          .aggregate()
+                          .asString()
+                          .block();
+    }
+}
+----
+<1> The maximum length of all headers will be `16384`.
+When this value is exceeded, a
+https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
+is raised.
+====
+
 == TCP-level Configurations
 
 When you need configurations on a TCP level, you can use the following snippet

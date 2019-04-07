@@ -478,9 +478,9 @@ By default, the `HTTP` server is configured with the following settings:
 
 ====
 [source,java,indent=0]
-./../../main/java/reactor/netty/http/server/HttpRequestDecoderSpec.java
+./../../main/java/reactor/netty/http/HttpDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=33..37]
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..32]
 ----
 ====
 
@@ -499,7 +499,7 @@ public class Application {
         DisposableServer server =
                 HttpServer.create()
                           .httpRequestDecoder(spec -> spec.maxHeaderSize(16384)) <1>
-                          .handle((request, response) -> response.sendString(Mono.just("hello"))) <1>
+                          .handle((request, response) -> response.sendString(Mono.just("hello")))
                           .bindNow();
 
         server.onDispose()
