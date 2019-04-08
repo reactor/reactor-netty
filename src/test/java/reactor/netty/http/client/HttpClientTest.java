@@ -1817,8 +1817,40 @@ public class HttpClientTest {
 			field.setAccessible(true);
 			return field.get(obj);
 		}
-		catch(NoSuchFieldException | IllegalAccessException e) {
+		catch (NoSuchFieldException | IllegalAccessException e) {
 			return new RuntimeException(e);
 		}
+	}
+
+	@Test
+	public void testDoOnRequestInvokedBeforeSendingRequest() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.send(req.receive()
+				                                            .retain()))
+				          .wiretap(true)
+				          .bindNow();
+
+		StepVerifier.create(
+		        createHttpClientForContextWithAddress(server)
+		                  .doOnRequest((req, con) -> req.header("test", "test"))
+		                  .post()
+		                  .uri("/")
+		                  .send((req, out) -> {
+		                      String header = req.requestHeaders().get("test");
+		                      if (header != null) {
+		                          return out.sendString(Flux.just("FOUND"));
+		                      }
+		                      else {
+		                          return out.sendString(Flux.just("NOT_FOUND"));
+		                      }
+		                  })
+		                  .responseSingle((res, bytes) -> bytes.asString()))
+		            .expectNext("FOUND")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
 	}
 }
