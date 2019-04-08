@@ -531,10 +531,11 @@ public abstract class TcpServer {
 	 *
 	 * @return new {@link TcpServer}
 	 *
-	 * @see ServerBootstrap#childOption(ChannelOption, Object)
+	 * @see ServerBootstrap#option(ChannelOption, Object)
 	 */
 	public final <T> TcpServer selectorOption(ChannelOption<T> key, T value) {
-		return option(key, value);
+		Objects.requireNonNull(key, "key");
+		return bootstrap(b -> b.option(key, value));
 	}
 
 	/**
