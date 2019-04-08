@@ -116,12 +116,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	final public void channelInactive(ChannelHandlerContext ctx) {
 		try {
-			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+			Connection connection = Connection.from(ctx.channel());
+			ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 			if (ops != null) {
 				ops.onInboundClose();
 			}
 			else {
-				listener.onStateChange(Connection.from(ctx.channel()), ConnectionObserver.State.DISCONNECTING);
+				listener.onStateChange(connection, ConnectionObserver.State.DISCONNECTING);
 			}
 		}
 		catch (Throwable err) {
@@ -180,12 +181,13 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 	@Override
 	final public void exceptionCaught(ChannelHandlerContext ctx, Throwable err) {
 		Exceptions.throwIfJvmFatal(err);
-		ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
+		Connection connection = Connection.from(ctx.channel());
+		ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 		if (ops != null) {
 			ops.onInboundError(err);
 		}
 		else {
-			listener.onUncaughtException(Connection.from(ctx.channel()), err);
+			listener.onUncaughtException(connection, err);
 		}
 	}
 

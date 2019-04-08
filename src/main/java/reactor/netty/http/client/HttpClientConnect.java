@@ -845,7 +845,7 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
-			ChannelOperations<?, ?> ops = Connection.from(ctx.channel()).as(ChannelOperations.class);
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops != null) {
 				ops.listener().onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}
