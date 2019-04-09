@@ -16,8 +16,10 @@
 
 package reactor.netty.http.server;
 
+import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -233,41 +235,93 @@ final class HttpPredicate
 				key.method())) && (template == null || template.matches(key.uri()));
 	}
 
+
 	/**
-	 * Represents a URI template. A URI template is a URI-like String that contains
-	 * variables enclosed by braces (<code>{</code>, <code>}</code>), which can be
-	 * expanded to produce an actual URI.
+	 * This is adapted from
+	 * https://github.com/spring-projects/spring-framework/blob/v5.1.6.RELEASE/spring-web/src/main/java/org/springframework/web/util/UriTemplate.java
+	 *
+	 * Represents a URI template. A URI template is a URI-like String that contains variables
+	 * enclosed by braces ({@code {}}) which can be expanded to produce an actual URI.
+	 *
+	 * <p>See {@link #match(String)} for example usages.
+	 *
+	 * <p>This class is designed to be thread-safe and reusable, allowing for any number
+	 * of expand or match calls.
 	 *
 	 * @author Arjen Poutsma
 	 * @author Juergen Hoeller
-	 * @author Jon Brisbin
-	 * @see <a href="https://tools.ietf.org/html/rfc6570">RFC 6570: URI Templates</a>
+	 * @author Rossen Stoyanchev
+	 * @since 3.0
 	 */
-	static final class UriPathTemplate {
+	@SuppressWarnings("serial")
+	static final class UriPathTemplate implements Serializable {
 
-		private static final Pattern FULL_SPLAT_PATTERN     =
-				Pattern.compile("[\\*][\\*]");
-		private static final String  FULL_SPLAT_REPLACEMENT = ".*";
+		private final String uriTemplate;
 
-		private static final Pattern NAME_SPLAT_PATTERN     =
-				Pattern.compile("\\{([^/]+?)\\}[\\*][\\*]");
-		// JDK 6 doesn't support named capture groups
-		private static final String  NAME_SPLAT_REPLACEMENT = "(?<%NAME%>.*)";
-		//private static final String  NAME_SPLAT_REPLACEMENT = "(.*)";
+		private final List<String> variableNames;
 
-		private static final Pattern NAME_PATTERN     = Pattern.compile("\\{([^/]+?)\\}");
-		// JDK 6 doesn't support named capture groups
-		private static final String  NAME_REPLACEMENT = "(?<%NAME%>[^\\/]*)";
-		//private static final String  NAME_REPLACEMENT = "([^\\/]*)";
+		private final Pattern matchPattern;
 
-		private final List<String>                         pathVariables =
-				new ArrayList<>();
-		private final HashMap<String, Matcher>             matchers      =
-				new HashMap<>();
-		private final HashMap<String, Map<String, String>> vars          =
-				new HashMap<>();
 
-		private final Pattern uriPattern;
+		/**
+		 * Construct a new {@code UriPathTemplate} with the given URI String.
+		 * @param uriTemplate the URI template string
+		 */
+		UriPathTemplate(String uriTemplate) {
+			this.uriTemplate = Objects.requireNonNull(uriTemplate, "'uriTemplate' must not be null");
+
+			TemplateInfo info = TemplateInfo.parse(filterQueryParams(uriTemplate));
+			this.variableNames = Collections.unmodifiableList(info.variableNames);
+			this.matchPattern = info.pattern;
+		}
+
+
+		/**
+		 * Indicate whether the given URI matches this template.
+		 * @param uri the URI to match to
+		 * @return {@code true} if it matches; {@code false} otherwise
+		 */
+		boolean matches(@Nullable String uri) {
+			if (uri == null) {
+				return false;
+			}
+			uri = filterQueryParams(uri);
+			Matcher matcher = this.matchPattern.matcher(uri);
+			return matcher.matches();
+		}
+
+		/**
+		 * Match the given URI to a map of variable values. Keys in the returned map are variable names,
+		 * values are variable values, as occurred in the given URI.
+		 * <p>Example:
+		 * <pre class="code">
+		 * UriPathTemplate template = new UriPathTemplate("https://example.com/hotels/{hotel}/bookings/{booking}");
+		 * System.out.println(template.match("https://example.com/hotels/1/bookings/42"));
+		 * </pre>
+		 * will print: <blockquote>{@code {hotel=1, booking=42}}</blockquote>
+		 * @param uri the URI to match to
+		 * @return a map of variable values
+		 */
+		Map<String, String> match(String uri) {
+			Objects.requireNonNull(uri, "'uri' must not be null");
+			uri = filterQueryParams(uri);
+			Map<String, String> result = new LinkedHashMap<>(this.variableNames.size());
+			Matcher matcher = this.matchPattern.matcher(uri);
+			if (matcher.find()) {
+				for (int i = 1; i <= matcher.groupCount(); i++) {
+					String name = this.variableNames.get(i - 1);
+					String value = matcher.group(i);
+					result.put(name, value);
+				}
+			}
+			return result;
+		}
+
+		@Override
+		public String toString() {
+			return this.uriTemplate;
+		}
+
 
 		static String filterQueryParams(String uri) {
 			int hasQuery = uri.lastIndexOf("?");
@@ -279,99 +333,73 @@ final class HttpPredicate
 			}
 		}
 
-		/**
-		 * Creates a new {@code UriPathTemplate} from the given {@code uriPattern}.
-		 *
-		 * @param uriPattern The pattern to be used by the template
-		 */
-		UriPathTemplate(String uriPattern) {
-			String s = "^" + filterQueryParams(uriPattern);
+	}
 
-			Matcher m = NAME_SPLAT_PATTERN.matcher(s);
-			while (m.find()) {
-				for (int i = 1; i <= m.groupCount(); i++) {
-					String name = m.group(i);
-					pathVariables.add(name);
-					s = m.replaceFirst(NAME_SPLAT_REPLACEMENT.replaceAll("%NAME%", name));
-					m.reset(s);
-				}
-			}
+	/**
+	 * Helper to extract variable names and regex for matching to actual URLs.
+	 */
+	static final class TemplateInfo {
 
-			m = NAME_PATTERN.matcher(s);
-			while (m.find()) {
-				for (int i = 1; i <= m.groupCount(); i++) {
-					String name = m.group(i);
-					pathVariables.add(name);
-					s = m.replaceFirst(NAME_REPLACEMENT.replaceAll("%NAME%", name));
-					m.reset(s);
-				}
-			}
+		private final List<String> variableNames;
 
-			m = FULL_SPLAT_PATTERN.matcher(s);
-			while (m.find()) {
-				s = m.replaceAll(FULL_SPLAT_REPLACEMENT);
-				m.reset(s);
-			}
+		private final Pattern pattern;
 
-			this.uriPattern = Pattern.compile(s + "$");
+		private TemplateInfo(List<String> vars, Pattern pattern) {
+			this.variableNames = vars;
+			this.pattern = pattern;
 		}
 
-		/**
-		 * Tests the given {@code uri} against this template, returning {@code true} if
-		 * the uri matches the template, {@code false} otherwise.
-		 *
-		 * @param uri The uri to match
-		 *
-		 * @return {@code true} if there's a match, {@code false} otherwise
-		 */
-		public boolean matches(String uri) {
-			return matcher(uri).matches();
-		}
-
-		/**
-		 * Matches the template against the given {@code uri} returning a map of path
-		 * parameters extracted from the uri, keyed by the names in the template. If the
-		 * uri does not match, or there are no path parameters, an empty map is returned.
-		 *
-		 * @param uri The uri to match
-		 *
-		 * @return the path parameters from the uri. Never {@code null}.
-		 */
-		final Map<String, String> match(String uri) {
-			Map<String, String> pathParameters = vars.get(uri);
-			if (null != pathParameters) {
-				return pathParameters;
-			}
-
-			pathParameters = new HashMap<>();
-			Matcher m = matcher(uri);
-			if (m.matches()) {
-				int i = 1;
-				for (String name : pathVariables) {
-					String val = m.group(i++);
-					pathParameters.put(name, val);
+		static TemplateInfo parse(String uriTemplate) {
+			int level = 0;
+			List<String> variableNames = new ArrayList<>();
+			StringBuilder pattern = new StringBuilder();
+			StringBuilder builder = new StringBuilder();
+			for (int i = 0 ; i < uriTemplate.length(); i++) {
+				char c = uriTemplate.charAt(i);
+				if (c == '{') {
+					level++;
+					if (level == 1) {
+						// start of URI variable
+						pattern.append((builder.length() > 0 ? Pattern.quote(builder.toString()) : ""));
+						builder = new StringBuilder();
+						continue;
+					}
 				}
-			}
-			synchronized (vars) {
-				vars.put(uri, pathParameters);
-			}
-
-			return pathParameters;
-		}
-
-		private Matcher matcher(String uri) {
-			uri = filterQueryParams(uri);
-			Matcher m = matchers.get(uri);
-			if (null == m) {
-				m = uriPattern.matcher(uri);
-				synchronized (matchers) {
-					matchers.put(uri, m);
+				else if (c == '}') {
+					level--;
+					if (level == 0) {
+						// end of URI variable
+						String variable = builder.toString();
+						int idx = variable.indexOf(':');
+						if (idx == -1) {
+							pattern.append("([^/]*)");
+							variableNames.add(variable);
+						}
+						else {
+							if (idx + 1 == variable.length()) {
+								throw new IllegalArgumentException(
+										"No custom regular expression specified after ':' in \"" + variable + "\"");
+							}
+							String regex = variable.substring(idx + 1);
+							pattern.append('(');
+							pattern.append(regex);
+							pattern.append(')');
+							variableNames.add(variable.substring(0, idx));
+						}
+						builder = new StringBuilder();
+						continue;
+					}
 				}
+				builder.append(c);
 			}
-			return m;
+			if (builder.length() > 0) {
+				pattern.append(Pattern.quote(builder.toString()));
+			}
+			return new TemplateInfo(variableNames, Pattern.compile(pattern.toString()));
 		}
 
 	}
+
 
 	static final class HttpPrefixPredicate implements Predicate<HttpServerRequest> {
 
