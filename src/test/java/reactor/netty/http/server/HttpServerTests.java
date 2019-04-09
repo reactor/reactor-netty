@@ -913,7 +913,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropPublisherConnectionClose() {
+	public void testDropPublisherConnectionClose() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
@@ -929,7 +929,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropMessageConnectionClose() {
+	public void testDropMessageConnectionClose() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
@@ -943,7 +943,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropPublisher() {
+	public void testDropPublisher() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
@@ -956,7 +956,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDropMessage() {
+	public void testDropMessage() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
@@ -969,7 +969,8 @@ public class HttpServerTests {
 	private void doTestDropData(
 			BiFunction<? super HttpServerRequest, ? super
 					HttpServerResponse, ? extends Publisher<Void>> serverFn,
-			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> clientFn) {
+			BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>> clientFn)
+			throws Exception {
 		DisposableServer disposableServer =
 				HttpServer.create()
 				          .port(0)
@@ -977,10 +978,13 @@ public class HttpServerTests {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
+		CountDownLatch latch = new CountDownLatch(1);
 		String response =
 				HttpClient.create()
 				          .port(disposableServer.port())
 				          .wiretap(true)
+				          .doOnRequest((req, conn) -> conn.onTerminate()
+				                                          .subscribe(null, null, latch::countDown))
 				          .request(HttpMethod.GET)
 				          .uri("/")
 				          .send(clientFn)
@@ -990,6 +994,7 @@ public class HttpServerTests {
 				          .switchIfEmpty(Mono.just("Empty"))
 				          .block(Duration.ofSeconds(30));
 
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(response).isEqualTo("Empty");
 		disposableServer.disposeNow();
 	}
