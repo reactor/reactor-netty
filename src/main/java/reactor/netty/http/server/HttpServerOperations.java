@@ -120,6 +120,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyRequest = nettyRequest;
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
+		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
 		this.compressionPredicate = compressionPredicate;
 		this.cookieHolder = Cookies.newServerRequestHolder(requestHeaders(), decoder);
 		this.connectionInfo = connectionInfo;
@@ -460,10 +461,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	protected void preSendHeadersAndStatus(){
-		if (!HttpUtil.isTransferEncodingChunked(nettyResponse) && !HttpUtil.isContentLengthSet(
-				nettyResponse)) {
-			markPersistent(false);
-		}
 		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
 			               .remove(HttpHeaderNames.CONTENT_LENGTH);
