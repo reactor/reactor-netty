@@ -259,13 +259,12 @@ public final class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 				b -> this.reduce(b,
 				                 (prev, next) -> {
 				                     if (prev.refCnt() > 0) {
-				                         return prev.addComponent(next.retain());
+				                         return prev.addComponent(true, next.retain());
 				                     }
 				                     else {
 				                         return prev;
 				                     }
 				                 })
-				         .doOnNext(cbb -> cbb.writerIndex(cbb.capacity()))
 				         .filter(ByteBuf::isReadable),
 				b -> {
 				    if (b.refCnt() > 0) {

@@ -788,7 +788,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			               if (signal.hasValue()) {
 			                   ByteBuf buf = signal.get();
 			                   if (buf != null && buf.readableBytes() > 0) {
-			                       return flux.collect(alloc::compositeBuffer, CompositeByteBuf::addComponent)
+			                       return flux.collect(alloc::compositeBuffer, (prev, next) -> prev.addComponent(true, next))
 			                                  .flatMap(agg -> {
 			                                      if (!HttpUtil.isTransferEncodingChunked(request) &&
 			                                              !HttpUtil.isContentLengthSet(request)) {
