@@ -783,7 +783,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			ByteBufAllocator alloc = parent.channel().alloc();
 			return Flux.from(source)
-			           .collect(alloc::compositeBuffer, CompositeByteBuf::addComponent)
+			           .collect(alloc::compositeBuffer, (prev, next) -> prev.addComponent(true, next))
 			           .flatMap(agg -> {
 				           if (!HttpUtil.isTransferEncodingChunked(request) && !HttpUtil.isContentLengthSet(request)) {
 					           request.headers()
