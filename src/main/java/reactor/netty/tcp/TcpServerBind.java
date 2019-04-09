@@ -128,8 +128,6 @@ final class TcpServerBind extends TcpServer {
 				.option(ChannelOption.SO_REUSEADDR, true)
 				.option(ChannelOption.SO_BACKLOG, 1000)
 				.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-				.childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
-				.childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
 				.childOption(ChannelOption.AUTO_READ, false)
 				.childOption(ChannelOption.SO_KEEPALIVE, true)
 				.childOption(ChannelOption.TCP_NODELAY, true)
