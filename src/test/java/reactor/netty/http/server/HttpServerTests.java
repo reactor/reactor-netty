@@ -1105,6 +1105,7 @@ public class HttpServerTests {
 		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
 		                                        .build();
 		AtomicReference<Throwable> error = new AtomicReference<>();
+		CountDownLatch latch = new CountDownLatch(1);
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -1113,7 +1114,10 @@ public class HttpServerTests {
 				              res.withConnection(DisposableChannel::dispose);
 				              return res.sendString(Mono.just("OK"))
 				                        .then()
-				                        .doOnError(error::set);
+				                        .doOnError(t -> {
+				                            error.set(t);
+				                            latch.countDown();
+				                        });
 				          })
 				          .bindNow();
 
@@ -1129,6 +1133,7 @@ public class HttpServerTests {
 				          .responseContent())
 				    .verifyError(PrematureCloseException.class);
 
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(error.get()).isInstanceOf(AbortedException.class);
 		server.dispose();
 	}
