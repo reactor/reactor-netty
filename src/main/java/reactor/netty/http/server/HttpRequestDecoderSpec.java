@@ -32,6 +32,31 @@ import reactor.netty.tcp.TcpServer;
 public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDecoderSpec> {
 
 	@Override
+	public HttpRequestDecoderSpec maxInitialLineLength(int value) {
+		return super.maxInitialLineLength(value);
+	}
+
+	@Override
+	public HttpRequestDecoderSpec maxHeaderSize(int value) {
+		return super.maxHeaderSize(value);
+	}
+
+	@Override
+	public HttpRequestDecoderSpec maxChunkSize(int value) {
+		return super.maxChunkSize(value);
+	}
+
+	@Override
+	public HttpRequestDecoderSpec validateHeaders(boolean validate) {
+		return super.validateHeaders(validate);
+	}
+
+	@Override
+	public HttpRequestDecoderSpec initialBufferSize(int value) {
+		return super.initialBufferSize(value);
+	}
+
+	@Override
 	public HttpRequestDecoderSpec get() {
 		return this;
 	}
