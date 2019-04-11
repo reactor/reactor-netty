@@ -388,7 +388,8 @@ public final class ReactorNetty {
 				}
 				else {
 					this.thenMono = Mono.from(thenPublisher)
-					                    .doFinally(s -> onCleanup.run());
+					                    .doOnCancel(onCleanup)
+					                    .doOnError(t -> onCleanup.run());
 				}
 			}
 			else {
@@ -397,7 +398,8 @@ public final class ReactorNetty {
 				}
 				else {
 					this.thenMono = parentMono.thenEmpty(thenPublisher)
-					                          .doFinally(s -> onCleanup.run());
+					                          .doOnCancel(onCleanup)
+					                          .doOnError(t -> onCleanup.run());
 				}
 			}
 		}
