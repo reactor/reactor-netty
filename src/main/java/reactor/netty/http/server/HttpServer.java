@@ -36,7 +36,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
-import reactor.netty.MissingDependencyException;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
@@ -255,24 +254,25 @@ public abstract class HttpServer {
 				Class.forName("io.netty.handler.codec.haproxy.HAProxyMessageDecoder");
 			}
 			catch (ClassNotFoundException e) {
-				throw new MissingDependencyException(
-						"To enable proxyProtocol, you must add the dependency `io.netty:netty-codec-haproxy` to the class path first", e);
+				throw new UnsupportedOperationException(
+				        "To enable proxyProtocol, you must add the dependency `io.netty:netty-codec-haproxy`" +
+				                " to the class path first", e);
 			}
 
 			return tcpConfiguration(tcpServer ->
-					tcpServer.bootstrap(b -> BootstrapHandlers.updateConfiguration(b,
-							NettyPipeline.ProxyProtocolDecoder,
-							(connectionObserver, channel) -> {
-								channel.pipeline()
-										.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
-								channel.pipeline()
-										.addAfter(NettyPipeline.ProxyProtocolDecoder,
-												NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
-							})));
+			        tcpServer.bootstrap(b -> BootstrapHandlers.updateConfiguration(b,
+			                NettyPipeline.ProxyProtocolDecoder,
+			                (connectionObserver, channel) -> {
+			                    channel.pipeline()
+			                           .addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
+			                    channel.pipeline()
+			                           .addAfter(NettyPipeline.ProxyProtocolDecoder,
+			                                     NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
+			                })));
 		}
 		else {
 			return tcpConfiguration(tcpServer ->
-					tcpServer.bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyProtocolDecoder)));
+			        tcpServer.bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyProtocolDecoder)));
 		}
 	}
 

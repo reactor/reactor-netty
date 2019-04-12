@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
+import reactor.netty.tcp.InetSocketAddressUtil;
 
 /**
  * Consumes {@link io.netty.handler.codec.haproxy.HAProxyMessage}
@@ -35,12 +36,17 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 		if (msg instanceof HAProxyMessage) {
 			HAProxyMessage proxyMessage = (HAProxyMessage) msg;
 			if (proxyMessage.sourceAddress() != null && proxyMessage.sourcePort() != 0) {
-				InetSocketAddress remoteAddress = InetSocketAddress
+				InetSocketAddress remoteAddress = InetSocketAddressUtil
 						.createUnresolved(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
-				ctx.channel().attr(ConnectionInfo.REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).set(remoteAddress);
+				ctx.channel()
+				   .attr(ConnectionInfo.REMOTE_ADDRESS_FROM_PROXY_PROTOCOL)
+				   .set(remoteAddress);
 			}
 
-			ctx.channel().pipeline().remove(this);
+			ctx.channel()
+			   .pipeline()
+			   .remove(this);
+
 			ctx.read();
 		} else {
 			super.channelRead(ctx, msg);

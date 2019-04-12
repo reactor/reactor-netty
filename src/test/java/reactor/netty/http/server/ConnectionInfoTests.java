@@ -136,33 +136,36 @@ public class ConnectionInfoTests {
 
 		this.connection =
 				HttpServer.create()
-						.port(0)
-						.proxyProtocol(true)
-						.handle((req, res) -> {
-							try {
-								requestConsumer.accept(req);
-								return res.status(200)
-										.sendString(Mono.just("OK"));
-							}
-							catch (Throwable e) {
-								return res.status(500)
-										.sendString(Mono.just(e.getMessage()));
-							}
-						})
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .proxyProtocol(true)
+				          .handle((req, res) -> {
+				              try {
+				                  requestConsumer.accept(req);
+				                  return res.status(200)
+				                            .sendString(Mono.just("OK"));
+				              }
+				              catch (Throwable e) {
+				                  return res.status(500)
+				                            .sendString(Mono.just(e.getMessage()));
+				              }
+				          })
+				          .wiretap(true)
+				          .bindNow();
 
 		Connection clientConn =
 				TcpClient.create()
-						.port(this.connection.address().getPort())
-						.connectNow();
+				         .port(this.connection.port())
+				         .connectNow();
 
-		ByteBuf proxyProtocolMsg = clientConn.channel().alloc().buffer();
+		ByteBuf proxyProtocolMsg = clientConn.channel()
+		                                     .alloc()
+		                                     .buffer();
 		proxyProtocolMsg.writeCharSequence("PROXY TCP4 " + remoteAddress + " 10.210.12.10 5678 80\r\n",
 				Charset.defaultCharset());
 		proxyProtocolMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
 				Charset.defaultCharset());
-		clientConn.channel().writeAndFlush(proxyProtocolMsg);
+		clientConn.channel()
+		          .writeAndFlush(proxyProtocolMsg);
 
 		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
 	}

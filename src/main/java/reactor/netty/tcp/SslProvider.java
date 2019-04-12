@@ -671,11 +671,11 @@ public final class SslProvider {
 						       sslHandler);
 			}
 			else if (channel.pipeline()
-					.get(NettyPipeline.ProxyProtocolReader) != null) {
+			                .get(NettyPipeline.ProxyProtocolReader) != null) {
 				channel.pipeline()
-						.addAfter(NettyPipeline.ProxyProtocolReader,
-								NettyPipeline.SslHandler,
-								sslHandler);
+				       .addAfter(NettyPipeline.ProxyProtocolReader,
+						        NettyPipeline.SslHandler,
+						        sslHandler);
 			}
 			else {
 				channel.pipeline()

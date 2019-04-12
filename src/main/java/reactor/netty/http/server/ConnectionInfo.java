@@ -158,8 +158,8 @@ final class ConnectionInfo {
 	}
 
 	private static InetSocketAddress getRemoteAddress(SocketChannel channel) {
-		InetSocketAddress remoteAddressFromProxyProtocol
-				= channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
+		InetSocketAddress remoteAddressFromProxyProtocol =
+				channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
 
 		if (remoteAddressFromProxyProtocol != null) {
 			return remoteAddressFromProxyProtocol;
