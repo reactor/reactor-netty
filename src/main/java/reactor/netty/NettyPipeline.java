@@ -52,6 +52,8 @@ public interface NettyPipeline {
 	String LEFT = "reactor.left.";
 	String RIGHT = "reactor.right.";
 
+	String ProxyProtocolDecoder = LEFT + "proxyProtocolDecoder";
+	String ProxyProtocolReader = LEFT + "proxyProtocolReader";
 	String SslHandler         = LEFT + "sslHandler";
 	String SslReader          = LEFT + "sslReader";
 	String SslLoggingHandler  = LEFT + "sslLoggingHandler";

@@ -25,6 +25,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.logging.LoggingHandler;
@@ -35,6 +36,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
+import reactor.netty.MissingDependencyException;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
@@ -235,6 +237,42 @@ public abstract class HttpServer {
 		}
 		else {
 			return tcpConfiguration(FORWARD_ATTR_DISABLE);
+		}
+	}
+
+	/**
+	 * Specifies whether support for the {@code "HAProxy proxy protocol"}
+	 * for deriving information about the address of the remote peer is enabled.
+	 *
+	 * @param proxyProtocolEnabled if true support for the {@code "HAProxy proxy protocol"}
+	 *                         for deriving information about the address of the remote peer is enabled,
+	 *                         otherwise disabled.
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer proxyProtocol(boolean proxyProtocolEnabled) {
+		if (proxyProtocolEnabled) {
+			try {
+				Class.forName("io.netty.handler.codec.haproxy.HAProxyMessageDecoder");
+			}
+			catch (ClassNotFoundException e) {
+				throw new MissingDependencyException(
+						"To enable proxyProtocol, you must add the dependency `io.netty:netty-codec-haproxy` to the class path first", e);
+			}
+
+			return tcpConfiguration(tcpServer ->
+					tcpServer.bootstrap(b -> BootstrapHandlers.updateConfiguration(b,
+							NettyPipeline.ProxyProtocolDecoder,
+							(connectionObserver, channel) -> {
+								channel.pipeline()
+										.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
+								channel.pipeline()
+										.addAfter(NettyPipeline.ProxyProtocolDecoder,
+												NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
+							})));
+		}
+		else {
+			return tcpConfiguration(tcpServer ->
+					tcpServer.bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyProtocolDecoder)));
 		}
 	}
 
