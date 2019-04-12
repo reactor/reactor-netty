@@ -21,7 +21,6 @@ import java.util.regex.Pattern;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
@@ -52,8 +51,8 @@ final class ConnectionInfo {
 	static final String XFORWARDED_PORT_HEADER = "X-Forwarded-Port";
 	static final String XFORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
 
-	static final AttributeKey<HAProxyMessage> PROXY_PROTOCOL_MESSAGE =
-			AttributeKey.valueOf("proxyProtocolMessage");
+	static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_FROM_PROXY_PROTOCOL =
+			AttributeKey.valueOf("remoteAddressFromProxyProtocol");
 
 	final InetSocketAddress hostAddress;
 
@@ -159,13 +158,11 @@ final class ConnectionInfo {
 	}
 
 	private static InetSocketAddress getRemoteAddress(SocketChannel channel) {
-		Object attr = channel.attr(PROXY_PROTOCOL_MESSAGE).getAndSet(null);
+		InetSocketAddress remoteAddressFromProxyProtocol
+				= channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
 
-		if (attr != null) {
-			HAProxyMessage proxyMessage = (HAProxyMessage) attr;
-			if (proxyMessage.sourceAddress() != null && proxyMessage.sourcePort() != 0) {
-				return new InetSocketAddress(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
-			}
+		if (remoteAddressFromProxyProtocol != null) {
+			return remoteAddressFromProxyProtocol;
 		}
 
 		return channel.remoteAddress();

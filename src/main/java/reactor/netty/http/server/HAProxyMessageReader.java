@@ -16,6 +16,8 @@
 
 package reactor.netty.http.server;
 
+import java.net.InetSocketAddress;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
@@ -31,8 +33,12 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		if (msg instanceof HAProxyMessage) {
-			HAProxyMessage haProxyMessage = (HAProxyMessage)msg;
-			ctx.channel().attr(ConnectionInfo.PROXY_PROTOCOL_MESSAGE).set(haProxyMessage);
+			HAProxyMessage proxyMessage = (HAProxyMessage) msg;
+			if (proxyMessage.sourceAddress() != null && proxyMessage.sourcePort() != 0) {
+				InetSocketAddress remoteAddress = InetSocketAddress
+						.createUnresolved(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
+				ctx.channel().attr(ConnectionInfo.REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).set(remoteAddress);
+			}
 
 			ctx.channel().pipeline().remove(this);
 			ctx.read();
