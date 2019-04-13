@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,10 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
-import io.netty.util.NetUtil;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -124,16 +122,10 @@ final class TcpServerBind extends TcpServer {
 	}
 
 	ServerBootstrap createServerBootstrap() {
-		return new ServerBootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+		return new ServerBootstrap()
 				.option(ChannelOption.SO_REUSEADDR, true)
-				.option(ChannelOption.SO_BACKLOG, 1000)
-				.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-				.childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
-				.childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
 				.childOption(ChannelOption.AUTO_READ, false)
-				.childOption(ChannelOption.SO_KEEPALIVE, true)
 				.childOption(ChannelOption.TCP_NODELAY, true)
-				.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
 				.localAddress(new InetSocketAddress(DEFAULT_PORT));
 	}
 

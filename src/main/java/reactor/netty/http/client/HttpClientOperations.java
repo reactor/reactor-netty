@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -419,7 +420,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
 						"zero-length header"));
 			}
-			channel().writeAndFlush(newFullEmptyBodyMessage());
+			channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
 		}
 		else if (markSentBody()) {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -559,12 +560,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	protected HttpMessage newFullEmptyBodyMessage() {
-		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri());
+	protected HttpMessage newFullBodyMessage(ByteBuf body) {
+		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
 
 		request.headers()
 		       .set(requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-		                          .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+		                          .setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes()));
 		return request;
 	}
 
@@ -574,7 +575,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	final Mono<Void> send() {
 		if (markSentHeaderAndBody()) {
-			HttpMessage request = newFullEmptyBodyMessage();
+			HttpMessage request = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
 		}
 		else {

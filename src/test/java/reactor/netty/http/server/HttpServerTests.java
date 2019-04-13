@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -934,7 +934,7 @@ public class HttpServerTests {
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .sendObject(data),
+				                 .sendObject(Mono.just(data)),
 				(req, out) -> {
 					req.addHeader("Connection", "close");
 					return out;
@@ -961,7 +961,7 @@ public class HttpServerTests {
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .sendObject(data),
+				                 .sendObject(Mono.just(data)),
 				(req, out) -> out);
 		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
 	}
