@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.CombinedChannelDuplexHandler;
@@ -85,6 +86,17 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
+	public NettyOutbound sendObject(Object message) {
+		if (!(message instanceof ByteBuf) || !markSentHeaderAndBody()) {
+			return super.sendObject(message);
+		}
+		return then(FutureMono.deferFuture(() -> {
+			ByteBuf b = (ByteBuf) message;
+			return channel().writeAndFlush(newFullBodyMessage(b));
+		}));
+	}
+
+	@Override
 	public Mono<Void> then() {
 		if (!channel().isActive()) {
 			return Mono.error(new AbortedException("Connection has been closed BEFORE response"));
@@ -103,7 +115,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 							.remove(HttpHeaderNames.TRANSFER_ENCODING);
 					if (HttpUtil.getContentLength(outboundHttpMessage(), 0) == 0) {
 						markSentBody();
-						msg = newFullEmptyBodyMessage();
+						msg = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 					}
 					else {
 						msg = outboundHttpMessage();
@@ -125,7 +137,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	protected abstract void preSendHeadersAndStatus();
 
-	protected abstract HttpMessage newFullEmptyBodyMessage();
+	protected abstract HttpMessage newFullBodyMessage(ByteBuf body);
 
 	@Override
 	public final NettyOutbound sendFile(Path file, long position, long count) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -145,20 +146,18 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected HttpMessage newFullEmptyBodyMessage() {
+	protected HttpMessage newFullBodyMessage(ByteBuf body) {
 		HttpResponse res =
-				new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
+				new DefaultFullHttpResponse(version(), status(), body);
 
 		if (!HttpMethod.HEAD.equals(method())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
-				responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+				responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
 			}
 		}
 
 		res.headers().set(responseHeaders);
-
-		markPersistent(true);
 		return res;
 	}
 
@@ -324,7 +323,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public Mono<Void> send() {
 		if (markSentHeaderAndBody()) {
-			HttpMessage response = newFullEmptyBodyMessage();
+			HttpMessage response = newFullBodyMessage(EMPTY_BUFFER);
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(response));
 		}
 		else {
@@ -486,7 +485,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 						"zero-length header"));
 			}
 
-			f = channel().writeAndFlush(newFullEmptyBodyMessage());
+			f = channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER));
 		}
 		else if (markSentBody()) {
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);

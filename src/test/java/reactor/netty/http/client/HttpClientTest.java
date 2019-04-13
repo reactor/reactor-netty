@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,9 +38,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -299,18 +299,10 @@ public class HttpClientTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, resp) -> {
-				                  req.withConnection(cn -> cn.onDispose(latch::countDown));
+				          	req.withConnection(cn -> cn.onDispose(latch::countDown));
 
 				                  return Flux.interval(Duration.ofSeconds(1))
-				                             .flatMap(d -> resp.withConnection(cn -> cn.channel()
-				                                                                       .config()
-				                                                                       .setAutoRead(true))
-				                                               .sendObject(Unpooled.EMPTY_BUFFER)
-				                                               .then()
-				                                               .doOnSuccess(x -> req.withConnection(
-				                                                       cn -> cn.channel()
-				                                                               .config()
-				                                                               .setAutoRead(false))));
+				                             .flatMap(d -> resp.sendObject(Unpooled.EMPTY_BUFFER));
 				          })
 				          .wiretap(true)
 				          .bindNow();
