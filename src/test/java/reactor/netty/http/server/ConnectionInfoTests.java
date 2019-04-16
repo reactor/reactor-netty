@@ -33,6 +33,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for {@link ConnectionInfo}
@@ -165,7 +166,12 @@ public class ConnectionInfoTests {
 		proxyProtocolMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
 				Charset.defaultCharset());
 		clientConn.channel()
-		          .writeAndFlush(proxyProtocolMsg);
+		          .writeAndFlush(proxyProtocolMsg)
+		          .addListener(f -> {
+		              if (!f.isSuccess()) {
+		                  fail("Writing proxyProtocolMsg was not successful");
+		              }
+		          });
 
 		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
 	}
