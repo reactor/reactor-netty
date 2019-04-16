@@ -250,13 +250,10 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer proxyProtocol(boolean proxyProtocolEnabled) {
 		if (proxyProtocolEnabled) {
-			try {
-				Class.forName("io.netty.handler.codec.haproxy.HAProxyMessageDecoder");
-			}
-			catch (ClassNotFoundException e) {
+			if (!HAProxyMessageReader.hasProxyProtocol()) {
 				throw new UnsupportedOperationException(
 				        "To enable proxyProtocol, you must add the dependency `io.netty:netty-codec-haproxy`" +
-				                " to the class path first", e);
+				                " to the class path first");
 			}
 
 			return tcpConfiguration(tcpServer ->
