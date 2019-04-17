@@ -154,8 +154,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						listener,
 						compress,
 						request, ConnectionInfo.from(ctx.channel(), readForwardHeaders, request),
-						cookieEncoder, cookieDecoder)
-						.chunkedTransfer(true);
+						cookieEncoder, cookieDecoder);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 
@@ -287,8 +286,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						listener,
 						compress,
 						nextRequest, ConnectionInfo.from(ctx.channel(), readForwardHeaders, nextRequest),
-						cookieEncoder, cookieDecoder)
-						.chunkedTransfer(true);
+						cookieEncoder, cookieDecoder);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}

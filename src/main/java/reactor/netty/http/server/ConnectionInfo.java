@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.AttributeKey;
 import reactor.netty.tcp.InetSocketAddressUtil;
 /**
  * Resolve information about the current connection, including the
@@ -49,6 +50,10 @@ final class ConnectionInfo {
 	static final String XFORWARDED_HOST_HEADER = "X-Forwarded-Host";
 	static final String XFORWARDED_PORT_HEADER = "X-Forwarded-Port";
 	static final String XFORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
+
+	static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_FROM_PROXY_PROTOCOL =
+			AttributeKey.valueOf("remoteAddressFromProxyProtocol");
+
 	final InetSocketAddress hostAddress;
 
 	final InetSocketAddress remoteAddress;
@@ -72,7 +77,7 @@ final class ConnectionInfo {
 	static ConnectionInfo newConnectionInfo(Channel c) {
 		SocketChannel channel = (SocketChannel) c; 
 		InetSocketAddress hostAddress = channel.localAddress();
-		InetSocketAddress remoteAddress = channel.remoteAddress();
+		InetSocketAddress remoteAddress = getRemoteAddress(channel);
 		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
 		return new ConnectionInfo(hostAddress, remoteAddress, scheme);
 	}
@@ -95,7 +100,7 @@ final class ConnectionInfo {
 
 	static ConnectionInfo parseForwardedInfo(HttpRequest request, SocketChannel channel) {
 		InetSocketAddress hostAddress = channel.localAddress();
-		InetSocketAddress remoteAddress = channel.remoteAddress();
+		InetSocketAddress remoteAddress = getRemoteAddress(channel);
 		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
 
 		String forwarded = request.headers().get(FORWARDED_HEADER).split(",")[0];
@@ -128,7 +133,7 @@ final class ConnectionInfo {
 
 	static ConnectionInfo parseXForwardedInfo(HttpRequest request, SocketChannel channel) {
 		InetSocketAddress hostAddress = channel.localAddress();
-		InetSocketAddress remoteAddress = channel.remoteAddress();
+		InetSocketAddress remoteAddress = getRemoteAddress(channel);
 		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
 		if (request.headers().contains(XFORWARDED_IP_HEADER)) {
 			String remoteIpValue = request.headers().get(XFORWARDED_IP_HEADER).split(",")[0];
@@ -150,6 +155,19 @@ final class ConnectionInfo {
 			scheme = request.headers().get(XFORWARDED_PROTO_HEADER).trim();
 		}
 		return new ConnectionInfo(hostAddress, remoteAddress, scheme);
+	}
+
+	private static InetSocketAddress getRemoteAddress(SocketChannel channel) {
+		if (HAProxyMessageReader.hasProxyProtocol()) {
+			InetSocketAddress remoteAddressFromProxyProtocol =
+					channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
+
+			if (remoteAddressFromProxyProtocol != null) {
+				return remoteAddressFromProxyProtocol;
+			}
+		}
+
+		return channel.remoteAddress();
 	}
 
 	ConnectionInfo(InetSocketAddress hostAddress, InetSocketAddress remoteAddress, String scheme) {

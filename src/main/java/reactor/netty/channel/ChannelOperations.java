@@ -167,7 +167,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final boolean isDisposed() {
-		return !channel().isActive() || get(channel()) != this;
+		return !channel().isActive() || OUTBOUND_CLOSE.get(this) == Operators.cancelledSubscription();
 	}
 
 	@Override
@@ -183,24 +183,22 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final void onComplete() {
-		Subscription s =
-				OUTBOUND_CLOSE.getAndSet(this, Operators.cancelledSubscription());
-		if (s == Operators.cancelledSubscription() || isDisposed()) {
+		if (isDisposed()) {
 			return;
 		}
+		OUTBOUND_CLOSE.set(this, Operators.cancelledSubscription());
 		onOutboundComplete();
 	}
 
 	@Override
 	public final void onError(Throwable t) {
-		Subscription s =
-				OUTBOUND_CLOSE.getAndSet(this, Operators.cancelledSubscription());
-		if (s == Operators.cancelledSubscription() || isDisposed()) {
+		if (isDisposed()) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "An outbound error could not be processed"), t);
 			}
 			return;
 		}
+		OUTBOUND_CLOSE.set(this, Operators.cancelledSubscription());
 		onOutboundError(t);
 	}
 

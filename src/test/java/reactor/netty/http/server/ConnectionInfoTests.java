@@ -16,17 +16,24 @@
 package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
+import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.tcp.TcpClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * Tests for {@link ConnectionInfo}
@@ -116,6 +123,57 @@ public class ConnectionInfoTests {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
 					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 				});
+	}
+
+	@Test
+	public void proxyProtocol() throws InterruptedException {
+		String remoteAddress = "202.112.144.236";
+		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
+
+		Consumer<HttpServerRequest> requestConsumer = serverRequest -> {
+			String remoteAddrFromRequest = serverRequest.remoteAddress().getHostString();
+			resultQueue.add(remoteAddrFromRequest);
+		};
+
+		this.connection =
+				HttpServer.create()
+				          .port(0)
+				          .proxyProtocol(true)
+				          .handle((req, res) -> {
+				              try {
+				                  requestConsumer.accept(req);
+				                  return res.status(200)
+				                            .sendString(Mono.just("OK"));
+				              }
+				              catch (Throwable e) {
+				                  return res.status(500)
+				                            .sendString(Mono.just(e.getMessage()));
+				              }
+				          })
+				          .wiretap(true)
+				          .bindNow();
+
+		Connection clientConn =
+				TcpClient.create()
+				         .port(this.connection.port())
+				         .connectNow();
+
+		ByteBuf proxyProtocolMsg = clientConn.channel()
+		                                     .alloc()
+		                                     .buffer();
+		proxyProtocolMsg.writeCharSequence("PROXY TCP4 " + remoteAddress + " 10.210.12.10 5678 80\r\n",
+				Charset.defaultCharset());
+		proxyProtocolMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
+				Charset.defaultCharset());
+		clientConn.channel()
+		          .writeAndFlush(proxyProtocolMsg)
+		          .addListener(f -> {
+		              if (!f.isSuccess()) {
+		                  fail("Writing proxyProtocolMsg was not successful");
+		              }
+		          });
+
+		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
 	}
 
 	@Test

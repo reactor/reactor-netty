@@ -413,7 +413,7 @@ final class HttpClientConnect extends HttpClient {
 				return;
 			}
 			if (newState == State.CONFIGURED && HttpClientOperations.class == connection.getClass()) {
-				handler.channel(connection.channel());
+				handler.channel((HttpClientOperations) connection);
 			}
 		}
 	}
@@ -649,13 +649,10 @@ final class HttpClientConnect extends HttpClient {
 			}
 		}
 
-		void channel(Channel channel) {
+		void channel(HttpClientOperations ops) {
 			Supplier<String>[] redirectedFrom = this.redirectedFrom;
 			if (redirectedFrom != null) {
-				ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
-				if (ops instanceof HttpClientOperations) {
-					((HttpClientOperations) ops).redirectedFrom = redirectedFrom;
-				}
+				ops.redirectedFrom = redirectedFrom;
 			}
 		}
 
@@ -840,7 +837,7 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
-			ChannelOperations<?, ?> ops = Connection.from(ctx.channel()).as(ChannelOperations.class);
+			ChannelOperations<?, ?> ops = ChannelOperations.get(ctx.channel());
 			if (ops != null) {
 				ops.listener().onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}

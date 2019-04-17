@@ -124,16 +124,11 @@ final class TcpServerBind extends TcpServer {
 	}
 
 	ServerBootstrap createServerBootstrap() {
-		return new ServerBootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+		return new ServerBootstrap()
 				.option(ChannelOption.SO_REUSEADDR, true)
-				.option(ChannelOption.SO_BACKLOG, 1000)
 				.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-				.childOption(ChannelOption.SO_RCVBUF, 1024 * 1024)
-				.childOption(ChannelOption.SO_SNDBUF, 1024 * 1024)
 				.childOption(ChannelOption.AUTO_READ, false)
-				.childOption(ChannelOption.SO_KEEPALIVE, true)
 				.childOption(ChannelOption.TCP_NODELAY, true)
-				.childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
 				.localAddress(new InetSocketAddress(DEFAULT_PORT));
 	}
 

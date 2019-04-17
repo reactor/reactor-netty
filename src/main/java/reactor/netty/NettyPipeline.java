@@ -69,6 +69,8 @@ public interface NettyPipeline {
 	String LoggingHandler     = LEFT + "loggingHandler";
 	String CompressionHandler = LEFT + "compressionHandler";
 	String WsCompressionHandler = LEFT + "wsCompressionHandler";
+	String ProxyProtocolDecoder = LEFT + "proxyProtocolDecoder";
+	String ProxyProtocolReader  = LEFT + "proxyProtocolReader";
 
 	/**
 	 * A builder for sending strategy, similar prefixed methods being mutually exclusive
