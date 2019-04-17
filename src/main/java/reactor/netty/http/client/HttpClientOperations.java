@@ -563,9 +563,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected HttpMessage newFullBodyMessage(ByteBuf body) {
 		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
 
+		requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+
+		if (HttpUtil.getContentLength(request, -1) != -1) {
+			requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+		}
+
 		request.headers()
-		       .set(requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-		                          .setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes()));
+		       .set(requestHeaders);
 		return request;
 	}
 
@@ -765,6 +770,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 
 		@Override
+		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+			parent.options(configurator);
+			return this;
+		}
+
+		@Override
 		public NettyOutbound sendObject(Object message) {
 			return parent.sendObject(message);
 		}
@@ -790,7 +801,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					                  .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
 				           }
 				           if (agg.readableBytes() > 0) {
-				               return parent.then().thenEmpty(FutureMono.disposableWriteAndFlush(parent.channel(), Mono.just(agg)));
+				               return parent.sendObject(Mono.just(agg)).then();
 				           }
 				           agg.release();
 				           return parent.then();

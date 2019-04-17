@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -422,6 +422,17 @@ public final class ReactorNetty {
 		}
 
 		@Override
+		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+			source.options(configurator);
+			return this;
+		}
+
+		@Override
+		public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+			return then(source.send(dataStream));
+		}
+
+		@Override
 		public NettyOutbound sendObject(Publisher<?> dataStream) {
 			return then(source.sendObject(dataStream));
 		}
@@ -616,6 +627,11 @@ public final class ReactorNetty {
 			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
 					BiFunction<? super Connection, ? super S, ?> mappedInput,
 					Consumer<? super S> sourceCleanup) {
+				return this;
+			}
+
+			@Override
+			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 				return this;
 			}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
 
 package reactor.netty;
 
-import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -107,28 +105,6 @@ public interface NettyPipeline {
 		SendOptions flushOnEach(boolean withEventLoop);
 
 
-	}
-
-	/**
-	 * An container transporting a new {@link SendOptions}, eventually bound to a
-	 * specific {@link Publisher}
-	 */
-	final class SendOptionsChangeEvent {
-
-		final Consumer<? super SendOptions> configurator;
-
-		SendOptionsChangeEvent(Consumer<? super SendOptions> configurator) {
-			this.configurator = Objects.requireNonNull(configurator, "configurator");
-		}
-
-		/**
-		 * Return the send configurator
-		 *
-		 * @return the send configurator
-		 */
-		public Consumer<? super SendOptions> configurator() {
-			return configurator;
-		}
 	}
 
 	/**

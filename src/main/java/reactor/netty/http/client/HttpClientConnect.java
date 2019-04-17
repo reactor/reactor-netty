@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -702,8 +702,7 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public NettyOutbound sendObject(Publisher<?> dataStream) {
-			return then(FutureMono.deferFuture(() -> ch.channel()
-			                                           .writeAndFlush(dataStream)));
+			return then(ch.sendObject(dataStream).then());
 		}
 
 		@Override
@@ -711,6 +710,12 @@ final class HttpClientConnect extends HttpClient {
 			return then(FutureMono.deferFuture(() -> ch.channel()
 			                                           .writeAndFlush(message)),
 			            () -> ReactorNetty.safeRelease(message));
+		}
+
+		@Override
+		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+			ch.options(configurator);
+			return this;
 		}
 
 		@Override

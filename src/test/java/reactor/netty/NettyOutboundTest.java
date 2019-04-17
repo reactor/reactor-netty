@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,6 +97,11 @@ public class NettyOutboundTest {
 			}
 
 			@Override
+			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+				return this;
+			}
+
+			@Override
 			public ByteBufAllocator alloc() {
 				return ByteBufAllocator.DEFAULT;
 			}
@@ -184,6 +189,11 @@ public class NettyOutboundTest {
 			}
 
 			@Override
+			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+				return this;
+			}
+
+			@Override
 			public ByteBufAllocator alloc() {
 				return ByteBufAllocator.DEFAULT;
 			}
@@ -264,6 +274,11 @@ public class NettyOutboundTest {
 
 			@Override
 			public NettyOutbound sendObject(Object message) {
+				return this;
+			}
+
+			@Override
+			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 				return this;
 			}
 
