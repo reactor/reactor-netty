@@ -565,7 +565,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 		requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
-		if (HttpUtil.getContentLength(request, -1) != -1) {
+		if (HttpUtil.getContentLength(request, -1) == -1) {
 			requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
 		}
 

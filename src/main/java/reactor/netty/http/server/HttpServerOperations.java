@@ -154,7 +154,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
 
-				if (HttpUtil.getContentLength(res, -1) != -1) {
+				if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
 					responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
 				}
 			}
