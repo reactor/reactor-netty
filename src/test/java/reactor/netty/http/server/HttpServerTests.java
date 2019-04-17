@@ -934,7 +934,7 @@ public class HttpServerTests {
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .sendObject(Mono.just(data)),
+				                 .sendObject(data),
 				(req, out) -> {
 					req.addHeader("Connection", "close");
 					return out;
@@ -961,7 +961,7 @@ public class HttpServerTests {
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .sendObject(Mono.just(data)),
+				                 .sendObject(data),
 				(req, out) -> out);
 		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
 	}

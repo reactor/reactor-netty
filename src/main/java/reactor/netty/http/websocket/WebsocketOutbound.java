@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,10 +47,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	String selectedSubprotocol();
 
 	@Override
-	default NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
-		return sendObject(Flux.from(dataStream)
-		                      .map(bytebufToWebsocketFrame));
-	}
+	NettyOutbound send(Publisher<? extends ByteBuf> dataStream);
 
 	/**
 	 * Prepare to send a close frame on subscribe then close the underlying channel

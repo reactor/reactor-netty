@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,11 +73,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 *
 	 * @return this {@link NettyOutbound}
 	 */
-	default NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-		return withConnection(c -> c.channel()
-		                            .pipeline()
-		                            .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator)));
-	}
+	NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator);
 
 	/**
 	 * Sends data to the peer, listens for any error on write and closes on terminal signal
@@ -277,7 +273,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	default NettyOutbound sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
-		return sendObject(ReactorNetty.publisherOrScalarMap(
+		return send(ReactorNetty.publisherOrScalarMap(
 				dataStream, s -> {
 				    ByteBuf buffer = alloc().buffer();
 				    buffer.writeCharSequence(s, charset);

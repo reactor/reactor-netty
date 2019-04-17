@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,10 +113,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse keepAlive(boolean keepAlive);
 
 	@Override
-	default HttpServerResponse options(Consumer<? super NettyPipeline.SendOptions> configurator){
-		NettyOutbound.super.options(configurator);
-		return this;
-	}
+	HttpServerResponse options(Consumer<? super NettyPipeline.SendOptions> configurator);
 
 	/**
 	 * Returns the outbound HTTP headers, sent back to the clients

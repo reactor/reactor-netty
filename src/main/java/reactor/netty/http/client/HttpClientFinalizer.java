@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	@Override
 	public HttpClientFinalizer send(Publisher<? extends ByteBuf> requestBody) {
 		Objects.requireNonNull(requestBody, "requestBody");
-		return send((req, out) -> out.sendObject(requestBody));
+		return send((req, out) -> out.send(requestBody));
 	}
 	@Override
 	public HttpClientFinalizer send(BiFunction<? super HttpClientRequest, ?

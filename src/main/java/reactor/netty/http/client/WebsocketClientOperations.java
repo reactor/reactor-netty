@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package reactor.netty.http.client;
 import java.net.URI;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,8 +34,11 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
+import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.http.websocket.WebsocketInbound;
@@ -164,6 +168,11 @@ final class WebsocketClientOperations extends HttpClientOperations
 		if (channel().isActive()) {
 			sendCloseNow(new CloseWebSocketFrame(1002, "Client internal error"));
 		}
+	}
+
+	@Override
+	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+		return sendObject(Flux.from(dataStream).map(bytebufToWebsocketFrame));
 	}
 
 	@Override

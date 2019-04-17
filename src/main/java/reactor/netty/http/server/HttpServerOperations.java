@@ -153,7 +153,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (!HttpMethod.HEAD.equals(method())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
-				responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+
+				if (HttpUtil.getContentLength(res, -1) != -1) {
+					responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+				}
 			}
 		}
 
@@ -230,10 +233,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public boolean isWebsocket() {
-		return requestHeaders().contains(HttpHeaderNames.UPGRADE,
-				HttpHeaderValues.WEBSOCKET,
-				true)
-				&& HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status());
+		return get(channel()) instanceof WebsocketServerOperations;
 	}
 
 	@Override
@@ -308,6 +308,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			return nettyRequest.headers();
 		}
 		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public HttpServerOperations options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+		super.options(configurator);
+		return this;
 	}
 
 	@Override
