@@ -31,6 +31,23 @@ import reactor.netty.tcp.InetSocketAddressUtil;
  */
 final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 
+	private static final boolean hasProxyProtocol;
+
+	static {
+		boolean proxyProtocolCheck = true;
+		try{
+			Class.forName("io.netty.handler.codec.haproxy.HAProxyMessageDecoder");
+		}
+		catch (ClassNotFoundException cnfe){
+			proxyProtocolCheck = false;
+		}
+		hasProxyProtocol = proxyProtocolCheck;
+	}
+
+	public static boolean hasProxyProtocol() {
+		return hasProxyProtocol;
+	}
+
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		if (msg instanceof HAProxyMessage) {
