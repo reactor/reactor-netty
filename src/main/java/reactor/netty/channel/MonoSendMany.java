@@ -25,21 +25,36 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.netty.FutureMono;
+import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
-class MonoSend<I, O> extends Mono<Void> {
+class MonoSendMany<I, O> extends Mono<Void> {
+
+	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source, Channel channel, @Nullable FlushOptions flushOption) {
+		return new MonoSendMany<>(source, channel, flushOption, FUNCTION_BB_IDENTITY, CONSUMER_BB_NOCHECK_CLEANUP, CONSUMER_BB_CLEANUP, SIZE_OF_BB);
+	}
+
+	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel, @Nullable FlushOptions flushOption) {
+		return new MonoSendMany<>(source, channel, flushOption, FUNCTION_IDENTITY, CONSUMER_NOCHECK_CLEANUP, CONSUMER_CLEANUP, SIZE_OF);
+	}
 
 	final Publisher<? extends I> source;
 	final Channel                channel;
@@ -48,17 +63,17 @@ class MonoSend<I, O> extends Mono<Void> {
 	final Consumer<I>            sourceCleanup;
 	final ToIntFunction<O>       sizeOf;
 	final FlushOptions           flushOption;
-	@SuppressWarnings("unchecked")
-	MonoSend(Publisher<? extends I> source,
-			ChannelOperations<?, ?> ops,
+
+	MonoSendMany(Publisher<? extends I> source,
+			Channel channel,
+			@Nullable FlushOptions flushOption,
 			Function<I, O> transformer,
 			Consumer<I> sourceCleanup,
 			Consumer<O> writeCleanup,
 			ToIntFunction<O> sizeOf) {
 		this.source = source;
-		this.channel = ops.channel();
-		this.flushOption = ops.flushOption == null ? FlushOptions.FLUSH_ON_BOUNDARY :
-				ops.flushOption;
+		this.channel = channel;
+		this.flushOption = flushOption == null ? FlushOptions.FLUSH_ON_BOUNDARY : flushOption;
 		this.transformer = transformer;
 		this.sizeOf = sizeOf;
 		this.sourceCleanup = sourceCleanup;
@@ -67,20 +82,19 @@ class MonoSend<I, O> extends Mono<Void> {
 
 	@Override
 	public void subscribe(CoreSubscriber<? super Void> destination) {
-		source.subscribe(new SendInner<>(this, destination));
+		source.subscribe(new SendManyInner<>(this, destination));
 	}
 
 //
 	enum FlushOptions {FLUSH_ON_EACH, FLUSH_ON_BURST, FLUSH_ON_BOUNDARY}
 
-	static final class SendInner<I, O> implements CoreSubscriber<I>, Subscription,
-	                                              ChannelFutureListener {
+	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription,
+	                                                  ChannelFutureListener {
 
 		final ChannelHandlerContext        ctx;
 		final EventLoop                    eventLoop;
-		final MonoSend<I, O>               parent;
+		final MonoSendMany<I, O>           parent;
 		final CoreSubscriber<? super Void> actual;
-		final AtomicBoolean                pendingFlush;
 		final AtomicBoolean                completed;
 		final Queue<I>                     queue;
 
@@ -90,14 +104,14 @@ class MonoSend<I, O> extends Mono<Void> {
 		@SuppressWarnings("unused")
 		volatile int          wip;
 
+		boolean pendingFlush;
 		int     pending;
 		long    requestedUpstream;
 		boolean fuse;
 
-		SendInner(MonoSend<I, O> parent, CoreSubscriber<? super Void> actual) {
+		SendManyInner(MonoSendMany<I, O> parent, CoreSubscriber<? super Void> actual) {
 			this.parent = parent;
 			this.actual = actual;
-			this.pendingFlush = new AtomicBoolean();
 			this.requestedUpstream = MAX_SIZE;
 			this.completed = new AtomicBoolean();
 			this.ctx = Objects.requireNonNull(parent.channel.pipeline().context(ChannelOperationsHandler.class));
@@ -108,7 +122,8 @@ class MonoSend<I, O> extends Mono<Void> {
 			this.fuse = false;
 
 			//TODO cleanup on complete
-			FutureMono.from(ctx.channel().closeFuture())
+			Disposable listener =
+					FutureMono.from(ctx.channel().closeFuture())
 			          .doOnTerminate(() -> {
 				          if (completed.get() && TERMINATED.get(this) == 0) {
 					          onError(new ClosedChannelException());
@@ -188,8 +203,8 @@ class MonoSend<I, O> extends Mono<Void> {
 				onError(future.cause());
 			}
 			else {
-				requestedUpstream--;
-				pending--;
+				requestedUpstream -= pending;
+				pending = 0;
 
 				tryRequestMoreUpstream();
 				tryComplete();
@@ -204,6 +219,8 @@ class MonoSend<I, O> extends Mono<Void> {
 					scheduleFlush = false;
 
 					long r = requestedUpstream;
+					ChannelPromise lastWrite;
+
 					while (r-- > 0) {
 						I sourceMessage = queue.poll();
 						if (sourceMessage != null && terminated == 0) {
@@ -212,10 +229,19 @@ class MonoSend<I, O> extends Mono<Void> {
 							pending++;
 
 							scheduleFlush =
-									parent.flushOption != FlushOptions.FLUSH_ON_EACH && ctx.channel().isWritable() && readableBytes <= ctx.channel().bytesBeforeUnwritable();
+									parent.flushOption != FlushOptions.FLUSH_ON_EACH &&
+											ctx.channel().isWritable() &&
+											readableBytes <= ctx.channel().bytesBeforeUnwritable();
 
-							ctx.write(encodedMessage)
-							       .addListener(this);
+							if (r > 0 && !queue.isEmpty()) {
+								lastWrite = ctx.voidPromise();
+							}
+							else {
+								lastWrite = ctx.newPromise();
+								lastWrite.addListener(this);
+							}
+
+							ctx.write(encodedMessage, lastWrite);
 
 							if (!scheduleFlush) {
 								ctx.flush();
@@ -228,18 +254,19 @@ class MonoSend<I, O> extends Mono<Void> {
 						}
 					}
 
-					if (parent.flushOption != FlushOptions.FLUSH_ON_BOUNDARY && scheduleFlush
-							&& !pendingFlush.getAndSet(true)) {
+					if (parent.flushOption != FlushOptions.FLUSH_ON_BOUNDARY && scheduleFlush && !pendingFlush) {
+						pendingFlush = true;
 						eventLoop.execute(this::flushOnBurst);
 					}
-					else if (parent.flushOption != FlushOptions.FLUSH_ON_EACH && completed.get()) {
-						ctx.flush();
+					else if (completed.get()){
+						if (parent.flushOption != FlushOptions.FLUSH_ON_EACH ) {
+							ctx.flush();
+						}
 						tryComplete();
-						return;
 					}
 
 					if (terminated == 1) {
-						break;
+						return;
 					}
 
 					missed = WIP.addAndGet(this, -missed);
@@ -255,8 +282,8 @@ class MonoSend<I, O> extends Mono<Void> {
 
 		void flushOnBurst() {
 			try {
+				pendingFlush = false;
 				ctx.flush();
-				pendingFlush.set(false);
 				tryComplete();
 			}
 			catch (Throwable t) {
@@ -294,12 +321,47 @@ class MonoSend<I, O> extends Mono<Void> {
 			}
 		}
 
-		static final int MAX_SIZE    = Queues.SMALL_BUFFER_SIZE;
-		static final int REFILL_SIZE = MAX_SIZE / 2;
-
-		static final AtomicIntegerFieldUpdater<SendInner> WIP        =
-				AtomicIntegerFieldUpdater.newUpdater(SendInner.class, "wip");
-		static final AtomicIntegerFieldUpdater<SendInner> TERMINATED =
-				AtomicIntegerFieldUpdater.newUpdater(SendInner.class, "terminated");
+		static final AtomicIntegerFieldUpdater<SendManyInner> WIP        =
+				AtomicIntegerFieldUpdater.newUpdater(SendManyInner.class, "wip");
+		static final AtomicIntegerFieldUpdater<SendManyInner> TERMINATED =
+				AtomicIntegerFieldUpdater.newUpdater(SendManyInner.class, "terminated");
 	}
+
+	static final int                    MAX_SIZE    = Queues.SMALL_BUFFER_SIZE;
+	static final int                    REFILL_SIZE = MAX_SIZE / 2;
+	static final ToIntFunction<ByteBuf> SIZE_OF_BB  = ByteBuf::readableBytes;
+	static final ToIntFunction<Object>  SIZE_OF     = msg -> {
+		if (msg instanceof ByteBufHolder) {
+			return ((ByteBufHolder) msg).content()
+			                            .readableBytes();
+		}
+		if (msg instanceof ByteBuf) {
+			return ((ByteBuf) msg).readableBytes();
+		}
+		return 0;
+	};
+
+	static final Function<ByteBuf, ByteBuf> FUNCTION_BB_IDENTITY =
+			Function.identity();
+	static final Function<Object, Object>   FUNCTION_IDENTITY    =
+			Function.identity();
+
+	static final Consumer<ByteBuf> CONSUMER_BB_NOCHECK_CLEANUP = ByteBuf::release;
+	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    =
+			ReferenceCountUtil::release;
+
+	static final Consumer<ByteBuf> CONSUMER_BB_CLEANUP = data -> {
+		if (data.refCnt() > 0) {
+			data.release();
+		}
+	};
+
+	static final Consumer<Object> CONSUMER_CLEANUP = data -> {
+		if (data instanceof ReferenceCounted) {
+			ReferenceCounted counted = (ReferenceCounted) data;
+			if (counted.refCnt() > 0) {
+				counted.release();
+			}
+		}
+	};
 }

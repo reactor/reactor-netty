@@ -86,9 +86,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
 	 * signal successful sequence write (e.g. after "flush") or any error during write.
 	 */
-	default NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
-		return sendObject(dataStream);
-	}
+	NettyOutbound send(Publisher<? extends ByteBuf> dataStream);
 
 	/**
 	 * Sends bytes to the peer, listens for any error on write and closes on terminal

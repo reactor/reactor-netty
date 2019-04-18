@@ -23,9 +23,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -75,7 +73,6 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
-import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
@@ -352,8 +349,23 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
-		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
-			return new GetOrHeadAggregateOutbound(this, source, outboundHttpMessage());
+		if (source instanceof Mono) {
+			return super.send(source);
+		}
+		if ((Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD))
+				&& markSentHeaderAndBody()) {
+
+			ByteBufAllocator alloc = channel().alloc();
+			return then(Flux.from(source)
+			           .collect(alloc::compositeBuffer, (prev, next) -> prev.addComponent(true, next))
+			           .flatMap(agg -> {
+				           if (agg.readableBytes() > 0) {
+					           return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(agg)));
+				           }
+				           agg.release();
+				           return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
+			           })
+			           .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
 		return super.send(source);
 	}
@@ -563,9 +575,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected HttpMessage newFullBodyMessage(ByteBuf body) {
 		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
 
-		requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
-
-		if (HttpUtil.getContentLength(request, -1) == -1) {
+		if (!HttpUtil.isTransferEncodingChunked(nettyRequest)) {
 			requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
 		}
 
@@ -742,76 +752,5 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	static final int                    MAX_REDIRECTS      = 50;
 	@SuppressWarnings("unchecked")
 	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];
-	static final Logger                 log                =
-			Loggers.getLogger(HttpClientOperations.class);
-
-	static final class GetOrHeadAggregateOutbound implements NettyOutbound {
-
-		final HttpOperations<?, ?>         parent;
-		final HttpMessage                  request;
-		final Publisher<? extends ByteBuf> source;
-
-		 GetOrHeadAggregateOutbound(HttpOperations<?, ?> parent,
-				Publisher<? extends ByteBuf> source,
-				 HttpMessage request) {
-			this.parent = parent;
-			this.source = source;
-			this.request = request;
-		}
-
-		@Override
-		public ByteBufAllocator alloc() {
-			return parent.alloc();
-		}
-
-		@Override
-		public NettyOutbound sendObject(Publisher<?> dataStream) {
-			return parent.sendObject(dataStream);
-		}
-
-		@Override
-		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-			parent.options(configurator);
-			return this;
-		}
-
-		@Override
-		public NettyOutbound sendObject(Object message) {
-			return parent.sendObject(message);
-		}
-
-		@Override
-		public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
-				BiFunction<? super Connection, ? super S, ?> mappedInput, Consumer<? super S> sourceCleanup) {
-			return parent.sendUsing(sourceInput, mappedInput, sourceCleanup);
-		}
-
-		@Override
-		public Mono<Void> then() {
-			if (!parent.channel().isActive()) {
-				return Mono.error(new AbortedException("Connection has been closed BEFORE response"));
-			}
-
-			ByteBufAllocator alloc = parent.channel().alloc();
-			return Flux.from(source)
-			           .collect(alloc::compositeBuffer, (prev, next) -> prev.addComponent(true, next))
-			           .flatMap(agg -> {
-				           if (!HttpUtil.isTransferEncodingChunked(request) && !HttpUtil.isContentLengthSet(request)) {
-					           request.headers()
-					                  .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
-				           }
-				           if (agg.readableBytes() > 0) {
-				               return parent.sendObject(Mono.just(agg)).then();
-				           }
-				           agg.release();
-				           return parent.then();
-			           })
-			           .doOnDiscard(ByteBuf.class, ByteBuf::release);
-		}
-
-		@Override
-		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
-			return parent.withConnection(withConnection);
-		}
-	}
+	static final Logger                 log                = Loggers.getLogger(HttpClientOperations.class);
 }

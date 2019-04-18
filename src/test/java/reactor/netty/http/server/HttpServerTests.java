@@ -527,10 +527,10 @@ public class HttpServerTests {
 				HttpServer.create()
 				          .host("localhost")
 				          .route(r -> r.route(req -> req.uri().startsWith("/1"),
-				                                  (req, res) -> res.sendString(Mono.just("OK")))
+				                                  (req, res) -> res.sendString(Flux.just("OK").hide()))
 				                       .route(req -> req.uri().startsWith("/2"),
 				                                  (req, res) -> res.chunkedTransfer(false)
-				                                                   .sendString(Mono.just("OK")))
+				                                                   .sendString(Flux.just("OK").hide()))
 				                       .route(req -> req.uri().startsWith("/3"),
 				                                  (req, res) -> {
 				                                                res.responseHeaders().set("Content-Length", 2);
@@ -918,7 +918,7 @@ public class HttpServerTests {
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .send(Mono.fromRunnable(() -> Flux.just(data, data.retain(), data.retain())))
+				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain())))
 				                 .then()
 				                 .doOnCancel(() -> ReferenceCountUtil.release(data)),
 				(req, out) -> {
@@ -948,7 +948,7 @@ public class HttpServerTests {
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .send(Mono.fromRunnable(() -> Flux.just(data, data.retain(), data.retain())))
+				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain())))
 				                 .then()
 				                 .doOnCancel(() -> ReferenceCountUtil.release(data)),
 				(req, out) -> out);
