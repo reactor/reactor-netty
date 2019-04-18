@@ -102,20 +102,15 @@ public class ChannelOperationsHandlerTest {
 //	}
 //
 //	private void doTestPrefetchSize(int writeBufferLowWaterMark, int writeBufferHighWaterMark) {
-//		ChannelOperationsHandler handler = new ChannelOperationsHandler(ChannelOperations.EMPTY_SETUP, ConnectionObserver.emptyListener());
-//
-//		EmbeddedChannel channel = new EmbeddedChannel(handler);
+//		EmbeddedChannel channel = new EmbeddedChannel();
 //		channel.config()
 //		       .setWriteBufferLowWaterMark(writeBufferLowWaterMark)
 //		       .setWriteBufferHighWaterMark(writeBufferHighWaterMark);
 //
-//		assertThat(handler.prefetch == (handler.inner.requested - handler.inner.produced)).isTrue();
-//
-//		StepVerifier.create(FutureMono.deferFuture(() -> channel.writeAndFlush(Flux.range(0, 70))))
+//		StepVerifier.create(FutureMono.deferFuture(() -> channel.writeAndFlush(MonoSendMany.objectSource(Flux.range(0, 70), channel, null))))
 //		            .expectComplete()
 //		            .verify(Duration.ofSeconds(30));
 //
-//		assertThat(handler.prefetch == (handler.inner.requested - handler.inner.produced)).isTrue();
 //	}
 
 	@Test

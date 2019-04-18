@@ -614,6 +614,11 @@ public final class ReactorNetty {
 			}
 
 			@Override
+			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+				return this;
+			}
+
+			@Override
 			public NettyOutbound sendObject(Publisher<?> dataStream) {
 				return this;
 			}

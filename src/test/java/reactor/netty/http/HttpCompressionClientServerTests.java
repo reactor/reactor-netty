@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -274,7 +274,7 @@ public class HttpCompressionClientServerTests {
 		                              .compress((req, res) -> false);
 
 		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Flux.just("reply").hide()))
 				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 

@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -40,6 +41,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 
@@ -86,14 +88,29 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
+		if (source instanceof Mono && markSentHeaderAndBody()) {
+			return then(((Mono<ByteBuf>)source)
+					.flatMap(msg -> {
+						preSendHeadersAndStatus();
+						return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(msg)));
+					})
+					.doOnDiscard(ByteBuf.class, ByteBuf::release));
+		}
+		return super.send(source);
+	}
+
+	@Override
 	public NettyOutbound sendObject(Object message) {
 		if (!(message instanceof ByteBuf) || !markSentHeaderAndBody()) {
 			return super.sendObject(message);
 		}
 		return then(FutureMono.deferFuture(() -> {
 			ByteBuf b = (ByteBuf) message;
+			preSendHeadersAndStatus();
 			return channel().writeAndFlush(newFullBodyMessage(b));
-		}));
+		}), () -> ReactorNetty.safeRelease(message));
 	}
 
 	@Override

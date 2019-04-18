@@ -387,6 +387,7 @@ public class HttpClientTest {
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
 				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+				          .headers(h -> h.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED))
 				          .wiretap(true)
 				          .request(HttpMethod.GET)
 				          .uri("/unsupportedURI")
@@ -1253,7 +1254,7 @@ public class HttpClientTest {
 				          .port(0)
 				          .handle((req, resp) -> {
 				              if (req.requestHeaders().contains("during")) {
-				                  return resp.sendString(Mono.just("test"))
+				                  return resp.sendString(Flux.just("test").hide())
 				                             .then(Mono.error(new RuntimeException("test")));
 				              }
 				              throw new RuntimeException("test");

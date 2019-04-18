@@ -21,16 +21,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.ToIntFunction;
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
@@ -96,7 +92,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final ConnectionObserver  listener;
 	final MonoProcessor<Void> onTerminate;
 
-	MonoSend.FlushOptions flushOption;
+	MonoSendMany.FlushOptions flushOption;
 
 	@SuppressWarnings("unchecked")
 	volatile Subscription outboundSubscription;
@@ -232,48 +228,24 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		                                                          .alloc());
 	}
 
-	static final ToIntFunction<ByteBuf>     SIZE_OF_BB                  =
-			ByteBuf::readableBytes;
-	static final Function<ByteBuf, ByteBuf> FUNCTION_BB_IDENTITY        =
-			Function.identity();
-	static final Consumer<ByteBuf>          CONSUMER_BB_NOCHECK_CLEANUP =
-			ByteBuf::release;
-	static final Consumer<ByteBuf>          CONSUMER_BB_CLEANUP         = data -> {
-		if (data.refCnt() > 0) {
-			data.release();
-		}
-	};
-
-	static final Function<Object, Object> FUNCTION_IDENTITY        = Function.identity();
-	static final Consumer<Object>         CONSUMER_NOCHECK_CLEANUP =
-			ReferenceCountUtil::release;
-	static final Consumer<Object>         CONSUMER_CLEANUP         = data -> {
-		if (data instanceof ReferenceCounted) {
-			ReferenceCounted counted = (ReferenceCounted) data;
-			if (counted.refCnt() > 0) {
-				counted.release();
-			}
-		}
-	};
-	static final ToIntFunction<Object>    SIZE_OF                  = msg -> {
-		if (msg instanceof ByteBufHolder) {
-			return ((ByteBufHolder) msg).content()
-			                            .readableBytes();
-		}
-		if (msg instanceof ByteBuf) {
-			return ((ByteBuf) msg).readableBytes();
-		}
-		return 0;
-	};
-
 	@Override
+	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
-		return then(new MonoSend<>(dataStream, this, FUNCTION_BB_IDENTITY, CONSUMER_BB_NOCHECK_CLEANUP, CONSUMER_BB_CLEANUP, SIZE_OF_BB));
+		if (dataStream instanceof Mono) {
+			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
+		}
+		return then(MonoSendMany.byteBufSource(dataStream, channel(), flushOption));
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public NettyOutbound sendObject(Publisher<?> dataStream) {
-		return then(new MonoSend<>(dataStream, this, FUNCTION_IDENTITY, CONSUMER_NOCHECK_CLEANUP, CONSUMER_CLEANUP, SIZE_OF));
+		if (dataStream instanceof Mono) {
+			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
+		}
+		return then(MonoSendMany.objectSource(dataStream, channel(), flushOption));
 	}
 
 	@Override
@@ -435,13 +407,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		configurator.accept(new NettyPipeline.SendOptions() {
 			@Override
 			public NettyPipeline.SendOptions flushOnBoundary() {
-				flushOption = MonoSend.FlushOptions.FLUSH_ON_BOUNDARY;
+				flushOption = MonoSendMany.FlushOptions.FLUSH_ON_BOUNDARY;
 				return this;
 			}
 
 			@Override
 			public NettyPipeline.SendOptions flushOnEach(boolean withEventLoop) {
-				flushOption = withEventLoop ? MonoSend.FlushOptions.FLUSH_ON_BURST : MonoSend.FlushOptions.FLUSH_ON_EACH;
+				flushOption = withEventLoop ? MonoSendMany.FlushOptions.FLUSH_ON_BURST : MonoSendMany.FlushOptions.FLUSH_ON_EACH;
 				return this;
 			}
 		});

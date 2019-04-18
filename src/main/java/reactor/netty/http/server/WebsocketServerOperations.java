@@ -109,8 +109,8 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 			handshaker.handshake(channel,
 					request,
-					replaced.nettyResponse.headers()
-					                      .remove(HttpHeaderNames.TRANSFER_ENCODING),
+					replaced.responseHeaders
+							.remove(HttpHeaderNames.TRANSFER_ENCODING),
 					handshakerResult)
 			          .addListener(f -> markPersistent(false));
 		}
