@@ -29,7 +29,6 @@ import io.netty.handler.codec.ByteToMessageCodec;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -217,21 +216,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 */
 	protected final boolean markSentHeaderAndBody() {
 		return HTTP_STATE.compareAndSet(this, READY, BODY_SENT);
-	}
-
-	protected boolean isKeepAlive(HttpMessage message) {
-		boolean connectionClose = message.headers().containsValue(HttpHeaderNames.CONNECTION,
-				HttpHeaderValues.CLOSE, true);
-		if (connectionClose) {
-			return false;
-		}
-
-		if (message.protocolVersion().isKeepAliveDefault()) {
-			return true;
-		} else {
-			return message.headers().containsValue(HttpHeaderNames.CONNECTION,
-					HttpHeaderValues.KEEP_ALIVE, true);
-		}
 	}
 
 	/**
