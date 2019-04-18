@@ -226,7 +226,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public boolean isKeepAlive() {
-		return isKeepAlive(nettyRequest);
+		return HttpUtil.isKeepAlive(nettyRequest);
 	}
 
 	@Override

@@ -34,7 +34,6 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -304,9 +303,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	public boolean isKeepAlive() {
 		ResponseState rs = responseState;
 		if (rs != null) {
-			return isKeepAlive(rs.response);
+			return HttpUtil.isKeepAlive(rs.response);
 		}
-		return isKeepAlive(nettyRequest);
+		return HttpUtil.isKeepAlive(nettyRequest);
 	}
 
 	@Override
