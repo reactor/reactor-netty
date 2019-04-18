@@ -17,14 +17,15 @@
 package reactor.netty.resources;
 
 import java.net.SocketAddress;
+import java.util.concurrent.TimeoutException;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.pool.FixedChannelPool;
-import io.netty.channel.pool.SimpleChannelPool;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
+import reactor.pool.InstrumentedPool;
+import reactor.pool.PoolBuilder;
 import reactor.util.annotation.NonNull;
 
 /**
@@ -79,11 +80,12 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	static ConnectionProvider elastic(String name) {
 		return new PooledConnectionProvider(name,
-				(bootstrap, handler, checker) -> new SimpleChannelPool(bootstrap,
-						handler,
-						checker,
-						true,
-						false));
+				(allocator, destroyHandler, evictionPredicate) ->
+				        (InstrumentedPool<PooledConnectionProvider.PooledConnection>)
+				                PoolBuilder.from(allocator)
+				                           .destroyHandler(destroyHandler)
+				                           .evictionPredicate(evictionPredicate)
+				                           .build());
 	}
 
 	/**
@@ -127,7 +129,8 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @param name the connection pool name
 	 * @param maxConnections the maximum number of connections before starting pending
-	 * @param acquireTimeout the maximum time in millis to wait for acquiring
+	 * @param acquireTimeout the maximum time in millis after which a pending acquire
+	 *                          must complete or the {@link TimeoutException} will be thrown.
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
@@ -137,21 +140,21 @@ public interface ConnectionProvider extends Disposable {
 			return elastic(name);
 		}
 		if (maxConnections <= 0) {
-			throw new IllegalArgumentException("Max Connections value must be strictly " + "positive");
+			throw new IllegalArgumentException("Max Connections value must be strictly positive");
 		}
-		if (acquireTimeout != -1L && acquireTimeout < 0) {
-			throw new IllegalArgumentException("Acquire Timeout value must " + "be " + "positive");
+		if (acquireTimeout < 0) {
+			throw new IllegalArgumentException("Acquire Timeout value must be positive");
 		}
 		return new PooledConnectionProvider(name,
-				(bootstrap, handler, checker) -> new FixedChannelPool(bootstrap,
-						handler,
-						checker,
-						FixedChannelPool.AcquireTimeoutAction.FAIL,
-						acquireTimeout,
-						maxConnections,
-						Integer.MAX_VALUE,
-						true,
-						false),
+				(allocator, destroyHandler, evictionPredicate) ->
+				        (InstrumentedPool<PooledConnectionProvider.PooledConnection>)
+				                PoolBuilder.from(allocator)
+				                           .sizeMax(maxConnections)
+				                           .maxPendingAcquireUnbounded()
+				                           .destroyHandler(destroyHandler)
+				                           .evictionPredicate(evictionPredicate)
+				                           .build(),
+				acquireTimeout,
 				maxConnections);
 	}
 

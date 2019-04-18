@@ -76,7 +76,7 @@ public class HttpTests {
 
 		StepVerifier.create(content)
 				    .expectComplete()
-				    .verify(Duration.ofSeconds(5000));
+				    .verify(Duration.ofSeconds(30));
 
 		server.disposeNow();
 	}
