@@ -44,6 +44,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
@@ -57,6 +58,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -71,6 +73,7 @@ import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -1852,5 +1855,80 @@ public class HttpClientTest {
 		            .verify(Duration.ofSeconds(30));
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void testIssue719() throws Exception {
+		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
+				h -> h.set("Transfer-Encoding", "chunked"), false);
+		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
+				h -> h.set("Content-Length", "4"), false);
+
+		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
+				h -> h.set("Transfer-Encoding", "chunked"), false);
+		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
+				h -> h.set("Content-Length", "0"), false);
+
+		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
+				h -> h.set("Transfer-Encoding", "chunked"), true);
+		doTestIssue719(ByteBufFlux.fromString(Mono.just("test")),
+				h -> h.set("Content-Length", "4"), true);
+
+		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
+				h -> h.set("Transfer-Encoding", "chunked"), true);
+		doTestIssue719(ByteBufFlux.fromString(Mono.just("")),
+				h -> h.set("Content-Length", "0"), true);
+	}
+
+	private void doTestIssue719(Publisher<ByteBuf> clientSend,
+			Consumer<HttpHeaders> clientSendHeaders, boolean ssl) throws Exception {
+		HttpServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) -> req.receive()
+				                                   .then(res.sendString(Mono.just("test"))
+				                                            .then()));
+
+		if (ssl) {
+			SelfSignedCertificate cert = new SelfSignedCertificate();
+			server = server.secure(spec -> spec.sslContext(
+					SslContextBuilder.forServer(cert.certificate(), cert.privateKey())));
+		}
+
+		DisposableServer disposableServer = server.bindNow();
+
+		HttpClient client = createHttpClientForContextWithAddress(disposableServer);
+		if (ssl) {
+			client = client.secure(spec ->
+					spec.sslContext(SslContextBuilder.forClient()
+					                                 .trustManager(InsecureTrustManagerFactory.INSTANCE)));
+		}
+
+		StepVerifier.create(
+		        client.headers(clientSendHeaders)
+		              .post()
+		              .uri("/")
+		              .send(clientSend)
+		              .responseContent()
+		              .aggregate()
+		              .asString())
+		            .expectNext("test")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(
+		        client.headers(clientSendHeaders)
+		              .post()
+		              .uri("/")
+		              .send(clientSend)
+		              .responseContent()
+		              .aggregate()
+		              .asString())
+		        .expectNext("test")
+		        .expectComplete()
+		        .verify(Duration.ofSeconds(30));
+
+		disposableServer.disposeNow();
 	}
 }

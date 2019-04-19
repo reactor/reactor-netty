@@ -694,6 +694,12 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 
 			produced++;
 
+			if ((t instanceof ByteBuf && ((ByteBuf) t).readableBytes() == 0) ||
+					(t instanceof FileRegion && ((FileRegion) t).count() == 0)) {
+				promise.setSuccess();
+				return;
+			}
+
 			// Returned value is deliberately ignored
 			parent.doWrite(t, promise, this);
 
