@@ -86,7 +86,7 @@ public class ChannelOperationsHandlerTest {
 		StepVerifier.create(code)
 		            .expectNextMatches(c -> c == 200)
 		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		            .verify(Duration.ofSeconds(30000000));
 
 		server.disposeNow();
 	}
