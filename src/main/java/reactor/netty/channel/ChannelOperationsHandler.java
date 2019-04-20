@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-Present Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,15 +117,6 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			Exceptions.throwIfJvmFatal(err);
 			exceptionCaught(ctx, err);
 			ReferenceCountUtil.safeRelease(msg);
-		}
-	}
-
-	@Override
-	public void channelWritabilityChanged(ChannelHandlerContext ctx) {
-		if (log.isDebugEnabled()) {
-			log.debug(format(ctx.channel(), "Write state change {}"),
-					ctx.channel()
-					   .isWritable());
 		}
 	}
 
