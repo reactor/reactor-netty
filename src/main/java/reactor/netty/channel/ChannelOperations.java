@@ -92,7 +92,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final ConnectionObserver  listener;
 	final MonoProcessor<Void> onTerminate;
 
-	MonoSendMany.FlushOptions flushOption;
+	boolean flushOnEach;
 
 	@SuppressWarnings("unchecked")
 	volatile Subscription outboundSubscription;
@@ -101,7 +101,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.connection = replaced.connection;
 		this.listener = replaced.listener;
 		this.onTerminate = replaced.onTerminate;
-		this.flushOption = replaced.flushOption;
+		this.flushOnEach = replaced.flushOnEach;
 		this.inbound = new FluxReceive(this);
 	}
 
@@ -235,7 +235,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
-		return then(MonoSendMany.byteBufSource(dataStream, channel(), flushOption));
+		return then(MonoSendMany.byteBufSource(dataStream, channel(), flushOnEach));
 	}
 
 	@Override
@@ -245,7 +245,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
 		}
-		return then(MonoSendMany.objectSource(dataStream, channel(), flushOption));
+		return then(MonoSendMany.objectSource(dataStream, channel(), flushOnEach));
 	}
 
 	@Override
@@ -407,13 +407,12 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		configurator.accept(new NettyPipeline.SendOptions() {
 			@Override
 			public NettyPipeline.SendOptions flushOnBoundary() {
-				flushOption = MonoSendMany.FlushOptions.FLUSH_ON_BOUNDARY;
 				return this;
 			}
 
 			@Override
 			public NettyPipeline.SendOptions flushOnEach(boolean withEventLoop) {
-				flushOption = withEventLoop ? MonoSendMany.FlushOptions.FLUSH_ON_BURST : MonoSendMany.FlushOptions.FLUSH_ON_EACH;
+				flushOnEach = !withEventLoop;
 				return this;
 			}
 		});

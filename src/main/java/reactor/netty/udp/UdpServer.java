@@ -25,7 +25,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -440,11 +439,7 @@ public abstract class UdpServer {
 					12012;
 
 	static final Bootstrap DEFAULT_BOOTSTRAP =
-			new Bootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-			               .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-			               .option(ChannelOption.AUTO_READ, false)
-			               .option(ChannelOption.SO_RCVBUF, 1024 * 1024)
-			               .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
+			new Bootstrap().option(ChannelOption.AUTO_READ, false)
 			               .localAddress(NetUtil.LOCALHOST, DEFAULT_PORT);
 
 	static {

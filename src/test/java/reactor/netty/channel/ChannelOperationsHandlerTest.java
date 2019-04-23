@@ -64,7 +64,7 @@ public class ChannelOperationsHandlerTest {
 				          .handle((req, res) ->
 				                  req.receive()
 				                     .asString()
-				                     .doOnNext(System.err::println)
+				                     .log("receive")
 				                     .then(res.status(200).sendHeaders().then()))
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
@@ -79,9 +79,9 @@ public class ChannelOperationsHandlerTest {
 				          .wiretap(true)
 				          .post()
 				          .uri("/")
-				          .send(ByteBufFlux.fromString(flux))
-				          .responseSingle((res, buf) -> Mono.just(res.status().code()))
-				          .log();
+				          .send(ByteBufFlux.fromString(flux)
+				                           .log("send"))
+				          .responseSingle((res, buf) -> Mono.just(res.status().code()));
 
 		StepVerifier.create(code)
 		            .expectNextMatches(c -> c == 200)

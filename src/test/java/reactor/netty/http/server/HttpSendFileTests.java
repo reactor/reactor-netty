@@ -38,6 +38,7 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.logging.Level;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -48,9 +49,11 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClient;
+import reactor.util.Loggers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -299,8 +302,9 @@ public class HttpSendFileTests {
 	@Test
 	public void sendFileAsync1024() throws IOException, URISyntaxException {
 		doTestSendFileAsync((req, resp) -> resp.sendByteArray(req.receive()
-				                                                 .aggregate()
-				                                                 .asByteArray()),
+		                                                         .asByteArray()
+		                                                         .log("reply", Level.INFO, SignalType.REQUEST)
+				.doOnRequest(r -> Loggers.getLogger(HttpSendFileTests.class).info(""+req.receiveObject()))),
 				1024, null);
 	}
 
@@ -329,11 +333,14 @@ public class HttpSendFileTests {
 				                ch.read(buf, 0, buf, handler);
 				        }),
 				        HttpSendFileTests::closeChannel)
-				    .doOnDiscard(ByteBuf.class, ByteBuf::release);
+				    .doOnDiscard(ByteBuf.class, ByteBuf::release)
+				.log("send", Level.INFO, SignalType.REQUEST, SignalType.ON_COMPLETE);
 
 		DisposableServer context =
 				customizeServerOptions(HttpServer.create()
 				                                 .host("localhost"))
+//						.wiretap(true)
+//						.tcpConfiguration(tcp -> tcp.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(1024)))
 				          .handle(fn)
 				          .bindNow();
 
@@ -341,6 +348,8 @@ public class HttpSendFileTests {
 			byte[] response =
 					customizeClientOptions(HttpClient.create()
 					                                 .addressSupplier(context::address))
+//							.tcpConfiguration(tcp -> tcp.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024, 1024)))
+//.wiretap(true)
 					    .request(HttpMethod.POST)
 					    .uri("/")
 					    .send(content)
