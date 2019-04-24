@@ -305,7 +305,7 @@ public class TcpClientTests {
 
 		c.onDispose()
 		 .log()
-		 .block(Duration.ofSeconds(30));
+		 .block(Duration.ofSeconds(30000));
 
 		assertTrue("Expected messages not received. Received " + strings.size() + " messages: " + strings,
 				latch.await(15, TimeUnit.SECONDS));

@@ -121,6 +121,8 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 		int      sourceMode;
 		boolean  needFlush;
 
+		int nextRequest;
+
 		@Override
 		public Context currentContext() {
 			return actual.currentContext();
@@ -213,7 +215,7 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 					@SuppressWarnings("unchecked") QueueSubscription<I> f =
 							(QueueSubscription<I>) s;
 
-					int m = f.requestFusion(Fuseable.NONE/* | Fuseable.THREAD_BARRIER*/);
+					int m = f.requestFusion(Fuseable.SYNC/* | Fuseable.THREAD_BARRIER*/);
 
 					if (m == Fuseable.SYNC) {
 						sourceMode = Fuseable.SYNC;
@@ -262,7 +264,7 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 				for (; ; ) {
 					int r = requested;
 
-					while (r-- > 0) {
+					while (Integer.MAX_VALUE != r && r-- > 0) {
 						I sourceMessage = queue.poll();
 
 						if (sourceMessage == null) {
@@ -297,12 +299,19 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 						ctx.flush();
 					}
 
+					if (Operators.cancelledSubscription() == s) {
+						cleanup();
+						return;
+					}
+
 					if (tryComplete()) {
 						return;
 					}
 
-					if (Operators.cancelledSubscription() == s) {
-						return;
+					int nextRequest = this.nextRequest;
+					if (!done && nextRequest != 0) {
+						this.nextRequest = 0;
+						s.request(nextRequest);
 					}
 
 					missed = WIP.addAndGet(this, -missed);
@@ -312,7 +321,6 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 				}
 			}
 			catch (Throwable t) {
-				log.debug("Error while sending", t);
 				cleanup();
 				if (Operators.terminate(SUBSCRIPTION, this) ) {
 					actual.onError(t);
@@ -464,17 +472,17 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 
 		@Override
 		public boolean trySuccess(Void result) {
-			requested -= pending;
-			pending = 0;
+			requested--;
+			pending--;
 
 			if (tryComplete()) {
 				return true;
 			}
 
 			if (requested <= REFILL_SIZE) {
-				long u = MAX_SIZE - requested;
+				int u = MAX_SIZE - requested;
 				requested += u;
-				s.request(u);
+				nextRequest += u;
 				trySchedule(null);
 			}
 			return true;

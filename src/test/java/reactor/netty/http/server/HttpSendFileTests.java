@@ -53,7 +53,6 @@ import reactor.core.publisher.SignalType;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.client.HttpClient;
-import reactor.util.Loggers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -303,8 +302,7 @@ public class HttpSendFileTests {
 	public void sendFileAsync1024() throws IOException, URISyntaxException {
 		doTestSendFileAsync((req, resp) -> resp.sendByteArray(req.receive()
 		                                                         .asByteArray()
-		                                                         .log("reply", Level.INFO, SignalType.REQUEST)
-				.doOnRequest(r -> Loggers.getLogger(HttpSendFileTests.class).info(""+req.receiveObject()))),
+		                                                         .log("reply", Level.INFO, SignalType.REQUEST)),
 				1024, null);
 	}
 
