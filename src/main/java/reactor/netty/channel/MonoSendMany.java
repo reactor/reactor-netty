@@ -18,6 +18,7 @@ package reactor.netty.channel;
 
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -34,6 +35,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -97,13 +100,13 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 	}
 
 	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription,
-	                                                  ChannelFutureListener, Runnable, Scannable, Fuseable {
+	                                                  ChannelFutureListener, Runnable, Scannable, Fuseable, ChannelPromise {
 
 		final ChannelHandlerContext        ctx;
 		final EventLoop                    eventLoop;
 		final MonoSendMany<I, O>           parent;
 		final CoreSubscriber<? super Void> actual;
-		final Queue<I>                     queue;
+
 
 		@SuppressWarnings("unused")
 		volatile Subscription s;
@@ -111,12 +114,12 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 		@SuppressWarnings("unused")
 		volatile int          wip;
 
-		boolean done;
-		int     pending;
-		int     requested;
-		int     sourceMode;
-
-		boolean pendingFlush;
+		Queue<I> queue;
+		boolean  done;
+		int      pending;
+		int      requested;
+		int      sourceMode;
+		boolean  needFlush;
 
 		@Override
 		public Context currentContext() {
@@ -134,12 +137,12 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 		}
 
 		SendManyInner(MonoSendMany<I, O> parent, CoreSubscriber<? super Void> actual) {
+			this.needFlush = true;
 			this.parent = parent;
 			this.actual = actual;
 			this.requested = MAX_SIZE;
 			this.ctx = Objects.requireNonNull(parent.channel.pipeline().context(ChannelOperationsHandler.class));
 			this.eventLoop = parent.channel.eventLoop();
-			this.queue = Queues.<I>get(MAX_SIZE).get();
 
 //			this.fuse = queue instanceof Fuseable.QueueSubscription;
 
@@ -158,16 +161,16 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 			ctx.channel()
 			   .closeFuture()
 			   .removeListener(this);
-			tryDrain(null);
+			trySchedule(null);
 		}
 
 		@Override
 		public void onError(Throwable t) {
-			if (done) {
+
+			if (SUBSCRIPTION.getAndSet(this, Operators.cancelledSubscription()) == Operators.cancelledSubscription()) {
 				Operators.onErrorDropped(t, actual.currentContext());
 				return;
 			}
-			done = true;
 
 			//FIXME serialize om drain loop
 			if (WIP.getAndIncrement(this) == 0) {
@@ -180,7 +183,7 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 		@Override
 		public void onNext(I t) {
 			if (sourceMode == ASYNC) {
-				tryDrain(null);
+				trySchedule(null);
 				return;
 			}
 
@@ -198,16 +201,40 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 						actual.currentContext()));
 				return;
 			}
-			tryDrain(t);
+			trySchedule(t);
 		}
 
 		@Override
 		public void onSubscribe(Subscription s) {
 			if (Operators.validate(this.s, s)) {
 				this.s = s;
+
+				if (s instanceof QueueSubscription) {
+					@SuppressWarnings("unchecked") QueueSubscription<I> f =
+							(QueueSubscription<I>) s;
+
+					int m = f.requestFusion(Fuseable.NONE/* | Fuseable.THREAD_BARRIER*/);
+
+					if (m == Fuseable.SYNC) {
+						sourceMode = Fuseable.SYNC;
+						queue = f;
+						done = true;
+						actual.onSubscribe(this);
+						trySchedule(null);
+						return;
+					}
+					if (m == Fuseable.ASYNC) {
+						sourceMode = Fuseable.ASYNC;
+						queue = f;
+						actual.onSubscribe(this);
+						s.request(MAX_SIZE);
+						return;
+					}
+				}
+
+				queue = Queues.<I>get(MAX_SIZE).get();
 				actual.onSubscribe(this);
 				s.request(MAX_SIZE);
-				tryDrain(null);
 			}
 		}
 
@@ -231,90 +258,47 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 		@Override
 		public void run() {
 			try {
-				boolean scheduleFlush;
 				int missed = 1;
 				for (; ; ) {
-					scheduleFlush = false;
-
-					long r = requested;
-					ChannelPromise lastWrite;
+					int r = requested;
 
 					while (r-- > 0) {
 						I sourceMessage = queue.poll();
-						if (sourceMessage != null && s != Operators.cancelledSubscription()) {
-							O encodedMessage = parent.transformer.apply(sourceMessage);
-							int readableBytes = parent.sizeOf.applyAsInt(encodedMessage);
 
-							pending++;
-							scheduleFlush = !parent.flushOnEach &&
-									ctx.channel().isWritable() &&
-											readableBytes <= ctx.channel().bytesBeforeUnwritable();
-
-							if (pendingFlush || (r > 0 && !queue.isEmpty())) {
-								lastWrite = ctx.voidPromise();
-							}
-							else {
-								pendingFlush = true;
-								lastWrite = ctx.newPromise();
-							}
-
-							ChannelFuture lastFuture = ctx.write(encodedMessage, lastWrite);
-
-							if (!scheduleFlush) {
-								ctx.flush();
-							}
-
-							if (lastFuture != ctx.voidPromise()) {
-								long _r = r;
-								lastFuture.addListener(future -> {
-									pendingFlush = false;
-									if (future.cause() != null) {
-										Operators.terminate(SUBSCRIPTION, this);
-										if (WIP.getAndIncrement(this) == 0) {
-											cleanup();
-										}
-										actual.onError(future.cause());
-									}
-									else {
-										requested -= pending;
-										pending = 0;
-
-										if (!done && requested <= REFILL_SIZE) {
-											long u = MAX_SIZE - requested;
-											requested += u;
-											s.request(u);
-										}
-
-										tryComplete();
-									}
-								});
-							}
-						}
-						else {
-							if (sourceMessage != null) {
-								parent.sourceCleanup.accept(sourceMessage);
-								Operators.onDiscard(sourceMessage, actual.currentContext());
-							}
+						if (sourceMessage == null) {
 							break;
 						}
+
+						if (s == Operators.cancelledSubscription()) {
+							parent.sourceCleanup.accept(sourceMessage);
+							Operators.onDiscard(sourceMessage, actual.currentContext());
+							cleanup();
+							return;
+						}
+
+						O encodedMessage = parent.transformer.apply(sourceMessage);
+						int readableBytes = parent.sizeOf.applyAsInt(encodedMessage);
+
+						pending++;
+
+						ctx.write(encodedMessage, this);
+
+						if (parent.flushOnEach || !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {
+							needFlush = false;
+							ctx.flush();
+						}
+						else {
+							needFlush = true;
+						}
 					}
 
-					if (scheduleFlush) {
-						try {
-							ctx.flush();
-							tryComplete();
-						}
-						catch (Throwable t) {
-							Operators.terminate(SUBSCRIPTION, this);
-							cleanup();
-							actual.onError(t);
-						}
+					if (needFlush) {
+						needFlush = false;
+						ctx.flush();
 					}
-					else if (done){
-						if (pending != 0 && !parent.flushOnEach) {
-							ctx.flush();
-						}
-						tryComplete();
+
+					if (tryComplete()) {
+						return;
 					}
 
 					if (Operators.cancelledSubscription() == s) {
@@ -328,9 +312,14 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 				}
 			}
 			catch (Throwable t) {
-				Operators.terminate(SUBSCRIPTION, this);
+				log.debug("Error while sending", t);
 				cleanup();
-				actual.onError(t);
+				if (Operators.terminate(SUBSCRIPTION, this) ) {
+					actual.onError(t);
+				}
+				else {
+					Operators.onErrorDropped(t, actual.currentContext());
+				}
 			}
 		}
 
@@ -349,14 +338,18 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 			}
 		}
 
-		void tryComplete() {
-			if (pending == 0 && done && queue.isEmpty()
+		boolean tryComplete() {
+			if (pending == 0
+					&& done
+					&& queue.isEmpty()
 					&& SUBSCRIPTION.getAndSet(this, Operators.cancelledSubscription()) != Operators.cancelledSubscription()) {
 				actual.onComplete();
+				return true;
 			}
+			return false;
 		}
 
-		void tryDrain(@Nullable Object data) {
+		void trySchedule(@Nullable Object data) {
 			if (WIP.getAndIncrement(this) == 0) {
 				try {
 					if (eventLoop.inEventLoop()) {
@@ -366,8 +359,10 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 					eventLoop.execute(this);
 				}
 				catch (Throwable t) {
-					cleanup();
-					actual.onError(Operators.onRejectedExecution(t, s, null, data, actual.currentContext()));
+					if(Operators.terminate(SUBSCRIPTION, this)) {
+						cleanup();
+						actual.onError(Operators.onRejectedExecution(t, null, null, data, actual.currentContext()));
+					}
 				}
 			}
 		}
@@ -383,6 +378,188 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 //			if (key == Attr.ERROR) return error;
 			if (key == Attr.PREFETCH) return MAX_SIZE;
 			return null;
+		}
+
+		@Override
+		public Channel channel() {
+			return ctx.channel();
+		}
+
+		@Override
+		public ChannelPromise setSuccess(Void result) {
+			trySuccess(null);
+			return this;
+		}
+
+		@Override
+		public ChannelPromise setSuccess() {
+			trySuccess(null);
+			return this;
+		}
+
+		@Override
+		public boolean trySuccess() {
+			trySchedule(null);
+			return true;
+		}
+
+		@Override
+		public ChannelPromise setFailure(Throwable cause) {
+			if (tryFailure(cause)) {
+				return this;
+			}
+			Operators.onErrorDropped(cause, actual.currentContext());
+			return this;
+		}
+
+		@Override
+		public ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
+			return this;
+		}
+
+		@Override
+		public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
+			return this;
+		}
+
+		@Override
+		public ChannelPromise sync() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public ChannelPromise syncUninterruptibly() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public ChannelPromise await()  {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public ChannelPromise awaitUninterruptibly() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public ChannelPromise unvoid() {
+			return this;
+		}
+
+		@Override
+		public boolean isVoid() {
+			return true;
+		}
+
+		@Override
+		public boolean trySuccess(Void result) {
+			requested -= pending;
+			pending = 0;
+
+			if (tryComplete()) {
+				return true;
+			}
+
+			if (requested <= REFILL_SIZE) {
+				long u = MAX_SIZE - requested;
+				requested += u;
+				s.request(u);
+				trySchedule(null);
+			}
+			return true;
+		}
+
+		@Override
+		public boolean tryFailure(Throwable cause) {
+			if (Operators.terminate(SUBSCRIPTION, this)) {
+				if (WIP.getAndIncrement(this) == 0) {
+					cleanup();
+				}
+				actual.onError(cause);
+			}
+			return true;
+		}
+
+		@Override
+		public boolean setUncancellable() {
+			return true;
+		}
+
+		@Override
+		public boolean isSuccess() {
+			return done && queue.isEmpty();
+		}
+
+		@Override
+		public boolean isCancellable() {
+			return false;
+		}
+
+		@Override
+		@Nullable
+		public Throwable cause() {
+			return null;
+		}
+
+		@Override
+		public boolean await(long timeout, TimeUnit unit) {
+			return false;
+		}
+
+		@Override
+		public boolean await(long timeoutMillis) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean awaitUninterruptibly(long timeout, TimeUnit unit) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean awaitUninterruptibly(long timeoutMillis) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Void getNow() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean cancel(boolean mayInterruptIfRunning) {
+			return false;
+		}
+
+		@Override
+		public boolean isCancelled() {
+			return false;
+		}
+
+		@Override
+		public boolean isDone() {
+			return false;
+		}
+
+		@Override
+		public Void get() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Void get(long timeout, TimeUnit unit) {
+			throw new UnsupportedOperationException();
 		}
 
 		static final AtomicIntegerFieldUpdater<SendManyInner>                 WIP          =
@@ -513,11 +690,11 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 							                    .bytesBeforeUnwritable();
 
 					ChannelPromise lastWrite;
-					if (pendingFlush || (e + 1 != r && !queue.isEmpty())) {
+					if (needFlush || (e + 1 != r && !queue.isEmpty())) {
 						lastWrite = ctx.voidPromise();
 					}
 					else {
-						pendingFlush = true;
+						needFlush = true;
 						lastWrite = ctx.newPromise();
 					}
 
@@ -528,10 +705,10 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 					if (lastFuture != ctx.voidPromise()) {
 						long nextRequest = e;
 						lastFuture.addListener(f -> {
-							pendingFlush = false;
+							needFlush = false;
 							requested = Operators.addCap(requested, nextRequest);
 							log.info("flush listener, produced:{}, r:{} and nextReq:{}", produced, requested, nextRequest);
-							tryDrain(null);
+							trySchedule(null);
 						});
 					}
 
