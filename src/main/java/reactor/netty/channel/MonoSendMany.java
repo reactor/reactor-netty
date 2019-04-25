@@ -51,7 +51,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
-class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
+final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable {
 
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
 			Channel channel,
@@ -100,12 +100,13 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 	}
 
 	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription,
-	                                                  ChannelFutureListener, Runnable, Scannable, Fuseable, ChannelPromise {
+	                                                  ChannelFutureListener, Runnable, Scannable, ChannelPromise {
 
 		final ChannelHandlerContext        ctx;
 		final EventLoop                    eventLoop;
 		final MonoSendMany<I, O>           parent;
 		final CoreSubscriber<? super Void> actual;
+		final Runnable                     asyncFlush;
 
 
 		@SuppressWarnings("unused")
@@ -123,6 +124,26 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 
 		int nextRequest;
 
+		SendManyInner(MonoSendMany<I, O> parent, CoreSubscriber<? super Void> actual) {
+			this.needFlush = true;
+			this.parent = parent;
+			this.actual = actual;
+			this.requested = MAX_SIZE;
+			this.ctx = Objects.requireNonNull(parent.channel.pipeline().context(ChannelOperationsHandler.class));
+			this.eventLoop = parent.channel.eventLoop();
+
+			this.asyncFlush = () -> {
+				if (pending != 0) {
+					ctx.flush();
+				}
+			};
+
+			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
+			ctx.channel()
+			   .closeFuture()
+			   .addListener(this);
+		}
+
 		@Override
 		public Context currentContext() {
 			return actual.currentContext();
@@ -136,20 +157,6 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 			if (WIP.getAndIncrement(this) == 0) {
 				cleanup();
 			}
-		}
-
-		SendManyInner(MonoSendMany<I, O> parent, CoreSubscriber<? super Void> actual) {
-			this.needFlush = true;
-			this.parent = parent;
-			this.actual = actual;
-			this.requested = MAX_SIZE;
-			this.ctx = Objects.requireNonNull(parent.channel.pipeline().context(ChannelOperationsHandler.class));
-			this.eventLoop = parent.channel.eventLoop();
-
-			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
-			ctx.channel()
-			   .closeFuture()
-			   .addListener(this);
 		}
 
 		@Override
@@ -293,9 +300,9 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 						}
 					}
 
-					if (needFlush) {
+					if (needFlush && pending != 0) {
 						needFlush = false;
-						ctx.flush();
+						eventLoop.execute(asyncFlush);
 					}
 
 					if (Operators.cancelledSubscription() == s) {
