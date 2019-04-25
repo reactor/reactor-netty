@@ -34,7 +34,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
@@ -56,17 +55,16 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
 			Channel channel,
 			boolean flushOption) {
-		return new MonoSendMany<>(source, channel, flushOption, FUNCTION_BB_IDENTITY, CONSUMER_BB_NOCHECK_CLEANUP, CONSUMER_BB_CLEANUP, SIZE_OF_BB);
+		return new MonoSendMany<>(source, channel, flushOption, FUNCTION_BB_IDENTITY, CONSUMER_BB_NOCHECK_CLEANUP, SIZE_OF_BB);
 	}
 
 	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel, boolean flushOnEach) {
-		return new MonoSendMany<>(source, channel, flushOnEach, FUNCTION_IDENTITY, CONSUMER_NOCHECK_CLEANUP, CONSUMER_CLEANUP, SIZE_OF);
+		return new MonoSendMany<>(source, channel, flushOnEach, FUNCTION_IDENTITY, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
 	}
 
 	final Publisher<? extends I> source;
 	final Channel                channel;
 	final Function<I, O>         transformer;
-	final Consumer<O>            writeCleanup;
 	final Consumer<I>            sourceCleanup;
 	final ToIntFunction<O>       sizeOf;
 	final boolean                flushOnEach;
@@ -75,7 +73,6 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 			Channel channel, boolean flushOnEach,
 			Function<I, O> transformer,
 			Consumer<I> sourceCleanup,
-			Consumer<O> writeCleanup,
 			ToIntFunction<O> sizeOf) {
 		this.source = source;
 		this.channel = channel;
@@ -83,7 +80,6 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 		this.transformer = transformer;
 		this.sizeOf = sizeOf;
 		this.sourceCleanup = sourceCleanup;
-		this.writeCleanup = writeCleanup;
 	}
 
 	@Override
@@ -132,17 +128,15 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 			this.ctx = Objects.requireNonNull(parent.channel.pipeline().context(ChannelOperationsHandler.class));
 			this.eventLoop = parent.channel.eventLoop();
 
-			this.asyncFlush = () -> {
-				if (pending != 0) {
-					ctx.flush();
-				}
-			};
+			this.asyncFlush = new AsyncFlush();
 
 			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
 			ctx.channel()
 			   .closeFuture()
 			   .addListener(this);
 		}
+
+
 
 		@Override
 		public Context currentContext() {
@@ -200,8 +194,8 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 				return;
 			}
 
+//			ReferenceCountUtil.touch(t);
 			//FIXME check cancel race
-			ReferenceCountUtil.touch(t);
 			if (!queue.offer(t)) {
 				onError(Operators.onOperatorError(s,
 						Exceptions.failWithOverflow(Exceptions.BACKPRESSURE_ERROR_QUEUE_FULL),
@@ -580,6 +574,15 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 				AtomicIntegerFieldUpdater.newUpdater(SendManyInner.class, "wip");
 		static final AtomicReferenceFieldUpdater<SendManyInner, Subscription> SUBSCRIPTION =
 				AtomicReferenceFieldUpdater.newUpdater(SendManyInner.class, Subscription.class, "s");
+
+		final class AsyncFlush implements Runnable {
+			@Override
+			public void run() {
+				if (pending != 0) {
+					ctx.flush();
+				}
+			}
+		}
 	}
 
 	static final Logger log = Loggers.getLogger(MonoSendMany.class);
@@ -599,27 +602,9 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 		return 0;
 	};
 
-	static final Function<ByteBuf, ByteBuf> FUNCTION_BB_IDENTITY =
-			Function.identity();
-	static final Function<Object, Object>   FUNCTION_IDENTITY    =
-			Function.identity();
+	static final Function<ByteBuf, ByteBuf> FUNCTION_BB_IDENTITY = Function.identity();
+	static final Function<Object, Object>   FUNCTION_IDENTITY    = Function.identity();
 
 	static final Consumer<ByteBuf> CONSUMER_BB_NOCHECK_CLEANUP = ByteBuf::release;
-	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    =
-			ReferenceCountUtil::release;
-
-	static final Consumer<ByteBuf> CONSUMER_BB_CLEANUP = data -> {
-		if (data.refCnt() > 0) {
-			data.release();
-		}
-	};
-
-	static final Consumer<Object> CONSUMER_CLEANUP = data -> {
-		if (data instanceof ReferenceCounted) {
-			ReferenceCounted counted = (ReferenceCounted) data;
-			if (counted.refCnt() > 0) {
-				counted.release();
-			}
-		}
-	};
+	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    = ReferenceCountUtil::release;
 }
