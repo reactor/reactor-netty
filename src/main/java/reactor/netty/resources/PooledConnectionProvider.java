@@ -218,10 +218,15 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			AttributeKey.valueOf("connectionOwner");
 
 	static final BiPredicate<PooledConnection, PooledRefMetadata> EVICTION_PREDICATE =
-			(pooledConnection, metadata) -> !pooledConnection.channel.isActive();
+			(pooledConnection, metadata) -> !pooledConnection.channel.isActive() || !pooledConnection.isPersistent();
 
 	static final Function<PooledConnection, Publisher<Void>> DESTROY_HANDLER =
-			pooledConnection -> FutureMono.from(pooledConnection.channel.close());
+			pooledConnection -> {
+				if (!pooledConnection.channel.isActive()) {
+					return Mono.empty();
+				}
+				return FutureMono.from(pooledConnection.channel.close());
+			};
 
 	final static class PooledConnectionAllocator {
 
@@ -391,19 +396,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 			if (newState == State.DISCONNECTING) {
 
-				if (!isPersistent() && channel.isActive()) {
-					//will be released by closeFuture internals
-					channel.close();
-					owner().onStateChange(connection, State.DISCONNECTING);
-					return;
-				}
-
-				if (!channel.isActive()) {
-					owner().onStateChange(connection, State.DISCONNECTING);
-					//will be released by poolResources internals
-					return;
-				}
-
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "Releasing channel"));
 				}
@@ -528,7 +520,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				PendingConnectionObserver pending = (PendingConnectionObserver)current;
 				PendingConnectionObserver.Pending p;
 				current = null;
-				registerClose(pooledRef, pool);
 
 				while((p = pending.pendingQueue.poll()) != null) {
 					if (p.error != null) {
@@ -538,9 +529,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 						onStateChange(p.connection, p.state);
 					}
 				}
-			}
-			else if (current == null) {
-				registerClose(pooledRef, pool);
 			}
 
 
@@ -575,24 +563,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			if (opsFactory == ChannelOperations.OnSetup.empty()) {
 				sink.success(Connection.from(c));
 			}
-		}
-
-		void registerClose(PooledRef<PooledConnection> pooledRef, InstrumentedPool<PooledConnection> pool) {
-			Channel channel = pooledRef.poolable().channel;
-			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "Registering pool release on close event for channel"));
-			}
-			channel.closeFuture()
-			       .addListener(ff ->
-			          pooledRef.invalidate()
-			                   .subscribe(null, null, () -> {
-			                       if (log.isDebugEnabled()) {
-			                           log.debug(format(channel, "Channel closed, now {} active connections and " +
-			                                           "{} inactive connections"),
-			                                   pool.metrics().acquiredSize(),
-			                                   pool.metrics().idleSize());
-			                       }
-			                   }));
 		}
 	}
 
