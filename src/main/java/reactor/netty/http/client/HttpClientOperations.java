@@ -244,6 +244,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	protected void onInboundClose() {
 		if (isInboundCancelled() || isInboundDisposed()) {
+			listener().onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 			return;
 		}
 		listener().onStateChange(this, HttpClientState.RESPONSE_INCOMPLETE);
