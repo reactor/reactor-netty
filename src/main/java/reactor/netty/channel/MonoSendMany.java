@@ -146,8 +146,6 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 			this.ctx = Objects.requireNonNull(parent.channel.pipeline().context(ChannelOperationsHandler.class));
 			this.eventLoop = parent.channel.eventLoop();
 
-//			this.fuse = queue instanceof Fuseable.QueueSubscription;
-
 			//TODO should also cleanup on complete operation (ChannelOperation.OnTerminate) ?
 			ctx.channel()
 			   .closeFuture()
@@ -196,6 +194,7 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 			}
 
 			//FIXME check cancel race
+			ReferenceCountUtil.touch(t);
 			if (!queue.offer(t)) {
 				onError(Operators.onOperatorError(s,
 						Exceptions.failWithOverflow(Exceptions.BACKPRESSURE_ERROR_QUEUE_FULL),
@@ -215,7 +214,7 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 					@SuppressWarnings("unchecked") QueueSubscription<I> f =
 							(QueueSubscription<I>) s;
 
-					int m = f.requestFusion(Fuseable.SYNC/* | Fuseable.THREAD_BARRIER*/);
+					int m = f.requestFusion(Fuseable.ANY/* | Fuseable.THREAD_BARRIER*/);
 
 					if (m == Fuseable.SYNC) {
 						sourceMode = Fuseable.SYNC;
@@ -616,151 +615,4 @@ class MonoSendMany<I, O> extends Mono<Void> implements Scannable {
 			}
 		}
 	};
-
-	/*
-	boolean checkTerminated(boolean d, boolean empty, CoreSubscriber<? super Void> a) {
-			if (Operators.cancelledSubscription() == s) {
-				cleanup();
-				return true;
-			}
-			if (d && empty) {
-				a.onComplete();
-				return true;
-			}
-
-			return false;
-		}
-
-		void runAsync() {
-			int missed = 1;
-
-			final Queue<I> q = queue;
-			final CoreSubscriber<? super Void> a = actual;
-
-			long e = produced;
-
-			for (; ; ) {
-
-				long r = requested;
-				boolean scheduleFlush = false;
-
-				while (e != r) {
-					I v;
-					try {
-						v = q.poll();
-					}
-					catch (Throwable ex) {
-						Exceptions.throwIfFatal(ex);
-						a.onError(Operators.onOperatorError(ex, a.currentContext()));
-						return;
-					}
-
-
-					boolean empty = v == null;
-
-					if (checkTerminated(done, empty, a)) {
-						//cancelled
-						if (!empty) {
-							parent.sourceCleanup.accept(v);
-						}
-						return;
-					}
-
-					if (empty) {
-						break;
-					}
-
-
-					int readableBytes;
-					O encodedMessage = null;
-					try {
-						encodedMessage = parent.transformer.apply(v);
-						readableBytes = parent.sizeOf.applyAsInt(encodedMessage);
-					}
-					catch (Throwable ex) {
-						if (encodedMessage != null) {
-							parent.writeCleanup.accept(encodedMessage);
-						}
-						else {
-							parent.sourceCleanup.accept(v);
-						}
-						Operators.terminate(SUBSCRIPTION, this);
-						cleanup();
-						Exceptions.throwIfFatal(ex);
-						a.onError(Operators.onOperatorError(ex, a.currentContext()));
-						return;
-					}
-
-					scheduleFlush = !parent.flushOnEach &&
-							ctx.channel()
-							   .isWritable() &&
-							readableBytes <= ctx.channel()
-							                    .bytesBeforeUnwritable();
-
-					ChannelPromise lastWrite;
-					if (needFlush || (e + 1 != r && !queue.isEmpty())) {
-						lastWrite = ctx.voidPromise();
-					}
-					else {
-						needFlush = true;
-						lastWrite = ctx.newPromise();
-					}
-
-
-					e++;
-
-					ChannelFuture lastFuture = ctx.write(encodedMessage, lastWrite);
-					if (lastFuture != ctx.voidPromise()) {
-						long nextRequest = e;
-						lastFuture.addListener(f -> {
-							needFlush = false;
-							requested = Operators.addCap(requested, nextRequest);
-							log.info("flush listener, produced:{}, r:{} and nextReq:{}", produced, requested, nextRequest);
-							trySchedule(null);
-						});
-					}
-
-
-					if (!scheduleFlush) {
-						ctx.flush();
-					}
-
-					if (e == REFILL_SIZE) {
-						if (r != Long.MAX_VALUE) {
-							requested -= e;
-							r = requested;
-						}
-						log.info("refill loop, {}, r:{} and nextReq:{}", e, r, e);
-						s.request(e);
-						e = 0L;
-					}
-
-
-				}
-
-				if (scheduleFlush) {
-					ctx.flush();
-				}
-
-				if (e == r && checkTerminated(done, q.isEmpty(), a)) {
-					if (!scheduleFlush && !parent.flushOnEach) {
-						ctx.flush();
-					}
-					return;
-				}
-
-				int w = wip;
-				if (missed == w) {
-					produced = e;
-					missed = WIP.addAndGet(this, -missed);
-					if (missed == 0) {
-						break;
-					}
-				}
-				else {
-					missed = w;
-				}
-			}
-		}
-	 */
 }
