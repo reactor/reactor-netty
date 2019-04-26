@@ -37,6 +37,7 @@ import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Signal;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
@@ -223,34 +224,47 @@ public class PooledConnectionProviderTest {
 				                                                 .delayElement(Duration.ofMillis(100))))
 				         .wiretap(true)
 				         .bindNow();
-
-		CountDownLatch latch = new CountDownLatch(1);
 		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("test", 1, 20);
-		AtomicReference<InstrumentedPool<PooledConnection>> pool = new AtomicReference<>();
-		Flux.range(0, 5)
-		    .flatMap(i ->
-		        TcpClient.create(provider)
-		                 .port(server.port())
-		                 .doOnConnected(conn -> {
-		                     ConcurrentMap<PooledConnectionProvider.PoolKey, InstrumentedPool<PooledConnection>> pools =
-		                             provider.channelPools;
-		                     pool.set(pools.get(pools.keySet().toArray()[0]));
-		                     conn.channel()
-		                         .closeFuture()
-		                         .addListener(future -> latch.countDown());
-		                 })
-		                 .handle((in, out) -> in.receive().then())
-		                 .wiretap(true)
-		                 .connect())
-		    .subscribe(null, t -> assertThat(t instanceof TimeoutException).isTrue());
+		CountDownLatch latch = new CountDownLatch(2);
 
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		try {
+			AtomicReference<InstrumentedPool<PooledConnection>> pool = new AtomicReference<>();
+			Flux.range(0, 5)
+			    .flatMap(i ->
+					    TcpClient.create(provider)
+					             .port(server.port())
+					             .doOnConnected(conn -> {
+						             ConcurrentMap<PooledConnectionProvider.PoolKey, InstrumentedPool<PooledConnection>> pools =
+								             provider.channelPools;
+						             pool.set(pools.get(pools.keySet().toArray()[0]));
+					             })
+					             .doOnDisconnected(conn -> latch.countDown())
+					             .handle((in, out) -> in.receive().then())
+					             .wiretap(true)
+					             .connect()
+					             .materialize()
+			    )
+			    .collectList()
+			    .doFinally(fin -> latch.countDown())
+			    .subscribe(l -> {
+				    assertThat(l)
+						    .hasSize(5)
+						    .element(0).matches(Signal::isOnNext);
 
-		assertThat(pool.get().metrics().acquiredSize()).isEqualTo(0);
-		assertThat(pool.get().metrics().idleSize()).isEqualTo(0);
+				    assertThat(l.subList(1, l.size())).allSatisfy(s -> assertThat(s.getThrowable())
+						    .isInstanceOf(TimeoutException.class)
+						    .hasMessage("Acquire has been pending for more than the configured timeout of 20ms"));
+			    });
 
-		server.disposeNow();
-		provider.dispose();
+			assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch 30s").isTrue();
+
+			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
+			assertThat(pool.get().metrics().idleSize()).as("currently idle").isEqualTo(0);
+		}
+		finally {
+			server.disposeNow();
+			provider.dispose();
+		}
 	}
 
 
