@@ -33,6 +33,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.FileRegion;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -281,8 +282,12 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 						O encodedMessage = parent.transformer.apply(sourceMessage);
 						int readableBytes = parent.sizeOf.applyAsInt(encodedMessage);
 
-						pending++;
 
+						if (readableBytes == 0 && !(encodedMessage instanceof ByteBufHolder)) {
+							r++;
+							continue;
+						}
+						pending++;
 						ctx.write(encodedMessage, this);
 
 						if (parent.flushOnEach || !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {
@@ -598,6 +603,9 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 		}
 		if (msg instanceof ByteBuf) {
 			return ((ByteBuf) msg).readableBytes();
+		}
+		if (msg instanceof FileRegion) {
+			return (int) Math.min(Integer.MAX_VALUE, ((FileRegion) msg).count());
 		}
 		return 0;
 	};
