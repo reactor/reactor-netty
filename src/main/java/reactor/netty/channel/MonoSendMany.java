@@ -607,7 +607,7 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 		if (msg instanceof FileRegion) {
 			return (int) Math.min(Integer.MAX_VALUE, ((FileRegion) msg).count());
 		}
-		return 0;
+		return -1;
 	};
 
 	static final Function<ByteBuf, ByteBuf> FUNCTION_BB_IDENTITY = Function.identity();
