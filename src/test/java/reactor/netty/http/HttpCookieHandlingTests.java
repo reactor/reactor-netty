@@ -38,6 +38,36 @@ import reactor.test.StepVerifier;
 public class HttpCookieHandlingTests {
 
 	@Test
+	public void clientWillIgnoreMalformedCookies() {
+		DisposableServer server =
+				HttpServer.create()
+						.port(0)
+						.route(r -> r.get("/test", (req, resp) ->
+								resp.addHeader("Set-Cookie", "name:with_colon=value")
+										.send(req.receive()
+												.log("server received"))))
+						.wiretap(true)
+						.bindNow();
+
+		Mono<Map<CharSequence, Set<Cookie>>> cookieResponse =
+				HttpClient.create()
+						.port(server.port())
+						.wiretap(true)
+						.get()
+						.uri("/test")
+						.responseSingle((res, buf) -> Mono.just(res.cookies()))
+						.doOnSuccess(System.out::println)
+						.doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
+
+		StepVerifier.create(cookieResponse)
+				.expectNextMatches(l -> !l.containsKey("name:with_colon"))
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
+	}
+
+	@Test
 	public void clientWithoutCookieGetsANewOneFromServer() {
 		DisposableServer server =
 				HttpServer.create()

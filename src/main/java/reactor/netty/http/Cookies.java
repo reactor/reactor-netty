@@ -102,6 +102,9 @@ public final class Cookies {
 			Set<Cookie> decode;
 			if (isClientChannel) {
 				final Cookie c = ((ClientCookieDecoder) decoder).decode(aCookieHeader);
+				if (c == null) {
+					continue;
+				}
 				Set<Cookie> existingCookiesOfName = cookies.get(c.name());
 				if (null == existingCookiesOfName) {
 					existingCookiesOfName = new HashSet<>();
