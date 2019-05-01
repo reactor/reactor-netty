@@ -33,8 +33,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.FileRegion;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
@@ -43,7 +41,6 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Exceptions;
 import reactor.core.Fuseable;
 import reactor.core.Scannable;
-import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -51,7 +48,7 @@ import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
-final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable {
+final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
 			Channel channel,
@@ -64,23 +61,16 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 	}
 
 	final Publisher<? extends I> source;
-	final Channel                channel;
-	final Function<I, O>         transformer;
-	final Consumer<I>            sourceCleanup;
-	final ToIntFunction<O>       sizeOf;
 	final boolean                flushOnEach;
 
 	MonoSendMany(Publisher<? extends I> source,
 			Channel channel, boolean flushOnEach,
-			Function<I, O> transformer,
-			Consumer<I> sourceCleanup,
+			Function<? super I, ? extends O> transformer,
+			Consumer<? super I> sourceCleanup,
 			ToIntFunction<O> sizeOf) {
-		this.source = source;
-		this.channel = channel;
+		super(channel, transformer, sourceCleanup, sizeOf);
+		this.source = Objects.requireNonNull(source, "source publisher cannot be null");
 		this.flushOnEach = flushOnEach;
-		this.transformer = transformer;
-		this.sizeOf = sizeOf;
-		this.sourceCleanup = sourceCleanup;
 	}
 
 	@Override
@@ -96,7 +86,7 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 		return null;
 	}
 
-	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription,
+	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription, Fuseable,
 	                                                  ChannelFutureListener, Runnable, Scannable, ChannelPromise {
 
 		final ChannelHandlerContext        ctx;
@@ -122,12 +112,11 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 		int nextRequest;
 
 		SendManyInner(MonoSendMany<I, O> parent, CoreSubscriber<? super Void> actual) {
-			this.needFlush = true;
 			this.parent = parent;
 			this.actual = actual;
 			this.requested = MAX_SIZE;
-			this.ctx = Objects.requireNonNull(parent.channel.pipeline().context(ChannelOperationsHandler.class));
-			this.eventLoop = parent.channel.eventLoop();
+			this.ctx = parent.ctx;
+			this.eventLoop = ctx.channel().eventLoop();
 
 			this.asyncFlush = new AsyncFlush();
 
@@ -412,7 +401,7 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 
 		@Override
 		public boolean trySuccess() {
-			trySchedule(null);
+			trySuccess(null);
 			return true;
 		}
 
@@ -591,28 +580,4 @@ final class MonoSendMany<I, O> extends Mono<Void> implements Scannable, Fuseable
 	}
 
 	static final Logger log = Loggers.getLogger(MonoSendMany.class);
-
-
-	static final int                    MAX_SIZE    = 128;
-	static final int                    REFILL_SIZE = MAX_SIZE / 2;
-	static final ToIntFunction<ByteBuf> SIZE_OF_BB  = ByteBuf::readableBytes;
-	static final ToIntFunction<Object>  SIZE_OF     = msg -> {
-		if (msg instanceof ByteBufHolder) {
-			return ((ByteBufHolder) msg).content()
-			                            .readableBytes();
-		}
-		if (msg instanceof ByteBuf) {
-			return ((ByteBuf) msg).readableBytes();
-		}
-		if (msg instanceof FileRegion) {
-			return (int) Math.min(Integer.MAX_VALUE, ((FileRegion) msg).count());
-		}
-		return -1;
-	};
-
-	static final Function<ByteBuf, ByteBuf> FUNCTION_BB_IDENTITY = Function.identity();
-	static final Function<Object, Object>   FUNCTION_IDENTITY    = Function.identity();
-
-	static final Consumer<ByteBuf> CONSUMER_BB_NOCHECK_CLEANUP = ByteBuf::release;
-	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    = ReferenceCountUtil::release;
 }

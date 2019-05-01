@@ -114,8 +114,7 @@ public abstract class FutureMono extends Mono<Void> {
 	 * @deprecated use {@link NettyOutbound#send(Publisher)}
 	 */
 	@Deprecated
-	public static Mono<Void> disposableWriteAndFlush(Channel channel,
-			Publisher<?> dataStream) {
+	public static Mono<Void> disposableWriteAndFlush(Channel channel, Publisher<?> dataStream) {
 		return Mono.error(new UnsupportedOperationException("deprecated: use NettyOutbound#send(Publisher)"));
 	}
 
