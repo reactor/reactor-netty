@@ -36,6 +36,7 @@ configure(rootProject) { subproject ->
 	}
 
 	artifacts {
+		archives shadowJar
 		archives sourcesJar
 		archives javadocJar
 	  	archives docsZip
