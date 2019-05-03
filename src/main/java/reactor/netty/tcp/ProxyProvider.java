@@ -227,7 +227,7 @@ public final class ProxyProvider {
 		return Objects.equals(username, that.username) &&
 				Objects.equals(getPasswordValue(), that.getPasswordValue()) &&
 				Objects.equals(getAddress().get(), that.getAddress().get()) &&
-				Objects.equals(getNonProxyHosts(), that.getNonProxyHosts()) &&
+				Objects.equals(getNonProxyHostsValue(), that.getNonProxyHostsValue()) &&
 				Objects.equals(httpHeaders.get(), that.httpHeaders.get()) &&
 				getType() == that.getType();
 	}
@@ -235,7 +235,11 @@ public final class ProxyProvider {
 	@Override
 	public int hashCode() {
 		return Objects.hash(
-				username, getPasswordValue(), getAddress().get(), getNonProxyHosts(), httpHeaders.get(), getType());
+				username, getPasswordValue(), getAddress().get(), getNonProxyHostsValue(), httpHeaders.get(), getType());
+	}
+
+	private String getNonProxyHostsValue() {
+		return (getNonProxyHosts() == null) ? null : getNonProxyHosts().toString();
 	}
 
 	@Nullable

@@ -30,6 +30,8 @@ public class ProxyProviderTest {
     private static final Function<String, String> PASSWORD_1 = username -> "123";
     private static final Function<String, String> PASSWORD_2 = username -> "456";
 
+    private static final String NON_PROXY_HOSTS = "localhost";
+
     private static final InetSocketAddress ADDRESS_1 = InetSocketAddress.createUnresolved("localhost", 80);
     private static final InetSocketAddress ADDRESS_2 = InetSocketAddress.createUnresolved("example.com", 80);
 
@@ -79,6 +81,7 @@ public class ProxyProviderTest {
                 .address(address)
                 .username("netty")
                 .password(passwordFunc)
+                .nonProxyHosts(NON_PROXY_HOSTS)
                 .build();
     }
 
@@ -87,6 +90,7 @@ public class ProxyProviderTest {
                 .builder()
                 .type(ProxyProvider.Proxy.SOCKS5)
                 .address(address)
+                .nonProxyHosts("localhost")
                 .build();
     }
 
