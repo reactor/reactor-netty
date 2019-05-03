@@ -63,7 +63,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
-import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -86,6 +85,7 @@ import reactor.util.function.Tuple3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * @author Stephane Maldini
@@ -268,7 +268,7 @@ public class HttpServerTests {
 				         .wiretap(true)
 				         .connectNow();
 
-		Assert.assertTrue(latch.await(45, TimeUnit.SECONDS));
+		assertThat(latch.await(45, TimeUnit.SECONDS)).isTrue();
 
 		server.disposeNow();
 		client.disposeNow();
@@ -373,11 +373,11 @@ public class HttpServerTests {
 		                                                                  .delayUntil(ch -> c.inbound().receive()))
 		                              .blockLast(Duration.ofSeconds(30));
 
-		Assert.assertEquals(response0, response1);
-		Assert.assertEquals(response0, response2);
-		Assert.assertEquals(response0, response3);
-		Assert.assertEquals(response0, response4);
-		Assert.assertEquals(response0, response5);
+		assertThat(response0).isEqualTo(response1);
+		assertThat(response0).isEqualTo(response2);
+		assertThat(response0).isEqualTo(response3);
+		assertThat(response0).isEqualTo(response4);
+		assertThat(response0).isEqualTo(response5);
 
 		p.dispose();
 		s.disposeNow();
@@ -817,10 +817,10 @@ public class HttpServerTests {
 					HttpServer.create()
 					          .port(d.port())
 					          .bindNow();
-					Assert.fail("illegal-success");
+					fail("illegal-success");
 				}
 				catch (ChannelBindException e){
-					Assert.assertEquals(e.localPort(), d.port());
+					assertThat(e.localPort()).isEqualTo(d.port());
 					e.printStackTrace();
 				}
 				d.disposeNow();

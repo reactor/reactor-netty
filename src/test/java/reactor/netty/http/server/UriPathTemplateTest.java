@@ -26,8 +26,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasEntry;
-import static org.testng.AssertJUnit.assertEquals;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class UriPathTemplateTest {
 
@@ -51,8 +51,7 @@ public class UriPathTemplateTest {
         UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/3");
         // does not match, the query parameter breaks matching
         // expected: true, found: false
-	    assertTrue(uriPathTemplate.matches("/test/3?q=reactor"));
-//        assertThat(uriPathTemplate.matches("/test/3?q=reactor"), is(true));
+        assertTrue(uriPathTemplate.matches("/test/3?q=reactor"));
     }
 
     @Test
@@ -60,10 +59,9 @@ public class UriPathTemplateTest {
         UriPathTemplate uriPathTemplate = new UriPathTemplate("/test/{order}");
         // does not match, the query parameter breaks matching
         // expected: a map containing {"order": "3"}, found: a map containing {"order": "3?q=reactor"}
-	    assertEquals("3",
-			    uriPathTemplate.match("/test/3?q=reactor")
-			                   .get("order"));
-//        assertThat(uriPathTemplate.match("/test/3?q=reactor").get("order"), is("3"));
+        assertEquals("3",
+                uriPathTemplate.match("/test/3?q=reactor")
+                               .get("order"));
     }
 
     @Test

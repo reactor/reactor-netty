@@ -216,9 +216,6 @@ configure(rootProject) { project ->
 
 	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
 
-	//Default reactor-netty impl
-	//compile "io.netty:netty-all:$nettyVersion"
-
 	compile "io.netty:netty-handler:${nettyVersion}"
 	compile "io.netty:netty-handler-proxy:${nettyVersion}"
 	compile "io.netty:netty-codec-http:${nettyVersion}"
@@ -228,18 +225,15 @@ configure(rootProject) { project ->
 	optional "io.netty:netty-transport-native-kqueue:${nettyVersion}"
 
 	// Testing
-	testCompile "org.apache.httpcomponents:fluent-hc:4.3.6"
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
+	testCompile "org.hamcrest:hamcrest-library:1.3"
+	testCompile "org.assertj:assertj-core:$assertJVersion"
+	testCompile "io.specto:hoverfly-java:${hoverflyJavaVersion}"
 
 	testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 
 	testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
-	// Testing
-	testCompile "org.hamcrest:hamcrest-library:1.3",
-			"org.assertj:assertj-core:$assertJVersion",
-			"org.testng:testng:6.8.5",
-			"io.specto:hoverfly-java:${hoverflyJavaVersion}"
 
 	// Needed for HTTP/2 testing
 	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.25.Final" + os_suffix

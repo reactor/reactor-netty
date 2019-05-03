@@ -44,7 +44,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.testng.Assert;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ChannelBindException;
@@ -55,7 +54,9 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * @author Jon Brisbin
@@ -263,10 +264,10 @@ public class UdpServerTests {
 			UdpServer.create()
 			         .addressSupplier(conn::address)
 			         .bindNow(Duration.ofSeconds(30));
-			Assert.fail("illegal-success");
+			fail("illegal-success");
 		}
 		catch (ChannelBindException e) {
-			Assert.assertEquals(e.localPort(), conn.address().getPort());
+			assertEquals(e.localPort(), conn.address().getPort());
 			e.printStackTrace();
 		}
 
