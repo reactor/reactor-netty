@@ -258,7 +258,8 @@ configure(rootProject) { project ->
 	  instruction 'Import-Package', bundleImportPackages.join(',')
 	  attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
 			  "Implementation-Title": project.name,
-			  "Implementation-Version": project.version)
+			  "Implementation-Version": project.version,
+			  "Automatic-Module-Name": "reactor.netty")
 	}
   }
 
