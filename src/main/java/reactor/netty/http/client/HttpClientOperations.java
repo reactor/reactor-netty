@@ -585,9 +585,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected HttpMessage newFullBodyMessage(ByteBuf body) {
 		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
 
-		if (!HttpUtil.isTransferEncodingChunked(nettyRequest)) {
-			requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
-		}
+		requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+		requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
 		request.headers()
 		       .set(requestHeaders);
