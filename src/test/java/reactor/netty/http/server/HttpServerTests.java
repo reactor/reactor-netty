@@ -83,9 +83,7 @@ import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuple3;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * @author Stephane Maldini
@@ -1117,7 +1115,7 @@ public class HttpServerTests {
 				          .secure(spec -> spec.sslContext(serverCtx))
 				          .handle((req, res) -> {
 				              res.withConnection(DisposableChannel::dispose);
-				              return res.sendString(Mono.just("OK"))
+				              return res.sendString(Flux.just("OK").hide())
 				                        .then()
 				                        .doOnError(t -> {
 				                            error.set(t);

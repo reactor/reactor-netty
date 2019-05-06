@@ -401,7 +401,7 @@ public class HttpClientTest {
 
 		assertThat(r).isNotNull();
 
-		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
+		Assert.assertEquals(r.getT1(), HttpResponseStatus.BAD_REQUEST);
 	}
 
 	@Test

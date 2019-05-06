@@ -342,11 +342,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (source instanceof Mono) {
 			return super.send(source);
 		}
-		if ((Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD))
-				&& markSentHeaderAndBody()) {
+		if ((Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD))) {
 
 			ByteBufAllocator alloc = channel().alloc();
-			return then(Flux.from(source)
+			return new PostHeadersNettyOutbound(Flux.from(source)
 			                .collectList()
 			                .doOnDiscard(ByteBuf.class, ByteBuf::release)
 			                .flatMap(list -> {
@@ -375,7 +374,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				                }
 				                output.release();
 				                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
-			                }));
+			                }), this, null);
 		}
 
 		return super.send(source);
@@ -586,9 +585,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	protected HttpMessage newFullBodyMessage(ByteBuf body) {
 		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
 
-		if (!HttpUtil.isTransferEncodingChunked(nettyRequest)) {
-			requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
-		}
+		requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+		requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
 		request.headers()
 		       .set(requestHeaders);
