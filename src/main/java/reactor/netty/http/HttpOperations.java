@@ -18,9 +18,13 @@ package reactor.netty.http;
 
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
@@ -41,9 +45,11 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
-import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
+import reactor.util.Logger;
+import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 /**
  * An HTTP ready {@link ChannelOperations} with state management for status and headers
@@ -90,27 +96,35 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
-		if (source instanceof Mono && markSentHeaderAndBody()) {
-			return then(((Mono<ByteBuf>)source)
+		if (source instanceof Mono) {
+			return new PostHeadersNettyOutbound(((Mono<ByteBuf>)source)
 					.flatMap(msg -> {
-						preSendHeadersAndStatus();
-						return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(msg)));
+						if (markSentHeaderAndBody()) {
+							preSendHeadersAndStatus();
+							return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(msg)));
+						}
+						log.debug(getClass().getSimpleName()+" outbound sending has already been called once, ignoring further send");
+						return Mono.empty();
 					})
-					.doOnDiscard(ByteBuf.class, ByteBuf::release));
+					.doOnDiscard(ByteBuf.class, ByteBuf::release), this, null);
 		}
 		return super.send(source);
 	}
 
 	@Override
 	public NettyOutbound sendObject(Object message) {
-		if (!(message instanceof ByteBuf) || !markSentHeaderAndBody()) {
+		if (!(message instanceof ByteBuf)) {
 			return super.sendObject(message);
 		}
-		return then(FutureMono.deferFuture(() -> {
-			ByteBuf b = (ByteBuf) message;
-			preSendHeadersAndStatus();
-			return channel().writeAndFlush(newFullBodyMessage(b));
-		}), () -> ReactorNetty.safeRelease(message));
+		ByteBuf b = (ByteBuf) message;
+		return new PostHeadersNettyOutbound(FutureMono.deferFuture(() -> {
+			if (markSentHeaderAndBody()) {
+				preSendHeadersAndStatus();
+				return channel().writeAndFlush(newFullBodyMessage(b));
+			}
+			log.debug(getClass().getSimpleName()+" outbound sending has already been called once, ignoring further send");
+			return channel().newSucceededFuture();
+		}), this, b);
 	}
 
 	@Override
@@ -278,4 +292,81 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				}
 			}
 	);
+	static final Logger log = Loggers.getLogger(HttpOperations.class);
+
+	protected static final class PostHeadersNettyOutbound implements NettyOutbound, Consumer<Throwable>, Runnable {
+
+		final Mono<Void> source;
+		final HttpOperations<?, ?> parent;
+		final ByteBuf msg;
+
+		public PostHeadersNettyOutbound(Mono<Void> source, HttpOperations<?, ?> parent, @Nullable ByteBuf msg) {
+			this.msg = msg;
+			if (msg != null) {
+				this.source = source.doOnError(this)
+				                    .doOnCancel(this);
+			}
+			else {
+				this.source = source;
+			}
+			this.parent = parent;
+		}
+
+		@Override
+		public void run() {
+			if (msg != null && msg.refCnt() > 0) {
+				msg.release();
+			}
+		}
+
+		@Override
+		public void accept(Throwable throwable) {
+			if (msg != null && msg.refCnt() > 0) {
+				msg.release();
+			}
+		}
+
+		@Override
+		public Mono<Void> then() {
+			return source;
+		}
+
+		@Override
+		public ByteBufAllocator alloc() {
+			return parent.alloc();
+		}
+
+		@Override
+		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+			return parent.options(configurator);
+		}
+
+		@Override
+		public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+			return parent.send(dataStream);
+		}
+
+		@Override
+		public NettyOutbound sendObject(Publisher<?> dataStream) {
+			return parent.sendObject(dataStream);
+		}
+
+		@Override
+		public NettyOutbound sendObject(Object message) {
+			return parent.sendObject(message);
+		}
+
+		@Override
+		public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
+				BiFunction<? super Connection, ? super S, ?> mappedInput,
+				Consumer<? super S> sourceCleanup) {
+			return parent.sendUsing(sourceInput, mappedInput, sourceCleanup);
+		}
+
+		@Override
+		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
+			return parent.withConnection(withConnection);
+		}
+	}
 }
+

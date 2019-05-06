@@ -16,9 +16,9 @@
 
 package reactor.netty.http;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 
 import org.junit.Test;
 import reactor.core.publisher.Mono;
@@ -52,7 +52,8 @@ public class HttpErrorTests {
 		                             .responseContent()
 		                             .asString(StandardCharsets.UTF_8)
 		                             .collectList())
-		            .verifyError(IOException.class);
+		            .expectNextMatches(List::isEmpty)
+		            .verifyComplete();
 
 		server.disposeNow();
 	}

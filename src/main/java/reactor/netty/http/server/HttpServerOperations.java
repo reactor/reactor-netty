@@ -539,6 +539,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
 					HttpResponseStatus.INTERNAL_SERVER_ERROR);
 			response.headers()
+			        .set(responseHeaders)
+			        .remove(HttpHeaderValues.CHUNKED)
 			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
 			        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 			channel().writeAndFlush(response)
