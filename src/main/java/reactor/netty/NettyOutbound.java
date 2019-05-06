@@ -73,11 +73,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 *
 	 * @return this {@link NettyOutbound}
 	 */
-	default NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-		return withConnection(c -> c.channel()
-		                            .pipeline()
-		                            .fireUserEventTriggered(new NettyPipeline.SendOptionsChangeEvent(configurator)));
-	}
+	NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator);
 
 	/**
 	 * Sends data to the peer, listens for any error on write and closes on terminal signal
@@ -90,9 +86,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
 	 * signal successful sequence write (e.g. after "flush") or any error during write.
 	 */
-	default NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
-		return sendObject(dataStream);
-	}
+	NettyOutbound send(Publisher<? extends ByteBuf> dataStream);
 
 	/**
 	 * Sends bytes to the peer, listens for any error on write and closes on terminal
@@ -277,7 +271,7 @@ public interface NettyOutbound extends Publisher<Void> {
 	 */
 	default NettyOutbound sendString(Publisher<? extends String> dataStream,
 			Charset charset) {
-		return sendObject(ReactorNetty.publisherOrScalarMap(
+		return send(ReactorNetty.publisherOrScalarMap(
 				dataStream, s -> {
 				    ByteBuf buffer = alloc().buffer();
 				    buffer.writeCharSequence(s, charset);

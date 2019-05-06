@@ -19,6 +19,7 @@ package reactor.netty.http.server;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.annotation.Nullable;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -35,8 +36,11 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
+import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.http.HttpOperations;
@@ -105,11 +109,16 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 			handshaker.handshake(channel,
 					request,
-					replaced.nettyResponse.headers()
-					                      .remove(HttpHeaderNames.TRANSFER_ENCODING),
+					replaced.responseHeaders
+							.remove(HttpHeaderNames.TRANSFER_ENCODING),
 					handshakerResult)
 			          .addListener(f -> markPersistent(false));
 		}
+	}
+
+	@Override
+	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+		return sendObject(Flux.from(dataStream).map(bytebufToWebsocketFrame));
 	}
 
 	@Override

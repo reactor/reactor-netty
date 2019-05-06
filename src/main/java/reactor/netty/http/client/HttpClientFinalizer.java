@@ -104,7 +104,7 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	@Override
 	public HttpClientFinalizer send(Publisher<? extends ByteBuf> requestBody) {
 		Objects.requireNonNull(requestBody, "requestBody");
-		return send((req, out) -> out.sendObject(requestBody));
+		return send((req, out) -> out.send(requestBody));
 	}
 	@Override
 	public HttpClientFinalizer send(BiFunction<? super HttpClientRequest, ?

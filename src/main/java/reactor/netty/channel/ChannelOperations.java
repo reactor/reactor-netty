@@ -23,19 +23,18 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.ReferenceCounted;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.Operators;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.Connection;
@@ -58,9 +57,7 @@ import static reactor.netty.ReactorNetty.format;
  * @since 0.6
  */
 public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends NettyOutbound>
-		extends DefaultPromise<Void>
-		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void>,
-		           ChannelPromise {
+		implements NettyInbound, NettyOutbound, Connection, CoreSubscriber<Void> {
 
 	/**
 	 * Add {@link NettyPipeline#ReactiveBridge} handler at the end of {@link Channel}
@@ -90,15 +87,22 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		                 .as(ChannelOperations.class);
 	}
 
-	final Connection         connection;
-	final FluxReceive        inbound;
-	final ConnectionObserver listener;
+	final Connection          connection;
+	final FluxReceive         inbound;
+	final ConnectionObserver  listener;
+	final MonoProcessor<Void> onTerminate;
+
+	boolean flushOnEach;
 
 	@SuppressWarnings("unchecked")
 	volatile Subscription outboundSubscription;
 
 	protected ChannelOperations(ChannelOperations<INBOUND, OUTBOUND> replaced) {
-		this(replaced.connection, replaced.listener);
+		this.connection = replaced.connection;
+		this.listener = replaced.listener;
+		this.onTerminate = replaced.onTerminate;
+		this.flushOnEach = replaced.flushOnEach;
+		this.inbound = new FluxReceive(this);
 	}
 
 	/**
@@ -108,9 +112,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @param listener the events callback
 	 */
 	public ChannelOperations(Connection connection, ConnectionObserver listener) {
-		super(connection.channel().eventLoop());
 		this.connection = Objects.requireNonNull(connection, "connection");
 		this.listener = Objects.requireNonNull(listener, "listener");
+		this.onTerminate = MonoProcessor.create();
 		this.inbound = new FluxReceive(this);
 	}
 
@@ -225,8 +229,23 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+		if (dataStream instanceof Mono) {
+			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
+		}
+		return then(MonoSendMany.byteBufSource(dataStream, channel(), flushOnEach));
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
 	public NettyOutbound sendObject(Publisher<?> dataStream) {
-		return then(FutureMono.disposableWriteAndFlush(connection.channel(), dataStream));
+		if (dataStream instanceof Mono) {
+			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
+			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
+		}
+		return then(MonoSendMany.objectSource(dataStream, channel(), flushOnEach));
 	}
 
 	@Override
@@ -262,7 +281,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		if (!isPersistent()) {
 			return connection.onDispose();
 		}
-		return FutureMono.from((Future<Void>)this).or(connection.onDispose());
+		return onTerminate.or(connection.onDispose());
 	}
 
 	/**
@@ -378,14 +397,26 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// HttpClientOperations need to notify with error
 			// when there is no response state
 			onInboundComplete();
-			if (channel().isActive() && isPersistent()) {
-				channel().writeAndFlush(TERMINATED_OPS, this);
-			}
-			else {
-				// Returned value is deliberately ignored
-				setSuccess(null);
-			}
+			onTerminate.onComplete();
+			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 		}
+	}
+
+	@Override
+	public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+		configurator.accept(new NettyPipeline.SendOptions() {
+			@Override
+			public NettyPipeline.SendOptions flushOnBoundary() {
+				return this;
+			}
+
+			@Override
+			public NettyPipeline.SendOptions flushOnEach(boolean withEventLoop) {
+				flushOnEach = !withEventLoop;
+				return this;
+			}
+		});
+		return this;
 	}
 
 	/**
@@ -414,112 +445,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final String formatName() {
 		return getClass().getSimpleName()
 		                 .replace("Operations", "");
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public ChannelPromise setSuccess() {
-		// Returned value is deliberately ignored
-		setSuccess(null);
-		return this;
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public ChannelPromise setSuccess(Void result) {
-		// Returned value is deliberately ignored
-		super.setSuccess(result);
-		listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
-		return this;
-	}
-
-	@Override
-	public boolean trySuccess() {
-		boolean result = super.trySuccess(null);
-		listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
-		return result;
-	}
-
-	@Override
-	public boolean tryFailure(Throwable cause) {
-		boolean result = super.tryFailure(cause);
-		listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
-		return result;
-	}
-
-	@Override
-	public ChannelPromise unvoid() {
-		return this;
-	}
-
-	@Override
-	public boolean isVoid() {
-		return true;
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public ChannelPromise setFailure(Throwable cause) {
-		// Returned value is deliberately ignored
-		super.setFailure(cause);
-		listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
-		return this;
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public ChannelPromise addListener(GenericFutureListener<? extends Future<? super Void>> listener) {
-		// Returned value is deliberately ignored
-		super.addListener(listener);
-		return this;
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-		// Returned value is deliberately ignored
-		super.addListeners(listeners);
-		return this;
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
-		// Returned value is deliberately ignored
-		super.removeListener(listener);
-		return this;
-	}
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-		// Returned value is deliberately ignored
-		super.removeListeners(listeners);
-		return this;
-	}
-
-	@Override
-	public ChannelPromise sync() throws InterruptedException {
-		super.sync();
-		return this;
-	}
-
-	@Override
-	public ChannelPromise await() throws InterruptedException {
-		super.await();
-		return this;
-	}
-
-	@Override
-	public ChannelPromise awaitUninterruptibly() {
-		super.awaitUninterruptibly();
-		return this;
-	}
-
-	@Override
-	public ChannelPromise syncUninterruptibly() {
-		super.syncUninterruptibly();
-		return this;
 	}
 
 	@Override

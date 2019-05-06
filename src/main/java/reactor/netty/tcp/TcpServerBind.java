@@ -23,12 +23,10 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
-import io.netty.util.NetUtil;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -126,7 +124,6 @@ final class TcpServerBind extends TcpServer {
 	ServerBootstrap createServerBootstrap() {
 		return new ServerBootstrap()
 				.option(ChannelOption.SO_REUSEADDR, true)
-				.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
 				.childOption(ChannelOption.AUTO_READ, false)
 				.childOption(ChannelOption.TCP_NODELAY, true)
 				.localAddress(new InetSocketAddress(DEFAULT_PORT));

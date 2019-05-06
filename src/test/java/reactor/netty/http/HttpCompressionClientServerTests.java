@@ -274,7 +274,7 @@ public class HttpCompressionClientServerTests {
 		                              .compress((req, res) -> false);
 
 		DisposableServer runningServer =
-				server.handle((in, out) -> out.sendString(Mono.just("reply")))
+				server.handle((in, out) -> out.sendString(Flux.just("reply").hide()))
 				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 

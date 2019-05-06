@@ -26,7 +26,6 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -571,14 +570,8 @@ public abstract class TcpClient {
 					12012;
 
 	static final Bootstrap DEFAULT_BOOTSTRAP =
-			new Bootstrap().option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-			               .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
-			               .option(ChannelOption.AUTO_READ, false)
-			               .option(ChannelOption.SO_RCVBUF, 1024 * 1024)
-			               .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
-			               .remoteAddress(
-			                   InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(),
-			                                                          DEFAULT_PORT));
+			new Bootstrap().option(ChannelOption.AUTO_READ, false)
+			               .remoteAddress(InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT));
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);

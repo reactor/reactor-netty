@@ -47,10 +47,7 @@ public interface WebsocketOutbound extends NettyOutbound {
 	String selectedSubprotocol();
 
 	@Override
-	default NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
-		return sendObject(Flux.from(dataStream)
-		                      .map(bytebufToWebsocketFrame));
-	}
+	NettyOutbound send(Publisher<? extends ByteBuf> dataStream);
 
 	/**
 	 * Prepare to send a close frame on subscribe then close the underlying channel

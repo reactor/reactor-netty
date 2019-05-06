@@ -23,9 +23,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -34,6 +32,7 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -74,7 +73,6 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
-import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
@@ -260,17 +258,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public NettyOutbound sendObject(Publisher<?> dataStream) {
-		if (!HttpUtil.isTransferEncodingChunked(nettyRequest) &&
-				!HttpUtil.isContentLengthSet(nettyRequest) &&
-				!method().equals(HttpMethod.HEAD) &&
-				!hasSentHeaders()) {
-			HttpUtil.setTransferEncodingChunked(nettyRequest, true);
-		}
-		return super.sendObject(dataStream);
-	}
-
-	@Override
 	public HttpClientRequest header(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
 			this.requestHeaders.set(name, value);
@@ -351,8 +338,23 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
-		if (Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD)) {
-			return new GetOrHeadAggregateOutbound(this, source, outboundHttpMessage());
+		if (source instanceof Mono) {
+			return super.send(source);
+		}
+		if ((Objects.equals(method(), HttpMethod.GET) || Objects.equals(method(), HttpMethod.HEAD))
+				&& markSentHeaderAndBody()) {
+
+			ByteBufAllocator alloc = channel().alloc();
+			return then(Flux.from(source)
+			           .collect(alloc::compositeBuffer, (prev, next) -> prev.addComponent(true, next))
+			           .flatMap(agg -> {
+				           if (agg.readableBytes() > 0) {
+					           return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(agg)));
+				           }
+				           agg.release();
+				           return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
+			           })
+			           .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
 		return super.send(source);
 	}
@@ -419,7 +421,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
 						"zero-length header"));
 			}
-			channel().writeAndFlush(newFullEmptyBodyMessage());
+			channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
 		}
 		else if (markSentBody()) {
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -559,12 +561,15 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	protected HttpMessage newFullEmptyBodyMessage() {
-		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri());
+	protected HttpMessage newFullBodyMessage(ByteBuf body) {
+		HttpRequest request = new DefaultFullHttpRequest(version(), method(), uri(), body);
+
+		if (!HttpUtil.isTransferEncodingChunked(nettyRequest)) {
+			requestHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+		}
 
 		request.headers()
-		       .set(requestHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
-		                          .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+		       .set(requestHeaders);
 		return request;
 	}
 
@@ -574,7 +579,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	final Mono<Void> send() {
 		if (markSentHeaderAndBody()) {
-			HttpMessage request = newFullEmptyBodyMessage();
+			HttpMessage request = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
 		}
 		else {
@@ -736,81 +741,5 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	static final int                    MAX_REDIRECTS      = 50;
 	@SuppressWarnings("unchecked")
 	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];
-	static final Logger                 log                =
-			Loggers.getLogger(HttpClientOperations.class);
-
-	static final class GetOrHeadAggregateOutbound implements NettyOutbound {
-
-		final HttpOperations<?, ?>         parent;
-		final HttpMessage                  request;
-		final Publisher<? extends ByteBuf> source;
-
-		 GetOrHeadAggregateOutbound(HttpOperations<?, ?> parent,
-				Publisher<? extends ByteBuf> source,
-				 HttpMessage request) {
-			this.parent = parent;
-			this.source = source;
-			this.request = request;
-		}
-
-		@Override
-		public ByteBufAllocator alloc() {
-			return parent.alloc();
-		}
-
-		@Override
-		public NettyOutbound sendObject(Publisher<?> dataStream) {
-			return parent.sendObject(dataStream);
-		}
-
-		@Override
-		public NettyOutbound sendObject(Object message) {
-			return parent.sendObject(message);
-		}
-
-		@Override
-		public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
-				BiFunction<? super Connection, ? super S, ?> mappedInput, Consumer<? super S> sourceCleanup) {
-			return parent.sendUsing(sourceInput, mappedInput, sourceCleanup);
-		}
-
-		@Override
-		public Mono<Void> then() {
-			if (!parent.channel().isActive()) {
-				return Mono.error(new AbortedException("Connection has been closed BEFORE response"));
-			}
-
-			ByteBufAllocator alloc = parent.channel()
-			                               .alloc();
-			return Flux.from(source)
-			           .switchOnFirst((signal, flux) -> {
-			               if (signal.hasValue()) {
-			                   ByteBuf buf = signal.get();
-			                   if (buf != null && buf.readableBytes() > 0) {
-			                       return flux.collect(alloc::compositeBuffer, (prev, next) -> prev.addComponent(true, next))
-			                                  .flatMap(agg -> {
-			                                      if (!HttpUtil.isTransferEncodingChunked(request) &&
-			                                              !HttpUtil.isContentLengthSet(request)) {
-			                                          request.headers()
-			                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH, agg.readableBytes());
-			                                      }
-			                                      return parent.then()
-			                                                   .thenEmpty(FutureMono.disposableWriteAndFlush(parent.channel(), Mono.just(agg)));
-			                                  })
-			                                  .doOnDiscard(ByteBuf.class, ByteBuf::release);
-			                   }
-			               }
-			               else if (signal.hasError()) {
-			                   return flux.onErrorResume(Mono::error);
-			               }
-			               return parent.then();
-			           })
-			           .then();
-		}
-
-		@Override
-		public NettyOutbound withConnection(Consumer<? super Connection> withConnection) {
-			return parent.withConnection(withConnection);
-		}
-	}
+	static final Logger                 log                = Loggers.getLogger(HttpClientOperations.class);
 }

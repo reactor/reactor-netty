@@ -29,6 +29,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -145,20 +146,21 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected HttpMessage newFullEmptyBodyMessage() {
+	protected HttpMessage newFullBodyMessage(ByteBuf body) {
 		HttpResponse res =
-				new DefaultFullHttpResponse(version(), status(), EMPTY_BUFFER);
+				new DefaultFullHttpResponse(version(), status(), body);
 
 		if (!HttpMethod.HEAD.equals(method())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 			if (!HttpResponseStatus.NOT_MODIFIED.equals(status())) {
-				responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
+
+				if (HttpUtil.getContentLength(nettyResponse, -1) == -1) {
+					responseHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, body.readableBytes());
+				}
 			}
 		}
 
 		res.headers().set(responseHeaders);
-
-		markPersistent(true);
 		return res;
 	}
 
@@ -231,10 +233,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public boolean isWebsocket() {
-		return requestHeaders().contains(HttpHeaderNames.UPGRADE,
-				HttpHeaderValues.WEBSOCKET,
-				true)
-				&& HttpResponseStatus.SWITCHING_PROTOCOLS.equals(status());
+		return get(channel()) instanceof WebsocketServerOperations;
 	}
 
 	@Override
@@ -312,6 +311,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	public HttpServerOperations options(Consumer<? super NettyPipeline.SendOptions> configurator) {
+		super.options(configurator);
+		return this;
+	}
+
+	@Override
 	public String scheme() {
 		return this.connectionInfo.getScheme();
 	}
@@ -324,7 +329,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public Mono<Void> send() {
 		if (markSentHeaderAndBody()) {
-			HttpMessage response = newFullEmptyBodyMessage();
+			HttpMessage response = newFullBodyMessage(EMPTY_BUFFER);
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(response));
 		}
 		else {
@@ -486,7 +491,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 						"zero-length header"));
 			}
 
-			f = channel().writeAndFlush(newFullEmptyBodyMessage());
+			f = channel().writeAndFlush(newFullBodyMessage(EMPTY_BUFFER));
 		}
 		else if (markSentBody()) {
 			f = channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
