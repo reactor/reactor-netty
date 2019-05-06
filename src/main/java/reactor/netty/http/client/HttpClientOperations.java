@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
@@ -346,16 +347,28 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 			ByteBufAllocator alloc = channel().alloc();
 			return then(Flux.from(source)
-			           .collect(alloc::compositeBuffer, (prev, next) -> prev.addComponent(true, next))
-			           .flatMap(agg -> {
-				           if (agg.readableBytes() > 0) {
-					           return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(agg)));
-				           }
-				           agg.release();
-				           return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
-			           })
-			           .doOnDiscard(ByteBuf.class, ByteBuf::release));
+			                .collectList()
+			                .doOnDiscard(ByteBuf.class, ByteBuf::release)
+			                .flatMap(list -> {
+
+				                if (list.isEmpty()) {
+					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
+				                }
+
+				                CompositeByteBuf agg = alloc.compositeBuffer(list.size());
+
+				                for (ByteBuf component : list) {
+					                agg.addComponent(component);
+				                }
+
+				                if (agg.readableBytes() > 0) {
+					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(agg)));
+				                }
+				                agg.release();
+				                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
+			                }));
 		}
+
 		return super.send(source);
 	}
 
