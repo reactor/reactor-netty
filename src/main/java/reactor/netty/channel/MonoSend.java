@@ -36,12 +36,12 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 	final ChannelHandlerContext            ctx;
 	final Function<? super I, ? extends O> transformer;
 	final Consumer<? super I>              sourceCleanup;
-	final ToIntFunction<O>                 sizeOf;
+	final ToIntFunction<? super O>         sizeOf; //FIXME use MessageSizeEstimator ?
 
 	MonoSend(Channel channel,
 			Function<? super I, ? extends O> transformer,
 			Consumer<? super I> sourceCleanup,
-			ToIntFunction<O> sizeOf) {
+			ToIntFunction<? super O> sizeOf) {
 		this.transformer = Objects.requireNonNull(transformer, "source transformer cannot be null");
 		this.sourceCleanup = Objects.requireNonNull(sourceCleanup, "source cleanup handler cannot be null");
 		this.sizeOf = Objects.requireNonNull(sizeOf, "message size mapper cannot be null");
@@ -79,7 +79,10 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 			return ((ByteBuf) msg).readableBytes();
 		}
 		if (msg instanceof FileRegion) {
-			return (int) Math.min(Integer.MAX_VALUE, ((FileRegion) msg).count());
+			// aligns with DefaultMessageSizeEstimator.DEFAULT
+			return 0;
+			// alternatively could have used
+			// return (int) Math.min(Integer.MAX_VALUE, ((FileRegion) msg).count());
 		}
 		return -1;
 	};

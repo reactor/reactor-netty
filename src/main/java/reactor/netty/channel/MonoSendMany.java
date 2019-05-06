@@ -198,9 +198,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public void onSubscribe(Subscription s) {
-			if (Operators.validate(this.s, s)) {
-				this.s = s;
-
+			if (Operators.setOnce(SUBSCRIPTION, this, s)) {
 				if (s instanceof QueueSubscription) {
 					@SuppressWarnings("unchecked") QueueSubscription<I> f =
 							(QueueSubscription<I>) s;
@@ -237,9 +235,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public void operationComplete(ChannelFuture future) {
-			Subscription s;
-			if ((s = SUBSCRIPTION.getAndSet(this, Operators.cancelledSubscription())) != Operators.cancelledSubscription()) {
-				s.cancel();
+			if (Operators.terminate(SUBSCRIPTION, this)) {
 				if (WIP.getAndIncrement(this) == 0) {
 					cleanup();
 				}
