@@ -103,8 +103,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 							preSendHeadersAndStatus();
 							return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(msg)));
 						}
-						log.debug(getClass().getSimpleName()+" outbound sending has already been called once, ignoring further send");
-						return Mono.empty();
+						return FutureMono.from(channel().writeAndFlush(msg));
 					})
 					.doOnDiscard(ByteBuf.class, ByteBuf::release), this, null);
 		}
@@ -122,8 +121,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				preSendHeadersAndStatus();
 				return channel().writeAndFlush(newFullBodyMessage(b));
 			}
-			log.debug(getClass().getSimpleName()+" outbound sending has already been called once, ignoring further send");
-			return channel().newSucceededFuture();
+			return channel().writeAndFlush(b);
 		}), this, b);
 	}
 
