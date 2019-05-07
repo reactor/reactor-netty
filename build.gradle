@@ -46,7 +46,7 @@ ext {
 
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.2.9.BUILD-SNAPSHOT"
+  reactorCoreVersion = "3.2.9.RELEASE"
 
   // Logging
   slf4jVersion = '1.7.12'
