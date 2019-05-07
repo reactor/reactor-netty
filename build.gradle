@@ -222,9 +222,9 @@ configure(rootProject) { project ->
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 
-	shaded "io.netty:netty-handler-proxy:${nettyVersion}"
-	shaded "io.netty:netty-codec-http2:${nettyVersion}"
-	shaded "io.netty:netty-codec-haproxy:${nettyVersion}"
+	compile "io.netty:netty-handler-proxy:${nettyVersion}"
+	compile "io.netty:netty-codec-http2:${nettyVersion}"
+	optional "io.netty:netty-codec-haproxy:${nettyVersion}"
 
 	// Logging
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
@@ -319,7 +319,7 @@ configure(rootProject) { project ->
 	exclude 'META-INF/maven*/**'
 	exclude 'META-INF/native-image/**'
 
-	relocate 'io.netty.', 'reactor.netty.internal.shaded.io.netty.'
+//	relocate 'io.netty.', 'reactor.netty.internal.shaded.io.netty.'
   }
 
   artifacts.archives shadowJar
