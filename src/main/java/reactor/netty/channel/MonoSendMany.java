@@ -457,7 +457,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public boolean isVoid() {
-			return true;
+			return false;
 		}
 
 		@Override
