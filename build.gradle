@@ -213,8 +213,6 @@ configure(rootProject) { project ->
 
   configurations {
 	shaded
-
-	[testCompile]*.extendsFrom shaded
   }
 
 	// dependencies that are common across all java projects
@@ -255,6 +253,7 @@ configure(rootProject) { project ->
 
 	for (dependency in project.configurations.shaded.dependencies) {
 	  compileOnly(dependency)
+	  testRuntime(dependency)
 	}
   }
 
