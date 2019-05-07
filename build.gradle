@@ -214,7 +214,7 @@ configure(rootProject) { project ->
   configurations {
 	shaded
 
-	[compileOnly, testCompile]*.extendsFrom shaded
+	[testCompile]*.extendsFrom shaded
   }
 
 	// dependencies that are common across all java projects
@@ -222,9 +222,9 @@ configure(rootProject) { project ->
 	// JSR-305 annotations
 	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 
-	compile "io.netty:netty-handler-proxy:${nettyVersion}"
-	compile "io.netty:netty-codec-http2:${nettyVersion}"
-	optional "io.netty:netty-codec-haproxy:${nettyVersion}"
+	shaded "io.netty:netty-handler-proxy:${nettyVersion}"
+	shaded "io.netty:netty-codec-http2:${nettyVersion}"
+	shaded "io.netty:netty-codec-haproxy:${nettyVersion}"
 
 	// Logging
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
@@ -252,6 +252,10 @@ configure(rootProject) { project ->
 
 	jarFileTestCompile 'org.assertj:assertj-core:3.12.2'
 	jarFileTestCompile 'junit:junit:4.12'
+
+	for (dependency in project.configurations.shaded.dependencies) {
+	  compileOnly(dependency)
+	}
   }
 
 
@@ -309,6 +313,7 @@ configure(rootProject) { project ->
 		for (id in project.configurations.compile.resolvedConfiguration.resolvedArtifacts*.moduleVersion*.id) {
 		  def module = "${id.group}:${id.name}".toString()
 		  if (!shadedDependencies.contains(module)) {
+			project.configurations.shaded.exclude(group: id.group, module: id.name)
 			exclude(dependency(module))
 		  }
 		}
@@ -318,9 +323,14 @@ configure(rootProject) { project ->
 	exclude 'META-INF/*'
 	exclude 'META-INF/maven*/**'
 	exclude 'META-INF/native-image/**'
-
-//	relocate 'io.netty.', 'reactor.netty.internal.shaded.io.netty.'
   }
+
+  task relocateShadowJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation) {
+	target = tasks.shadowJar
+	prefix = "reactor.netty.internal.shaded"
+  }
+
+  tasks.shadowJar.dependsOn tasks.relocateShadowJar
 
   artifacts.archives shadowJar
 
