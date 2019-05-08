@@ -27,7 +27,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.util.ReferenceCountUtil;
-import reactor.core.Exceptions;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
@@ -78,7 +77,6 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			}
 		}
 		catch (Throwable err) {
-			Exceptions.throwIfJvmFatal(err);
 			exceptionCaught(ctx, err);
 		}
 	}
@@ -114,15 +112,13 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			}
 		}
 		catch (Throwable err) {
-			Exceptions.throwIfJvmFatal(err);
-			exceptionCaught(ctx, err);
 			ReferenceCountUtil.safeRelease(msg);
+			exceptionCaught(ctx, err);
 		}
 	}
 
 	@Override
 	final public void exceptionCaught(ChannelHandlerContext ctx, Throwable err) {
-		Exceptions.throwIfJvmFatal(err);
 		Connection connection = Connection.from(ctx.channel());
 		ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 		if (ops != null) {

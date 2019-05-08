@@ -31,6 +31,10 @@ public class AbortedException extends RuntimeException {
 		super(message);
 	}
 
+	public AbortedException(Throwable cause) {
+		super(cause);
+	}
+
 	/**
 	 * Return true if connection has been simply aborted on a tcp level by verifying if
 	 * the given inbound error.
@@ -49,5 +53,13 @@ public class AbortedException extends RuntimeException {
 		       (err instanceof SocketException && err.getMessage() != null &&
 		                                          err.getMessage()
 		                                             .contains("Connection reset by peer"));
+	}
+
+	@Override
+	public synchronized Throwable fillInStackTrace() {
+		if (getCause() != null) {
+			return getCause().fillInStackTrace();
+		}
+		return this;
 	}
 }
