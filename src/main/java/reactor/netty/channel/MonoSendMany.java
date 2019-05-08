@@ -43,6 +43,7 @@ import reactor.core.Exceptions;
 import reactor.core.Fuseable;
 import reactor.core.Scannable;
 import reactor.core.publisher.Operators;
+import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -171,7 +172,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 			//Avoid singleton
 			if (t instanceof ClosedChannelException) {
-				t = new AbortedException("Channel has been closed");
+				t = ReactorNetty.wrapException(t);
 			}
 
 			actual.onError(t);

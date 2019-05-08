@@ -32,6 +32,7 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
+import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
@@ -357,11 +358,11 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			if (log.isWarnEnabled()) {
 //				log.error(format(channel, "An attempt to allocate memory has failed"), err);
 			}
-			this.inboundError = new AbortedException(err);
+			this.inboundError = ReactorNetty.wrapException(err);
 			parent.terminate(); //get rid of the resource
 		}
 		else if (err instanceof ClosedChannelException) {
-			this.inboundError = new AbortedException("Channel has been closed");
+			this.inboundError = ReactorNetty.wrapException(err);
 		}
 		else {
 			this.inboundError = err;
