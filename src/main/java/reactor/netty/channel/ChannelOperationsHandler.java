@@ -16,10 +16,9 @@
 
 package reactor.netty.channel;
 
-import java.nio.charset.Charset;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -93,7 +92,6 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					String loggingMsg = msg.toString();
 					if (msg instanceof DecoderResultProvider) {
 						DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
 						if (decoderResult.isFailure()) {
@@ -101,9 +99,16 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 									decoderResult.cause());
 						}
 					}
+					String loggingMsg;
 					if (msg instanceof ByteBufHolder && ((ByteBufHolder)msg).content() != Unpooled.EMPTY_BUFFER) {
 						ByteBuf buffer = ((ByteBufHolder) msg).content();
-						loggingMsg = buffer.readCharSequence(buffer.readableBytes(), Charset.defaultCharset()).toString();
+						loggingMsg = ByteBufUtil.prettyHexDump(buffer);
+					}
+					else if (msg instanceof ByteBuf){
+						loggingMsg = ByteBufUtil.prettyHexDump((ByteBuf)msg);
+					}
+					else {
+						loggingMsg = msg.toString();
 					}
 					log.debug(format(ctx.channel(), "No ChannelOperation attached. Dropping: {}"),
 							loggingMsg);
