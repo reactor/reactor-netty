@@ -168,7 +168,7 @@ public final class ReactorNetty {
 	 * @return a wrapped {@link RuntimeException}
 	 */
 	public static RuntimeException wrapException(Throwable throwable) {
-		return new ReactorNettyException(Objects.requireNonNull(throwable));
+		return new InternalNettyException(Objects.requireNonNull(throwable));
 	}
 
 	static void addChunkedWriter(Connection c){
@@ -765,15 +765,15 @@ public final class ReactorNetty {
 		};
 	}
 
-	static final class ReactorNettyException extends RuntimeException {
+	static final class InternalNettyException extends RuntimeException {
 
-		ReactorNettyException(Throwable cause) {
+		InternalNettyException(Throwable cause) {
 			super(cause);
 		}
 
 		@Override
 		public synchronized Throwable fillInStackTrace() {
-			return getCause().fillInStackTrace();
+			return this;
 		}
 	}
 
