@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -349,31 +350,39 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			                .collectList()
 			                .doOnDiscard(ByteBuf.class, ByteBuf::release)
 			                .flatMap(list -> {
-
-				                if (list.isEmpty()) {
-					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
-				                }
-
-				                ByteBuf output;
-				                int i = list.size();
-				                if (i == 1) {
-				                	output = list.get(0);
-				                }
-				                else {
-					                CompositeByteBuf agg = alloc.compositeBuffer(list.size());
-
-					                for (ByteBuf component : list) {
-						                agg.addComponent(true, component);
+				                if (markSentHeaderAndBody()) {
+					                if (list.isEmpty()) {
+						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
 					                }
 
-					                output = agg;
-				                }
+					                ByteBuf output;
+					                int i = list.size();
+					                if (i == 1) {
+						                output = list.get(0);
+					                }
+					                else {
+						                CompositeByteBuf agg = alloc.compositeBuffer(list.size());
 
-				                if (output.readableBytes() > 0) {
-					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(output)));
+						                for (ByteBuf component : list) {
+							                agg.addComponent(true, component);
+						                }
+
+						                output = agg;
+					                }
+
+					                if (output.readableBytes() > 0) {
+						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(output)));
+					                }
+					                output.release();
+					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
 				                }
-				                output.release();
-				                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
+				                for(ByteBuf bb : list) {
+				                	if (log.isDebugEnabled()) {
+				                		log.debug(format(channel(), "Ignoring accumulated bytebuf on http GET {}"), ByteBufUtil.prettyHexDump(bb));
+					                }
+				                	bb.release();
+				                }
+				                return Mono.empty();
 			                }), this, null);
 		}
 

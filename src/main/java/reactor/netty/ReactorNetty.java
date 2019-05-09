@@ -162,6 +162,14 @@ public final class ReactorNetty {
 			return msg;
 		}
 	}
+	/**
+	 * Wrap possibly fatal or singleton exception into a new exception instance in order to propagate in reactor flows without side effect.
+	 *
+	 * @return a wrapped {@link RuntimeException}
+	 */
+	public static RuntimeException wrapException(Throwable throwable) {
+		return new InternalNettyException(Objects.requireNonNull(throwable));
+	}
 
 	static void addChunkedWriter(Connection c){
 		if (c.channel()
@@ -755,6 +763,18 @@ public final class ReactorNetty {
 				return Mono.error(new IllegalStateException("Sender Unavailable"));
 			}
 		};
+	}
+
+	static final class InternalNettyException extends RuntimeException {
+
+		InternalNettyException(Throwable cause) {
+			super(cause);
+		}
+
+		@Override
+		public synchronized Throwable fillInStackTrace() {
+			return this;
+		}
 	}
 
 	static final ConnectionObserver NOOP_LISTENER = (connection, newState) -> {};

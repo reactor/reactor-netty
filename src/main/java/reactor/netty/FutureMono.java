@@ -15,6 +15,7 @@
  */
 package reactor.netty;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -253,8 +254,14 @@ public abstract class FutureMono extends Mono<Void> {
 		@Override
 		@SuppressWarnings("unchecked")
 		public void operationComplete(F future) {
-			if (!future.isSuccess()) {
-				s.onError(future.cause());
+			if (!future.isSuccess()) {//Avoid singleton
+				if (future.cause() instanceof ClosedChannelException) {
+					//Update with a common aborted exception?
+					s.onError(ReactorNetty.wrapException(future.cause()));
+				}
+				else {
+					s.onError(future.cause());
+				}
 			}
 			else {
 				s.onComplete();

@@ -16,6 +16,7 @@
 
 package reactor.netty.channel;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -31,10 +32,10 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
+import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
-import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -339,17 +340,34 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	final void onInboundError(Throwable err) {
 		if (isCancelled() || inboundDone) {
-			Context c = receiver == null ? Context.empty() : receiver.currentContext();
-			Operators.onErrorDropped(err, c);
+			if (log.isWarnEnabled()) {
+				log.warn(format(channel, "An exception has been observed post termination, use DEBUG level to see the full stack: {}"), err.getClass().getSimpleName());
+			}
+			else if (log.isDebugEnabled()) {
+				log.error(format(channel, "An exception has been observed post termination"), err);
+			}
 			return;
 		}
 		CoreSubscriber<?> receiver = this.receiver;
-		this.inboundError = err;
 		this.inboundDone = true;
-
 		if(channel.isActive()){
 			parent.markPersistent(false);
 		}
+
+		if (err instanceof OutOfMemoryError) {
+			if (log.isWarnEnabled()) {
+//				log.error(format(channel, "An attempt to allocate memory has failed"), err);
+			}
+			this.inboundError = ReactorNetty.wrapException(err);
+			parent.terminate(); //get rid of the resource
+		}
+		else if (err instanceof ClosedChannelException) {
+			this.inboundError = ReactorNetty.wrapException(err);
+		}
+		else {
+			this.inboundError = err;
+		}
+
 		if (receiverFastpath && receiver != null) {
 			//parent.listener.onReceiveError(channel, err);
 			receiver.onError(err);

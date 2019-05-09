@@ -16,6 +16,7 @@
 
 package reactor.netty.channel;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +43,7 @@ import reactor.core.Exceptions;
 import reactor.core.Fuseable;
 import reactor.core.Scannable;
 import reactor.core.publisher.Operators;
+import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -168,6 +170,11 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				cleanup();
 			}
 
+			//Avoid singleton
+			if (t instanceof ClosedChannelException) {
+				t = ReactorNetty.wrapException(t);
+			}
+
 			actual.onError(t);
 		}
 
@@ -239,7 +246,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				if (WIP.getAndIncrement(this) == 0) {
 					cleanup();
 				}
-				actual.onError(new AbortedException("Closed channel ["+ctx.channel().id().asShortText()+"] while sending operation active"));
+				//actual.onError(new AbortedException("Closed channel ["+ctx.channel().id().asShortText()+"] while sending operation active"));
+				actual.onComplete();
 			}
 		}
 

@@ -16,10 +16,9 @@
 
 package reactor.netty.channel;
 
-import java.nio.charset.Charset;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,7 +26,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.util.ReferenceCountUtil;
-import reactor.core.Exceptions;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
@@ -78,7 +76,6 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			}
 		}
 		catch (Throwable err) {
-			Exceptions.throwIfJvmFatal(err);
 			exceptionCaught(ctx, err);
 		}
 	}
@@ -95,7 +92,6 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			}
 			else {
 				if (log.isDebugEnabled()) {
-					String loggingMsg = msg.toString();
 					if (msg instanceof DecoderResultProvider) {
 						DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
 						if (decoderResult.isFailure()) {
@@ -103,9 +99,16 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 									decoderResult.cause());
 						}
 					}
+					String loggingMsg;
 					if (msg instanceof ByteBufHolder && ((ByteBufHolder)msg).content() != Unpooled.EMPTY_BUFFER) {
 						ByteBuf buffer = ((ByteBufHolder) msg).content();
-						loggingMsg = buffer.readCharSequence(buffer.readableBytes(), Charset.defaultCharset()).toString();
+						loggingMsg = "\n"+ByteBufUtil.prettyHexDump(buffer);
+					}
+					else if (msg instanceof ByteBuf){
+						loggingMsg = "\n"+ByteBufUtil.prettyHexDump((ByteBuf)msg);
+					}
+					else {
+						loggingMsg = msg.toString();
 					}
 					log.debug(format(ctx.channel(), "No ChannelOperation attached. Dropping: {}"),
 							loggingMsg);
@@ -114,15 +117,13 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			}
 		}
 		catch (Throwable err) {
-			Exceptions.throwIfJvmFatal(err);
-			exceptionCaught(ctx, err);
 			ReferenceCountUtil.safeRelease(msg);
+			exceptionCaught(ctx, err);
 		}
 	}
 
 	@Override
 	final public void exceptionCaught(ChannelHandlerContext ctx, Throwable err) {
-		Exceptions.throwIfJvmFatal(err);
 		Connection connection = Connection.from(ctx.channel());
 		ChannelOperations<?, ?> ops = connection.as(ChannelOperations.class);
 		if (ops != null) {
