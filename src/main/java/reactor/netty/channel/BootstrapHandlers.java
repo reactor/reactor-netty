@@ -209,7 +209,6 @@ public abstract class BootstrapHandlers {
 	 * @return current {@link ChannelOperations.OnSetup} factory or null
 	 *
 	 */
-	@SuppressWarnings("unchecked")
 	public static ChannelOperations.OnSetup channelOperationFactory(AbstractBootstrap<?, ?> b) {
 		Objects.requireNonNull(b, "bootstrap");
 		ChannelOperations.OnSetup ops =
@@ -245,7 +244,6 @@ public abstract class BootstrapHandlers {
 	 * @return current {@link ConnectionObserver} or null
 	 *
 	 */
-	@SuppressWarnings("unchecked")
 	public static ConnectionObserver connectionObserver(AbstractBootstrap<?, ?> b) {
 		Objects.requireNonNull(b, "bootstrap");
 		ConnectionObserver obs =
@@ -281,7 +279,6 @@ public abstract class BootstrapHandlers {
 	 * @return current {@link ConnectionObserver} or null
 	 *
 	 */
-	@SuppressWarnings("unchecked")
 	public static ConnectionObserver childConnectionObserver(ServerBootstrap b) {
 		Objects.requireNonNull(b, "bootstrap");
 		ConnectionObserver obs = (ConnectionObserver) b.config()
@@ -556,8 +553,8 @@ public abstract class BootstrapHandlers {
 	BootstrapHandlers() {
 	}
 
-	static final ChannelOption<ChannelOperations.OnSetup> OPS_OPTION = ChannelOption.newInstance("ops_factory");
-	static final ChannelOption<ConnectionObserver> OBSERVER_OPTION = ChannelOption.newInstance("connectionObserver");
+	static final ChannelOption<ChannelOperations.OnSetup> OPS_OPTION = ChannelOption.valueOf("ops_factory");
+	static final ChannelOption<ConnectionObserver> OBSERVER_OPTION = ChannelOption.valueOf("connectionObserver");
 
 
 	static final class LoggingHandlerSupportConsumer
