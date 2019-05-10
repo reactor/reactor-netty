@@ -254,6 +254,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public void run() {
+			Queue<I> queue = this.queue;
 			try {
 				int missed = 1;
 				for (; ; ) {
