@@ -46,8 +46,7 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 		this.sourceCleanup = Objects.requireNonNull(sourceCleanup, "source cleanup handler cannot be null");
 		this.sizeOf = Objects.requireNonNull(sizeOf, "message size mapper cannot be null");
 
-		this.ctx = Objects.requireNonNull(channel.pipeline()
-		                                         .context(ChannelOperationsHandler.class),
+		this.ctx = Objects.requireNonNull(channel.pipeline().lastContext(),
 				"reactiveBridge is not installed");
 	}
 
