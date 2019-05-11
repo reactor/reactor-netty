@@ -128,6 +128,10 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	@Override
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
+		if(log.isDebugEnabled()){
+			log.debug("WebsocketServerOperations Handler Msg Type => "+frame.getClass().getSimpleName());
+		}
+
 		if (frame instanceof CloseWebSocketFrame && ((CloseWebSocketFrame) frame).isFinalFragment()) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
@@ -139,10 +143,16 @@ final class WebsocketServerOperations extends HttpServerOperations
 					close.content()), f -> terminate());
 			return;
 		}
-		if (frame instanceof PingWebSocketFrame) {
-			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()));
-			ctx.read();
-			return;
+
+		//is used gateway?
+		try {
+			this.getClass().getClassLoader().loadClass("org.springframework.web.reactive.socket.adapter.ReactorNettyWebSocketSession");
+		} catch (ClassNotFoundException e) {
+			if (frame instanceof PingWebSocketFrame) {
+				ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()));
+				ctx.read();
+				return;
+			}
 		}
 		if (frame != LastHttpContent.EMPTY_LAST_CONTENT) {
 			super.onInboundNext(ctx, frame);

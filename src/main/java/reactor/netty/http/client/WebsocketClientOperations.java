@@ -125,10 +125,19 @@ final class WebsocketClientOperations extends HttpClientOperations
 			}
 			return;
 		}
-		if (msg instanceof PingWebSocketFrame) {
-			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
-			ctx.read();
-			return;
+		if(log.isDebugEnabled()){
+			log.debug("WebsocketClientOperations Handler Msg Type => "+msg.getClass().getSimpleName());
+		}
+
+		//is used gateway?
+		try {
+			this.getClass().getClassLoader().loadClass("org.springframework.web.reactive.socket.adapter.ReactorNettyWebSocketSession");
+		} catch (ClassNotFoundException e) {
+			if (msg instanceof PingWebSocketFrame) {
+				channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
+				ctx.read();
+				return;
+			}
 		}
 		if (msg instanceof CloseWebSocketFrame &&
 				((CloseWebSocketFrame)msg).isFinalFragment()) {
