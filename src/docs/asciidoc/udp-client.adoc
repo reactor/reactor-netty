@@ -241,7 +241,7 @@ By default, the `UDP` client is configured with the following options:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/udp/UdpClient.java
 ----
-include::{sourcedir}/reactor/netty/udp/UdpClient.java[lines=430..436]
+include::{sourcedir}/reactor/netty/udp/UdpClient.java[lines=429..431]
 ----
 ====
 
@@ -324,7 +324,7 @@ The following listing shows the default configuration for the "`Event Loop Group
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=691..711]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=72..92]
 ----
 ====
 
