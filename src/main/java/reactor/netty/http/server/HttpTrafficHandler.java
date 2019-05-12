@@ -56,11 +56,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	static final String MULTIPART_PREFIX = "multipart";
 
-	final ConnectionObserver listener;
-	final boolean            readForwardHeaders;
+	final ConnectionObserver                                 listener;
+	final boolean                                            secure;
+	final boolean                                            readForwardHeaders;
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compress;
-	final ServerCookieEncoder cookieEncoder;
-	final ServerCookieDecoder cookieDecoder;
+	final ServerCookieEncoder                                cookieEncoder;
+	final ServerCookieDecoder                                cookieDecoder;
 
 	boolean persistentConnection = true;
 	// Track pending responses to support client pipelining: https://tools.ietf.org/html/rfc7230#section-6.3.2
@@ -75,11 +76,11 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			ServerCookieEncoder encoder,
-			ServerCookieDecoder decoder) {
+			ServerCookieEncoder encoder, ServerCookieDecoder decoder, boolean secure) {
 		this.listener = listener;
 		this.readForwardHeaders = readForwardHeaders;
 		this.compress = compress;
+		this.secure = secure;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
 	}
@@ -152,8 +153,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
-						compress,
-						request, ConnectionInfo.from(ctx.channel(), readForwardHeaders, request),
+						compress, request, ConnectionInfo.from(ctx.channel(), readForwardHeaders, request, secure),
 						cookieEncoder, cookieDecoder);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
@@ -229,13 +229,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 									"connection, preparing to close"),
 							pendingResponses);
 				}
-				ctx.write(msg, promise)
+				ctx.write(msg, promise.unvoid())
 				   .addListener(this)
 				   .addListener(ChannelFutureListener.CLOSE);
 				return;
 			}
 
-			ctx.write(msg, promise)
+			ctx.write(msg, promise.unvoid())
 			   .addListener(this);
 
 			if (!persistentConnection) {
@@ -285,7 +285,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						compress,
-						nextRequest, ConnectionInfo.from(ctx.channel(), readForwardHeaders, nextRequest),
+						nextRequest,
+						ConnectionInfo.from(ctx.channel(), readForwardHeaders, nextRequest, secure),
 						cookieEncoder, cookieDecoder);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);

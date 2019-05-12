@@ -22,7 +22,6 @@ import java.util.regex.Pattern;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import reactor.netty.tcp.InetSocketAddressUtil;
 /**
@@ -60,25 +59,26 @@ final class ConnectionInfo {
 
 	final String scheme;
 
-	static ConnectionInfo from(Channel channel, boolean headers, HttpRequest request) {
+	static ConnectionInfo from(Channel channel, boolean headers, HttpRequest request, boolean secured) {
 		if (headers) {
-			return ConnectionInfo.newForwardedConnectionInfo(request, channel);
+			return ConnectionInfo.newForwardedConnectionInfo(request, channel, secured);
 		}
 		else {
-			return ConnectionInfo.newConnectionInfo(channel);
+			return ConnectionInfo.newConnectionInfo(channel, secured);
 		}
 	}
 
 	/**
 	 * Retrieve the connection information from the current connection directly
 	 * @param c the current channel
+	 * @param secured is transport secure (SSL)
 	 * @return the connection information
 	 */
-	static ConnectionInfo newConnectionInfo(Channel c) {
+	static ConnectionInfo newConnectionInfo(Channel c, boolean secured) {
 		SocketChannel channel = (SocketChannel) c; 
 		InetSocketAddress hostAddress = channel.localAddress();
 		InetSocketAddress remoteAddress = getRemoteAddress(channel);
-		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
+		String scheme = secured ? "https" : "http";
 		return new ConnectionInfo(hostAddress, remoteAddress, scheme);
 	}
 
@@ -87,21 +87,22 @@ final class ConnectionInfo {
 	 * HTTP request headers, or from the current connection directly if none are found.
 	 * @param request the current server request
 	 * @param channel the current channel
+	 * @param secured is transport secure (SSL)
 	 * @return the connection information
 	 */
-	static ConnectionInfo newForwardedConnectionInfo(HttpRequest request, Channel channel) {
+	static ConnectionInfo newForwardedConnectionInfo(HttpRequest request, Channel channel, boolean secured) {
 		if (request.headers().contains(FORWARDED_HEADER)) {
-			return parseForwardedInfo(request, (SocketChannel)channel);
+			return parseForwardedInfo(request, (SocketChannel)channel, secured);
 		}
 		else {
-			return parseXForwardedInfo(request, (SocketChannel)channel);
+			return parseXForwardedInfo(request, (SocketChannel)channel, secured);
 		}
 	}
 
-	static ConnectionInfo parseForwardedInfo(HttpRequest request, SocketChannel channel) {
+	static ConnectionInfo parseForwardedInfo(HttpRequest request, SocketChannel channel, boolean secured) {
 		InetSocketAddress hostAddress = channel.localAddress();
 		InetSocketAddress remoteAddress = getRemoteAddress(channel);
-		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
+		String scheme = secured ? "https" : "http";
 
 		String forwarded = request.headers().get(FORWARDED_HEADER).split(",")[0];
 		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
@@ -131,10 +132,10 @@ final class ConnectionInfo {
 		return InetSocketAddressUtil.createUnresolved(address, defaultPort);
 	}
 
-	static ConnectionInfo parseXForwardedInfo(HttpRequest request, SocketChannel channel) {
+	static ConnectionInfo parseXForwardedInfo(HttpRequest request, SocketChannel channel, boolean secured) {
 		InetSocketAddress hostAddress = channel.localAddress();
 		InetSocketAddress remoteAddress = getRemoteAddress(channel);
-		String scheme = channel.pipeline().get(SslHandler.class) != null ? "https" : "http";
+		String scheme =  secured ? "https" : "http";
 		if (request.headers().contains(XFORWARDED_IP_HEADER)) {
 			String remoteIpValue = request.headers().get(XFORWARDED_IP_HEADER).split(",")[0];
 			remoteAddress = parseAddress(remoteIpValue, remoteAddress.getPort());
