@@ -71,7 +71,7 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 		}
 		if (msg instanceof LastHttpContent) {
 			accessLog.increaseContentLength(((LastHttpContent) msg).content().readableBytes());
-			ctx.write(msg, promise)
+			ctx.write(msg, promise.unvoid())
 			   .addListener(future -> {
 			       if (future.isSuccess()) {
 			           accessLog.log();
