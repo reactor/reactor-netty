@@ -47,6 +47,7 @@ ext {
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
   reactorCoreVersion = "3.3.0.BUILD-SNAPSHOT"
+  blockHoundVersion = "1.0.0.BUILD-SNAPSHOT"
 
   // Logging
   slf4jVersion = '1.7.12'
@@ -214,6 +215,7 @@ configure(rootProject) { project ->
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
 
 	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
+	optional "io.projectreactor.tools:blockhound:$blockHoundVersion"
 
 	compile "io.netty:netty-handler:${nettyVersion}"
 	compile "io.netty:netty-codec-http:${nettyVersion}"

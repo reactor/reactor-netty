@@ -89,6 +89,8 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
@@ -101,6 +103,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @since 0.6
  */
 public class HttpClientTest {
+
+	static final Logger log = Loggers.getLogger(HttpClientTest.class);
 
 	@Test
 	public void abort() {
@@ -851,30 +855,30 @@ public class HttpClientTest {
 				          .bindNow();
 
 		createHttpClientForContextWithAddress(context)
-		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
-		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
-		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
+		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
+		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
+		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
 		        .put()
 		        .uri("/201")
 		        .responseContent()
 		        .blockLast();
 
 		createHttpClientForContextWithAddress(context)
-		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
-		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
-		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
+		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
+		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
+		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
 		        .put()
 		        .uri("/204")
 		        .responseContent()
 		        .blockLast(Duration.ofSeconds(30));
 
 		createHttpClientForContextWithAddress(context)
-		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
-		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
-		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
+		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
+		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
+		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
 		        .get()
 		        .uri("/200")
 		        .responseContent()
@@ -901,7 +905,7 @@ public class HttpClientTest {
 
 		AtomicInteger i = new AtomicInteger();
 		createHttpClientForContextWithAddress(context)
-		        .observe((c, s) -> System.out.println(s + "" + c))
+		        .observe((c, s) -> log.info(s + "" + c))
 		        .get()
 		        .uri(Mono.fromCallable(() -> {
 		            switch (i.incrementAndGet()) {
@@ -931,7 +935,7 @@ public class HttpClientTest {
 
 		createHttpClientForContextWithAddress(context)
 		        .headersWhen(h -> Mono.just(h.set("test", "test")).delayElement(Duration.ofSeconds(2)))
-		        .observe((c, s) -> System.out.println(s + "" + c))
+		        .observe((c, s) -> log.debug(s + "" + c))
 		        .get()
 		        .uri("/201")
 		        .responseContent()

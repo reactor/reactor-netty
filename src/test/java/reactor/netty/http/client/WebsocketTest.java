@@ -50,6 +50,8 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,6 +64,8 @@ import static org.hamcrest.CoreMatchers.is;
 public class WebsocketTest {
 
 	static final String auth = "bearer abc";
+
+	static final Logger log = Loggers.getLogger(WebsocketTest.class);
 
 	DisposableServer httpServer = null;
 
@@ -150,7 +154,7 @@ public class WebsocketTest {
 //		                       .flatMapMany(in -> in.receiveWebsocket()
 //		                                        .receive()
 //		                                        .asByteArray())
-//		                       .doOnNext(d -> System.out.println(d.length))
+//		                       .doOnNext(d -> log.debug(d.length))
 //		                       .log()
 //		                       .subscribe();
 //
@@ -203,7 +207,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .route(r -> r.get("/test/{param}", (req, res) -> {
-					          System.out.println(req.requestHeaders().get("test"));
+					          log.debug(req.requestHeaders().get("test"));
 					          return res.header("content-type", "text/plain")
 					                    .sendWebsocket((in, out) ->
 							                    out.options(NettyPipeline.SendOptions::flushOnEach)
@@ -246,14 +250,14 @@ public class WebsocketTest {
 				      .cache()
 				      .doOnError(i -> System.err.println("Failed requesting server: " + i));
 
-		System.out.println("STARTING: server[" + serverRes.get() + "] / client[" + clientRes.get() + "]");
+		log.debug("STARTING: server[" + serverRes.get() + "] / client[" + clientRes.get() + "]");
 
 		StepVerifier.create(response)
 		            .expectNextMatches(list -> "1000 World!".equals(list.get(999)))
 		            .expectComplete()
 		            .verify();
 
-		System.out.println("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
+		log.debug("FINISHED: server[" + serverRes.get() + "] / client[" + clientRes + "]");
 	}
 
 	@Test
@@ -805,7 +809,7 @@ public class WebsocketTest {
 			          Mono.delay(Duration.ofSeconds(3))
 			              .delayUntil(i -> out.sendClose())
 			              .subscribe(c -> {
-				              System.out.println("context.dispose()");
+				              log.debug("context.dispose()");
 				              latch.countDown();
 			              });
 		              in.withConnection(conn ->
@@ -818,7 +822,7 @@ public class WebsocketTest {
 		                                  error.set(true);
 		                              },
 		                              () -> {
-		                                  System.out.println("context.onClose() completed");
+		                                  log.debug("context.onClose() completed");
 		                                  latch.countDown();
 		                              }));
 		                  Mono.delay(Duration.ofSeconds(3))
@@ -826,7 +830,7 @@ public class WebsocketTest {
 		                          AtomicBoolean disposed = new AtomicBoolean(false);
 		                          in.withConnection(conn -> {
 		                              disposed.set(conn.isDisposed());
-		                              System.out.println("context.isDisposed() " + conn.isDisposed());
+		                              log.debug("context.isDisposed() " + conn.isDisposed());
 		                          });
 		                          if (disposed.get()) {
 		                              latch.countDown();
@@ -867,7 +871,7 @@ public class WebsocketTest {
 		              in.withConnection(conn -> {
 		                  Mono.delay(Duration.ofSeconds(3))
 		                      .subscribe(c -> {
-		                              System.out.println("context.dispose()");
+		                              log.debug("context.dispose()");
 		                              conn.dispose();
 		                              latch.countDown();
 		                      });
@@ -880,7 +884,7 @@ public class WebsocketTest {
 		                                     error.set(true);
 		                                 },
 		                                 () -> {
-		                                     System.out.println("context.onClose() completed");
+		                                     log.debug("context.onClose() completed");
 		                                     latch.countDown();
 		                                 });
 		              });
@@ -889,7 +893,7 @@ public class WebsocketTest {
 		                          AtomicBoolean disposed = new AtomicBoolean(false);
 		                          in.withConnection(conn -> {
 		                              disposed.set(conn.isDisposed());
-		                              System.out.println("context.isDisposed() " + conn.isDisposed());
+		                              log.debug("context.isDisposed() " + conn.isDisposed());
 		                          });
 		                          if (disposed.get()) {
 		                              latch.countDown();
@@ -936,7 +940,7 @@ public class WebsocketTest {
 		                                 error.set(true);
 		                             },
 		                             () -> {
-		                                 System.out.println("context.onClose() completed");
+		                                 log.debug("context.onClose() completed");
 		                                 latch.countDown();
 		                             }));
 		              Mono.delay(Duration.ofSeconds(3))
@@ -944,7 +948,7 @@ public class WebsocketTest {
 		                      AtomicBoolean disposed = new AtomicBoolean(false);
 		                      in.withConnection(conn -> {
 		                          disposed.set(conn.isDisposed());
-		                          System.out.println("context.isDisposed() " + conn.isDisposed());
+		                          log.debug("context.isDisposed() " + conn.isDisposed());
 		                      });
 		                      if (disposed.get()) {
 		                          latch.countDown();

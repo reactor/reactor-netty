@@ -293,7 +293,7 @@ public class PooledConnectionProviderTest {
 		                     ConcurrentMap<PooledConnectionProvider.PoolKey, PooledConnectionProvider.Pool> pools = provider.channelPools;
 		                     pool.set(pools.get(pools.keySet().toArray()[0]));
 		                     provider.disposeLater()
-		                             .block(Duration.ofSeconds(30));
+		                             .subscribe();
 		                     conn.channel()
 		                         .closeFuture()
 		                         .addListener(future -> latch.countDown());
