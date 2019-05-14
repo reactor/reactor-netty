@@ -337,6 +337,10 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			   .removeListener(this);
 
 			Context context = actual.currentContext();
+			Queue<I> queue = this.queue;
+			if (queue == null) {
+				return;
+			}
 			while (!queue.isEmpty()) {
 				I sourceMessage = queue.poll();
 				if (sourceMessage != null) {
