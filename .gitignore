@@ -8,7 +8,6 @@ build
 .settings
 out
 *.log
-*.i*
 *.java.hsp
 *.index
 *.data
