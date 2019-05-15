@@ -36,7 +36,9 @@ public class NettyBlockHoundIntegration implements BlockHoundIntegration {
 		//allow set initialization that might use Yield
 		builder.allowBlockingCallsInside(ChannelInitializer.class.getName(), "initChannel");
 		//allow unbounded linked blocking queue
-		builder.disallowBlockingCallsInside(GlobalEventExecutor.class.getName(), "addTask");
+		builder.allowBlockingCallsInside(GlobalEventExecutor.class.getName(), "addTask");
+		//allow unbounded linked blocking queue
+		builder.allowBlockingCallsInside(SingleThreadEventExecutor.class.getName(), "confirmShutdown");
 
 		//prevent blocking call in arbitrary netty event executor tasks
 		builder.disallowBlockingCallsInside(AbstractEventExecutor.class.getName(), "safeExecute");
