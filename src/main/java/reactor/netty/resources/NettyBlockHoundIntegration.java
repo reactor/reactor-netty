@@ -17,6 +17,7 @@ package reactor.netty.resources;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import reactor.blockhound.BlockHound;
 import reactor.blockhound.integration.BlockHoundIntegration;
@@ -34,6 +35,8 @@ public class NettyBlockHoundIntegration implements BlockHoundIntegration {
 
 		//allow set initialization that might use Yield
 		builder.allowBlockingCallsInside(ChannelInitializer.class.getName(), "initChannel");
+		//allow unbounded linked blocking queue
+		builder.disallowBlockingCallsInside(GlobalEventExecutor.class.getName(), "addTask");
 
 		//prevent blocking call in arbitrary netty event executor tasks
 		builder.disallowBlockingCallsInside(AbstractEventExecutor.class.getName(), "safeExecute");
