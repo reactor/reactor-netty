@@ -355,7 +355,7 @@ public class TcpServerTests {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		TcpServer server = TcpServer.create().host("foo").port(123);
+		TcpServer server = TcpServer.create().host("example.com").port(123);
 		Assertions.assertThat(server.configure())
 		          .isNotSameAs(TcpServerBind.INSTANCE.serverBootstrap)
 		          .isNotSameAs(server.configure());

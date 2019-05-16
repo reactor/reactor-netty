@@ -47,7 +47,7 @@ public class HttpResponseStatusCodesHandlingTests {
 
 		Mono<Integer> content = client.headers(h -> h.add("Content-Type", "text/plain"))
 				                      .request(HttpMethod.GET)
-				                      .uri("/unsupportedURI")
+				                      .uri("/status/404")
 				                      .send(ByteBufFlux.fromString(Flux.just("Hello")
 				                                                       .log("client-send")))
 				                      .responseSingle((res, buf) -> Mono.just(res.status().code()))

@@ -109,14 +109,14 @@ public class UriEndpointFactoryTest {
 	@Test
 	public void createUriEndpointRelativeNoLeadingSlash() {
 		String test1 = this.builder.build()
-				.createUriEndpoint("foo:8080/bar", false)
+				.createUriEndpoint("example.com:8080/bar", false)
 				.toExternalForm();
 		String test2 = this.builder.build()
-				.createUriEndpoint("foo:8080/bar", true)
+				.createUriEndpoint("example.com:8080/bar", true)
 				.toExternalForm();
 
-		assertThat(test1).isEqualTo("http://foo:8080/bar");
-		assertThat(test2).isEqualTo("ws://foo:8080/bar");
+		assertThat(test1).isEqualTo("http://example.com:8080/bar");
+		assertThat(test2).isEqualTo("ws://example.com:8080/bar");
 	}
 
 	@Test
@@ -155,33 +155,33 @@ public class UriEndpointFactoryTest {
 
 	@Test
 	public void createUriEndpointRelativeAddressSsl() {
-		String test1 = this.builder.host("example")
+		String test1 = this.builder.host("example.com")
 				.port(8080)
 				.sslSupport()
 				.build()
 				.createUriEndpoint("/foo", false)
 				.toExternalForm();
-		String test2 = this.builder.host("example")
+		String test2 = this.builder.host("example.com")
 				.port(8080)
 				.sslSupport()
 				.build()
 				.createUriEndpoint("/foo", true)
 				.toExternalForm();
 
-		assertThat(test1).isEqualTo("https://example:8080/foo");
-		assertThat(test2).isEqualTo("wss://example:8080/foo");
+		assertThat(test1).isEqualTo("https://example.com:8080/foo");
+		assertThat(test2).isEqualTo("wss://example.com:8080/foo");
 	}
 
 	@Test
 	public void createUriEndpointRelativeWithPort() {
 		String test = this.builder
-				.host("google.com")
+				.host("example.com")
 				.port(80)
 				.build()
 				.createUriEndpoint("/foo", false)
 				.toExternalForm();
 
-		assertThat(test).isEqualTo("http://google.com/foo");
+		assertThat(test).isEqualTo("http://example.com/foo");
 	}
 
 	@Test
