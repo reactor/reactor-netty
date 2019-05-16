@@ -48,10 +48,10 @@ public class InetSocketAddressUtilTest {
 	@Test
 	public void shouldCreateUnresolvedAddressByHostName() {
 		InetSocketAddress socketAddress = InetSocketAddressUtil
-				.createUnresolved("google.com", 80);
+				.createUnresolved("example.com", 80);
 		assertThat(socketAddress.isUnresolved()).isTrue();
 		assertThat(socketAddress.getPort()).isEqualTo(80);
-		assertThat(socketAddress.getHostString()).isEqualTo("google.com");
+		assertThat(socketAddress.getHostString()).isEqualTo("example.com");
 	}
 
 	@Test
@@ -80,7 +80,7 @@ public class InetSocketAddressUtilTest {
 
 	@Test
 	public void shouldNotReplaceIfNonNumeric() {
-		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("google.com",
+		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("example.com",
 				80);
 		InetSocketAddress processedAddress = InetSocketAddressUtil
 				.replaceUnresolvedNumericIp(socketAddress);
@@ -97,7 +97,7 @@ public class InetSocketAddressUtilTest {
 
 	@Test
 	public void shouldResolveUnresolvedAddress() {
-		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("google.com",
+		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("example.com",
 				80);
 		InetSocketAddress processedAddress = InetSocketAddressUtil
 				.replaceWithResolved(socketAddress);
@@ -107,7 +107,7 @@ public class InetSocketAddressUtilTest {
 
 	@Test
 	public void shouldNotReplaceIfAlreadyResolved() {
-		InetSocketAddress socketAddress = new InetSocketAddress("google.com", 80);
+		InetSocketAddress socketAddress = new InetSocketAddress("example.com", 80);
 		InetSocketAddress processedAddress = InetSocketAddressUtil
 				.replaceWithResolved(socketAddress);
 		assertThat(processedAddress).isSameAs(socketAddress);

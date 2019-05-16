@@ -126,44 +126,4 @@ public class FluxReceiveTest {
 		server1.disposeNow();
 		server2.disposeNow();
 	}
-
-	/*static final Logger logger = Loggers.getLogger(FluxReceiveTest.class);
-
-	@Test
-	public void issue362() throws InterruptedException {
-		HttpClient client = HttpClient.newConnection()
-		                              .tcpConfiguration(tcp -> tcp.runOn(LoopResources.create("my-loop", 2, false))
-		                                                          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000));
-
-		client.doOnRequest((req, c) -> c.addHandlerFirst(new IdleStateHandler(1, 0, 0))
-		                                .addHandlerLast(new ChannelDuplexHandler() {
-			                                @Override
-			                                public void userEventTriggered(
-					                                ChannelHandlerContext ctx,
-					                                Object evt) throws Exception {
-				                                if (evt instanceof IdleStateEvent) {
-					                                ctx.close();
-				                                }
-				                                else {
-					                                super.userEventTriggered(ctx, evt);
-				                                }
-			                                }
-		                                }))
-		      .get()
-		      .uri("http://releases.ubuntu.com/16.04.4/ubuntu-16.04.4-desktop-amd64.iso")
-		      .responseContent()
-		      .log(logger.getName())
-		      .retry(IOException.class::isInstance)
-		      .subscribe(byteBuf -> {
-			      logger.info("Msg: {}", byteBuf);
-			      Flux.just(1, 2, 3)
-			          .onErrorReturn(8)
-			          .subscribe(i -> {
-				          throw new RuntimeException(i + " error");
-			          });
-		      });
-
-		Thread.sleep(Duration.ofMinutes(5)
-		                     .toMillis());
-	}*/
 }
