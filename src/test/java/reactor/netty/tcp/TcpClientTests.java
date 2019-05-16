@@ -563,7 +563,7 @@ public class TcpClientTests {
 
 		final CountDownLatch latch = new CountDownLatch(1);
 		System.out.println(client.get()
-		                         .uri("http://www.google.com/?q=test%20d%20dq")
+		                         .uri("http://example.com/?q=test%20d%20dq")
 		                         .responseContent()
 		                         .asString()
 		                         .collectList()
@@ -575,7 +575,7 @@ public class TcpClientTests {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		TcpClient client = TcpClient.create().host("foo").port(123);
+		TcpClient client = TcpClient.create().host("example.com").port(123);
 		Assertions.assertThat(client.configure())
 		          .isNotSameAs(TcpClient.DEFAULT_BOOTSTRAP)
 		          .isNotSameAs(client.configure());

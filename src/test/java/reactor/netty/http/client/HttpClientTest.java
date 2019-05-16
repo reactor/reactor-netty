@@ -321,41 +321,33 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@Ignore
 	public void postUpload() throws IOException {
 		HttpClient client =
 				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("httpbin.org"))
 				          .wiretap(true);
 
-		try (InputStream f = getClass().getResourceAsStream("/public/index.html")) {
-			client.put()
+		Tuple2<Integer, String> res;
+		try (InputStream f = getClass().getResourceAsStream("/smallFile.txt")) {
+			res = client.post()
 			      .uri("/post")
 			      .sendForm((req, form) -> form.multipart(true)
 			                                   .file("test", f)
-			                                   .attr("att1", "attr2")
+			                                   .attr("attr1", "attr2")
 			                                   .file("test2", f))
-			      .responseSingle((r, buf) -> Mono.just(r.status().code()))
+			      .responseSingle((r, buf) -> buf.asString().map(s -> Tuples.of(r.status().code(), s)))
 			      .block(Duration.ofSeconds(30));
 		}
 
-		Integer res = client.followRedirect(true)
-		                    .get()
-		                    .uri("/search")
-		                    .responseSingle((r, out) -> Mono.just(r.status().code()))
-		                    .log()
-		                    .block(Duration.ofSeconds(30));
-
-		assertThat(res).isNotNull();
-		if (res != 200) {
-			throw new IllegalStateException("test status failed with " + res);
-		}
+		assertThat(res).as("response").isNotNull();
+		assertThat(res.getT1()).as("status code").isEqualTo(200);
+		assertThat(res.getT2()).as("response body reflecting request").contains("\"form\": {\n    \"attr1\": \"attr2\", \n    \"test\": \"This is an UTF-8 file that is smaller than 1024 bytes.\\nIt contains accents like \\u00e9.\\nEnd of File\", \n    \"test2\": \"\"\n  },");
 	}
 
 	@Test
 	public void simpleTest404() {
 		doSimpleTest404(HttpClient.create()
-		                          .baseUrl("google.com"));
+		                          .baseUrl("example.com"));
 	}
 
 	@Test
@@ -364,7 +356,7 @@ public class HttpClientTest {
 		HttpClient client =
 				HttpClient.create(pool)
 				          .port(80)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
 				          .wiretap(true);
 		doSimpleTest404(client);
 		doSimpleTest404(client);
@@ -374,7 +366,7 @@ public class HttpClientTest {
 	private void doSimpleTest404(HttpClient client) {
 		Integer res = client.followRedirect(true)
 				            .get()
-				            .uri("/unsupportedURI")
+				            .uri("/status/404")
 				            .responseSingle((r, buf) -> Mono.just(r.status().code()))
 				            .log()
 				            .block();
@@ -389,11 +381,11 @@ public class HttpClientTest {
 	public void disableChunkForced() {
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
 				          .headers(h -> h.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED))
 				          .wiretap(true)
 				          .request(HttpMethod.GET)
-				          .uri("/unsupportedURI")
+				          .uri("/status/404")
 				          .send(ByteBufFlux.fromString(Flux.just("hello")))
 				          .responseSingle((res, conn) -> Mono.just(res.status())
 				                                             .zipWith(conn.asString()))
@@ -408,11 +400,11 @@ public class HttpClientTest {
 	public void disableChunkForced2() {
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
 				          .wiretap(true)
 				          .keepAlive(false)
 				          .get()
-				          .uri("/unsupportedURI")
+				          .uri("/status/404")
 				          .responseSingle((res, conn) -> Mono.just(res.status())
 				                                             .zipWith(conn.asString()))
 				          .block(Duration.ofSeconds(30));
@@ -433,7 +425,7 @@ public class HttpClientTest {
 				          .doOnResponse((res, c) -> ch1.set(c.channel()))
 				          .wiretap(true)
 				          .get()
-				          .uri("http://google.com/unsupportedURI")
+				          .uri("http://example.com/status/404")
 				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 				          .block(Duration.ofSeconds(30));
 
@@ -441,7 +433,7 @@ public class HttpClientTest {
 		          .doOnResponse((res, c) -> ch2.set(c.channel()))
 		          .wiretap(true)
 		          .get()
-		          .uri("http://google.com/unsupportedURI")
+		          .uri("http://example.com/status/404")
 		          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 		          .block(Duration.ofSeconds(30));
 
@@ -460,12 +452,12 @@ public class HttpClientTest {
 		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
 		HttpClient client =
 				HttpClient.create(p)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("google.com"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
 				          .wiretap(true);
 
 		Tuple2<HttpResponseStatus, Channel> r =
 				client.get()
-				      .uri("/unsupportedURI")
+				      .uri("/status/404")
 				      .responseConnection((res, conn) -> Mono.just(res.status())
 				                                             .delayUntil(s -> conn.inbound().receive())
 				                                             .zipWith(Mono.just(conn.channel())))
@@ -475,7 +467,7 @@ public class HttpClientTest {
 
 		Channel r2 =
 				client.get()
-				      .uri("/unsupportedURI")
+				      .uri("/status/404")
 				      .responseConnection((res, conn) -> Mono.just(conn.channel())
 				                                             .delayUntil(s -> conn.inbound().receive()))
 				      .blockLast(Duration.ofSeconds(30));
@@ -498,13 +490,13 @@ public class HttpClientTest {
 
 		HttpResponseStatus r =
 				client.request(HttpMethod.GET)
-				      .uri("http://google.com")
+				      .uri("http://example.com")
 				      .send(ByteBufFlux.fromString(Mono.just(" ")))
 				      .responseSingle((res, buf) -> Mono.just(res.status()))
 				      .block(Duration.ofSeconds(30));
 
 		client.request(HttpMethod.GET)
-		      .uri("http://google.com")
+		      .uri("http://example.com")
 		      .send(ByteBufFlux.fromString(Mono.just(" ")))
 		      .responseSingle((res, buf) -> Mono.just(res.status()))
 		      .block(Duration.ofSeconds(30));
@@ -518,7 +510,7 @@ public class HttpClientTest {
 		StepVerifier.create(HttpClient.create()
 		                              .wiretap(true)
 		                              .get()
-		                              .uri("https://developer.chrome.com")
+		                              .uri("https://example.com")
 		                              .response((r, buf) -> Mono.just(r.status().code())))
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -527,7 +519,7 @@ public class HttpClientTest {
 		StepVerifier.create(HttpClient.create()
 		                              .wiretap(true)
 		                              .get()
-		                              .uri("https://developer.chrome.com")
+		                              .uri("https://example.com")
 		                              .response((r, buf) -> Mono.just(r.status().code())))
 		            .expectNextMatches(status -> status >= 200 && status < 400)
 		            .expectComplete()
@@ -685,7 +677,7 @@ public class HttpClientTest {
 	@Test
 	public void gettingOptionsDuplicates() {
 		HttpClient client = HttpClient.create()
-		                              .tcpConfiguration(tcpClient -> tcpClient.host("foo"))
+		                              .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
 		                              .wiretap(true)
 		                              .port(123)
 		                              .compress(true);
