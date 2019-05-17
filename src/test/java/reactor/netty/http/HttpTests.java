@@ -724,7 +724,7 @@ public class HttpTests {
 				          .protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
 				          .secure(ssl -> ssl.sslContext(serverOptions))
 				          .port(8080)
-				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
+				          .handle((req, res) -> res.sendString(req.receive().aggregate().retain().asString()))
 				          .wiretap(true)
 				          .bindNow();
 
