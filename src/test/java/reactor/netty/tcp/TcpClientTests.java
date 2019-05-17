@@ -47,11 +47,13 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
+import reactor.netty.HttpEchoTestingServer;
 import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
@@ -63,8 +65,7 @@ import reactor.test.StepVerifier;
 import reactor.util.Loggers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 /**
@@ -558,19 +559,44 @@ public class TcpClientTests {
 
 	@Test
 	public void nettyNetChannelAcceptsNettyChannelHandlers() throws InterruptedException {
-		HttpClient client = HttpClient.create()
-		                              .wiretap(true);
+		HttpEchoTestingServer server = new HttpEchoTestingServer();
+		server.start();
+		String echoTestingUrl = server.getBaseUrl();
 
-		final CountDownLatch latch = new CountDownLatch(1);
-		System.out.println(client.get()
-		                         .uri("http://example.com/?q=test%20d%20dq")
-		                         .responseContent()
-		                         .asString()
-		                         .collectList()
-		                         .doOnSuccess(v -> latch.countDown())
-		                         .block(Duration.ofSeconds(30)));
+		try {
+			//the main goal of this test seems to be to validate "net channel" interaction
+			// HttpClient interacts with MockServer through a NioSocketChannel
+			String testUrl = echoTestingUrl + "anything?q=test%20d%20dq";
+			HttpClient client = HttpClient.create()
+			                              //uncomment to verify the type of Channel used
+//			                              .tcpConfiguration(tcp -> tcp.doOnConnected(c -> System.err.println(c.channel().getClass())))
+                                          .wiretap(true);
 
-		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
+
+			final CountDownLatch latch = new CountDownLatch(1);
+			List<String> bodyCollectList = client.get()
+			                                     .uri(testUrl)
+			                                     .responseContent()
+			                                     .asString()
+			                                     .collectList()
+			                                     .doOnSuccess(v -> latch.countDown())
+			                                     .block(Duration.ofSeconds(30));
+
+			//we make a few assertions on the request not timing out and the body content,
+			//but this test is more about testing the socket channel setup
+			boolean noTimeout = false;
+			try {
+				noTimeout = latch.await(15, TimeUnit.SECONDS);
+			}
+			catch (InterruptedException e) {
+				Assertions.fail("Latch interrupted", e);
+			}
+			assertTrue("Latch didn't time out",noTimeout);
+			assertThat(bodyCollectList.get(0), containsString("\"q\" : [ \"test%20d%20dq\" ]"));
+		}
+		finally {
+			server.stop();
+		}
 	}
 
 	@Test
