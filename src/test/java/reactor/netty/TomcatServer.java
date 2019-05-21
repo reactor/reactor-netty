@@ -130,10 +130,7 @@ public class TomcatServer {
 			StringBuilder builder = new StringBuilder();
 
 			Collection<Part> parts = req.getParts();
-			parts.forEach(p -> builder.append(p.getName())
-					.append(": ")
-					.append(p.getSize())
-					.append(' '));
+			parts.forEach(p -> builder.append(p.getName()).append(' '));
 
 			writer.print(builder);
 			writer.flush();

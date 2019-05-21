@@ -106,7 +106,7 @@ public class HttpClientWithTomcatTest {
 
 		assertThat(res).as("response").isNotNull();
 		assertThat(res.getT1()).as("status code").isEqualTo(200);
-		assertThat(res.getT2()).as("response body reflecting request").contains("test: 95 attr1: 5 test2: 0 ");
+		assertThat(res.getT2()).as("response body reflecting request").contains("test attr1 test2 ");
 	}
 
 	@Test
