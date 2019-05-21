@@ -345,7 +345,7 @@ public class HttpClientTest {
 
 		assertThat(res).as("response").isNotNull();
 		assertThat(res.getT1()).as("status code").isEqualTo(200);
-		assertThat(res.getT2()).as("response body reflecting request").contains("\"form\": {\n    \"attr1\": \"attr2\", \n    \"test\": \"This is an UTF-8 file that is smaller than 1024 bytes.\\nIt contains accents like \\u00e9.\\nEnd of File\", \n    \"test2\": \"\"\n  },");
+		assertThat(res.getT2()).as("response body reflecting request").contains("\"form\": {\n    \"attr1\": \"attr2\", \n    \"test\": \"This is an UTF-8 file that is smaller than 1024 bytes."+System.lineSeparator().replaceAll("\\n", "\\\\n").replaceAll("\\r", "\\\\r")+"It contains accents like \\u00e9.\\nEnd of File\", \n    \"test2\": \"\"\n  },");
 	}
 
 	@Test
