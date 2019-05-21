@@ -133,7 +133,7 @@ public class TomcatServer {
 			parts.forEach(p -> builder.append(p.getName())
 					.append(": ")
 					.append(p.getSize())
-					.append('\n'));
+					.append(' '));
 
 			writer.print(builder);
 			writer.flush();
