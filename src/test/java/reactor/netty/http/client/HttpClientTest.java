@@ -82,6 +82,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
+import reactor.netty.TomcatServer;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
@@ -321,16 +322,21 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void postUpload() throws IOException {
+	public void postUpload() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
 		HttpClient client =
 				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("httpbin.org"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .port(tomcat.port())
 				          .wiretap(true);
 
 		Tuple2<Integer, String> res;
 		try (InputStream f = getClass().getResourceAsStream("/smallFile.txt")) {
 			res = client.post()
-			      .uri("/post")
+			      .uri("/multipart")
 			      .sendForm((req, form) -> form.multipart(true)
 			                                   .file("test", f)
 			                                   .attr("attr1", "attr2")
@@ -341,26 +347,40 @@ public class HttpClientTest {
 
 		assertThat(res).as("response").isNotNull();
 		assertThat(res.getT1()).as("status code").isEqualTo(200);
-		assertThat(res.getT2()).as("response body reflecting request").contains("\"form\": {\n    \"attr1\": \"attr2\", \n    \"test\": \"This is an UTF-8 file that is smaller than 1024 bytes.\\nIt contains accents like \\u00e9.\\nEnd of File\", \n    \"test2\": \"\"\n  },");
+		assertThat(res.getT2()).as("response body reflecting request").contains("test: 95\nattr1: 5\ntest2: 0\n");
+
+		tomcat.stop();
 	}
 
 	@Test
-	public void simpleTest404() {
+	public void simpleTest404() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
 		doSimpleTest404(HttpClient.create()
-		                          .baseUrl("example.com"));
+		                          .baseUrl("http://localhost:" + tomcat.port()));
+
+		tomcat.stop();
 	}
 
 	@Test
-	public void simpleTest404_1() {
+	public void simpleTest404_1() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
 		ConnectionProvider pool = ConnectionProvider.fixed("http", 1);
 		HttpClient client =
 				HttpClient.create(pool)
-				          .port(80)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
+				          .port(tomcat.port())
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
 				          .wiretap(true);
 		doSimpleTest404(client);
 		doSimpleTest404(client);
 		pool.dispose();
+
+		tomcat.stop();
 	}
 
 	private void doSimpleTest404(HttpClient client) {
@@ -378,14 +398,21 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void disableChunkForced() {
+	public void disableChunkForced() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
+		AtomicReference<HttpHeaders> headers = new AtomicReference<>();
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .port(tomcat.port())
 				          .headers(h -> h.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED))
 				          .wiretap(true)
+				          .doAfterRequest((req, connection) -> headers.set(req.requestHeaders()))
 				          .request(HttpMethod.GET)
-				          .uri("/status/404")
+				          .uri("/status/400")
 				          .send(ByteBufFlux.fromString(Flux.just("hello")))
 				          .responseSingle((res, conn) -> Mono.just(res.status())
 				                                             .zipWith(conn.asString()))
@@ -393,15 +420,26 @@ public class HttpClientTest {
 
 		assertThat(r).isNotNull();
 
-		Assert.assertEquals(r.getT1(), HttpResponseStatus.BAD_REQUEST);
+		assertThat(r.getT1()).isEqualTo(HttpResponseStatus.BAD_REQUEST);
+		assertThat(headers.get().get("Content-Length")).isEqualTo("5");
+		assertThat(headers.get().get("Transfer-Encoding")).isNull();
+
+		tomcat.stop();
 	}
 
 	@Test
-	public void disableChunkForced2() {
+	public void disableChunkForced2() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
+		AtomicReference<HttpHeaders> headers = new AtomicReference<>();
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .port(tomcat.port())
 				          .wiretap(true)
+				          .doAfterRequest((req, connection) -> headers.set(req.requestHeaders()))
 				          .keepAlive(false)
 				          .get()
 				          .uri("/status/404")
@@ -411,11 +449,19 @@ public class HttpClientTest {
 
 		assertThat(r).isNotNull();
 
-		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
+		assertThat(r.getT1()).isEqualTo(HttpResponseStatus.NOT_FOUND);
+		assertThat(headers.get().get("Content-Length")).isEqualTo("0");
+		assertThat(headers.get().get("Transfer-Encoding")).isNull();
+
+		tomcat.stop();
 	}
 
 	@Test
-	public void simpleClientPooling() {
+	public void simpleClientPooling() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
 		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
@@ -425,7 +471,7 @@ public class HttpClientTest {
 				          .doOnResponse((res, c) -> ch1.set(c.channel()))
 				          .wiretap(true)
 				          .get()
-				          .uri("http://example.com/status/404")
+				          .uri("http://localhost:" + tomcat.port() + "/status/404")
 				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 				          .block(Duration.ofSeconds(30));
 
@@ -433,7 +479,7 @@ public class HttpClientTest {
 		          .doOnResponse((res, c) -> ch2.set(c.channel()))
 		          .wiretap(true)
 		          .get()
-		          .uri("http://example.com/status/404")
+		          .uri("http://localhost:" + tomcat.port() + "/status/404")
 		          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
 		          .block(Duration.ofSeconds(30));
 
@@ -445,14 +491,21 @@ public class HttpClientTest {
 
 		Assert.assertEquals(r, HttpResponseStatus.NOT_FOUND);
 		p.dispose();
+
+		tomcat.stop();
 	}
 
 	@Test
-	public void disableChunkImplicitDefault() {
+	public void disableChunkImplicitDefault() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
 		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
 		HttpClient client =
 				HttpClient.create(p)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
+				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .port(tomcat.port())
 				          .wiretap(true);
 
 		Tuple2<HttpResponseStatus, Channel> r =
@@ -478,10 +531,16 @@ public class HttpClientTest {
 
 		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
 		p.dispose();
+
+		tomcat.stop();
 	}
 
 	@Test
-	public void contentHeader() {
+	public void contentHeader() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
 		ConnectionProvider fixed = ConnectionProvider.fixed("test", 1);
 		HttpClient client =
 				HttpClient.create(fixed)
@@ -490,19 +549,21 @@ public class HttpClientTest {
 
 		HttpResponseStatus r =
 				client.request(HttpMethod.GET)
-				      .uri("http://example.com")
+				      .uri("http://localhost:" + tomcat.port())
 				      .send(ByteBufFlux.fromString(Mono.just(" ")))
 				      .responseSingle((res, buf) -> Mono.just(res.status()))
 				      .block(Duration.ofSeconds(30));
 
 		client.request(HttpMethod.GET)
-		      .uri("http://example.com")
+		      .uri("http://localhost:" + tomcat.port())
 		      .send(ByteBufFlux.fromString(Mono.just(" ")))
 		      .responseSingle((res, buf) -> Mono.just(res.status()))
 		      .block(Duration.ofSeconds(30));
 
 		Assert.assertEquals(r, HttpResponseStatus.BAD_REQUEST);
 		fixed.dispose();
+
+		tomcat.stop();
 	}
 
 	@Test

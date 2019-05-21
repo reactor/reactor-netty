@@ -54,6 +54,7 @@ import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
+import reactor.netty.TomcatServer;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.client.HttpClient;
@@ -557,20 +558,29 @@ public class TcpClientTests {
 	}
 
 	@Test
-	public void nettyNetChannelAcceptsNettyChannelHandlers() throws InterruptedException {
+	public void nettyNetChannelAcceptsNettyChannelHandlers() throws Exception {
+		TomcatServer tomcat = new TomcatServer();
+		tomcat.createDefaultContext();
+		tomcat.start();
+
 		HttpClient client = HttpClient.create()
+		                              .port(tomcat.port())
 		                              .wiretap(true);
 
 		final CountDownLatch latch = new CountDownLatch(1);
-		System.out.println(client.get()
-		                         .uri("http://example.com/?q=test%20d%20dq")
-		                         .responseContent()
-		                         .asString()
-		                         .collectList()
-		                         .doOnSuccess(v -> latch.countDown())
-		                         .block(Duration.ofSeconds(30)));
+		String response = client.get()
+		                        .uri("/?q=test%20d%20dq")
+		                        .responseContent()
+		                        .aggregate()
+		                        .asString()
+		                        .doOnSuccess(v -> latch.countDown())
+		                        .block(Duration.ofSeconds(30));
 
 		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
+		assertNotNull(response);
+		assertTrue(response.contains("q=test%20d%20dq"));
+
+		tomcat.stop();
 	}
 
 	@Test
