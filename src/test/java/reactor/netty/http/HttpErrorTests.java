@@ -40,7 +40,7 @@ public class HttpErrorTests {
 				                                "/",
 				                                (httpServerRequest, httpServerResponse) -> {
 					                                return httpServerResponse.sendString(
-							                                Mono.error(new IllegalArgumentException()));
+							                                Mono.error(new IllegalArgumentException("test")));
 				                                }))
 		                                    .bindNow(Duration.ofSeconds(30));
 

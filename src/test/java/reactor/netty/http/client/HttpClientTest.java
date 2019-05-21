@@ -17,7 +17,6 @@
 package reactor.netty.http.client;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
@@ -41,7 +40,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -322,191 +320,6 @@ public class HttpClientTest {
 
 		latch.await();
 		c.disposeNow();
-	}
-
-	@Test
-	public void postUpload() throws IOException {
-		HttpClient client =
-				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("httpbin.org"))
-				          .wiretap(true);
-
-		Tuple2<Integer, String> res;
-		try (InputStream f = getClass().getResourceAsStream("/smallFile.txt")) {
-			res = client.post()
-			      .uri("/post")
-			      .sendForm((req, form) -> form.multipart(true)
-			                                   .file("test", f)
-			                                   .attr("attr1", "attr2")
-			                                   .file("test2", f))
-			      .responseSingle((r, buf) -> buf.asString().map(s -> Tuples.of(r.status().code(), s)))
-			      .block(Duration.ofSeconds(30));
-		}
-		String separator = System.lineSeparator().replaceAll("\\n", "\\\\n").replaceAll("\\r", "\\\\r");
-		assertThat(res).as("response").isNotNull();
-		assertThat(res.getT1()).as("status code").isEqualTo(200);
-		assertThat(res.getT2()).as("response body reflecting request").contains("\"form\": {\n    \"attr1\": \"attr2\", \n    \"test\": \"This is an UTF-8 file that is smaller than 1024 bytes."+separator+"It contains accents like \\u00e9."+separator+"End of File\", \n    \"test2\": \"\"\n  },");
-	}
-
-	@Test
-	public void simpleTest404() {
-		doSimpleTest404(HttpClient.create()
-		                          .baseUrl("example.com"));
-	}
-
-	@Test
-	public void simpleTest404_1() {
-		ConnectionProvider pool = ConnectionProvider.fixed("http", 1);
-		HttpClient client =
-				HttpClient.create(pool)
-				          .port(80)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
-				          .wiretap(true);
-		doSimpleTest404(client);
-		doSimpleTest404(client);
-		pool.dispose();
-	}
-
-	private void doSimpleTest404(HttpClient client) {
-		Integer res = client.followRedirect(true)
-				            .get()
-				            .uri("/status/404")
-				            .responseSingle((r, buf) -> Mono.just(r.status().code()))
-				            .log()
-				            .block();
-
-		assertThat(res).isNotNull();
-		if (res != 404) {
-			throw new IllegalStateException("test status failed with " + res);
-		}
-	}
-
-	@Test
-	public void disableChunkForced() {
-		Tuple2<HttpResponseStatus, String> r =
-				HttpClient.newConnection()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
-				          .headers(h -> h.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED))
-				          .wiretap(true)
-				          .request(HttpMethod.GET)
-				          .uri("/status/404")
-				          .send(ByteBufFlux.fromString(Flux.just("hello")))
-				          .responseSingle((res, conn) -> Mono.just(res.status())
-				                                             .zipWith(conn.asString()))
-				          .block(Duration.ofSeconds(30));
-
-		assertThat(r).isNotNull();
-
-		Assert.assertEquals(r.getT1(), HttpResponseStatus.BAD_REQUEST);
-	}
-
-	@Test
-	public void disableChunkForced2() {
-		Tuple2<HttpResponseStatus, String> r =
-				HttpClient.newConnection()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
-				          .wiretap(true)
-				          .keepAlive(false)
-				          .get()
-				          .uri("/status/404")
-				          .responseSingle((res, conn) -> Mono.just(res.status())
-				                                             .zipWith(conn.asString()))
-				          .block(Duration.ofSeconds(30));
-
-		assertThat(r).isNotNull();
-
-		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
-	}
-
-	@Test
-	public void simpleClientPooling() {
-		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
-		AtomicReference<Channel> ch1 = new AtomicReference<>();
-		AtomicReference<Channel> ch2 = new AtomicReference<>();
-
-		HttpResponseStatus r =
-				HttpClient.create(p)
-				          .doOnResponse((res, c) -> ch1.set(c.channel()))
-				          .wiretap(true)
-				          .get()
-				          .uri("http://example.com/status/404")
-				          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
-				          .block(Duration.ofSeconds(30));
-
-		HttpClient.create(p)
-		          .doOnResponse((res, c) -> ch2.set(c.channel()))
-		          .wiretap(true)
-		          .get()
-		          .uri("http://example.com/status/404")
-		          .responseSingle((res, buf) -> buf.thenReturn(res.status()))
-		          .block(Duration.ofSeconds(30));
-
-		AtomicBoolean same = new AtomicBoolean();
-
-		same.set(ch1.get() == ch2.get());
-
-		Assert.assertTrue(same.get());
-
-		Assert.assertEquals(r, HttpResponseStatus.NOT_FOUND);
-		p.dispose();
-	}
-
-	@Test
-	public void disableChunkImplicitDefault() {
-		ConnectionProvider p = ConnectionProvider.fixed("test", 1);
-		HttpClient client =
-				HttpClient.create(p)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
-				          .wiretap(true);
-
-		Tuple2<HttpResponseStatus, Channel> r =
-				client.get()
-				      .uri("/status/404")
-				      .responseConnection((res, conn) -> Mono.just(res.status())
-				                                             .delayUntil(s -> conn.inbound().receive())
-				                                             .zipWith(Mono.just(conn.channel())))
-				      .blockLast(Duration.ofSeconds(30));
-
-		assertThat(r).isNotNull();
-
-		Channel r2 =
-				client.get()
-				      .uri("/status/404")
-				      .responseConnection((res, conn) -> Mono.just(conn.channel())
-				                                             .delayUntil(s -> conn.inbound().receive()))
-				      .blockLast(Duration.ofSeconds(30));
-
-		assertThat(r2).isNotNull();
-
-		Assert.assertSame(r.getT2(), r2);
-
-		Assert.assertEquals(r.getT1(), HttpResponseStatus.NOT_FOUND);
-		p.dispose();
-	}
-
-	@Test
-	public void contentHeader() {
-		ConnectionProvider fixed = ConnectionProvider.fixed("test", 1);
-		HttpClient client =
-				HttpClient.create(fixed)
-				          .wiretap(true)
-				          .headers(h -> h.add("content-length", "1"));
-
-		HttpResponseStatus r =
-				client.request(HttpMethod.GET)
-				      .uri("http://example.com")
-				      .send(ByteBufFlux.fromString(Mono.just(" ")))
-				      .responseSingle((res, buf) -> Mono.just(res.status()))
-				      .block(Duration.ofSeconds(30));
-
-		client.request(HttpMethod.GET)
-		      .uri("http://example.com")
-		      .send(ByteBufFlux.fromString(Mono.just(" ")))
-		      .responseSingle((res, buf) -> Mono.just(res.status()))
-		      .block(Duration.ofSeconds(30));
-
-		Assert.assertEquals(r, HttpResponseStatus.BAD_REQUEST);
-		fixed.dispose();
 	}
 
 	@Test

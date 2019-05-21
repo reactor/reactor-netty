@@ -58,7 +58,6 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
-import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
@@ -559,23 +558,6 @@ public class TcpClientTests {
 
 		assertThat(duration, is(greaterThanOrEqualTo(500L)));
 		client.disposeNow();
-	}
-
-	@Test
-	public void nettyNetChannelAcceptsNettyChannelHandlers() throws InterruptedException {
-		HttpClient client = HttpClient.create()
-		                              .wiretap(true);
-
-		final CountDownLatch latch = new CountDownLatch(1);
-		log.debug(client.get()
-		                         .uri("http://www.google.com/?q=test%20d%20dq")
-		                         .responseContent()
-		                         .asString()
-		                         .collectList()
-		                         .doOnSuccess(v -> latch.countDown())
-		                         .block(Duration.ofSeconds(30)).toString());
-
-		assertTrue("Latch didn't time out", latch.await(15, TimeUnit.SECONDS));
 	}
 
 	@Test
