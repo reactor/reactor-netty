@@ -30,6 +30,8 @@ public class NettyTestBlockHoundIntegration implements BlockHoundIntegration {
         // System.out.println
         builder.allowBlockingCallsInside("java.io.PrintStream", "println");
 
+        builder.allowBlockingCallsInside("java.util.concurrent.ConcurrentHashMap", "initTable");
+
         // TODO remove once BlockHound adds Thread#run by default
         builder.disallowBlockingCallsInside("java.lang.Thread", "run");
         builder.allowBlockingCallsInside(ScheduledThreadPoolExecutor.class.getName() + "$DelayedWorkQueue", "take");
