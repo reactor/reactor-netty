@@ -17,3 +17,5 @@ exportToHtml
 .ruleset
 .rulesets
 .gradletasknamecache
+*.iml
+.idea
