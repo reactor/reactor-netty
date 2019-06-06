@@ -340,11 +340,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	final void onInboundError(Throwable err) {
 		if (isCancelled() || inboundDone) {
-			if (log.isWarnEnabled()) {
-				log.warn(format(channel, "An exception has been observed post termination, use DEBUG level to see the full stack: {}"), err.getClass().getSimpleName());
-			}
-			else if (log.isDebugEnabled()) {
-				log.error(format(channel, "An exception has been observed post termination"), err);
+			if (log.isDebugEnabled()) {
+				log.warn(format(channel, "An exception has been observed post termination"), err);
+			} else if (log.isWarnEnabled()) {
+				log.warn(format(channel, "An exception has been observed post termination, use DEBUG level to see the full stack: {}"), err.toString());
 			}
 			return;
 		}
