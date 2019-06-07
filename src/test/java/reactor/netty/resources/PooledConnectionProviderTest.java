@@ -42,6 +42,7 @@ import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
@@ -282,7 +283,7 @@ public class PooledConnectionProviderTest {
 				         .wiretap(true)
 				         .bindNow();
 
-		CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch latch = new CountDownLatch(2);
 		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("test", 1);
 		AtomicReference<PooledConnectionProvider.Pool> pool = new AtomicReference<>();
 		Flux.range(0, 2)
@@ -293,7 +294,8 @@ public class PooledConnectionProviderTest {
 		                     ConcurrentMap<PooledConnectionProvider.PoolKey, PooledConnectionProvider.Pool> pools = provider.channelPools;
 		                     pool.set(pools.get(pools.keySet().toArray()[0]));
 		                     provider.disposeLater()
-		                             .subscribe();
+		                             .subscribeOn(Schedulers.elastic())
+		                             .subscribe(null, null, latch::countDown);
 		                     conn.channel()
 		                         .closeFuture()
 		                         .addListener(future -> latch.countDown());
