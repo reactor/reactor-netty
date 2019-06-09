@@ -767,8 +767,7 @@ public class TcpServerTests {
 				         .doOnConnection(c -> c.addHandlerLast("codec",
 				                                               new LineBasedFrameDecoder(256)))
 				         .handle((in, out) ->
-				                 out.options(o -> o.flushOnEach(false))
-				                    .sendString(in.receive()
+				                 out.sendString(in.receive()
 				                                  .asString()
 				                                  .doOnNext(s -> {
 				                                      if ("4".equals(s)) {
@@ -786,8 +785,7 @@ public class TcpServerTests {
 				         .doOnConnected(c -> c.addHandlerLast("codec",
 				                                              new LineBasedFrameDecoder(256)))
 				         .handle((in, out) ->
-				                 out.options(sendOptions -> sendOptions.flushOnEach(false))
-				                    .sendString(Flux.just("1\n", "2\n", "3\n", "4\n"))
+				                 out.sendString(Flux.just("1\n", "2\n", "3\n", "4\n"))
 				                    .then(in.receive()
 				                            .asString()
 				                            .doOnNext(s -> {

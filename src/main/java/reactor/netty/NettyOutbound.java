@@ -65,17 +65,6 @@ public interface NettyOutbound extends Publisher<Void> {
 	}
 
 	/**
-	 * Provides a new {@link NettyOutbound} scoped configuration for sending. The
-	 * {@link NettyPipeline.SendOptions} changes will be applied to the next written object or
-	 * {@link Publisher}.
-	 *
-	 * @param configurator the callback invoked to retrieve send configuration
-	 *
-	 * @return this {@link NettyOutbound}
-	 */
-	NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator);
-
-	/**
 	 * Sends data to the peer, listens for any error on write and closes on terminal signal
 	 * (complete|error). <p>A new {@link NettyOutbound} type (or the same) for typed send
 	 * sequences.</p>

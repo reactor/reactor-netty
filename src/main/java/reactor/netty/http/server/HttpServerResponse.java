@@ -112,9 +112,6 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 */
 	HttpServerResponse keepAlive(boolean keepAlive);
 
-	@Override
-	HttpServerResponse options(Consumer<? super NettyPipeline.SendOptions> configurator);
-
 	/**
 	 * Returns the outbound HTTP headers, sent back to the clients
 	 *

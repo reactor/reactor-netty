@@ -76,7 +76,6 @@ public class BlockingConnectionTest {
 		DisposableServer simpleServer =
 				TcpServer.create()
 				         .handle((in, out) -> out
-						         .options(NettyPipeline.SendOptions::flushOnEach)
 						         .sendString(
 								         in.receive()
 								           .asString()
@@ -97,8 +96,7 @@ public class BlockingConnectionTest {
 
 		Connection simpleClient1 =
 				TcpClient.create().port(simpleServer.address().getPort())
-				         .handle((in, out) -> out.options(NettyPipeline.SendOptions::flushOnEach)
-				                                 .sendString(Flux.just("Hello", "World", "CONTROL"))
+				         .handle((in, out) -> out.sendString(Flux.just("Hello", "World", "CONTROL"))
 				                                 .then(in.receive()
 				                                        .asString()
 				                                        .takeUntil(s -> s.endsWith("DONE"))
@@ -114,8 +112,7 @@ public class BlockingConnectionTest {
 		Connection simpleClient2 =
 				TcpClient.create()
 				         .port(simpleServer.address().getPort())
-				         .handle((in, out) -> out.options(NettyPipeline.SendOptions::flushOnEach)
-				                                 .sendString(Flux.just("How", "Are", "You?", "CONTROL"))
+				         .handle((in, out) -> out.sendString(Flux.just("How", "Are", "You?", "CONTROL"))
 				                                 .then(in.receive()
 				                                        .asString()
 				                                        .takeUntil(s -> s.endsWith("DONE"))

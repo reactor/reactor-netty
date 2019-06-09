@@ -167,8 +167,7 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
-				                                  .sendString(
+				                       (i, o) -> o.sendString(
 						                                  Mono.just("test")
 						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
@@ -210,8 +209,7 @@ public class WebsocketTest {
 					          log.debug(req.requestHeaders().get("test"));
 					          return res.header("content-type", "text/plain")
 					                    .sendWebsocket((in, out) ->
-							                    out.options(NettyPipeline.SendOptions::flushOnEach)
-							                       .sendString(in.receive()
+							                    out.sendString(in.receive()
 							                                     .asString()
 							                                     .publishOn(Schedulers.single())
 							                                     .doOnNext(s -> serverRes.incrementAndGet())
@@ -231,8 +229,6 @@ public class WebsocketTest {
 				      .websocket() //TODO investigate why get not working
 				      .uri("/test/World")
 				      .handle((i, o) -> {
-					      o.options(NettyPipeline.SendOptions::flushOnEach);
-
 					      o.sendString(Flux.range(1, 1000)
 					                       .log("client-send")
 					                       .map(it -> "" + it), Charset.defaultCharset())
@@ -266,8 +262,7 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
-				                                  .sendByteArray(
+				                       (i, o) -> o.sendByteArray(
 						                                  Mono.just("test".getBytes(Charset.defaultCharset()))
 						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
@@ -332,8 +327,7 @@ public class WebsocketTest {
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/test")
-		          .handle((i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
-		                             .sendString(i.receive()
+		          .handle((i, o) -> o.sendString(i.receive()
 		                                          .asString()
 		                                          .subscribeWith(client)))
 		          .log()
@@ -595,8 +589,7 @@ public class WebsocketTest {
 				HttpServer.create()
 						.port(0)
 						.handle((req, res) -> res.sendWebsocket(null, maxFramePayloadLength, (in, out) ->
-								out.options(NettyPipeline.SendOptions::flushOnEach)
-										.sendObject(in.aggregateFrames()
+								out.sendObject(in.aggregateFrames()
 												.receiveFrames()
 												.map(WebSocketFrame::content)
 												.map(byteBuf ->
@@ -632,8 +625,7 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.options(NettyPipeline.SendOptions::flushOnEach)
-				                                  .sendString(
+				                       (i, o) -> o.sendString(
 						                                  Mono.just("test")
 						                                      .delayElement(Duration.ofMillis(100))
 						                                      .repeat())))
@@ -725,8 +717,7 @@ public class WebsocketTest {
 	@Test
 	public void testConnectionAliveWhenTransformationErrors_1() {
 		doTestConnectionAliveWhenTransformationErrors((in, out) ->
-		        out.options(NettyPipeline.SendOptions::flushOnEach)
-		           .sendObject(in.aggregateFrames()
+		        out.sendObject(in.aggregateFrames()
 		                         .receiveFrames()
 		                         .map(WebSocketFrame::content)
 		                         //.share()
@@ -743,8 +734,7 @@ public class WebsocketTest {
 	@Test
 	public void testConnectionAliveWhenTransformationErrors_2() {
 		doTestConnectionAliveWhenTransformationErrors((in, out) ->
-		        out.options(NettyPipeline.SendOptions::flushOnEach)
-		           .sendObject(in.aggregateFrames()
+		        out.sendObject(in.aggregateFrames()
 		                         .receiveFrames()
 		                         .map(WebSocketFrame::content)
 		                         .concatMap(content ->
@@ -793,8 +783,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				              res.options(NettyPipeline.SendOptions::flushOnEach)
-				                 .sendWebsocket((in, out) ->
+				              res.sendWebsocket((in, out) ->
 				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
 				                                        .map(l -> l + ""))))
 				          .bindNow();
@@ -855,8 +844,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				              res.options(NettyPipeline.SendOptions::flushOnEach)
-				                 .sendWebsocket((in, out) ->
+				              res.sendWebsocket((in, out) ->
 				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
 				                                        .map(l -> l + ""))))
 				          .bindNow();
@@ -997,8 +985,7 @@ public class WebsocketTest {
 				                   .onErrorResume(ex -> out.sendClose(1001, "Going Away"))
 				                   .cast(WebSocketFrame.class)));
 		doTestIssue444((in, out) ->
-				out.options(o -> o.flushOnEach(false))
-				   .send(Flux.range(0, 10)
+				out.send(Flux.range(0, 10)
 				             .map(i -> {
 				                 if (i == 5) {
 				                     out.sendClose(1001, "Going Away").subscribe();

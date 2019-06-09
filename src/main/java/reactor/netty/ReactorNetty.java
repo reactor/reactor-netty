@@ -534,12 +534,6 @@ public final class ReactorNetty {
 		}
 
 		@Override
-		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-			source.options(configurator);
-			return this;
-		}
-
-		@Override
 		public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
 			return then(source.send(dataStream));
 		}
@@ -744,11 +738,6 @@ public final class ReactorNetty {
 			public <S> NettyOutbound sendUsing(Callable<? extends S> sourceInput,
 					BiFunction<? super Connection, ? super S, ?> mappedInput,
 					Consumer<? super S> sourceCleanup) {
-				return this;
-			}
-
-			@Override
-			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 				return this;
 			}
 

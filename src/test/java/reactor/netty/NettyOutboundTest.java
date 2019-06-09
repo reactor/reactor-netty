@@ -97,11 +97,6 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-				return this;
-			}
-
-			@Override
 			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
 				return this;
 			}
@@ -194,11 +189,6 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-				return this;
-			}
-
-			@Override
 			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
 				return this;
 			}
@@ -284,11 +274,6 @@ public class NettyOutboundTest {
 
 			@Override
 			public NettyOutbound sendObject(Object message) {
-				return this;
-			}
-
-			@Override
-			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 				return this;
 			}
 
