@@ -335,11 +335,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 
 		@Override
-		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-			return parent.options(configurator);
-		}
-
-		@Override
 		public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
 			return parent.send(dataStream);
 		}

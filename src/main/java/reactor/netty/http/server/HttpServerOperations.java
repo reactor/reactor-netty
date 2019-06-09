@@ -311,12 +311,6 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerOperations options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-		super.options(configurator);
-		return this;
-	}
-
-	@Override
 	public String scheme() {
 		return this.connectionInfo.getScheme();
 	}

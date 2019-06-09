@@ -783,8 +783,7 @@ public class HttpClientTest {
 		DisposableServer httpServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((in, out) ->  out.options(NettyPipeline.SendOptions::flushOnEach)
-				                                   .sendString(Mono.just("test")
+				          .handle((in, out) ->  out.sendString(Mono.just("test")
 				                                                   .delayElement(Duration.ofMillis(100))
 				                                                   .repeat()))
 				          .wiretap(true)
@@ -1529,8 +1528,7 @@ public class HttpClientTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				                  res.options(o -> o.flushOnEach(false))
-				                     .sendString(Flux.range(0, 10)
+				                  res.sendString(Flux.range(0, 10)
 				                                     .map(i -> "test")
 				                                     .delayElements(Duration.ofMillis(4))))
 				          .bindNow();

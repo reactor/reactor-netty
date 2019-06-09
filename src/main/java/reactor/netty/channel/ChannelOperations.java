@@ -92,8 +92,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final ConnectionObserver  listener;
 	final MonoProcessor<Void> onTerminate;
 
-	boolean flushOnEach;
-
 	@SuppressWarnings("unchecked")
 	volatile Subscription outboundSubscription;
 
@@ -101,7 +99,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 		this.connection = replaced.connection;
 		this.listener = replaced.listener;
 		this.onTerminate = replaced.onTerminate;
-		this.flushOnEach = replaced.flushOnEach;
 		this.inbound = new FluxReceive(this);
 	}
 
@@ -235,7 +232,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
-		return then(MonoSendMany.byteBufSource(dataStream, channel(), flushOnEach));
+		return then(MonoSendMany.byteBufSource(dataStream, channel(), false));
 	}
 
 	@Override
@@ -245,7 +242,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
 		}
-		return then(MonoSendMany.objectSource(dataStream, channel(), flushOnEach));
+		return then(MonoSendMany.objectSource(dataStream, channel(), false));
 	}
 
 	@Override
@@ -400,23 +397,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			onTerminate.onComplete();
 			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 		}
-	}
-
-	@Override
-	public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
-		configurator.accept(new NettyPipeline.SendOptions() {
-			@Override
-			public NettyPipeline.SendOptions flushOnBoundary() {
-				return this;
-			}
-
-			@Override
-			public NettyPipeline.SendOptions flushOnEach(boolean withEventLoop) {
-				flushOnEach = !withEventLoop;
-				return this;
-			}
-		});
-		return this;
 	}
 
 	/**
