@@ -466,7 +466,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public ChannelPromise unvoid() {
-			return new DefaultChannelPromise(ctx.channel());
+			return new DefaultChannelPromise(ctx.channel()).addListener(this);
 		}
 
 		@Override
