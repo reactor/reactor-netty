@@ -44,7 +44,7 @@ final class ConnectionInfo {
 	static final Pattern FORWARDED_HOST_PATTERN  = Pattern.compile("host=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_PROTO_PATTERN = Pattern.compile("proto=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_FOR_PATTERN   = Pattern.compile("for=\"?([^;,\"]+)\"?");
-	static final Pattern PORT_PATTERN = Pattern.compile("\\d");
+	static final Pattern PORT_PATTERN = Pattern.compile("\\d*");
 	static final String XFORWARDED_IP_HEADER = "X-Forwarded-For";
 
 	static final String XFORWARDED_HOST_HEADER = "X-Forwarded-Host";
