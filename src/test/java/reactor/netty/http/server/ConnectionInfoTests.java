@@ -305,10 +305,18 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
-	public void parseAddressForIpV6WithPortAndBrackets() {
+	public void parseAddressForIpV6WithPortAndBrackets_1() {
 		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]:443", 8080, inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
+		});
+	}
+
+	@Test
+	public void parseAddressForIpV6WithPortAndBrackets_2() {
+		testParseAddress("[2001:db8:a0b:12f0::1]:dba2", 8080, inetSocketAddress -> {
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("[2001:db8:a0b:12f0::1]:dba2");
+			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
 		});
 	}
 

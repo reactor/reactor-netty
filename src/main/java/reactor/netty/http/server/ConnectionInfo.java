@@ -44,6 +44,7 @@ final class ConnectionInfo {
 	static final Pattern FORWARDED_HOST_PATTERN  = Pattern.compile("host=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_PROTO_PATTERN = Pattern.compile("proto=\"?([^;,\"]+)\"?");
 	static final Pattern FORWARDED_FOR_PATTERN   = Pattern.compile("for=\"?([^;,\"]+)\"?");
+	static final Pattern PORT_PATTERN = Pattern.compile("\\d*");
 	static final String XFORWARDED_IP_HEADER = "X-Forwarded-For";
 
 	static final String XFORWARDED_HOST_HEADER = "X-Forwarded-Host";
@@ -125,8 +126,11 @@ final class ConnectionInfo {
 		int ipV6HostSeparatorIdx = address.lastIndexOf("]");
 		if(separatorIdx > ipV6HostSeparatorIdx) {
 			if(separatorIdx == address.indexOf(":") || ipV6HostSeparatorIdx > -1) {
-				return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx),
-					Integer.parseInt(address.substring(separatorIdx + 1)));
+				String port = address.substring(separatorIdx + 1);
+				if (PORT_PATTERN.matcher(port).matches()) {
+					return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx),
+							Integer.parseInt(port));
+				}
 			}
 		}
 		return InetSocketAddressUtil.createUnresolved(address, defaultPort);
