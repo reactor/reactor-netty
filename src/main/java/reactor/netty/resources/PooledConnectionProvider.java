@@ -47,6 +47,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.MonoSink;
+import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.BootstrapHandlers;
@@ -165,13 +166,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
-	public void dispose() {
-		disposeLater().subscribe();
-	}
-
-	@Override
 	public Mono<Void> disposeLater() {
-		return Mono.fromRunnable(() -> {
+		return Mono.<Void>fromRunnable(() -> {
 			Pool pool;
 			for (PoolKey key : channelPools.keySet()) {
 				pool = channelPools.remove(key);
@@ -179,7 +175,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					pool.close();
 				}
 			}
-		});
+		})
+		.subscribeOn(Schedulers.elastic());
 	}
 
 	@Override

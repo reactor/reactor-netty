@@ -92,7 +92,7 @@ public class PooledConnectionProviderTest {
 	}
 
 	@Test
-	public void disposeLaterDefers() {
+	public void disposeLaterDefers() throws Exception {
 		PooledConnectionProvider.Pool pool = new PooledConnectionProvider.Pool(
 				new Bootstrap().group(new DefaultEventLoopGroup()),
 				(b, handler, checker) -> channelPool, ChannelOperations.OnSetup.empty());
@@ -108,12 +108,15 @@ public class PooledConnectionProviderTest {
 		Mono<Void> disposer = poolResources.disposeLater();
 		assertThat(closed.get()).as("pool closed by disposeLater()").isEqualTo(0);
 
-		disposer.subscribe();
+		CountDownLatch latch = new CountDownLatch(1);
+		disposer.subscribe(null, null, latch::countDown);
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(closed.get()).as("pool closed by disposer subscribe()").isEqualTo(1);
 	}
 
 	@Test
-	public void disposeOnlyOnce() {
+	public void disposeOnlyOnce() throws Exception {
 		PooledConnectionProvider.Pool pool = new PooledConnectionProvider.Pool(
 				new Bootstrap().group(new DefaultEventLoopGroup()),
 				(b, handler, checker) -> channelPool, ChannelOperations.OnSetup.empty()
@@ -127,14 +130,17 @@ public class PooledConnectionProviderTest {
 						InetSocketAddress.createUnresolved("localhost", 80), -1),
 				pool);
 
-		poolResources.dispose();
-		assertThat(closed.get()).as("pool closed by dispose()").isEqualTo(1);
+		CountDownLatch latch1 = new CountDownLatch(1);
+		poolResources.disposeLater().subscribe(null, null, latch1::countDown);
 
-		Mono<Void> disposer = poolResources.disposeLater();
-		disposer.subscribe();
-		poolResources.disposeLater().subscribe();
-		poolResources.dispose();
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(closed.get()).as("pool closed by disposeLater()").isEqualTo(1);
 
+		CountDownLatch latch2 = new CountDownLatch(2);
+		poolResources.disposeLater().subscribe(null, null, latch2::countDown);
+		poolResources.disposeLater().subscribe(null, null, latch2::countDown);
+
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(closed.get()).as("pool closed only once").isEqualTo(1);
 	}
 
@@ -294,7 +300,6 @@ public class PooledConnectionProviderTest {
 		                     ConcurrentMap<PooledConnectionProvider.PoolKey, PooledConnectionProvider.Pool> pools = provider.channelPools;
 		                     pool.set(pools.get(pools.keySet().toArray()[0]));
 		                     provider.disposeLater()
-		                             .subscribeOn(Schedulers.elastic())
 		                             .subscribe(null, null, latch::countDown);
 		                     conn.channel()
 		                         .closeFuture()
