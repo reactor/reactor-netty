@@ -5,10 +5,9 @@ ifndef::host-github[:ext-relative: {outfilesuffix}]
 {appversion}
 :doctype: book
 :icons: font
-:toc:
+:toc2:
 :sectnums:
 :sectanchors:
-:linkattrs:
 
 include::about-doc.adoc[leveloffset=1]
 ifeval::["{backend}" == "html5"]
