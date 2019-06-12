@@ -54,26 +54,23 @@ import reactor.util.context.Context;
 final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
-			Channel channel,
-			boolean flushOption) {
-		return new MonoSendMany<>(source, channel, flushOption, FUNCTION_BB_IDENTITY, CONSUMER_BB_NOCHECK_CLEANUP, SIZE_OF_BB);
+			Channel channel) {
+		return new MonoSendMany<>(source, channel, FUNCTION_BB_IDENTITY, CONSUMER_BB_NOCHECK_CLEANUP, SIZE_OF_BB);
 	}
 
-	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel, boolean flushOnEach) {
-		return new MonoSendMany<>(source, channel, flushOnEach, FUNCTION_IDENTITY, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
+	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel) {
+		return new MonoSendMany<>(source, channel, FUNCTION_IDENTITY, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
 	}
 
 	final Publisher<? extends I> source;
-	final boolean                flushOnEach;
 
 	MonoSendMany(Publisher<? extends I> source,
-			Channel channel, boolean flushOnEach,
+			Channel channel,
 			Function<? super I, ? extends O> transformer,
 			Consumer<? super I> sourceCleanup,
 			ToIntFunction<O> sizeOf) {
 		super(channel, transformer, sourceCleanup, sizeOf);
 		this.source = Objects.requireNonNull(source, "source publisher cannot be null");
-		this.flushOnEach = flushOnEach;
 	}
 
 	@Override
@@ -285,7 +282,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						pending++;
 						ctx.write(encodedMessage, this);
 
-						if (parent.flushOnEach || !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {
+						//uncomment and use any predicate to force flush
+						if (/*parent.flushOnEach ||*/ !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {
 							needFlush = false;
 							ctx.flush();
 						}
