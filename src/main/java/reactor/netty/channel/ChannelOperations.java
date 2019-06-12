@@ -232,7 +232,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
-		return then(MonoSendMany.byteBufSource(dataStream, channel(), false));
+		return then(MonoSendMany.byteBufSource(dataStream, channel()));
 	}
 
 	@Override
@@ -242,7 +242,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
 		}
-		return then(MonoSendMany.objectSource(dataStream, channel(), false));
+		return then(MonoSendMany.objectSource(dataStream, channel()));
 	}
 
 	@Override

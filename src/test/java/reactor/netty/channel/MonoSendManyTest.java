@@ -35,7 +35,7 @@ public class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new WriteTimeoutHandler(1), new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.just("test"), channel, false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.just("test"), channel);
 
 		StepVerifier.create(m)
 		            .then(() -> {
