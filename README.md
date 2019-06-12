@@ -1,6 +1,6 @@
 # Reactor Netty
 
-[![Join the chat at https://gitter.im/reactor/reactor](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/reactor/reactor)
+[![Join the chat at https://gitter.im/reactor/reactor-netty](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/reactor/reactor-netty)
 
 [![Reactor Netty](https://img.shields.io/maven-central/v/io.projectreactor.netty/reactor-netty.svg?colorB=brightgreen)](https://mvnrepository.com/artifact/io.projectreactor.netty/reactor-netty) [ ![Download](https://api.bintray.com/packages/spring/jars/io.projectreactor.netty/images/download.svg) ](https://bintray.com/spring/jars/io.projectreactor.netty/_latestVersion)
 
@@ -25,13 +25,13 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
     }
 ```
 
-See the [Reference documentation](https://next.projectreactor.io/docs/netty/snapshot/reference/index.html#getting)
+See the [Reference documentation](https://projectreactor.io/docs/netty/milestone/reference/index.html#getting)
 for more information on getting it (eg. using `Maven`, or on how to get milestones and snapshots).
 
 
 ## Getting Started
 New to `Reactor Netty`? Check this [Reactor Netty Workshop](https://violetagg.github.io/reactor-netty-workshop/)
-and the [Reference documentation](https://next.projectreactor.io/docs/netty/snapshot/reference/index.html)
+and the [Reference documentation](https://projectreactor.io/docs/netty/milestone/reference/index.html)
 
 Here is a very simple `HTTP` server and the corresponding `HTTP` client example
 
@@ -71,7 +71,7 @@ Having trouble with `Reactor Netty`? We'd like to help!
   for upgrade instructions and *new and noteworthy* features.
 * Ask a question - we monitor [stackoverflow.com](https://stackoverflow.com) for questions
   tagged with [`reactor-netty`](https://stackoverflow.com/questions/tagged/reactor-netty). You can also chat
-  with the community on [Gitter](https://gitter.im/reactor/reactor).
+  with the community on [Gitter](https://gitter.im/reactor/reactor-netty).
 * Report bugs with `Reactor Netty` at [github.com/reactor/reactor-netty/issues](https://github.com/reactor/reactor-netty/issues).
 
 ## Reporting Issues
@@ -107,7 +107,7 @@ https://projectreactor.io/docs/netty/release/api/
 
 ## Guides
 
-* https://next.projectreactor.io/docs/netty/snapshot/reference/index.html
+* https://projectreactor.io/docs/netty/milestone/reference/index.html
 * https://violetagg.github.io/reactor-netty-workshop/
 
 ## License
