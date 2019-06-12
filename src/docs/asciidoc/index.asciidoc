@@ -1,8 +1,6 @@
 = Reactor Netty Reference Guide
 Stephane Maldini <https://twitter.com/smaldini[@smaldini]>; Violeta Georgieva <https://twitter.com/violeta_g_g[@violeta_g_g]>
-:appversion: 0.9.0
 ifndef::host-github[:ext-relative: {outfilesuffix}]
-{appversion}
 :doctype: book
 :icons: font
 :toc2:
