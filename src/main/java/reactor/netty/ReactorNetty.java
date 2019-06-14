@@ -46,6 +46,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCounted;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
+import reactor.core.CorePublisher;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -408,7 +409,7 @@ public final class ReactorNetty {
 	}
 
 
-	static <T, V> Publisher<V> publisherOrScalarMap(Publisher<T> publisher,
+	static <T, V> CorePublisher<V> publisherOrScalarMap(Publisher<T> publisher,
 			Function<? super T, ? extends V> mapper) {
 
 		if (publisher instanceof Callable) {

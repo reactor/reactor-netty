@@ -67,8 +67,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	public static ByteBufFlux fromInbound(Publisher<?> source,
 			ByteBufAllocator allocator) {
 		Objects.requireNonNull(allocator, "allocator");
-		return maybeFuse(Flux.from(source)
-		                           .map(bytebufExtractor), allocator);
+		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bytebufExtractor)), allocator);
 	}
 
 
@@ -86,13 +85,12 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	public static ByteBufFlux fromString(Publisher<? extends String> source, Charset charset, ByteBufAllocator allocator) {
 		Objects.requireNonNull(allocator, "allocator");
 		return maybeFuse(
-				Flux.from(source)
-				    .map(s -> {
-				        ByteBuf buffer = allocator.buffer();
-				        buffer.writeCharSequence(s, charset);
-				        return buffer;
-				    }),
-				allocator);
+				Flux.from(ReactorNetty.publisherOrScalarMap(
+						source, s -> {
+							ByteBuf buffer = allocator.buffer();
+							buffer.writeCharSequence(s, charset);
+							return buffer;
+						})), allocator);
 	}
 
 	/**
