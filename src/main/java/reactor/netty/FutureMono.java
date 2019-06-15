@@ -71,54 +71,6 @@ public abstract class FutureMono extends Mono<Void> {
 		return new DeferredFutureMono<>(deferredFuture);
 	}
 
-	/**
-	 * Convert a supplied {@link Future} for each subscriber into {@link Mono}.
-	 * {@link Mono#subscribe(Subscriber)}
-	 * will bridge to {@link Future#addListener(GenericFutureListener)}.
-	 *
-	 * In addition, current method allows interaction with downstream context, so it
-	 * may be transferred to implicitly connected upstream
-	 *
-	 * Example:
-	 *
-	 * <pre><code>
-	 *   FutureMono.deferFutureWithContext((subscriberContext) -> channel.writeAndFlush(subscriberContext.get("data"));
-	 * </code></pre>
-	 *
-	 * @param deferredFuture the future to evaluate and convert from
-	 * @param <F> the future type
-	 *
-	 * @return A {@link Mono} forwarding {@link Future} success or failure
-	 */
-	public static <F extends Future<Void>> Mono<Void> deferFutureWithContext(Function<Context, F> deferredFuture) {
-		return new DeferredContextFutureMono<>(deferredFuture);
-	}
-
-	/**
-	 * Write the passed {@link Publisher} and return a disposable {@link Mono}.
-	 * <p>
-	 * In addition, current method allows interaction with downstream context, so it
-	 * may be transferred to implicitly connected upstream
-	 * <p>
-	 * Example:
-	 * <p>
-	 * <pre><code>
-	 *   Flux&lt;String&gt; dataStream = Flux.just("a", "b", "c");
-	 *   FutureMono.deferFutureWithContext((subscriberContext) ->
-	 *  	context().channel()
-	 * 		 .writeAndFlush(PublisherContext.withContext(dataStream, subscriberContext)));
-	 * </code></pre>
-	 *
-	 * @param dataStream the publisher to write
-	 *
-	 * @return A {@link Mono} forwarding {@link Future} success, failure and cancel
-	 * @deprecated use {@link NettyOutbound#send(Publisher)}
-	 */
-	@Deprecated
-	public static Mono<Void> disposableWriteAndFlush(Channel channel, Publisher<?> dataStream) {
-		return Mono.error(new UnsupportedOperationException("deprecated: use NettyOutbound#send(Publisher)"));
-	}
-
 	final static class ImmediateFutureMono<F extends Future<Void>> extends FutureMono {
 
 		final F future;
@@ -165,44 +117,6 @@ public abstract class FutureMono extends Mono<Void> {
 				Operators.error(s,
 						Operators.onOperatorError(new NullPointerException(
 								"Deferred supplied null"), s.currentContext()));
-				return;
-			}
-
-			if (f.isDone()) {
-				if (f.isSuccess()) {
-					Operators.complete(s);
-				}
-				else {
-					Operators.error(s, f.cause());
-				}
-				return;
-			}
-
-			FutureSubscription<F> fs = new FutureSubscription<>(f, s);
-			s.onSubscribe(fs);
-			// Returned value is deliberately ignored
-			f.addListener(fs);
-		}
-	}
-
-	final static class DeferredContextFutureMono<F extends Future<Void>> extends
-	                                                                     FutureMono {
-
-		final Function<Context, F> deferredFuture;
-
-		DeferredContextFutureMono(Function<Context, F> deferredFuture) {
-			this.deferredFuture = Objects.requireNonNull(deferredFuture, "deferredFuture");
-		}
-
-		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public void subscribe(CoreSubscriber<? super Void> s) {
-			F f = deferredFuture.apply(s.currentContext());
-
-			if (f == null) {
-				Operators.error(s,
-						Operators.onOperatorError(new NullPointerException("Deferred supplied null"),
-								s.currentContext()));
 				return;
 			}
 
