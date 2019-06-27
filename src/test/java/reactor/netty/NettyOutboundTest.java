@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
@@ -87,7 +88,7 @@ public class NettyOutboundTest {
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
-			public NettyOutbound sendObject(Publisher<?> dataStream) {
+			public NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate) {
 				return this;
 			}
 
@@ -97,7 +98,7 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
 				return this;
 			}
 
@@ -179,7 +180,7 @@ public class NettyOutboundTest {
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
-			public NettyOutbound sendObject(Publisher<?> dataStream) {
+			public NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate) {
 				return this;
 			}
 
@@ -189,7 +190,7 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
 				return this;
 			}
 
@@ -268,7 +269,7 @@ public class NettyOutboundTest {
 		Connection mockContext = () -> channel;
 		NettyOutbound outbound = new NettyOutbound() {
 			@Override
-			public NettyOutbound sendObject(Publisher<?> dataStream) {
+			public NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate) {
 				return this;
 			}
 
@@ -278,7 +279,7 @@ public class NettyOutboundTest {
 			}
 
 			@Override
-			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+			public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
 				return this;
 			}
 

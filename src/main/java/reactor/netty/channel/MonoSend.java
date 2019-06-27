@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.publisher.Mono;
+import reactor.netty.ReactorNetty;
 
 /**
  * @author Stephane Maldini
@@ -59,9 +60,15 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 
 	static final int                    REFILL_SIZE = MAX_SIZE / 2;
 
-	static final Function<ByteBuf, ByteBuf> FUNCTION_BB_IDENTITY = Function.identity();
+	static final Function<ByteBuf, ByteBuf> TRANSFORMATION_FUNCTION_BB =
+		msg -> {
+			if (ReactorNetty.PREDICATE_GROUP_FLUSH.test(msg)) {
+				return null;
+			}
+			return msg;
+		};
 
-	static final Function<Object, Object>   FUNCTION_IDENTITY    = Function.identity();
+	static final Function<Object, Object>   TRANSFORMATION_FUNCTION    = Function.identity();
 
 	static final Consumer<ByteBuf> CONSUMER_BB_NOCHECK_CLEANUP = ByteBuf::release;
 

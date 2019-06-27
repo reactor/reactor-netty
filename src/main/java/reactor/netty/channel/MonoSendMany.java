@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
 import io.netty.buffer.ByteBuf;
@@ -54,23 +55,27 @@ import reactor.util.context.Context;
 final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
-			Channel channel) {
-		return new MonoSendMany<>(source, channel, FUNCTION_BB_IDENTITY, CONSUMER_BB_NOCHECK_CLEANUP, SIZE_OF_BB);
+			Channel channel,
+			Predicate<ByteBuf> predicate) {
+		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION_BB, CONSUMER_BB_NOCHECK_CLEANUP, SIZE_OF_BB);
 	}
 
-	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel) {
-		return new MonoSendMany<>(source, channel, FUNCTION_IDENTITY, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
+	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel, Predicate<Object> predicate) {
+		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION, CONSUMER_NOCHECK_CLEANUP, SIZE_OF);
 	}
 
 	final Publisher<? extends I> source;
+	final Predicate<I> predicate;
 
 	MonoSendMany(Publisher<? extends I> source,
 			Channel channel,
+			Predicate<I> predicate,
 			Function<? super I, ? extends O> transformer,
 			Consumer<? super I> sourceCleanup,
 			ToIntFunction<O> sizeOf) {
 		super(channel, transformer, sourceCleanup, sizeOf);
 		this.source = Objects.requireNonNull(source, "source publisher cannot be null");
+		this.predicate = Objects.requireNonNull(predicate, "predicate cannot be null");
 	}
 
 	@Override
@@ -272,6 +277,14 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						}
 
 						O encodedMessage = parent.transformer.apply(sourceMessage);
+						if (encodedMessage == null) {
+							if (parent.predicate.test(sourceMessage)) {
+								needFlush = false;
+								ctx.flush();
+							}
+							continue;
+						}
+
 						int readableBytes = parent.sizeOf.applyAsInt(encodedMessage);
 
 
@@ -282,8 +295,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						pending++;
 						ctx.write(encodedMessage, this);
 
-						//uncomment and use any predicate to force flush
-						if (/*parent.flushOnEach ||*/ !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {
+						if (parent.predicate.test(sourceMessage) || !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {
 							needFlush = false;
 							ctx.flush();
 						}

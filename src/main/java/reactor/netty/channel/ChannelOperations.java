@@ -21,6 +21,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
@@ -227,22 +228,22 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
 		}
-		return then(MonoSendMany.byteBufSource(dataStream, channel()));
+		return then(MonoSendMany.byteBufSource(dataStream, channel(), predicate));
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public NettyOutbound sendObject(Publisher<?> dataStream) {
+	public NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate) {
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
 		}
-		return then(MonoSendMany.objectSource(dataStream, channel()));
+		return then(MonoSendMany.objectSource(dataStream, channel(), predicate));
 	}
 
 	@Override

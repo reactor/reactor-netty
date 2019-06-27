@@ -28,6 +28,7 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -75,7 +76,23 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
 	 * signal successful sequence write (e.g. after "flush") or any error during write.
 	 */
-	NettyOutbound send(Publisher<? extends ByteBuf> dataStream);
+	default NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+		return send(dataStream, ReactorNetty.PREDICATE_BB_FLUSH);
+	}
+
+	/**
+	 * Sends data to the peer, listens for any error on write and closes on terminal signal
+	 * (complete|error). <p>A new {@link NettyOutbound} type (or the same) for typed send
+	 * sequences.</p>
+	 * <p>Note: Nesting any send* method is not supported.</p>
+	 *
+	 * @param dataStream the dataStream publishing OUT items to write on this channel
+	 * @param predicate that returns true if explicit flush operation is needed after that buffer
+	 *
+	 * @return A new {@link NettyOutbound} to append further send. It will emit a complete
+	 * signal successful sequence write (e.g. after "flush") or any error during write.
+	 */
+	NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate);
 
 	/**
 	 * Sends bytes to the peer, listens for any error on write and closes on terminal
@@ -201,9 +218,11 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * any error during write
 	 */
 	default NettyOutbound sendGroups(Publisher<? extends Publisher<? extends ByteBuf>> dataStreams) {
-		return then(Flux.from(dataStreams)
-		           .concatMapDelayError(this::send, false, 32)
-		           .then());
+		return send(
+				Flux.from(dataStreams)
+				    .concatMap(p -> Flux.<ByteBuf>from(p)
+				                        .concatWith(Mono.just(ReactorNetty.BOUNDARY)), 32),
+				ReactorNetty.PREDICATE_GROUP_FLUSH);
 	}
 
 	/**
@@ -217,7 +236,23 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
 	 * error during write
 	 */
-	NettyOutbound sendObject(Publisher<?> dataStream);
+	default NettyOutbound sendObject(Publisher<?> dataStream) {
+		return sendObject(dataStream, ReactorNetty.PREDICATE_FLUSH);
+	}
+
+	/**
+	 * Sends an object through Netty pipeline. If type of {@link Publisher}, sends all signals,
+	 * flushing on complete by default. Write occur in FIFO sequence.
+	 * <p>Note: Nesting any send* method is not supported.</p>
+	 *
+	 * @param dataStream the dataStream publishing items to write on this channel
+	 * or a simple pojo supported by configured Netty handlers
+	 * @param predicate that returns true if explicit flush operation is needed after that object
+	 *
+	 * @return A Publisher to signal successful sequence write (e.g. after "flush") or any
+	 * error during write
+	 */
+	NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate);
 
 	/**
 	 * Sends data to the peer, listens for any error on write and closes on terminal signal

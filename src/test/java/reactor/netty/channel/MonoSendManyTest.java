@@ -35,12 +35,12 @@ public class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new WriteTimeoutHandler(1), new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.just("test"), channel);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.just("test"), channel, b -> false);
 
 		StepVerifier.create(m)
 		            .then(() -> {
-		            	channel.runPendingTasks(); //run flush
-			            assertThat(channel.<String>readOutbound()).isEqualToIgnoringCase("test");
+		                channel.runPendingTasks(); //run flush
+		                assertThat(channel.<String>readOutbound()).isEqualToIgnoringCase("test");
 		            })
 		            .verifyComplete();
 	}
