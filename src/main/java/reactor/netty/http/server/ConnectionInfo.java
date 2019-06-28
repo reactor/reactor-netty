@@ -131,6 +131,9 @@ final class ConnectionInfo {
 					return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx),
 							Integer.parseInt(port));
 				}
+				else {
+					return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx), defaultPort);
+				}
 			}
 		}
 		return InetSocketAddressUtil.createUnresolved(address, defaultPort);
