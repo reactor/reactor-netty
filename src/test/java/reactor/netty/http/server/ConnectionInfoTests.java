@@ -315,7 +315,7 @@ public class ConnectionInfoTests {
 	@Test
 	public void parseAddressForIpV6WithPortAndBrackets_2() {
 		testParseAddress("[2001:db8:a0b:12f0::1]:dba2", 8080, inetSocketAddress -> {
-			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("[2001:db8:a0b:12f0::1]:dba2");
+			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("2001:db8:a0b:12f0:0:0:0:1");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
 		});
 	}

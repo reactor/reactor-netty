@@ -101,6 +101,10 @@ public class ByteBufMono extends MonoOperator<ByteBuf, ByteBuf> {
 
 	/**
 	 * Convert to an {@link InputStream} inbound {@link Mono}
+	 * <p>Note: Auto memory release is disabled. The underlying
+	 * {@link ByteBuf} will be released only when {@link InputStream#close()}
+	 * is invoked. Ensure {@link InputStream#close()} is invoked
+	 * for any terminal signal: {@code complete} | {@code error} | {@code cancel}</p>
 	 *
 	 * @return a {@link InputStream} inbound {@link Mono}
 	 */
