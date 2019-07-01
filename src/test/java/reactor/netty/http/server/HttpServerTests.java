@@ -914,15 +914,20 @@ public class HttpServerTests {
 	public void testDropPublisherConnectionClose() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
+		CountDownLatch latch = new CountDownLatch(1);
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain())))
 				                 .then()
-				                 .doOnCancel(() -> ReferenceCountUtil.release(data)),
+				                 .doOnCancel(() -> {
+				                     ReferenceCountUtil.release(data);
+				                     latch.countDown();
+				                 }),
 				(req, out) -> {
 					req.addHeader("Connection", "close");
 					return out;
 				});
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
 	}
 
