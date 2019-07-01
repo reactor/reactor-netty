@@ -184,7 +184,7 @@ public class TcpClient implements NettyConnector<NettyInbound, NettyOutbound> {
 			PoolResources poolResources = options.getPoolResources();
 			if (poolResources != null) {
 				pool = poolResources.selectOrCreate(remote, options,
-						doHandler(null, sink, secure, remote, null, null),
+						doHandler(null, null, secure, remote, null, null),
 						options.getLoopResources().onClient(options.preferNative()));
 			}
 

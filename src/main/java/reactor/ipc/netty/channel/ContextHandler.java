@@ -393,7 +393,6 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 	static final Logger         log      = Loggers.getLogger(ContextHandler.class);
 
 	static void addSslAndLogHandlers(NettyOptions<?, ?> options,
-			ContextHandler<?> sink,
 			LoggingHandler loggingHandler,
 			boolean secure,
 			Tuple2<String, Integer> sniInfo,
@@ -432,12 +431,12 @@ public abstract class ContextHandler<CHANNEL extends Channel>
 						loggingHandler);
 				pipeline.addAfter(NettyPipeline.LoggingHandler,
 						NettyPipeline.SslReader,
-						new SslReadHandler(sink));
+						new SslReadHandler());
 			}
 			else {
 				pipeline.addAfter(NettyPipeline.SslHandler,
 						NettyPipeline.SslReader,
-						new SslReadHandler(sink));
+						new SslReadHandler());
 			}
 		}
 		else if (log.isDebugEnabled()) {

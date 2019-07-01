@@ -572,6 +572,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					else {
 						// Returned value is deliberately ignored
 						promise.setFailure(new AbortedException("Connection has been closed"));
+						clean();
 						return;
 					}
 				}
@@ -604,6 +605,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				produced(p);
 				// Returned value is deliberately ignored
 				promise.setSuccess();
+				clean();
 				parent.drain();
 			}
 		}
@@ -630,6 +632,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				else {
 					// Returned value is deliberately ignored
 					promise.setFailure(new AbortedException("Connection has been closed"));
+					clean();
 					return;
 				}
 			}
@@ -658,10 +661,12 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 					if (!future.isSuccess()) {
 						// Returned value is deliberately ignored
 						promise.setFailure(Exceptions.addSuppressed(future.cause(), t));
+						clean();
 						return;
 					}
 					// Returned value is deliberately ignored
 					promise.setFailure(t);
+					clean();
 				});
 			}
 			else {
@@ -669,6 +674,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				produced(p);
 				// Returned value is deliberately ignored
 				promise.setFailure(t);
+				clean();
 				parent.drain();
 			}
 		}
@@ -760,6 +766,7 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 				// Returned value is deliberately ignored
 				promise.setFailure(future.cause());
 			}
+			clean();
 		}
 
 		@Override
@@ -923,6 +930,12 @@ final class ChannelOperationsHandler extends ChannelDuplexHandler
 			Operators.addCap(MISSED_PRODUCED, this, n);
 
 			drain();
+		}
+
+		private void clean() {
+			promise = null;
+			actual = null;
+			lastWrite = null;
 		}
 
 		@SuppressWarnings("rawtypes")

@@ -25,12 +25,9 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
  */
 final class SslReadHandler extends ChannelInboundHandlerAdapter {
 
-	final ContextHandler<?> sink;
-
 	boolean handshakeDone;
 
-	SslReadHandler(ContextHandler<?> sink) {
-		this.sink = sink;
+	SslReadHandler() {
 	}
 
 	@Override
@@ -60,7 +57,10 @@ final class SslReadHandler extends ChannelInboundHandlerAdapter {
 				ctx.fireChannelActive();
 			}
 			else {
-				sink.fireContextError(handshake.cause());
+				ChannelOperationsHandler h = ctx.channel().pipeline()
+						.get(ChannelOperationsHandler.class);
+
+				h.lastContext.fireContextError(handshake.cause());
 			}
 		}
 		super.userEventTriggered(ctx, evt);
