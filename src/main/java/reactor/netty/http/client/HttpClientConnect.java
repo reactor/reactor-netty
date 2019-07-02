@@ -151,8 +151,10 @@ final class HttpClientConnect extends HttpClient {
 			}
 
 			HttpClientConfiguration conf = HttpClientConfiguration.getAndClean(b);
+			ClientCookieEncoder cookieEncoder = conf.cookieEncoder;
+			ClientCookieDecoder cookieDecoder = conf.cookieDecoder;
 			BootstrapHandlers.channelOperationFactory(b,
-					(ch, c, msg) -> new HttpClientOperations(ch, c, conf.cookieEncoder, conf.cookieDecoder));
+					(ch, c, msg) -> new HttpClientOperations(ch, c, cookieEncoder, cookieDecoder));
 
 			if (ssl != null) {
 				if (ssl.getDefaultConfigurationType() == null) {
@@ -237,7 +239,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
 					BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer,
-							new Http1Initializer(handler, configuration.protocols));
+							new Http1Initializer(handler.decoder, handler.compress, configuration.protocols));
 //					return;
 				}
 //				if ((configuration.protocols & HttpClientConfiguration.h2) == HttpClientConfiguration.h2) {
@@ -273,7 +275,7 @@ final class HttpClientConnect extends HttpClient {
 				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
 					BootstrapHandlers.updateConfiguration(b,
 							NettyPipeline.HttpInitializer,
-							new Http1Initializer(handler, configuration.protocols));
+							new Http1Initializer(handler.decoder, handler.compress, configuration.protocols));
 //					return;
 				}
 //				if ((configuration.protocols & HttpClientConfiguration.h2c) == HttpClientConfiguration.h2c) {
@@ -680,11 +682,13 @@ final class HttpClientConnect extends HttpClient {
 	static final class Http1Initializer
 			implements BiConsumer<ConnectionObserver, Channel>  {
 
-		final HttpClientHandler handler;
+		final HttpResponseDecoderSpec decoder;
+		final boolean compress;
 		final int protocols;
 
-		Http1Initializer(HttpClientHandler handler, int protocols) {
-			this.handler = handler;
+		Http1Initializer(HttpResponseDecoderSpec decoder, boolean compress, int protocols) {
+			this.decoder = decoder;
+			this.compress = compress;
 			this.protocols = protocols;
 		}
 
@@ -692,15 +696,15 @@ final class HttpClientConnect extends HttpClient {
 		public void accept(ConnectionObserver listener, Channel channel) {
 			channel.pipeline()
 			       .addLast(NettyPipeline.HttpCodec,
-			                new HttpClientCodec(handler.decoder.maxInitialLineLength(),
-			                                    handler.decoder.maxHeaderSize(),
-			                                    handler.decoder.maxChunkSize(),
-			                                    handler.decoder.failOnMissingResponse,
-			                                    handler.decoder.validateHeaders(),
-			                                    handler.decoder.initialBufferSize(),
-			                                    handler.decoder.parseHttpAfterConnectRequest));
+			                new HttpClientCodec(decoder.maxInitialLineLength(),
+			                                    decoder.maxHeaderSize(),
+			                                    decoder.maxChunkSize(),
+			                                    decoder.failOnMissingResponse,
+			                                    decoder.validateHeaders(),
+			                                    decoder.initialBufferSize(),
+			                                    decoder.parseHttpAfterConnectRequest));
 
-			if (handler.compress) {
+			if (compress) {
 				channel.pipeline()
 				       .addAfter(NettyPipeline.HttpCodec,
 						       NettyPipeline.HttpDecompressor,
@@ -717,13 +721,13 @@ final class HttpClientConnect extends HttpClient {
 				return false;
 			}
 			Http1Initializer that = (Http1Initializer) o;
-			return handler.compress == that.handler.compress &&
+			return compress == that.compress &&
 					protocols == that.protocols;
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(handler.compress, protocols);
+			return Objects.hash(compress, protocols);
 		}
 	}
 
