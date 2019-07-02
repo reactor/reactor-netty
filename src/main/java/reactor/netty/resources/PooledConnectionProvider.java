@@ -531,7 +531,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				PendingConnectionObserver pending = (PendingConnectionObserver)current;
 				PendingConnectionObserver.Pending p;
 				current = null;
-				registerClose(c);
+				registerClose(c, pool);
 
 				while((p = pending.pendingQueue.poll()) != null) {
 					if (p.error != null) {
@@ -543,7 +543,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				}
 			}
 			else if (current == null) {
-				registerClose(c);
+				registerClose(c, pool);
 			}
 
 
@@ -586,7 +586,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 		}
 
-		void registerClose(Channel c) {
+		// The close lambda expression refers to pool,
+		// so it will have a implicit reference to `DisposableAcquire.this`,
+		// As a result this will avoid GC from recycling other references of this.
+		// Use Pool in the method declaration to avoid it.
+		void registerClose(Channel c, Pool pool) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(c, "Registering pool release on close event for channel"));
 			}
@@ -629,7 +633,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				Channel c = f.get();
 
 				if (!c.isActive()) {
-					registerClose(c);
+					registerClose(c, pool);
 					if (!retried) {
 						if (log.isDebugEnabled()) {
 							log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
