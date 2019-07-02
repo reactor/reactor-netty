@@ -188,7 +188,6 @@ final class WebsocketServerOperations extends HttpServerOperations
 			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 					discard();
-					channel().pipeline().remove(NettyPipeline.ReactiveBridge);
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
