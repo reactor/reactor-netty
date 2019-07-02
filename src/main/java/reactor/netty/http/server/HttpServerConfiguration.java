@@ -49,11 +49,11 @@ final class HttpServerConfiguration {
 		HttpServerConfiguration hcc = (HttpServerConfiguration) b.config()
 		                                                         .attrs()
 		                                                         .get(CONF_KEY);
-		b.attr(CONF_KEY, null);
 		if (hcc == null) {
-			hcc = DEFAULT;
+			return DEFAULT;
 		}
 
+		b.attr(CONF_KEY, null);
 		return hcc;
 	}
 

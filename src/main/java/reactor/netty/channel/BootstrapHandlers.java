@@ -215,10 +215,10 @@ public abstract class BootstrapHandlers {
 				(ChannelOperations.OnSetup) b.config()
 				                             .options()
 				                             .get(OPS_OPTION);
-		b.option(OPS_OPTION, null);
 		if (ops == null) {
 			return ChannelOperations.OnSetup.empty(); //will not be triggered in
 		}
+		b.option(OPS_OPTION, null);
 		return ops;
 	}
 
