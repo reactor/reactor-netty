@@ -17,7 +17,6 @@
 package reactor.netty.http.client;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
@@ -31,6 +30,7 @@ import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -41,9 +41,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javax.net.ssl.SSLException;
 
@@ -78,6 +78,7 @@ import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.ByteBufMono;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyPipeline;
@@ -1730,5 +1731,99 @@ public class HttpClientTest {
 		            .verify(Duration.ofSeconds(30));
 
 		disposableServer.disposeNow();
+	}
+
+	@Test
+	public void testIssue777() {
+		DisposableServer server = null;
+		try {
+			server = HttpServer.create()
+			                   .port(0)
+			                   .wiretap(true)
+			                   .route(r ->
+			                       r.post("/empty", (req, res) -> res.status(400)
+			                                                               .header(HttpHeaderNames.CONNECTION, "close")
+			                                                               .send(Mono.empty()))
+			                        .post("/test", (req, res) -> res.status(400)
+			                                                              .header(HttpHeaderNames.CONNECTION, "close")
+			                                                              .sendString(Mono.just("Test"))))
+			                   .bindNow();
+
+			HttpClient client = createHttpClientForContextWithAddress(server);
+
+			BiFunction<HttpClientResponse, ByteBufMono, Mono<String>> receiver =
+					(resp, bytes) -> {
+						if (!Objects.equals(HttpResponseStatus.OK, resp.status())) {
+							return bytes.asString()
+							            .switchIfEmpty(Mono.just(resp.status().reasonPhrase()))
+							            .flatMap(text -> Mono.error(new RuntimeException(text)));
+						}
+						return bytes.asString();
+					};
+			doTestIssue777_1(client, "/empty", "Bad Request", receiver);
+			doTestIssue777_1(client, "/test", "Test", receiver);
+
+			receiver = (resp, bytes) -> {
+				if (Objects.equals(HttpResponseStatus.OK, resp.status())) {
+					return bytes.asString();
+				}
+				return Mono.error(new RuntimeException("error"));
+			};
+			doTestIssue777_1(client, "/empty", "error", receiver);
+			doTestIssue777_1(client, "/test", "error", receiver);
+
+			BiFunction<HttpClientResponse, ByteBufMono, Mono<Tuple2<String, HttpClientResponse>>> receiver1 =
+					(resp, byteBuf) ->
+							Mono.zip(byteBuf.asString(StandardCharsets.UTF_8)
+							                .switchIfEmpty(Mono.just(resp.status().reasonPhrase())),
+							         Mono.just(resp));
+			doTestIssue777_2(client, "/empty", "Bad Request", receiver1);
+			doTestIssue777_2(client, "/test", "Test", receiver1);
+
+			receiver =
+					(resp, bytes) -> bytes.asString(StandardCharsets.UTF_8)
+					                      .switchIfEmpty(Mono.just(resp.status().reasonPhrase()))
+					                      .map(respBody -> {
+					                          if (resp.status() != HttpResponseStatus.OK) {
+					                              throw new RuntimeException(respBody);
+					                          }
+					                          return respBody;
+					                      });
+			doTestIssue777_1(client, "/empty", "Bad Request", receiver);
+			doTestIssue777_1(client, "/test", "Test", receiver);
+		}
+		finally {
+			if (server != null) {
+				server.disposeNow();
+			}
+		}
+	}
+
+	private void doTestIssue777_1(HttpClient client, String uri, String expectation,
+			BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<String>> receiver) {
+		StepVerifier.create(
+		        client.post()
+		              .uri(uri)
+		              .send((req, out) -> out.sendString(Mono.just("Test")))
+		              .responseSingle(receiver))
+		            .expectErrorMessage(expectation)
+		            .verify(Duration.ofSeconds(30));
+	}
+
+	private void doTestIssue777_2(HttpClient client, String uri, String expectation,
+			BiFunction<? super HttpClientResponse, ? super ByteBufMono, ? extends Mono<Tuple2<String, HttpClientResponse>>> receiver) {
+		StepVerifier.create(
+		        client.post()
+		              .uri(uri)
+		              .send((req, out) -> out.sendString(Mono.just("Test")))
+		              .responseSingle(receiver)
+		              .map(tuple -> {
+		                  if (tuple.getT2().status() != HttpResponseStatus.OK) {
+		                      throw new RuntimeException(tuple.getT1());
+		                  }
+		                  return tuple.getT1();
+		              }))
+		            .expectErrorMessage(expectation)
+		            .verify(Duration.ofSeconds(30));
 	}
 }
