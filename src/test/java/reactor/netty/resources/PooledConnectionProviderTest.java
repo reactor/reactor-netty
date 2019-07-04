@@ -253,7 +253,7 @@ public class PooledConnectionProviderTest {
 
 				    assertThat(l.subList(1, l.size())).allSatisfy(s -> assertThat(s.getThrowable())
 						    .isInstanceOf(TimeoutException.class)
-						    .hasMessage("Acquire has been pending for more than the configured timeout of 20ms"));
+						    .hasMessage("Pool#acquire(Duration) has been pending for more than the configured timeout of 20ms"));
 			    });
 
 			assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch 30s").isTrue();
@@ -271,6 +271,11 @@ public class PooledConnectionProviderTest {
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {
 
 		@Override
+		public Mono<Integer> warmup() {
+			return null;
+		}
+
+		@Override
 		public Mono<PooledRef<PooledConnection>> acquire() {
 			return Mono.empty();
 		}
@@ -283,6 +288,11 @@ public class PooledConnectionProviderTest {
 		@Override
 		public void dispose() {
 			incrementAndGet();
+		}
+
+		@Override
+		public Mono<Void> disposeLater() {
+			return null;
 		}
 
 		@Override

@@ -24,7 +24,6 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
-import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolBuilder;
 import reactor.util.annotation.NonNull;
 
@@ -81,11 +80,10 @@ public interface ConnectionProvider extends Disposable {
 	static ConnectionProvider elastic(String name) {
 		return new PooledConnectionProvider(name,
 				(allocator, destroyHandler, evictionPredicate) ->
-				        (InstrumentedPool<PooledConnectionProvider.PooledConnection>)
 				                PoolBuilder.from(allocator)
 				                           .destroyHandler(destroyHandler)
 				                           .evictionPredicate(evictionPredicate)
-				                           .build());
+				                           .fifo());
 	}
 
 	/**
@@ -147,13 +145,12 @@ public interface ConnectionProvider extends Disposable {
 		}
 		return new PooledConnectionProvider(name,
 				(allocator, destroyHandler, evictionPredicate) ->
-				        (InstrumentedPool<PooledConnectionProvider.PooledConnection>)
 				                PoolBuilder.from(allocator)
 				                           .sizeMax(maxConnections)
 				                           .maxPendingAcquireUnbounded()
 				                           .destroyHandler(destroyHandler)
 				                           .evictionPredicate(evictionPredicate)
-				                           .build(),
+				                           .fifo(),
 				acquireTimeout,
 				maxConnections);
 	}
