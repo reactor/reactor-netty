@@ -41,13 +41,14 @@ instance ready for configuring.
 ====
 
 
-The following example uses WebSocket`:
+The following example uses `WebSocket`:
 
 ====
 [source,java]
 ----
-import reactor.core.publisher.Mono;
-import reactor.netty.NettyPipeline;
+import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
+import reactor.core.publisher.Flux;
 import reactor.netty.http.client.HttpClient;
 
 public class Application {
@@ -62,8 +63,9 @@ public class Application {
                              .take(1)
                              .subscribe(System.out::println);
 
-                      return outbound.options(NettyPipeline.SendOptions::flushOnEach)
-                                     .sendString(Mono.just("hello"))
+                      final byte[] msgBytes = "hello".getBytes(CharsetUtil.ISO_8859_1);
+                      return outbound.send(Flux.just(Unpooled.wrappedBuffer(msgBytes), Unpooled.wrappedBuffer(msgBytes)),
+                                           b -> true)
                                      .neverComplete();
                   })
                   .blockLast();
@@ -222,50 +224,6 @@ public class Application {
 }
 ----
 ====
-
-== Flushing Strategies
-
-Reactor Netty provides three different strategies for flushing the outgoing data with
-{javadoc}/reactor/netty/NettyPipeline.SendOptions.html[`NettyPipeline.SendOptions`]
-
-* `flushOnBoundary()` (default): The flush operation is explicitly invoked on a terminated `Publisher`.
-* `flushOnEach()`: The flushing operation is invoked as soon as possible after the write operation.
-This means that the ultimate goal is a flush operation after every element that was written. However, as the flush operation
-is scheduled, the flush operation might be invoked once for several write operations.
-* `flushOnEach(boolean)`: When invoked with `true`, the flush operation behaves the same as `flushOnEach()`.
-When invoked with `false`, it is guaranteed to be a flush operation after
-every write operation.
-
-The following example uses `flushOnEach(false)` to set the flushing strategy:
-
-====
-[source,java]
-----
-import reactor.core.publisher.Flux;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .post()
-                          .uri("http://example.com/")
-                          .send((request, outbound) ->
-                                  outbound.options(o -> o.flushOnEach(false)) <1>
-                                          .sendString(Flux.just("Hello", "World", "!")))
-                          .response()
-                          .block();
-    }
-}
-----
-<1> Configures the flushing strategy to flush after every element emitted by the given `Publisher`.
-The flush operation is not scheduled, which means a flush operation is invoked after every write operation.
-====
-
-NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
-You can configure the buffer size by using the `SO_SNDBUF` channel option.
 
 == Consuming Data
 

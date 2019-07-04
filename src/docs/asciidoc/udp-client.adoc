@@ -108,53 +108,6 @@ public class Application {
 <1> Sends `hello` string to the remote peer.
 ====
 
-== Flushing Strategies
-
-`Reactor Netty` provides three different strategies for flushing the outgoing data with
-{javadoc}/reactor/netty/NettyPipeline.SendOptions.html[`NettyPipeline.SendOptions`]:
-
-* `flushOnBoundary()` (default): The flush operation is explicitly invoked on a terminated `Publisher`.
-* `flushOnEach()`: The flushing operation is run as soon as possible after the write operation.
-This means that the ultimate goal is a flush operation after every element that was written. However, as the flush operation
-is scheduled, the flush operation might be invoked once for several write operations.
-* `flushOnEach(boolean)`:  When invoked with `true`, the flush operation behaves the same as `flushOnEach()`.
-When invoked with `false`, it is guaranteed to be a flush operation after
-every write operation.
-
-The following example uses `flushOnEach(false)` to set the flushing strategy:
-
-====
-[source,java]
-----
-import reactor.core.publisher.Flux;
-import reactor.netty.Connection;
-import reactor.netty.udp.UdpClient;
-import java.time.Duration;
-
-public class Application {
-
-    public static void main(String[] args) {
-        Connection connection =
-                UdpClient.create()
-                         .host("example.com")
-                         .port(80)
-                         .handle((udpInbound, udpOutbound) ->
-                                 udpOutbound.options(o -> o.flushOnEach(false)) <1>
-                                            .sendString(Flux.just("Hello", "World", "!")))
-                         .connectNow(Duration.ofSeconds(30));
-
-        connection.onDispose()
-                  .block();
-    }
-}
-----
-<1> Configures the flushing strategy to flush after every element emitted by the given `Publisher`.
-The flush operation is not scheduled, which means flush operation is invoked after every write operation.
-====
-
-NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
-You can configure the buffer size by using the `SO_SNDBUF` channel option.
-
 == Consuming Data
 
 To receive data from a given peer, you must attach an I/O handler.

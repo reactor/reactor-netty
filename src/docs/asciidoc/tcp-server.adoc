@@ -101,50 +101,6 @@ public class Application {
 <1> Sends `hello` string to the connected clients
 ====
 
-== Flushing Strategies
-
-`Reactor Netty` provides three different strategies for flushing the outgoing data, as detailed in
-{javadoc}/reactor/netty/NettyPipeline.SendOptions.html[`NettyPipeline.SendOptions`]:
-
-* `flushOnBoundary()` (default): The flush operation is explicitly invoked on a terminated `Publisher`.
-* `flushOnEach()`: The flushing operation is invoked as soon as possible after the write operation.
-This means that the ultimate goal is a flush operation after every element that was written.
-However, as the flush operation is scheduled, the flush operation might be invoked once for several write operations.
-* `flushOnEach(boolean)`: Depending on the provided boolean value, the flush operation might behave as the one described above
-(when invoked with `true`), or (when invoked with `false`) it is guaranteed that a flush operation happens after
-every write operation.
-
-The following example sets the flushing strategy to `flushOnEach(false)`:
-
-====
-[source,java]
-----
-import reactor.core.publisher.Flux;
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .handle((inbound, outbound) ->
-                                 outbound.options(o -> o.flushOnEach(false)) <1>
-                                         .sendString(Flux.just("Hello", "World", "!")))
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
-----
-<1> Configures the flushing strategy to flush after every element emitted by the given `Publisher`.
-The flush operation is not scheduled, which means the flush operation is invoked after every write operation.
-====
-
-NOTE: There might be an implicit flushing when the buffer used for the outgoing data is full.
-You can configure the buffer size by using the `SO_SNDBUF` channel option.
-
 == Consuming Data
 
 In order to receive data from a connected client, you must attach an I/O handler.
