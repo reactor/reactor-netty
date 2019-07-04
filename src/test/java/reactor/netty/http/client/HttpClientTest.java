@@ -1784,7 +1784,7 @@ public class HttpClientTest {
 					(resp, bytes) -> bytes.asString(StandardCharsets.UTF_8)
 					                      .switchIfEmpty(Mono.just(resp.status().reasonPhrase()))
 					                      .map(respBody -> {
-					                          if (resp.status() != HttpResponseStatus.OK) {
+					                          if (!Objects.equals(HttpResponseStatus.OK, resp.status())) {
 					                              throw new RuntimeException(respBody);
 					                          }
 					                          return respBody;
@@ -1818,7 +1818,7 @@ public class HttpClientTest {
 		              .send((req, out) -> out.sendString(Mono.just("Test")))
 		              .responseSingle(receiver)
 		              .map(tuple -> {
-		                  if (tuple.getT2().status() != HttpResponseStatus.OK) {
+		                  if (!Objects.equals(HttpResponseStatus.OK, tuple.getT2().status())) {
 		                      throw new RuntimeException(tuple.getT1());
 		                  }
 		                  return tuple.getT1();
