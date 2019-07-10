@@ -279,6 +279,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						O encodedMessage = parent.transformer.apply(sourceMessage);
 						if (encodedMessage == null) {
 							if (parent.predicate.test(sourceMessage)) {
+								nextRequest++;
 								needFlush = false;
 								ctx.flush();
 							}
@@ -289,7 +290,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 
 						if (readableBytes == 0 && !(encodedMessage instanceof ByteBufHolder)) {
-							r++;
+							nextRequest++;
 							continue;
 						}
 						pending++;
