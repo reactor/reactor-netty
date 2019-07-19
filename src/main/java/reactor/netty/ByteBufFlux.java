@@ -171,7 +171,8 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 				                      sink.error(e);
 				                  }
 				                  return fc;
-				              }),
+				              },
+				              ReactorNetty.fileCloser),
 				allocator);
 	}
 
