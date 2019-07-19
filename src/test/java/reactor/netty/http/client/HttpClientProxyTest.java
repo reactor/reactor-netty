@@ -66,7 +66,9 @@ public class HttpClientProxyTest {
 
 	@After
 	public void tearDown() {
-		server.dispose();
+		if (server != null) {
+			server.dispose();
+		}
 	}
 
 	@Test
