@@ -64,8 +64,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	 *
 	 * @return a {@link ByteBufFlux}
 	 */
-	public static ByteBufFlux fromInbound(Publisher<?> source,
-			ByteBufAllocator allocator) {
+	public static ByteBufFlux fromInbound(Publisher<?> source, ByteBufAllocator allocator) {
 		Objects.requireNonNull(allocator, "allocator");
 		return maybeFuse(Flux.from(ReactorNetty.publisherOrScalarMap(source, bytebufExtractor)), allocator);
 	}
@@ -152,23 +151,27 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		if (maxChunkSize < 1) {
 			throw new IllegalArgumentException("chunk size must be strictly positive, " + "was: " + maxChunkSize);
 		}
-		return maybeFuse(Flux.generate(() -> FileChannel.open(path), (fc, sink) -> {
-			ByteBuf buf = allocator.buffer();
-			try {
-				if (buf.writeBytes(fc, maxChunkSize) < 0) {
-					buf.release();
-					sink.complete();
-				}
-				else {
-					sink.next(buf);
-				}
-			}
-			catch (IOException e) {
-				buf.release();
-				sink.error(e);
-			}
-			return fc;
-		}), allocator);
+		return maybeFuse(
+				Flux.generate(() -> FileChannel.open(path),
+				              (fc, sink) -> {
+				                  ByteBuf buf = allocator.buffer();
+				                  try {
+				                      if (buf.writeBytes(fc, maxChunkSize) < 0) {
+				                          buf.release();
+				                          sink.complete();
+				                      }
+				                      else {
+				                          sink.next(buf);
+				                      }
+				                  }
+				                  catch (IOException e) {
+				                      buf.release();
+				                      sink.error(e);
+				                  }
+				                  return fc;
+				              },
+				              ReactorNetty.fileCloser),
+				allocator);
 	}
 
 	/**

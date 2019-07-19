@@ -46,121 +46,115 @@ import static org.junit.Assert.assertTrue;
  */
 public class ByteBufFluxTest {
 
-    private static File temporaryDirectory;
+	private static File temporaryDirectory;
 
-    @BeforeClass
-    public static void createTempDir() {
-        temporaryDirectory = createTemporaryDirectory();
-    }
+	@BeforeClass
+	public static void createTempDir() {
+		temporaryDirectory = createTemporaryDirectory();
+	}
 
-    @AfterClass
-    public static void deleteTempDir() {
-        deleteTemporaryDirectoryRecursively(temporaryDirectory);
-    }
+	@AfterClass
+	public static void deleteTempDir() {
+		deleteTemporaryDirectoryRecursively(temporaryDirectory);
+	}
 
-    @Test
-    public void testFromPath() throws Exception {
+	@Test
+	public void testFromPath() throws Exception {
 
-        // Create a temporary file with some binary data that will be read in chunks using the ByteBufFlux
-        final int chunkSize = 3;
-        final Path tmpFile = new File(temporaryDirectory, "content.in").toPath();
-        final byte[] data = new byte[]{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9};
-        Files.write(tmpFile, data);
-        // Make sure the file is 10 bytes (i.e. the same ad the data length)
-        Assert.assertEquals(data.length, Files.size(tmpFile));
+		// Create a temporary file with some binary data that will be read in chunks using the ByteBufFlux
+		final int chunkSize = 3;
+		final Path tmpFile = new File(temporaryDirectory, "content.in").toPath();
+		final byte[] data = new byte[]{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9};
+		Files.write(tmpFile, data);
+		// Make sure the file is 10 bytes (i.e. the same as the data length)
+		Assert.assertEquals(data.length, Files.size(tmpFile));
 
-        // Use the ByteBufFlux to read the file in chunks of 3 bytes max and write them into a ByteArrayOutputStream for verification
-        final Iterator<ByteBuf> it = ByteBufFlux.fromPath(tmpFile, chunkSize)
-                                                .toIterable()
-                                                .iterator();
-        final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        while (it.hasNext()) {
-            ByteBuf bb = it.next();
-            byte[] read = new byte[bb.readableBytes()];
-            bb.readBytes(read);
-            bb.release();
-            Assert.assertEquals(0, bb.readableBytes());
-            out.write(read);
-        }
+		// Use the ByteBufFlux to read the file in chunks of 3 bytes max and write them into a ByteArrayOutputStream for verification
+		final Iterator<ByteBuf> it = ByteBufFlux.fromPath(tmpFile, chunkSize)
+		                                        .toIterable()
+		                                        .iterator();
+		final ByteArrayOutputStream out = new ByteArrayOutputStream();
+		while (it.hasNext()) {
+			ByteBuf bb = it.next();
+			byte[] read = new byte[bb.readableBytes()];
+			bb.readBytes(read);
+			bb.release();
+			Assert.assertEquals(0, bb.readableBytes());
+			out.write(read);
+		}
 
-        // Verify that we read the file.
-        Assert.assertArrayEquals(data, out.toByteArray());
-        System.out.println(Files.exists(tmpFile));
+		// Verify that we read the file.
+		Assert.assertArrayEquals(data, out.toByteArray());
+		System.out.println(Files.exists(tmpFile));
 
-    }
+	}
 
-    private static File createTemporaryDirectory() {
-        try {
-            final File tempDir = File.createTempFile("ByteBufFluxTest", "", null);
-            assertTrue(tempDir.delete());
-            assertTrue(tempDir.mkdir());
-            return tempDir;
-        } catch (Exception e) {
-            throw new RuntimeException("Error creating the temporary directory", e);
-        }
-    }
+	private static File createTemporaryDirectory() {
+		try {
+			final File tempDir = File.createTempFile("ByteBufFluxTest", "", null);
+			assertTrue(tempDir.delete());
+			assertTrue(tempDir.mkdir());
+			return tempDir;
+		} catch (Exception e) {
+			throw new RuntimeException("Error creating the temporary directory", e);
+		}
+	}
 
-    private static void deleteTemporaryDirectoryRecursively(final File file) {
-        if (temporaryDirectory == null || !temporaryDirectory.exists()){
-            return;
-        }
-        final File[] files = file.listFiles();
-        if (files != null) {
-            for (File childFile : files) {
-                deleteTemporaryDirectoryRecursively(childFile);
-            }
-        }
-        file.deleteOnExit();
-    }
+	private static void deleteTemporaryDirectoryRecursively(final File file) {
+		if (temporaryDirectory == null || !temporaryDirectory.exists()){
+			return;
+		}
+		final File[] files = file.listFiles();
+		if (files != null) {
+			for (File childFile : files) {
+				deleteTemporaryDirectoryRecursively(childFile);
+			}
+		}
+		file.deleteOnExit();
+	}
 
-    @Test
-    public void testByteBufFluxFromPathWithoutSecurity() throws Exception {
-        doTestByteBufFluxFromPath(false);
-    }
+	@Test
+	public void testByteBufFluxFromPathWithoutSecurity() throws Exception {
+		doTestByteBufFluxFromPath(false);
+	}
 
-    @Test
-    public void testByteBufFluxFromPathWithSecurity() throws Exception {
-        doTestByteBufFluxFromPath(true);
-    }
+	@Test
+	public void testByteBufFluxFromPathWithSecurity() throws Exception {
+		doTestByteBufFluxFromPath(true);
+	}
 
-    private void doTestByteBufFluxFromPath(boolean withSecurity) throws Exception {
-        final int serverPort = SocketUtils.findAvailableTcpPort();
-        final HttpServer server;
-        final HttpClient client;
-        if (withSecurity) {
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
-            SslContext sslClient = SslContextBuilder.forClient()
-					.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-            server = HttpServer.create()
-                               .port(serverPort)
-                               .secure(ssl -> ssl.sslContext(sslServer));
-            client = HttpClient.create()
-                               .port(serverPort)
-                               .secure(ssl -> ssl.sslContext(sslClient));
-        }
-        else {
-            server = HttpServer.create()
-                               .port(serverPort);
-            client = HttpClient.create()
-                               .port(serverPort);
-        }
+	private void doTestByteBufFluxFromPath(boolean withSecurity) throws Exception {
+		final int serverPort = SocketUtils.findAvailableTcpPort();
+		HttpServer server = HttpServer.create()
+		                              .port(serverPort)
+		                              .wiretap(true);
+		HttpClient client = HttpClient.create()
+		                              .port(serverPort)
+		                              .wiretap(true);
+		if (withSecurity) {
+			SelfSignedCertificate ssc = new SelfSignedCertificate();
+			SslContext sslServer = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+			SslContext sslClient = SslContextBuilder.forClient()
+			                                        .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+			server = server.secure(ssl -> ssl.sslContext(sslServer));
+			client = client.secure(ssl -> ssl.sslContext(sslClient));
+		}
 
-        Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
-        DisposableServer c = server.handle((req, res) ->
-                                       res.send(ByteBufFlux.fromPath(path))
-                                          .then())
-                                   .wiretap(true)
-                                   .bindNow();
+		Path path = Paths.get(getClass().getResource("/largeFile.txt").toURI());
+		DisposableServer c = server.handle((req, res) ->
+		                                      res.send(ByteBufFlux.fromPath(path))
+		                                         .then())
+		                           .bindNow();
 
-        AtomicLong counter = new AtomicLong(0);
-        client.wiretap(true)
-              .get()
-              .uri("/download")
-              .responseContent()
-              .doOnNext(b -> counter.addAndGet(b.readableBytes()))
-              .blockLast(Duration.ofSeconds(30));
-        assertEquals(1245, counter.get());
-        c.disposeNow();
-    }
+		AtomicLong counter = new AtomicLong(0);
+		client.get()
+		      .uri("/download")
+		      .responseContent()
+		      .doOnNext(b -> counter.addAndGet(b.readableBytes()))
+		      .blockLast(Duration.ofSeconds(30));
+
+		assertEquals(1245, counter.get());
+
+		c.disposeNow();
+	}
 }
