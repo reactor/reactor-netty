@@ -550,11 +550,11 @@ import java.io.File;
 public class Application {
 
     public static void main(String[] args) {
+        File cert = new File("certificate.crt");
+        File key = new File("private.key");
         DisposableServer server =
                 HttpServer.create()
-                          .secure(spec ->
-                                  SslContextBuilder.forServer(new File("certificate.crt"),
-                                                              new File("private.key")))
+                          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert,key)))
                           .bindNow();
 
         server.onDispose()
