@@ -274,6 +274,17 @@ public abstract class HttpServer {
 	}
 
 	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpServer},
+	 * assuming Micrometer is on the classpath.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer metrics(boolean metricsEnabled) {
+		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, "reactor.netty.http.server"));
+	}
+
+	/**
 	 * The host to which this server should bind.
 	 * By default the server will listen on any local address.
 	 *

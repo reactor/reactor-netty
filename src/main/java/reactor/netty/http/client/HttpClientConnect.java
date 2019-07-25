@@ -86,6 +86,7 @@ import reactor.netty.tcp.InetSocketAddressUtil;
 import reactor.netty.tcp.ProxyProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
+import reactor.netty.tcp.TcpMetricsHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
@@ -687,21 +688,29 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void accept(ConnectionObserver listener, Channel channel) {
-			channel.pipeline()
-			       .addLast(NettyPipeline.HttpCodec,
-			                new HttpClientCodec(decoder.maxInitialLineLength(),
-			                                    decoder.maxHeaderSize(),
-			                                    decoder.maxChunkSize(),
-			                                    decoder.failOnMissingResponse,
-			                                    decoder.validateHeaders(),
-			                                    decoder.initialBufferSize(),
-			                                    decoder.parseHttpAfterConnectRequest));
+			ChannelPipeline p = channel.pipeline();
+			p.addLast(NettyPipeline.HttpCodec,
+			          new HttpClientCodec(decoder.maxInitialLineLength(),
+			                              decoder.maxHeaderSize(),
+			                              decoder.maxChunkSize(),
+			                              decoder.failOnMissingResponse,
+			                              decoder.validateHeaders(),
+			                              decoder.initialBufferSize(),
+			                              decoder.parseHttpAfterConnectRequest));
 
 			if (compress) {
-				channel.pipeline()
-				       .addAfter(NettyPipeline.HttpCodec,
-						       NettyPipeline.HttpDecompressor,
-						       new HttpContentDecompressor());
+				p.addAfter(NettyPipeline.HttpCodec,
+				           NettyPipeline.HttpDecompressor,
+				           new HttpContentDecompressor());
+			}
+
+			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+			if (handler != null) {
+				TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+				HttpClientMetricsHandler httpMetrics =
+						new HttpClientMetricsHandler(tcpMetrics.registry(),
+						                             tcpMetrics.name());
+				p.addLast(NettyPipeline.HttpMetricsHandler, httpMetrics);
 			}
 		}
 
@@ -839,6 +848,17 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				p.addLast(NettyPipeline.HttpCodec, httpClientCodec);
+//				TODO
+//				ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+//				if (handler != null) {
+//					TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+//					HttpClientMetricsHandler httpMetrics =
+//							new HttpClientMetricsHandler(tcpMetrics.registry(),
+//									tcpMetrics.name(),
+//									"http",
+//									tcpMetrics.remoteAddress());
+//					p.addLast(NettyPipeline.HttpMetricsHandler, httpMetrics);
+//				}
 //				 .addLast(new HttpClientUpgradeHandler(httpClientCodec,
 //				          new Http2ClientUpgradeCodec(h2HandlerBuilder.build()), 65536))
 //				 .addLast(this);
@@ -898,6 +918,15 @@ final class HttpClientConnect extends HttpClient {
 					p.addAfter(NettyPipeline.HttpCodec,
 					           NettyPipeline.HttpDecompressor,
 					           new HttpContentDecompressor());
+				}
+
+				ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+				if (handler != null) {
+					TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+					HttpClientMetricsHandler httpMetrics =
+							new HttpClientMetricsHandler(tcpMetrics.registry(),
+							                             tcpMetrics.name());
+					p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, httpMetrics);
 				}
 //				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(ctx.channel()), listener,	null);
 //				if (ops != null) {

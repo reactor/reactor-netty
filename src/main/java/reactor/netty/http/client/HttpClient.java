@@ -821,6 +821,17 @@ public abstract class HttpClient {
 	}
 
 	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpClient},
+	 * assuming Micrometer is on the classpath.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the client.
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient metrics(boolean metricsEnabled) {
+		return tcpConfiguration(tcpClient -> tcpClient.metrics(metricsEnabled, "reactor.netty.http.client"));
+	}
+
+	/**
 	 * Configure the {@link io.netty.handler.codec.http.HttpClientCodec}'s response decoding options.
 	 *
 	 * @param responseDecoderOptions a function to mutate the provided Http response decoder options

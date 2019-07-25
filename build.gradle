@@ -51,6 +51,9 @@ ext {
   reactorPoolVersion = "0.0.1.BUILD-SNAPSHOT"
   blockHoundVersion = "1.0.0.M4"
 
+  //Metrics
+  micrometerVersion = 'latest.release'
+
   // Logging
   slf4jVersion = '1.7.12'
   logbackVersion = '1.1.2'
@@ -101,6 +104,7 @@ configure(rootProject) { project ->
   ext.bundleImportPackages = [ '!javax.annotation',
 							   'io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)"',
 							   '!reactor.pool',
+							   'io.micrometer.*;resolution:=optional',
 							   '*']
 
   [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
@@ -223,6 +227,9 @@ configure(rootProject) { project ->
 	compile "io.netty:netty-handler-proxy:${nettyVersion}"
 	compile "io.netty:netty-codec-http2:${nettyVersion}"
 	optional "io.netty:netty-codec-haproxy:${nettyVersion}"
+
+	//Metrics
+	optional "io.micrometer:micrometer-core:${micrometerVersion}"
 
 	// Logging
 	optional "org.slf4j:slf4j-api:$slf4jVersion"

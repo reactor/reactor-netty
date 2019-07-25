@@ -55,6 +55,7 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
+import reactor.netty.tcp.TcpMetricsHandler;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.annotation.Nullable;
 
@@ -361,6 +362,17 @@ final class HttpServerBind extends HttpServer
 
 			p.addLast(NettyPipeline.HttpTrafficHandler,
 					new HttpTrafficHandler(listener, forwarded, compressPredicate, cookieEncoder, cookieDecoder, secure));
+
+			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+			if (handler != null) {
+				// TODO doesn't take into account proxy protocol address and forward headers
+				TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+				HttpServerMetricsHandler httpMetrics =
+						new HttpServerMetricsHandler(tcpMetrics.registry(),
+						                             tcpMetrics.name());
+				p.addLast(NettyPipeline.HttpMetricsHandler, httpMetrics);
+			}
+
 		}
 	}
 
@@ -435,6 +447,16 @@ final class HttpServerBind extends HttpServer
 
 			p.addLast(NettyPipeline.HttpTrafficHandler,
 					new HttpTrafficHandler(listener, forwarded, compressPredicate, cookieEncoder, cookieDecoder, false));
+
+			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+			if (handler != null) {
+				// TODO doesn't take into account proxy protocol address and forward headers
+				TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+				HttpServerMetricsHandler httpMetrics =
+						new HttpServerMetricsHandler(tcpMetrics.registry(),
+						                             tcpMetrics.name());
+				p.addLast(NettyPipeline.HttpMetricsHandler, httpMetrics);
+			}
 		}
 	}
 
@@ -633,6 +655,16 @@ final class HttpServerBind extends HttpServer
 					p.addBefore(NettyPipeline.HttpTrafficHandler,
 							NettyPipeline.CompressionHandler,
 							new SimpleCompressionHandler());
+				}
+
+				ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+				if (handler != null) {
+					// TODO doesn't take into account proxy protocol address and forward headers
+					TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+					HttpServerMetricsHandler httpMetrics =
+							new HttpServerMetricsHandler(tcpMetrics.registry(),
+							                             tcpMetrics.name());
+					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
 				}
 				return;
 			}

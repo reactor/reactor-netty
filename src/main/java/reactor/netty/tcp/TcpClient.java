@@ -48,6 +48,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.Metrics;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -514,6 +515,31 @@ public abstract class TcpClient {
 	@Nullable
 	public SslProvider sslProvider(){
 		return null;
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link TcpClient},
+	 * assuming Micrometer is on the classpath.
+	 * if {@code name } is {@code NULL } - {@code reactor.netty.tcp.client}
+	 * will be used as a name.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the client.
+	 * @param name the name to be used for the metrics
+	 * @return a new {@link TcpClient}
+	 */
+	public final TcpClient metrics(boolean metricsEnabled, @Nullable String name) {
+		if (metricsEnabled) {
+			if (!Metrics.isInstrumentationAvailable()) {
+				throw new UnsupportedOperationException(
+						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+								" to the class path first");
+			}
+
+			return bootstrap(b -> TcpUtils.updateMetricsSupport(b, name));
+		}
+		else {
+			return bootstrap(TcpUtils::removeMetricsSupport);
+		}
 	}
 
 	/**

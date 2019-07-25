@@ -47,6 +47,7 @@ import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.Metrics;
 
 /**
  * A TcpServer allows to build in a safe immutable way a TCP server that is materialized
@@ -538,6 +539,31 @@ public abstract class TcpServer {
 		}
 		else {
 			return bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.LoggingHandler));
+		}
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link TcpServer},
+	 * assuming Micrometer is on the classpath.
+	 * if {@code name } is {@code NULL } - {@code reactor.netty.tcp.server}
+	 * will be used as a name.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param name the name to be used for the metrics
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer metrics(boolean metricsEnabled, @Nullable String name) {
+		if (metricsEnabled) {
+			if (!Metrics.isInstrumentationAvailable()) {
+				throw new UnsupportedOperationException(
+						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+								" to the class path first");
+			}
+
+			return bootstrap(b -> TcpUtils.updateMetricsSupport(b, name));
+		}
+		else {
+			return bootstrap(TcpUtils::removeMetricsSupport);
 		}
 	}
 

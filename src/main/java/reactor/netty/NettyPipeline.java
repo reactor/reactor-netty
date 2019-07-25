@@ -20,7 +20,6 @@ import java.util.function.BiConsumer;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import org.reactivestreams.Publisher;
 
 /**
  * Constant for names used when adding/removing {@link io.netty.channel.ChannelHandler}.
@@ -66,6 +65,10 @@ public interface NettyPipeline {
 	String ChunkedWriter      = LEFT + "chunkedWriter";
 	String LoggingHandler     = LEFT + "loggingHandler";
 	String CompressionHandler = LEFT + "compressionHandler";
+	String TcpMetricsHandler  = LEFT + "tcpMetricsHandler";
+	String HttpMetricsHandler = LEFT + "httpMetricsHandler";
+	String SslMetricsHandler  = LEFT + "sslMetricsHandler";
+	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";
 	String WsCompressionHandler = LEFT + "wsCompressionHandler";
 	String ProxyProtocolDecoder = LEFT + "proxyProtocolDecoder";
 	String ProxyProtocolReader  = LEFT + "proxyProtocolReader";

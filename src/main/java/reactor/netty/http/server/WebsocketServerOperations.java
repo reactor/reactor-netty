@@ -81,6 +81,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 		}
 		else {
 			removeHandler(NettyPipeline.HttpTrafficHandler);
+			removeHandler(NettyPipeline.HttpMetricsHandler);
 
 			handshakerResult = channel.newPromise();
 			HttpRequest request = new DefaultFullHttpRequest(replaced.version(),
