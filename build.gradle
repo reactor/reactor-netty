@@ -29,6 +29,7 @@ buildscript {
 plugins {
   id "com.github.hierynomus.license" version "0.14.0"
   id 'org.asciidoctor.convert' version '1.5.11'
+  id 'com.github.johnrengelman.shadow' version '5.0.0'
 }
 
 description = 'Reactive Streams Netty driver'
@@ -99,6 +100,7 @@ configure(rootProject) { project ->
 
   ext.bundleImportPackages = [ '!javax.annotation',
 							   'io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)"',
+							   '!reactor.pool',
 							   '*']
 
   [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
@@ -182,7 +184,13 @@ configure(rootProject) { project ->
 	}
   }
 
-  repositories {
+	sourceSets {
+		jarFileTest
+	}
+
+	idea.module.testSourceDirs += sourceSets.jarFileTest.allSource.srcDirs
+
+	repositories {
 	mavenCentral()
 	if (version.endsWith('BUILD-SNAPSHOT') || project.hasProperty('platformVersion')) {
 	  if (System.getenv ()["bamboo_buildNumber"] == null) {
@@ -203,6 +211,10 @@ configure(rootProject) { project ->
 		os_suffix = ":" + osdetector.classifier
 	}
 
+	configurations {
+		shaded
+	}
+
 	// dependencies that are common across all java projects
   dependencies {
 	// JSR-305 annotations
@@ -216,7 +228,7 @@ configure(rootProject) { project ->
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
 
 	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
-	compile "io.projectreactor.addons:reactor-pool:$reactorPoolVersion"
+	shaded "io.projectreactor.addons:reactor-pool:$reactorPoolVersion"
 	optional "io.projectreactor.tools:blockhound:$blockHoundVersion"
 
 	compile "io.netty:netty-handler:${nettyVersion}"
@@ -238,6 +250,13 @@ configure(rootProject) { project ->
 
 	// Needed for HTTP/2 testing
 	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.25.Final" + os_suffix
+
+	jarFileTestCompile 'org.assertj:assertj-core:3.12.2'
+	jarFileTestCompile 'junit:junit:4.12'
+
+	for (dependency in project.configurations.shaded.dependencies) {
+		compile(dependency)
+	}
   }
 
 
@@ -259,6 +278,8 @@ configure(rootProject) { project ->
 
 
   jar {
+	classifier = 'original'
+
 	manifest {
 	  instruction 'Import-Package', bundleImportPackages.join(',')
 	  attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
@@ -269,6 +290,80 @@ configure(rootProject) { project ->
   }
 
   check.dependsOn jacocoTestReport
+
+  shadowJar {
+	  classifier = null
+
+	  dependsOn(project.tasks.jar)
+
+	  manifest {
+		  inheritFrom project.tasks.jar.manifest
+	  }
+
+	  configurations = [project.configurations.shaded]
+
+	  project.afterEvaluate {
+		  dependencies {
+			  def shadedDependencies = project.configurations
+					  .shaded
+					  .dependencies
+					  .collect { "${it.group}:${it.name}".toString() }
+					  .toSet()
+
+			  // Exclude every compile-scoped dependency (including the transitive ones)
+			  for (id in project.configurations.compile.resolvedConfiguration.resolvedArtifacts*.moduleVersion*.id) {
+				  def module = "${id.group}:${id.name}".toString()
+				  if (!shadedDependencies.contains(module)) {
+					  project.configurations.shaded.exclude(group: id.group, module: id.name)
+					  exclude(dependency(module))
+				  }
+			  }
+		  }
+	  }
+
+	  exclude 'META-INF/*'
+	  exclude 'META-INF/maven*/**'
+  }
+
+  task relocateShadowJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation) {
+	  target = tasks.shadowJar
+	  prefix = "reactor.netty.internal.shaded"
+  }
+
+  tasks.shadowJar.dependsOn tasks.relocateShadowJar
+
+  artifacts.archives shadowJar
+
+  task jarFileTest(type: Test) {
+	  testClassesDirs = sourceSets.jarFileTest.output.classesDirs
+	  classpath = sourceSets.jarFileTest.runtimeClasspath
+
+	  systemProperty("jarFile", shadowJar.outputs.files.singleFile)
+
+	  dependsOn(shadowJar)
+  }
+  project.tasks.check.dependsOn(jarFileTest)
+
+  project.tasks.test.classpath += configurations.shaded
+
+  task shadedJarTest(type: Test) {
+	  testClassesDirs = sourceSets.test.output.classesDirs
+
+	  Set<? super File> mainOutputs = [
+			  project.sourceSets.main.output.resourcesDir,
+			  project.sourceSets.main.java.outputDir,
+	  ]
+
+	  classpath = shadowJar.outputs.files
+	  // Exclude main outputs since we have the shaded JAR on the classpath already
+	  classpath += sourceSets.test.runtimeClasspath.filter { !(it in mainOutputs) }
+
+	  //The imports are not relocated, we do relocation only for the main sources not the tests
+	  exclude '**/*PooledConnectionProviderTest*.*'
+
+	  dependsOn(shadowJar)
+  }
+  project.tasks.check.dependsOn(shadedJarTest)
 }
 
 configurations.all {
