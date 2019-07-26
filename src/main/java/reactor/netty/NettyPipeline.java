@@ -73,7 +73,9 @@ public interface NettyPipeline {
 	/**
 	 * A builder for sending strategy, similar prefixed methods being mutually exclusive
 	 * (flushXxx, prefetchXxx, requestXxx).
+	 * @deprecated No need of a replacement
 	 */
+	@Deprecated
 	interface SendOptions {
 
 		/**

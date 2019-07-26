@@ -72,7 +72,9 @@ public interface NettyOutbound extends Publisher<Void> {
 	 * @param configurator the callback invoked to retrieve send configuration
 	 *
 	 * @return this {@link NettyOutbound}
+	 * @deprecated No need of a replacement
 	 */
+	@Deprecated
 	NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator);
 
 	/**
