@@ -74,6 +74,8 @@ public interface Connection extends DisposableChannel {
 	 * <p>
 	 * If effectively added, the handler will be safely removed when the channel is made
 	 * inactive (pool release).
+	 * As the Connection object is available once the channel is in active state, events prior this state
+	 * will not be available (i.e. {@code channelRegistered}, {@code initChannel}, {@code channelActive}, etc.)
 	 *
 	 * @param handler handler instance
 	 *
@@ -94,6 +96,8 @@ public interface Connection extends DisposableChannel {
 	 * <p>
 	 * If effectively added, the handler will be safely removed when the channel is made
 	 * inactive (pool release).
+	 * As the Connection object is available once the channel is in active state, events prior this state
+	 * will not be available (i.e. {@code channelRegistered}, {@code initChannel}, {@code channelActive}, etc.)
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
@@ -119,6 +123,8 @@ public interface Connection extends DisposableChannel {
 	 * <p>
 	 * If effectively added, the handler will be safely removed when the channel is made
 	 * inactive (pool release).
+	 * As the Connection object is available once the channel is in active state, events prior this state
+	 * will not be available (i.e. {@code channelRegistered}, {@code initChannel}, {@code channelActive}, etc.)
 	 *
 	 * @param handler handler instance
 	 *
@@ -138,6 +144,8 @@ public interface Connection extends DisposableChannel {
 	 * <p>
 	 * If effectively added, the handler will be safely removed when the channel is made
 	 * inactive (pool release).
+	 * As the Connection object is available once the channel is in active state, events prior this state
+	 * will not be available (i.e. {@code channelRegistered}, {@code initChannel}, {@code channelActive}, etc.)
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
@@ -158,6 +166,8 @@ public interface Connection extends DisposableChannel {
 	 * <p>
 	 * If effectively added, the handler will be safely removed when the channel is made
 	 * inactive (pool release).
+	 * As the Connection object is available once the channel is in active state, events prior this state
+	 * will not be available (i.e. {@code channelRegistered}, {@code initChannel}, {@code channelActive}, etc.)
 	 *
 	 * @param handler handler instance
 	 *
@@ -176,6 +186,8 @@ public interface Connection extends DisposableChannel {
 	 * <p>
 	 * If effectively added, the handler will be safely removed when the channel is made
 	 * inactive (pool release).
+	 * As the Connection object is available once the channel is in active state, events prior this state
+	 * will not be available (i.e. {@code channelRegistered}, {@code initChannel}, {@code channelActive}, etc.)
 	 *
 	 * @param name handler name
 	 * @param handler handler instance
