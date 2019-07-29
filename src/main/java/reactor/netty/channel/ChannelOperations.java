@@ -171,7 +171,16 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public final boolean isDisposed() {
-		return !channel().isActive() || OUTBOUND_CLOSE.get(this) == Operators.cancelledSubscription();
+		return !channel().isActive() || isSubscriptionDisposed();
+	}
+
+	/**
+	 * Return true if dispose subscription has been terminated
+	 *
+	 * @return true if dispose subscription has been terminated
+	 */
+	public final boolean isSubscriptionDisposed() {
+		return OUTBOUND_CLOSE.get(this) == Operators.cancelledSubscription();
 	}
 
 	@Override
