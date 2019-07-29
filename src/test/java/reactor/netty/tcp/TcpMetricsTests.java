@@ -56,6 +56,7 @@ public class TcpMetricsTests {
 	public void setUp() {
 		tcpServer =
 				TcpServer.create()
+				         .host("127.0.0.1")
 				         .port(0)
 				         .metrics(true, null);
 
@@ -146,17 +147,14 @@ public class TcpMetricsTests {
 	}
 
 	private void checkExpectationsPositive() {
-		String[] timerTags = new String[] {REMOTE_ADDRESS, "127.0.0.1", STATUS, "SUCCESS"};
-		String[] summaryTags = new String[] {REMOTE_ADDRESS, "127.0.0.1", URI, "tcp"};
+		String address = disposableServer.address().getHostString();
+		String[] timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
+		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 1, 5);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 1, 5);
 		checkCounter(SERVER_ERRORS, summaryTags, 0);
-
-		String address = disposableServer.address().getHostString();
-		timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
-		summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
 		checkTimer(CLIENT_CONNECT_TIME, timerTags, 1, 0.0001);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);

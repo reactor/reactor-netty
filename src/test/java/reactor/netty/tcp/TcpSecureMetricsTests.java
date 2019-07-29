@@ -97,17 +97,16 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 	}
 
 	private void checkExpectationsNegative() {
-		String[] timerTags = new String[] {REMOTE_ADDRESS, "127.0.0.1", STATUS, "ERROR"};
-		String[] summaryTags = new String[] {REMOTE_ADDRESS, "127.0.0.1", URI, "tcp"};
+		String address = disposableServer.address().getHostString();
+		String[] timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "ERROR"};
+		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 0, 0);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 0, 0);
 		checkCounter(SERVER_ERRORS, summaryTags, 2);
 
-		String address = disposableServer.address().getHostString();
 		timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
-		summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
 		checkTimer(CLIENT_CONNECT_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);

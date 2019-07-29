@@ -31,7 +31,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
@@ -56,6 +55,7 @@ public class HttpMetricsHandlerTests {
 	public void setUp() {
 		httpServer = customizeServerOptions(
 				HttpServer.create()
+				          .host("127.0.0.1")
 				          .port(0)
 				          .metrics(true)
 				          .route(r -> r.post("/1", (req, res) -> res.send(req.receive().retain()))
@@ -141,11 +141,12 @@ public class HttpMetricsHandlerTests {
 	}
 
 	private void checkExpectationsExisting(String uri) {
+		String address = disposableServer.address().getHostString();
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "200"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, "127.0.0.1", STATUS, "SUCCESS"};
-		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, "127.0.0.1", URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, "127.0.0.1", URI, "tcp"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
+		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, address, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
 		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, 1);
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, 1);
@@ -158,12 +159,9 @@ public class HttpMetricsHandlerTests {
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
-		String address = disposableServer.address().getHostString();
 		timerTags1 = new String[] {URI, address + uri, METHOD, "POST", STATUS, "200"};
 		timerTags2 = new String[] {URI, address + uri, METHOD, "POST"};
-		timerTags3 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
 		summaryTags1 = new String[] {REMOTE_ADDRESS, address, URI, address + uri};
-		summaryTags2 = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 1);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 1);
@@ -180,11 +178,12 @@ public class HttpMetricsHandlerTests {
 
 	private void checkExpectationsNonExisting() {
 		String uri = "/3";
+		String address = disposableServer.address().getHostString();
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "404"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, "127.0.0.1", STATUS, "SUCCESS"};
-		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, "127.0.0.1", URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, "127.0.0.1", URI, "tcp"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
+		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, address, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
 		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, 2);
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, 2);
@@ -197,12 +196,9 @@ public class HttpMetricsHandlerTests {
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
-		String address = disposableServer.address().getHostString();
 		timerTags1 = new String[] {URI, address + uri, METHOD, "POST", STATUS, "404"};
 		timerTags2 = new String[] {URI, address + uri, METHOD, "POST"};
-		timerTags3 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
 		summaryTags1 = new String[] {REMOTE_ADDRESS, address, URI, address + uri};
-		summaryTags2 = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 2);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 2);
