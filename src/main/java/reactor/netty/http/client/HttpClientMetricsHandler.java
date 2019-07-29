@@ -102,7 +102,8 @@ public class HttpClientMetricsHandler extends ChannelDuplexHandler {
 				}
 
 				Timer dataSentTime =
-						dataSentTimeBuilder.tags(URI, address + request.uri(),
+						dataSentTimeBuilder.tags(REMOTE_ADDRESS, address,
+						                         URI, request.uri(),
 						                         METHOD, request.method().name())
 						                   .register(registry);
 				dataSentTimeSample.stop(dataSentTime);
@@ -110,7 +111,7 @@ public class HttpClientMetricsHandler extends ChannelDuplexHandler {
 				DistributionSummary.builder(name + DATA_SENT)
 				                   .baseUnit("bytes")
 				                   .description("Amount of the data that is sent, in bytes")
-				                   .tags(REMOTE_ADDRESS, address, URI, address + request.uri())
+				                   .tags(REMOTE_ADDRESS, address, URI, request.uri())
 				                   .register(registry)
 				                   .record(dataSent);
 			});
@@ -144,12 +145,14 @@ public class HttpClientMetricsHandler extends ChannelDuplexHandler {
 				address = socketAddress.toString();
 			}
 
-			dataReceivedTimeSample.stop(dataReceivedTimeBuilder.tags(URI, address + request.uri(),
+			dataReceivedTimeSample.stop(dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address,
+			                                                         URI, request.uri(),
 			                                                         METHOD, request.method().name(),
 			                                                         STATUS, response.status().codeAsText().toString())
 			                                                   .register(registry));
 			Timer responseTime =
-					responseTimeBuilder.tags(URI, address + request.uri(),
+					responseTimeBuilder.tags(REMOTE_ADDRESS, address,
+					                         URI, request.uri(),
 					                         METHOD, request.method().name(),
 					                         STATUS, response.status().codeAsText().toString())
 					                   .register(registry);
@@ -157,7 +160,7 @@ public class HttpClientMetricsHandler extends ChannelDuplexHandler {
 			DistributionSummary.builder(name + DATA_RECEIVED)
 			                   .baseUnit("bytes")
 			                   .description("Amount of the data that is received, in bytes")
-			                   .tags(REMOTE_ADDRESS, address, URI, address + request.uri())
+			                   .tags(REMOTE_ADDRESS, address, URI, request.uri())
 			                   .register(registry)
 			                   .record(dataReceived);
 			reset();
@@ -179,7 +182,7 @@ public class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
 		Counter.builder(name + ERRORS)
 		       .description("Number of the errors that are occurred")
-		       .tags(REMOTE_ADDRESS, address, URI, address + request.uri())
+		       .tags(REMOTE_ADDRESS, address, URI, request.uri())
 		       .register(registry)
 		       .increment();
 

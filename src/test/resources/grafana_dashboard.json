@@ -96,7 +96,7 @@
           "expr": "sum_over_time(reactor_netty_http_client_errors_total{uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{uri}}",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -156,7 +156,7 @@
           "expr": "irate(reactor_netty_http_client_response_time_seconds_count{uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{method}} [{{status}}] - {{uri}}",
+          "legendFormat": "{{method}} [{{status}}] - {{remote_address}}{{uri}}",
           "refId": "A"
         }
       ],
@@ -245,7 +245,7 @@
           "expr": "irate(reactor_netty_http_client_response_time_seconds_sum{uri!~\".*actuator.*\"}[5m]) / irate(reactor_netty_http_client_response_time_seconds_count{uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{method}} [{{status}}] - {{uri}}",
+          "legendFormat": "{{method}} [{{status}}] - {{remote_address}}{{uri}}",
           "refId": "A"
         }
       ],
@@ -509,7 +509,7 @@
           "expr": "irate(reactor_netty_http_client_data_received_time_seconds_sum{uri!~\".*actuator.*\"}[5m]) / irate(reactor_netty_http_client_data_received_time_seconds_count{uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{method}} [{{status}}] - {{uri}}",
+          "legendFormat": "{{method}} [{{status}}] - {{remote_address}}{{uri}}",
           "refId": "A"
         }
       ],
@@ -597,7 +597,7 @@
           "expr": "irate(reactor_netty_http_client_data_sent_time_seconds_sum{uri!~\".*actuator.*\"}[5m]) / irate(reactor_netty_http_client_data_sent_time_seconds_count{uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{method}} - {{uri}}",
+          "legendFormat": "{{method}} - {{remote_address}}{{uri}}",
           "refId": "A"
         }
       ],
@@ -780,14 +780,14 @@
           "expr": "irate(reactor_netty_http_client_data_received_bytes_sum{uri!~\"tcp\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Received Bytes - {{uri}}",
+          "legendFormat": "Received Bytes - {{remote_address}}{{uri}}",
           "refId": "A"
         },
         {
           "expr": "irate(reactor_netty_http_client_data_sent_bytes_sum{uri!~\"tcp\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Sent Bytes - {{uri}}",
+          "legendFormat": "Sent Bytes - {{remote_address}}{{uri}}",
           "refId": "B"
         }
       ],
@@ -1598,5 +1598,5 @@
   "timezone": "",
   "title": "Reactor Netty",
   "uid": "4JPCcTNWz",
-  "version": 40
+  "version": 43
 }

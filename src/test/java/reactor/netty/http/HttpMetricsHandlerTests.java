@@ -159,9 +159,8 @@ public class HttpMetricsHandlerTests {
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
-		timerTags1 = new String[] {URI, address + uri, METHOD, "POST", STATUS, "200"};
-		timerTags2 = new String[] {URI, address + uri, METHOD, "POST"};
-		summaryTags1 = new String[] {REMOTE_ADDRESS, address, URI, address + uri};
+		timerTags1 = new String[] {REMOTE_ADDRESS, address, URI, uri, METHOD, "POST", STATUS, "200"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, address, URI, uri, METHOD, "POST"};
 
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 1);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 1);
@@ -196,9 +195,8 @@ public class HttpMetricsHandlerTests {
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
-		timerTags1 = new String[] {URI, address + uri, METHOD, "POST", STATUS, "404"};
-		timerTags2 = new String[] {URI, address + uri, METHOD, "POST"};
-		summaryTags1 = new String[] {REMOTE_ADDRESS, address, URI, address + uri};
+		timerTags1 = new String[] {REMOTE_ADDRESS, address, URI, uri, METHOD, "POST", STATUS, "404"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, address, URI, uri, METHOD, "POST"};
 
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 2);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 2);
