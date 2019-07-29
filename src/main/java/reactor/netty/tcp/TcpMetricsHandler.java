@@ -17,6 +17,7 @@ package reactor.netty.tcp;
 
 import static reactor.netty.Metrics.*;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -51,7 +52,7 @@ public class TcpMetricsHandler extends ChannelDuplexHandler {
 
 	final DistributionSummary dataSent;
 
-	final DistributionSummary errorCount;
+	final Counter errorCount;
 
 
 	public TcpMetricsHandler(String name, String remoteAddress, boolean onServer) {
@@ -73,10 +74,10 @@ public class TcpMetricsHandler extends ChannelDuplexHandler {
 				                   .tags(REMOTE_ADDRESS, remoteAddress, URI, PROTOCOL)
 				                   .register(registry);
 		this.errorCount =
-				DistributionSummary.builder(name + ERROR_COUNT)
-				                   .description("Number of the error that are occurred")
-				                   .tags(REMOTE_ADDRESS, remoteAddress, URI, PROTOCOL)
-				                   .register(registry);
+				Counter.builder(name + ERRORS)
+				       .description("Number of the errors that are occurred")
+				       .tags(REMOTE_ADDRESS, remoteAddress, URI, PROTOCOL)
+				       .register(registry);
 	}
 
 	@Override
@@ -124,7 +125,7 @@ public class TcpMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		errorCount.record(1);
+		errorCount.increment();
 
 		super.exceptionCaught(ctx, cause);
 	}

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static reactor.netty.Metrics.*;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -151,7 +152,7 @@ public class TcpMetricsTests {
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 1, 5);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 1, 5);
-		checkDistributionSummary(SERVER_ERROR_COUNT, summaryTags, 0, 0);
+		checkCounter(SERVER_ERRORS, summaryTags, 0);
 
 		String address = disposableServer.address().getHostString();
 		timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
@@ -161,7 +162,7 @@ public class TcpMetricsTests {
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 1, 5);
-		checkDistributionSummary(CLIENT_ERROR_COUNT, summaryTags, 0, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags, 0);
 	}
 
 	private void checkExpectationsNegative() {
@@ -174,7 +175,7 @@ public class TcpMetricsTests {
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags2, 0, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 0, 0);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 0, 0);
-		checkDistributionSummary(CLIENT_ERROR_COUNT, summaryTags, 0, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags, 0);
 	}
 
 
@@ -205,17 +206,23 @@ public class TcpMetricsTests {
 		assertTrue(summary.totalAmount() >= expectedAmound);
 	}
 
+	void checkCounter(String name, String[] tags, double expectedCount) {
+		Counter counter = registry.find(name).tags(tags).counter();
+		assertNotNull(counter);
+		assertEquals(expectedCount, counter.count(), 0.0);
+	}
+
 
 	private static final String SERVER_METRICS_NAME = "reactor.netty.tcp.server";
 	static final String SERVER_DATA_SENT = SERVER_METRICS_NAME + DATA_SENT;
 	static final String SERVER_DATA_RECEIVED = SERVER_METRICS_NAME + DATA_RECEIVED;
-	static final String SERVER_ERROR_COUNT = SERVER_METRICS_NAME + ERROR_COUNT;
+	static final String SERVER_ERRORS = SERVER_METRICS_NAME + ERRORS;
 	static final String SERVER_TLS_HANDSHAKE_TIME = SERVER_METRICS_NAME + TLS_HANDSHAKE_TIME;
 
 	private static final String CLIENT_METRICS_NAME = "reactor.netty.tcp.client";
 	static final String CLIENT_DATA_SENT = CLIENT_METRICS_NAME + DATA_SENT;
 	static final String CLIENT_DATA_RECEIVED = CLIENT_METRICS_NAME + DATA_RECEIVED;
-	static final String CLIENT_ERROR_COUNT = CLIENT_METRICS_NAME + ERROR_COUNT;
+	static final String CLIENT_ERRORS = CLIENT_METRICS_NAME + ERRORS;
 	static final String CLIENT_CONNECT_TIME = CLIENT_METRICS_NAME + CONNECT_TIME;
 	static final String CLIENT_TLS_HANDSHAKE_TIME = CLIENT_METRICS_NAME + TLS_HANDSHAKE_TIME;
 }

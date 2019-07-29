@@ -17,6 +17,7 @@ package reactor.netty.http.server;
 
 import static reactor.netty.Metrics.*;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -163,11 +164,11 @@ public class HttpServerMetricsHandler extends ChannelDuplexHandler {
 		ChannelOperations channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpServerOperations) {
 			HttpServerOperations ops = (HttpServerOperations) channelOps;
-			DistributionSummary.builder(name + ERROR_COUNT)
-			                   .description("Number of the error that are occurred")
-			                   .tags(REMOTE_ADDRESS, ops.remoteAddress().getHostString(), URI, ops.uri())
-			                   .register(registry)
-			                   .record(1);
+			Counter.builder(name + ERRORS)
+			       .description("Number of the errors that are occurred")
+			       .tags(REMOTE_ADDRESS, ops.remoteAddress().getHostString(), URI, ops.uri())
+			       .register(registry)
+			       .increment();
 		}
 
 		super.exceptionCaught(ctx, cause);

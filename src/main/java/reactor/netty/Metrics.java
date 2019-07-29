@@ -21,7 +21,7 @@ public class Metrics {
 
 	public static final String DATA_SENT = ".data.sent";
 
-	public static final String ERROR_COUNT = ".error.count";
+	public static final String ERRORS = ".errors";
 
 	public static final String TLS_HANDSHAKE_TIME = ".tls.handshake.time";
 

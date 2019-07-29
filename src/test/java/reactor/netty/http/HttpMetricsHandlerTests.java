@@ -21,6 +21,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static reactor.netty.Metrics.*;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -30,6 +31,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
@@ -107,6 +109,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
+		Mono.delay(Duration.ofSeconds(5)).block();
 		checkExpectationsExisting("/1");
 		checkExpectationsExisting("/2");
 	}
@@ -133,6 +136,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
+		Mono.delay(Duration.ofSeconds(5)).block();
 		checkExpectationsNonExisting();
 	}
 
@@ -149,10 +153,10 @@ public class HttpMetricsHandlerTests {
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, 1, 12);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, true, 1, 12);
-		checkDistributionSummary(SERVER_ERROR_COUNT, summaryTags1, false, 0, 0);
+		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 28, 168);
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
-		checkDistributionSummary(SERVER_ERROR_COUNT, summaryTags2, true, 0, 0);
+		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
 		String address = disposableServer.address().getHostString();
 		timerTags1 = new String[] {URI, address + uri, METHOD, "POST", STATUS, "200"};
@@ -168,10 +172,10 @@ public class HttpMetricsHandlerTests {
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, true, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, true, 1, 12);
-		checkDistributionSummary(CLIENT_ERROR_COUNT, summaryTags1, false, 0, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, true, 28, 292);
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 6, 168);
-		checkDistributionSummary(CLIENT_ERROR_COUNT, summaryTags2, true, 0, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
 	}
 
 	private void checkExpectationsNonExisting() {
@@ -188,10 +192,10 @@ public class HttpMetricsHandlerTests {
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, 2, 0);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, false, 0, 0);
-		checkDistributionSummary(SERVER_ERROR_COUNT, summaryTags1, false, 0, 0);
+		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 2, 90);
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
-		checkDistributionSummary(SERVER_ERROR_COUNT, summaryTags2, true, 0, 0);
+		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
 		String address = disposableServer.address().getHostString();
 		timerTags1 = new String[] {URI, address + uri, METHOD, "POST", STATUS, "404"};
@@ -207,10 +211,10 @@ public class HttpMetricsHandlerTests {
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, true, 2, 24);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, true, 2, 0);
-		checkDistributionSummary(CLIENT_ERROR_COUNT, summaryTags1, false, 0, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, true, 28, 292);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 2, 90);
-		checkDistributionSummary(CLIENT_ERROR_COUNT, summaryTags2, true, 0, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
 	}
 
 
@@ -250,6 +254,17 @@ public class HttpMetricsHandlerTests {
 		}
 	}
 
+	private void checkCounter(String name, String[] tags, boolean exists, double expectedCount) {
+		Counter counter = registry.find(name).tags(tags).counter();
+		if (exists) {
+			assertNotNull(counter);
+			assertEquals(expectedCount, counter.count(), 0.0);
+		}
+		else {
+			assertNull(counter);
+		}
+	}
+
 
 	private static final String SERVER_METRICS_NAME = "reactor.netty.http.server";
 	private static final String SERVER_RESPONSE_TIME = SERVER_METRICS_NAME + RESPONSE_TIME;
@@ -257,7 +272,7 @@ public class HttpMetricsHandlerTests {
 	private static final String SERVER_DATA_RECEIVED_TIME = SERVER_METRICS_NAME + DATA_RECEIVED_TIME;
 	private static final String SERVER_DATA_SENT = SERVER_METRICS_NAME + DATA_SENT;
 	private static final String SERVER_DATA_RECEIVED = SERVER_METRICS_NAME + DATA_RECEIVED;
-	private static final String SERVER_ERROR_COUNT = SERVER_METRICS_NAME + ERROR_COUNT;
+	private static final String SERVER_ERRORS = SERVER_METRICS_NAME + ERRORS;
 	private static final String SERVER_TLS_HANDSHAKE_TIME = SERVER_METRICS_NAME + TLS_HANDSHAKE_TIME;
 
 	private static final String CLIENT_METRICS_NAME = "reactor.netty.http.client";
@@ -266,7 +281,7 @@ public class HttpMetricsHandlerTests {
 	private static final String CLIENT_DATA_RECEIVED_TIME = CLIENT_METRICS_NAME + DATA_RECEIVED_TIME;
 	private static final String CLIENT_DATA_SENT = CLIENT_METRICS_NAME + DATA_SENT;
 	private static final String CLIENT_DATA_RECEIVED = CLIENT_METRICS_NAME + DATA_RECEIVED;
-	private static final String CLIENT_ERROR_COUNT = CLIENT_METRICS_NAME + ERROR_COUNT;
+	private static final String CLIENT_ERRORS = CLIENT_METRICS_NAME + ERRORS;
 	private static final String CLIENT_CONNECT_TIME = CLIENT_METRICS_NAME + CONNECT_TIME;
 	private static final String CLIENT_TLS_HANDSHAKE_TIME = CLIENT_METRICS_NAME + TLS_HANDSHAKE_TIME;
 }

@@ -103,7 +103,7 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 0, 0);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 0, 0);
-		checkDistributionSummary(SERVER_ERROR_COUNT, summaryTags, 2, 2);
+		checkCounter(SERVER_ERRORS, summaryTags, 2);
 
 		String address = disposableServer.address().getHostString();
 		timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
@@ -112,6 +112,6 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		checkTimer(CLIENT_CONNECT_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 1, 7);
-		checkDistributionSummary(CLIENT_ERROR_COUNT, summaryTags, 0, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags, 0);
 	}
 }
