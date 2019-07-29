@@ -93,7 +93,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum_over_time(reactor_netty_http_client_error_count_total{uri!~\".*actuator.*\"}[5m])",
+          "expr": "sum_over_time(reactor_netty_http_client_errors_total{uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{uri}}",
@@ -907,7 +907,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum_over_time(reactor_netty_http_client_error_count_total{uri!~\".*actuator.*\"}[5m])",
+          "expr": "sum_over_time(reactor_netty_http_client_errors_total{uri!~\".*actuator.*\"}[5m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -1567,7 +1567,7 @@
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {
@@ -1598,5 +1598,5 @@
   "timezone": "",
   "title": "Reactor Netty",
   "uid": "4JPCcTNWz",
-  "version": 38
+  "version": 40
 }
