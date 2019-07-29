@@ -139,9 +139,11 @@ public class HttpServerMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				dataReceivedTimeSample.stop(dataReceivedTimeBuilder.tags(URI, ops.uri(),
-				                                                         METHOD, ops.method().name())
-				                                                   .register(registry));
+				Timer dataReceivedTime =
+						dataReceivedTimeBuilder.tags(URI, ops.uri(),
+						                             METHOD, ops.method().name())
+						                       .register(registry);
+				dataReceivedTimeSample.stop(dataReceivedTime);
 				DistributionSummary.builder(name + DATA_RECEIVED)
 				                   .baseUnit("bytes")
 				                   .description("Amount of the data that is received, in bytes")
