@@ -86,7 +86,7 @@ public class HttpMetricsHandlerTests {
 	}
 
 	@Test
-	public void testExistingEndpoint() {
+	public void testExistingEndpoint() throws Exception {
 		disposableServer = customizeServerOptions(httpServer).bindNow();
 
 		StepVerifier.create(httpClient.post()
@@ -109,13 +109,13 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		Mono.delay(Duration.ofSeconds(5)).block();
+		Thread.sleep(5000);
 		checkExpectationsExisting("/1");
 		checkExpectationsExisting("/2");
 	}
 
 	@Test
-	public void testNonExistingEndpoint() {
+	public void testNonExistingEndpoint() throws Exception {
 		disposableServer = customizeServerOptions(httpServer).bindNow();
 
 		StepVerifier.create(httpClient.post()
@@ -136,7 +136,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		Mono.delay(Duration.ofSeconds(5)).block();
+		Thread.sleep(5000);
 		checkExpectationsNonExisting();
 	}
 
