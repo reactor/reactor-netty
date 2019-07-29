@@ -51,6 +51,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -81,7 +82,6 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
-import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
@@ -1827,5 +1827,59 @@ public class HttpClientTest {
 		              }))
 		            .expectErrorMessage(expectation)
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testConnectionIdleTimeFixedPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100, Duration.ofMillis(10));
+		ChannelId[] ids = doTestConnectionIdleTime(provider);
+		assertThat(ids[0]).isNotEqualTo(ids[1]);
+	}
+
+	@Test
+	public void testConnectionIdleTimeElasticPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.elastic("test", Duration.ofMillis(10));
+		ChannelId[] ids = doTestConnectionIdleTime(provider);
+		assertThat(ids[0]).isNotEqualTo(ids[1]);
+	}
+
+	@Test
+	public void testConnectionNoIdleTimeFixedPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100);
+		ChannelId[] ids = doTestConnectionIdleTime(provider);
+		assertThat(ids[0]).isEqualTo(ids[1]);
+	}
+
+	@Test
+	public void testConnectionNoIdleTimeElasticPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.elastic("test");
+		ChannelId[] ids = doTestConnectionIdleTime(provider);
+		assertThat(ids[0]).isEqualTo(ids[1]);
+	}
+
+	private ChannelId[] doTestConnectionIdleTime(ConnectionProvider provider) throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) -> res.sendString(Mono.just("hello")))
+				          .bindNow();
+
+		Flux<ChannelId> id = createHttpClientForContextWithAddress(server, provider)
+		                       .get()
+		                       .uri("/")
+		                       .responseConnection((res, conn) -> Mono.just(conn.channel().id())
+		                                                              .delayUntil(ch -> conn.inbound().receive()));
+
+		ChannelId id1 = id.blockLast(Duration.ofSeconds(30));
+		Thread.sleep(30);
+		ChannelId id2 = id.blockLast(Duration.ofSeconds(30));
+
+		assertThat(id1).isNotNull();
+		assertThat(id2).isNotNull();
+
+		server.disposeNow();
+		provider.dispose();
+		return new ChannelId[] {id1, id2};
 	}
 }
