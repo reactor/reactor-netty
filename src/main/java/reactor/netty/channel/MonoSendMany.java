@@ -236,6 +236,9 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				actual.onSubscribe(this);
 				s.request(MAX_SIZE);
 			}
+			else {
+				queue = Queues.<I>empty().get();
+			}
 		}
 
 		@Override
