@@ -36,7 +36,7 @@ import java.net.SocketAddress;
 /**
  * @author Violeta Georgieva
  */
-public class HttpClientMetricsHandler extends ChannelDuplexHandler {
+final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	HttpRequest request;
 

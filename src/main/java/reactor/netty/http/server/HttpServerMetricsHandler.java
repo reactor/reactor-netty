@@ -15,7 +15,8 @@
  */
 package reactor.netty.http.server;
 
-import static reactor.netty.Metrics.*;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -32,10 +33,12 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.channel.ChannelOperations;
 
+import static reactor.netty.Metrics.*;
+
 /**
  * @author Violeta Georgieva
  */
-public class HttpServerMetricsHandler extends ChannelDuplexHandler {
+final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	long dataReceived;
 
@@ -51,14 +54,17 @@ public class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	final String name;
 
-
 	final Timer.Builder dataReceivedTimeBuilder;
 
 	final Timer.Builder dataSentTimeBuilder;
 
 	final Timer.Builder responseTimeBuilder;
 
-	public HttpServerMetricsHandler(MeterRegistry registry, String name) {
+	String uri;
+
+	String method;
+
+	HttpServerMetricsHandler(MeterRegistry registry, String name) {
 		this.registry = registry;
 		this.name = name;
 		dataReceivedTimeBuilder = Timer.builder(name + DATA_RECEIVED_TIME)
@@ -113,8 +119,6 @@ public class HttpServerMetricsHandler extends ChannelDuplexHandler {
 					                   .register(registry)
 					                   .record(dataSent);
 
-					dataReceivedTimeSample = null;
-					dataSentTimeSample = null;
 					dataSent = 0;
 				}
 			});
@@ -127,6 +131,10 @@ public class HttpServerMetricsHandler extends ChannelDuplexHandler {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		if (msg instanceof HttpRequest) {
 			dataReceivedTimeSample = Timer.start(registry);
+			HttpRequest request = (HttpRequest) msg;
+			uri = request.uri();
+			method = request.method()
+			                .name();
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -137,23 +145,19 @@ public class HttpServerMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		if (msg instanceof LastHttpContent) {
-			ChannelOperations channelOps = ChannelOperations.get(ctx.channel());
-			if (channelOps instanceof HttpServerOperations) {
-				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				Timer dataReceivedTime =
-						dataReceivedTimeBuilder.tags(URI, ops.uri(),
-						                             METHOD, ops.method().name())
-						                       .register(registry);
-				dataReceivedTimeSample.stop(dataReceivedTime);
+			Timer dataReceivedTime = dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
+			                                                .register(registry);
+
+
+			dataReceivedTimeSample.stop(dataReceivedTime);
 				DistributionSummary.builder(name + DATA_RECEIVED)
 				                   .baseUnit("bytes")
 				                   .description("Amount of the data that is received, in bytes")
-				                   .tags(REMOTE_ADDRESS, ops.remoteAddress().getHostString(), URI, ops.uri())
+				                   .tags(REMOTE_ADDRESS, address(ctx), URI, uri)
 				                   .register(registry)
 				                   .record(dataReceived);
 
 				dataReceived = 0;
-			}
 		}
 
 		super.channelRead(ctx, msg);
@@ -161,16 +165,29 @@ public class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		ChannelOperations channelOps = ChannelOperations.get(ctx.channel());
-		if (channelOps instanceof HttpServerOperations) {
-			HttpServerOperations ops = (HttpServerOperations) channelOps;
+
+		if (uri != null) {
 			Counter.builder(name + ERRORS)
 			       .description("Number of the errors that are occurred")
-			       .tags(REMOTE_ADDRESS, ops.remoteAddress().getHostString(), URI, ops.uri())
+			       .tags(REMOTE_ADDRESS,
+					       address(ctx),
+					       URI,
+					       uri)
 			       .register(registry)
 			       .increment();
 		}
 
 		super.exceptionCaught(ctx, cause);
+	}
+
+	String address(ChannelHandlerContext ctx) {
+		SocketAddress socketAddress = ctx.channel()
+		                                 .remoteAddress();
+		if (socketAddress instanceof InetSocketAddress) {
+			return  ((InetSocketAddress) socketAddress).getHostString();
+		}
+		else {
+			return socketAddress.toString();
+		}
 	}
 }

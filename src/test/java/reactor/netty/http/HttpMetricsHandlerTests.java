@@ -186,10 +186,10 @@ public class HttpMetricsHandlerTests {
 
 		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, 2);
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, 2);
-		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, false, 0);
+		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, true, 2);
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, 2, 0);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, false, 0, 0);
+		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, true, 2, 0);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 2, 90);
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
