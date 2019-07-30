@@ -37,7 +37,7 @@ import java.net.SocketAddress;
 /**
  * @author Violeta Georgieva
  */
-final class TcpMetricsHandler extends ChannelDuplexHandler {
+public class TcpMetricsHandler extends ChannelDuplexHandler {
 
 	final MeterRegistry registry;
 
