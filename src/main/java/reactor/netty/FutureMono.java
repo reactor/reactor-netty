@@ -89,7 +89,9 @@ public abstract class FutureMono extends Mono<Void> {
 	 * @param <F> the future type
 	 *
 	 * @return A {@link Mono} forwarding {@link Future} success or failure
+	 * @deprecated
 	 */
+	@Deprecated
 	public static <F extends Future<Void>> Mono<Void> deferFutureWithContext(Function<Context, F> deferredFuture) {
 		return new DeferredContextFutureMono<>(deferredFuture);
 	}
