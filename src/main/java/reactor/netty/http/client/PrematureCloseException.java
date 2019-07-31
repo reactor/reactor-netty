@@ -25,12 +25,24 @@ import java.io.IOException;
  */
 public final class PrematureCloseException extends IOException {
 
+	/**
+	 * @deprecated Should not be singleton
+	 */
+	@Deprecated
 	public static final PrematureCloseException BEFORE_RESPONSE_SENDING_REQUEST =
 			new PrematureCloseException("Connection has been closed BEFORE response, while sending request body");
 
+	/**
+	 * @deprecated Should not be singleton
+	 */
+	@Deprecated
 	public static final PrematureCloseException BEFORE_RESPONSE =
 			new PrematureCloseException("Connection prematurely closed BEFORE response");
 
+	/**
+	 * @deprecated Should not be singleton
+	 */
+	@Deprecated
 	public static final PrematureCloseException DURING_RESPONSE =
 			new PrematureCloseException("Connection prematurely closed DURING response");
 
