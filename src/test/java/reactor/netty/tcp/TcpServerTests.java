@@ -52,6 +52,7 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
@@ -109,14 +110,19 @@ public class TcpServerTests {
 	}
 
 	@Test
-	public void tcpServerHandlesJsonPojosOverSsl() throws Exception {
+		public void tcpServerHandlesJsonPojosOverSsl() throws Exception {
 		final CountDownLatch latch = new CountDownLatch(2);
 
 		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+		                                                   .sslProvider(SslProvider.JDK);
 		SslContext clientOptions = SslContextBuilder.forClient()
 		                                            .trustManager(InsecureTrustManagerFactory.INSTANCE)
+		                                            .sslProvider(SslProvider.JDK)
 		                                            .build();
+
+		log.debug("Using SslContext: {}", clientOptions);
+
 		final TcpServer server =
 				TcpServer.create()
 				         .host("localhost")

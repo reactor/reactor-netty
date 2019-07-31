@@ -131,12 +131,7 @@ final class HttpClientConnect extends HttpClient {
 
 				LoopResources loops = HttpResources.get();
 
-				SslContext sslContext = ssl != null ? ssl.getSslContext() : null;
-
-				boolean useNative =
-						LoopResources.DEFAULT_NATIVE && !(sslContext instanceof JdkSslContext);
-
-				EventLoopGroup elg = loops.onClient(useNative);
+				EventLoopGroup elg = loops.onClient(LoopResources.DEFAULT_NATIVE);
 
 				Integer maxConnections = (Integer) b.config().attrs().get(AttributeKey.valueOf("maxConnections"));
 
