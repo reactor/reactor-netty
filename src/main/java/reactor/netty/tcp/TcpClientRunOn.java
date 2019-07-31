@@ -52,12 +52,7 @@ final class TcpClientRunOn extends TcpClientOperator {
 			boolean preferNative,
 			LoopResources resources,
 			boolean useDelegate) {
-		SslProvider sslProvider =  SslProvider.findSslSupport(b);
-
-		boolean useNative = preferNative &&
-				(sslProvider == null || !(sslProvider.sslContext instanceof JdkSslContext));
-
-		EventLoopGroup elg = resources.onClient(useNative);
+		EventLoopGroup elg = resources.onClient(preferNative);
 
 		if (useDelegate && elg instanceof Supplier) {
 			EventLoopGroup delegate = (EventLoopGroup) ((Supplier) elg).get();

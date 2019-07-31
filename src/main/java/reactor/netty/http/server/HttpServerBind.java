@@ -119,11 +119,8 @@ final class HttpServerBind extends HttpServer
 		     .group() == null) {
 			LoopResources loops = HttpResources.get();
 
-			boolean useNative =
-					LoopResources.DEFAULT_NATIVE || (ssl != null && !(ssl.getSslContext() instanceof JdkSslContext));
-
-			EventLoopGroup selector = loops.onServerSelect(useNative);
-			EventLoopGroup elg = loops.onServer(useNative);
+			EventLoopGroup selector = loops.onServerSelect(LoopResources.DEFAULT_NATIVE);
+			EventLoopGroup elg = loops.onServer(LoopResources.DEFAULT_NATIVE);
 
 			b.group(selector, elg)
 			 .channel(loops.onServerChannel(elg));
