@@ -38,7 +38,9 @@ configure(rootProject) { subproject ->
 	artifacts {
 		archives sourcesJar
 		archives javadocJar
-	  	archives docsZip
+		if (System.getenv ()["bamboo_buildNumber"] != null) {
+		  archives docsZip
+		}
 	}
 }
 
