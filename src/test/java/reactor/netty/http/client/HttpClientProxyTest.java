@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.specto.hoverfly.junit.core.HoverflyConfig;
 import io.specto.hoverfly.junit.rule.HoverflyRule;
 import org.junit.After;
@@ -27,8 +28,12 @@ import reactor.netty.SocketUtils;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.tcp.ProxyProvider;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 
+import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static io.specto.hoverfly.junit.core.SimulationSource.dsl;
 import static io.specto.hoverfly.junit.dsl.HoverflyDsl.service;
@@ -74,16 +79,12 @@ public class HttpClientProxyTest {
 	@Test
 	public void proxy_1() {
 		StepVerifier.create(
-				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-				                                                                   .host("localhost")
-				                                                                   .port(hoverflyRule.getProxyPort())))
-				          .addressSupplier(server::address)
-				          .wiretap(true)
-				          .get()
-				          .uri("/")
-				          .responseSingle((response, body) -> Mono.zip(body.asString(),
-				                  Mono.just(response.responseHeaders()))))
+				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+				                      .host("localhost")
+				                      .port(hoverflyRule.getProxyPort()),
+				            server::address,
+				            "/",
+				            true))
 				    .expectNextMatches(t ->
 				            t.getT2().contains("Hoverfly") &&
 				                "test".equals(t.getT1()))
@@ -94,15 +95,12 @@ public class HttpClientProxyTest {
 	@Test
 	public void proxy_2() {
 		StepVerifier.create(
-				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-				                                                                   .host("localhost")
-				                                                                   .port(hoverflyRule.getProxyPort())))
-				          .wiretap(true)
-				          .get()
-				          .uri("http://127.0.0.1:" + port + "/")
-				          .responseSingle((response, body) -> Mono.zip(body.asString(),
-				                  Mono.just(response.responseHeaders()))))
+				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+				                      .host("localhost")
+				                      .port(hoverflyRule.getProxyPort()),
+				            null,
+				            "http://127.0.0.1:" + port + "/",
+				            true))
 				    .expectNextMatches(t ->
 				            t.getT2().contains("Hoverfly") &&
 				                "test".equals(t.getT1()))
@@ -113,17 +111,13 @@ public class HttpClientProxyTest {
 	@Test
 	public void nonProxyHosts_1() {
 		StepVerifier.create(
-				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-				                                                                   .host("localhost")
-				                                                                   .port(hoverflyRule.getProxyPort())
-				                                                                   .nonProxyHosts("127.0.0.1")))
-				          .addressSupplier(server::address)
-				          .wiretap(true)
-				          .get()
-				          .uri("/")
-				          .responseSingle((response, body) -> Mono.zip(body.asString(),
-				                  Mono.just(response.responseHeaders()))))
+				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+				                      .host("localhost")
+				                      .port(hoverflyRule.getProxyPort())
+				                      .nonProxyHosts("127.0.0.1"),
+				            server::address,
+				            "/",
+				            true))
 				    .expectNextMatches(t ->
 				            !t.getT2().contains("Hoverfly") &&
 				                "test".equals(t.getT1()))
@@ -134,20 +128,37 @@ public class HttpClientProxyTest {
 	@Test
 	public void nonProxyHosts_2() {
 		StepVerifier.create(
-				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-				                                                                   .host("localhost")
-				                                                                   .port(hoverflyRule.getProxyPort())
-				                                                                   .nonProxyHosts("localhost")))
-				          .wiretap(true)
-				          .get()
-				          .uri("http://localhost:" + port + "/")
-				          .responseSingle((response, body) -> Mono.zip(body.asString(),
-				                  Mono.just(response.responseHeaders()))))
+				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+				                      .host("localhost")
+				                      .port(hoverflyRule.getProxyPort())
+				                      .nonProxyHosts("localhost"),
+				            null,
+				             "http://localhost:" + port + "/",
+				             true))
 				    .expectNextMatches(t ->
 				            !t.getT2().contains("Hoverfly") &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
+	}
+
+	private Mono<Tuple2<String, HttpHeaders>> sendRequest(
+			Consumer<? super ProxyProvider.TypeSpec> proxyOptions,
+			Supplier<? extends SocketAddress> connectAddressSupplier,
+			String uri,
+			boolean wiretap) {
+		HttpClient client =
+				HttpClient.create()
+				          .tcpConfiguration(tcpClient -> tcpClient.proxy(proxyOptions));
+
+		if (connectAddressSupplier != null) {
+			client = client.addressSupplier(server::address);
+		}
+
+		return client.wiretap(wiretap)
+		             .get()
+		             .uri(uri)
+		             .responseSingle((response, body) -> Mono.zip(body.asString(),
+		                                                          Mono.just(response.responseHeaders())));
 	}
 }
