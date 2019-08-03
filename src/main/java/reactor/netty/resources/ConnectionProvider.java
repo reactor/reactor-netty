@@ -188,7 +188,7 @@ public interface ConnectionProvider extends Disposable {
 		return new PooledConnectionProvider(name,
 				(allocator, destroyHandler, evictionPredicate) ->
 				                PoolBuilder.from(allocator)
-				                           .sizeMax(maxConnections)
+				                           .sizeBetween(0, maxConnections)
 				                           .maxPendingAcquireUnbounded()
 				                           .destroyHandler(destroyHandler)
 				                           .evictionPredicate(evictionPredicate
