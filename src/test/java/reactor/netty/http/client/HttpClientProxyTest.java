@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.specto.hoverfly.junit.core.HoverflyConfig;
 import io.specto.hoverfly.junit.rule.HoverflyRule;
@@ -24,6 +25,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
+import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.tcp.ProxyProvider;
@@ -87,6 +89,7 @@ public class HttpClientProxyTest {
 				            true))
 				    .expectNextMatches(t ->
 				            t.getT2().contains("Hoverfly") &&
+				                "FOUND".equals(t.getT2().get("Logging-Handler")) &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -103,6 +106,7 @@ public class HttpClientProxyTest {
 				            true))
 				    .expectNextMatches(t ->
 				            t.getT2().contains("Hoverfly") &&
+				                "FOUND".equals(t.getT2().get("Logging-Handler")) &&
 				                "test".equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -142,6 +146,23 @@ public class HttpClientProxyTest {
 				    .verify(Duration.ofSeconds(30));
 	}
 
+	@Test
+	public void testIssue804() {
+		StepVerifier.create(
+				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+				                      .host("localhost")
+				                      .port(hoverflyRule.getProxyPort()),
+				            server::address,
+				            "/",
+				            false))
+				    .expectNextMatches(t ->
+				           t.getT2().contains("Hoverfly") &&
+				                "NOT FOUND".equals(t.getT2().get("Logging-Handler")) &&
+				                "test".equals(t.getT1()))
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+	}
+
 	private Mono<Tuple2<String, HttpHeaders>> sendRequest(
 			Consumer<? super ProxyProvider.TypeSpec> proxyOptions,
 			Supplier<? extends SocketAddress> connectAddressSupplier,
@@ -149,7 +170,12 @@ public class HttpClientProxyTest {
 			boolean wiretap) {
 		HttpClient client =
 				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.proxy(proxyOptions));
+				          .tcpConfiguration(tcpClient -> tcpClient.proxy(proxyOptions))
+				          .doOnResponse((res, conn) -> {
+				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
+				              res.responseHeaders()
+				                 .add("Logging-Handler", handler != null? "FOUND" : "NOT FOUND");
+				          });
 
 		if (connectAddressSupplier != null) {
 			client = client.addressSupplier(server::address);

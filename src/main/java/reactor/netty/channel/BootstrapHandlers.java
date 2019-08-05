@@ -582,9 +582,12 @@ public abstract class BootstrapHandlers {
 						handler);
 			}
 			else if (pipeline.get(NettyPipeline.ProxyHandler) != null) {
-				pipeline.addAfter(NettyPipeline.ProxyHandler,
-						NettyPipeline.LoggingHandler,
-						handler);
+				pipeline.addBefore(NettyPipeline.ProxyHandler,
+				                   NettyPipeline.ProxyLoggingHandler,
+				                   new LoggingHandler("reactor.netty.proxy"))
+				        .addAfter(NettyPipeline.ProxyHandler,
+				                  NettyPipeline.LoggingHandler,
+				                  handler);
 			}
 			else {
 				pipeline.addFirst(NettyPipeline.LoggingHandler, handler);

@@ -470,8 +470,11 @@ public final class ProxyProvider {
 				pipeline.addFirst(NettyPipeline.ProxyHandler,
 								proxyProvider.newProxyHandler());
 
-				if (TcpUtils.log.isDebugEnabled()) {
-					pipeline.addFirst(new LoggingHandler("reactor.netty.proxy"));
+				if (channel.pipeline()
+				           .get(NettyPipeline.LoggingHandler) != null) {
+					pipeline.addBefore(NettyPipeline.ProxyHandler,
+					                   NettyPipeline.ProxyLoggingHandler,
+					                   new LoggingHandler("reactor.netty.proxy"));
 				}
 			}
 		}
