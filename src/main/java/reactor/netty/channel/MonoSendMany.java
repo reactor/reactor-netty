@@ -46,8 +46,6 @@ import reactor.core.Fuseable;
 import reactor.core.Scannable;
 import reactor.core.publisher.Operators;
 import reactor.netty.ReactorNetty;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
@@ -108,11 +106,11 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		volatile int          wip;
 
 		Queue<I> queue;
-		boolean  done;
 		int      pending;
 		int      requested;
 		int      sourceMode;
 		boolean  needFlush;
+		Throwable terminalSignal;
 
 		int nextRequest;
 
@@ -131,8 +129,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			   .addListener(this);
 		}
 
-
-
 		@Override
 		public Context currentContext() {
 			return actual.currentContext();
@@ -140,45 +136,36 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public void cancel() {
-			if (Operators.terminate(SUBSCRIPTION, this)) {
+			if (!Operators.terminate(SUBSCRIPTION, this)) {
 				return;
 			}
 			if (WIP.getAndIncrement(this) == 0) {
-				cleanup();
+				onInterruptionCleanup();
 			}
 		}
 
 		@Override
 		public void onComplete() {
-			if (done) {
+			if (terminalSignal != null) {
 				return;
 			}
-			done = true;
-			ctx.channel()
-			   .closeFuture()
-			   .removeListener(this);
+			terminalSignal = Completion.INSTANCE;
 			trySchedule(null);
 		}
 
 		@Override
 		public void onError(Throwable t) {
-
-			if (SUBSCRIPTION.getAndSet(this, Operators.cancelledSubscription()) == Operators.cancelledSubscription()) {
+			if (terminalSignal != null) {
 				Operators.onErrorDropped(t, actual.currentContext());
 				return;
 			}
 
-			//FIXME serialize om drain loop
-			if (WIP.getAndIncrement(this) == 0) {
-				cleanup();
-			}
-
-			//Avoid singleton
 			if (t instanceof ClosedChannelException) {
 				t = ReactorNetty.wrapException(t);
 			}
 
-			actual.onError(t);
+			terminalSignal = t;
+			trySchedule(null);
 		}
 
 		@Override
@@ -188,7 +175,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return;
 			}
 
-			if (done) {
+			if (terminalSignal != null) {
 				parent.sourceCleanup.accept(t);
 				Operators.onDiscard(t, actual.currentContext());
 				return;
@@ -218,7 +205,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 					if (m == Fuseable.SYNC) {
 						sourceMode = Fuseable.SYNC;
 						queue = f;
-						done = true;
+						terminalSignal = Completion.INSTANCE;
 						actual.onSubscribe(this);
 						trySchedule(null);
 						return;
@@ -250,7 +237,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		public void operationComplete(ChannelFuture future) {
 			if (Operators.terminate(SUBSCRIPTION, this)) {
 				if (WIP.getAndIncrement(this) == 0) {
-					cleanup();
+					onInterruptionCleanup();
 				}
 				//actual.onError(new AbortedException("Closed channel ["+ctx.channel().id().asShortText()+"] while sending operation active"));
 				actual.onComplete();
@@ -265,7 +252,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				for (; ; ) {
 					int r = requested;
 
-					while (Integer.MAX_VALUE != r && r-- > 0) {
+					while (Integer.MAX_VALUE == r || r-- > 0) {
 						I sourceMessage = queue.poll();
 
 						if (sourceMessage == null) {
@@ -275,7 +262,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						if (s == Operators.cancelledSubscription()) {
 							parent.sourceCleanup.accept(sourceMessage);
 							Operators.onDiscard(sourceMessage, actual.currentContext());
-							cleanup();
+							onInterruptionCleanup();
 							return;
 						}
 
@@ -314,16 +301,27 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 					}
 
 					if (Operators.cancelledSubscription() == s) {
-						cleanup();
+						onInterruptionCleanup();
 						return;
 					}
 
-					if (tryComplete()) {
+					if (checkTerminated() && queue.isEmpty()) {
+						ctx.channel()
+						   .closeFuture()
+						   .removeListener(this);
+
+						Throwable t = terminalSignal;
+						if (t == Completion.INSTANCE) {
+							actual.onComplete();
+						}
+						else {
+							actual.onError(t);
+						}
 						return;
 					}
 
 					int nextRequest = this.nextRequest;
-					if (!done && nextRequest != 0) {
+					if (terminalSignal == null && nextRequest != 0) {
 						this.nextRequest = 0;
 						s.request(nextRequest);
 					}
@@ -335,7 +333,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				}
 			}
 			catch (Throwable t) {
-				cleanup();
+				onInterruptionCleanup();
 				if (Operators.terminate(SUBSCRIPTION, this) ) {
 					actual.onError(t);
 				}
@@ -345,7 +343,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 		}
 
-		void cleanup() {
+		void onInterruptionCleanup() {
 			ctx.channel()
 			   .closeFuture()
 			   .removeListener(this);
@@ -367,15 +365,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 		}
 
-		boolean tryComplete() {
-			if (pending == 0
-					&& done
-					&& queue.isEmpty()
-					&& SUBSCRIPTION.getAndSet(this, Operators.cancelledSubscription()) != Operators.cancelledSubscription()) {
-				actual.onComplete();
-				return true;
-			}
-			return false;
+		boolean checkTerminated() {
+			return pending == 0 && terminalSignal != null;
 		}
 
 		void trySchedule(@Nullable Object data) {
@@ -389,7 +380,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				}
 				catch (Throwable t) {
 					if(Operators.terminate(SUBSCRIPTION, this)) {
-						cleanup();
+						onInterruptionCleanup();
 						actual.onError(Operators.onRejectedExecution(t, null, null, data, actual.currentContext()));
 					}
 				}
@@ -402,9 +393,9 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			if (key == Attr.ACTUAL) return actual;
 			if (key == Attr.REQUESTED_FROM_DOWNSTREAM) return requested;
 			if (key == Attr.CANCELLED) return Operators.cancelledSubscription() == s;
-			if (key == Attr.TERMINATED) return done;
+			if (key == Attr.TERMINATED) return terminalSignal != null;
 			if (key == Attr.BUFFERED) return queue != null ? queue.size() : 0;
-//			if (key == Attr.ERROR) return error;
+			if (key == Attr.ERROR) return !hasOnComplete() ? terminalSignal : null;
 			if (key == Attr.PREFETCH) return MAX_SIZE;
 			return null;
 		}
@@ -496,7 +487,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			requested--;
 			pending--;
 
-			if (tryComplete()) {
+			if (checkTerminated()) {
+				trySchedule(null);
 				return true;
 			}
 
@@ -513,7 +505,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		public boolean tryFailure(Throwable cause) {
 			if (Operators.terminate(SUBSCRIPTION, this)) {
 				if (WIP.getAndIncrement(this) == 0) {
-					cleanup();
+					onInterruptionCleanup();
 				}
 				actual.onError(cause);
 			}
@@ -527,7 +519,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public boolean isSuccess() {
-			return done && queue.isEmpty();
+			return hasOnComplete() && queue.isEmpty();
 		}
 
 		@Override
@@ -604,7 +596,19 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				}
 			}
 		}
+
+		boolean hasOnComplete(){
+			return terminalSignal == Completion.INSTANCE;
+		}
 	}
 
-	static final Logger log = Loggers.getLogger(MonoSendMany.class);
+	static final class Completion extends Exception {
+
+		static final Completion INSTANCE = new Completion();
+
+		@Override
+		public synchronized Throwable fillInStackTrace() {
+			return this;
+		}
+	}
 }
