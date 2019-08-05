@@ -19,7 +19,6 @@ package reactor.netty.tcp;
 import java.util.Objects;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.util.AttributeKey;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
@@ -32,23 +31,10 @@ final class TcpClientConnect extends TcpClient {
 
 	static final TcpClientConnect INSTANCE = new TcpClientConnect(ConnectionProvider.newConnection());
 
-	static final AttributeKey<Integer> MAX_CONNECTIONS = AttributeKey.newInstance("maxConnections");
-
 	final ConnectionProvider provider;
-	final int                maxConnections;
 
 	TcpClientConnect(ConnectionProvider provider) {
 		this.provider = Objects.requireNonNull(provider, "connectionProvider");
-		maxConnections = provider.maxConnections();
-	}
-
-	@Override
-	public Bootstrap configure() {
-		Bootstrap b = super.configure();
-		if (maxConnections != -1) {
-			b.attr(MAX_CONNECTIONS, maxConnections);
-		}
-		return b;
 	}
 
 	@Override
@@ -59,8 +45,7 @@ final class TcpClientConnect extends TcpClient {
 
 			TcpClientRunOn.configure(b,
 					LoopResources.DEFAULT_NATIVE,
-					TcpResources.get(),
-					maxConnections != -1);
+					TcpResources.get());
 		}
 
 		return provider.acquire(b);

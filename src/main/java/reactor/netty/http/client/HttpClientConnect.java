@@ -59,10 +59,7 @@ import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterBuilder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.SslContext;
 import io.netty.util.AsciiString;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
@@ -133,17 +130,8 @@ final class HttpClientConnect extends HttpClient {
 
 				EventLoopGroup elg = loops.onClient(LoopResources.DEFAULT_NATIVE);
 
-				Integer maxConnections = (Integer) b.config().attrs().get(AttributeKey.valueOf("maxConnections"));
-
-				if (maxConnections != null && maxConnections != -1 && elg instanceof Supplier) {
-					EventLoopGroup delegate = (EventLoopGroup) ((Supplier) elg).get();
-					b.group(delegate)
-					 .channel(loops.onChannel(delegate));
-				}
-				else {
-					b.group(elg)
-					 .channel(loops.onChannel(elg));
-				}
+				b.group(elg)
+				 .channel(loops.onChannel(elg));
 			}
 
 			HttpClientConfiguration conf = HttpClientConfiguration.getAndClean(b);

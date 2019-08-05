@@ -17,11 +17,9 @@
 package reactor.netty.tcp;
 
 import java.util.Objects;
-import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.JdkSslContext;
 import reactor.netty.resources.LoopResources;
 
 /**
@@ -41,27 +39,17 @@ final class TcpClientRunOn extends TcpClientOperator {
 	@Override
 	public Bootstrap configure() {
 		Bootstrap b = source.configure();
-		Integer maxConnections = (Integer) b.config().attrs().get(TcpClientConnect.MAX_CONNECTIONS);
 
-		configure(b, preferNative, loopResources, maxConnections != null && maxConnections != -1);
+		configure(b, preferNative, loopResources);
 
 		return b;
 	}
 
 	static void configure(Bootstrap b,
 			boolean preferNative,
-			LoopResources resources,
-			boolean useDelegate) {
+			LoopResources resources) {
 		EventLoopGroup elg = resources.onClient(preferNative);
 
-		if (useDelegate && elg instanceof Supplier) {
-			EventLoopGroup delegate = (EventLoopGroup) ((Supplier) elg).get();
-			b.group(delegate)
-			 .channel(resources.onChannel(delegate));
-		}
-		else {
-			b.group(elg)
-			 .channel(resources.onChannel(elg));
-		}
+		b.group(elg).channel(resources.onChannel(elg));
 	}
 }
