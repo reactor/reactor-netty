@@ -21,7 +21,6 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.junit.Test;
-import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -55,7 +54,7 @@ public class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), channel, false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), channel, b -> false);
 
 		WeakReference[] _w = new WeakReference[1];
 		StepVerifier.create(m)
@@ -79,7 +78,7 @@ public class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), channel, false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), channel, b -> false);
 
 		WeakReference[] _w = new WeakReference[1];
 		StepVerifier.create(m)
@@ -103,7 +102,7 @@ public class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), channel, false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), channel, b -> false);
 
 		WeakReference[] _w = new WeakReference[1];
 		StepVerifier.create(m)
@@ -127,7 +126,7 @@ public class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), channel, false);
+		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), channel, b -> false);
 
 		WeakReference[] _w = new WeakReference[1];
 		StepVerifier.create(m)
@@ -150,7 +149,7 @@ public class MonoSendManyTest {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
-		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), channel, false);
+		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), channel, b -> false);
 
 		WeakReference[] _w = new WeakReference[1];
 		StepVerifier.create(m)
