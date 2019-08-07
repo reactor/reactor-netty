@@ -302,11 +302,15 @@ public class Application {
 
 == Connection Pool
 
-By default, the `TCP` client uses an "`elastic`" connection pool. This means that the implementation creates a new channel
-if someone tries to acquire a channel but none is in the pool. Also, there is no limit on the maximum concurrent channels.
+By default, the `TCP` client uses a "`fixed`" connection pool with `500` as the maximum number of the channels and
+`45s` as the acquisition timeout.
+This means that the implementation creates a new channel if someone tries to acquire a channel but none is in the pool.
+When the maximum number of the channels in the pool is reached, new tries to acquire a channel are delayed
+until a channel is returned to the pool again.
 The implementation uses `FIFO` order for channels in the pool regardless of whether it is "`elastic`" or "`fixed`".
+By default, there is no idle time specified for the channels in the pool.
 
-If you need a "`fixed`" connection pool, you can apply the following configuration by using
+If you need an "`elastic`" connection pool, you can apply the following configuration by using
 {javadoc}/reactor/netty/resources/ConnectionProvider.html[`ConnectionProvider`].
 The following example shows how to do so:
 
@@ -320,7 +324,7 @@ import reactor.netty.tcp.TcpClient;
 public class Application {
 
     public static void main(String[] args) {
-        ConnectionProvider provider = ConnectionProvider.fixed("fixed", 50, 30000);
+        ConnectionProvider provider = ConnectionProvider.elastic("fixed");
         Connection connection =
                 TcpClient.create(provider)
                          .host("example.com")
@@ -357,6 +361,37 @@ public class Application {
 }
 ----
 ====
+
+If you need to specify an idle time for the channels in the connection pool, you can apply the following configuration:
+
+====
+[source,java]
+----
+import reactor.netty.Connection;
+import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.TcpClient;
+import java.time.Duration;
+
+public class Application {
+
+    public static void main(String[] args) {
+        ConnectionProvider provider = ConnectionProvider.fixed("fixed", 50, 30000, Duration.ofSeconds(60));
+        Connection connection =
+                TcpClient.create(provider)
+                         .host("example.com")
+                         .port(80)
+                         .connectNow();
+
+        connection.onDispose()
+                  .block();
+    }
+}
+----
+====
+
+NOTE: Be cautious with an "`elastic`" connection pool when you expect a high load. You might experience
+`reactor.netty.http.client.PrematureCloseException` exception with a root cause "Connect Timeout" due
+to too many concurrent connections opened/acquired.
 
 == SSL and TLS
 

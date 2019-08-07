@@ -277,7 +277,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 			BiFunction<LoopResources, ConnectionProvider, T> onNew) {
 		if (previous == null) {
 			loops = loops == null ? LoopResources.create("reactor-" + name) : loops;
-			provider = provider == null ? ConnectionProvider.elastic(name) : provider;
+			provider = provider == null ? ConnectionProvider.fixed(name, 500) : provider;
 		}
 		else {
 			loops = loops == null ? previous.defaultLoops : loops;
