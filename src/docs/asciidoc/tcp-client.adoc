@@ -188,7 +188,7 @@ By default, the `TCP` client is configured with the following options:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/tcp/TcpClient.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpClient.java[lines=572..574]
+include::{sourcedir}/reactor/netty/tcp/TcpClient.java[lines=598..600]
 ----
 ====
 
@@ -269,7 +269,7 @@ The following listing shows the default configuration for the Event Loop Group:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=72..92]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=75..95]
 ----
 ====
 
