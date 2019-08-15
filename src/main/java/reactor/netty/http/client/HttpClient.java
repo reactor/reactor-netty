@@ -640,10 +640,10 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Specifies whether http status 301|302|307|308 auto-redirect support is enabled
+	 * Specifies whether HTTP status 301|302|307|308 auto-redirect support is enabled.
 	 *
-	 * @param followRedirect if true http status 301/302 auto-redirect support
-	 *                       is enabled otherwise disabled (default: true)
+	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
+	 *                       is enabled, otherwise disabled (default: false).
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient followRedirect(boolean followRedirect) {
