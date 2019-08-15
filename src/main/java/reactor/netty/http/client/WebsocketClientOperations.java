@@ -33,10 +33,12 @@ import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
@@ -55,6 +57,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 		implements WebsocketInbound, WebsocketOutbound {
 
 	final WebSocketClientHandshaker handshaker;
+	final MonoProcessor<WebSocketCloseStatus> onCloseState;
 
 	volatile int closeSent;
 
@@ -64,6 +67,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			HttpClientOperations replaced) {
 		super(replaced);
 		Channel channel = channel();
+		onCloseState = MonoProcessor.create();
 
 		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 					WebSocketVersion.V13,
@@ -195,6 +199,12 @@ final class WebsocketClientOperations extends HttpClientOperations
 		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
 	}
 
+	@Override
+	@SuppressWarnings("unchecked")
+	public Mono<WebSocketCloseStatus> receiveCloseStatus() {
+		return onCloseState.or((Mono)onTerminate());
+	}
+
 	Mono<Void> sendClose(CloseWebSocketFrame frame) {
 		if (CLOSE_SENT.get(this) == 0) {
 			//commented for now as we assume the close is always scheduled (deferFuture runs)
@@ -202,6 +212,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			return FutureMono.deferFuture(() -> {
 				if (CLOSE_SENT.getAndSet(this, 1) == 0) {
 					discard();
+					onCloseState.onNext(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
 					return channel().writeAndFlush(frame)
 					                .addListener(ChannelFutureListener.CLOSE);
 				}
@@ -219,8 +230,15 @@ final class WebsocketClientOperations extends HttpClientOperations
 			return;
 		}
 		if (CLOSE_SENT.getAndSet(this, 1) == 0) {
-			channel().writeAndFlush(frame == null ? new CloseWebSocketFrame() : frame)
-			         .addListener(ChannelFutureListener.CLOSE);
+			if (frame != null) {
+				onCloseState.onNext(new WebSocketCloseStatus(frame.statusCode(), frame.reasonText()));
+				channel().writeAndFlush(frame)
+				         .addListener(ChannelFutureListener.CLOSE);
+			} else {
+				onCloseState.onNext(new WebSocketCloseStatus(-1, ""));
+				channel().writeAndFlush(new CloseWebSocketFrame())
+				         .addListener(ChannelFutureListener.CLOSE);
+			}
 		}
 		else if (frame != null) {
 			frame.release();

@@ -56,6 +56,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -64,8 +65,11 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.UnicastProcessor;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
@@ -1152,5 +1156,200 @@ public class HttpServerTests {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(error.get()).isInstanceOf(AbortedException.class);
 		server.dispose();
+	}
+
+	@Test
+	public void testNormalConnectionCloseForWebSocketClient() {
+		Flux<String> flux = Flux.range(0, 100)
+		                        .map(n -> String.format("%010d", n));
+		UnicastProcessor<String> receiver = UnicastProcessor.create();
+		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
+		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		List<String> test =
+			flux.collectList()
+			    .block();
+		assertThat(test).isNotNull();
+
+		DisposableServer c = HttpServer
+			.create()
+			.port(0)
+			.handle((req, resp) -> resp.sendWebsocket((in, out) ->
+				out.sendString(flux)
+				   .then(out.sendClose(4404, "test"))
+				   .then(in.receiveCloseStatus()
+				           .subscribeWith(statusServer)
+				           .then())
+			))
+			.wiretap(true)
+			.bindNow();
+
+		HttpClient.create()
+		          .port(c.address()
+		                 .getPort())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) -> {
+			          MonoProcessor<Object> done = MonoProcessor.create();
+			          in.receiveCloseStatus()
+			            .subscribeWith(statusClient);
+			          in.receive()
+			            .asString()
+			            .doFinally((s) -> done.onComplete())
+			            .subscribeWith(receiver);
+			          return done.then(Mono.delay(Duration.ofMillis(500)));
+		          })
+		          .blockLast();
+
+		StepVerifier.create(receiver)
+		            .expectNextSequence(test)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(statusClient)
+		            .expectNext(new WebSocketCloseStatus(4404, "test"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+
+		StepVerifier.create(statusServer)
+		            .expectNext(new WebSocketCloseStatus(4404, "test"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		c.disposeNow();
+	}
+
+
+	@Test
+	public void testNormalConnectionCloseForWebSocketServer() {
+		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
+		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+
+		DisposableServer c = HttpServer.create()
+		                               .port(0)
+		                               .handle((req, resp) ->
+			                               resp.sendWebsocket((in, out) -> in.receiveCloseStatus()
+			                                                                 .subscribeWith(statusServer)
+			                                                                 .then())
+		                               )
+		                               .wiretap(true)
+		                               .bindNow();
+
+		HttpClient.create()
+		          .port(c.address()
+		                 .getPort())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) -> out.sendClose(4404, "test")
+		                                  .then(in.receiveCloseStatus()
+		                                          .subscribeWith(statusClient)))
+		          .blockLast();
+
+		StepVerifier.create(statusClient)
+		            .expectNext(new WebSocketCloseStatus(4404, "test"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(statusServer)
+		            .expectNext(new WebSocketCloseStatus(4404, "test"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		c.disposeNow();
+	}
+
+	@Test
+	public void testCancelConnectionCloseForWebSocketClient() {
+		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
+		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+
+		DisposableServer c = HttpServer.create()
+		                               .port(0)
+		                               .handle((req, resp) ->
+			                               resp.sendWebsocket((in, out) -> in.receiveCloseStatus()
+			                                                                 .subscribeWith(statusServer)
+			                                                                 .then())
+		                               )
+		                               .wiretap(true)
+		                               .bindNow();
+
+		HttpClient.create()
+		          .port(c.address()
+		                 .getPort())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) -> {
+			          in.receiveCloseStatus()
+			            .subscribeWith(statusClient);
+
+			          in.withConnection(Connection::dispose);
+
+			          return Mono.never();
+		          })
+		          .subscribe();
+
+
+		StepVerifier.create(statusClient)
+		            .expectNext(new WebSocketCloseStatus(-1, ""))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(statusServer)
+		            .expectNext(new WebSocketCloseStatus(-1, ""))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		c.disposeNow();
+	}
+
+	@Test
+	public void testCancelConnectionCloseForWebSocketServer() {
+		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
+		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+
+		DisposableServer c = HttpServer
+			.create()
+			.port(0)
+			.handle((req, resp) -> resp.sendWebsocket((in, out) -> {
+				in.receiveCloseStatus()
+				  .subscribeWith(statusServer)
+				  .then();
+
+				in.withConnection(Connection::dispose);
+
+				return Mono.never();
+			}))
+			.wiretap(true)
+			.bindNow();
+
+		HttpClient.create()
+		          .port(c.address()
+		                 .getPort())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) -> {
+			          in.receiveCloseStatus()
+			            .subscribeWith(statusClient);
+
+			          return Mono.never();
+		          })
+		          .subscribe();
+
+
+		StepVerifier.create(statusClient)
+		            .expectNext(new WebSocketCloseStatus(-1, ""))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(statusServer)
+		            .expectNext(new WebSocketCloseStatus(-1, ""))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		c.disposeNow();
 	}
 }
