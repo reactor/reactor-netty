@@ -17,9 +17,11 @@
 package reactor.netty.http.websocket;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.netty.NettyInbound;
 import reactor.util.annotation.Nullable;
 
@@ -47,6 +49,12 @@ public interface WebsocketInbound extends NettyInbound {
 	 * @return the websocket remote headers sent during handshake
 	 */
 	HttpHeaders headers();
+
+	/**
+	 * Receive the close status code and reason if sent by the remote peer,
+	 * or empty if the connection completes otherwise.
+	 */
+	Mono<WebSocketCloseStatus> receiveCloseStatus();
 
 	/**
 	 * Turn this {@link WebsocketInbound} into aggregating mode which will only produce
