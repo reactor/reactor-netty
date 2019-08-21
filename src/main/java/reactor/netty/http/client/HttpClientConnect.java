@@ -48,8 +48,9 @@ import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2FrameLogger;
-import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
+import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.Http2StreamChannelBootstrap;
@@ -872,15 +873,17 @@ final class HttpClientConnect extends HttpClient {
 			ChannelPipeline p = ctx.pipeline();
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-						Http2MultiplexCodecBuilder.forClient(new Http2StreamInitializer())
-						                          .initialSettings(Http2Settings.defaultSettings());
+				Http2FrameCodecBuilder http2FrameCodecBuilder =
+						Http2FrameCodecBuilder.forClient()
+						                      .validateHeaders(true)
+						                      .initialSettings(Http2Settings.defaultSettings());
 
 				if (p.get(NettyPipeline.LoggingHandler) != null) {
-					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
+					http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
 				}
 
-				p.addLast(http2MultiplexCodecBuilder.build());
+				p.addLast(http2FrameCodecBuilder.build())
+				 .addLast(new Http2MultiplexHandler(new Http2StreamInitializer()));
 
 				openStream(ctx.channel(), listener, parent);
 

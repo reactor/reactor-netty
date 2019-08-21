@@ -24,6 +24,7 @@ import java.util.function.Function;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -35,16 +36,16 @@ import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http2.CleartextHttp2ServerUpgradeHandler;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2FrameCodec;
+import io.netty.handler.codec.http2.Http2FrameCodecBuilder;
 import io.netty.handler.codec.http2.Http2FrameLogger;
-import io.netty.handler.codec.http2.Http2MultiplexCodec;
-import io.netty.handler.codec.http2.Http2MultiplexCodecBuilder;
+import io.netty.handler.codec.http2.Http2MultiplexHandler;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
-import io.netty.handler.ssl.JdkSslContext;
 import io.netty.util.AsciiString;
 import reactor.core.publisher.Mono;
 import reactor.netty.ConnectionObserver;
@@ -425,9 +426,19 @@ final class HttpServerBind extends HttpServer
 			Http1OrH2CleartextCodec
 					upgrader = new Http1OrH2CleartextCodec(this, listener, p.get(NettyPipeline.LoggingHandler) != null);
 
-
-			final CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler =
-					new CleartextHttp2ServerUpgradeHandler(httpServerCodec, new HttpServerUpgradeHandler(httpServerCodec, upgrader), upgrader.multiplexCodec);
+			final ChannelHandler http2ServerHandler = new ChannelHandlerAdapter() {
+				@Override
+				public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+					ctx.pipeline()
+							.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec)
+							.addAfter(NettyPipeline.HttpCodec, null, new Http2MultiplexHandler(upgrader));
+					ctx.pipeline().remove(this);
+				}
+			};
+			final CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
+					httpServerCodec,
+					new HttpServerUpgradeHandler(httpServerCodec, upgrader),
+					http2ServerHandler);
 
 			p.addLast(NettyPipeline.HttpCodec, h2cUpgradeHandler);
 
@@ -467,22 +478,22 @@ final class HttpServerBind extends HttpServer
 
 		final Http1OrH2CleartextInitializer parent;
 		final ConnectionObserver            listener;
-		final Http2MultiplexCodec           multiplexCodec;
+		final Http2FrameCodec               http2FrameCodec;
 
 		Http1OrH2CleartextCodec(Http1OrH2CleartextInitializer parent, ConnectionObserver listener, boolean debug) {
 			this.parent = parent;
 			this.listener = listener;
-			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-					Http2MultiplexCodecBuilder.forServer(this)
-					                          .validateHeaders(parent.validate)
-					                          .initialSettings(Http2Settings.defaultSettings());
+			Http2FrameCodecBuilder http2FrameCodecBuilder =
+					Http2FrameCodecBuilder.forServer()
+					                      .validateHeaders(parent.validate)
+					                      .initialSettings(Http2Settings.defaultSettings());
 
 			if (debug) {
-				http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(
+				http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(
 						LogLevel.DEBUG,
 						"reactor.netty.http.server.h2.cleartext"));
 			}
-			this.multiplexCodec = http2MultiplexCodecBuilder.build();
+			this.http2FrameCodec = http2FrameCodecBuilder.build();
 		}
 
 		/**
@@ -498,7 +509,7 @@ final class HttpServerBind extends HttpServer
 		public HttpServerUpgradeHandler.UpgradeCodec newUpgradeCodec(CharSequence protocol) {
 			if (AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME,
 					protocol)) {
-				return new Http2ServerUpgradeCodec(multiplexCodec);
+				return new Http2ServerUpgradeCodec(http2FrameCodec, new Http2MultiplexHandler(this));
 			}
 			else {
 				return null;
@@ -535,18 +546,20 @@ final class HttpServerBind extends HttpServer
 		public void accept(ConnectionObserver listener, Channel channel) {
 			ChannelPipeline p = channel.pipeline();
 
-			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-					Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer(listener, forwarded, cookieEncoder, cookieDecoder, false))
-					                          .validateHeaders(validate)
-					                          .initialSettings(Http2Settings.defaultSettings());
+			Http2FrameCodecBuilder http2FrameCodecBuilder =
+					Http2FrameCodecBuilder.forServer()
+					                      .validateHeaders(validate)
+					                      .initialSettings(Http2Settings.defaultSettings());
 
 			if (p.get(NettyPipeline.LoggingHandler) != null) {
-				http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(
+				http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(
 						LogLevel.DEBUG,
 						"reactor.netty.http.server.h2.cleartext"));
 			}
 
-			p.addLast(NettyPipeline.HttpCodec, http2MultiplexCodecBuilder.build());
+			p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
+			 .addLast(new Http2MultiplexHandler(
+			        new Http2StreamInitializer(listener, forwarded, cookieEncoder, cookieDecoder, false)));
 
 			channel.read();
 		}
@@ -617,17 +630,19 @@ final class HttpServerBind extends HttpServer
 
 				p.remove(NettyPipeline.ReactiveBridge);
 
-				Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-						Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer(listener, parent.forwarded,
-						                                                                parent.cookieEncoder,
-						                                                                parent.cookieDecoder, true))
-						                          .initialSettings(Http2Settings.defaultSettings());
+				Http2FrameCodecBuilder http2FrameCodecBuilder =
+						Http2FrameCodecBuilder.forServer()
+						                      .validateHeaders(true)
+						                      .initialSettings(Http2Settings.defaultSettings());
 
 				if (p.get(NettyPipeline.LoggingHandler) != null) {
-					http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, "reactor.netty.http.server.h2.secure"));
+					http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, "reactor.netty.http.server.h2.secure"));
 				}
 
-				p.addLast(NettyPipeline.HttpCodec, http2MultiplexCodecBuilder.build());
+				p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
+				 .addLast(new Http2MultiplexHandler(
+				        new Http2StreamInitializer(listener, parent.forwarded,
+				            parent.cookieEncoder, parent.cookieDecoder, true)));
 
 				return;
 			}
@@ -699,17 +714,18 @@ final class HttpServerBind extends HttpServer
 		public void accept(ConnectionObserver listener, Channel channel) {
 			ChannelPipeline p = channel.pipeline();
 
-			Http2MultiplexCodecBuilder http2MultiplexCodecBuilder =
-					Http2MultiplexCodecBuilder.forServer(new Http2StreamInitializer
-							(listener, forwarded, cookieEncoder, cookieDecoder, true))
-					                          .validateHeaders(validate)
-					                          .initialSettings(Http2Settings.defaultSettings());
+			Http2FrameCodecBuilder http2FrameCodecBuilder =
+					Http2FrameCodecBuilder.forServer()
+					                      .validateHeaders(validate)
+					                      .initialSettings(Http2Settings.defaultSettings());
 
 			if (p.get(NettyPipeline.LoggingHandler) != null) {
-				http2MultiplexCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, "reactor.netty.http.server.h2.secured"));
+				http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, "reactor.netty.http.server.h2.secured"));
 			}
 
-			p.addLast(NettyPipeline.HttpCodec, http2MultiplexCodecBuilder.build());
+			p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
+			 .addLast(new Http2MultiplexHandler(
+			        new Http2StreamInitializer(listener, forwarded, cookieEncoder, cookieDecoder, true)));
 		}
 	}
 
