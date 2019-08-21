@@ -16,6 +16,8 @@
 package reactor.netty.channel;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -50,18 +52,15 @@ public class MonoSendManyTest {
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	public void cleanupFuseableSyncCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
 		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}), channel, false);
 
-		WeakReference[] _w = new WeakReference[1];
+		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
-		            .consumeSubscriptionWith(s -> {
-			            _w[0] = new WeakReference(s);
-		            })
+		            .consumeSubscriptionWith(s -> _w.add(new WeakReference<>(s)))
 		            .then(() -> {
 			            channel.runPendingTasks();
 			            assertThat(channel.<String>readOutbound()).isEqualToIgnoringCase("test");
@@ -70,22 +69,19 @@ public class MonoSendManyTest {
 		            .verifyComplete();
 
 		System.gc();
-		wait(_w[0]);
+		wait(_w.get(0));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	public void cleanupFuseableAsyncCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
 		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).limitRate(10), channel, false);
 
-		WeakReference[] _w = new WeakReference[1];
+		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
-		            .consumeSubscriptionWith(s -> {
-			            _w[0] = new WeakReference(s);
-		            })
+		            .consumeSubscriptionWith(s -> _w.add(new WeakReference<>(s)))
 		            .then(() -> {
 			            channel.runPendingTasks();
 			            assertThat(channel.<String>readOutbound()).isEqualToIgnoringCase("test");
@@ -94,22 +90,19 @@ public class MonoSendManyTest {
 		            .verifyComplete();
 
 		System.gc();
-		wait(_w[0]);
+		wait(_w.get(0));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	public void cleanupFuseableErrorCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
 		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.error(new Exception("boo"))).limitRate(10), channel, false);
 
-		WeakReference[] _w = new WeakReference[1];
+		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
-		            .consumeSubscriptionWith(s -> {
-			            _w[0] = new WeakReference(s);
-		            })
+		            .consumeSubscriptionWith(s -> _w.add(new WeakReference<>(s)))
 		            .then(() -> {
 			            channel.runPendingTasks();
 			            assertThat(channel.<String>readOutbound()).isEqualToIgnoringCase("test");
@@ -118,55 +111,45 @@ public class MonoSendManyTest {
 		            .verifyErrorMessage("boo");
 
 		System.gc();
-		wait(_w[0]);
+		wait(_w.get(0));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	public void cleanupCancelCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
 		Mono<Void> m = MonoSendMany.objectSource(Flux.fromArray(new String[]{"test", "test2"}).concatWith(Mono.never()), channel, false);
 
-		WeakReference[] _w = new WeakReference[1];
+		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
-		            .consumeSubscriptionWith(s -> {
-			            _w[0] = new WeakReference(s);
-		            })
-		            .then(() -> {
-			            channel.runPendingTasks();
-		            })
+		            .consumeSubscriptionWith(s -> _w.add(new WeakReference<>(s)))
+		            .then(channel::runPendingTasks)
 		            .thenCancel()
 		            .verify();
 
 		System.gc();
-		wait(_w[0]);
+		wait(_w.get(0));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	public void cleanupErrorCloseFuture() {
 		//use an extra handler
 		EmbeddedChannel channel = new EmbeddedChannel(new ChannelHandlerAdapter() {});
 
 		Mono<Void> m = MonoSendMany.objectSource(Mono.error(new Exception("boo")), channel, false);
 
-		WeakReference[] _w = new WeakReference[1];
+		List<WeakReference<Subscription>> _w = new ArrayList<>(1);
 		StepVerifier.create(m)
-		            .consumeSubscriptionWith(s -> {
-			            _w[0] = new WeakReference(s);
-		            })
-		            .then(() -> {
-			            channel.runPendingTasks();
-		            })
+		            .consumeSubscriptionWith(s -> _w.add(new WeakReference<>(s)))
+		            .then(channel::runPendingTasks)
 		            .verifyErrorMessage("boo");
 
 		System.gc();
-		wait(_w[0]);
+		wait(_w.get(0));
 	}
 
-	static void wait(WeakReference<?> ref){
+	static void wait(WeakReference<Subscription> ref){
 		int duration = 5_000;
 		int spins = duration / 100;
 		int i = 0;
