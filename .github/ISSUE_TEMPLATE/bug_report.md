@@ -22,8 +22,9 @@ https://pivotal.io/security
 <!--- Tell us what happens instead of the expected behavior. -->
 
 ## Steps to Reproduce
-<!---Provide a link to a live example, or an unambiguous set of steps to
-reproduce this bug, eg. a unit test. Include code to reproduce, if relevant. -->
+<!--- Provide a link to a live example, or an unambiguous set of steps to
+reproduce this bug, eg. a unit test. Include code to reproduce, if relevant.
+https://stackoverflow.com/help/minimal-reproducible-example -->
 
 ```java
 @Test
