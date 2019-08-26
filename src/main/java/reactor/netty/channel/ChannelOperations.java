@@ -240,6 +240,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
+		if (!channel().isActive()) {
+			return then(Mono.error(new AbortedException("Connection has been closed")));
+		}
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ByteBuf.class, ByteBuf::release));
@@ -250,6 +253,9 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@Override
 	@SuppressWarnings("unchecked")
 	public NettyOutbound sendObject(Publisher<?> dataStream) {
+		if (!channel().isActive()) {
+			return then(Mono.error(new AbortedException("Connection has been closed")));
+		}
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
 			                                 .doOnDiscard(ReferenceCounted.class, ReferenceCounted::release));
