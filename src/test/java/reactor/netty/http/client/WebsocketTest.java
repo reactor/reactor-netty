@@ -42,9 +42,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -1147,5 +1149,50 @@ public class WebsocketTest {
 				          .block();
 		Assert.assertNotNull(res);
 		Assert.assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+	}
+
+	@Test
+	public void testIssue821() throws Exception {
+		Scheduler scheduler = Schedulers.newSingle("ws");
+		CountDownLatch latch = new CountDownLatch(1);
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .route(r -> r.ws("/ws", (in, out) -> {
+		                           scheduler.schedule(() ->
+		                               out.sendString(Mono.just("scheduled"))
+		                                  .then()
+		                                  .subscribe(
+		                                          null,
+		                                          t -> {
+		                                              error.set(t);
+		                                              latch.countDown();
+		                                          },
+		                                          null)
+		                           , 500, TimeUnit.MILLISECONDS);
+		                           return out.sendString(Mono.just("test"));
+		                       }))
+		                       .wiretap(true)
+		                       .bindNow();
+
+		String res =
+				HttpClient.create()
+				          .port(httpServer.address().getPort())
+				          .wiretap(true)
+				          .websocket()
+				          .uri("/ws")
+				          .receive()
+				          .asString()
+				          .blockLast();
+
+		assertThat(res).isNotNull()
+		               .isEqualTo("test");
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		assertThat(error.get()).isNotNull()
+		                       .isInstanceOf(AbortedException.class);
+
+		scheduler.dispose();
 	}
 }
