@@ -26,7 +26,6 @@ import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
-import reactor.netty.SocketUtils;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.tcp.ProxyProvider;
 import reactor.test.StepVerifier;
@@ -46,20 +45,14 @@ import static io.specto.hoverfly.junit.dsl.ResponseCreators.success;
  */
 public class HttpClientProxyTest {
 
-	private static final int port = SocketUtils.findAvailableTcpPort();
-
 	@ClassRule
 	public static final HoverflyRule hoverflyRule =
 			HoverflyRule.inSimulationMode(
-					dsl(service("http://127.0.0.1:" + port)
-					        .get("/")
-					        .willReturn(success()
-					                .body("test")
-					                .header("Hoverfly", "Was-Here"))),
 					HoverflyConfig.localConfigs()
 					              .plainHttpTunneling());
 
 	private DisposableServer server;
+	private int port;
 
 	@Before
 	public void setUp() {
@@ -69,12 +62,21 @@ public class HttpClientProxyTest {
 		                   .handle((req, res) -> res.sendString(Mono.just("test")))
 		                   .wiretap(true)
 		                   .bindNow();
+
+		port = server.port();
+
+		hoverflyRule.simulate(
+				dsl(service("http://127.0.0.1:" + port)
+				        .get("/")
+				        .willReturn(success()
+				                .body("test")
+				                .header("Hoverfly", "Was-Here"))));
 	}
 
 	@After
 	public void tearDown() {
 		if (server != null) {
-			server.dispose();
+			server.disposeNow();
 		}
 	}
 
