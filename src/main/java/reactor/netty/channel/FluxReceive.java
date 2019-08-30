@@ -206,7 +206,14 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					a.onNext(v);
 				}
 				finally {
-					ReferenceCountUtil.release(v);
+					try {
+						ReferenceCountUtil.release(v);
+					}
+					catch(Throwable t) {
+						inboundError = t;
+						cleanQueue(q);
+						terminateReceiver(q, a);
+					}
 				}
 
 				e++;

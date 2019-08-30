@@ -28,6 +28,7 @@ import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
+import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
@@ -514,5 +515,106 @@ public class HttpCompressionClientServerTests {
 		            .verify();
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void testIssue825_1() {
+		int port1 = SocketUtils.findAvailableTcpPort();
+		int port2 = SocketUtils.findAvailableTcpPort();
+
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		DisposableServer server1 =
+				HttpServer.create()
+				          .port(port1)
+				          .compress(true)
+				          .handle((in, out) -> out.send(
+				              HttpClient.create()
+				                        .port(port2)
+				                        .wiretap(true)
+				                        .get()
+				                        .uri("/")
+				                        .responseContent()
+				                        .doOnError(error::set)))
+				                        // .retain() deliberately not invoked
+				                        // so that .release() in FluxReceive.drainReceiver will fail
+				                        //.retain()))
+				          .wiretap(true)
+				          .bindNow();
+
+		DisposableServer server2 =
+				HttpServer.create()
+				          .port(port2)
+				          .handle((in, out) -> out.sendString(Mono.just("reply")))
+				          .wiretap(true)
+				          .bindNow();
+
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .port(port1)
+		                  .wiretap(true)
+		                  .compress(true)
+		                  .get()
+		                  .uri("/")
+		                  .responseContent()
+		                  .aggregate()
+		                  .asString())
+		            .expectError()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(error.get()).isNotNull()
+		                       .isInstanceOf(RuntimeException.class);
+
+		server1.disposeNow();
+		server2.disposeNow();
+	}
+
+	@Test
+	public void testIssue825_2() {
+		int port1 = SocketUtils.findAvailableTcpPort();
+		int port2 = SocketUtils.findAvailableTcpPort();
+
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		DisposableServer server1 =
+				HttpServer.create()
+				          .port(port1)
+				          .compress((req, res) -> {
+				              throw new RuntimeException("testIssue825_2");
+				          })
+				          .handle((in, out) ->
+				              HttpClient.create()
+				                        .port(port2)
+				                        .wiretap(true)
+				                        .get()
+				                        .uri("/")
+				                        .responseContent()
+				                        .retain()
+				                        .flatMap(b -> out.send(Mono.just(b)))
+				                        .doOnError(error::set))
+				          .wiretap(true)
+				          .bindNow();
+
+		DisposableServer server2 =
+				HttpServer.create()
+				          .port(port2)
+				          .handle((in, out) -> out.sendString(Mono.just("reply")))
+				          .wiretap(true)
+				          .bindNow();
+
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .port(port1)
+		                  .wiretap(true)
+		                  .compress(true)
+		                  .get()
+		                  .uri("/")
+		                  .responseContent())
+		            .expectError()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(error.get()).isNotNull()
+		                       .isInstanceOf(RuntimeException.class);
+
+		server1.disposeNow();
+		server2.disposeNow();
 	}
 }
