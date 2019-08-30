@@ -577,15 +577,22 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	final boolean notRedirected(HttpResponse response) {
-		if (isFollowRedirect() && followRedirectPredicate.test(this, this)) {
-			if (log.isDebugEnabled()) {
-				log.debug(format(channel(), "Received redirect location: {}"),
-						response.headers()
-						        .entries()
-						        .toString());
+		try {
+			if (isFollowRedirect() && followRedirectPredicate.test(this, this)) {
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel(), "Received redirect location: {}"),
+					        response.headers()
+					                .entries()
+					                .toString());
+				}
+				listener().onUncaughtException(this, new RedirectClientException(response.headers()));
+				return false;
 			}
-			listener().onUncaughtException(this, new RedirectClientException(response.headers()));
-			return false;
+		}
+		catch (RuntimeException e) {
+			log.error(format(channel(),
+					"Unexpected exception is thrown by the follow redirect predicate. Auto redirection will be disabled."), e);
+			return true;
 		}
 		return true;
 	}
