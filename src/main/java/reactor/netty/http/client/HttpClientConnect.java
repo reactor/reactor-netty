@@ -84,7 +84,7 @@ import reactor.netty.tcp.InetSocketAddressUtil;
 import reactor.netty.tcp.ProxyProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
-import reactor.netty.tcp.TcpMetricsHandler;
+import reactor.netty.channel.ChannelMetricsHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
@@ -702,7 +702,7 @@ final class HttpClientConnect extends HttpClient {
 
 			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
 			if (handler != null) {
-				TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+				ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
 				HttpClientMetricsHandler httpMetrics =
 						new HttpClientMetricsHandler(tcpMetrics.registry(),
 						                             tcpMetrics.name());
@@ -920,7 +920,7 @@ final class HttpClientConnect extends HttpClient {
 
 				ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
 				if (handler != null) {
-					TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+					ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
 					HttpClientMetricsHandler httpMetrics =
 							new HttpClientMetricsHandler(tcpMetrics.registry(),
 							                             tcpMetrics.name());

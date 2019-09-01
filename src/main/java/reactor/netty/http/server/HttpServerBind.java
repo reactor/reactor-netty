@@ -56,7 +56,7 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
-import reactor.netty.tcp.TcpMetricsHandler;
+import reactor.netty.channel.ChannelMetricsHandler;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.annotation.Nullable;
 
@@ -364,7 +364,7 @@ final class HttpServerBind extends HttpServer
 			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
 			if (handler != null) {
 				// TODO doesn't take into account proxy protocol address and forward headers
-				TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+				ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
 				HttpServerMetricsHandler httpMetrics =
 						new HttpServerMetricsHandler(tcpMetrics.registry(),
 						                             tcpMetrics.name());
@@ -459,7 +459,7 @@ final class HttpServerBind extends HttpServer
 			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
 			if (handler != null) {
 				// TODO doesn't take into account proxy protocol address and forward headers
-				TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+				ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
 				HttpServerMetricsHandler httpMetrics =
 						new HttpServerMetricsHandler(tcpMetrics.registry(),
 						                             tcpMetrics.name());
@@ -672,7 +672,7 @@ final class HttpServerBind extends HttpServer
 				ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
 				if (handler != null) {
 					// TODO doesn't take into account proxy protocol address and forward headers
-					TcpMetricsHandler tcpMetrics = (TcpMetricsHandler) handler;
+					ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
 					HttpServerMetricsHandler httpMetrics =
 							new HttpServerMetricsHandler(tcpMetrics.registry(),
 							                             tcpMetrics.name());

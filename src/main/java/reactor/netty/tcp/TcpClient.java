@@ -535,10 +535,10 @@ public abstract class TcpClient {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> TcpUtils.updateMetricsSupport(b, name));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, name == null ? "reactor.netty.tcp.client" : name));
 		}
 		else {
-			return bootstrap(TcpUtils::removeMetricsSupport);
+			return bootstrap(BootstrapHandlers::removeMetricsSupport);
 		}
 	}
 

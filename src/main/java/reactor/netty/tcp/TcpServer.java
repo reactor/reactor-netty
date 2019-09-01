@@ -560,10 +560,10 @@ public abstract class TcpServer {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> TcpUtils.updateMetricsSupport(b, name));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, name == null ? "reactor.netty.tcp.server" : name));
 		}
 		else {
-			return bootstrap(TcpUtils::removeMetricsSupport);
+			return bootstrap(BootstrapHandlers::removeMetricsSupport);
 		}
 	}
 
