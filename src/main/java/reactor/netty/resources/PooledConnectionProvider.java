@@ -50,6 +50,7 @@ import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
+import reactor.netty.Metrics;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.pool.InstrumentedPool;
@@ -157,6 +158,12 @@ final class PooledConnectionProvider implements ConnectionProvider {
 								name,
 								bootstrap.config()
 								         .remoteAddress());
+					}
+					if (BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
+						PooledConnectionProviderMetrics.registerMetrics(name,
+								holder.hashCode() + "",
+								Metrics.formatSocketAddress(bootstrap.config().remoteAddress()),
+								pool.metrics());
 					}
 					break;
 				}
@@ -594,7 +601,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		PoolKey(SocketAddress holder, int pipelineKey) {
 			this.holder = holder;
-			this.fqdn = holder instanceof InetSocketAddress ? holder.toString() : null;
+			this.fqdn = holder instanceof InetSocketAddress ? holder.toString() : "null";
 			this.pipelineKey = pipelineKey;
 		}
 

@@ -34,7 +34,6 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import reactor.netty.NettyPipeline;
 
 import javax.annotation.Nullable;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 /**
@@ -133,7 +132,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			ByteBuf buffer = p.content();
 			if (buffer.readableBytes() > 0) {
 				if (dataReceived == null) {
-					dataReceivedBuilder.tag(REMOTE_ADDRESS, address(p.sender()))
+					dataReceivedBuilder.tag(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(p.sender()))
 					                   .register(registry)
 					                   .record(buffer.readableBytes());
 
@@ -160,7 +159,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			ByteBuf buffer = p.content();
 			if (buffer.readableBytes() > 0) {
 				if (dataSent == null) {
-					dataSentBuilder.tag(REMOTE_ADDRESS, address(p.recipient()))
+					dataSentBuilder.tag(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(p.recipient()))
 					               .register(registry)
 					               .record(buffer.readableBytes());
 
@@ -177,7 +176,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		if (errorCount == null) {
-			String address = address(ctx.channel().remoteAddress());
+			String address = reactor.netty.Metrics.formatSocketAddress(ctx.channel().remoteAddress());
 			if (address != null) {
 				errorCountBuilder.tag(REMOTE_ADDRESS, address)
 				                 .register(registry)
@@ -286,19 +285,5 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 				connectTimeSample.stop(connectTime);
 			});
 		}
-	}
-
-	@Nullable
-	static String address(@Nullable SocketAddress socketAddress) {
-		if (socketAddress != null) {
-			if (socketAddress instanceof InetSocketAddress) {
-				InetSocketAddress address = (InetSocketAddress) socketAddress;
-				return address.getHostString() + ":" + address.getPort();
-			}
-			else {
-				return socketAddress.toString();
-			}
-		}
-		return null;
 	}
 }

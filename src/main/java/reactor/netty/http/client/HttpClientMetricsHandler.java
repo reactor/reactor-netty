@@ -29,6 +29,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
+import reactor.netty.Metrics;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -92,7 +93,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
 		if (msg instanceof LastHttpContent) {
 			promise.addListener(future -> {
-				String address = address(ctx.channel().remoteAddress());
+				String address = Metrics.formatSocketAddress(ctx.channel().remoteAddress());
 
 				Timer dataSentTime =
 						dataSentTimeBuilder.tags(REMOTE_ADDRESS, address,
@@ -129,7 +130,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		if (msg instanceof LastHttpContent) {
-			String address = address(ctx.channel().remoteAddress());
+			String address = Metrics.formatSocketAddress(ctx.channel().remoteAddress());
 
 			dataReceivedTimeSample.stop(dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address,
 			                                                         URI, request.uri(),
@@ -159,7 +160,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		Counter.builder(name + ERRORS)
 		       .description("Number of the errors that are occurred")
-		       .tags(REMOTE_ADDRESS, address(ctx.channel().remoteAddress()), URI, request.uri())
+		       .tags(REMOTE_ADDRESS, Metrics.formatSocketAddress(ctx.channel().remoteAddress()), URI, request.uri())
 		       .register(registry)
 		       .increment();
 
@@ -173,15 +174,5 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		dataSent = 0;
 		dataReceivedTimeSample = null;
 		dataSentTimeSample = null;
-	}
-
-	String address(SocketAddress socketAddress) {
-		if (socketAddress instanceof InetSocketAddress) {
-			InetSocketAddress address = (InetSocketAddress) socketAddress;
-			return address.getHostString() + ":" + address.getPort();
-		}
-		else {
-			return socketAddress.toString();
-		}
 	}
 }
