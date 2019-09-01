@@ -15,8 +15,6 @@
  */
 package reactor.netty.channel;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,6 +35,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.Metrics;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
@@ -454,6 +453,18 @@ public abstract class BootstrapHandlers {
 		return removeConfiguration(b, NettyPipeline.TcpMetricsHandler);
 	}
 
+	/**
+	 * Find metrics support in the given client bootstrap
+	 *
+	 * @param b a bootstrap to search
+	 *
+	 * @return any {@link DeferredMetricsSupport} found or null
+	 */
+	@Nullable
+	public static Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>> findMetricsSupport(Bootstrap b) {
+		return BootstrapHandlers.findConfiguration(DeferredMetricsSupport.class, b.config().handler());
+	}
+
 	@ChannelHandler.Sharable
 	static final class BootstrapInitializerHandler extends ChannelInitializer<Channel> {
 
@@ -652,7 +663,7 @@ public abstract class BootstrapHandlers {
 
 		@Override
 		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
-			String address = address(bootstrap.config().remoteAddress());
+			String address = Metrics.formatSocketAddress(bootstrap.config().remoteAddress());
 			return new MetricsSupportConsumer(name, address, protocol, onServer);
 		}
 
@@ -703,7 +714,7 @@ public abstract class BootstrapHandlers {
 			//TODO or behind the proxy?
 			String address = remoteAddress;
 			if (address == null) {
-				address = address(channel.remoteAddress());
+				address = Metrics.formatSocketAddress(channel.remoteAddress());
 			}
 
 			channel.pipeline()
@@ -714,19 +725,5 @@ public abstract class BootstrapHandlers {
 			                                           protocol,
 			                                           onServer));
 		}
-	}
-
-	@Nullable
-	static String address(@Nullable SocketAddress socketAddress) {
-		if (socketAddress != null) {
-			if (socketAddress instanceof InetSocketAddress) {
-				InetSocketAddress address = (InetSocketAddress) socketAddress;
-				return address.getHostString() + ":" + address.getPort();
-			}
-			else {
-				return socketAddress.toString();
-			}
-		}
-		return null;
 	}
 }
