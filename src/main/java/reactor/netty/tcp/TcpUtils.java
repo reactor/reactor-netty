@@ -19,18 +19,14 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.NetUtil;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
@@ -55,26 +51,6 @@ final class TcpUtils {
 
 	static Bootstrap removeProxySupport(Bootstrap b) {
 		return BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyHandler);
-	}
-
-	static ServerBootstrap updateMetricsSupport(ServerBootstrap b, @Nullable String name) {
-		return BootstrapHandlers.updateConfiguration(b,
-				NettyPipeline.TcpMetricsHandler,
-				new MetricsSupportConsumer(name == null ? SERVER_METRICS_NAME : name, true));
-	}
-
-	static Bootstrap updateMetricsSupport(Bootstrap b, @Nullable String name) {
-		return BootstrapHandlers.updateConfiguration(b,
-				NettyPipeline.TcpMetricsHandler,
-				new DeferredMetricsSupport(name == null ? CLIENT_METRICS_NAME : name, false));
-	}
-
-	static ServerBootstrap removeMetricsSupport(ServerBootstrap b) {
-		return BootstrapHandlers.removeConfiguration(b, NettyPipeline.TcpMetricsHandler);
-	}
-
-	static Bootstrap removeMetricsSupport(Bootstrap b) {
-		return BootstrapHandlers.removeConfiguration(b, NettyPipeline.TcpMetricsHandler);
 	}
 
 	static Bootstrap updateHost(Bootstrap b, String host) {
@@ -134,100 +110,8 @@ final class TcpUtils {
 		}
 	}
 
-	static final Logger log = Loggers.getLogger(TcpUtils.class);
-
 	static final ChannelOperations.OnSetup TCP_OPS =
 			(ch, c, msg) -> new ChannelOperations<>(ch, c);
 
 
-	static final String SERVER_METRICS_NAME = "reactor.netty.tcp.server";
-
-	static final String CLIENT_METRICS_NAME = "reactor.netty.tcp.client";
-
-	static final class DeferredMetricsSupport
-			implements Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>> {
-
-		final String name;
-
-		final boolean onServer;
-
-		DeferredMetricsSupport(String name, boolean onServer) {
-			this.name = name;
-			this.onServer = onServer;
-		}
-
-		@Override
-		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
-			String address;
-			SocketAddress socketAddress = bootstrap.config().remoteAddress();
-			if (socketAddress instanceof InetSocketAddress) {
-				address = ((InetSocketAddress) socketAddress).getHostString();
-			}
-			else {
-				address = socketAddress.toString();
-			}
-			return new MetricsSupportConsumer(name, address, onServer);
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) {
-				return true;
-			}
-			if (o == null || getClass() != o.getClass()) {
-				return false;
-			}
-			DeferredMetricsSupport that = (DeferredMetricsSupport) o;
-			return onServer == that.onServer && name.equals(that.name);
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(name, onServer);
-		}
-	}
-
-	static final class MetricsSupportConsumer
-			implements BiConsumer<ConnectionObserver, Channel> {
-
-		final String name;
-
-		final String remoteAddress;
-
-		final boolean onServer;
-
-		MetricsSupportConsumer(String name, boolean onServer) {
-			this(name, null, onServer);
-		}
-
-		MetricsSupportConsumer(String name, @Nullable String remoteAddress, boolean onServer) {
-			this.name = name;
-			this.remoteAddress = remoteAddress;
-			this.onServer = onServer;
-		}
-
-		@Override
-		public void accept(ConnectionObserver connectionObserver, Channel channel) {
-			//TODO check all other handlers and add this always as first
-			//SSL, Proxy, ProxyProtocol
-			//TODO or behind the proxy?
-			String address = remoteAddress;
-			if (address == null) {
-				SocketAddress socketAddress = channel.remoteAddress();
-				if (socketAddress instanceof InetSocketAddress) {
-					address = ((InetSocketAddress) socketAddress).getHostString();
-				}
-				else {
-					address = socketAddress.toString();
-				}
-			}
-
-			channel.pipeline()
-			       .addFirst(NettyPipeline.TcpMetricsHandler,
-			                 new TcpMetricsHandler(name,
-			                                       //Check the remote address is it on the proxy or not
-			                                       address,
-			                                       onServer));
-		}
-	}
 }

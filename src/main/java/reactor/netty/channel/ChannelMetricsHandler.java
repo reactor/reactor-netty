@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.tcp;
+package reactor.netty.channel;
 
 import static reactor.netty.Metrics.*;
 
@@ -37,7 +37,7 @@ import java.net.SocketAddress;
 /**
  * @author Violeta Georgieva
  */
-public class TcpMetricsHandler extends ChannelDuplexHandler {
+public class ChannelMetricsHandler extends ChannelDuplexHandler {
 
 	final MeterRegistry registry;
 
@@ -55,7 +55,7 @@ public class TcpMetricsHandler extends ChannelDuplexHandler {
 	final Counter errorCount;
 
 
-	public TcpMetricsHandler(String name, String remoteAddress, boolean onServer) {
+	public ChannelMetricsHandler(String name, String remoteAddress, boolean onServer) {
 		this.registry = Metrics.globalRegistry;
 		this.name = name;
 		this.remoteAddress = remoteAddress;
