@@ -118,6 +118,9 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 		}
 		catch (Throwable err) {
 			ReferenceCountUtil.safeRelease(msg);
+			log.error(format(ctx.channel(), "Error was received while reading the incoming data." +
+					" The connection will be closed."), err);
+			ctx.close();
 			exceptionCaught(ctx, err);
 		}
 	}

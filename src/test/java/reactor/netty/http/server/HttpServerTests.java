@@ -62,6 +62,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
@@ -1447,5 +1448,43 @@ public class HttpServerTests {
 		            .verify(Duration.ofSeconds(30));
 
 		c.disposeNow();
+	}
+
+	@Test
+	public void testIssue825() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) -> resp.sendString(Mono.just("test")))
+				          .wiretap(true)
+				          .bindNow();
+
+		DefaultFullHttpRequest request =
+				new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+
+		CountDownLatch latch = new CountDownLatch(1);
+
+		Connection client =
+				TcpClient.create()
+				         .port(server.address().getPort())
+				         .handle((in, out) -> {
+				             in.withConnection(x -> x.addHandlerFirst(new HttpClientCodec()))
+				               .receiveObject()
+				               .ofType(DefaultHttpContent.class)
+				               .as(ByteBufFlux::fromInbound)
+				               // ReferenceCounted::release is deliberately invoked
+				               // so that .release() in FluxReceive.drainReceiver will fail
+				               .subscribe(ReferenceCounted::release, t -> latch.countDown(), null);
+
+				             return out.sendObject(Flux.just(request))
+				                       .neverComplete();
+				         })
+				         .wiretap(true)
+				         .connectNow();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		server.disposeNow();
+		client.disposeNow();
 	}
 }

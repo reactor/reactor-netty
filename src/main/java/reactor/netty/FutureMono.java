@@ -111,7 +111,14 @@ public abstract class FutureMono extends Mono<Void> {
 		@Override
 		@SuppressWarnings("FutureReturnValueIgnored")
 		public void subscribe(CoreSubscriber<? super Void> s) {
-			F f = deferredFuture.get();
+			F f;
+			try {
+				f = deferredFuture.get();
+			}
+			catch(Throwable t) {
+				Operators.error(s, t);
+				return;
+			}
 
 			if (f == null) {
 				Operators.error(s,

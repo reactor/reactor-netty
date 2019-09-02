@@ -347,4 +347,32 @@ public class HttpRedirectTest {
 
 		Assertions.assertThat(followRedirects.get()).isEqualTo(4);
 	}
+
+	@Test
+	public void testFollowRedirectPredicateThrowsException() {
+		final int serverPort = SocketUtils.findAvailableTcpPort();
+
+		DisposableServer server =
+				HttpServer.create()
+				          .port(serverPort)
+				          .host("localhost")
+				          .handle((req, res) -> res.sendRedirect("http://localhost:" + serverPort))
+				          .wiretap(true)
+				          .bindNow();
+
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .addressSupplier(server::address)
+		                  .wiretap(true)
+		                  .followRedirect((req, res) -> {
+		                      throw new RuntimeException("testFollowRedirectPredicateThrowsException");
+		                  })
+		                  .get()
+		                  .uri("/")
+		                  .responseContent())
+		            .expectError()
+		            .verify(Duration.ofSeconds(30));
+
+		server.disposeNow();
+	}
 }
