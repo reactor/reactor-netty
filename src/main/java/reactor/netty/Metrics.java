@@ -43,8 +43,6 @@ public class Metrics {
 
 	public static final String METHOD = "method";
 
-	public static final String PROTOCOL = "tcp";
-
 	public static final String SUCCESS = "SUCCESS";
 
 	public static final String ERROR = "ERROR";

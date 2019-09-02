@@ -24,6 +24,7 @@ import org.junit.Test;
 import reactor.core.publisher.Mono;
 
 import javax.net.ssl.SSLException;
+import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -97,16 +98,20 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 	}
 
 	private void checkExpectationsNegative() {
-		String address = disposableServer.address().getHostString();
-		String[] timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "ERROR"};
-		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
+		InetSocketAddress ca = (InetSocketAddress) connection.channel().localAddress();
+		String clientAddress = ca.getHostString() + ":" + ca.getPort();
+		String[] timerTags = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "ERROR"};
+		String[] summaryTags = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 0, 0);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 0, 0);
 		checkCounter(SERVER_ERRORS, summaryTags, 2);
 
-		timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
+		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
+		String serverAddress = sa.getHostString() + ":" + sa.getPort();
+		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
+		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
 
 		checkTimer(CLIENT_CONNECT_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);

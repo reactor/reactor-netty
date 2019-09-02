@@ -29,6 +29,7 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.netty.ByteBufFlux;
@@ -38,8 +39,11 @@ import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Violeta Georgieva
@@ -89,6 +93,13 @@ public class HttpMetricsHandlerTests {
 	public void testExistingEndpoint() throws Exception {
 		disposableServer = customizeServerOptions(httpServer).bindNow();
 
+		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		httpClient = httpClient.doAfterRequest((req, conn) -> {
+			clientAddress.set(conn.channel().localAddress());
+			serverAddress.set(conn.channel().remoteAddress());
+		});
+
 		StepVerifier.create(httpClient.post()
 		                              .uri("/1")
 		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
@@ -98,6 +109,12 @@ public class HttpMetricsHandlerTests {
 		            .expectNext("Hello World!")
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+
+		Thread.sleep(5000);
+		InetSocketAddress ca = (InetSocketAddress) clientAddress.get();
+		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+		checkExpectationsExisting("/1", ca.getHostString() + ":" + ca.getPort(),
+				sa.getHostString() + ":" + sa.getPort(), 1);
 
 		StepVerifier.create(httpClient.post()
 		                              .uri("/2")
@@ -110,22 +127,19 @@ public class HttpMetricsHandlerTests {
 		            .verify(Duration.ofSeconds(30));
 
 		Thread.sleep(5000);
-		checkExpectationsExisting("/1");
-		checkExpectationsExisting("/2");
+		ca = (InetSocketAddress) clientAddress.get();
+		sa = (InetSocketAddress) serverAddress.get();
+		checkExpectationsExisting("/2", ca.getHostString() + ":" + ca.getPort(),
+				sa.getHostString() + ":" + sa.getPort(), 2);
 	}
 
 	@Test
+	@Ignore
 	public void testNonExistingEndpoint() throws Exception {
 		disposableServer = customizeServerOptions(httpServer).bindNow();
 
-		StepVerifier.create(httpClient.post()
-		                              .uri("/3")
-		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
-		                              .responseContent()
-		                              .aggregate()
-		                              .asString())
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
+		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
+		httpClient = httpClient.doAfterRequest((req, conn) -> clientAddress.set(conn.channel().localAddress()));
 
 		StepVerifier.create(httpClient.post()
 		                              .uri("/3")
@@ -137,16 +151,29 @@ public class HttpMetricsHandlerTests {
 		            .verify(Duration.ofSeconds(30));
 
 		Thread.sleep(5000);
-		checkExpectationsNonExisting();
+		InetSocketAddress ca = (InetSocketAddress) clientAddress.get();
+		checkExpectationsNonExisting(ca.getHostString() + ":" + ca.getPort(), 1);
+
+		StepVerifier.create(httpClient.post()
+		                              .uri("/3")
+		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		Thread.sleep(5000);
+		ca = (InetSocketAddress) clientAddress.get();
+		checkExpectationsNonExisting(ca.getHostString() + ":" + ca.getPort(), 2);
 	}
 
-	private void checkExpectationsExisting(String uri) {
-		String address = disposableServer.address().getHostString();
+	private void checkExpectationsExisting(String uri, String clientAddress, String serverAddress, int index) {
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "200"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
-		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, address, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "SUCCESS"};
+		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, clientAddress, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
 		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, 1);
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, 1);
@@ -155,12 +182,15 @@ public class HttpMetricsHandlerTests {
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, 1, 12);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, true, 1, 12);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 28, 168);
-		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 14*index, 84*index);
+		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 2*index, 151*index);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, address, URI, uri, METHOD, "POST", STATUS, "200"};
-		timerTags2 = new String[] {REMOTE_ADDRESS, address, URI, uri, METHOD, "POST"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST", STATUS, "200"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
+		timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
+		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
 
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 1);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 1);
@@ -170,44 +200,47 @@ public class HttpMetricsHandlerTests {
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, true, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, true, 1, 12);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, true, 28, 292);
-		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 6, 168);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, true, 14*index, 151*index);
+		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
 	}
 
-	private void checkExpectationsNonExisting() {
+	private void checkExpectationsNonExisting(String clientAddress, int index) {
 		String uri = "/3";
-		String address = disposableServer.address().getHostString();
 		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "404"};
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
-		String[] timerTags3 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
-		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, address, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
+		String[] timerTags3 = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "SUCCESS"};
+		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, clientAddress, URI, uri};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
-		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, 2);
-		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, 2);
-		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, true, 2);
+		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, index);
+		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, index);
+		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, true, index);
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, 2, 0);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, true, 2, 0);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, index, 0);
+		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, true, index, 0);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 2, 90);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, index, 45*index);
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
-		timerTags1 = new String[] {REMOTE_ADDRESS, address, URI, uri, METHOD, "POST", STATUS, "404"};
-		timerTags2 = new String[] {REMOTE_ADDRESS, address, URI, uri, METHOD, "POST"};
+		String serverAddress = disposableServer.address().getHostString();
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST", STATUS, "404"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
+		timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
+		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
+		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
 
-		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 2);
-		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 2);
-		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, true, 2);
+		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, index);
+		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, index);
+		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, true, index);
 		checkTimer(CLIENT_CONNECT_TIME, timerTags3, true, 1);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, true, 2, 24);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, true, 2, 0);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, true, index, 24);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, true, index, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, true, 28, 292);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 2, 90);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, true, 14*index, 292*index);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, index, 45*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
 	}
 

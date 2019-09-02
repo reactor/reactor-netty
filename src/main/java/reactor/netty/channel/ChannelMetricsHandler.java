@@ -28,10 +28,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import reactor.netty.NettyPipeline;
 
+import javax.annotation.Nullable;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 /**
@@ -39,45 +42,63 @@ import java.net.SocketAddress;
  */
 public class ChannelMetricsHandler extends ChannelDuplexHandler {
 
-	final MeterRegistry registry;
+	final MeterRegistry registry = Metrics.globalRegistry;
 
 	final String name;
 
 	final String remoteAddress;
 
+	final String protocol;
+
 	final boolean onServer;
 
 
-	final DistributionSummary dataReceived;
+	final DistributionSummary.Builder dataReceivedBuilder;
+	DistributionSummary dataReceived;
 
-	final DistributionSummary dataSent;
+	final DistributionSummary.Builder dataSentBuilder;
+	DistributionSummary dataSent;
 
-	final Counter errorCount;
+	final Counter.Builder errorCountBuilder;
+	Counter errorCount;
 
 
-	public ChannelMetricsHandler(String name, String remoteAddress, boolean onServer) {
-		this.registry = Metrics.globalRegistry;
+	ChannelMetricsHandler(String name, @Nullable String remoteAddress, String protocol, boolean onServer) {
 		this.name = name;
+		if (remoteAddress == null && !"udp".equals(protocol)) {
+			throw new IllegalArgumentException("remoteAddress is null for protocol " + protocol);
+		}
 		this.remoteAddress = remoteAddress;
+		this.protocol = protocol;
 		this.onServer = onServer;
 
-		this.dataReceived =
+		this.dataReceivedBuilder =
 				DistributionSummary.builder(name + DATA_RECEIVED)
 				                   .baseUnit("bytes")
 				                   .description("Amount of the data that is received, in bytes")
-				                   .tags(REMOTE_ADDRESS, remoteAddress, URI, PROTOCOL)
-				                   .register(registry);
-		this.dataSent =
+				                   .tag(URI, protocol);
+
+		this.dataSentBuilder =
 				DistributionSummary.builder(name + DATA_SENT)
 				                   .baseUnit("bytes")
 				                   .description("Amount of the data that is sent, in bytes")
-				                   .tags(REMOTE_ADDRESS, remoteAddress, URI, PROTOCOL)
-				                   .register(registry);
-		this.errorCount =
+				                   .tag(URI, protocol);
+
+		this.errorCountBuilder =
 				Counter.builder(name + ERRORS)
 				       .description("Number of the errors that are occurred")
-				       .tags(REMOTE_ADDRESS, remoteAddress, URI, PROTOCOL)
-				       .register(registry);
+				       .tag(URI, protocol);
+
+		if (remoteAddress != null) {
+			this.dataReceivedBuilder.tag(REMOTE_ADDRESS, remoteAddress);
+			this.dataReceived = dataReceivedBuilder.register(registry);
+
+			this.dataSentBuilder.tag(REMOTE_ADDRESS, remoteAddress);
+			this.dataSent = dataSentBuilder.register(registry);
+
+			this.errorCountBuilder.tag(REMOTE_ADDRESS, remoteAddress);
+			this.errorCount = errorCountBuilder.register(registry);
+		}
 	}
 
 	@Override
@@ -107,6 +128,21 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 				dataReceived.record(buffer.readableBytes());
 			}
 		}
+		else if (msg instanceof DatagramPacket) {
+			DatagramPacket p = (DatagramPacket) msg;
+			ByteBuf buffer = p.content();
+			if (buffer.readableBytes() > 0) {
+				if (dataReceived == null) {
+					dataReceivedBuilder.tag(REMOTE_ADDRESS, address(p.sender()))
+					                   .register(registry)
+					                   .record(buffer.readableBytes());
+
+				}
+				else {
+					dataReceived.record(buffer.readableBytes());
+				}
+			}
+		}
 
 		super.channelRead(ctx, msg);
 	}
@@ -119,13 +155,38 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 				dataSent.record(buffer.readableBytes());
 			}
 		}
+		else if (msg instanceof DatagramPacket) {
+			DatagramPacket p = (DatagramPacket) msg;
+			ByteBuf buffer = p.content();
+			if (buffer.readableBytes() > 0) {
+				if (dataSent == null) {
+					dataSentBuilder.tag(REMOTE_ADDRESS, address(p.recipient()))
+					               .register(registry)
+					               .record(buffer.readableBytes());
+
+				}
+				else {
+					dataSent.record(buffer.readableBytes());
+				}
+			}
+		}
 
 		super.write(ctx, msg, promise);
 	}
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		errorCount.increment();
+		if (errorCount == null) {
+			String address = address(ctx.channel().remoteAddress());
+			if (address != null) {
+				errorCountBuilder.tag(REMOTE_ADDRESS, address)
+				                 .register(registry)
+				                 .increment();
+			}
+		}
+		else {
+			errorCount.increment();
+		}
 
 		super.exceptionCaught(ctx, cause);
 	}
@@ -225,5 +286,19 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 				connectTimeSample.stop(connectTime);
 			});
 		}
+	}
+
+	@Nullable
+	static String address(@Nullable SocketAddress socketAddress) {
+		if (socketAddress != null) {
+			if (socketAddress instanceof InetSocketAddress) {
+				InetSocketAddress address = (InetSocketAddress) socketAddress;
+				return address.getHostString() + ":" + address.getPort();
+			}
+			else {
+				return socketAddress.toString();
+			}
+		}
+		return null;
 	}
 }
