@@ -43,6 +43,9 @@ import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.Metrics;
+
+import javax.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -352,6 +355,31 @@ public abstract class UdpServer {
 	 */
 	public final UdpServer runOn(LoopResources channelResources, InternetProtocolFamily family) {
 		return new UdpServerRunOn(this, channelResources, false, family);
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link UdpServer},
+	 * assuming Micrometer is on the classpath.
+	 * if {@code name } is {@code NULL } - {@code reactor.netty.udp.server}
+	 * will be used as a name.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param name the name to be used for the metrics
+	 * @return a new {@link UdpServer}
+	 */
+	public final UdpServer metrics(boolean metricsEnabled, @Nullable String name) {
+		if (metricsEnabled) {
+			if (!Metrics.isInstrumentationAvailable()) {
+				throw new UnsupportedOperationException(
+						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+								" to the class path first");
+			}
+
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, name == null ? "reactor.netty.udp.server" : name, "udp"));
+		}
+		else {
+			return bootstrap(BootstrapHandlers::removeMetricsSupport);
+		}
 	}
 
 	/**

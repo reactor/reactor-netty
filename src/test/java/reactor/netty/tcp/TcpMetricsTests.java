@@ -37,6 +37,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.resources.ConnectionProvider;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -132,10 +133,11 @@ public class TcpMetricsTests {
 	public void testFailedConnect() {
 		disposableServer = customizeServerOptions(tcpServer).bindNow();
 
+		int port = SocketUtils.findAvailableTcpPort();
 		try {
 			connection = customizeClientOptions(tcpClient)
 			                     .host("localhost")
-			                     .port(SocketUtils.findAvailableTcpPort())
+			                     .port(port)
 			                     .connectNow();
 			fail("Connect should fail.");
 		}
@@ -143,19 +145,24 @@ public class TcpMetricsTests {
 			// expected
 		}
 
-		checkExpectationsNegative();
+		checkExpectationsNegative(port);
 	}
 
 	private void checkExpectationsPositive() {
-		String address = disposableServer.address().getHostString();
-		String[] timerTags = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
-		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
+		InetSocketAddress ca = (InetSocketAddress) connection.channel().localAddress();
+		String clientAddress = ca.getHostString() + ":" + ca.getPort();
+		String[] timerTags = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "SUCCESS"};
+		String[] summaryTags = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 1, 5);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 1, 5);
 		checkCounter(SERVER_ERRORS, summaryTags, 0);
 
+		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
+		String serverAddress = sa.getHostString() + ":" + sa.getPort();
+		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
+		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
 		checkTimer(CLIENT_CONNECT_TIME, timerTags, 1, 0.0001);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);
@@ -163,8 +170,8 @@ public class TcpMetricsTests {
 		checkCounter(CLIENT_ERRORS, summaryTags, 0);
 	}
 
-	private void checkExpectationsNegative() {
-		String address = disposableServer.address().getHostString();
+	private void checkExpectationsNegative(int port) {
+		String address = "localhost:" + port;
 		String[] timerTags1 = new String[] {REMOTE_ADDRESS, address, STATUS, "ERROR"};
 		String[] timerTags2 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};

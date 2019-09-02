@@ -434,16 +434,16 @@ public abstract class BootstrapHandlers {
 		return new LoggingHandlerSupportConsumer(handler, debugSsl);
 	}
 
-	public static ServerBootstrap updateMetricsSupport(ServerBootstrap b, @Nullable String name) {
+	public static ServerBootstrap updateMetricsSupport(ServerBootstrap b, @Nullable String name, String protocol) {
 		return updateConfiguration(b,
 				NettyPipeline.TcpMetricsHandler,
-				new MetricsSupportConsumer(name, true));
+				new MetricsSupportConsumer(name, protocol, true));
 	}
 
-	public static Bootstrap updateMetricsSupport(Bootstrap b, @Nullable String name) {
+	public static Bootstrap updateMetricsSupport(Bootstrap b, @Nullable String name, String protocol) {
 		return updateConfiguration(b,
 				NettyPipeline.TcpMetricsHandler,
-				new DeferredMetricsSupport(name, false));
+				new DeferredMetricsSupport(name, protocol, false));
 	}
 
 	public static ServerBootstrap removeMetricsSupport(ServerBootstrap b) {
@@ -640,24 +640,20 @@ public abstract class BootstrapHandlers {
 
 		final String name;
 
+		final String protocol;
+
 		final boolean onServer;
 
-		DeferredMetricsSupport(String name, boolean onServer) {
+		DeferredMetricsSupport(String name, String protocol, boolean onServer) {
 			this.name = name;
+			this.protocol = protocol;
 			this.onServer = onServer;
 		}
 
 		@Override
 		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
-			String address;
-			SocketAddress socketAddress = bootstrap.config().remoteAddress();
-			if (socketAddress instanceof InetSocketAddress) {
-				address = ((InetSocketAddress) socketAddress).getHostString();
-			}
-			else {
-				address = socketAddress.toString();
-			}
-			return new MetricsSupportConsumer(name, address, onServer);
+			String address = address(bootstrap.config().remoteAddress());
+			return new MetricsSupportConsumer(name, address, protocol, onServer);
 		}
 
 		@Override
@@ -685,15 +681,18 @@ public abstract class BootstrapHandlers {
 
 		final String remoteAddress;
 
+		final String protocol;
+
 		final boolean onServer;
 
-		MetricsSupportConsumer(String name, boolean onServer) {
-			this(name, null, onServer);
+		MetricsSupportConsumer(String name, String protocol, boolean onServer) {
+			this(name, null, protocol, onServer);
 		}
 
-		MetricsSupportConsumer(String name, @Nullable String remoteAddress, boolean onServer) {
+		MetricsSupportConsumer(String name, @Nullable String remoteAddress, String protocol, boolean onServer) {
 			this.name = name;
 			this.remoteAddress = remoteAddress;
+			this.protocol = protocol;
 			this.onServer = onServer;
 		}
 
@@ -704,13 +703,7 @@ public abstract class BootstrapHandlers {
 			//TODO or behind the proxy?
 			String address = remoteAddress;
 			if (address == null) {
-				SocketAddress socketAddress = channel.remoteAddress();
-				if (socketAddress instanceof InetSocketAddress) {
-					address = ((InetSocketAddress) socketAddress).getHostString();
-				}
-				else {
-					address = socketAddress.toString();
-				}
+				address = address(channel.remoteAddress());
 			}
 
 			channel.pipeline()
@@ -718,7 +711,22 @@ public abstract class BootstrapHandlers {
 			                 new ChannelMetricsHandler(name,
 			                                           //Check the remote address is it on the proxy or not
 			                                           address,
+			                                           protocol,
 			                                           onServer));
 		}
+	}
+
+	@Nullable
+	static String address(@Nullable SocketAddress socketAddress) {
+		if (socketAddress != null) {
+			if (socketAddress instanceof InetSocketAddress) {
+				InetSocketAddress address = (InetSocketAddress) socketAddress;
+				return address.getHostString() + ":" + address.getPort();
+			}
+			else {
+				return socketAddress.toString();
+			}
+		}
+		return null;
 	}
 }
