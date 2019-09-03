@@ -28,6 +28,7 @@ import java.util.function.Function;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
 import org.reactivestreams.Publisher;
@@ -257,23 +258,25 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	 * @return {@link ByteBufMono} of aggregated {@link ByteBuf}
 	 */
 	public final ByteBufMono aggregate() {
-		return Mono.using(alloc::compositeBuffer,
-				b -> this.reduce(b,
-				                 (prev, next) -> {
-				                     if (prev.refCnt() > 0) {
-				                         return prev.addComponent(true, next.retain());
-				                     }
-				                     else {
-				                         return prev;
-				                     }
-				                 })
-				         .filter(ByteBuf::isReadable),
-				b -> {
-				    if (b.refCnt() > 0) {
-				        b.release();
-				    }
-				})
-				.as(ByteBufMono::maybeFuse);
+		return Mono.defer(() -> {
+			CompositeByteBuf b = alloc.compositeBuffer();
+			return this.reduce(b,
+			                   (prev, next) -> {
+			                       if (prev.refCnt() > 0) {
+			                           return prev.addComponent(true, next.retain());
+			                       }
+			                       else {
+			                           return prev;
+			                       }
+			                   })
+			           .filter(ByteBuf::isReadable)
+			           .doFinally(signalType -> {
+			               if (b.refCnt() > 0) {
+			                   b.release();
+			               }
+			           });
+			})
+			.as(ByteBufMono::maybeFuse);
 	}
 
 	/**

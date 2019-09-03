@@ -48,8 +48,8 @@ ext {
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
   reactorCoreVersion = "3.3.0.BUILD-SNAPSHOT"
-  reactorPoolVersion = "0.0.1.BUILD-SNAPSHOT"
-  blockHoundVersion = "1.0.0.M5"
+  reactorPoolVersion = "0.1.0.BUILD-SNAPSHOT"
+  blockHoundVersion = "1.0.0.RC1"
 
   //Metrics
   micrometerVersion = 'latest.release'
@@ -235,7 +235,9 @@ configure(rootProject) { project ->
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
 
 	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
-	shaded "io.projectreactor.addons:reactor-pool:$reactorPoolVersion"
+	shaded("io.projectreactor.addons:reactor-pool:$reactorPoolVersion") {
+		exclude module: "reactor-core"
+	}
 	optional "io.projectreactor.tools:blockhound:$blockHoundVersion"
 
 	compile "io.netty:netty-handler:${nettyVersion}"
