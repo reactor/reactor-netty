@@ -125,7 +125,7 @@ final class HttpClientConnect extends HttpClient {
 			SslProvider ssl = SslProvider.findSslSupport(b);
 
 			if (b.config()
-			     .group() == null) {
+				 .group() == null) {
 
 				LoopResources loops = HttpResources.get();
 
@@ -196,7 +196,7 @@ final class HttpClientConnect extends HttpClient {
 		MonoHttpConnect(Bootstrap bootstrap,
 				HttpClientConfiguration configuration,
 				TcpClient tcpClient,
-				@Nullable SslProvider               sslProvider) {
+				@Nullable SslProvider sslProvider) {
 			this.bootstrap = bootstrap;
 			this.configuration = configuration;
 			this.sslProvider = sslProvider;
@@ -208,18 +208,18 @@ final class HttpClientConnect extends HttpClient {
 		public void subscribe(CoreSubscriber<? super Connection> actual) {
 			final Bootstrap b = bootstrap.clone();
 
-			HttpClientHandler handler = new HttpClientHandler(configuration, b.config()
-			                                                                  .remoteAddress(), sslProvider, proxyProvider);
+			HttpClientHandler handler =
+					new HttpClientHandler(configuration, b.config().remoteAddress(), sslProvider, proxyProvider);
 
 			b.remoteAddress(handler);
 
 			if (sslProvider != null) {
 				if ((configuration.protocols & HttpClientConfiguration.h2c) == HttpClientConfiguration.h2c) {
-					Operators.error(actual, new IllegalArgumentException("Configured" +
-							" H2 Clear-Text protocol " +
+					Operators.error(actual, new IllegalArgumentException("Configured " +
+							"H2 Clear-Text protocol " +
 							"with TLS. Use the non clear-text h2 protocol via " +
-							"HttpClient#protocol or disable TLS" +
-							" via HttpClient#tcpConfiguration(tcp -> tcp.noSSL())"));
+							"HttpClient#protocol or disable TLS " +
+							"via HttpClient#tcpConfiguration(tcp -> tcp.noSSL())"));
 					return;
 				}
 				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
@@ -241,7 +241,8 @@ final class HttpClientConnect extends HttpClient {
 			else {
 				if ((configuration.protocols & HttpClientConfiguration.h2) == HttpClientConfiguration.h2) {
 					Operators.error(actual, new IllegalArgumentException(
-							"Configured H2 protocol without TLS. Use" + " a clear-text " + "h2 protocol via HttpClient#protocol or configure TLS" + " via HttpClient#secure"));
+							"Configured H2 protocol without TLS. Use a clear-text " +
+							"h2 protocol via HttpClient#protocol or configure TLS via HttpClient#secure"));
 					return;
 				}
 //				if ((configuration.protocols & HttpClientConfiguration.h11orH2c) == HttpClientConfiguration.h11orH2c) {
@@ -281,11 +282,11 @@ final class HttpClientConnect extends HttpClient {
 			Mono.<Connection>create(sink -> {
 				Bootstrap finalBootstrap;
 				//append secure handler if needed
-				if (handler.activeURI.isSecure()) {
+				if (handler.toURI.isSecure()) {
 					if (sslProvider == null) {
 						if ((configuration.protocols & HttpClientConfiguration.h2c) == HttpClientConfiguration.h2c) {
 							sink.error(new IllegalArgumentException("Configured H2 " +
-									"Clear-Text" + " protocol" + " without TLS while " +
+									"Clear-Text protocol without TLS while " +
 									"trying to redirect to a secure address."));
 							return;
 						}
@@ -420,11 +421,10 @@ final class HttpClientConnect extends HttpClient {
 			if (newState == ConnectionObserver.State.CONFIGURED
 					&& HttpClientOperations.class == connection.getClass()) {
 				if (log.isDebugEnabled()) {
-					log.debug(format(connection.channel(), "Handler is being applied: {}"),
-							handler);
+					log.debug(format(connection.channel(), "Handler is being applied: {}"), handler);
 				}
 
-				Mono.defer(() -> Mono.fromDirect(handler.requestWithBody((HttpClientOperations)connection)))
+				Mono.defer(() -> Mono.fromDirect(handler.requestWithBody((HttpClientOperations) connection)))
 				    .subscribe(connection.disposeSubscriber());
 			}
 		}
@@ -433,27 +433,25 @@ final class HttpClientConnect extends HttpClient {
 	static final class HttpClientHandler extends SocketAddress
 			implements Predicate<Throwable>, Supplier<SocketAddress> {
 
-		final HttpMethod         method;
-		final HttpHeaders        defaultHeaders;
+		final HttpMethod              method;
+		final HttpHeaders             defaultHeaders;
 		final BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
-		                         handler;
-		final boolean            compress;
-		final UriEndpointFactory uriEndpointFactory;
-		final String             websocketProtocols;
-		final int                maxFramePayloadLength;
-
-		final ClientCookieEncoder cookieEncoder;
-		final ClientCookieDecoder cookieDecoder;
-
-		final BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
-
+		                              handler;
+		final boolean                 compress;
+		final UriEndpointFactory      uriEndpointFactory;
+		final String                  websocketProtocols;
+		final int                     maxFramePayloadLength;
+		final ClientCookieEncoder     cookieEncoder;
+		final ClientCookieDecoder     cookieDecoder;
+		final BiPredicate<HttpClientRequest, HttpClientResponse>
+		                              followRedirectPredicate;
 		final HttpResponseDecoderSpec decoder;
+		final ProxyProvider           proxyProvider;
 
-		final ProxyProvider proxyProvider;
-
-		volatile UriEndpoint        activeURI;
+		volatile UriEndpoint        toURI;
+		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
-		volatile boolean retried;
+		volatile boolean            retried;
 
 		@SuppressWarnings("unchecked")
 		HttpClientHandler(HttpClientConfiguration configuration, @Nullable SocketAddress address,
@@ -474,8 +472,7 @@ final class HttpClientConnect extends HttpClient {
 				else {
 					this.defaultHeaders = defaultHeaders;
 				}
-				this.defaultHeaders.set(HttpHeaderNames.ACCEPT_ENCODING,
-				                        HttpHeaderValues.GZIP);
+				this.defaultHeaders.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
 			}
 			else {
 				this.defaultHeaders = defaultHeaders;
@@ -508,12 +505,12 @@ final class HttpClientConnect extends HttpClient {
 			this.websocketProtocols = configuration.websocketSubprotocols;
 			this.maxFramePayloadLength = configuration.websocketMaxFramePayloadLength;
 			this.handler = configuration.body;
-			this.activeURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketSubprotocols != null);
+			this.toURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketSubprotocols != null);
 		}
 
 		@Override
 		public SocketAddress get() {
-			SocketAddress address = activeURI.getRemoteAddress();
+			SocketAddress address = toURI.getRemoteAddress();
 			if (proxyProvider != null && !proxyProvider.shouldProxy(address) &&
 					address instanceof InetSocketAddress) {
 				address = InetSocketAddressUtil.replaceWithResolved((InetSocketAddress) address);
@@ -524,7 +521,7 @@ final class HttpClientConnect extends HttpClient {
 
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
-				UriEndpoint uri = activeURI;
+				UriEndpoint uri = toURI;
 				HttpHeaders headers = ch.getNettyRequest()
 				                        .setUri(uri.getPathAndQuery())
 				                        .setMethod(method)
@@ -537,6 +534,14 @@ final class HttpClientConnect extends HttpClient {
 
 				if (!headers.contains(HttpHeaderNames.USER_AGENT)) {
 					headers.set(HttpHeaderNames.USER_AGENT, USER_AGENT);
+				}
+
+				if (fromURI != null && !toURI.equals(fromURI)) {
+					headers.remove(HttpHeaderNames.HOST)
+					       .remove(HttpHeaderNames.EXPECT)
+					       .remove(HttpHeaderNames.COOKIE)
+					       .remove(HttpHeaderNames.AUTHORIZATION)
+					       .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
 				}
 
 				SocketAddress remoteAddress = uri.getRemoteAddress();
@@ -597,14 +602,23 @@ final class HttpClientConnect extends HttpClient {
 
 		void redirect(String to) {
 			Supplier<String>[] redirectedFrom = this.redirectedFrom;
-			UriEndpoint from = activeURI;
+			UriEndpoint from = toURI;
 			if (to.startsWith("/")) {
-				activeURI = uriEndpointFactory.createUriEndpoint(to, from.isWs(),
-						() -> URI_ADDRESS_MAPPER.apply(from.host, from.port));
+				SocketAddress address = from.getRemoteAddress();
+				if (address instanceof InetSocketAddress) {
+					InetSocketAddress inetSocketAddress = (InetSocketAddress) address;
+					toURI = uriEndpointFactory.createUriEndpoint(to, from.isWs(),
+							() -> URI_ADDRESS_MAPPER.apply(inetSocketAddress.getHostString(), inetSocketAddress.getPort()));
+				}
+				else {
+					toURI = uriEndpointFactory.createUriEndpoint(to, from.isWs(),
+							() -> URI_ADDRESS_MAPPER.apply(from.host, from.port));
+				}
 			}
 			else {
-				activeURI = uriEndpointFactory.createUriEndpoint(to, from.isWs());
+				toURI = uriEndpointFactory.createUriEndpoint(to, from.isWs());
 			}
+			fromURI = from;
 			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
 		}
 
@@ -616,8 +630,7 @@ final class HttpClientConnect extends HttpClient {
 				return new Supplier[]{fromUrlSupplier};
 			}
 			else {
-				Supplier<String>[] newRedirectedFrom =
-						new Supplier[redirectedFrom.length + 1];
+				Supplier<String>[] newRedirectedFrom = new Supplier[redirectedFrom.length + 1];
 				System.arraycopy(redirectedFrom,
 						0,
 						newRedirectedFrom,
@@ -644,7 +657,7 @@ final class HttpClientConnect extends HttpClient {
 			}
 			if (AbortedException.isConnectionReset(throwable) && !retried) {
 				retried = true;
-				redirect(activeURI.toString());
+				redirect(toURI.toString());
 				return true;
 			}
 			return false;
@@ -652,13 +665,12 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public String toString() {
-			return "{" + "uri=" + activeURI + ", method=" + method + '}';
+			return "{" + "uri=" + toURI + ", method=" + method + '}';
 		}
 	}
 
 
-	static final class Http1Initializer
-			implements BiConsumer<ConnectionObserver, Channel>  {
+	static final class Http1Initializer implements BiConsumer<ConnectionObserver, Channel> {
 
 		final HttpResponseDecoderSpec decoder;
 		final boolean compress;
@@ -746,8 +758,8 @@ final class HttpClientConnect extends HttpClient {
 	@ChannelHandler.Sharable
 	static final class HttpClientInitializer
 			extends ChannelInboundHandlerAdapter
-			implements BiConsumer<ConnectionObserver, Channel>, ChannelOperations
-			.OnSetup, GenericFutureListener<Future<Http2StreamChannel>> {
+			implements BiConsumer<ConnectionObserver, Channel>, ChannelOperations.OnSetup,
+			GenericFutureListener<Future<Http2StreamChannel>> {
 		final HttpClientHandler handler;
 		final DirectProcessor<Void> upgraded;
 
@@ -774,7 +786,7 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-			if(evt == HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL) {
+			if (evt == HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL) {
 				//upgraded to h2, read the next streams/settings from server
 
 				ctx.channel()
@@ -819,13 +831,13 @@ final class HttpClientConnect extends HttpClient {
 						                    handler.decoder.parseHttpAfterConnectRequest);
 
 				final Http2Connection connection = new DefaultHttp2Connection(false);
-				HttpToHttp2ConnectionHandlerBuilder h2HandlerBuilder = new
-						HttpToHttp2ConnectionHandlerBuilder()
-						.frameListener(new InboundHttp2ToHttpAdapterBuilder(connection)
-										.maxContentLength(65536)
-										.propagateSettings(true)
-										.build())
-						.connection(connection);
+				HttpToHttp2ConnectionHandlerBuilder h2HandlerBuilder =
+						new HttpToHttp2ConnectionHandlerBuilder()
+						        .frameListener(new InboundHttp2ToHttpAdapterBuilder(connection)
+						                               .maxContentLength(65536)
+						                               .propagateSettings(true)
+						                               .build())
+						        .connection(connection);
 
 				if (p.get(NettyPipeline.LoggingHandler) != null) {
 					h2HandlerBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG, HttpClient.class));
@@ -933,7 +945,8 @@ final class HttpClientConnect extends HttpClient {
 				new Http2StreamChannelBootstrap(ch).handler(new ChannelInitializer() {
 					@Override
 					protected void initChannel(Channel ch) {
-						ch.pipeline().addLast(new Http2StreamFrameToHttpObjectCodec(false));
+						ch.pipeline()
+						  .addLast(new Http2StreamFrameToHttpObjectCodec(false));
 						ChannelOperations.addReactiveBridge(ch,
 								(conn, l, msg) -> new HttpClientOperations(conn, l,
 										initializer.handler.cookieEncoder,
@@ -957,7 +970,6 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		protected void initChannel(Channel ch) {
-			System.out.println("test");
 			// TODO handle server pushes
 		}
 	}

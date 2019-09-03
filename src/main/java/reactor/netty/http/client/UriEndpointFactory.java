@@ -42,7 +42,6 @@ final class UriEndpointFactory {
 
 	UriEndpoint createUriEndpoint(String url, boolean isWs) {
 		return createUriEndpoint(url, isWs, connectAddress);
-
 	}
 
 	UriEndpoint createUriEndpoint(String url, boolean isWs, Supplier<SocketAddress> connectAddress) {
@@ -61,12 +60,12 @@ final class UriEndpointFactory {
 				int port = portString != null ? Integer.parseInt(portString)
 						: (UriEndpoint.isSecureScheme(scheme) ? 443 : 80);
 				String pathAndQuery = cleanPathAndQuery(matcher.group(4));
-				return new UriEndpoint(scheme,
-						host, port, () -> inetSocketAddressFunction.apply(host, port),
+				return new UriEndpoint(scheme, host, port,
+						() -> inetSocketAddressFunction.apply(host, port),
 						pathAndQuery);
 			}
 			else {
-				throw new IllegalArgumentException("Unable to parse url '" + url + "'");
+				throw new IllegalArgumentException("Unable to parse url [" + url + "]");
 			}
 		}
 	}
@@ -84,7 +83,8 @@ final class UriEndpointFactory {
 		}
 		if (pathAndQuery.length() == 0) {
 			pathAndQuery = "/";
-		} else if (pathAndQuery.charAt(0) == '?') {
+		}
+		else if (pathAndQuery.charAt(0) == '?') {
 			pathAndQuery = "/" + pathAndQuery;
 		}
 		return pathAndQuery;
