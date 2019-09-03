@@ -30,9 +30,7 @@ final class UriEndpoint {
 	final Supplier<SocketAddress> remoteAddress;
 	final String pathAndQuery;
 
-	UriEndpoint(String scheme, String host, int port,
-			Supplier<SocketAddress> remoteAddress,
-			String pathAndQuery) {
+	UriEndpoint(String scheme, String host, int port, Supplier<SocketAddress> remoteAddress, String pathAndQuery) {
 		this.host = host;
 		this.port = port;
 		this.scheme = Objects.requireNonNull(scheme, "scheme");
@@ -41,8 +39,7 @@ final class UriEndpoint {
 	}
 
 	boolean isWs() {
-		return HttpClient.WS_SCHEME.equals(scheme)
-				|| HttpClient.WSS_SCHEME.equals(scheme);
+		return HttpClient.WS_SCHEME.equals(scheme) || HttpClient.WSS_SCHEME.equals(scheme);
 	}
 
 	boolean isSecure() {
@@ -50,8 +47,7 @@ final class UriEndpoint {
 	}
 
 	static boolean isSecureScheme(String scheme) {
-		return HttpClient.HTTPS_SCHEME.equals(scheme)
-				|| HttpClient.WSS_SCHEME.equals(scheme);
+		return HttpClient.HTTPS_SCHEME.equals(scheme) || HttpClient.WSS_SCHEME.equals(scheme);
 	}
 
 	String getPathAndQuery() {
@@ -74,13 +70,11 @@ final class UriEndpoint {
 		return sb.toString();
 	}
 
-	@SuppressWarnings("unchecked")
-	static String toSocketAddressStringWithoutDefaultPort(
-			SocketAddress address, boolean secure) {
+	static String toSocketAddressStringWithoutDefaultPort(SocketAddress address, boolean secure) {
 		if (!(address instanceof InetSocketAddress)) {
 			throw new IllegalStateException("Only support InetSocketAddress representation");
 		}
-		String addressString = NetUtil.toSocketAddressString((InetSocketAddress)address);
+		String addressString = NetUtil.toSocketAddressString((InetSocketAddress) address);
 		if (secure) {
 			if (addressString.endsWith(":443")) {
 				addressString = addressString.substring(0, addressString.length() - 4);
@@ -97,5 +91,22 @@ final class UriEndpoint {
 	@Override
 	public String toString() {
 		return toExternalForm();
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		UriEndpoint that = (UriEndpoint) o;
+		return getRemoteAddress().equals(that.getRemoteAddress());
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(getRemoteAddress());
 	}
 }
