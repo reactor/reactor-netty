@@ -22,7 +22,7 @@ backpressure-ready network engines for `HTTP` (including Websockets), `TCP`, and
 
 It has transitive dependencies on:
 
-* Reactive Streams v1.0.2
+* Reactive Streams v1.0.3
 * Reactor Core v3.x
 * Netty v4.1.x
 
