@@ -47,8 +47,8 @@ ext {
 
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.3.0.BUILD-SNAPSHOT"
-  reactorPoolVersion = "0.1.0.BUILD-SNAPSHOT"
+  reactorCoreVersion = "3.3.0.RC1"
+  reactorPoolVersion = "0.1.0.RC1"
   blockHoundVersion = "1.0.0.RC1"
 
   //Metrics
