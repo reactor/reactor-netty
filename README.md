@@ -21,7 +21,7 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
 
     dependencies {
       //compile "io.projectreactor.netty:reactor-netty:0.9.0.BUILD-SNAPSHOT"
-      compile "io.projectreactor.netty:reactor-netty:0.9.0.M3"
+      compile "io.projectreactor.netty:reactor-netty:0.9.0.RC1"
     }
 ```
 
