@@ -38,6 +38,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.netty.Connection;
@@ -57,7 +58,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	static final String MULTIPART_PREFIX = "multipart";
 
 	final ConnectionObserver                                 listener;
-	final boolean                                            secure;
+	Boolean                                                  secure;
 	final boolean                                            readForwardHeaders;
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compress;
 	final ServerCookieEncoder                                cookieEncoder;
@@ -76,11 +77,10 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	HttpTrafficHandler(ConnectionObserver listener, boolean readForwardHeaders,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compress,
-			ServerCookieEncoder encoder, ServerCookieDecoder decoder, boolean secure) {
+			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		this.listener = listener;
 		this.readForwardHeaders = readForwardHeaders;
 		this.compress = compress;
-		this.secure = secure;
 		this.cookieEncoder = encoder;
 		this.cookieDecoder = decoder;
 	}
@@ -97,6 +97,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
+		if (secure == null) {
+			secure = ctx.channel().pipeline().get(SslHandler.class) != null;
+		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {
 			final HttpRequest request = (HttpRequest) msg;

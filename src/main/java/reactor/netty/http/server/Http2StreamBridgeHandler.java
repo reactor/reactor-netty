@@ -29,6 +29,7 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2StreamChannel;
 import io.netty.handler.codec.http2.HttpConversionUtil;
+import io.netty.handler.ssl.SslHandler;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 
@@ -37,19 +38,17 @@ import static reactor.netty.ReactorNetty.format;
 final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
 	final boolean            readForwardHeaders;
-	final boolean            secured;
+	Boolean                  secured;
 	final ConnectionObserver listener;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
 
 	Http2StreamBridgeHandler(ConnectionObserver listener, boolean readForwardHeaders,
 			ServerCookieEncoder encoder,
-			ServerCookieDecoder decoder,
-			boolean secured) {
+			ServerCookieDecoder decoder) {
 		this.readForwardHeaders = readForwardHeaders;
 		this.listener = listener;
 		this.cookieEncoder = encoder;
-		this.secured = secured;
 		this.cookieDecoder = decoder;
 	}
 
@@ -64,6 +63,9 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		if (secured == null) {
+			secured = ctx.channel().pipeline().get(SslHandler.class) != null;
+		}
 		if (msg instanceof Http2HeadersFrame) {
 			Http2HeadersFrame headersFrame = (Http2HeadersFrame)msg;
 			HttpRequest request;
