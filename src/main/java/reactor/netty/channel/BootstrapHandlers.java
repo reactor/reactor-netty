@@ -112,19 +112,22 @@ public abstract class BootstrapHandlers {
 
 
 		if (pipeline != null) {
+			BootstrapPipelineHandler newPipeline = new BootstrapPipelineHandler(pipeline);
 			PipelineConfiguration pipelineConfiguration;
-			for (int i = 0; i < pipeline.size(); i++) {
-				pipelineConfiguration = pipeline.get(i);
+			for (int i = 0; i < newPipeline.size(); i++) {
+				pipelineConfiguration = newPipeline.get(i);
 				if (pipelineConfiguration.deferredConsumer != null) {
-					pipeline.set(i,
+					newPipeline.set(i,
 							new PipelineConfiguration(
 									pipelineConfiguration.deferredConsumer.apply(b),
 									pipelineConfiguration.name));
 				}
 			}
+			b.handler(new BootstrapInitializerHandler(newPipeline, opsFactory, listener));
 		}
-
-		b.handler(new BootstrapInitializerHandler(pipeline, opsFactory, listener));
+		else {
+			b.handler(new BootstrapInitializerHandler(pipeline, opsFactory, listener));
+		}
 	}
 
 	/**

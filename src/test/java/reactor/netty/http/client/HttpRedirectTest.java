@@ -21,6 +21,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -374,5 +378,52 @@ public class HttpRedirectTest {
 		            .verify(Duration.ofSeconds(30));
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void testIssue843() throws Exception {
+		final int server2Port = SocketUtils.findAvailableTcpPort();
+
+		SelfSignedCertificate cert1 = new SelfSignedCertificate();
+		DisposableServer server1 =
+				HttpServer.create()
+				          .port(0)
+				          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert1.certificate(), cert1.privateKey())))
+				          .handle((req, res) -> res.sendRedirect("https://localhost:" + server2Port))
+				          .wiretap(true)
+				          .bindNow();
+
+		SelfSignedCertificate cert2 = new SelfSignedCertificate();
+		DisposableServer server2 =
+				HttpServer.create()
+				          .port(server2Port)
+				          .host("localhost")
+				          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert2.certificate(), cert2.privateKey())))
+				          .handle((req, res) -> res.sendString(Mono.just("test")))
+				          .wiretap(true)
+				          .bindNow();
+
+		AtomicInteger peerPort = new AtomicInteger(0);
+		HttpClient.create()
+		          .addressSupplier(server1::address)
+		          .wiretap(true)
+		          .followRedirect(true)
+		          .secure(spec -> spec.sslContext(SslContextBuilder.forClient()
+		                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE)))
+		          .doOnRequest((req, conn) ->
+		                  peerPort.set(conn.channel()
+		                                   .pipeline()
+		                                   .get(SslHandler.class)
+		                                   .engine()
+		                                   .getPeerPort()))
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .blockLast(Duration.ofSeconds(30));
+
+		Assertions.assertThat(peerPort.get()).isEqualTo(server2Port);
+
+		server1.disposeNow();
+		server2.disposeNow();
 	}
 }
