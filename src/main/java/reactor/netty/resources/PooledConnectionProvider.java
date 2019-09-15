@@ -45,7 +45,6 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.MonoSink;
-import reactor.core.scheduler.Schedulers;
 import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -203,10 +202,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public String toString() {
-		return "PooledConnectionProvider {" +
-				"name=" + name +
-				", poolFactory=" + poolFactory +
-				'}';
+		return "PooledConnectionProvider {" + "name=" + name + ", poolFactory=" + poolFactory + '}';
 	}
 
 	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, InstrumentedPool<PooledConnection> pool,
