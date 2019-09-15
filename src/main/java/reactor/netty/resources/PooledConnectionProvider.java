@@ -178,7 +178,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public Mono<Void> disposeLater() {
-		return Mono.<Void>fromRunnable(() -> {
+		return Mono.fromRunnable(() -> {
 			InstrumentedPool<PooledConnection> pool;
 			for (PoolKey key : channelPools.keySet()) {
 				pool = channelPools.remove(key);
@@ -186,8 +186,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					pool.dispose();
 				}
 			}
-		})
-		.subscribeOn(Schedulers.elastic());
+		});
 	}
 
 	@Override
