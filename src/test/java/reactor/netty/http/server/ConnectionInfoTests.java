@@ -17,18 +17,30 @@ package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
+import java.security.cert.CertificateException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
+
+import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
+import reactor.netty.NettyPipeline;
+import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
 
@@ -42,7 +54,14 @@ import static org.junit.Assert.fail;
  */
 public class ConnectionInfoTests {
 
+	static SelfSignedCertificate ssc;
+
 	private DisposableServer connection;
+
+	@BeforeClass
+	public static void createSelfSignedCertificate() throws CertificateException {
+		ssc = new SelfSignedCertificate();
+	}
 
 	@Test
 	public void noHeaders() {
@@ -174,6 +193,43 @@ public class ConnectionInfoTests {
 		          });
 
 		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
+	}
+
+	@Test
+	public void https() throws SSLException {
+		SslContext clientSslContext = SslContextBuilder.forClient()
+				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+
+		testClientRequest(
+				clientRequestHeaders -> {},
+				serverRequest -> Assertions.assertThat(serverRequest.scheme()).isEqualTo("https"),
+				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
+				httpServer -> httpServer.secure(ssl -> ssl.sslContext(serverSslContext)),
+				true);
+	}
+
+	// Users may add SslHandler themselves, not by using `httpServer.secure`
+	@Test
+	public void httpsUserAddedSslHandler() throws SSLException {
+		SslContext clientSslContext = SslContextBuilder.forClient()
+				.trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+		SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+
+		testClientRequest(
+				clientRequestHeaders -> {},
+				serverRequest -> Assertions.assertThat(serverRequest.scheme()).isEqualTo("https"),
+				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
+				httpServer -> httpServer.tcpConfiguration(tcpServer -> {
+					tcpServer = tcpServer.bootstrap(serverBootstrap ->
+							BootstrapHandlers.updateConfiguration(serverBootstrap, NettyPipeline.SslHandler, (connectionObserver, channel) -> {
+								SslHandler sslHandler = serverSslContext.newHandler(channel.alloc());
+								channel.pipeline().addFirst(NettyPipeline.SslHandler, sslHandler);
+							}));
+
+					return tcpServer;
+				}),
+				true);
 	}
 
 	@Test
@@ -321,15 +377,25 @@ public class ConnectionInfoTests {
 	}
 
 	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
-			Consumer<HttpServerRequest> serverConsumer) {
+			Consumer<HttpServerRequest> serverRequestConsumer) {
+		testClientRequest(clientRequestHeadersConsumer, serverRequestConsumer, Function.identity(), Function.identity(), false);
+	}
+
+	private void testClientRequest(Consumer<HttpHeaders> clientRequestHeadersConsumer,
+			Consumer<HttpServerRequest> serverRequestConsumer,
+			Function<HttpClient, HttpClient> clientConfigFunction,
+			Function<HttpServer, HttpServer> serverConfigFunction,
+			boolean useHttps) {
 
 		this.connection =
-				HttpServer.create()
+				serverConfigFunction.apply(
+						HttpServer.create()
 				          .forwarded(true)
 				          .port(0)
+				)
 				          .handle((req, res) -> {
 				              try {
-				                  serverConsumer.accept(req);
+								  serverRequestConsumer.accept(req);
 				                  return res.status(200)
 				                            .sendString(Mono.just("OK"));
 				              }
@@ -341,13 +407,20 @@ public class ConnectionInfoTests {
 				          .wiretap(true)
 				          .bindNow();
 
+		String uri = "/test";
+		if (useHttps) {
+			uri += ("https://localhost:" + this.connection.address().getPort());
+		}
+
 		String response =
-				HttpClient.create()
+				clientConfigFunction.apply(
+						HttpClient.create()
 				          .port(this.connection.address().getPort())
 				          .wiretap(true)
+				)
 				          .headers(clientRequestHeadersConsumer)
 				          .get()
-				          .uri("/test")
+				          .uri(uri)
 				          .responseContent()
 				          .aggregate()
 				          .asString()
