@@ -225,6 +225,13 @@ public interface LoopResources extends Disposable {
 		return false;
 	}
 
+	/**
+	 * Dispose the underlying LoopResources.
+	 * This method is NOT blocking. It is implemented as fire-and-forget.
+	 * Use {@link #disposeLater()} when you need to observe the final
+	 * status of the operation, combined with {@link Mono#block()}
+	 * if you need to synchronously wait for the underlying resources to be disposed.
+	 */
 	@Override
 	default void dispose() {
 		//noop default
@@ -232,11 +239,12 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
-	 * Returns a Mono that triggers the disposal of underlying resources when subscribed to.
+	 * Returns a Mono that triggers the disposal of the underlying LoopResources when subscribed to.
 	 *
-	 * @return a Mono representing the completion of resources disposal.
+	 * @return a Mono representing the completion of the LoopResources disposal.
 	 **/
 	default Mono<Void> disposeLater() {
-		return Mono.empty(); //noop default
+		//noop default
+		return Mono.empty();
 	}
 }

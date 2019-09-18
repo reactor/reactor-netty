@@ -70,6 +70,10 @@ public class UdpResources implements LoopResources {
 	/**
 	 * Shutdown the global {@link UdpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones.
+	 * This method is NOT blocking. It is implemented as fire-and-forget.
+	 * Use {@link #shutdownLater()} when you need to observe the final
+	 * status of the operation, combined with {@link Mono#block()}
+	 * if you need to synchronously wait for the underlying resources to be disposed.
 	 */
 	public static void shutdown() {
 		UdpResources resources = udpResources.getAndSet(null);
@@ -99,16 +103,6 @@ public class UdpResources implements LoopResources {
 
 	protected UdpResources(LoopResources defaultLoops) {
 		this.defaultLoops = defaultLoops;
-	}
-
-	@Override
-	public void dispose() {
-		//noop on global by default
-	}
-
-	@Override
-	public Mono<Void> disposeLater() {
-		return Mono.empty(); //noop on global by default
 	}
 
 	/**

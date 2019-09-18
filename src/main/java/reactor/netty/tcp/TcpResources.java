@@ -82,6 +82,10 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	/**
 	 * Shutdown the global {@link TcpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones.
+	 * This method is NOT blocking. It is implemented as fire-and-forget.
+	 * Use {@link #disposeLoopsAndConnectionsLater()} when you need to observe
+	 * the final status of the operation, combined with {@link Mono#block()}
+	 * if you need to synchronously wait for the underlying resources to be disposed.
 	 */
 	public static void disposeLoopsAndConnections() {
 		TcpResources resources = tcpResources.getAndSet(null);
@@ -116,14 +120,21 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		this.defaultProvider = defaultProvider;
 	}
 
+	/**
+	 * Use {@link #disposeLoopsAndConnections()}
+	 */
 	@Override
 	public void dispose() {
 		//noop on global by default
 	}
 
+	/**
+	 * Use {@link #disposeLoopsAndConnectionsLater()}
+	 */
 	@Override
 	public Mono<Void> disposeLater() {
-		return Mono.empty(); //noop on global by default
+		//noop on global by default
+		return Mono.empty();
 	}
 
 	/**

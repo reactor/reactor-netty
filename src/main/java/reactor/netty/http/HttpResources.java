@@ -72,6 +72,10 @@ public final class HttpResources extends TcpResources {
 	/**
 	 * Shutdown the global {@link HttpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones.
+	 * This method is NOT blocking. It is implemented as fire-and-forget.
+	 * Use {@link #disposeLoopsAndConnectionsLater()} when you need to observe
+	 * the final status of the operation, combined with {@link Mono#block()}
+	 * if you need to synchronously wait for the underlying resources to be disposed.
 	 */
 	public static void disposeLoopsAndConnections() {
 		HttpResources resources = httpResources.getAndSet(null);
