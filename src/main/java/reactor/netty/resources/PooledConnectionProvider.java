@@ -140,24 +140,15 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			PoolKey holder = new PoolKey(bootstrap.config().remoteAddress(),
 					handler != null ? handler.hashCode() : -1);
 
-			Pool pool;
-			for (; ; ) {
-				pool = channelPools.get(holder);
-				if (pool != null) {
-					break;
+			Pool pool = channelPools.computeIfAbsent(holder, poolKey -> {
+				if (log.isDebugEnabled()) {
+					log.debug("Creating new client pool [{}] for {}",
+							name,
+							bootstrap.config()
+									.remoteAddress());
 				}
-				pool = new Pool(bootstrap, poolFactory, opsFactory);
-				if (channelPools.putIfAbsent(holder, pool) == null) {
-					if (log.isDebugEnabled()) {
-						log.debug("Creating new client pool [{}] for {}",
-								name,
-								bootstrap.config()
-										.remoteAddress());
-					}
-					break;
-				}
-				pool.close();
-			}
+				return new Pool(bootstrap, poolFactory, opsFactory);
+			});
 
 			disposableAcquire(sink, obs, pool, false);
 
