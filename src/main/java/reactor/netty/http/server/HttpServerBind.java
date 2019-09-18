@@ -44,7 +44,6 @@ import io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
-import io.netty.handler.ssl.JdkSslContext;
 import io.netty.util.AsciiString;
 import reactor.core.publisher.Mono;
 import reactor.netty.ConnectionObserver;
@@ -90,7 +89,6 @@ final class HttpServerBind extends HttpServer
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public Mono<? extends DisposableServer> bind(TcpServer delegate) {
 		return delegate.bootstrap(this)
 		               .bind()
@@ -162,8 +160,7 @@ final class HttpServerBind extends HttpServer
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
 								conf.forwarded,
 								conf.cookieEncoder,
-								conf.cookieDecoder,
-								true));
+								conf.cookieDecoder));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -210,8 +207,7 @@ final class HttpServerBind extends HttpServer
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
 								conf.forwarded,
 								conf.cookieEncoder,
-								conf.cookieDecoder,
-								false));
+								conf.cookieDecoder));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -309,7 +305,6 @@ final class HttpServerBind extends HttpServer
 		final int                                                chunk;
 		final boolean                                            validate;
 		final int                                                buffer;
-		final boolean                                            secure;
 		final int                                                minCompressionSize;
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final boolean                                            forwarded;
@@ -325,7 +320,7 @@ final class HttpServerBind extends HttpServer
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				boolean forwarded,
 				ServerCookieEncoder encoder,
-				ServerCookieDecoder decoder, boolean secure) {
+				ServerCookieDecoder decoder) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -334,7 +329,6 @@ final class HttpServerBind extends HttpServer
 			this.minCompressionSize = minCompressionSize;
 			this.compressPredicate = compressPredicate;
 			this.forwarded = forwarded;
-			this.secure = secure;
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
 		}

@@ -203,9 +203,7 @@ public class ConnectionInfoTests {
 
 		testClientRequest(
 				clientRequestHeaders -> {},
-				serverRequest -> {
-					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
-				},
+				serverRequest -> Assertions.assertThat(serverRequest.scheme()).isEqualTo("https"),
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
 				httpServer -> httpServer.secure(ssl -> ssl.sslContext(serverSslContext)),
 				true);
@@ -220,9 +218,7 @@ public class ConnectionInfoTests {
 
 		testClientRequest(
 				clientRequestHeaders -> {},
-				serverRequest -> {
-					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
-				},
+				serverRequest -> Assertions.assertThat(serverRequest.scheme()).isEqualTo("https"),
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
 				httpServer -> httpServer.tcpConfiguration(tcpServer -> {
 					tcpServer = tcpServer.bootstrap(serverBootstrap ->
