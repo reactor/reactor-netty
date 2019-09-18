@@ -144,30 +144,23 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			PoolKey holder = new PoolKey(bootstrap.config().remoteAddress(),
 					handler != null ? handler.hashCode() : -1);
 
-			InstrumentedPool<PooledConnection> pool;
-			for (; ; ) {
-				pool = channelPools.get(holder);
-				if (pool != null) {
-					break;
+			InstrumentedPool<PooledConnection> pool = channelPools.computeIfAbsent(holder, poolKey -> {
+				if (log.isDebugEnabled()) {
+					log.debug("Creating new client pool [{}] for {}",
+							name, bootstrap.config().remoteAddress());
 				}
-				pool = new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
-				if (channelPools.putIfAbsent(holder, pool) == null) {
-					if (log.isDebugEnabled()) {
-						log.debug("Creating new client pool [{}] for {}",
-								name,
-								bootstrap.config()
-								         .remoteAddress());
-					}
-					if (BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
-						PooledConnectionProviderMetrics.registerMetrics(name,
-								holder.hashCode() + "",
-								Metrics.formatSocketAddress(bootstrap.config().remoteAddress()),
-								pool.metrics());
-					}
-					break;
+
+				InstrumentedPool<PooledConnection> newPool =
+						new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
+
+				if (BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
+					PooledConnectionProviderMetrics.registerMetrics(name,
+							poolKey.hashCode() + "",
+							Metrics.formatSocketAddress(bootstrap.config().remoteAddress()),
+							newPool.metrics());
 				}
-				pool.dispose();
-			}
+				return newPool;
+			});
 
 			disposableAcquire(sink, obs, pool, opsFactory, acquireTimeout);
 
