@@ -60,6 +60,8 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 				   .set(remoteAddress);
 			}
 
+			proxyMessage.release();
+
 			ctx.channel()
 			   .pipeline()
 			   .remove(this);
