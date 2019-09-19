@@ -57,7 +57,7 @@ final class ConnectionInfo {
 	final String scheme;
 
 	static ConnectionInfo from(Channel channel, boolean headers, HttpRequest request, boolean secured,
-            InetSocketAddress remoteAddress) {
+			InetSocketAddress remoteAddress) {
 		if (headers) {
 			return ConnectionInfo.newForwardedConnectionInfo(request, channel, secured, remoteAddress);
 		}
@@ -88,7 +88,7 @@ final class ConnectionInfo {
 	 * @return the connection information
 	 */
 	static ConnectionInfo newForwardedConnectionInfo(HttpRequest request, Channel channel, boolean secured,
-            InetSocketAddress remoteAddress) {
+			InetSocketAddress remoteAddress) {
 		if (request.headers().contains(FORWARDED_HEADER)) {
 			return parseForwardedInfo(request, (SocketChannel)channel, secured, remoteAddress);
 		}
@@ -98,7 +98,7 @@ final class ConnectionInfo {
 	}
 
 	static ConnectionInfo parseForwardedInfo(HttpRequest request, SocketChannel channel, boolean secured,
-            InetSocketAddress remoteAddress) {
+			InetSocketAddress remoteAddress) {
 		InetSocketAddress hostAddress = channel.localAddress();
 		String scheme = secured ? "https" : "http";
 
@@ -137,7 +137,7 @@ final class ConnectionInfo {
 	}
 
 	static ConnectionInfo parseXForwardedInfo(HttpRequest request, SocketChannel channel, boolean secured,
-            InetSocketAddress remoteAddress) {
+			InetSocketAddress remoteAddress) {
 		InetSocketAddress hostAddress = channel.localAddress();
 		String scheme =  secured ? "https" : "http";
 		if (request.headers().contains(XFORWARDED_IP_HEADER)) {

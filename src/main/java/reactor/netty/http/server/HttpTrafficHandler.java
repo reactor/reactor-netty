@@ -107,7 +107,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		if (remoteAddress == null) {
 			remoteAddress =
 					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel()))
-							.orElse(((SocketChannel) ctx.channel()).remoteAddress());
+					        .orElse(((SocketChannel) ctx.channel()).remoteAddress());
 		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {
@@ -166,9 +166,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						compress, request,
-						ConnectionInfo.from(ctx.channel(), readForwardHeaders, request, secure,
-								remoteAddress),
-						cookieEncoder, cookieDecoder);
+						ConnectionInfo.from(ctx.channel(),
+						                    readForwardHeaders,
+						                    request,
+						                    secure,
+						                    remoteAddress),
+						cookieEncoder,
+						cookieDecoder);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 
@@ -300,9 +304,13 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 						listener,
 						compress,
 						nextRequest,
-						ConnectionInfo.from(ctx.channel(), readForwardHeaders, nextRequest, secure,
-								remoteAddress),
-						cookieEncoder, cookieDecoder);
+						ConnectionInfo.from(ctx.channel(),
+						                    readForwardHeaders,
+						                    nextRequest,
+						                    secure,
+						                    remoteAddress),
+						cookieEncoder,
+						cookieDecoder);
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 			}

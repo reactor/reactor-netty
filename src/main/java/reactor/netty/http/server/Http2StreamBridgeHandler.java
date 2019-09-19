@@ -41,10 +41,10 @@ import static reactor.netty.ReactorNetty.format;
 
 final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
-	final boolean            readForwardHeaders;
-	Boolean                  secured;
-	InetSocketAddress        remoteAddress;
-	final ConnectionObserver listener;
+	final boolean             readForwardHeaders;
+	Boolean                   secured;
+	InetSocketAddress         remoteAddress;
+	final ConnectionObserver  listener;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
 
@@ -74,7 +74,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 		if (remoteAddress == null) {
 			remoteAddress =
 					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel()))
-							.orElse(((SocketChannel) ctx.channel()).remoteAddress());
+					        .orElse(((SocketChannel) ctx.channel()).remoteAddress());
 		}
 		if (msg instanceof Http2HeadersFrame) {
 			Http2HeadersFrame headersFrame = (Http2HeadersFrame)msg;
@@ -94,13 +94,13 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 					listener,
 					request,
 					headersFrame.headers(),
-					ConnectionInfo.from(ctx.channel()
-					                       .parent(),
-							readForwardHeaders,
-							request,
-							secured,
-							remoteAddress),
-					cookieEncoder, cookieDecoder);
+					ConnectionInfo.from(ctx.channel().parent(),
+					                    readForwardHeaders,
+					                    request,
+					                    secured,
+					                    remoteAddress),
+					cookieEncoder,
+					cookieDecoder);
 			ops.bind();
 			listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 		}

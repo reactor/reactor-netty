@@ -25,6 +25,8 @@ import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.util.AttributeKey;
 import reactor.netty.tcp.InetSocketAddressUtil;
 
+import javax.annotation.Nullable;
+
 /**
  * Consumes {@link io.netty.handler.codec.haproxy.HAProxyMessage}
  * and set it into channel attribute for later use.
@@ -49,11 +51,12 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 		hasProxyProtocol = proxyProtocolCheck;
 	}
 
-	public static boolean hasProxyProtocol() {
+	static boolean hasProxyProtocol() {
 		return hasProxyProtocol;
 	}
 
-	public static InetSocketAddress resolveRemoteAddressFromProxyProtocol(Channel channel) {
+	@Nullable
+	static InetSocketAddress resolveRemoteAddressFromProxyProtocol(Channel channel) {
 		if (HAProxyMessageReader.hasProxyProtocol()) {
 			return channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
 		}
