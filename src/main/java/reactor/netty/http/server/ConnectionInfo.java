@@ -122,10 +122,10 @@ final class ConnectionInfo {
 	}
 
 	static InetSocketAddress parseAddress(String address, int defaultPort) {
-		int separatorIdx = address.lastIndexOf(":");
-		int ipV6HostSeparatorIdx = address.lastIndexOf("]");
+		int separatorIdx = address.lastIndexOf(':');
+		int ipV6HostSeparatorIdx = address.lastIndexOf(']');
 		if(separatorIdx > ipV6HostSeparatorIdx) {
-			if(separatorIdx == address.indexOf(":") || ipV6HostSeparatorIdx > -1) {
+			if(separatorIdx == address.indexOf(':') || ipV6HostSeparatorIdx > -1) {
 				String port = address.substring(separatorIdx + 1);
 				if (PORT_PATTERN.matcher(port).matches()) {
 					return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx),

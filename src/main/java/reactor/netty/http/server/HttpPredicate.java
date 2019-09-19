@@ -270,7 +270,7 @@ final class HttpPredicate
 		private final Pattern uriPattern;
 
 		static String filterQueryParams(String uri) {
-			int hasQuery = uri.lastIndexOf("?");
+			int hasQuery = uri.lastIndexOf('?');
 			if (hasQuery != -1) {
 				return uri.substring(0, hasQuery);
 			}
