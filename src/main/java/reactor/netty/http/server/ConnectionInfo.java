@@ -168,7 +168,7 @@ final class ConnectionInfo {
 	private static InetSocketAddress getRemoteAddress(SocketChannel channel) {
 		if (HAProxyMessageReader.hasProxyProtocol()) {
 			InetSocketAddress remoteAddressFromProxyProtocol =
-					channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
+					channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).get();
 
 			if (remoteAddressFromProxyProtocol != null) {
 				return remoteAddressFromProxyProtocol;
