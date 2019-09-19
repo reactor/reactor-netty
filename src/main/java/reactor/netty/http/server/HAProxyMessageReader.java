@@ -18,10 +18,14 @@ package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
+import io.netty.util.AttributeKey;
 import reactor.netty.tcp.InetSocketAddressUtil;
+
+import javax.annotation.Nullable;
 
 /**
  * Consumes {@link io.netty.handler.codec.haproxy.HAProxyMessage}
@@ -30,6 +34,9 @@ import reactor.netty.tcp.InetSocketAddressUtil;
  * @author aftersss
  */
 final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
+
+	private static final AttributeKey<InetSocketAddress> REMOTE_ADDRESS_FROM_PROXY_PROTOCOL =
+			AttributeKey.valueOf("remoteAddressFromProxyProtocol");
 
 	private static final boolean hasProxyProtocol;
 
@@ -44,8 +51,17 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 		hasProxyProtocol = proxyProtocolCheck;
 	}
 
-	public static boolean hasProxyProtocol() {
+	static boolean hasProxyProtocol() {
 		return hasProxyProtocol;
+	}
+
+	@Nullable
+	static InetSocketAddress resolveRemoteAddressFromProxyProtocol(Channel channel) {
+		if (HAProxyMessageReader.hasProxyProtocol()) {
+			return channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
+		}
+
+		return null;
 	}
 
 	@Override
@@ -56,9 +72,11 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 				InetSocketAddress remoteAddress = InetSocketAddressUtil
 						.createUnresolved(proxyMessage.sourceAddress(), proxyMessage.sourcePort());
 				ctx.channel()
-				   .attr(ConnectionInfo.REMOTE_ADDRESS_FROM_PROXY_PROTOCOL)
+				   .attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL)
 				   .set(remoteAddress);
 			}
+
+			proxyMessage.release();
 
 			ctx.channel()
 			   .pipeline()

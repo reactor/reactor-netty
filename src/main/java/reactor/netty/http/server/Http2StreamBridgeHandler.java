@@ -15,10 +15,14 @@
  */
 package reactor.netty.http.server;
 
+import java.net.InetSocketAddress;
+import java.util.Optional;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -37,9 +41,10 @@ import static reactor.netty.ReactorNetty.format;
 
 final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
-	final boolean            readForwardHeaders;
-	Boolean                  secured;
-	final ConnectionObserver listener;
+	final boolean             readForwardHeaders;
+	Boolean                   secured;
+	InetSocketAddress         remoteAddress;
+	final ConnectionObserver  listener;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
 
@@ -66,6 +71,11 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 		if (secured == null) {
 			secured = ctx.channel().pipeline().get(SslHandler.class) != null;
 		}
+		if (remoteAddress == null) {
+			remoteAddress =
+					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel()))
+					        .orElse(((SocketChannel) ctx.channel()).remoteAddress());
+		}
 		if (msg instanceof Http2HeadersFrame) {
 			Http2HeadersFrame headersFrame = (Http2HeadersFrame)msg;
 			HttpRequest request;
@@ -84,12 +94,13 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 					listener,
 					request,
 					headersFrame.headers(),
-					ConnectionInfo.from(ctx.channel()
-					                       .parent(),
-							readForwardHeaders,
-							request,
-							secured),
-					cookieEncoder, cookieDecoder);
+					ConnectionInfo.from(ctx.channel().parent(),
+					                    readForwardHeaders,
+					                    request,
+					                    secured,
+					                    remoteAddress),
+					cookieEncoder,
+					cookieDecoder);
 			ops.bind();
 			listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 		}

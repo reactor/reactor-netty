@@ -133,7 +133,7 @@ public class ConnectionInfoTests {
 	public void xForwardedForHostAndPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
-                    clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
+					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
 					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com");
 					clientRequestHeaders.add("X-Forwarded-Port", "8080");
 				},
@@ -186,6 +186,22 @@ public class ConnectionInfoTests {
 				Charset.defaultCharset());
 		clientConn.channel()
 		          .writeAndFlush(proxyProtocolMsg)
+		          .addListener(f -> {
+		              if (!f.isSuccess()) {
+		                  fail("Writing proxyProtocolMsg was not successful");
+		              }
+		          });
+
+		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
+
+		//send a http request again to confirm that removeAddress is not changed.
+		ByteBuf httpMsg = clientConn.channel()
+		                            .alloc()
+		                            .buffer();
+		httpMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
+				Charset.defaultCharset());
+		clientConn.channel()
+		          .writeAndFlush(httpMsg)
 		          .addListener(f -> {
 		              if (!f.isSuccess()) {
 		                  fail("Writing proxyProtocolMsg was not successful");
@@ -390,22 +406,22 @@ public class ConnectionInfoTests {
 		this.connection =
 				serverConfigFunction.apply(
 						HttpServer.create()
-				          .forwarded(true)
-				          .port(0)
-				)
-				          .handle((req, res) -> {
-				              try {
-								  serverRequestConsumer.accept(req);
-				                  return res.status(200)
-				                            .sendString(Mono.just("OK"));
-				              }
-				              catch (Throwable e) {
-				                  return res.status(500)
-				                            .sendString(Mono.just(e.getMessage()));
-				              }
-				          })
-				          .wiretap(true)
-				          .bindNow();
+						          .forwarded(true)
+						          .port(0)
+						)
+				        .handle((req, res) -> {
+				            try {
+				                serverRequestConsumer.accept(req);
+				                return res.status(200)
+				                          .sendString(Mono.just("OK"));
+				            }
+				            catch (Throwable e) {
+				                return res.status(500)
+				                          .sendString(Mono.just(e.getMessage()));
+				            }
+				        })
+				        .wiretap(true)
+				        .bindNow();
 
 		String uri = "/test";
 		if (useHttps) {
@@ -415,16 +431,16 @@ public class ConnectionInfoTests {
 		String response =
 				clientConfigFunction.apply(
 						HttpClient.create()
-				          .port(this.connection.address().getPort())
-				          .wiretap(true)
-				)
-				          .headers(clientRequestHeadersConsumer)
-				          .get()
-				          .uri(uri)
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .block();
+						          .port(this.connection.address().getPort())
+						          .wiretap(true)
+						)
+				        .headers(clientRequestHeadersConsumer)
+				        .get()
+				        .uri(uri)
+				        .responseContent()
+				        .aggregate()
+				        .asString()
+				        .block();
 
 		assertThat(response).isEqualTo("OK");
 	}
@@ -435,8 +451,9 @@ public class ConnectionInfoTests {
 
 	@After
 	public void tearDown() {
-		if(null != this.connection)
+		if(null != this.connection) {
 			this.connection.disposeNow();
+		}
 	}
 
 }
