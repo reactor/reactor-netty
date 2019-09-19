@@ -26,6 +26,9 @@ import javax.annotation.Nullable;
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -436,13 +439,13 @@ public abstract class BootstrapHandlers {
 		return new LoggingHandlerSupportConsumer(handler, debugSsl);
 	}
 
-	public static ServerBootstrap updateMetricsSupport(ServerBootstrap b, @Nullable String name, String protocol) {
+	public static ServerBootstrap updateMetricsSupport(ServerBootstrap b, String name, String protocol) {
 		return updateConfiguration(b,
 				NettyPipeline.TcpMetricsHandler,
 				new MetricsSupportConsumer(name, protocol, true));
 	}
 
-	public static Bootstrap updateMetricsSupport(Bootstrap b, @Nullable String name, String protocol) {
+	public static Bootstrap updateMetricsSupport(Bootstrap b, String name, String protocol) {
 		return updateConfiguration(b,
 				NettyPipeline.TcpMetricsHandler,
 				new DeferredMetricsSupport(name, protocol, false));
@@ -461,7 +464,7 @@ public abstract class BootstrapHandlers {
 	 *
 	 * @param b a bootstrap to search
 	 *
-	 * @return any {@link DeferredMetricsSupport} found or null
+	 * @return any {@link BootstrapHandlers.DeferredMetricsSupport} found or null
 	 */
 	@Nullable
 	public static Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>> findMetricsSupport(Bootstrap b) {
@@ -727,6 +730,16 @@ public abstract class BootstrapHandlers {
 			                                           address,
 			                                           protocol,
 			                                           onServer));
+
+			ByteBufAllocator alloc = channel.alloc();
+			if (alloc instanceof PooledByteBufAllocator) {
+				ByteBufAllocatorMetrics.registerMetrics("pooled", alloc.hashCode() + "",
+						((PooledByteBufAllocator) alloc).metric());
+			}
+			else if (alloc instanceof UnpooledByteBufAllocator) {
+				ByteBufAllocatorMetrics.registerMetrics("unpooled", alloc.hashCode() + "",
+						((UnpooledByteBufAllocator) alloc).metric());
+			}
 		}
 	}
 }
