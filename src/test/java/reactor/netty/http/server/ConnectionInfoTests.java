@@ -193,6 +193,22 @@ public class ConnectionInfoTests {
 		          });
 
 		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
+
+		//send a http request again to confirm that removeAddress is not changed.
+		ByteBuf httpMsg = clientConn.channel()
+				.alloc()
+				.buffer();
+		httpMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
+				Charset.defaultCharset());
+		clientConn.channel()
+				.writeAndFlush(httpMsg)
+				.addListener(f -> {
+					if (!f.isSuccess()) {
+						fail("Writing proxyProtocolMsg was not successful");
+					}
+				});
+
+		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
 	}
 
 	@Test
