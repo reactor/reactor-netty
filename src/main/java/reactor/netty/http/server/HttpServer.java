@@ -263,10 +263,17 @@ public abstract class HttpServer {
 	 *
 	 * @param proxyProtocolSupportType
 	 * 		<ul>
-	 *         <li>choose {@link ProxyProtocolSupportType#ON} to enable support for the {@code "HAProxy proxy protocol"}
-	 *             for deriving information about the address of the remote peer.</li>
+	 *         <li>
+     *             choose {@link ProxyProtocolSupportType#ON}
+     *             to enable support for the {@code "HAProxy proxy protocol"}
+	 *             for deriving information about the address of the remote peer.
+     *         </li>
 	 *         <li>choose {@link ProxyProtocolSupportType#OFF} to disable the proxy protocol support.</li>
-	 *         <li>choose {@link ProxyProtocolSupportType#AUTO} then each connection of the same `HttpServer` will auto detect whether there is proxy protocol, so HttpServer can accept requests with or without proxy protocol.</li>
+	 *         <li>
+     *             choose {@link ProxyProtocolSupportType#AUTO}
+     *             then each connection of the same `HttpServer` will auto detect whether there is proxy protocol,
+     *             so HttpServer can accept requests with or without proxy protocol at the same time.
+     *         </li>
 	 *      </ul>
 	 *
 	 * @return a new {@link HttpServer}
