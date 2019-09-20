@@ -243,13 +243,41 @@ public abstract class HttpServer {
 	 * Specifies whether support for the {@code "HAProxy proxy protocol"}
 	 * for deriving information about the address of the remote peer is enabled.
 	 *
-	 * @param proxyProtocolEnabled if true support for the {@code "HAProxy proxy protocol"}
-	 *                         for deriving information about the address of the remote peer is enabled,
-	 *                         otherwise disabled.
+	 * @param proxyProtocolEnabled
+	 *      <ul>
+	 *         <li>choose true to enable support for the {@code "HAProxy proxy protocol"}
+	 *             for deriving information about the address of the remote peer.</li>
+	 *         <li>choose false to disable the proxy protocol support.</li>
+	 *      </ul>
+	 * @return a new {@link HttpServer}
+	 * @deprecated Use {@link HttpServer#proxyProtocol(ProxyProtocolSupportType)}
+	 */
+	@Deprecated
+	public final HttpServer proxyProtocol(boolean proxyProtocolEnabled) {
+		return proxyProtocol(proxyProtocolEnabled ? ProxyProtocolSupportType.ON : ProxyProtocolSupportType.OFF);
+	}
+
+	/**
+	 * Specifies whether support for the {@code "HAProxy proxy protocol"}
+	 * for deriving information about the address of the remote peer is enabled.
+	 *
+	 * @param proxyProtocolSupportType
+	 * 		<ul>
+	 *         <li>choose {@link ProxyProtocolSupportType#ON} to enable support for the {@code "HAProxy proxy protocol"}
+	 *             for deriving information about the address of the remote peer.</li>
+	 *         <li>choose {@link ProxyProtocolSupportType#OFF} to disable the proxy protocol support.</li>
+	 *         <li>choose {@link ProxyProtocolSupportType#AUTO} then each connection of the same `HttpServer` will auto detect whether there is proxy protocol, so HttpServer can accept requests with or without proxy protocol.</li>
+	 *      </ul>
+	 *
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer proxyProtocol(boolean proxyProtocolEnabled) {
-		if (proxyProtocolEnabled) {
+	public final HttpServer proxyProtocol(ProxyProtocolSupportType proxyProtocolSupportType) {
+		if (proxyProtocolSupportType == null) {
+			throw new NullPointerException("The parameter: proxyProtocolSupportType must not be null.");
+		}
+
+		if (proxyProtocolSupportType == ProxyProtocolSupportType.ON ||
+				proxyProtocolSupportType == ProxyProtocolSupportType.AUTO) {
 			if (!HAProxyMessageReader.hasProxyProtocol()) {
 				throw new UnsupportedOperationException(
 				        "To enable proxyProtocol, you must add the dependency `io.netty:netty-codec-haproxy`" +
@@ -260,16 +288,26 @@ public abstract class HttpServer {
 			        tcpServer.bootstrap(b -> BootstrapHandlers.updateConfiguration(b,
 			                NettyPipeline.ProxyProtocolDecoder,
 			                (connectionObserver, channel) -> {
-			                    channel.pipeline()
-			                           .addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
-			                    channel.pipeline()
-			                           .addAfter(NettyPipeline.ProxyProtocolDecoder,
-			                                     NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
+			        			if (proxyProtocolSupportType == ProxyProtocolSupportType.ON) {
+									channel.pipeline()
+											.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
+									channel.pipeline()
+											.addAfter(NettyPipeline.ProxyProtocolDecoder,
+													NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
+								}
+			        			else { // AUTO
+									channel.pipeline()
+											.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDetector());
+								}
 			                })));
 		}
-		else {
+		else if (proxyProtocolSupportType == ProxyProtocolSupportType.OFF) {
 			return tcpConfiguration(tcpServer ->
 			        tcpServer.bootstrap(b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.ProxyProtocolDecoder)));
+		}
+		else {
+			//Will never be here
+			throw new IllegalArgumentException("Invalid proxyProtocolSupportType");
 		}
 	}
 
