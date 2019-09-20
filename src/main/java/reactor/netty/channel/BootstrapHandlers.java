@@ -443,14 +443,14 @@ public abstract class BootstrapHandlers {
 
 	public static ServerBootstrap updateMetricsSupport(ServerBootstrap b, String name, String protocol) {
 		return updateConfiguration(b,
-				NettyPipeline.TcpMetricsHandler,
+				NettyPipeline.ChannelMetricsHandler,
 				new MetricsSupportConsumer(name, protocol, true));
 	}
 
 	@SuppressWarnings("unchecked")
 	public static Bootstrap updateMetricsSupport(Bootstrap b, String name, String protocol) {
 		updateConfiguration(b,
-				NettyPipeline.TcpMetricsHandler,
+				NettyPipeline.ChannelMetricsHandler,
 				new DeferredMetricsSupport(name, protocol, false));
 
 		b.resolver(new AddressResolverGroupMetrics((AddressResolverGroup<SocketAddress>) b.config().resolver()));
@@ -459,11 +459,11 @@ public abstract class BootstrapHandlers {
 	}
 
 	public static ServerBootstrap removeMetricsSupport(ServerBootstrap b) {
-		return removeConfiguration(b, NettyPipeline.TcpMetricsHandler);
+		return removeConfiguration(b, NettyPipeline.ChannelMetricsHandler);
 	}
 
 	public static Bootstrap removeMetricsSupport(Bootstrap b) {
-		removeConfiguration(b, NettyPipeline.TcpMetricsHandler);
+		removeConfiguration(b, NettyPipeline.ChannelMetricsHandler);
 
 		AddressResolverGroup<?> resolver = b.config().resolver();
 		if (resolver instanceof AddressResolverGroupMetrics) {
@@ -738,7 +738,7 @@ public abstract class BootstrapHandlers {
 			}
 
 			channel.pipeline()
-			       .addFirst(NettyPipeline.TcpMetricsHandler,
+			       .addFirst(NettyPipeline.ChannelMetricsHandler,
 			                 new ChannelMetricsHandler(name,
 			                                           //Check the remote address is it on the proxy or not
 			                                           address,

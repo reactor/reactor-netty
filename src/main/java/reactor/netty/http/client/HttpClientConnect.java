@@ -700,7 +700,7 @@ final class HttpClientConnect extends HttpClient {
 				           new HttpContentDecompressor());
 			}
 
-			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+			ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 			if (handler != null) {
 				ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
 				HttpClientMetricsHandler httpMetrics =
@@ -918,7 +918,7 @@ final class HttpClientConnect extends HttpClient {
 					           new HttpContentDecompressor());
 				}
 
-				ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+				ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 				if (handler != null) {
 					ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
 					HttpClientMetricsHandler httpMetrics =

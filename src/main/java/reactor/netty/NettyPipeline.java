@@ -66,9 +66,9 @@ public interface NettyPipeline {
 	String ChunkedWriter      = LEFT + "chunkedWriter";
 	String LoggingHandler     = LEFT + "loggingHandler";
 	String CompressionHandler = LEFT + "compressionHandler";
-	String TcpMetricsHandler  = LEFT + "tcpMetricsHandler";
 	String HttpMetricsHandler = LEFT + "httpMetricsHandler";
 	String SslMetricsHandler  = LEFT + "sslMetricsHandler";
+	String ChannelMetricsHandler = LEFT + "channelMetricsHandler";
 	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";
 	String WsCompressionHandler = LEFT + "wsCompressionHandler";
 	String ProxyProtocolDecoder = LEFT + "proxyProtocolDecoder";

@@ -356,7 +356,7 @@ final class HttpServerBind extends HttpServer
 			p.addLast(NettyPipeline.HttpTrafficHandler,
 					new HttpTrafficHandler(listener, forwarded, compressPredicate, cookieEncoder, cookieDecoder));
 
-			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+			ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 			if (handler != null) {
 				// TODO doesn't take into account proxy protocol address and forward headers
 				ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
@@ -451,7 +451,7 @@ final class HttpServerBind extends HttpServer
 			p.addLast(NettyPipeline.HttpTrafficHandler,
 					new HttpTrafficHandler(listener, forwarded, compressPredicate, cookieEncoder, cookieDecoder));
 
-			ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+			ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 			if (handler != null) {
 				// TODO doesn't take into account proxy protocol address and forward headers
 				ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
@@ -664,7 +664,7 @@ final class HttpServerBind extends HttpServer
 							new SimpleCompressionHandler());
 				}
 
-				ChannelHandler handler = p.get(NettyPipeline.TcpMetricsHandler);
+				ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 				if (handler != null) {
 					// TODO doesn't take into account proxy protocol address and forward headers
 					ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;

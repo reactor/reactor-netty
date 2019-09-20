@@ -104,7 +104,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 	public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
 		if (!onServer) {
 			ctx.pipeline()
-			   .addAfter(NettyPipeline.TcpMetricsHandler,
+			   .addAfter(NettyPipeline.ChannelMetricsHandler,
 			             NettyPipeline.ConnectMetricsHandler,
 			             new ConnectMetricsHandler(registry, name, remoteAddress));
 		}
