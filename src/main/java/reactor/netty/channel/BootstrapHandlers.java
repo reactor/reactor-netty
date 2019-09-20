@@ -15,6 +15,7 @@
  */
 package reactor.netty.channel;
 
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,6 +37,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.resolver.AddressResolverGroup;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.Metrics;
@@ -445,10 +447,15 @@ public abstract class BootstrapHandlers {
 				new MetricsSupportConsumer(name, protocol, true));
 	}
 
+	@SuppressWarnings("unchecked")
 	public static Bootstrap updateMetricsSupport(Bootstrap b, String name, String protocol) {
-		return updateConfiguration(b,
+		updateConfiguration(b,
 				NettyPipeline.TcpMetricsHandler,
 				new DeferredMetricsSupport(name, protocol, false));
+
+		b.resolver(new AddressResolverGroupMetrics((AddressResolverGroup<SocketAddress>) b.config().resolver()));
+
+		return b;
 	}
 
 	public static ServerBootstrap removeMetricsSupport(ServerBootstrap b) {
@@ -456,7 +463,14 @@ public abstract class BootstrapHandlers {
 	}
 
 	public static Bootstrap removeMetricsSupport(Bootstrap b) {
-		return removeConfiguration(b, NettyPipeline.TcpMetricsHandler);
+		removeConfiguration(b, NettyPipeline.TcpMetricsHandler);
+
+		AddressResolverGroup<?> resolver = b.config().resolver();
+		if (resolver instanceof AddressResolverGroupMetrics) {
+			b.resolver(((AddressResolverGroupMetrics) resolver).resolverGroup);
+		}
+
+		return b;
 	}
 
 	/**
