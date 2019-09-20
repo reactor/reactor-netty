@@ -31,9 +31,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.Metrics;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-
 /**
  * @author Violeta Georgieva
  */
@@ -74,6 +71,14 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		                           .description("Time that is spent in sending outgoing data");
 		responseTimeBuilder = Timer.builder(name + RESPONSE_TIME)
 		                           .description("Total time for the request/response");
+
+		registry.config()
+		        .meterFilter(maxUriTagsMeterFilter(name + DATA_RECEIVED_TIME))
+		        .meterFilter(maxUriTagsMeterFilter(name + DATA_SENT_TIME))
+		        .meterFilter(maxUriTagsMeterFilter(name + RESPONSE_TIME))
+		        .meterFilter(maxUriTagsMeterFilter(name + DATA_RECEIVED))
+		        .meterFilter(maxUriTagsMeterFilter(name + DATA_SENT))
+		        .meterFilter(maxUriTagsMeterFilter(name + ERRORS));
 	}
 
 	@Override
