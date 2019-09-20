@@ -1,0 +1,41 @@
+/*
+ * Copyright (c) 2011-2019 Pivotal Software Inc, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package reactor.netty.http.server;
+
+/**
+ * Proxy protocol support type, this enum class defines how the HttpServer handles proxy protocol.
+ *
+ * @author aftersss
+ */
+public enum ProxyProtocolSupportType {
+	/**
+	 * Each connection of the same {@link HttpServer} will auto detect whether there is proxy protocol.
+	 * The {@link HttpServer} can support multiple clients(or reverse proxy server like HaProxy)
+	 * with and without proxy protocol enabled at the same time.
+	 */
+	AUTO,
+
+	/**
+	 * Enable support for the {@code "HAProxy proxy protocol"}
+	 * for deriving information about the address of the remote peer.
+	 */
+	ON,
+
+	/**
+	 * Disable the proxy protocol support
+	 */
+	OFF
+}
