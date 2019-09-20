@@ -223,41 +223,41 @@ public class ConnectionInfoTests {
 
 		this.connection =
 				HttpServer.create()
-						.port(0)
-						.proxyProtocol(ProxyProtocolSupportType.AUTO)
-						.handle((req, res) -> {
-							try {
-								requestConsumer.accept(req);
-								return res.status(200)
-										.sendString(Mono.just("OK"));
-							}
-							catch (Throwable e) {
-								return res.status(500)
-										.sendString(Mono.just(e.getMessage()));
-							}
-						})
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .proxyProtocol(ProxyProtocolSupportType.AUTO)
+				          .handle((req, res) -> {
+				              try {
+				                  requestConsumer.accept(req);
+				                  return res.status(200)
+				                            .sendString(Mono.just("OK"));
+				              }
+				              catch (Throwable e) {
+				                  return res.status(500)
+				                            .sendString(Mono.just(e.getMessage()));
+				              }
+				          })
+				          .wiretap(true)
+				          .bindNow();
 
 		Connection clientConn =
 				TcpClient.create()
-						.port(this.connection.port())
-						.connectNow();
+				         .port(this.connection.port())
+				         .connectNow();
 
 		ByteBuf proxyProtocolMsg = clientConn.channel()
-				.alloc()
-				.buffer();
+		                                     .alloc()
+		                                     .buffer();
 		proxyProtocolMsg.writeCharSequence("PROXY TCP4 " + remoteAddress + " 10.210.12.10 5678 80\r\n",
 				Charset.defaultCharset());
 		proxyProtocolMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
 				Charset.defaultCharset());
 		clientConn.channel()
-				.writeAndFlush(proxyProtocolMsg)
-				.addListener(f -> {
-					if (!f.isSuccess()) {
-						fail("Writing proxyProtocolMsg was not successful");
-					}
-				});
+		          .writeAndFlush(proxyProtocolMsg)
+		          .addListener(f -> {
+		              if (!f.isSuccess()) {
+		                  fail("Writing proxyProtocolMsg was not successful");
+		              }
+		          });
 
 		assertThat(resultQueue.poll(5, TimeUnit.SECONDS)).isEqualTo(remoteAddress);
 
@@ -265,22 +265,23 @@ public class ConnectionInfoTests {
 
 		clientConn =
 				TcpClient.create()
-						.port(this.connection.port())
-						.connectNow();
+				          .port(this.connection.port())
+				          .connectNow();
 
-		//Send a http request without proxy protocol in a new connection, server should support this when proxyProtocol is set to ProxyProtocolSupportType.AUTO
+		// Send a http request without proxy protocol in a new connection,
+		// server should support this when proxyProtocol is set to ProxyProtocolSupportType.AUTO
 		ByteBuf httpMsg = clientConn.channel()
-				.alloc()
-				.buffer();
+		                            .alloc()
+		                            .buffer();
 		httpMsg.writeCharSequence("GET /test HTTP/1.1\r\nHost: a.example.com\r\n\r\n",
 				Charset.defaultCharset());
 		clientConn.channel()
-				.writeAndFlush(httpMsg)
-				.addListener(f -> {
-					if (!f.isSuccess()) {
-						fail("Writing proxyProtocolMsg was not successful");
-					}
-				});
+		          .writeAndFlush(httpMsg)
+		          .addListener(f -> {
+		              if (!f.isSuccess()) {
+		                  fail("Writing proxyProtocolMsg was not successful");
+		              }
+		          });
 
 		assertThat(resultQueue.poll(5, TimeUnit.SECONDS))
 				.containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");

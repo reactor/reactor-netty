@@ -262,18 +262,18 @@ public abstract class HttpServer {
 	 * for deriving information about the address of the remote peer is enabled.
 	 *
 	 * @param proxyProtocolSupportType
-	 * 		<ul>
+	 *      <ul>
 	 *         <li>
-     *             choose {@link ProxyProtocolSupportType#ON}
-     *             to enable support for the {@code "HAProxy proxy protocol"}
+	 *             choose {@link ProxyProtocolSupportType#ON}
+	 *             to enable support for the {@code "HAProxy proxy protocol"}
 	 *             for deriving information about the address of the remote peer.
-     *         </li>
+	 *         </li>
 	 *         <li>choose {@link ProxyProtocolSupportType#OFF} to disable the proxy protocol support.</li>
 	 *         <li>
-     *             choose {@link ProxyProtocolSupportType#AUTO}
-     *             then each connection of the same `HttpServer` will auto detect whether there is proxy protocol,
-     *             so HttpServer can accept requests with or without proxy protocol at the same time.
-     *         </li>
+	 *             choose {@link ProxyProtocolSupportType#AUTO}
+	 *             then each connection of the same {@link HttpServer} will auto detect whether there is proxy protocol,
+	 *             so {@link HttpServer} can accept requests with or without proxy protocol at the same time.
+	 *         </li>
 	 *      </ul>
 	 *
 	 * @return a new {@link HttpServer}
@@ -295,17 +295,16 @@ public abstract class HttpServer {
 			        tcpServer.bootstrap(b -> BootstrapHandlers.updateConfiguration(b,
 			                NettyPipeline.ProxyProtocolDecoder,
 			                (connectionObserver, channel) -> {
-			        			if (proxyProtocolSupportType == ProxyProtocolSupportType.ON) {
-									channel.pipeline()
-											.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder());
-									channel.pipeline()
-											.addAfter(NettyPipeline.ProxyProtocolDecoder,
-													NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
-								}
-			        			else { // AUTO
-									channel.pipeline()
-											.addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDetector());
-								}
+			                    if (proxyProtocolSupportType == ProxyProtocolSupportType.ON) {
+			                        channel.pipeline()
+			                               .addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDecoder())
+			                               .addAfter(NettyPipeline.ProxyProtocolDecoder,
+			                                         NettyPipeline.ProxyProtocolReader, new HAProxyMessageReader());
+			                    }
+			                    else { // AUTO
+			                        channel.pipeline()
+			                               .addFirst(NettyPipeline.ProxyProtocolDecoder, new HAProxyMessageDetector());
+			                    }
 			                })));
 		}
 		else if (proxyProtocolSupportType == ProxyProtocolSupportType.OFF) {
