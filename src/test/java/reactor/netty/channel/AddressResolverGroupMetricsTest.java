@@ -35,7 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.SUCCESS;
-import static reactor.netty.channel.AddressResolverGroupMetrics.NAME;
 
 /**
  * @author Violeta Georgieva
@@ -89,7 +88,7 @@ public class AddressResolverGroupMetricsTest {
 
 
 	private double getTimerValue(String address) {
-		Timer timer = registry.find(NAME).tags(REMOTE_ADDRESS, address, STATUS, SUCCESS).timer();
+		Timer timer = registry.find("reactor.netty.address.resolver").tags(REMOTE_ADDRESS, address, STATUS, SUCCESS).timer();
 		double result = -1;
 		if (timer != null) {
 			result = timer.totalTime(TimeUnit.SECONDS);

@@ -15,33 +15,34 @@
  */
 package reactor.netty.channel;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import reactor.netty.Metrics;
 
+import javax.annotation.Nullable;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.List;
 import java.util.function.Supplier;
-
-import static reactor.netty.Metrics.ERROR;
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
-import static reactor.netty.Metrics.STATUS;
-import static reactor.netty.Metrics.SUCCESS;
 
 /**
  * @author Violeta Georgieva
  */
 final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddress> {
-
 	final AddressResolverGroup<SocketAddress> resolverGroup;
 
+	final ChannelMetricsRecorder recorder;
+
 	AddressResolverGroupMetrics(AddressResolverGroup<SocketAddress> resolverGroup) {
+		this(resolverGroup, null);
+	}
+
+	AddressResolverGroupMetrics(AddressResolverGroup<SocketAddress> resolverGroup,
+			@Nullable ChannelMetricsRecorder recorder) {
 		this.resolverGroup = resolverGroup;
+		this.recorder = recorder;
 	}
 
 	@Override
@@ -86,35 +87,41 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 			}
 
 			Future<SocketAddress> resolveInternal(SocketAddress address, Supplier<Future<SocketAddress>> resolver) {
-				Timer.Sample resolveTimeSample = Timer.start(registry);
+				long resolveTimeStart = System.nanoTime();
 				return resolver.get()
 				               .addListener(
-				                   future -> record(resolveTimeSample,
+				                   future -> record(resolveTimeStart,
 				                                    future.isSuccess() ? SUCCESS : ERROR,
-				                                    Metrics.formatSocketAddress(address)));
+				                                    address));
 			}
 
 			Future<List<SocketAddress>> resolveAllInternal(SocketAddress address, Supplier<Future<List<SocketAddress>>> resolver) {
-				Timer.Sample resolveTimeSample = Timer.start(registry);
+				long resolveTimeStart = System.nanoTime();
 				return resolver.get()
 				               .addListener(
-				                   future -> record(resolveTimeSample,
+				                   future -> record(resolveTimeStart,
 				                                    future.isSuccess() ? SUCCESS : ERROR,
-				                                    Metrics.formatSocketAddress(address)));
+				                                    address));
 			}
 
-			void record(Timer.Sample resolveTimeSample, String status, String remoteAddress) {
-				Timer resolveTime =
-						Timer.builder(NAME)
-						     .tags(REMOTE_ADDRESS, remoteAddress, STATUS, status)
-						     .description("Time that is spent for resolving the address")
-						     .register(registry);
-				resolveTimeSample.stop(resolveTime);
+			void record(long resolveTimeStart, String status, SocketAddress remoteAddress) {
+				if (recorder == null) {
+					MicrometerChannelMetricsRecorder._recordResolveAddressTime(
+							remoteAddress,
+							Duration.ofMillis(System.nanoTime() - resolveTimeStart),
+							status);
+				}
+				else {
+					recorder.recordResolveAddressTime(
+							remoteAddress,
+							Duration.ofMillis(System.nanoTime() - resolveTimeStart),
+							status);
+				}
 			}
 		};
 	}
 
-	static final MeterRegistry registry = io.micrometer.core.instrument.Metrics.globalRegistry;
+	static final String SUCCESS = "SUCCESS";
 
-	static final String NAME = "reactor.netty.address.resolver";
+	static final String ERROR = "ERROR";
 }

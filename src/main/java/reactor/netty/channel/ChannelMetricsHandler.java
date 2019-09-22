@@ -15,13 +15,6 @@
  */
 package reactor.netty.channel;
 
-import static reactor.netty.Metrics.*;
-
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,69 +28,23 @@ import reactor.netty.NettyPipeline;
 
 import javax.annotation.Nullable;
 import java.net.SocketAddress;
+import java.time.Duration;
 
 /**
  * @author Violeta Georgieva
  */
 public class ChannelMetricsHandler extends ChannelDuplexHandler {
+	final ChannelMetricsRecorder recorder;
 
-	final MeterRegistry registry = Metrics.globalRegistry;
-
-	final String name;
-
-	final String remoteAddress;
-
-	final String protocol;
+	final SocketAddress remoteAddress;
 
 	final boolean onServer;
 
 
-	final DistributionSummary.Builder dataReceivedBuilder;
-	DistributionSummary dataReceived;
-
-	final DistributionSummary.Builder dataSentBuilder;
-	DistributionSummary dataSent;
-
-	final Counter.Builder errorCountBuilder;
-	Counter errorCount;
-
-
-	ChannelMetricsHandler(String name, @Nullable String remoteAddress, String protocol, boolean onServer) {
-		this.name = name;
-		if (remoteAddress == null && !"udp".equals(protocol)) {
-			throw new IllegalArgumentException("remoteAddress is null for protocol " + protocol);
-		}
+	ChannelMetricsHandler(ChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress, boolean onServer) {
+		this.recorder = recorder;
 		this.remoteAddress = remoteAddress;
-		this.protocol = protocol;
 		this.onServer = onServer;
-
-		this.dataReceivedBuilder =
-				DistributionSummary.builder(name + DATA_RECEIVED)
-				                   .baseUnit("bytes")
-				                   .description("Amount of the data that is received, in bytes")
-				                   .tag(URI, protocol);
-
-		this.dataSentBuilder =
-				DistributionSummary.builder(name + DATA_SENT)
-				                   .baseUnit("bytes")
-				                   .description("Amount of the data that is sent, in bytes")
-				                   .tag(URI, protocol);
-
-		this.errorCountBuilder =
-				Counter.builder(name + ERRORS)
-				       .description("Number of the errors that are occurred")
-				       .tag(URI, protocol);
-
-		if (remoteAddress != null) {
-			this.dataReceivedBuilder.tag(REMOTE_ADDRESS, remoteAddress);
-			this.dataReceived = dataReceivedBuilder.register(registry);
-
-			this.dataSentBuilder.tag(REMOTE_ADDRESS, remoteAddress);
-			this.dataSent = dataSentBuilder.register(registry);
-
-			this.errorCountBuilder.tag(REMOTE_ADDRESS, remoteAddress);
-			this.errorCount = errorCountBuilder.register(registry);
-		}
 	}
 
 	@Override
@@ -106,14 +53,14 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			ctx.pipeline()
 			   .addAfter(NettyPipeline.ChannelMetricsHandler,
 			             NettyPipeline.ConnectMetricsHandler,
-			             new ConnectMetricsHandler(registry, name, remoteAddress));
+			             new ConnectMetricsHandler(recorder));
 		}
 
 		if (ctx.pipeline().get(SslHandler.class) != null) {
 			ctx.pipeline()
 			   .addAfter(NettyPipeline.SslHandler,
 			             NettyPipeline.SslMetricsHandler,
-			             new TlsMetricsHandler(registry, name, remoteAddress));
+			             new TlsMetricsHandler(recorder, remoteAddress));
 		}
 
 		super.channelRegistered(ctx);
@@ -124,21 +71,18 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof ByteBuf) {
 			ByteBuf buffer = (ByteBuf) msg;
 			if (buffer.readableBytes() > 0) {
-				dataReceived.record(buffer.readableBytes());
+				recorder.recordDataReceived(remoteAddress, buffer.readableBytes());
 			}
 		}
 		else if (msg instanceof DatagramPacket) {
 			DatagramPacket p = (DatagramPacket) msg;
 			ByteBuf buffer = p.content();
 			if (buffer.readableBytes() > 0) {
-				if (dataReceived == null) {
-					dataReceivedBuilder.tag(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(p.sender()))
-					                   .register(registry)
-					                   .record(buffer.readableBytes());
-
+				if (remoteAddress != null) {
+					recorder.recordDataReceived(remoteAddress, buffer.readableBytes());
 				}
 				else {
-					dataReceived.record(buffer.readableBytes());
+					recorder.recordDataReceived(p.sender(), buffer.readableBytes());
 				}
 			}
 		}
@@ -151,21 +95,18 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof ByteBuf) {
 			ByteBuf buffer = (ByteBuf) msg;
 			if (buffer.readableBytes() > 0) {
-				dataSent.record(buffer.readableBytes());
+				recorder.recordDataSent(remoteAddress, buffer.readableBytes());
 			}
 		}
 		else if (msg instanceof DatagramPacket) {
 			DatagramPacket p = (DatagramPacket) msg;
 			ByteBuf buffer = p.content();
 			if (buffer.readableBytes() > 0) {
-				if (dataSent == null) {
-					dataSentBuilder.tag(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(p.recipient()))
-					               .register(registry)
-					               .record(buffer.readableBytes());
-
+				if (remoteAddress != null) {
+					recorder.recordDataSent(remoteAddress, buffer.readableBytes());
 				}
 				else {
-					dataSent.record(buffer.readableBytes());
+					recorder.recordDataSent(p.recipient(), buffer.readableBytes());
 				}
 			}
 		}
@@ -175,46 +116,32 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		if (errorCount == null) {
-			String address = reactor.netty.Metrics.formatSocketAddress(ctx.channel().remoteAddress());
-			if (address != null) {
-				errorCountBuilder.tag(REMOTE_ADDRESS, address)
-				                 .register(registry)
-				                 .increment();
-			}
+		if (remoteAddress != null) {
+			recorder.incrementErrorsCount(remoteAddress);
 		}
 		else {
-			errorCount.increment();
+			recorder.incrementErrorsCount(ctx.channel().remoteAddress());
 		}
 
 		super.exceptionCaught(ctx, cause);
 	}
 
-	public MeterRegistry registry() {
-		return registry;
+	public ChannelMetricsRecorder recorder() {
+		return recorder;
 	}
-
-	public String name() {
-		return name;
-	}
-
 
 	static final class TlsMetricsHandler extends ChannelInboundHandlerAdapter {
 
-		Timer.Sample tlsHandshakeTimeSample;
+		final ChannelMetricsRecorder recorder;
 
+		final SocketAddress remoteAddress;
 
-		final MeterRegistry registry;
+		final long tlsHandshakeTimeStart;
 
-		final String name;
-
-		final String remoteAddress;
-
-		TlsMetricsHandler(MeterRegistry registry, String name, String remoteAddress) {
-			this.registry = registry;
-			this.name = name;
+		TlsMetricsHandler(ChannelMetricsRecorder recorder, SocketAddress remoteAddress) {
+			this.recorder = recorder;
 			this.remoteAddress = remoteAddress;
-			this.tlsHandshakeTimeSample = Timer.start(registry);
+			this.tlsHandshakeTimeStart = System.currentTimeMillis();
 		}
 
 		@Override
@@ -231,12 +158,10 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 					status = ERROR;
 				}
 
-				Timer tlsHandshakeTime =
-						Timer.builder(name + TLS_HANDSHAKE_TIME)
-						     .tags(REMOTE_ADDRESS, remoteAddress, STATUS, status)
-						     .description("Time that is spent for TLS handshake")
-						     .register(registry);
-				tlsHandshakeTimeSample.stop(tlsHandshakeTime);
+				recorder.recordTlsHandshakeTime(
+						remoteAddress,
+						Duration.ofMillis(System.currentTimeMillis() - tlsHandshakeTimeStart),
+						status);
 			}
 
 			super.userEventTriggered(ctx, evt);
@@ -246,25 +171,16 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 
 	static final class ConnectMetricsHandler extends ChannelOutboundHandlerAdapter {
 
-		Timer.Sample connectTimeSample;
+		final ChannelMetricsRecorder recorder;
 
-
-		final MeterRegistry registry;
-
-		final String name;
-
-		final String remoteAddress;
-
-		ConnectMetricsHandler(MeterRegistry registry, String name, String remoteAddress) {
-			this.registry = registry;
-			this.name = name;
-			this.remoteAddress = remoteAddress;
+		ConnectMetricsHandler(ChannelMetricsRecorder recorder) {
+			this.recorder = recorder;
 		}
 
 		@Override
 		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
 				SocketAddress localAddress, ChannelPromise promise) throws Exception {
-			connectTimeSample = Timer.start(registry);
+			long connectTimeStart = System.currentTimeMillis();
 			super.connect(ctx, remoteAddress, localAddress, promise);
 			promise.addListener(future -> {
 				ctx.pipeline().remove(this);
@@ -277,13 +193,15 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 					status = ERROR;
 				}
 
-				Timer connectTime =
-						Timer.builder(name + CONNECT_TIME)
-						     .tags(REMOTE_ADDRESS, this.remoteAddress, STATUS, status)
-						     .description("Time that is spent for connecting to the remote address")
-						     .register(registry);
-				connectTimeSample.stop(connectTime);
+				recorder.recordConnectTime(
+						remoteAddress,
+						Duration.ofMillis(System.currentTimeMillis() - connectTimeStart),
+						status);
 			});
 		}
 	}
+
+	static final String SUCCESS = "SUCCESS";
+
+	static final String ERROR = "ERROR";
 }

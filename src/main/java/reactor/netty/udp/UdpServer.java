@@ -40,6 +40,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -358,9 +359,10 @@ public abstract class UdpServer {
 	}
 
 	/**
-	 * Specifies whether the metrics are enabled on the {@link UdpServer},
+	 * Specifies whether the metrics are enabled on the {@link UdpServer}.
+	 * All generated metrics are registered in the Micrometer MeterRegistry,
 	 * assuming Micrometer is on the classpath.
-	 * if {@code name } is {@code NULL } - {@code reactor.netty.udp.server}
+	 * if {@code name} is {@code NULL} - {@code reactor.netty.udp.server}
 	 * will be used as a name.
 	 *
 	 * @param metricsEnabled if true enables the metrics on the server.
@@ -376,6 +378,24 @@ public abstract class UdpServer {
 			}
 
 			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, name == null ? "reactor.netty.udp.server" : name, "udp"));
+		}
+		else {
+			return bootstrap(BootstrapHandlers::removeMetricsSupport);
+		}
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link UdpServer}.
+	 * All generated metrics are provided to the specified recorder.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param recorder the {@link ChannelMetricsRecorder}
+	 * @return a new {@link UdpServer}
+	 */
+	public final UdpServer metrics(boolean metricsEnabled, ChannelMetricsRecorder recorder) {
+		if (metricsEnabled) {
+			Objects.requireNonNull(recorder, "recorder");
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, recorder));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);

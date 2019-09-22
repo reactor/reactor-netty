@@ -44,6 +44,7 @@ import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -543,9 +544,10 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Specifies whether the metrics are enabled on the {@link TcpServer},
+	 * Specifies whether the metrics are enabled on the {@link TcpServer}.
+	 * All generated metrics are registered in the Micrometer MeterRegistry,
 	 * assuming Micrometer is on the classpath.
-	 * if {@code name } is {@code NULL } - {@code reactor.netty.tcp.server}
+	 * if {@code name} is {@code NULL} - {@code reactor.netty.tcp.server}
 	 * will be used as a name.
 	 *
 	 * @param metricsEnabled if true enables the metrics on the server.
@@ -561,6 +563,24 @@ public abstract class TcpServer {
 			}
 
 			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, name == null ? "reactor.netty.tcp.server" : name, "tcp"));
+		}
+		else {
+			return bootstrap(BootstrapHandlers::removeMetricsSupport);
+		}
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link TcpServer}.
+	 * All generated metrics are provided to the specified recorder.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param recorder the {@link ChannelMetricsRecorder}
+	 * @return a new {@link TcpServer}
+	 */
+	public final TcpServer metrics(boolean metricsEnabled, ChannelMetricsRecorder recorder) {
+		if (metricsEnabled) {
+			Objects.requireNonNull(recorder, "recorder");
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, recorder));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);

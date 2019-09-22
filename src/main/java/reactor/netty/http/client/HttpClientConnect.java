@@ -77,7 +77,9 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.BootstrapHandlers;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.InetSocketAddressUtil;
@@ -702,11 +704,14 @@ final class HttpClientConnect extends HttpClient {
 
 			ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 			if (handler != null) {
-				ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
-				HttpClientMetricsHandler httpMetrics =
-						new HttpClientMetricsHandler(tcpMetrics.registry(),
-						                             tcpMetrics.name());
-				p.addLast(NettyPipeline.HttpMetricsHandler, httpMetrics);
+				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
+				if (channelMetricsRecorder instanceof MicrometerChannelMetricsRecorder) {
+					MicrometerChannelMetricsRecorder recorder = (MicrometerChannelMetricsRecorder) channelMetricsRecorder;
+					HttpClientMetricsHandler httpMetrics =
+							new HttpClientMetricsHandler(recorder.registry(),
+							                             recorder.name());
+					p.addLast(NettyPipeline.HttpMetricsHandler, httpMetrics);
+				}
 			}
 		}
 
@@ -920,11 +925,14 @@ final class HttpClientConnect extends HttpClient {
 
 				ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 				if (handler != null) {
-					ChannelMetricsHandler tcpMetrics = (ChannelMetricsHandler) handler;
-					HttpClientMetricsHandler httpMetrics =
-							new HttpClientMetricsHandler(tcpMetrics.registry(),
-							                             tcpMetrics.name());
-					p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, httpMetrics);
+					ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
+					if (channelMetricsRecorder instanceof MicrometerChannelMetricsRecorder) {
+						MicrometerChannelMetricsRecorder recorder = (MicrometerChannelMetricsRecorder) channelMetricsRecorder;
+						HttpClientMetricsHandler httpMetrics =
+								new HttpClientMetricsHandler(recorder.registry(),
+								                             recorder.name());
+						p.addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.HttpMetricsHandler, httpMetrics);
+					}
 				}
 //				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(ctx.channel()), listener,	null);
 //				if (ops != null) {

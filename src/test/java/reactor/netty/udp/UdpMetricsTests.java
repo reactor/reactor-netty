@@ -64,12 +64,12 @@ public class UdpMetricsTests {
 				UdpServer.create()
 				         .host("127.0.0.1")
 				         .port(0)
-				         .metrics(true, null);
+				         .metrics(true, (String) null);
 
 		udpClient =
 				UdpClient.create()
 				         .addressSupplier(() -> serverConnection.address())
-				         .metrics(true, null);
+				         .metrics(true, (String) null);
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
