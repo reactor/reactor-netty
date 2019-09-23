@@ -20,6 +20,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -170,14 +171,13 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public Mono<Void> disposeLater() {
-		return Mono.fromRunnable(() -> {
-			InstrumentedPool<PooledConnection> pool;
+		return Mono.defer(() -> {
+			List<Mono<Void>> pools = new ArrayList<>();
 			for (PoolKey key : channelPools.keySet()) {
-				pool = channelPools.remove(key);
-				if (pool != null) {
-					pool.dispose();
-				}
+				pools.add(channelPools.remove(key).disposeLater());
 			}
+
+			return Mono.when(pools);
 		});
 	}
 
