@@ -59,13 +59,13 @@ public class TcpMetricsTests {
 				TcpServer.create()
 				         .host("127.0.0.1")
 				         .port(0)
-				         .metrics(true, (String) null);
+				         .metrics(true);
 
 		provider = ConnectionProvider.fixed("test", 1);
 		tcpClient =
 				TcpClient.create(provider)
 				         .addressSupplier(() -> disposableServer.address())
-				         .metrics(true, (String) null);
+				         .metrics(true);
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);

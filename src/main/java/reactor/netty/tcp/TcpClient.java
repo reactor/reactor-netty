@@ -526,10 +526,9 @@ public abstract class TcpClient {
 	 * will be used as a name.
 	 *
 	 * @param metricsEnabled if true enables the metrics on the client.
-	 * @param name the name to be used for the metrics
 	 * @return a new {@link TcpClient}
 	 */
-	public final TcpClient metrics(boolean metricsEnabled, @Nullable String name) {
+	public final TcpClient metrics(boolean metricsEnabled) {
 		if (metricsEnabled) {
 			if (!Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
@@ -537,7 +536,7 @@ public abstract class TcpClient {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, name == null ? "reactor.netty.tcp.client" : name, "tcp"));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, "reactor.netty.tcp.client", "tcp"));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);

@@ -63,7 +63,7 @@ public class HttpMetricsHandlerTests {
 				HttpServer.create()
 				          .host("127.0.0.1")
 				          .port(0)
-				          .metrics(true, (String) null)
+				          .metrics(true)
 				          .route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
 				                                                    .send(req.receive().retain()))
 				                       .post("/2", (req, res) -> res.header("Connection", "close")
@@ -73,7 +73,7 @@ public class HttpMetricsHandlerTests {
 		httpClient =
 				customizeClientOptions(HttpClient.create(provider)
 				                                 .addressSupplier(() -> disposableServer.address())
-				                                 .metrics(true, (String) null));
+				                                 .metrics(true));
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
@@ -191,7 +191,7 @@ public class HttpMetricsHandlerTests {
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
 		String[] timerTags3 = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "SUCCESS"};
 		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, clientAddress, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "http"};
 
 		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, 1);
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, 1);
@@ -208,7 +208,7 @@ public class HttpMetricsHandlerTests {
 		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
 		timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
 		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
-		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
+		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
 
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 1);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 1);
@@ -229,7 +229,7 @@ public class HttpMetricsHandlerTests {
 		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
 		String[] timerTags3 = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "SUCCESS"};
 		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, clientAddress, URI, uri};
-		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
+		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "http"};
 
 		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, index);
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, index);
@@ -247,7 +247,7 @@ public class HttpMetricsHandlerTests {
 		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
 		timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
 		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
-		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
+		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
 
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, index);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, index);

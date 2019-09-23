@@ -366,10 +366,9 @@ public abstract class UdpServer {
 	 * will be used as a name.
 	 *
 	 * @param metricsEnabled if true enables the metrics on the server.
-	 * @param name the name to be used for the metrics
 	 * @return a new {@link UdpServer}
 	 */
-	public final UdpServer metrics(boolean metricsEnabled, @Nullable String name) {
+	public final UdpServer metrics(boolean metricsEnabled) {
 		if (metricsEnabled) {
 			if (!Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
@@ -377,7 +376,7 @@ public abstract class UdpServer {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, name == null ? "reactor.netty.udp.server" : name, "udp"));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, "reactor.netty.udp.server", "udp"));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);

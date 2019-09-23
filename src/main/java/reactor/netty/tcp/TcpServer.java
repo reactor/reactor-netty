@@ -551,10 +551,9 @@ public abstract class TcpServer {
 	 * will be used as a name.
 	 *
 	 * @param metricsEnabled if true enables the metrics on the server.
-	 * @param name the name to be used for the metrics
 	 * @return a new {@link TcpServer}
 	 */
-	public final TcpServer metrics(boolean metricsEnabled, @Nullable String name) {
+	public final TcpServer metrics(boolean metricsEnabled) {
 		if (metricsEnabled) {
 			if (!Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
@@ -562,7 +561,7 @@ public abstract class TcpServer {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, name == null ? "reactor.netty.tcp.server" : name, "tcp"));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, "reactor.netty.tcp.server", "tcp"));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);

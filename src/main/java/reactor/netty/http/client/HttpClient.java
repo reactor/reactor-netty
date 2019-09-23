@@ -55,6 +55,7 @@ import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
+import reactor.util.Metrics;
 
 /**
  * An HttpClient allows to build in a safe immutable way an http client that is
@@ -826,11 +827,22 @@ public abstract class HttpClient {
 	 * assuming Micrometer is on the classpath.
 	 *
 	 * @param metricsEnabled if true enables the metrics on the client.
-	 * @param name the name to be used for the metrics
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient metrics(boolean metricsEnabled, @Nullable String name) {
-		return tcpConfiguration(tcpClient -> tcpClient.metrics(metricsEnabled, name == null ? "reactor.netty.http.client" : name));
+	public final HttpClient metrics(boolean metricsEnabled) {
+		if (metricsEnabled) {
+			if (!Metrics.isInstrumentationAvailable()) {
+				throw new UnsupportedOperationException(
+						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+								" to the class path first");
+			}
+
+			return tcpConfiguration(tcpClient ->
+					tcpClient.bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, "reactor.netty.http.client", "http")));
+		}
+		else {
+			return tcpConfiguration(tcpClient -> tcpClient.bootstrap(BootstrapHandlers::removeMetricsSupport));
+		}
 	}
 
 	/**
@@ -842,7 +854,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient metrics(boolean metricsEnabled, HttpClientMetricsRecorder recorder) {
-		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, recorder));
+		return tcpConfiguration(tcpClient -> tcpClient.metrics(metricsEnabled, recorder));
 	}
 
 	/**
