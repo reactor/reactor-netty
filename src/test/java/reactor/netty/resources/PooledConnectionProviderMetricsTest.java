@@ -88,7 +88,7 @@ public class PooledConnectionProviderMetricsTest {
 		                  metrics.set(true);
 		              }
 		          })
-		          .metrics(true)
+		          .metrics(true, (String) null)
 		          .get()
 		          .uri("/")
 		          .responseContent()

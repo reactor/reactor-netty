@@ -30,6 +30,9 @@ import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 
+import static reactor.netty.Metrics.ERROR;
+import static reactor.netty.Metrics.SUCCESS;
+
 /**
  * @author Violeta Georgieva
  */
@@ -200,8 +203,4 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			});
 		}
 	}
-
-	static final String SUCCESS = "SUCCESS";
-
-	static final String ERROR = "ERROR";
 }

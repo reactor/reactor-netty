@@ -15,12 +15,6 @@
  */
 package reactor.netty.http.client;
 
-import static reactor.netty.Metrics.*;
-
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelDuplexHandler;
@@ -29,7 +23,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
-import reactor.netty.Metrics;
+
+import java.net.SocketAddress;
+import java.time.Duration;
 
 /**
  * @author Violeta Georgieva
@@ -46,39 +42,15 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 	long dataSent;
 
 
-	Timer.Sample dataReceivedTimeSample;
+	long dataReceivedTime;
 
-	Timer.Sample dataSentTimeSample;
-
-
-	final MeterRegistry registry;
-
-	final String name;
+	long dataSentTime;
 
 
-	final Timer.Builder dataReceivedTimeBuilder;
+	final HttpClientMetricsRecorder recorder;
 
-	final Timer.Builder dataSentTimeBuilder;
-
-	final Timer.Builder responseTimeBuilder;
-
-	public HttpClientMetricsHandler(MeterRegistry registry, String name) {
-		this.registry = registry;
-		this.name = name;
-		dataReceivedTimeBuilder = Timer.builder(name + DATA_RECEIVED_TIME)
-		                               .description("Time that is spent in consuming incoming data");
-		dataSentTimeBuilder = Timer.builder(name + DATA_SENT_TIME)
-		                           .description("Time that is spent in sending outgoing data");
-		responseTimeBuilder = Timer.builder(name + RESPONSE_TIME)
-		                           .description("Total time for the request/response");
-
-		registry.config()
-		        .meterFilter(maxUriTagsMeterFilter(name + DATA_RECEIVED_TIME))
-		        .meterFilter(maxUriTagsMeterFilter(name + DATA_SENT_TIME))
-		        .meterFilter(maxUriTagsMeterFilter(name + RESPONSE_TIME))
-		        .meterFilter(maxUriTagsMeterFilter(name + DATA_RECEIVED))
-		        .meterFilter(maxUriTagsMeterFilter(name + DATA_SENT))
-		        .meterFilter(maxUriTagsMeterFilter(name + ERRORS));
+	HttpClientMetricsHandler(HttpClientMetricsRecorder recorder) {
+		this.recorder = recorder;
 	}
 
 	@Override
@@ -86,7 +58,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpRequest) {
 			request = (HttpRequest) msg;
 
-			dataSentTimeSample = Timer.start(registry);
+			dataSentTime = System.currentTimeMillis();
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -98,21 +70,14 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
 		if (msg instanceof LastHttpContent) {
 			promise.addListener(future -> {
-				String address = Metrics.formatSocketAddress(ctx.channel().remoteAddress());
+				SocketAddress address = ctx.channel().remoteAddress();
 
-				Timer dataSentTime =
-						dataSentTimeBuilder.tags(REMOTE_ADDRESS, address,
-						                         URI, request.uri(),
-						                         METHOD, request.method().name())
-						                   .register(registry);
-				dataSentTimeSample.stop(dataSentTime);
+				recorder.recordDataSentTime(address,
+						request.uri(),
+						request.method().name(),
+						Duration.ofMillis(System.currentTimeMillis() - dataSentTime));
 
-				DistributionSummary.builder(name + DATA_SENT)
-				                   .baseUnit("bytes")
-				                   .description("Amount of the data that is sent, in bytes")
-				                   .tags(REMOTE_ADDRESS, address, URI, request.uri())
-				                   .register(registry)
-				                   .record(dataSent);
+				recorder.recordDataSent(address, request.uri(), dataSent);
 			});
 		}
 
@@ -124,7 +89,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpResponse) {
 			response = (HttpResponse) msg;
 
-			dataReceivedTimeSample = Timer.start(registry);
+			dataReceivedTime = System.currentTimeMillis();
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -135,26 +100,22 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		if (msg instanceof LastHttpContent) {
-			String address = Metrics.formatSocketAddress(ctx.channel().remoteAddress());
+			SocketAddress address = ctx.channel().remoteAddress();
 
-			dataReceivedTimeSample.stop(dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address,
-			                                                         URI, request.uri(),
-			                                                         METHOD, request.method().name(),
-			                                                         STATUS, response.status().codeAsText().toString())
-			                                                   .register(registry));
-			Timer responseTime =
-					responseTimeBuilder.tags(REMOTE_ADDRESS, address,
-					                         URI, request.uri(),
-					                         METHOD, request.method().name(),
-					                         STATUS, response.status().codeAsText().toString())
-					                   .register(registry);
-			dataSentTimeSample.stop(responseTime);
-			DistributionSummary.builder(name + DATA_RECEIVED)
-			                   .baseUnit("bytes")
-			                   .description("Amount of the data that is received, in bytes")
-			                   .tags(REMOTE_ADDRESS, address, URI, request.uri())
-			                   .register(registry)
-			                   .record(dataReceived);
+			recorder.recordDataReceivedTime(address,
+					request.uri(),
+					request.method().name(),
+					response.status().codeAsText().toString(),
+					Duration.ofMillis(System.currentTimeMillis() - dataReceivedTime));
+
+			recorder.recordResponseTime(address,
+					request.uri(),
+					request.method().name(),
+					response.status().codeAsText().toString(),
+					Duration.ofMillis(System.currentTimeMillis() - dataSentTime));
+
+			recorder.recordDataReceived(address, request.uri(), dataReceived);
+
 			reset();
 		}
 
@@ -163,11 +124,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		Counter.builder(name + ERRORS)
-		       .description("Number of the errors that are occurred")
-		       .tags(REMOTE_ADDRESS, Metrics.formatSocketAddress(ctx.channel().remoteAddress()), URI, request.uri())
-		       .register(registry)
-		       .increment();
+		recorder.incrementErrorsCount(ctx.channel().remoteAddress(), request.uri());
 
 		super.exceptionCaught(ctx, cause);
 	}
@@ -177,7 +134,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		response = null;
 		dataReceived = 0;
 		dataSent = 0;
-		dataReceivedTimeSample = null;
-		dataSentTimeSample = null;
+		dataReceivedTime = 0;
+		dataSentTime = 0;
 	}
 }

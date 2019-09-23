@@ -15,6 +15,7 @@
  */
 package reactor.netty.http;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -42,6 +43,7 @@ import reactor.test.StepVerifier;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -61,15 +63,17 @@ public class HttpMetricsHandlerTests {
 				HttpServer.create()
 				          .host("127.0.0.1")
 				          .port(0)
-				          .metrics(true)
-				          .route(r -> r.post("/1", (req, res) -> res.send(req.receive().retain()))
-				                       .post("/2", (req, res) -> res.send(req.receive().retain()))));
+				          .metrics(true, (String) null)
+				          .route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
+				                                                    .send(req.receive().retain()))
+				                       .post("/2", (req, res) -> res.header("Connection", "close")
+				                                                    .send(req.receive().retain()))));
 
 		provider = ConnectionProvider.fixed("test", 1);
 		httpClient =
 				customizeClientOptions(HttpClient.create(provider)
 				                                 .addressSupplier(() -> disposableServer.address())
-				                                 .metrics(true));
+				                                 .metrics(true, (String) null));
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
@@ -100,7 +104,12 @@ public class HttpMetricsHandlerTests {
 			serverAddress.set(conn.channel().remoteAddress());
 		});
 
-		StepVerifier.create(httpClient.post()
+		CountDownLatch latch1 = new CountDownLatch(1);
+		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
+		                                  conn.channel()
+		                                      .closeFuture()
+		                                      .addListener(f -> latch1.countDown()))
+		                              .post()
 		                              .uri("/1")
 		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
 		                              .responseContent()
@@ -110,13 +119,20 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		Thread.sleep(5000);
+
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+
 		InetSocketAddress ca = (InetSocketAddress) clientAddress.get();
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 		checkExpectationsExisting("/1", ca.getHostString() + ":" + ca.getPort(),
 				sa.getHostString() + ":" + sa.getPort(), 1);
 
-		StepVerifier.create(httpClient.post()
+		CountDownLatch latch2 = new CountDownLatch(1);
+		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
+		                                  conn.channel()
+		                                      .closeFuture()
+		                                      .addListener(f -> latch2.countDown()))
+		                              .post()
 		                              .uri("/2")
 		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
 		                              .responseContent()
@@ -126,7 +142,9 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		Thread.sleep(5000);
+
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+
 		ca = (InetSocketAddress) clientAddress.get();
 		sa = (InetSocketAddress) serverAddress.get();
 		checkExpectationsExisting("/2", ca.getHostString() + ":" + ca.getPort(),
@@ -182,7 +200,7 @@ public class HttpMetricsHandlerTests {
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, 1, 12);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, true, 1, 12);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 14*index, 84*index);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 14, 84);
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 2*index, 151*index);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
@@ -195,8 +213,8 @@ public class HttpMetricsHandlerTests {
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 1);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 1);
 		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, true, 1);
-		checkTimer(CLIENT_CONNECT_TIME, timerTags3, true, 1);
-		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
+		//checkTimer(CLIENT_CONNECT_TIME, timerTags3, true, index);
+		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, true, index);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, true, 1, 12);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, true, 1, 12);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);

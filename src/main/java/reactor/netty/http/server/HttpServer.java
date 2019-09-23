@@ -300,14 +300,28 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Specifies whether the metrics are enabled on the {@link HttpServer},
+	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
+	 * All generated metrics are registered in the Micrometer MeterRegistry,
 	 * assuming Micrometer is on the classpath.
 	 *
 	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param name the name to be used for the metrics
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer metrics(boolean metricsEnabled) {
-		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, "reactor.netty.http.server"));
+	public final HttpServer metrics(boolean metricsEnabled, @Nullable String name) {
+		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, name == null ? "reactor.netty.http.server" : name));
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
+	 * All generated metrics are provided to the specified recorder.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param recorder the {@link HttpServerMetricsRecorder}
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer metrics(boolean metricsEnabled, HttpServerMetricsRecorder recorder) {
+		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, recorder));
 	}
 
 	/**

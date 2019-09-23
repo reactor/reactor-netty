@@ -27,6 +27,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static reactor.netty.Metrics.ERROR;
+import static reactor.netty.Metrics.SUCCESS;
+
 /**
  * @author Violeta Georgieva
  */
@@ -120,8 +123,4 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 			}
 		};
 	}
-
-	static final String SUCCESS = "SUCCESS";
-
-	static final String ERROR = "ERROR";
 }

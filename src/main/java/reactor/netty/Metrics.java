@@ -58,8 +58,7 @@ public class Metrics {
 
 	public static final String ERROR = "ERROR";
 
-
-	static final int MAX_URI_TAGS = 100;
+	public static final int MAX_URI_TAGS = 100;
 
 
 	@Nullable
@@ -74,23 +73,5 @@ public class Metrics {
 			}
 		}
 		return null;
-	}
-
-	public static MeterFilter maxUriTagsMeterFilter(String meterNamePrefix) {
-		return MeterFilter.maximumAllowableTags(meterNamePrefix, URI, MAX_URI_TAGS, new MaxUriTagsMeterFilter());
-	}
-
-	static final class MaxUriTagsMeterFilter implements MeterFilter {
-		final AtomicBoolean logged = new AtomicBoolean(false);
-
-		@Override
-		public MeterFilterReply accept(Meter.Id id) {
-			if (logger.isWarnEnabled() && logged.compareAndSet(false, true)) {
-				logger.warn("Reached the maximum number of URI tags for {0}.", id.getName());
-			}
-			return MeterFilterReply.DENY;
-		}
-
-		static final Logger logger = Loggers.getLogger(MaxUriTagsMeterFilter.class);
 	}
 }

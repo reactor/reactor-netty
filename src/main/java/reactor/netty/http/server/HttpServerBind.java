@@ -362,12 +362,16 @@ final class HttpServerBind extends HttpServer
 			if (handler != null) {
 				// TODO doesn't take into account proxy protocol address and forward headers
 				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
+				HttpServerMetricsHandler httpMetrics;
 				if (channelMetricsRecorder instanceof MicrometerChannelMetricsRecorder) {
 					MicrometerChannelMetricsRecorder recorder = (MicrometerChannelMetricsRecorder) channelMetricsRecorder;
-					HttpServerMetricsHandler httpMetrics =
-						new HttpServerMetricsHandler(recorder.registry(),
-						                             recorder.name());
-					p.addLast(NettyPipeline.HttpMetricsHandler, httpMetrics);
+					httpMetrics = new HttpServerMetricsHandler(
+							new MicrometerHttpServerMetricsRecorder(recorder.name(), recorder.remoteAddress(), "http"));
+					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
+				}
+				else if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
+					httpMetrics = new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder);
+					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
 				}
 			}
 
@@ -460,12 +464,16 @@ final class HttpServerBind extends HttpServer
 			if (handler != null) {
 				// TODO doesn't take into account proxy protocol address and forward headers
 				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
+				HttpServerMetricsHandler httpMetrics;
 				if (channelMetricsRecorder instanceof MicrometerChannelMetricsRecorder) {
 					MicrometerChannelMetricsRecorder recorder = (MicrometerChannelMetricsRecorder) channelMetricsRecorder;
-					HttpServerMetricsHandler httpMetrics =
-							new HttpServerMetricsHandler(recorder.registry(),
-							                             recorder.name());
-					p.addLast(NettyPipeline.HttpMetricsHandler, httpMetrics);
+					httpMetrics = new HttpServerMetricsHandler(
+							new MicrometerHttpServerMetricsRecorder(recorder.name(), recorder.remoteAddress(), "http"));
+					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
+				}
+				else if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
+					httpMetrics = new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder);
+					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
 				}
 			}
 		}
@@ -676,11 +684,15 @@ final class HttpServerBind extends HttpServer
 				if (handler != null) {
 					// TODO doesn't take into account proxy protocol address and forward headers
 					ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
+					HttpServerMetricsHandler httpMetrics;
 					if (channelMetricsRecorder instanceof MicrometerChannelMetricsRecorder) {
 						MicrometerChannelMetricsRecorder recorder = (MicrometerChannelMetricsRecorder) channelMetricsRecorder;
-						HttpServerMetricsHandler httpMetrics =
-								new HttpServerMetricsHandler(recorder.registry(),
-								                             recorder.name());
+						httpMetrics = new HttpServerMetricsHandler(
+								new MicrometerHttpServerMetricsRecorder(recorder.name(), recorder.remoteAddress(), "http"));
+						p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
+					}
+					else if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
+						httpMetrics = new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder);
 						p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
 					}
 				}

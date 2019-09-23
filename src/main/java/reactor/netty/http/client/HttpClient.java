@@ -821,14 +821,28 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Specifies whether the metrics are enabled on the {@link HttpClient},
+	 * Specifies whether the metrics are enabled on the {@link HttpClient}.
+	 * All generated metrics are registered in the Micrometer MeterRegistry,
 	 * assuming Micrometer is on the classpath.
 	 *
 	 * @param metricsEnabled if true enables the metrics on the client.
+	 * @param name the name to be used for the metrics
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient metrics(boolean metricsEnabled) {
-		return tcpConfiguration(tcpClient -> tcpClient.metrics(metricsEnabled, "reactor.netty.http.client"));
+	public final HttpClient metrics(boolean metricsEnabled, @Nullable String name) {
+		return tcpConfiguration(tcpClient -> tcpClient.metrics(metricsEnabled, name == null ? "reactor.netty.http.client" : name));
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpClient}.
+	 * All generated metrics are provided to the specified recorder.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param recorder the {@link HttpClientMetricsRecorder}
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient metrics(boolean metricsEnabled, HttpClientMetricsRecorder recorder) {
+		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, recorder));
 	}
 
 	/**
