@@ -251,14 +251,9 @@ final class HttpPredicate
 
 		private static final Pattern NAME_SPLAT_PATTERN     =
 				Pattern.compile("\\{([^/]+?)\\}[\\*][\\*]");
-		// JDK 6 doesn't support named capture groups
-		private static final String  NAME_SPLAT_REPLACEMENT = "(?<%NAME%>.*)";
-		//private static final String  NAME_SPLAT_REPLACEMENT = "(.*)";
 
 		private static final Pattern NAME_PATTERN     = Pattern.compile("\\{([^/]+?)\\}");
 		// JDK 6 doesn't support named capture groups
-		private static final String  NAME_REPLACEMENT = "(?<%NAME%>[^\\/]*)";
-		//private static final String  NAME_REPLACEMENT = "([^\\/]*)";
 
 		private final List<String>                         pathVariables =
 				new ArrayList<>();
@@ -268,6 +263,14 @@ final class HttpPredicate
 				new HashMap<>();
 
 		private final Pattern uriPattern;
+
+		private static String getNameSplatReplacement(String name) {
+			return "(?<" + name + ">.*)";
+		}
+
+		private static String getNameReplacement(String name) {
+			return "(?<" + name + ">[^\\/]*)";
+		}
 
 		static String filterQueryParams(String uri) {
 			int hasQuery = uri.lastIndexOf("?");
@@ -292,7 +295,7 @@ final class HttpPredicate
 				for (int i = 1; i <= m.groupCount(); i++) {
 					String name = m.group(i);
 					pathVariables.add(name);
-					s = m.replaceFirst(NAME_SPLAT_REPLACEMENT.replaceAll("%NAME%", name));
+					s = m.replaceFirst(getNameSplatReplacement(name));
 					m.reset(s);
 				}
 			}
@@ -302,7 +305,7 @@ final class HttpPredicate
 				for (int i = 1; i <= m.groupCount(); i++) {
 					String name = m.group(i);
 					pathVariables.add(name);
-					s = m.replaceFirst(NAME_REPLACEMENT.replaceAll("%NAME%", name));
+					s = m.replaceFirst(getNameReplacement(name));
 					m.reset(s);
 				}
 			}
