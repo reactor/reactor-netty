@@ -39,6 +39,8 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -65,9 +67,9 @@ public class HttpMetricsHandlerTests {
 				          .port(0)
 				          .metrics(true)
 				          .route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
-				                                                    .send(req.receive().retain()))
+				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))
 				                       .post("/2", (req, res) -> res.header("Connection", "close")
-				                                                    .send(req.receive().retain()))));
+				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))));
 
 		provider = ConnectionProvider.fixed("test", 1);
 		httpClient =
@@ -280,7 +282,13 @@ public class HttpMetricsHandlerTests {
 		if (exists) {
 			assertNotNull(timer);
 			assertEquals(expectedCount, timer.count());
-			assertTrue(timer.totalTime(TimeUnit.SECONDS) > 0);
+			try {
+				assertTrue(timer.totalTime(TimeUnit.MICROSECONDS) > 0);
+			}
+			catch (AssertionError e) {
+				log.error("timer "+ timer +" - time: "+timer.totalTime(TimeUnit.NANOSECONDS), e);
+				throw e;
+			}
 		}
 		else {
 			assertNull(timer);
@@ -292,7 +300,13 @@ public class HttpMetricsHandlerTests {
 		if (exists) {
 			assertNotNull(summary);
 			assertEquals(expectedCount, summary.count());
-			assertTrue(summary.totalAmount() >= expectedAmound);
+			try {
+				assertTrue(summary.totalAmount() >= expectedAmound);
+			}
+			catch (AssertionError e) {
+				log.error("total: "+summary.totalAmount(), e);
+				throw e;
+			}
 		}
 		else {
 			assertNull(summary);
@@ -309,6 +323,8 @@ public class HttpMetricsHandlerTests {
 			assertNull(counter);
 		}
 	}
+
+	static final Logger log = Loggers.getLogger(HttpMetricsHandlerTests.class);
 
 
 	private static final String SERVER_METRICS_NAME = "reactor.netty.http.server";

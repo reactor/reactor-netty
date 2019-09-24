@@ -103,7 +103,7 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		String[] timerTags = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "ERROR"};
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
-		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
+		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 0, 0);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 0, 0);
 		checkCounter(SERVER_ERRORS, summaryTags, 2);

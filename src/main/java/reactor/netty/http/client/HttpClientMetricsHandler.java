@@ -80,8 +80,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 				recorder.recordDataSent(address, request.uri(), dataSent);
 			});
 		}
-
-		super.write(ctx, msg, promise);
+		ctx.write(msg, promise);
 	}
 
 	@Override
@@ -101,7 +100,6 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
 		if (msg instanceof LastHttpContent) {
 			SocketAddress address = ctx.channel().remoteAddress();
-
 			recorder.recordDataReceivedTime(address,
 					request.uri(),
 					request.method().name(),
@@ -115,18 +113,17 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 					Duration.ofMillis(System.currentTimeMillis() - dataSentTime));
 
 			recorder.recordDataReceived(address, request.uri(), dataReceived);
-
 			reset();
 		}
 
-		super.channelRead(ctx, msg);
+		ctx.fireChannelRead(msg);
 	}
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		recorder.incrementErrorsCount(ctx.channel().remoteAddress(), request.uri());
 
-		super.exceptionCaught(ctx, cause);
+		ctx.fireExceptionCaught(cause);
 	}
 
 	private void reset() {

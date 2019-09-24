@@ -66,7 +66,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			             new TlsMetricsHandler(recorder, remoteAddress));
 		}
 
-		super.channelRegistered(ctx);
+		ctx.fireChannelRegistered();
 	}
 
 	@Override
@@ -90,7 +90,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			}
 		}
 
-		super.channelRead(ctx, msg);
+		ctx.fireChannelRead(msg);
 	}
 
 	@Override
@@ -114,7 +114,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			}
 		}
 
-		super.write(ctx, msg, promise);
+		ctx.write(msg, promise);
 	}
 
 	@Override
@@ -126,7 +126,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			recorder.incrementErrorsCount(ctx.channel().remoteAddress());
 		}
 
-		super.exceptionCaught(ctx, cause);
+		ctx.fireExceptionCaught(cause);
 	}
 
 	public ChannelMetricsRecorder recorder() {
