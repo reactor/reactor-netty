@@ -194,7 +194,7 @@ By default, the `UDP` client is configured with the following options:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/udp/UdpClient.java
 ----
-include::{sourcedir}/reactor/netty/udp/UdpClient.java[lines=429..431]
+include::{sourcedir}/reactor/netty/udp/UdpClient.java[lines=476..478]
 ----
 ====
 

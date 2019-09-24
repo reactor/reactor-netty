@@ -218,7 +218,7 @@ By default, the `UDP` server is configured with the following options:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/udp/UdpServer.java
 ----
-include::{sourcedir}/reactor/netty/udp/UdpServer.java[lines=429..431]
+include::{sourcedir}/reactor/netty/udp/UdpServer.java[lines=476..478]
 ----
 ====
 

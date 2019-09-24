@@ -188,7 +188,7 @@ By default, the `TCP` client is configured with the following options:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/tcp/TcpClient.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpClient.java[lines=598..600]
+include::{sourcedir}/reactor/netty/tcp/TcpClient.java[lines=617..619]
 ----
 ====
 
