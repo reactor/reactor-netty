@@ -292,7 +292,7 @@ public class PooledConnectionProviderTest {
 
 		@Override
 		public Mono<Void> disposeLater() {
-			return null;
+			return Mono.fromRunnable(this::incrementAndGet);
 		}
 
 		@Override

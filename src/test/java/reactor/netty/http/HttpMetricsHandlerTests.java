@@ -28,6 +28,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.buffer.ByteBuf;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -58,6 +59,8 @@ public class HttpMetricsHandlerTests {
 	private ConnectionProvider provider;
 	private HttpClient httpClient;
 	private MeterRegistry registry;
+	
+	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
 	@Before
 	public void setUp() {
@@ -113,7 +116,7 @@ public class HttpMetricsHandlerTests {
 		                                      .addListener(f -> latch1.countDown()))
 		                              .post()
 		                              .uri("/1")
-		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
+		                              .send(body)
 		                              .responseContent()
 		                              .aggregate()
 		                              .asString())
@@ -136,7 +139,7 @@ public class HttpMetricsHandlerTests {
 		                                      .addListener(f -> latch2.countDown()))
 		                              .post()
 		                              .uri("/2")
-		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
+		                              .send(body)
 		                              .responseContent()
 		                              .aggregate()
 		                              .asString())
@@ -163,7 +166,7 @@ public class HttpMetricsHandlerTests {
 
 		StepVerifier.create(httpClient.post()
 		                              .uri("/3")
-		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
+		                              .send(body)
 		                              .responseContent()
 		                              .aggregate()
 		                              .asString())
@@ -176,7 +179,7 @@ public class HttpMetricsHandlerTests {
 
 		StepVerifier.create(httpClient.post()
 		                              .uri("/3")
-		                              .send(ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")))
+		                              .send(body)
 		                              .responseContent()
 		                              .aggregate()
 		                              .asString())

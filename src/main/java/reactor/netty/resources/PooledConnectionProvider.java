@@ -176,7 +176,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			for (PoolKey key : channelPools.keySet()) {
 				pools.add(channelPools.remove(key).disposeLater());
 			}
-
+			if (pools.isEmpty()) {
+				return Mono.empty();
+			}
 			return Mono.when(pools);
 		});
 	}
