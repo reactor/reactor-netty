@@ -28,7 +28,7 @@ public interface HttpMetricsRecorder extends ChannelMetricsRecorder {
 	 * Records the amount of the data that is received, in bytes
 	 *
 	 * @param remoteAddress The remote peer
-	 * @param uri
+	 * @param uri the requested URI
 	 * @param bytes The amount of the data that is received, in bytes
 	 */
 	void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes);
@@ -37,7 +37,7 @@ public interface HttpMetricsRecorder extends ChannelMetricsRecorder {
 	 * Records the amount of the data that is sent, in bytes
 	 *
 	 * @param remoteAddress The remote peer
-	 * @param uri
+	 * @param uri the requested URI
 	 * @param bytes The amount of the data that is sent, in bytes
 	 */
 	void recordDataSent(SocketAddress remoteAddress, String uri, long bytes);
@@ -46,7 +46,7 @@ public interface HttpMetricsRecorder extends ChannelMetricsRecorder {
 	 * Increments the number of the errors that are occurred
 	 *
 	 * @param remoteAddress The remote peer
-	 * @param uri
+	 * @param uri the requested URI
 	 */
 	void incrementErrorsCount(SocketAddress remoteAddress, String uri);
 }

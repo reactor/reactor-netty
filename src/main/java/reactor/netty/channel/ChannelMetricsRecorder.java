@@ -19,6 +19,8 @@ import java.net.SocketAddress;
 import java.time.Duration;
 
 /**
+ * Interface for collecting metrics on protocol level
+ *
  * @author Violeta Georgieva
  */
 public interface ChannelMetricsRecorder {

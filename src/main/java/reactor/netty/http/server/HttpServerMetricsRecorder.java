@@ -20,6 +20,8 @@ import reactor.netty.http.HttpMetricsRecorder;
 import java.time.Duration;
 
 /**
+ * Interface for collecting metrics on HTTP server level
+ *
  * @author Violeta Georgieva
  */
 public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
@@ -27,8 +29,8 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	/**
 	 * Records the time that is spent in consuming incoming data
 	 *
-	 * @param uri
-	 * @param method
+	 * @param uri the requested URI
+	 * @param method the HTTP method
 	 * @param time the time that is spent in consuming incoming data
 	 */
 	void recordDataReceivedTime(String uri, String method, Duration time);
@@ -36,9 +38,9 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	/**
 	 * Records the time that is spent in sending outgoing data
 	 *
-	 * @param uri
-	 * @param method
-	 * @param status
+	 * @param uri the requested URI
+	 * @param method the HTTP method
+	 * @param status the HTTP status
 	 * @param time the time that is spent in sending outgoing data
 	 */
 	void recordDataSentTime(String uri, String method, String status, Duration time);
@@ -46,9 +48,9 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	/**
 	 * Records the total time for the request/response
 	 *
-	 * @param uri
-	 * @param method
-	 * @param status
+	 * @param uri the requested URI
+	 * @param method the HTTP method
+	 * @param status the HTTP status
 	 * @param time the total time for the request/response
 	 */
 	void recordResponseTime(String uri, String method, String status, Duration time);

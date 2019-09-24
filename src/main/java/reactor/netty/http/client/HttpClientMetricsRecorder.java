@@ -20,15 +20,20 @@ import reactor.netty.http.HttpMetricsRecorder;
 import java.net.SocketAddress;
 import java.time.Duration;
 
+/**
+ * Interface for collecting metrics on HTTP client level
+ *
+ * @author Violeta Georgieva
+ */
 public interface HttpClientMetricsRecorder extends HttpMetricsRecorder {
 
 	/**
 	 * Records the time that is spent in consuming incoming data
 	 *
-	 * @param remoteAddress
-	 * @param uri
-	 * @param method
-	 * @param status
+	 * @param remoteAddress The remote peer
+	 * @param uri the requested URI
+	 * @param method the HTTP method
+	 * @param status the HTTP status
 	 * @param time the time that is spent in consuming incoming data
 	 */
 	void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time);
@@ -36,9 +41,9 @@ public interface HttpClientMetricsRecorder extends HttpMetricsRecorder {
 	/**
 	 * Records the time that is spent in sending outgoing data
 	 *
-	 * @param remoteAddress
-	 * @param uri
-	 * @param method
+	 * @param remoteAddress The remote peer
+	 * @param uri the requested URI
+	 * @param method the HTTP method
 	 * @param time the time that is spent in sending outgoing data
 	 */
 	void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time);
@@ -46,10 +51,10 @@ public interface HttpClientMetricsRecorder extends HttpMetricsRecorder {
 	/**
 	 * Records the total time for the request/response
 	 *
-	 * @param remoteAddress
-	 * @param uri
-	 * @param method
-	 * @param status
+	 * @param remoteAddress The remote peer
+	 * @param uri the requested URI
+	 * @param method the HTTP method
+	 * @param status the HTTP status
 	 * @param time the total time for the request/response
 	 */
 	void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time);
