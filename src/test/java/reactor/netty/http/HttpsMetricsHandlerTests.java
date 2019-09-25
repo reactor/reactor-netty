@@ -17,6 +17,7 @@ package reactor.netty.http;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.BeforeClass;
@@ -40,7 +41,9 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 	@Override
 	protected HttpServer customizeServerOptions(HttpServer server) {
 		try {
-			SslContext ctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+			SslContext ctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+			                                  .sslProvider(SslProvider.JDK)
+			                                  .build();
 			return server.secure(ssl -> ssl.sslContext(ctx));
 		}
 		catch (SSLException e) {
@@ -52,7 +55,9 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 	protected HttpClient customizeClientOptions(HttpClient httpClient) {
 		try {
 			SslContext ctx = SslContextBuilder.forClient()
-			                                  .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+			                                  .trustManager(InsecureTrustManagerFactory.INSTANCE)
+			                                  .sslProvider(SslProvider.JDK)
+			                                  .build();
 			return httpClient.secure(ssl -> ssl.sslContext(ctx));
 		}
 		catch (SSLException e) {
