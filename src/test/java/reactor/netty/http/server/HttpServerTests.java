@@ -1190,4 +1190,60 @@ public class HttpServerTests {
 		server.disposeNow();
 		client.disposeNow();
 	}
+
+	@Test
+	public void testDecodingFailureLastHttpContent() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .route(r -> r.put("/1", (req, res) -> req.receive()
+				                                                   .then(res.sendString(Mono.just("test"))
+				                                                            .then()))
+				                       .put("/2", (req, res) -> res.send(req.receive().retain())))
+				          .bindNow();
+
+		TcpClient tcpClient =
+				TcpClient.create()
+				         .port(server.port())
+				         .wiretap(true);
+
+		Connection connection = tcpClient.connectNow();
+
+		AtomicReference<String> result = new AtomicReference<>();
+		connection.outbound()
+		          .sendString(Mono.just("PUT /1 HTTP/1.1\r\nHost: a.example.com\r\n" +
+		                  "Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n"))
+		          .then(connection.inbound()
+		                          .receive()
+		                          .asString()
+		                          .doOnNext(result::set)
+		                          .then())
+		          .then()
+		          .block(Duration.ofSeconds(30));
+
+		assertThat(result).isNotNull();
+		assertThat(result.get()).contains("400 Bad Request")
+		                        .contains("connection: close");
+		assertThat(connection.channel().isActive()).isFalse();
+
+		connection = tcpClient.connectNow();
+
+		connection.outbound()
+		          .sendString(Mono.just("PUT /2 HTTP/1.1\r\nHost: a.example.com\r\n" +
+		                  "Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n"))
+		          .then(connection.inbound()
+		                          .receive()
+		                          .asString()
+		                          .doOnNext(result::set)
+		                          .then())
+		          .then()
+		          .block(Duration.ofSeconds(30));
+
+		assertThat(result).isNotNull();
+		assertThat(result.get()).contains("200 OK");
+		assertThat(connection.channel().isActive()).isFalse();
+
+		server.disposeNow();
+	}
 }
