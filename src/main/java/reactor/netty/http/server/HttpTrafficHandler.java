@@ -29,6 +29,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DecoderResult;
+import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -113,26 +114,6 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		if (msg instanceof HttpRequest) {
 			final HttpRequest request = (HttpRequest) msg;
 
-			DecoderResult decoderResult = request.decoderResult();
-			if (decoderResult.isFailure()) {
-				Throwable cause = decoderResult.cause();
-				if (HttpServerOperations.log.isDebugEnabled()) {
-					HttpServerOperations.log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "),
-							cause);
-				}
-				ReferenceCountUtil.release(msg);
-
-				HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
-				        cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
-				                                                 HttpResponseStatus.BAD_REQUEST);
-				response.headers()
-				        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
-				        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-				ctx.writeAndFlush(response)
-				   .addListener(ChannelFutureListener.CLOSE);
-				return;
-			}
-
 			if (persistentConnection) {
 				pendingResponses += 1;
 				if (HttpServerOperations.log.isDebugEnabled()) {
@@ -163,6 +144,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			else {
 				overflow = false;
 
+				DecoderResult decoderResult = request.decoderResult();
+				if (decoderResult.isFailure()) {
+					sendDecodingFailures(decoderResult.cause(), msg);
+					return;
+				}
+
 				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						compress, request,
@@ -183,6 +170,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		}
 		else if (persistentConnection && pendingResponses == 0) {
 			if (msg instanceof LastHttpContent) {
+				DecoderResult decoderResult = ((LastHttpContent) msg).decoderResult();
+				if (decoderResult.isFailure()) {
+					sendDecodingFailures(decoderResult.cause(), msg);
+					return;
+				}
+
 				ctx.fireChannelRead(msg);
 			}
 			else {
@@ -205,7 +198,35 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			doPipeline(ctx, msg);
 			return;
 		}
+
+		if (msg instanceof DecoderResultProvider) {
+			DecoderResult decoderResult = ((DecoderResultProvider) msg).decoderResult();
+			if (decoderResult.isFailure()) {
+				sendDecodingFailures(decoderResult.cause(), msg);
+				return;
+			}
+		}
+
 		ctx.fireChannelRead(msg);
+	}
+
+	void sendDecodingFailures(Throwable cause, Object msg) {
+		if (HttpServerOperations.log.isDebugEnabled()) {
+			HttpServerOperations.log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "), cause);
+		}
+
+		persistentConnection = false;
+
+		ReferenceCountUtil.release(msg);
+
+		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
+				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
+				                                         HttpResponseStatus.BAD_REQUEST);
+		response.headers()
+		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+		ctx.writeAndFlush(response)
+		   .addListener(ChannelFutureListener.CLOSE);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
@@ -302,7 +323,16 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 					discard();
 					return;
 				}
-				nextRequest = (HttpRequest)next;
+
+				nextRequest = (HttpRequest) next;
+
+				DecoderResult decoderResult = nextRequest.decoderResult();
+				if (decoderResult.isFailure()) {
+					sendDecodingFailures(decoderResult.cause(), nextRequest);
+					discard();
+					return;
+				}
+
 				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 						listener,
 						compress,
