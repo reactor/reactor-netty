@@ -614,6 +614,7 @@ public abstract class BootstrapHandlers {
 					"BootstrapHandlers.finalizeHandler() call");
 		}
 
+		@SuppressWarnings("deprecation")
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 			throw Exceptions.propagate(cause);

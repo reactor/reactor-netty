@@ -100,7 +100,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 						}
 					}
 					String loggingMsg;
-					if (msg instanceof ByteBufHolder && ((ByteBufHolder)msg).content() != Unpooled.EMPTY_BUFFER) {
+					if (msg instanceof ByteBufHolder && !Unpooled.EMPTY_BUFFER.equals(((ByteBufHolder) msg).content())) {
 						ByteBuf buffer = ((ByteBufHolder) msg).content();
 						loggingMsg = "\n"+ByteBufUtil.prettyHexDump(buffer);
 					}

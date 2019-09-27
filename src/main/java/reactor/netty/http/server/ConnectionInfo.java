@@ -102,7 +102,7 @@ final class ConnectionInfo {
 		InetSocketAddress hostAddress = channel.localAddress();
 		String scheme = secured ? "https" : "http";
 
-		String forwarded = request.headers().get(FORWARDED_HEADER).split(",")[0];
+		String forwarded = request.headers().get(FORWARDED_HEADER).split(",",2)[0];
 		Matcher hostMatcher = FORWARDED_HOST_PATTERN.matcher(forwarded);
 		if (hostMatcher.find()) {
 			hostAddress = parseAddress(hostMatcher.group(1), hostAddress.getPort());
@@ -141,18 +141,18 @@ final class ConnectionInfo {
 		InetSocketAddress hostAddress = channel.localAddress();
 		String scheme =  secured ? "https" : "http";
 		if (request.headers().contains(XFORWARDED_IP_HEADER)) {
-			String remoteIpValue = request.headers().get(XFORWARDED_IP_HEADER).split(",")[0];
+			String remoteIpValue = request.headers().get(XFORWARDED_IP_HEADER).split(",",2)[0];
 			remoteAddress = parseAddress(remoteIpValue, remoteAddress.getPort());
 		}
 		if(request.headers().contains(XFORWARDED_HOST_HEADER)) {
 			if(request.headers().contains(XFORWARDED_PORT_HEADER)) {
 				hostAddress = InetSocketAddressUtil.createUnresolved(
-						request.headers().get(XFORWARDED_HOST_HEADER).split(",")[0].trim(),
-						Integer.parseInt(request.headers().get(XFORWARDED_PORT_HEADER).split(",")[0].trim()));
+						request.headers().get(XFORWARDED_HOST_HEADER).split(",",2)[0].trim(),
+						Integer.parseInt(request.headers().get(XFORWARDED_PORT_HEADER).split(",",2)[0].trim()));
 			}
 			else {
 				hostAddress = InetSocketAddressUtil.createUnresolved(
-						request.headers().get(XFORWARDED_HOST_HEADER).split(",")[0].trim(),
+						request.headers().get(XFORWARDED_HOST_HEADER).split(",",2)[0].trim(),
 						channel.localAddress().getPort());
 			}
 		}

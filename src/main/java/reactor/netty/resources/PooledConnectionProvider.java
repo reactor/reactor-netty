@@ -290,6 +290,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			public void handlerRemoved(ChannelHandlerContext ctx) {
 			}
 
+			@SuppressWarnings("deprecation")
 			@Override
 			public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 				ctx.pipeline().remove(this);

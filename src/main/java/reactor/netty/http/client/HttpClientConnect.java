@@ -624,7 +624,7 @@ final class HttpClientConnect extends HttpClient {
 			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
 		}
 
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({"unchecked","rawtypes"})
 		static Supplier<String>[] addToRedirectedFromArray(@Nullable Supplier<String>[] redirectedFrom,
 				UriEndpoint from) {
 			Supplier<String> fromUrlSupplier = from::toExternalForm;
@@ -955,6 +955,7 @@ final class HttpClientConnect extends HttpClient {
 
 	}
 
+	@SuppressWarnings("rawtypes")
 	static void openStream(Channel ch, ConnectionObserver listener,
 			HttpClientInitializer initializer) {
 		Http2StreamChannelBootstrap http2StreamChannelBootstrap =

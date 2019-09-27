@@ -200,6 +200,7 @@ final class TcpServerBind extends TcpServer {
 			this.childObs = childObs;
 		}
 
+		@SuppressWarnings("rawtypes")
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
 			ChannelOperations ops = ChannelOperations.get(connection.channel());
