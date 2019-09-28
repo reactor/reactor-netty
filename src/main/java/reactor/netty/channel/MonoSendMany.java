@@ -609,7 +609,6 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
-		@SuppressWarnings("rawtypes")
 		public Void get(long timeout, TimeUnit unit) {
 			throw new UnsupportedOperationException();
 		}

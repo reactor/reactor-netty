@@ -794,6 +794,6 @@ public final class ReactorNetty {
 
 	static final ByteBuf                   BOUNDARY              = Unpooled.EMPTY_BUFFER;
 
-	public static final Predicate<ByteBuf> PREDICATE_GROUP_FLUSH = BOUNDARY::equals;
+	public static final Predicate<ByteBuf> PREDICATE_GROUP_FLUSH = b -> b == BOUNDARY;
 
 }
