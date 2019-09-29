@@ -219,6 +219,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		// modify message on way out to add headers if needed
 		if (msg instanceof HttpResponse) {
@@ -236,6 +237,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			}
 
 			if (response.status().equals(HttpResponseStatus.CONTINUE)) {
+				//"FutureReturnValueIgnored" this is deliberate
 				ctx.write(msg, promise);
 				return;
 			}
@@ -283,6 +285,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			}
 			return;
 		}
+		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);
 	}
 

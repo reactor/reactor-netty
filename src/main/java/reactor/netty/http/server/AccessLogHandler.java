@@ -36,7 +36,7 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 	AccessLog accessLog = new AccessLog();
 
 	@Override
-	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			final HttpRequest request = (HttpRequest) msg;
 			final SocketChannel channel = (SocketChannel) ctx.channel();
@@ -48,16 +48,18 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 			        .uri(request.uri())
 			        .protocol(request.protocolVersion().text());
 		}
-		super.channelRead(ctx, msg);
+		ctx.fireChannelRead(msg);
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof HttpResponse) {
 			final HttpResponse response = (HttpResponse) msg;
 			final HttpResponseStatus status = response.status();
 
 			if (status.equals(HttpResponseStatus.CONTINUE)) {
+				//"FutureReturnValueIgnored" this is deliberate
 				ctx.write(msg, promise);
 				return;
 			}
@@ -85,6 +87,7 @@ final class AccessLogHandler extends ChannelDuplexHandler {
 		if (msg instanceof ByteBufHolder) {
 			accessLog.increaseContentLength(((ByteBufHolder) msg).content().readableBytes());
 		}
+		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);
 	}
 }

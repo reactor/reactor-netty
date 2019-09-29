@@ -112,7 +112,9 @@ final class ColocatedEventLoopGroup implements EventLoopGroup, Supplier<EventLoo
 
 	@Deprecated
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void shutdown() {
+		//"FutureReturnValueIgnored" this is deliberate
 		shutdownGracefully();
 	}
 

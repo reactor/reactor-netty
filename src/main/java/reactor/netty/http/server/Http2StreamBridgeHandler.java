@@ -108,6 +108,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof Http2Headers) {
 			msg = new DefaultHttp2HeadersFrame((Http2Headers) msg);
@@ -124,6 +125,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 			msg = new DefaultHttp2DataFrame((ByteBuf) msg);
 		}
 
+		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);
 	}
 
