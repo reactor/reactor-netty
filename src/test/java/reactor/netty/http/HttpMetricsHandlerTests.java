@@ -126,6 +126,7 @@ public class HttpMetricsHandlerTests {
 
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+		Thread.sleep(5000);
 
 		InetSocketAddress ca = (InetSocketAddress) clientAddress.get();
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
@@ -149,6 +150,7 @@ public class HttpMetricsHandlerTests {
 
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+		Thread.sleep(5000);
 
 		ca = (InetSocketAddress) clientAddress.get();
 		sa = (InetSocketAddress) serverAddress.get();
