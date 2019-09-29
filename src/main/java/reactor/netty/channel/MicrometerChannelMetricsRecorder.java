@@ -42,8 +42,6 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 
 	protected final String remoteAddress;
 
-	protected String protocol;
-
 	final DistributionSummary.Builder dataReceivedBuilder;
 	DistributionSummary dataReceived;
 
@@ -60,7 +58,6 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		if (remoteAddress == null && !"udp".equals(protocol)) {
 			throw new IllegalArgumentException("remoteAddress is null for protocol " + protocol);
 		}
-		this.protocol = protocol;
 
 		this.dataReceivedBuilder =
 				DistributionSummary.builder(name + DATA_RECEIVED)

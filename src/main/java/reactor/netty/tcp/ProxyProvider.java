@@ -133,6 +133,7 @@ public final class ProxyProvider {
 	 * a configured list of hosts that should be reached directly, bypassing the
 	 * proxy.
 	 */
+	@Nullable
 	public final Pattern getNonProxyHosts() {
 		return this.nonProxyHosts;
 	}
@@ -148,16 +149,17 @@ public final class ProxyProvider {
 		String password = Objects.nonNull(username) && Objects.nonNull(this.password) ?
 				this.password.apply(username) : null;
 
+		final boolean b = Objects.nonNull(username) && Objects.nonNull(password);
 		switch (this.type) {
 			case HTTP:
-				return Objects.nonNull(username) && Objects.nonNull(password) ?
+				return b ?
 						new HttpProxyHandler(proxyAddr, username, password, this.httpHeaders.get()) :
 						new HttpProxyHandler(proxyAddr, this.httpHeaders.get());
 			case SOCKS4:
 				return Objects.nonNull(username) ? new Socks4ProxyHandler(proxyAddr, username) :
 						new Socks4ProxyHandler(proxyAddr);
 			case SOCKS5:
-				return Objects.nonNull(username) && Objects.nonNull(password) ?
+				return b ?
 						new Socks5ProxyHandler(proxyAddr, username, password) :
 						new Socks5ProxyHandler(proxyAddr);
 		}
@@ -238,6 +240,7 @@ public final class ProxyProvider {
 				username, getPasswordValue(), getAddress().get(), getNonProxyHostsValue(), httpHeaders.get(), getType());
 	}
 
+	@Nullable
 	private String getNonProxyHostsValue() {
 		return (getNonProxyHosts() == null) ? null : getNonProxyHosts().toString();
 	}

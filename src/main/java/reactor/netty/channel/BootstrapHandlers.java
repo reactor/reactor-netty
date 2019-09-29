@@ -132,7 +132,7 @@ public abstract class BootstrapHandlers {
 			b.handler(new BootstrapInitializerHandler(newPipeline, opsFactory, listener));
 		}
 		else {
-			b.handler(new BootstrapInitializerHandler(pipeline, opsFactory, listener));
+			b.handler(new BootstrapInitializerHandler(null, opsFactory, listener));
 		}
 	}
 
