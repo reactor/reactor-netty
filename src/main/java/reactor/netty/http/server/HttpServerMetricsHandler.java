@@ -54,9 +54,11 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 	}
 
 	@Override
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+	@SuppressWarnings("FutureReturnValueIgnored")
+	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof HttpResponse) {
 			if (((HttpResponse) msg).status().equals(HttpResponseStatus.CONTINUE)) {
+				//"FutureReturnValueIgnored" this is deliberate
 				ctx.write(msg, promise);
 				return;
 			}
@@ -104,11 +106,12 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 			});
 		}
 
-		super.write(ctx, msg, promise);
+		//"FutureReturnValueIgnored" this is deliberate
+		ctx.write(msg, promise);
 	}
 
 	@Override
-	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			dataReceivedTime = System.currentTimeMillis();
 			HttpRequest request = (HttpRequest) msg;
@@ -132,15 +135,15 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 			dataReceived = 0;
 		}
 
-		super.channelRead(ctx, msg);
+		ctx.fireChannelRead(msg);
 	}
 
 	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		if (uri != null) {
 			recorder.incrementErrorsCount(ctx.channel().remoteAddress(), uri);
 		}
 
-		super.exceptionCaught(ctx, cause);
+		ctx.fireExceptionCaught(cause);
 	}
 }

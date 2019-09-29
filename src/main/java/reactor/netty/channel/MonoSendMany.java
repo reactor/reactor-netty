@@ -246,6 +246,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void run() {
 			Queue<I> queue = this.queue;
 			try {
@@ -285,6 +286,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 							continue;
 						}
 						pending++;
+						//"FutureReturnValueIgnored" this is deliberate
 						ctx.write(encodedMessage, this);
 
 						if (parent.predicate.test(sourceMessage) || !ctx.channel().isWritable() || readableBytes > ctx.channel().bytesBeforeUnwritable()) {

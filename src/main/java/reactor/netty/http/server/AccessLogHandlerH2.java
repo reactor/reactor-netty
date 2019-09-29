@@ -32,7 +32,7 @@ final class AccessLogHandlerH2 extends ChannelDuplexHandler {
 	AccessLog accessLog = new AccessLog();
 
 	@Override
-	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof Http2HeadersFrame){
 			final Http2HeadersFrame requestHeaders = (Http2HeadersFrame) msg;
 			final SocketChannel channel = (SocketChannel) ctx.channel()
@@ -46,11 +46,12 @@ final class AccessLogHandlerH2 extends ChannelDuplexHandler {
 			        .uri(headers.path())
 			        .protocol(H2_PROTOCOL_NAME);
 		}
-		super.channelRead(ctx, msg);
+		ctx.fireChannelRead(msg);
 	}
 
 	@Override
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+	@SuppressWarnings("FutureReturnValueIgnored")
+	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		boolean lastContent = false;
 		if (msg instanceof Http2HeadersFrame) {
 			final Http2HeadersFrame responseHeaders = (Http2HeadersFrame) msg;
@@ -75,6 +76,7 @@ final class AccessLogHandlerH2 extends ChannelDuplexHandler {
 			   });
 			return;
 		}
+		//"FutureReturnValueIgnored" this is deliberate
 		ctx.write(msg, promise);
 	}
 }

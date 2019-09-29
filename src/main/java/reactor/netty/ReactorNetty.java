@@ -795,7 +795,7 @@ public final class ReactorNetty {
 	static final ByteBuf                   BOUNDARY              = Unpooled.EMPTY_BUFFER;
 
 	@SuppressWarnings("ReferenceEquality")
-	//Desigin to use reference comparison here
+	//Design to use reference comparison here
 	public static final Predicate<ByteBuf> PREDICATE_GROUP_FLUSH = b -> b == BOUNDARY;
 
 }

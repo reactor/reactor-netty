@@ -140,6 +140,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return cacheNioSelectLoops();
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	EventLoopGroup cacheNioSelectLoops() {
 		if (serverSelectLoops == serverLoops) {
 			return cacheNioServerLoops();
@@ -150,6 +151,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 			EventLoopGroup newEventLoopGroup = new NioEventLoopGroup(selectCount,
 					threadFactory(this, "select-nio"));
 			if (!serverSelectLoops.compareAndSet(null, newEventLoopGroup)) {
+				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully();
 			}
 			eventLoopGroup = cacheNioSelectLoops();
@@ -165,12 +167,14 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return cacheNioServerLoops();
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	EventLoopGroup cacheNioServerLoops() {
 		EventLoopGroup eventLoopGroup = serverLoops.get();
 		if (null == eventLoopGroup) {
 			EventLoopGroup newEventLoopGroup = new NioEventLoopGroup(workerCount,
 					threadFactory(this, "nio"));
 			if (!serverLoops.compareAndSet(null, newEventLoopGroup)) {
+				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully();
 			}
 			eventLoopGroup = cacheNioServerLoops();
@@ -208,6 +212,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 				'}';
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	EventLoopGroup cacheNativeSelectLoops() {
 		if (cacheNativeSelectLoops == cacheNativeServerLoops) {
 			return cacheNativeServerLoops();
@@ -220,6 +225,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 					selectCount,
 					threadFactory(this, "select-" + defaultLoop.getName()));
 			if (!cacheNativeSelectLoops.compareAndSet(null, newEventLoopGroup)) {
+				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully();
 			}
 			eventLoopGroup = cacheNativeSelectLoops();
@@ -227,6 +233,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return eventLoopGroup;
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	EventLoopGroup cacheNativeServerLoops() {
 		EventLoopGroup eventLoopGroup = cacheNativeServerLoops.get();
 		if (null == eventLoopGroup) {
@@ -235,6 +242,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 					workerCount,
 					threadFactory(this, defaultLoop.getName()));
 			if (!cacheNativeServerLoops.compareAndSet(null, newEventLoopGroup)) {
+				//"FutureReturnValueIgnored" this is deliberate
 				newEventLoopGroup.shutdownGracefully();
 			}
 			eventLoopGroup = cacheNativeServerLoops();
