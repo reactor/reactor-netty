@@ -32,6 +32,8 @@ import reactor.netty.NettyOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import java.util.Objects;
+
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -100,7 +102,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 						}
 					}
 					String loggingMsg;
-					if (msg instanceof ByteBufHolder && ((ByteBufHolder)msg).content() != Unpooled.EMPTY_BUFFER) {
+					if (msg instanceof ByteBufHolder && !Objects.equals(Unpooled.EMPTY_BUFFER,((ByteBufHolder) msg).content())) {
 						ByteBuf buffer = ((ByteBufHolder) msg).content();
 						loggingMsg = "\n"+ByteBufUtil.prettyHexDump(buffer);
 					}

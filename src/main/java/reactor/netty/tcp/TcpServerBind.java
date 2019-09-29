@@ -202,7 +202,7 @@ final class TcpServerBind extends TcpServer {
 
 		@Override
 		public void onUncaughtException(Connection connection, Throwable error) {
-			ChannelOperations ops = ChannelOperations.get(connection.channel());
+			ChannelOperations<?, ?> ops = ChannelOperations.get(connection.channel());
 			if (ops == null && (error instanceof IOException || AbortedException.isConnectionReset(error))) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "onUncaughtException(" + connection + ")"), error);

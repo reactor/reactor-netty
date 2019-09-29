@@ -73,7 +73,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 		if (msg instanceof LastHttpContent) {
 			promise.addListener(future -> {
-				ChannelOperations channelOps = ChannelOperations.get(ctx.channel());
+				ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
 					recorder.recordDataSentTime(
