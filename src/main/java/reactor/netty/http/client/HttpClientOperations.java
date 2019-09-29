@@ -768,7 +768,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	static final int                    MAX_REDIRECTS      = 50;
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked","rawtypes"})
 	static final Supplier<String>[]     EMPTY_REDIRECTIONS = (Supplier<String>[])new Supplier[0];
 	static final Logger                 log                = Loggers.getLogger(HttpClientOperations.class);
 }

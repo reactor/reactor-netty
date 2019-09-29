@@ -266,6 +266,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 */
 	protected abstract HttpMessage outboundHttpMessage();
 
+	@SuppressWarnings("rawtypes")
 	final static AtomicIntegerFieldUpdater<HttpOperations> HTTP_STATE =
 			AtomicIntegerFieldUpdater.newUpdater(HttpOperations.class,
 					"statusAndHeadersSent");

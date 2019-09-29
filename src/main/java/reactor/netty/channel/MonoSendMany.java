@@ -81,6 +81,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 	@Override
 	@Nullable
+	@SuppressWarnings("rawtypes")
 	public Object scanUnsafe(Attr key) {
 		if (key == Attr.PREFETCH) return MAX_SIZE;
 		if (key == Attr.PARENT) return source;
@@ -374,6 +375,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		@Override
+		@SuppressWarnings("rawtypes")
 		public Object scanUnsafe(Attr key) {
 			if (key == Attr.PARENT) return s;
 			if (key == Attr.ACTUAL) return actual;
@@ -423,6 +425,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			throw new UnsupportedOperationException();
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
 			throw new UnsupportedOperationException();
@@ -433,6 +436,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			return this;
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
 			return this;
@@ -595,8 +599,10 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			throw new UnsupportedOperationException();
 		}
 
+		@SuppressWarnings("rawtypes")
 		static final AtomicIntegerFieldUpdater<SendManyInner>                 WIP          =
 				AtomicIntegerFieldUpdater.newUpdater(SendManyInner.class, "wip");
+		@SuppressWarnings("rawtypes")
 		static final AtomicReferenceFieldUpdater<SendManyInner, Subscription> SUBSCRIPTION =
 				AtomicReferenceFieldUpdater.newUpdater(SendManyInner.class, Subscription.class, "s");
 
