@@ -105,29 +105,29 @@ public class WebsocketTest {
 	public void serverWebSocketFailed() {
 		httpServer =
 				HttpServer.create()
-						.port(0)
-						.handle((in, out) -> {
-							if (!in.requestHeaders().contains("Authorization")) {
-								return out.status(401);
-							} else {
-								return out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")));
-							}
-						})
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .handle((in, out) -> {
+				              if (!in.requestHeaders().contains("Authorization")) {
+				                  return out.status(401);
+				              } else {
+				                  return out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")));
+				              }
+				          })
+				          .wiretap(true)
+				          .bindNow();
 
 		Mono<String> res =
 				HttpClient.create()
 				          .port(httpServer.address()
-						                .getPort())
-						  .websocket()
-						  .uri("/test")
-						  .handle((in, out) -> in.receive().aggregate().asString())
-						  .next();
+				                          .getPort())
+				          .websocket()
+				          .uri("/test")
+				          .handle((in, out) -> in.receive().aggregate().asString())
+				          .next();
 
 		StepVerifier.create(res)
-				.expectError(WebSocketHandshakeException.class)
-				.verify(Duration.ofSeconds(30));
+		            .expectError(WebSocketHandshakeException.class)
+		            .verify(Duration.ofSeconds(30));
 	}
 
 //	static final byte[] testData;
@@ -169,10 +169,10 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.sendString(
-						                                  Mono.just("test")
-						                                      .delayElement(Duration.ofMillis(100))
-						                                      .repeat())))
+		                               (i, o) -> o.sendString(
+		                                                  Mono.just("test")
+		                                                      .delayElement(Duration.ofMillis(100))
+		                                                      .repeat())))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -182,8 +182,8 @@ public class WebsocketTest {
 		                            .websocket()
 		                            .uri("/")
 		                            .handle((in, out) -> in.aggregateFrames()
-		                                                      .receive()
-		                                                      .asString());
+		                                                   .receive()
+		                                                   .asString());
 
 		List<String> expected =
 				Flux.range(1, c)
@@ -208,15 +208,15 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .route(r -> r.get("/test/{param}", (req, res) -> {
-					          log.debug(req.requestHeaders().get("test"));
-					          return res.header("content-type", "text/plain")
-					                    .sendWebsocket((in, out) ->
-							                    out.sendString(in.receive()
-							                                     .asString()
-							                                     .publishOn(Schedulers.single())
-							                                     .doOnNext(s -> serverRes.incrementAndGet())
-							                                     .map(it -> it + ' ' + req.param("param") + '!')
-							                                     .log("server-reply")));
+				              log.debug(req.requestHeaders().get("test"));
+				              return res.header("content-type", "text/plain")
+				                        .sendWebsocket((in, out) ->
+				                                out.sendString(in.receive()
+				                                                 .asString()
+				                                                 .publishOn(Schedulers.single())
+				                                                 .doOnNext(s -> serverRes.incrementAndGet())
+				                                                 .map(it -> it + ' ' + req.param("param") + '!')
+				                                                 .log("server-reply")));
 				          }))
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(5));
@@ -231,14 +231,14 @@ public class WebsocketTest {
 				      .websocket() //TODO investigate why get not working
 				      .uri("/test/World")
 				      .handle((i, o) -> {
-					      o.sendString(Flux.range(1, 1000)
-					                       .log("client-send")
-					                       .map(it -> "" + it), Charset.defaultCharset())
-					       .then()
-					       .subscribe();
+				          o.sendString(Flux.range(1, 1000)
+				                           .log("client-send")
+				                           .map(it -> "" + it), Charset.defaultCharset())
+				           .then()
+				           .subscribe();
 
-					      return i.receive()
-					              .asString();
+				          return i.receive()
+				                  .asString();
 				      })
 				      .log("client-received")
 				      .publishOn(Schedulers.parallel())
@@ -264,10 +264,10 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.sendByteArray(
-						                                  Mono.just("test".getBytes(Charset.defaultCharset()))
-						                                      .delayElement(Duration.ofMillis(100))
-						                                      .repeat())))
+		                               (i, o) -> o.sendByteArray(
+		                                                  Mono.just("test".getBytes(Charset.defaultCharset()))
+		                                                      .delayElement(Duration.ofMillis(100))
+		                                                      .repeat())))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -343,8 +343,7 @@ public class WebsocketTest {
 	public void simpleSubprotocolServerNoSubprotocol() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
-				                                    Mono.just("test"))))
+		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -354,8 +353,7 @@ public class WebsocketTest {
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket("SUBPROTOCOL,OTHER")
 				          .uri("/test")
-				          .handle((i, o) -> i.receive().asString())
-		)
+				          .handle((i, o) -> i.receive().asString()))
 		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
 	}
 
@@ -364,10 +362,10 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       "protoA,protoB",
-				                       (i, o) -> {
-				                       	return o.sendString(Mono.just("test"));
-				                       }))
+		                               "protoA,protoB",
+		                               (i, o) -> {
+		                                   return o.sendString(Mono.just("test"));
+		                               }))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -377,8 +375,7 @@ public class WebsocketTest {
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket("SUBPROTOCOL,OTHER")
 				          .uri("/test")
-				          .handle((i, o) -> i.receive().asString())
-		)
+				          .handle((i, o) -> i.receive().asString()))
 		            //the SERVER returned null which means that it couldn't select a protocol
 		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
 	}
@@ -388,7 +385,7 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket("SUBPROTOCOL",
-				                       (i, o) -> o.sendString(Mono.just("test"))))
+		                               (i, o) -> o.sendString(Mono.just("test"))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -414,9 +411,9 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       "NOT, Common",
-				                       (i, o) -> o.sendString(
-						                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
+		                               "NOT, Common",
+		                               (i, o) -> o.sendString(
+		                                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -500,15 +497,14 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-		                       		"not,proto1", (i, o) -> {
-					                       serverSelectedProtocol.set(i.selectedSubprotocol());
-					                       latch.countDown();
-					                       return i.receive()
-					                               .asString()
-					                               .doOnNext(System.err::println)
-					                               .then();
-				                       })
-		                       )
+		                               "not,proto1", (i, o) -> {
+		                                   serverSelectedProtocol.set(i.selectedSubprotocol());
+		                                   latch.countDown();
+		                                   return i.receive()
+		                                           .asString()
+		                                           .doOnNext(System.err::println)
+		                                           .then();
+		                               }))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -518,9 +514,9 @@ public class WebsocketTest {
 		           .websocket("proto1,proto2")
 		           .uri("/test")
 		           .handle((in, out) -> {
-			          clientSelectedProtocolWhenSimplyUpgrading.set(in.selectedSubprotocol());
-			          clientSelectedProtocol.set(out.selectedSubprotocol());
-			          return out.sendString(Mono.just("HELLO" + out.selectedSubprotocol()));
+		              clientSelectedProtocolWhenSimplyUpgrading.set(in.selectedSubprotocol());
+		              clientSelectedProtocol.set(out.selectedSubprotocol());
+		              return out.sendString(Mono.just("HELLO" + out.selectedSubprotocol()));
 		          })
 		          .blockLast(Duration.ofSeconds(30));
 
@@ -530,49 +526,49 @@ public class WebsocketTest {
 		Assert.assertThat(clientSelectedProtocolWhenSimplyUpgrading.get(), is("proto1"));
 	}
 
-    @Test
-    public void testMaxFramePayloadLengthFailed() {
-        httpServer = HttpServer.create()
-                .port(0)
-                .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901"))))
-                .wiretap(true)
-                .bindNow();
+	@Test
+	public void testMaxFramePayloadLengthFailed() {
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901"))))
+		                       .wiretap(true)
+		                       .bindNow();
 
-        Mono<Void> response = HttpClient.create()
-                        .port(httpServer.address().getPort())
-                        .websocket(10)
-                        .handle((in, out) -> in.receive()
-                                .asString()
-                                .map(srv -> srv))
-                        .log()
-                        .then();
+		Mono<Void> response = HttpClient.create()
+		                                .port(httpServer.address().getPort())
+		                                .websocket(10)
+		                                .handle((in, out) -> in.receive()
+		                                                       .asString()
+		                                                       .map(srv -> srv))
+		                                .log()
+		                                .then();
 
-        StepVerifier.create(response)
-                .expectError(CorruptedFrameException.class)
-                .verify(Duration.ofSeconds(30));
-    }
+		StepVerifier.create(response)
+		            .expectError(CorruptedFrameException.class)
+		            .verify(Duration.ofSeconds(30));
+	}
 
-    @Test
-    public void testMaxFramePayloadLengthSuccess() {
-        httpServer = HttpServer.create()
-                .port(0)
-                .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901"))))
-                .wiretap(true)
-                .bindNow();
+	@Test
+	public void testMaxFramePayloadLengthSuccess() {
+		httpServer = HttpServer.create()
+		                       .port(0)
+		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901"))))
+		                       .wiretap(true)
+		                       .bindNow();
 
-        Mono<Void> response = HttpClient.create()
-                .port(httpServer.address().getPort())
-                .websocket(11)
-                .handle((in, out) -> in.receive()
-                        .asString()
-                        .map(srv -> srv))
-                .log()
-                .then();
+		Mono<Void> response = HttpClient.create()
+		                                .port(httpServer.address().getPort())
+		                                .websocket(11)
+		                                .handle((in, out) -> in.receive()
+		                                                       .asString()
+		                                                       .map(srv -> srv))
+		                                .log()
+		                                .then();
 
-        StepVerifier.create(response)
-                .expectComplete()
-                .verify(Duration.ofSeconds(30));
-    }
+		StepVerifier.create(response)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+	}
 
 	@Test
 	public void testServerMaxFramePayloadLengthFailed() {
@@ -589,32 +585,32 @@ public class WebsocketTest {
 	private void doTestServerMaxFramePayloadLength(int maxFramePayloadLength, Flux<String> input, Flux<String> expectation, int count) {
 		httpServer =
 				HttpServer.create()
-						.port(0)
-						.handle((req, res) -> res.sendWebsocket(null, maxFramePayloadLength, (in, out) ->
-								out.sendObject(in.aggregateFrames()
-												.receiveFrames()
-												.map(WebSocketFrame::content)
-												.map(byteBuf ->
-														byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
-												.map(TextWebSocketFrame::new))))
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .handle((req, res) -> res.sendWebsocket(null, maxFramePayloadLength, (in, out) ->
+				              out.sendObject(in.aggregateFrames()
+				                               .receiveFrames()
+				                               .map(WebSocketFrame::content)
+				                               .map(byteBuf ->
+				                                   byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
+				                               .map(TextWebSocketFrame::new))))
+				          .wiretap(true)
+				          .bindNow();
 
 		ReplayProcessor<String> output = ReplayProcessor.create();
 		HttpClient.create()
-				.port(httpServer.address().getPort())
-				.websocket()
-				.uri("/")
-				.handle((in, out) -> out.sendString(input)
-						.then(in.aggregateFrames()
-								.receiveFrames()
-								.map(WebSocketFrame::content)
-								.map(byteBuf ->
-										byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
-								.take(count)
-								.subscribeWith(output)
-								.then()))
-				.blockLast(Duration.ofSeconds(30));
+		          .port(httpServer.address().getPort())
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) -> out.sendString(input)
+		                                  .then(in.aggregateFrames()
+		                                          .receiveFrames()
+		                                          .map(WebSocketFrame::content)
+		                                          .map(byteBuf ->
+		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
+		                                          .take(count)
+		                                          .subscribeWith(output)
+		                                          .then()))
+		          .blockLast(Duration.ofSeconds(30));
 
 		assertThat(output.collectList().block(Duration.ofSeconds(30)))
 				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
@@ -627,10 +623,10 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-				                       (i, o) -> o.sendString(
-						                                  Mono.just("test")
-						                                      .delayElement(Duration.ofMillis(100))
-						                                      .repeat())))
+		                               (i, o) -> o.sendString(
+		                                                  Mono.just("test")
+		                                                      .delayElement(Duration.ofMillis(100))
+		                                                      .repeat())))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -667,8 +663,7 @@ public class WebsocketTest {
 				          .port(0)
 				          .handle((req, res) ->
 				                  res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
-				                                                                  .doOnNext(
-						                                                                  WebSocketFrame::retain))))
+				                                                                  .doOnNext(WebSocketFrame::retain))))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -746,7 +741,7 @@ public class WebsocketTest {
 		                                 .map(Integer::parseInt)
 		                                 .map(i -> new TextWebSocketFrame(i + ""))
 		                                 .onErrorResume(t -> Mono.just(new TextWebSocketFrame("error"))))),
-				Flux.just("1", "error", "2"), 3);
+		        Flux.just("1", "error", "2"), 3);
 	}
 
 	private void doTestConnectionAliveWhenTransformationErrors(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
@@ -764,18 +759,18 @@ public class WebsocketTest {
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> out.sendString(Flux.just("1", "text", "2"))
-		                                                       .then(in.aggregateFrames()
-		                                                               .receiveFrames()
-		                                                               .map(WebSocketFrame::content)
-		                                                               .map(byteBuf ->
-		                                                                   byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
-		                                                               .take(count)
-		                                                               .subscribeWith(output)
-		                                                               .then()))
+		                                  .then(in.aggregateFrames()
+		                                          .receiveFrames()
+		                                          .map(WebSocketFrame::content)
+		                                          .map(byteBuf ->
+		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
+		                                          .take(count)
+		                                          .subscribeWith(output)
+		                                          .then()))
 		          .blockLast(Duration.ofSeconds(30));
 
 		assertThat(output.collectList().block(Duration.ofSeconds(30)))
-		          .isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
+				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
 
 	}
 
@@ -797,12 +792,12 @@ public class WebsocketTest {
 		          .websocket()
 		          .uri("/test")
 		          .handle((in, out)  -> {
-			          Mono.delay(Duration.ofSeconds(3))
-			              .delayUntil(i -> out.sendClose())
-			              .subscribe(c -> {
-				              log.debug("context.dispose()");
-				              latch.countDown();
-			              });
+		              Mono.delay(Duration.ofSeconds(3))
+		                  .delayUntil(i -> out.sendClose())
+		                  .subscribe(c -> {
+		                      log.debug("context.dispose()");
+		                      latch.countDown();
+		                  });
 		              in.withConnection(conn ->
 		                  conn.onDispose()
 		                      .subscribe(

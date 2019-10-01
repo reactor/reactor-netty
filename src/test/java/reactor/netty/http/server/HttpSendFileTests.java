@@ -295,7 +295,7 @@ public class HttpSendFileTests {
 				                              .take(10)
 				                              .doOnComplete(() -> resp.withConnection(c -> c.channel()
 				                                                                            .close())) //"FutureReturnValueIgnored" this is deliberate
-						.then(),
+				                              .then(),
 				4096, "error".getBytes(Charset.defaultCharset()));
 	}
 
