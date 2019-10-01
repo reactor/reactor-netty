@@ -130,7 +130,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			return;
 		}
 		if (msg instanceof PingWebSocketFrame) {
-			channel().writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
+			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
 			ctx.read();
 			return;
 		}
