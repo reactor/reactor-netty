@@ -113,6 +113,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	HttpServerResponse keepAlive(boolean keepAlive);
 
 	@Override
+	@SuppressWarnings("deprecation")
 	HttpServerResponse options(Consumer<? super NettyPipeline.SendOptions> configurator);
 
 	/**

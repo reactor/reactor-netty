@@ -101,6 +101,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Stephane Maldini
  * @since 0.6
  */
+@SuppressWarnings("deprecation")
 public class HttpClientTest {
 
 	@Test

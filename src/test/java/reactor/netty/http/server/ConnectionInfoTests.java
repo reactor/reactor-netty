@@ -52,6 +52,7 @@ import static org.junit.Assert.fail;
  *
  * @author Brian Clozel
  */
+@SuppressWarnings("deprecation")
 public class ConnectionInfoTests {
 
 	static SelfSignedCertificate ssc;

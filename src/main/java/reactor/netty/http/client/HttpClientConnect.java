@@ -879,6 +879,7 @@ final class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
 			ChannelPipeline p = ctx.pipeline();
 

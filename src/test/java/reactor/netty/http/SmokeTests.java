@@ -59,6 +59,7 @@ import static org.junit.Assert.assertTrue;
  * @author Stephane Maldini
  */
 @Ignore
+@SuppressWarnings("deprecation")
 public class SmokeTests {
 
 	static final Logger log = Loggers.getLogger(SmokeTests.class);

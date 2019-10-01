@@ -311,6 +311,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public HttpServerOperations options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 		super.options(configurator);
 		return this;

@@ -289,6 +289,7 @@ public class HttpSendFileTests {
 	}
 
 	@Test
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void sendFileAsync4096Negative() throws IOException, URISyntaxException {
 		doTestSendFileAsync((req, resp) -> req.receive()
 				                              .take(10)

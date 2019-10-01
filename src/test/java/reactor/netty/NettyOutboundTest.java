@@ -56,6 +56,7 @@ import reactor.core.publisher.Mono;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@SuppressWarnings("deprecation")
 public class NettyOutboundTest {
 
 	@Test

@@ -91,6 +91,7 @@ import static org.junit.Assert.assertTrue;
  * @author Jon Brisbin
  * @author Stephane Maldini
  */
+@SuppressWarnings("deprecation")
 public class TcpServerTests {
 
 	final Logger log     = Loggers.getLogger(TcpServerTests.class);

@@ -534,6 +534,7 @@ public final class ReactorNetty {
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 			source.options(configurator);
 			return this;
@@ -748,6 +749,7 @@ public final class ReactorNetty {
 			}
 
 			@Override
+			@SuppressWarnings("deprecation")
 			public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 				return this;
 			}

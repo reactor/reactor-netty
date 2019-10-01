@@ -434,6 +434,7 @@ final class HttpServerBind extends HttpServer
 	 * or cleartext upgrade
 	 */
 	@ChannelHandler.Sharable
+	@SuppressWarnings("deprecation")
 	static final class Http1OrH2CleartextCodec extends ChannelInitializer<Channel>
 			implements HttpServerUpgradeHandler.UpgradeCodecFactory {
 
@@ -504,6 +505,7 @@ final class HttpServerBind extends HttpServer
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public void accept(ConnectionObserver listener, Channel channel) {
 			ChannelPipeline p = channel.pipeline();
 
@@ -582,6 +584,7 @@ final class HttpServerBind extends HttpServer
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
 			ChannelPipeline p = ctx.pipeline();
 
@@ -658,6 +661,7 @@ final class HttpServerBind extends HttpServer
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public void accept(ConnectionObserver listener, Channel channel) {
 			ChannelPipeline p = channel.pipeline();
 

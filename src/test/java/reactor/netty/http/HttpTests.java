@@ -46,6 +46,7 @@ import reactor.test.StepVerifier;
 /**
  * @author Violeta Georgieva
  */
+@SuppressWarnings("deprecation")
 public class HttpTests {
 
 	@Test

@@ -335,6 +335,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 			return parent.options(configurator);
 		}

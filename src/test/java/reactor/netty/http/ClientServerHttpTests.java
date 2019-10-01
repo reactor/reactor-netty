@@ -53,6 +53,7 @@ import static org.junit.Assert.assertThat;
  * @author Stephane Maldini
  */
 @Ignore
+@SuppressWarnings("deprecation")
 public class ClientServerHttpTests {
 
 	static final Logger log = Loggers.getLogger(ClientServerHttpTests.class);

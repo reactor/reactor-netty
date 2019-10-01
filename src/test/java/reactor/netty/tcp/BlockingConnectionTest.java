@@ -35,6 +35,7 @@ import reactor.netty.NettyPipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+@SuppressWarnings("deprecation")
 public class BlockingConnectionTest {
 
 	static final Connection NEVER_STOP_CONTEXT = new Connection() {

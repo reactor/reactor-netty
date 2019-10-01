@@ -418,6 +418,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public NettyOutbound options(Consumer<? super NettyPipeline.SendOptions> configurator) {
 		configurator.accept(new NettyPipeline.SendOptions() {
 			@Override
