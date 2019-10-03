@@ -170,6 +170,9 @@ final class WebsocketClientOperations extends HttpClientOperations
 	@Override
 	protected void onOutboundError(Throwable err) {
 		if (channel().isActive()) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel(), "Outbound error happened"), err);
+			}
 			sendCloseNow(new CloseWebSocketFrame(1002, "Client internal error"));
 		}
 	}
