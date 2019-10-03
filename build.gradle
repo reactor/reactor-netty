@@ -264,7 +264,7 @@ configure(rootProject) { project ->
 	jarFileTestCompile 'junit:junit:4.12'
 
 	for (dependency in project.configurations.shaded.dependencies) {
-		compile(dependency)
+	    compileOnly(dependency)
 	}
   }
 
@@ -352,6 +352,7 @@ configure(rootProject) { project ->
   }
   project.tasks.check.dependsOn(jarFileTest)
 
+  project.tasks.compileTestJava.classpath += configurations.shaded
   project.tasks.test.classpath += configurations.shaded
 
   task shadedJarTest(type: Test) {
