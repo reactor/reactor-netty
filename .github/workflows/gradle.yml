@@ -5,7 +5,12 @@ on: [push, pull_request]
 jobs:
   build:
 
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false
 
     steps:
     - uses: actions/checkout@v1
@@ -15,3 +20,6 @@ jobs:
         java-version: 1.8
     - name: Build with Gradle
       run: ./gradlew clean build
+    - name: Code Coverage
+      run: <(curl -s https://codecov.io/bash)
+      shell: bash
