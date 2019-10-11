@@ -73,8 +73,8 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 		}
 		if (remoteAddress == null) {
 			remoteAddress =
-					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel()))
-					        .orElse(((SocketChannel) ctx.channel()).remoteAddress());
+					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel().parent()))
+					        .orElse(((SocketChannel) ctx.channel().parent()).remoteAddress());
 		}
 		if (msg instanceof Http2HeadersFrame) {
 			Http2HeadersFrame headersFrame = (Http2HeadersFrame)msg;
