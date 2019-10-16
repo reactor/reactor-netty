@@ -52,7 +52,7 @@ ext {
   blockHoundVersion = "1.0.0.RC1"
 
   //Metrics
-  micrometerVersion = 'latest.release'
+  micrometerVersion = '1.3.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
 
   // Logging
   slf4jVersion = '1.7.12'
