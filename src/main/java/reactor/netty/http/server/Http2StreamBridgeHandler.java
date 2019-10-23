@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty.handler.codec.http2.Http2DataFrame;
+import io.netty.handler.codec.http2.Http2FrameStream;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2HeadersFrame;
 import io.netty.handler.codec.http2.Http2StreamChannel;
@@ -77,23 +78,26 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 					        .orElse(((SocketChannel) ctx.channel().parent()).remoteAddress());
 		}
 		if (msg instanceof Http2HeadersFrame) {
-			Http2HeadersFrame headersFrame = (Http2HeadersFrame)msg;
+			Http2HeadersFrame headersFrame = (Http2HeadersFrame) msg;
+			Http2FrameStream stream = headersFrame.stream();
+			int id = stream == null ? 0 : stream.id();
+
 			HttpRequest request;
 			if (headersFrame.isEndStream()) {
-				request = HttpConversionUtil.toFullHttpRequest(-1,
+				request = HttpConversionUtil.toFullHttpRequest(id,
 						headersFrame.headers(),
 						ctx.channel().alloc(),
 						false);
 			}
 			else {
-				request = HttpConversionUtil.toHttpRequest(-1,
+				request = HttpConversionUtil.toHttpRequest(id,
 								headersFrame.headers(),
 								false);
 			}
-			HttpToH2Operations ops = new HttpToH2Operations(Connection.from(ctx.channel()),
+			HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
 					listener,
+					null,
 					request,
-					headersFrame.headers(),
 					ConnectionInfo.from(ctx.channel().parent(),
 					                    readForwardHeaders,
 					                    request,

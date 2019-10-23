@@ -53,6 +53,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
@@ -234,6 +235,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public boolean isWebsocket() {
 		return get(channel()) instanceof WebsocketServerOperations;
+	}
+
+	boolean isHttp2() {
+		return requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
 	}
 
 	@Override
@@ -442,6 +447,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			}
 			if (msg instanceof FullHttpRequest) {
 				super.onInboundNext(ctx, msg);
+				if (isHttp2()) {
+					onInboundComplete();
+				}
 			}
 			return;
 		}
