@@ -76,6 +76,7 @@ public class ChannelOperationsHandlerTest {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
+				          .tcpConfiguration(tcpServer -> tcpServer.doOnConnection(conn -> { conn.addHandler(new LineBasedFrameDecoder(10)); }))
 				          .handle((req, res) ->
 				                  req.receive()
 				                     .asString()
@@ -92,7 +93,6 @@ public class ChannelOperationsHandlerTest {
 		Mono<Integer> code =
 				HttpClient.create()
 				          .tcpConfiguration(tcpClient -> tcpClient.doOnConnected(conn -> {
-					          conn.addHandler(new LineBasedFrameDecoder(10));
 				              if (handler != null) {
 				                  conn.addHandlerLast(handler);
 				              }
