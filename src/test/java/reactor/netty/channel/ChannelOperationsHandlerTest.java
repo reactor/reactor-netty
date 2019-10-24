@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.junit.Test;
@@ -84,13 +85,14 @@ public class ChannelOperationsHandlerTest {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
-		Flux<String> flux = Flux.range(1, 257).map(count -> count + "");
+		Flux<String> flux = Flux.range(1, 257).map(count -> count + "\n");
 		if (useScheduler) {
 			flux.publishOn(Schedulers.single());
 		}
 		Mono<Integer> code =
 				HttpClient.create()
 				          .tcpConfiguration(tcpClient -> tcpClient.doOnConnected(conn -> {
+					          conn.addHandler(new LineBasedFrameDecoder(10));
 				              if (handler != null) {
 				                  conn.addHandlerLast(handler);
 				              }
