@@ -264,8 +264,8 @@ final class HttpServerBind extends HttpServer
 			  .addLast(NettyPipeline.AccessLogHandler, new AccessLogHandlerH2());
 		}
 		ch.pipeline()
-		  .addLast(new Http2StreamBridgeHandler(listener, readForwardHeaders, encoder, decoder))
-		  .addLast(new Http2StreamFrameToHttpObjectCodec(true));
+		  .addLast(new Http2StreamFrameToHttpObjectCodec(true))
+		  .addLast(new Http2StreamBridgeHandler(listener, readForwardHeaders, encoder, decoder));
 
 		ChannelOperations.addReactiveBridge(ch, ChannelOperations.OnSetup.empty(), listener);
 
