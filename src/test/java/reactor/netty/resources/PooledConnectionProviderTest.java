@@ -311,6 +311,7 @@ public class PooledConnectionProviderTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
+		Thread.sleep(1000);
 		assertThat(pool.get().activeConnections.get()).isEqualTo(0);
 		assertThat(pool.get().inactiveConnections.get()).isEqualTo(0);
 
