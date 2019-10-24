@@ -63,9 +63,14 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			(FluxReceive.class, "wip");
 
 	FluxReceive(ChannelOperations<?, ?> parent) {
+
+		//reset channel to manual read if re-used
+
 		this.parent = parent;
 		this.channel = parent.channel();
 		this.eventLoop = channel.eventLoop();
+		channel.config()
+		       .setAutoRead(false);
 		CANCEL.lazySet(this, () -> {
 			if (eventLoop.inEventLoop()) {
 				unsubscribeReceiver();
@@ -233,7 +238,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			if (r == Long.MAX_VALUE) {
 				channel.config()
 				       .setAutoRead(true);
-				channel.read();
 				missed = WIP.addAndGet(this, -missed);
 				if(missed == 0){
 					break;
@@ -242,7 +246,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 
 			if ((receiverDemand -= e) > 0L || e > 0L) {
-				channel.read();
+				channel.config()
+				       .setAutoRead(true);
+			}
+			else {
+				channel.config()
+				       .setAutoRead(false);
 			}
 
 			missed = WIP.addAndGet(this, -missed);

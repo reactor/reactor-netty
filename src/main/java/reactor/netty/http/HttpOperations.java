@@ -73,10 +73,6 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	protected HttpOperations(Connection connection, ConnectionObserver listener) {
 		super(connection, listener);
-		//reset channel to manual read if re-used
-		connection.channel()
-		          .config()
-		          .setAutoRead(false);
 	}
 
 	/**
