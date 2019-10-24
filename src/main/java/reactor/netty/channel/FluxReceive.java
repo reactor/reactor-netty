@@ -53,6 +53,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	long                           receiverDemand;
 	Queue<Object>                  receiverQueue;
 
+	boolean needRead = true;
+
 	volatile boolean   inboundDone;
 	Throwable inboundError;
 
@@ -236,8 +238,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 
 			if (r == Long.MAX_VALUE) {
-				channel.config()
-				       .setAutoRead(true);
+				if (needRead) {
+					channel.config()
+					       .setAutoRead(true);
+				}
 				missed = WIP.addAndGet(this, -missed);
 				if(missed == 0){
 					break;
@@ -246,10 +250,14 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 
 			if ((receiverDemand -= e) > 0L || e > 0L) {
-				channel.config()
-				       .setAutoRead(true);
+				if (needRead) {
+					needRead = false;
+					channel.config()
+					       .setAutoRead(true);
+				}
 			}
-			else {
+			else if (!needRead) {
+				needRead = true;
 				channel.config()
 				       .setAutoRead(false);
 			}
