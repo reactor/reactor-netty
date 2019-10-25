@@ -24,7 +24,6 @@ import javax.net.ssl.SSLParameters;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
@@ -77,7 +76,8 @@ final class HttpClientSecure extends HttpClientOperator {
 		SslContext sslCtx;
 		try {
 			io.netty.handler.ssl.SslProvider provider =
-					OpenSsl.isAlpnSupported() ? io.netty.handler.ssl.SslProvider.OPENSSL :
+					io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+							io.netty.handler.ssl.SslProvider.OPENSSL :
 							io.netty.handler.ssl.SslProvider.JDK;
 			sslCtx =
 					SslContextBuilder.forClient()
