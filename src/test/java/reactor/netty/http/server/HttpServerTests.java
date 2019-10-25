@@ -1211,20 +1211,22 @@ public class HttpServerTests {
 		Connection connection = tcpClient.connectNow();
 
 		CountDownLatch latch1 = new CountDownLatch(1);
+		connection.channel()
+		          .closeFuture()
+		          .addListener(f -> latch1.countDown());
+
 		AtomicReference<String> result = new AtomicReference<>();
+		connection.inbound()
+		          .receive()
+		          .asString()
+		          .doOnNext(result::set)
+		          .subscribe();
+
 		connection.outbound()
 		          .sendString(Mono.just("PUT /1 HTTP/1.1\r\nHost: a.example.com\r\n" +
 		                  "Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n"))
-		          .then(connection.inbound()
-		                          .receive()
-		                          .asString()
-		                          .doOnNext(s -> {
-		                              result.set(s);
-		                              latch1.countDown();
-		                          })
-		                          .then())
 		          .then()
-		          .block(Duration.ofSeconds(30));
+		          .subscribe();
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(result.get()).contains("400 Bad Request")
@@ -1234,19 +1236,21 @@ public class HttpServerTests {
 		connection = tcpClient.connectNow();
 
 		CountDownLatch latch2 = new CountDownLatch(1);
+		connection.channel()
+		          .closeFuture()
+		          .addListener(f -> latch2.countDown());
+
+		connection.inbound()
+		          .receive()
+		          .asString()
+		          .doOnNext(result::set)
+		          .subscribe();
+
 		connection.outbound()
 		          .sendString(Mono.just("PUT /2 HTTP/1.1\r\nHost: a.example.com\r\n" +
 		                  "Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n"))
-		          .then(connection.inbound()
-		                          .receive()
-		                          .asString()
-		                          .doOnNext(s -> {
-		                              result.set(s);
-		                              latch2.countDown();
-		                          })
-		                          .then())
 		          .then()
-		          .block(Duration.ofSeconds(30));
+		          .subscribe();
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(result.get()).contains("200 OK");
