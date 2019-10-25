@@ -255,12 +255,7 @@ final class HttpPredicate
 		private static final Pattern NAME_PATTERN     = Pattern.compile("\\{([^/]+?)\\}");
 		// JDK 6 doesn't support named capture groups
 
-		private final List<String>                         pathVariables =
-				new ArrayList<>();
-		private final HashMap<String, Matcher>             matchers      =
-				new HashMap<>();
-		private final HashMap<String, Map<String, String>> vars          =
-				new HashMap<>();
+		private final List<String> pathVariables = new ArrayList<>();
 
 		private final Pattern uriPattern;
 
@@ -341,12 +336,8 @@ final class HttpPredicate
 		 * @return the path parameters from the uri. Never {@code null}.
 		 */
 		final Map<String, String> match(String uri) {
-			Map<String, String> pathParameters = vars.get(uri);
-			if (null != pathParameters) {
-				return pathParameters;
-			}
+			Map<String, String> pathParameters = new HashMap<>(pathVariables.size());
 
-			pathParameters = new HashMap<>();
 			Matcher m = matcher(uri);
 			if (m.matches()) {
 				int i = 1;
@@ -355,23 +346,12 @@ final class HttpPredicate
 					pathParameters.put(name, val);
 				}
 			}
-			synchronized (vars) {
-				vars.put(uri, pathParameters);
-			}
-
 			return pathParameters;
 		}
 
 		private Matcher matcher(String uri) {
 			uri = filterQueryParams(uri);
-			Matcher m = matchers.get(uri);
-			if (null == m) {
-				m = uriPattern.matcher(uri);
-				synchronized (matchers) {
-					matchers.put(uri, m);
-				}
-			}
-			return m;
+			return uriPattern.matcher(uri);
 		}
 
 	}
