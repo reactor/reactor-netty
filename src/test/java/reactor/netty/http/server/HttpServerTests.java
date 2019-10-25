@@ -1505,12 +1505,9 @@ public class HttpServerTests {
 				         .port(server.port())
 				         .wiretap(true);
 
-		CountDownLatch latch1 = new CountDownLatch(1);
 		Connection connection = tcpClient.connectNow();
-		connection.channel()
-		          .closeFuture()
-		          .addListener(f -> latch1.countDown());
 
+		CountDownLatch latch1 = new CountDownLatch(1);
 		AtomicReference<String> result = new AtomicReference<>();
 		connection.outbound()
 		          .sendString(Mono.just("PUT /1 HTTP/1.1\r\nHost: a.example.com\r\n" +
@@ -1518,36 +1515,37 @@ public class HttpServerTests {
 		          .then(connection.inbound()
 		                          .receive()
 		                          .asString()
-		                          .doOnNext(result::set)
+		                          .doOnNext(s -> {
+		                              result.set(s);
+		                              latch1.countDown();
+		                          })
 		                          .then())
 		          .then()
 		          .block(Duration.ofSeconds(30));
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
-		assertThat(result).isNotNull();
 		assertThat(result.get()).contains("400 Bad Request")
 		                        .contains("connection: close");
 		assertThat(connection.channel().isActive()).isFalse();
 
-		CountDownLatch latch2 = new CountDownLatch(1);
 		connection = tcpClient.connectNow();
-		connection.channel()
-		          .closeFuture()
-		          .addListener(f -> latch2.countDown());
 
+		CountDownLatch latch2 = new CountDownLatch(1);
 		connection.outbound()
 		          .sendString(Mono.just("PUT /2 HTTP/1.1\r\nHost: a.example.com\r\n" +
 		                  "Transfer-Encoding: chunked\r\n\r\nsomething\r\n\r\n"))
 		          .then(connection.inbound()
 		                          .receive()
 		                          .asString()
-		                          .doOnNext(result::set)
+		                          .doOnNext(s -> {
+		                              result.set(s);
+		                              latch2.countDown();
+		                          })
 		                          .then())
 		          .then()
 		          .block(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
-		assertThat(result).isNotNull();
 		assertThat(result.get()).contains("200 OK");
 		assertThat(connection.channel().isActive()).isFalse();
 
