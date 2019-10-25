@@ -55,7 +55,7 @@ ext {
   assertJVersion = '3.6.1'
 
   // Libraries
-  nettyVersion = '4.1.42.Final'
+  nettyVersion = '4.1.43.Final'
   jacksonDatabindVersion = '2.5.1'
 
   // Testing
@@ -232,7 +232,7 @@ configure(rootProject) { project ->
 	testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
 
 	// Needed for HTTP/2 testing
-	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.25.Final" + os_suffix
+	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.26.Final" + os_suffix
   }
 
 

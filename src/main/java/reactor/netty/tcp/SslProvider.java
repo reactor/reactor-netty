@@ -367,7 +367,7 @@ public final class SslProvider {
 		switch (type) {
 			case H2:
 				sslContextBuilder.sslProvider(
-				                     OpenSsl.isAlpnSupported() ?
+				                     io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 				                             io.netty.handler.ssl.SslProvider.OPENSSL :
 				                             io.netty.handler.ssl.SslProvider.JDK)
 				                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)

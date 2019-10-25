@@ -103,7 +103,8 @@ public class SslProviderTests {
 				      .bindNow();
 		assertEquals(2, protocols.size());
 		assertTrue(protocols.contains("h2"));
-		assertTrue(OpenSsl.isAlpnSupported() ? sslContext instanceof OpenSslContext :
+		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext);
 		disposableServer.disposeNow();
 	}
@@ -116,7 +117,8 @@ public class SslProviderTests {
 				      .bindNow();
 		assertEquals(2, protocols.size());
 		assertTrue(protocols.contains("h2"));
-		assertTrue(OpenSsl.isAlpnSupported() ? sslContext instanceof OpenSslContext :
+		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext);
 		disposableServer.disposeNow();
 	}
@@ -130,7 +132,8 @@ public class SslProviderTests {
 				      .bindNow();
 		assertEquals(2, protocols.size());
 		assertTrue(protocols.contains("h2"));
-		assertTrue(OpenSsl.isAlpnSupported() ? sslContext instanceof OpenSslContext :
+		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
+		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext);
 		disposableServer.disposeNow();
 	}
