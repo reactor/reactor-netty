@@ -1489,7 +1489,7 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testDecodingFailureLastHttpContent() {
+	public void testDecodingFailureLastHttpContent() throws Exception {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -1505,7 +1505,11 @@ public class HttpServerTests {
 				         .port(server.port())
 				         .wiretap(true);
 
+		CountDownLatch latch1 = new CountDownLatch(1);
 		Connection connection = tcpClient.connectNow();
+		connection.channel()
+		          .closeFuture()
+		          .addListener(f -> latch1.countDown());
 
 		AtomicReference<String> result = new AtomicReference<>();
 		connection.outbound()
@@ -1519,12 +1523,17 @@ public class HttpServerTests {
 		          .then()
 		          .block(Duration.ofSeconds(30));
 
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(result).isNotNull();
 		assertThat(result.get()).contains("400 Bad Request")
 		                        .contains("connection: close");
 		assertThat(connection.channel().isActive()).isFalse();
 
+		CountDownLatch latch2 = new CountDownLatch(1);
 		connection = tcpClient.connectNow();
+		connection.channel()
+		          .closeFuture()
+		          .addListener(f -> latch2.countDown());
 
 		connection.outbound()
 		          .sendString(Mono.just("PUT /2 HTTP/1.1\r\nHost: a.example.com\r\n" +
@@ -1537,6 +1546,7 @@ public class HttpServerTests {
 		          .then()
 		          .block(Duration.ofSeconds(30));
 
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(result).isNotNull();
 		assertThat(result.get()).contains("200 OK");
 		assertThat(connection.channel().isActive()).isFalse();
