@@ -29,5 +29,5 @@ jobs:
     - name: Archive tests output
       uses: actions/upload-artifact@v1
       with:
-        name: tests_output
+        name: tests_output_${{ matrix.os }}_${{ matrix.transport }}
         path: build/test-results/test/binary/output.bin
