@@ -112,6 +112,7 @@ configure(rootProject) { project ->
 
   ext.bundleImportPackages = [ '!javax.annotation',
 							   'io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)"',
+							   'io.netty.handler.codec.haproxy;resolution:=optional;version="[4.1,5)"',
 							   '!reactor.pool',
 							   'io.micrometer.*;resolution:=optional',
 							   'reactor.blockhound.*;resolution:=optional',
