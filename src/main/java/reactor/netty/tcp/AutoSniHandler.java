@@ -22,6 +22,9 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
 import reactor.netty.NettyPipeline;
 
+/**
+ * @author aftersss
+ */
 public class AutoSniHandler extends SniHandler {
 	private SslDomainNameMappingContainer sslDomainNameMappingContainer;
 

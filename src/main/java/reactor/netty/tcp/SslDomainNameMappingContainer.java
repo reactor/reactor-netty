@@ -34,6 +34,8 @@ import io.netty.util.Mapping;
  * the server will auto search for the suitable {@link SslProvider} for the given hostname.
  * If no suitable {@link SslProvider} is found for the hostname or the client hostname is not specified,
  * it will fallback to use the default {@link SslProvider}.
+ *
+ * @author aftersss
  */
 public class SslDomainNameMappingContainer {
 
@@ -142,6 +144,9 @@ public class SslDomainNameMappingContainer {
 	 * @param type default configuration that will be applied to the provided {@link SslContextBuilder}
 	 */
 	public void updateAllSslProviderConfiguration(SslProvider.DefaultConfigurationType type) {
+		if (this.defaultConfigurationType == type) {
+			return;
+		}
 		this.defaultConfigurationType = type;
 		if (defaultSslProvider.getDefaultConfigurationType() == null) {
 			defaultSslProvider = SslProvider.updateDefaultConfiguration(defaultSslProvider, type);
@@ -257,17 +262,6 @@ public class SslDomainNameMappingContainer {
 
 	public Mapping<String, SslContext> getDomainNameMapping() {
 		return domainNameMapping;
-	}
-
-	/**
-	 * Returns whether or not the ssl certificate for the specified hostname is exist in the container.
-	 * @param hostname the host name (optionally wildcard)
-	 *
-	 * @return whether or not the ssl certificate for the specified hostname is exist in the container.
-	 */
-	public boolean hasMappingForHost(String hostname){
-		SslContext sslContext = domainNameMapping.map(hostname);
-		return sslContext != null;
 	}
 
 }

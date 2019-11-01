@@ -32,6 +32,8 @@ import java.util.Map;
  * <br/>
  * (netty's {@link DomainNameMapping} can use {@code *.demo.com} to match {@code demo.com} and {@code a.b.demo.com},
  * it is not suitable for sni, this is why this current class is needed.)
+ *
+ * @author aftersss
  */
 class SslDomainNameMapping implements Mapping<String, SslContext> {
 
