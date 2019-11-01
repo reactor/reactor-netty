@@ -29,6 +29,7 @@ import javax.net.ssl.SSLException;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -132,15 +133,35 @@ public final class SslProvider {
 	 * @param b a bootstrap to search
 	 *
 	 * @return any {@link SslProvider} found or null
+	 *
+	 * @deprecated When server side sni is used, sslProvider will return the default sslProvider, this maybe not wanted. Use {@link SslProvider#findSslDomainNameMappingSupport(ServerBootstrap)}
 	 */
 	@Nullable
+	@Deprecated
 	public static SslProvider findSslSupport(ServerBootstrap b) {
-		SslSupportConsumer ssl = BootstrapHandlers.findConfiguration(SslSupportConsumer.class, b.config().childHandler());
+		ServerSslSupportConsumer ssl = BootstrapHandlers.findConfiguration(ServerSslSupportConsumer.class, b.config().childHandler());
 
 		if (ssl == null) {
 			return null;
 		}
-		return ssl.sslProvider;
+		return ssl.sslDomainNameMappingContainer.getDefaultSslProvider();
+	}
+
+	/**
+	 * Find SslDomainNameMappingContainer in the given server bootstrap
+	 *
+	 * @param b a bootstrap to search
+	 *
+	 * @return any {@link SslDomainNameMappingContainer} found or null
+	 */
+	@Nullable
+	public static SslDomainNameMappingContainer findSslDomainNameMappingSupport(ServerBootstrap b) {
+		ServerSslSupportConsumer ssl = BootstrapHandlers.findConfiguration(ServerSslSupportConsumer.class, b.config().childHandler());
+
+		if (ssl == null) {
+			return null;
+		}
+		return ssl.sslDomainNameMappingContainer;
 	}
 
 	/**
@@ -585,7 +606,15 @@ public final class SslProvider {
 
 		BootstrapHandlers.updateConfiguration(b,
 				NettyPipeline.SslHandler,
-				new SslSupportConsumer(sslProvider, null));
+				new ServerSslSupportConsumer(new SslDomainNameMappingContainer(sslProvider)));
+
+		return b;
+	}
+
+	public static ServerBootstrap setBootstrap(ServerBootstrap b, SslDomainNameMappingContainer sslDomainNameMappingContainer) {
+		BootstrapHandlers.updateConfiguration(b,
+				NettyPipeline.SslHandler,
+				new ServerSslSupportConsumer(sslDomainNameMappingContainer));
 
 		return b;
 	}
@@ -600,7 +629,7 @@ public final class SslProvider {
 
 		@Override
 		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
-			return new SslSupportConsumer(sslProvider, bootstrap.config().remoteAddress());
+			return new ClientSslSupportConsumer(sslProvider, bootstrap.config().remoteAddress());
 		}
 
 		@Override
@@ -621,48 +650,9 @@ public final class SslProvider {
 		}
 	}
 
-	static final class SslSupportConsumer
-			implements BiConsumer<ConnectionObserver, Channel> {
-		final SslProvider sslProvider;
-		final InetSocketAddress sniInfo;
+	private static class BaseSslSupportConsumer {
 
-		SslSupportConsumer(SslProvider sslProvider, @Nullable SocketAddress sniInfo) {
-			this.sslProvider = sslProvider;
-			if (sniInfo instanceof InetSocketAddress) {
-				this.sniInfo = (InetSocketAddress) sniInfo;
-			}
-			else {
-				this.sniInfo = null;
-			}
-		}
-
-		@Override
-		public void accept(ConnectionObserver listener, Channel channel) {
-			SslHandler sslHandler;
-
-			if (sniInfo != null) {
-				sslHandler = sslProvider.getSslContext()
-				                        .newHandler(channel.alloc(),
-						                        sniInfo.getHostString(),
-						                        sniInfo.getPort());
-
-				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "SSL enabled using engine {} and SNI {}"),
-							sslHandler.engine().getClass().getSimpleName(),
-							sniInfo);
-				}
-			}
-			else {
-				sslHandler = sslProvider.getSslContext().newHandler(channel.alloc());
-
-				if (log.isDebugEnabled()) {
-					log.debug(format(channel, "SSL enabled using engine {}"),
-							sslHandler.engine().getClass().getSimpleName());
-				}
-			}
-
-			sslProvider.configure(sslHandler);
-
+		void accept(ConnectionObserver listener, Channel channel, ChannelHandler sslHandler) {
 			if (channel.pipeline()
 			           .get(NettyPipeline.ProxyHandler) != null) {
 				channel.pipeline()
@@ -695,6 +685,77 @@ public final class SslProvider {
 						       NettyPipeline.SslReader,
 						       new SslReadHandler());
 			}
+		}
+
+	}
+
+	static final class ClientSslSupportConsumer
+			extends BaseSslSupportConsumer
+			implements BiConsumer<ConnectionObserver, Channel> {
+		final SslProvider sslProvider;
+		final InetSocketAddress sniInfo;
+
+		ClientSslSupportConsumer(SslProvider sslProvider, @Nullable SocketAddress sniInfo) {
+			this.sslProvider = sslProvider;
+			if (sniInfo instanceof InetSocketAddress) {
+				this.sniInfo = (InetSocketAddress) sniInfo;
+			}
+			else {
+				this.sniInfo = null;
+			}
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			SslHandler sslHandler;
+
+			if (sniInfo != null) {
+				sslHandler = sslProvider.getSslContext()
+						.newHandler(channel.alloc(),
+								sniInfo.getHostString(),
+								sniInfo.getPort());
+
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel, "SSL enabled using engine {} and SNI {}"),
+							sslHandler.engine().getClass().getSimpleName(),
+							sniInfo);
+				}
+			}
+			else {
+				sslHandler = sslProvider.getSslContext().newHandler(channel.alloc());
+
+				if (log.isDebugEnabled()) {
+					log.debug(format(channel, "SSL enabled using engine {} and SNI {}"),
+							sslHandler.engine().getClass().getSimpleName(),
+							sniInfo);
+				}
+			}
+
+			sslProvider.configure(sslHandler);
+
+			super.accept(listener, channel, sslHandler);
+		}
+
+	}
+
+	static final class ServerSslSupportConsumer
+			extends BaseSslSupportConsumer
+			implements BiConsumer<ConnectionObserver, Channel> {
+		final SslDomainNameMappingContainer sslDomainNameMappingContainer;
+
+		ServerSslSupportConsumer(SslDomainNameMappingContainer sslDomainNameMappingContainer) {
+			this.sslDomainNameMappingContainer = sslDomainNameMappingContainer;
+		}
+
+		@Override
+		public void accept(ConnectionObserver listener, Channel channel) {
+			ChannelHandler sslHandler = new AutoSniHandler(sslDomainNameMappingContainer);
+
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "Using AutoSniHandler"));
+			}
+
+			super.accept(listener, channel, sslHandler);
 		}
 
 	}

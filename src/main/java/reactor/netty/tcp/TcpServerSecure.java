@@ -17,7 +17,6 @@
 package reactor.netty.tcp;
 
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import io.netty.bootstrap.ServerBootstrap;
 
@@ -26,28 +25,32 @@ import io.netty.bootstrap.ServerBootstrap;
  */
 final class TcpServerSecure extends TcpServerOperator {
 
-	final SslProvider sslProvider;
+	final SslDomainNameMappingContainer sslDomainNameMappingContainer;
 
-	static TcpServerSecure secure(TcpServer server, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
+	static TcpServerSecure secure(TcpServer server, SslDomainNameMappingContainer sslDomainNameMappingContainer) {
+		Objects.requireNonNull(sslDomainNameMappingContainer, "sslDomainNameMappingContainer");
 
-		SslProvider.Build builder = (SslProvider.Build) SslProvider.builder();
-		sslProviderBuilder.accept(builder);
-		return new TcpServerSecure(server, builder.build());
+		return new TcpServerSecure(server, sslDomainNameMappingContainer);
 	}
 
 	TcpServerSecure(TcpServer server, SslProvider sslProvider) {
 		super(server);
-		this.sslProvider = Objects.requireNonNull(sslProvider, "sslProvider");
+		this.sslDomainNameMappingContainer = new SslDomainNameMappingContainer(sslProvider);
+	}
+
+	TcpServerSecure(TcpServer server, SslDomainNameMappingContainer sslDomainNameMappingContainer) {
+		super(server);
+		this.sslDomainNameMappingContainer
+				= Objects.requireNonNull(sslDomainNameMappingContainer, "sslDomainNameMappingContainer");
 	}
 
 	@Override
 	public ServerBootstrap configure() {
-		return SslProvider.setBootstrap(source.configure(), sslProvider);
+		return SslProvider.setBootstrap(source.configure(), sslDomainNameMappingContainer);
 	}
 
 	@Override
 	public SslProvider sslProvider() {
-		return this.sslProvider;
+		return sslDomainNameMappingContainer.getDefaultSslProvider();
 	}
 }

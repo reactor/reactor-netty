@@ -53,6 +53,7 @@ import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.tcp.SslDomainNameMappingContainer;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.annotation.Nullable;
@@ -99,17 +100,13 @@ final class HttpServerBind extends HttpServer
 	public ServerBootstrap apply(ServerBootstrap b) {
 		HttpServerConfiguration conf = HttpServerConfiguration.getAndClean(b);
 
-		SslProvider ssl = SslProvider.findSslSupport(b);
-		if (ssl != null && ssl.getDefaultConfigurationType() == null) {
+		SslDomainNameMappingContainer sslContainer = SslProvider.findSslDomainNameMappingSupport(b);
+		if (sslContainer != null) {
 			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
-				ssl = SslProvider.updateDefaultConfiguration(ssl,
-						SslProvider.DefaultConfigurationType.H2);
-				SslProvider.setBootstrap(b, ssl);
+				sslContainer.updateAllSslProviderConfiguration(SslProvider.DefaultConfigurationType.H2);
 			}
 			else {
-				ssl = SslProvider.updateDefaultConfiguration(ssl,
-						SslProvider.DefaultConfigurationType.TCP);
-				SslProvider.setBootstrap(b, ssl);
+				sslContainer.updateAllSslProviderConfiguration(SslProvider.DefaultConfigurationType.TCP);
 			}
 		}
 
@@ -127,7 +124,7 @@ final class HttpServerBind extends HttpServer
 		//remove any OPS since we will initialize below
 		BootstrapHandlers.channelOperationFactory(b);
 
-		if (ssl != null) {
+		if (sslContainer != null) {
 			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
 				throw new IllegalArgumentException("Configured H2 Clear-Text protocol " +
 						"with TLS. Use the non clear-text h2 protocol via " +

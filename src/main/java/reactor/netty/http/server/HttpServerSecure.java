@@ -16,9 +16,8 @@
 package reactor.netty.http.server;
 
 import java.util.Objects;
-import java.util.function.Consumer;
 
-import reactor.netty.tcp.SslProvider;
+import reactor.netty.tcp.SslDomainNameMappingContainer;
 import reactor.netty.tcp.TcpServer;
 
 /**
@@ -26,20 +25,18 @@ import reactor.netty.tcp.TcpServer;
  */
 final class HttpServerSecure extends HttpServerOperator {
 
-	final SslProvider sslProvider;
+	final SslDomainNameMappingContainer sslDomainNameMappingContainer;
 
 	HttpServerSecure(HttpServer server,
-			Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+			SslDomainNameMappingContainer sslDomainNameMappingContainer) {
 		super(server);
-		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
+		Objects.requireNonNull(sslDomainNameMappingContainer, "sslDomainNameMappingContainer");
 
-		SslProvider.SslContextSpec builder = SslProvider.builder();
-		sslProviderBuilder.accept(builder);
-		this.sslProvider = ((SslProvider.Builder) builder).build();
+		this.sslDomainNameMappingContainer = sslDomainNameMappingContainer;
 	}
 
 	@Override
 	protected TcpServer tcpConfiguration() {
-		return source.tcpConfiguration().secure(this.sslProvider);
+		return source.tcpConfiguration().secure(this.sslDomainNameMappingContainer);
 	}
 }

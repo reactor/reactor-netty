@@ -39,6 +39,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.tcp.SslDomainNameMappingContainer;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.Logger;
@@ -444,7 +445,26 @@ public abstract class HttpServer {
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		return new HttpServerSecure(this, sslProviderBuilder);
+		return new HttpServerSecure(this, new SslDomainNameMappingContainer(sslProviderBuilder));
+	}
+
+	/**
+	 * Apply an SSL configuration customization via the SslDomainNameMappingContainer.
+	 * you can optionally add multiple hostname-to-sslProviderBuilder mapping(with hostname optionally wildcard)
+	 * to the SslDomainNameMappingContainer so the server will auto search for the suitable {@link SslProvider}
+	 * for the given hostname.
+	 * If no suitable {@link SslProvider} is found for the hostname or the client hostname is not specified,
+	 * it will fallback to use the default {@link SslProvider} in the SslDomainNameMappingContainer.
+	 *
+	 * The hostname-to-sslProviderBuilder mappings in the SslDomainNameMappingContainer can be changed after
+	 * the server have been started.
+	 *
+	 * @param sslDomainNameMappingContainer container for multiple {@link SslContext}s.
+	 *
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer secure(SslDomainNameMappingContainer sslDomainNameMappingContainer) {
+		return new HttpServerSecure(this, sslDomainNameMappingContainer);
 	}
 
 	/**

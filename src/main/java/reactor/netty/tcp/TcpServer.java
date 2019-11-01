@@ -479,7 +479,11 @@ public abstract class TcpServer {
 	 * @return a new {@link TcpServer}
 	 */
 	public final TcpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		return TcpServerSecure.secure(this, sslProviderBuilder);
+		return TcpServerSecure.secure(this, new SslDomainNameMappingContainer(sslProviderBuilder));
+	}
+
+	public final TcpServer secure(SslDomainNameMappingContainer sslDomainNameMappingContainer) {
+		return TcpServerSecure.secure(this, sslDomainNameMappingContainer);
 	}
 
 	/**
@@ -544,8 +548,11 @@ public abstract class TcpServer {
 	 *
 	 * @return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
 	 * transport or null
+	 *
+	 * @deprecated When server side sni is used, sslProvider will return the default sslProvider, this maybe not wanted.
 	 */
 	@Nullable
+	@Deprecated
 	public SslProvider sslProvider() {
 		return null;
 	}

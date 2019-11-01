@@ -57,10 +57,9 @@ final class TcpServerBind extends TcpServer {
 
 	@Override
 	public Mono<? extends DisposableServer> bind(ServerBootstrap b) {
-		SslProvider ssl = SslProvider.findSslSupport(b);
-		if (ssl != null && ssl.getDefaultConfigurationType() == null) {
-			ssl = SslProvider.updateDefaultConfiguration(ssl, SslProvider.DefaultConfigurationType.TCP);
-			SslProvider.setBootstrap(b, ssl);
+		SslDomainNameMappingContainer sslContainer = SslProvider.findSslDomainNameMappingSupport(b);
+		if (sslContainer != null) {
+			sslContainer.updateAllSslProviderConfiguration(SslProvider.DefaultConfigurationType.TCP);
 		}
 
 		if (b.config()
