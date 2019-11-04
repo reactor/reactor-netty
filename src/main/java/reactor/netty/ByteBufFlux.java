@@ -259,24 +259,35 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	 */
 	public final ByteBufMono aggregate() {
 		return Mono.defer(() -> {
-			CompositeByteBuf b = alloc.compositeBuffer();
-			return this.reduce(b,
-			                   (prev, next) -> {
-			                       if (prev.refCnt() > 0) {
-			                           return prev.addComponent(true, next.retain());
-			                       }
-			                       else {
-			                           return prev;
-			                       }
-			                   })
-			           .filter(ByteBuf::isReadable)
-			           .doFinally(signalType -> {
-			               if (b.refCnt() > 0) {
-			                   b.release();
-			               }
-			           });
-			})
-			.as(ByteBufMono::maybeFuse);
+		               CompositeByteBuf output = alloc.compositeBuffer();
+		               return doOnNext(ByteBuf::retain)
+		                       .collectList()
+		                       .doOnDiscard(ByteBuf.class, ByteBuf::release)
+		                       .handle((list, sink) -> {
+		                           if (!list.isEmpty()) {
+		                               for (ByteBuf component : list) {
+		                                   if (component.isReadable()) {
+		                                       output.addComponent(true, component);
+		                                   }
+		                                   else {
+		                                       component.release();
+		                                   }
+		                               }
+		                           }
+		                           if (output.isReadable()) {
+		                               sink.next(output);
+		                           }
+		                           else {
+		                               sink.complete();
+		                           }
+		                       })
+		                       .doFinally(signalType -> {
+		                           if (output.refCnt() > 0) {
+		                               output.release();
+		                           }
+		                       });
+		               })
+		           .as(ByteBufMono::maybeFuse);
 	}
 
 	/**

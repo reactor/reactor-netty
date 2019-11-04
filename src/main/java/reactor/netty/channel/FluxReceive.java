@@ -86,7 +86,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	@Override
 	public void cancel() {
 		cancelReceiver();
-		drainReceiver();
+		if (eventLoop.inEventLoop()) {
+			drainReceiver();
+		}
+		else {
+			eventLoop.execute(this::drainReceiver);
+		}
 	}
 
 	final long getPending() {

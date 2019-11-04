@@ -1525,8 +1525,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@Ignore
-	public void testIssue700() {
+	public void testIssue700AndIssue876() {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -1537,7 +1536,7 @@ public class HttpClientTest {
 				          .bindNow();
 
 		HttpClient client = createHttpClientForContextWithAddress(server);
-		for(int i = 0; i < 500; ++i) {
+		for(int i = 0; i < 1000; ++i) {
 			try {
 				client.get()
 				      .uri("/")
