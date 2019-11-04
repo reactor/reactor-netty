@@ -414,8 +414,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	public HttpResponseStatus status() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
-			return HttpResponseStatus.valueOf(responseState.response.status()
-			                                                        .code());
+			return responseState.response.status();
 		}
 		throw new IllegalStateException("Trying to access status() while missing response");
 	}
