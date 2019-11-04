@@ -16,9 +16,6 @@
 
 package reactor.netty.channel;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -32,9 +29,8 @@ import reactor.netty.NettyOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
-import java.util.Objects;
-
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
 /**
  * Netty {@link io.netty.channel.ChannelDuplexHandler} implementation that bridge data
@@ -101,19 +97,9 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 									decoderResult.cause());
 						}
 					}
-					String loggingMsg;
-					if (msg instanceof ByteBufHolder && !Objects.equals(Unpooled.EMPTY_BUFFER,((ByteBufHolder) msg).content())) {
-						ByteBuf buffer = ((ByteBufHolder) msg).content();
-						loggingMsg = "\n"+ByteBufUtil.prettyHexDump(buffer);
-					}
-					else if (msg instanceof ByteBuf){
-						loggingMsg = "\n"+ByteBufUtil.prettyHexDump((ByteBuf)msg);
-					}
-					else {
-						loggingMsg = msg.toString();
-					}
+
 					log.debug(format(ctx.channel(), "No ChannelOperation attached. Dropping: {}"),
-							loggingMsg);
+							toPrettyHexDump(msg));
 				}
 				ReferenceCountUtil.release(msg);
 			}

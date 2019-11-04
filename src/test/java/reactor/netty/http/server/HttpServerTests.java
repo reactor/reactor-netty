@@ -916,7 +916,6 @@ public class HttpServerTests {
 	}
 
 	@Test
-	@Ignore //TODO fix monoSendMany to not invoke Flux.defer()
 	public void testDropPublisherConnectionClose() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
@@ -926,7 +925,7 @@ public class HttpServerTests {
 				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain())))
 				                 .then()
 				                 .doOnCancel(() -> {
-				                     ReferenceCountUtil.release(data);
+				                     data.release(3);
 				                     latch.countDown();
 				                 }),
 				(req, out) -> {
@@ -952,21 +951,14 @@ public class HttpServerTests {
 	}
 
 	@Test
-	@Ignore //TODO fix monoSendMany to not invoke Flux.defer()
 	public void testDropPublisher() throws Exception {
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
-		CountDownLatch latch = new CountDownLatch(1);
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
 				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain())))
-				                 .then()
-				                 .doOnCancel(() -> {
-				                     ReferenceCountUtil.release(data);
-				                     latch.countDown();
-				                 }),
+				                 .then(),
 				(req, out) -> out);
-		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
 	}
 

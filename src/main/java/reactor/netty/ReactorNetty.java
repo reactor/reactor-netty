@@ -29,6 +29,7 @@ import java.util.function.Predicate;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -165,6 +166,26 @@ public final class ReactorNetty {
 			return msg;
 		}
 	}
+
+	/**
+	 * Pretty hex dump will be returned when the object is {@link ByteBuf} or {@link ByteBufHolder}
+	 */
+	public static String toPrettyHexDump(Object msg) {
+		String result;
+		if (msg instanceof ByteBufHolder &&
+				!Objects.equals(Unpooled.EMPTY_BUFFER, ((ByteBufHolder) msg).content())) {
+			ByteBuf buffer = ((ByteBufHolder) msg).content();
+			result = "\n" + ByteBufUtil.prettyHexDump(buffer);
+		}
+		else if (msg instanceof ByteBuf) {
+			result = "\n" + ByteBufUtil.prettyHexDump((ByteBuf) msg);
+		}
+		else {
+			result = msg.toString();
+		}
+		return result;
+	}
+
 	/**
 	 * Wrap possibly fatal or singleton exception into a new exception instance in order to propagate in reactor flows without side effect.
 	 *
