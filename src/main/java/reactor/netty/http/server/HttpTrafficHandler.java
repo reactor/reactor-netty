@@ -51,6 +51,7 @@ import reactor.util.concurrent.Queues;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.ReactorNetty.toPrettyHexDump;
 
 /**
  * Replace {@link io.netty.handler.codec.http.HttpServerKeepAliveHandler} with extra
@@ -304,6 +305,15 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 			else {
 				ctx.read();
 			}
+			return;
+		}
+		if (persistentConnection && pendingResponses == 0) {
+			if (HttpServerOperations.log.isDebugEnabled()) {
+				HttpServerOperations.log.debug(format(ctx.channel(), "Dropped HTTP content, " +
+						"since response has been sent already: {}"), toPrettyHexDump(msg));
+			}
+			ReferenceCountUtil.release(msg);
+			promise.setSuccess();
 			return;
 		}
 		//"FutureReturnValueIgnored" this is deliberate
