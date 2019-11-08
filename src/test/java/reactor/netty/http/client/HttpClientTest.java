@@ -1742,12 +1742,20 @@ public class HttpClientTest {
 			                   .port(0)
 			                   .wiretap(true)
 			                   .route(r ->
-			                       r.post("/empty", (req, res) -> res.status(400)
-			                                                               .header(HttpHeaderNames.CONNECTION, "close")
-			                                                               .send(Mono.empty()))
-			                        .post("/test", (req, res) -> res.status(400)
-			                                                              .header(HttpHeaderNames.CONNECTION, "close")
-			                                                              .sendString(Mono.just("Test"))))
+			                       r.post("/empty", (req, res) -> {
+			                           // Just consume the incoming body
+			                           req.receive().subscribe();
+			                           return res.status(400)
+			                                     .header(HttpHeaderNames.CONNECTION, "close")
+			                                     .send(Mono.empty());
+			                        })
+			                        .post("/test", (req, res) -> {
+			                            // Just consume the incoming body
+			                            req.receive().subscribe();
+			                            return res.status(400)
+			                                      .header(HttpHeaderNames.CONNECTION, "close")
+			                                      .sendString(Mono.just("Test"));
+			                        }))
 			                   .bindNow();
 
 			HttpClient client = createHttpClientForContextWithAddress(server);
