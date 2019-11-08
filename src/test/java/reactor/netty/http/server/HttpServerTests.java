@@ -1137,4 +1137,50 @@ public class HttpServerTests {
 		assertThat(result.get()).contains(expectations);
 		assertThat(connection.channel().isActive()).isFalse();
 	}
+
+	@Test
+	public void testIssue891() throws Exception {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .route(r -> r.get("/", (req, res) -> res.addHeader("Connection", "close")
+				                                                  .sendString(Mono.just("test"))))
+				          .bindNow();
+
+		int port = disposableServer.port();
+		String address = disposableServer.host() + ":" + port;
+		doTest(port, "GET http://" + address + "/ HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
+		doTest(port, "GET http://" + address + " HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
+	}
+
+	private void doTest(int port, String message) throws Exception {
+		TcpClient tcpClient =
+				TcpClient.create()
+				         .port(port)
+				         .wiretap(true);
+
+		Connection connection = tcpClient.connectNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		connection.channel()
+		          .closeFuture()
+		          .addListener(f -> latch.countDown());
+
+		AtomicReference<String> result = new AtomicReference<>();
+		connection.inbound()
+		          .receive()
+		          .asString()
+		          .doOnNext(result::set)
+		          .subscribe();
+
+		connection.outbound()
+		          .sendString(Mono.just(message))
+		          .then()
+		          .subscribe();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(result.get()).contains("test", "connection: close");
+		assertThat(connection.channel().isActive()).isFalse();
+	}
 }
