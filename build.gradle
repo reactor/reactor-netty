@@ -78,6 +78,7 @@ configure(rootProject) { project ->
 
   apply plugin: 'java'
   apply plugin: 'jacoco'
+  apply from: "$gradleScriptDir/releaser.gradle"
   apply from: "$gradleScriptDir/setup.gradle"
   apply plugin: 'propdeps'
   apply plugin: "biz.aQute.bnd.builder"
