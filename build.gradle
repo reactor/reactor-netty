@@ -29,6 +29,7 @@ buildscript {
 
 plugins {
   id "com.github.hierynomus.license" version "0.14.0"
+  id "com.jfrog.artifactory" version "4.9.8" apply false
 }
 
 description = 'Reactive Streams Netty driver'
