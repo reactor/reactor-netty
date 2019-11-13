@@ -35,6 +35,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.reactivestreams.Publisher;
@@ -271,6 +272,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 
 						if (readableBytes == 0 && !(encodedMessage instanceof ByteBufHolder)) {
+							ReferenceCountUtil.release(encodedMessage);
 							r++;
 							continue;
 						}
