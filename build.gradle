@@ -21,9 +21,9 @@ buildscript {
   }
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
-			'io.spring.gradle:spring-io-plugin:0.0.4.RELEASE',
 			'com.github.jengelman.gradle.plugins:shadow:1.2.0',
-			'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+			'com.google.gradle:osdetector-gradle-plugin:1.4.0',
+			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0'
   }
 }
 
@@ -46,7 +46,7 @@ ext {
 
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.2.13.BUILD-SNAPSHOT"
+  //NOTE: reactorCoreVersion is now defined in gradle.properties
 
   // Logging
   slf4jVersion = '1.7.12'
@@ -79,8 +79,7 @@ configure(rootProject) { project ->
   apply plugin: 'jacoco'
   apply from: "$gradleScriptDir/setup.gradle"
   apply plugin: 'propdeps'
-  apply plugin: 'osgi'
-  apply from: "${gradleScriptDir}/ide.gradle"
+  apply plugin: "biz.aQute.bnd.builder"
   apply from: "${gradleScriptDir}/errorprone.gradle"
   apply plugin: 'com.google.osdetector'
 
@@ -94,10 +93,6 @@ configure(rootProject) { project ->
 	  html.enabled = true
 	}
   }
-
-  ext.bundleImportPackages = [ '!javax.annotation',
-							   'io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)"',
-							   '*']
 
   [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
 														   "-Xlint:cast",
@@ -182,7 +177,7 @@ configure(rootProject) { project ->
 
   repositories {
 	mavenCentral()
-	if (version.endsWith('BUILD-SNAPSHOT') || project.hasProperty('platformVersion')) {
+	if (version.endsWith('BUILD-SNAPSHOT')) {
 	  if (System.getenv ()["bamboo_buildNumber"] == null) {
 		mavenLocal()
 	  } else {
@@ -236,30 +231,16 @@ configure(rootProject) { project ->
   }
 
 
-  if (project.hasProperty('platformVersion')) {
-	apply plugin: 'spring-io'
-
-	repositories {
-	  maven { url 'https://repo.spring.io/libs-snapshot' }
-	}
-
-	dependencyManagement {
-	  springIoTestRuntime {
-		imports {
-		  mavenBom "io.spring.platform:platform-bom:$platformVersion"
-		}
-	  }
-	}
-  }
-
-
   jar {
 	manifest {
-	  instruction 'Import-Package', bundleImportPackages.join(',')
 	  attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
 			  "Implementation-Title": project.name,
 			  "Implementation-Version": project.version)
 	}
+	bnd(
+			"-exportcontents": "!*internal*,*;-noimport:=true",
+			"Import-Package": '!*internal*,!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",*'
+	)
   }
 
   check.dependsOn jacocoTestReport
