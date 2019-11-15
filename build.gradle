@@ -21,8 +21,8 @@ buildscript {
   }
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
-			'io.spring.gradle:spring-io-plugin:0.0.4.RELEASE',
-			'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+			'com.google.gradle:osdetector-gradle-plugin:1.4.0',
+			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0'
   }
 }
 
@@ -30,6 +30,7 @@ plugins {
   id "com.github.hierynomus.license" version "0.14.0"
   id 'org.asciidoctor.convert' version '1.5.11'
   id 'com.github.johnrengelman.shadow' version '5.0.0'
+  id "com.jfrog.artifactory" version "4.9.8" apply false
 }
 
 description = 'Reactive Streams Netty driver'
@@ -47,8 +48,7 @@ ext {
 
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  reactorCoreVersion = "3.3.1.BUILD-SNAPSHOT"
-  reactorPoolVersion = "0.1.0.RELEASE"
+  //NOTE: reactor dependencies versions are now defined in gradle.properties
   blockHoundVersion = "1.0.1.RELEASE"
 
   //Metrics
@@ -92,12 +92,13 @@ configure(rootProject) { project ->
 
   apply plugin: 'java'
   apply plugin: 'jacoco'
+  apply from: "$gradleScriptDir/releaser.gradle"
   apply from: "$gradleScriptDir/setup.gradle"
   apply plugin: 'propdeps'
-  apply plugin: 'osgi'
-  apply from: "${gradleScriptDir}/ide.gradle"
+  apply plugin: "biz.aQute.bnd.builder"
   apply from: "${gradleScriptDir}/errorprone.gradle"
   apply plugin: 'com.google.osdetector'
+  apply plugin: 'idea'
 
   jacoco {
 	toolVersion = '0.7.7.201606060606'
@@ -109,14 +110,6 @@ configure(rootProject) { project ->
 	  html.enabled = true
 	}
   }
-
-  ext.bundleImportPackages = [ '!javax.annotation',
-							   'io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)"',
-							   'io.netty.handler.codec.haproxy;resolution:=optional;version="[4.1,5)"',
-							   '!reactor.pool',
-							   'io.micrometer.*;resolution:=optional',
-							   'reactor.blockhound.*;resolution:=optional',
-							   '*']
 
   [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
 														   "-Xlint:cast",
@@ -203,11 +196,12 @@ configure(rootProject) { project ->
 		jarFileTest
 	}
 
+	//TODO evaluate if this is still necessary, if not remove that and `idea` plugin
 	idea.module.testSourceDirs += sourceSets.jarFileTest.allSource.srcDirs
 
 	repositories {
 	mavenCentral()
-	if (version.endsWith('BUILD-SNAPSHOT') || project.hasProperty('platformVersion')) {
+	if (version.endsWith('BUILD-SNAPSHOT')) {
 	  if (System.getenv ()["bamboo_buildNumber"] == null) {
 		mavenLocal()
 	  } else {
@@ -305,33 +299,19 @@ configure(rootProject) { project ->
   }
 
 
-  if (project.hasProperty('platformVersion')) {
-	apply plugin: 'spring-io'
-
-	repositories {
-	  maven { url 'https://repo.spring.io/libs-snapshot' }
-	}
-
-	dependencyManagement {
-	  springIoTestRuntime {
-		imports {
-		  mavenBom "io.spring.platform:platform-bom:$platformVersion"
-		}
-	  }
-	}
-  }
-
-
   jar {
 	classifier = 'original'
 
 	manifest {
-	  instruction 'Import-Package', bundleImportPackages.join(',')
 	  attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
 			  "Implementation-Title": project.name,
 			  "Implementation-Version": project.version,
 			  "Automatic-Module-Name": "reactor.netty")
 	}
+	bnd(
+			"-exportcontents": "!*internal*,*;-noimport:=true",
+			"Import-Package": '!*internal*,!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",io.netty.handler.codec.haproxy;resolution:=optional;version="[4.1,5)",!reactor.pool,io.micrometer.*;resolution:=optional,reactor.blockhound.*;resolution:=optional,*'
+	)
   }
 
   check.dependsOn jacocoTestReport
@@ -376,7 +356,8 @@ configure(rootProject) { project ->
 
   tasks.shadowJar.dependsOn tasks.relocateShadowJar
 
-  artifacts.archives shadowJar
+  //add shadowJar to the publication
+  publishing.publications.mavenJava.artifact(shadowJar)
 
   task jarFileTest(type: Test) {
 	  testClassesDirs = sourceSets.jarFileTest.output.classesDirs

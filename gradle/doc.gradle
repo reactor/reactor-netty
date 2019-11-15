@@ -83,16 +83,17 @@ configure(rootProject) {
 			'source-highlighter': 'highlightjs',
 			'highlightjsdir': "./highlight",
 			'highlightjs-theme': 'railscasts'
-
-	doLast {
-	  file("$outputDir/pdf/index.pdf").
-			  renameTo("$outputDir/pdf/reactor-netty-reference-guide-${version}.pdf")
-	}
   }
 
   task docsZip(type: Zip, dependsOn: asciidoctor) {
 	baseName = 'reactor-netty-docs'
-	from("$buildDir/asciidoc/pdf/reactor-netty-reference-guide-${version}.pdf") { into ("docs/") }
+	afterEvaluate() {
+		//we copy the pdf late, when a potential customVersion has been applied to rootProject
+		from("$buildDir/asciidoc/pdf/index.pdf") {
+			into ("docs/")
+			rename("index.pdf", "reactor-netty-reference-guide-${rootProject.version}.pdf")
+		}
+	}
 	from("$buildDir/asciidoc/html5/index.html") { into("docs/") }
 	from("$buildDir/asciidoc/html5/images") { into("docs/images/") }
 	from("$buildDir/asciidoc/html5/highlight") { into("docs/highlight/") }
