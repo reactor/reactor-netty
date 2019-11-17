@@ -96,7 +96,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final ClientCookieEncoder   cookieEncoder;
 	final ClientCookieDecoder   cookieDecoder;
 
-	Supplier<String>[]    redirectedFrom = EMPTY_REDIRECTIONS;
+	Supplier<String>[]    		redirectedFrom = EMPTY_REDIRECTIONS;
+	String    		    		resourceUrl;
 
 	volatile ResponseState responseState;
 
@@ -422,6 +423,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public final String uri() {
 		return this.nettyRequest.uri();
+	}
+
+	@Override
+	public String resourceUrl() {
+		return resourceUrl;
 	}
 
 	@Override

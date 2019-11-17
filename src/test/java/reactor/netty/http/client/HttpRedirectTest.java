@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -461,5 +462,51 @@ public class HttpRedirectTest {
 		            .verify(Duration.ofSeconds(5));
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void testLastLocationSetToResourceUrlOnRedirect() throws CertificateException {
+		final String redirectPath = "/redirect";
+		final String destinationPath = "/destination";
+		final String responseContent = "Success";
+
+		SelfSignedCertificate redirectServerCert = new SelfSignedCertificate();
+		DisposableServer redirectServer =
+				HttpServer.create()
+						.port(0)
+						.route(r -> r
+								.get(redirectPath, (req, res) -> res.sendRedirect(destinationPath))
+								.get(destinationPath, (req, res) -> res.sendString(Mono.just(responseContent)))
+						)
+						.secure(spec -> spec.sslContext(SslContextBuilder
+								.forServer(redirectServerCert.certificate(), redirectServerCert.privateKey())))
+						.wiretap(true)
+						.bindNow();
+		DisposableServer initialServer =
+				HttpServer.create()
+						.port(0)
+						.handle((req, res) ->
+								res.sendRedirect("https://localhost:" + redirectServer.port() + destinationPath)
+						)
+						.wiretap(true)
+						.bindNow();
+
+		final String requestUri = "http://localhost:" + initialServer.port();
+		StepVerifier.create(
+				HttpClient.create()
+						.wiretap(true)
+						.followRedirect(true)
+						.secure(spec -> spec.sslContext(SslContextBuilder
+								.forClient()
+								.trustManager(InsecureTrustManagerFactory.INSTANCE)))
+						.get()
+						.uri(requestUri)
+						.responseConnection((res, conn) -> Mono.just(res.resourceUrl())))
+				.expectNext("https://localhost:" + redirectServer.port() + destinationPath)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+
+		initialServer.disposeNow();
+		redirectServer.disposeNow();
 	}
 }
