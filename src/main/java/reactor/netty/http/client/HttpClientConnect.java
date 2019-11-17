@@ -609,12 +609,12 @@ final class HttpClientConnect extends HttpClient {
 				SocketAddress address = from.getRemoteAddress();
 				if (address instanceof InetSocketAddress) {
 					InetSocketAddress inetSocketAddress = (InetSocketAddress) address;
-					toURI = uriEndpointFactory.createUriEndpoint(to, from.isWs(),
+					toURI = uriEndpointFactory.createUriEndpoint(from, to,
 							() -> URI_ADDRESS_MAPPER.apply(inetSocketAddress.getHostString(), inetSocketAddress.getPort()));
 				}
 				else {
-					toURI = uriEndpointFactory.createUriEndpoint(to, from.isWs(),
-							() -> URI_ADDRESS_MAPPER.apply(from.host, from.port));
+					toURI = uriEndpointFactory.createUriEndpoint(from, to,
+								() -> URI_ADDRESS_MAPPER.apply(from.host, from.port));
 				}
 			}
 			else {
