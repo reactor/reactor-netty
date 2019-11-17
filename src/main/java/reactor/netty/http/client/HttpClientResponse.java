@@ -18,8 +18,6 @@ package reactor.netty.http.client;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import reactor.netty.http.HttpInfos;
-import reactor.util.context.Context;
 
 /**
  * An HttpClient Reactive metadata contract for incoming response. It inherits several
@@ -31,22 +29,7 @@ import reactor.util.context.Context;
  * @author Stephane Maldini
  * @since 0.5
  */
-public interface HttpClientResponse extends HttpInfos {
-
-	/**
-	 * Return the current {@link Context} associated with the Mono/Flux exposed
-	 * via {@link HttpClient.ResponseReceiver#response()} or related terminating API.
-	 *
-	 * @return the current user {@link Context}
-	 */
-	Context currentContext();
-
-	/**
-	 * Return the previous redirections or empty array
-	 *
-	 * @return the previous redirections or empty array
-	 */
-	String[] redirectedFrom();
+public interface HttpClientResponse extends HttpClientInfos {
 
 	/**
 	 * Return response HTTP headers.

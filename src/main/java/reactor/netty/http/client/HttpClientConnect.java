@@ -523,6 +523,8 @@ final class HttpClientConnect extends HttpClient {
 
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
+				ch.resourceUrl = toURI.toExternalForm();
+
 				UriEndpoint uri = toURI;
 				HttpHeaders headers = ch.getNettyRequest()
 				                        .setUri(uri.getPathAndQuery())
