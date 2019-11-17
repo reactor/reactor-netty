@@ -429,14 +429,13 @@ public class HttpRedirectTest {
 
 	@Test
 	public void testRelativeRedirectKeepsScheme() {
-		final int serverPort = SocketUtils.findAvailableTcpPort();
 		final String requestPath = "/request";
 		final String redirectPath = "/redirect";
 		final String responseContent = "Success";
 
 		DisposableServer server =
 				HttpServer.create()
-						.port(serverPort)
+						.port(0)
 						.route(r -> {
 							r
 									.get(requestPath, (req, res) -> res.sendRedirect(redirectPath))
@@ -446,20 +445,20 @@ public class HttpRedirectTest {
 						.bindNow();
 
 		final Mono<String> responseMono = HttpClient.create()
-				.addressSupplier(server::address)
 				.wiretap(true)
 				.followRedirect(true)
 				.secure(spec -> spec.sslContext(SslContextBuilder.forClient()
 						.trustManager(InsecureTrustManagerFactory.INSTANCE)))
 				.get()
-				.uri("http://localhost:" + serverPort + requestPath)
+				.uri("http://localhost:" + server.port() + requestPath)
 				.responseContent()
 				.aggregate()
 				.asString();
 
 		StepVerifier.create(responseMono)
-				.assertNext(content -> Assertions.assertThat(content).isEqualTo(responseContent))
-				.verifyComplete();
+				.expectNext(responseContent)
+				.expectComplete()
+				.verify(Duration.ofSeconds(5));
 
 
 		server.disposeNow();
