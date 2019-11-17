@@ -70,6 +70,14 @@ final class UriEndpointFactory {
 		}
 	}
 
+	UriEndpoint createUriEndpoint(UriEndpoint from, String to, Supplier<SocketAddress> connectAddress) {
+		if (to.startsWith("/")) {
+			return new UriEndpoint(from.scheme, from.host, from.port, connectAddress, to);
+		} else {
+			throw new IllegalArgumentException("Must provide a relative address in parameter `to`");
+		}
+	}
+
 	String cleanPathAndQuery(@Nullable String pathAndQuery) {
 		if (pathAndQuery == null) {
 			pathAndQuery = "/";
