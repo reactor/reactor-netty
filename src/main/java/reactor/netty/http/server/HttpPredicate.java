@@ -252,8 +252,11 @@ final class HttpPredicate
 		private static final Pattern NAME_SPLAT_PATTERN     =
 				Pattern.compile("\\{([^/]+?)\\}[\\*][\\*]");
 
-		private static final Pattern NAME_PATTERN     = Pattern.compile("\\{([^/]+?)\\}");
+		private static final Pattern NAME_PATTERN           = Pattern.compile("\\{([^/]+?)\\}");
 		// JDK 6 doesn't support named capture groups
+
+		private static final Pattern URL_PATTERN            =
+				Pattern.compile("(?:(\\w+)://)?((?:\\[.+?])|(?<!\\[)(?:[^/?]+?))(?::(\\d{2,5}))?([/?].*)?");
 
 		private final List<String> pathVariables = new ArrayList<>();
 
@@ -277,13 +280,29 @@ final class HttpPredicate
 			}
 		}
 
+		static String filterHostAndPort(String uri) {
+			if (uri.startsWith("/")) {
+				return uri;
+			}
+			else {
+				Matcher matcher = URL_PATTERN.matcher(uri);
+				if (matcher.matches()) {
+					String path = matcher.group(4);
+					return path == null ? "/" : path;
+				}
+				else {
+					throw new IllegalArgumentException("Unable to parse url [" + uri + "]");
+				}
+			}
+		}
+
 		/**
 		 * Creates a new {@code UriPathTemplate} from the given {@code uriPattern}.
 		 *
 		 * @param uriPattern The pattern to be used by the template
 		 */
 		UriPathTemplate(String uriPattern) {
-			String s = "^" + filterQueryParams(uriPattern);
+			String s = "^" + filterQueryParams(filterHostAndPort(uriPattern));
 
 			Matcher m = NAME_SPLAT_PATTERN.matcher(s);
 			while (m.find()) {
@@ -350,7 +369,7 @@ final class HttpPredicate
 		}
 
 		private Matcher matcher(String uri) {
-			uri = filterQueryParams(uri);
+			uri = filterQueryParams(filterHostAndPort(uri));
 			return uriPattern.matcher(uri);
 		}
 
