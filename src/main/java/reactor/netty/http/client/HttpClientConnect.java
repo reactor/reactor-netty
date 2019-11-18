@@ -614,7 +614,7 @@ final class HttpClientConnect extends HttpClient {
 				}
 				else {
 					toURI = uriEndpointFactory.createUriEndpoint(from, to,
-								() -> URI_ADDRESS_MAPPER.apply(from.host, from.port));
+							() -> URI_ADDRESS_MAPPER.apply(from.host, from.port));
 				}
 			}
 			else {
