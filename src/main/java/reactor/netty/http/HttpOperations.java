@@ -38,6 +38,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -97,7 +98,13 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return new PostHeadersNettyOutbound(((Mono<ByteBuf>)source)
 					.flatMap(msg -> {
 						if (markSentHeaderAndBody()) {
-							preSendHeadersAndStatus();
+							try {
+								preSendHeadersAndStatus();
+							}
+							catch (RuntimeException e) {
+								ReferenceCountUtil.release(msg);
+								throw e;
+							}
 							return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(msg)));
 						}
 						return FutureMono.from(channel().writeAndFlush(msg));
