@@ -80,11 +80,10 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 
 	@Test
 	public void testFailedTlsHandshake() throws Exception {
-		disposableServer = customizeServerOptions(tcpServer).bindNow();
+		disposableServer = tcpServer.bindNow();
 
-		connection = customizeClientOptions(tcpClient)
-		                     .noSSL()
-		                     .connectNow();
+		connection = tcpClient.noSSL()
+		                      .connectNow();
 
 		connection.outbound()
 		          .sendString(Mono.just("hello"))

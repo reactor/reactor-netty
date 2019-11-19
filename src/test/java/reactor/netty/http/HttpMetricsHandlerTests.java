@@ -100,7 +100,7 @@ public class HttpMetricsHandlerTests {
 
 	@Test
 	public void testExistingEndpoint() throws Exception {
-		disposableServer = customizeServerOptions(httpServer).bindNow();
+		disposableServer = httpServer.bindNow();
 
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
 		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
@@ -161,7 +161,7 @@ public class HttpMetricsHandlerTests {
 	@Test
 	@Ignore
 	public void testNonExistingEndpoint() throws Exception {
-		disposableServer = customizeServerOptions(httpServer).bindNow();
+		disposableServer = httpServer.bindNow();
 
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
 		httpClient = httpClient.doAfterRequest((req, conn) -> clientAddress.set(conn.channel().localAddress()));
