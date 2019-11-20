@@ -14,6 +14,14 @@
  * limitations under the License.
  */
 
+
+if (project.hasProperty("releaserDryRun") && project.findProperty("releaserDryRun") != "false") {
+	println "Adding MavenLocal() for benefit of releaser dry run"
+	project.repositories {
+		mavenLocal()
+	}
+}
+
 //NOTE: this task is intended for single project builds with no submodules
 task groupId(group: "releaser helpers", description: "output the group id of the root project") {
 	doLast {
