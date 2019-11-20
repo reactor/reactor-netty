@@ -54,10 +54,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author Violeta Georgieva
  */
 public class HttpMetricsHandlerTests {
-	private HttpServer httpServer;
-	private DisposableServer disposableServer;
+	HttpServer httpServer;
+	DisposableServer disposableServer;
 	private ConnectionProvider provider;
-	private HttpClient httpClient;
+	HttpClient httpClient;
 	private MeterRegistry registry;
 	
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
@@ -318,7 +318,7 @@ public class HttpMetricsHandlerTests {
 		}
 	}
 
-	private void checkCounter(String name, String[] tags, boolean exists, double expectedCount) {
+	void checkCounter(String name, String[] tags, boolean exists, double expectedCount) {
 		Counter counter = registry.find(name).tags(tags).counter();
 		if (exists) {
 			assertNotNull(counter);
@@ -347,7 +347,7 @@ public class HttpMetricsHandlerTests {
 	private static final String CLIENT_DATA_RECEIVED_TIME = CLIENT_METRICS_NAME + DATA_RECEIVED_TIME;
 	private static final String CLIENT_DATA_SENT = CLIENT_METRICS_NAME + DATA_SENT;
 	private static final String CLIENT_DATA_RECEIVED = CLIENT_METRICS_NAME + DATA_RECEIVED;
-	private static final String CLIENT_ERRORS = CLIENT_METRICS_NAME + ERRORS;
+	static final String CLIENT_ERRORS = CLIENT_METRICS_NAME + ERRORS;
 	private static final String CLIENT_CONNECT_TIME = CLIENT_METRICS_NAME + CONNECT_TIME;
 	private static final String CLIENT_TLS_HANDSHAKE_TIME = CLIENT_METRICS_NAME + TLS_HANDSHAKE_TIME;
 }

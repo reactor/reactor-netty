@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
+import reactor.netty.channel.ChannelOperations;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -123,9 +124,20 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		recorder.incrementErrorsCount(ctx.channel().remoteAddress(), request.uri());
+		recorder.incrementErrorsCount(ctx.channel().remoteAddress(),
+				request != null ? request.uri() : resolveUri(ctx));
 
 		ctx.fireExceptionCaught(cause);
+	}
+
+	private String resolveUri(ChannelHandlerContext ctx) {
+		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
+		if (channelOps instanceof HttpClientOperations) {
+			return ((HttpClientOperations) channelOps).uri();
+		}
+		else {
+			return "unknown";
+		}
 	}
 
 	private void reset() {

@@ -21,11 +21,23 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.BeforeClass;
+import org.junit.Test;
+import reactor.core.publisher.Mono;
+import reactor.netty.ByteBufFlux;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.tcp.TcpServer;
 
 import javax.net.ssl.SSLException;
+import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertTrue;
+import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.URI;
 
 /**
  * @author Violeta Georgieva
@@ -68,5 +80,33 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 	@Override
 	protected void checkTlsTimer(String name, String[] tags, boolean exists, long expectedCount) {
 		checkTimer(name, tags, exists, expectedCount);
+	}
+
+
+	@Test
+	public void testIssue896() throws Exception {
+		disposableServer = httpServer.tcpConfiguration(TcpServer::noSSL)
+		                             .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		httpClient.observe((conn, state) -> {
+		              if (state == ConnectionObserver.State.DISCONNECTING) {
+		                  conn.channel()
+		                      .closeFuture()
+		                      .addListener(f -> latch.countDown());
+		              }
+		          })
+		          .post()
+		          .uri("/1")
+		          .send(ByteBufFlux.fromString(Mono.just("hello")))
+		          .responseContent()
+		          .subscribe();
+
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
+
+		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
+		String serverAddress = sa.getHostString() + ":" + sa.getPort();
+		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, URI, "unknown"};
+		checkCounter(CLIENT_ERRORS, summaryTags, true, 2);
 	}
 }
