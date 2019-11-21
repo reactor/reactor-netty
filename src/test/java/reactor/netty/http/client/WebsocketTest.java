@@ -32,15 +32,18 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
+import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -1155,5 +1158,88 @@ public class WebsocketTest {
 		                       .isInstanceOf(AbortedException.class);
 
 		scheduler.dispose();
+	}
+
+	@Test
+	public void testIssue900_1() {
+		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) ->
+				              res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
+				                                                              .doOnNext(WebSocketFrame::retain))))
+				          .wiretap(true)
+				          .bindNow();
+
+		Flux<WebSocketFrame> response =
+				HttpClient.create()
+				          .port(httpServer.port())
+				          .websocket()
+				          .uri("/")
+				          .handle((in, out) -> {
+				              in.receiveCloseStatus()
+				                .subscribeWith(statusClient);
+
+				              return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
+				                                              new CloseWebSocketFrame(1008, "something")))
+				                        .then()
+				                        .thenMany(in.receiveFrames());
+				          });
+
+		StepVerifier.create(response)
+		            .expectNextMatches(webSocketFrame ->
+		                webSocketFrame instanceof TextWebSocketFrame &&
+		                    "echo".equals(((TextWebSocketFrame) webSocketFrame).text()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(statusClient)
+		            .expectNext(new WebSocketCloseStatus(1008, "something"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testIssue900_2() {
+		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
+		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) ->
+				              res.sendWebsocket((in, out) -> {
+				                  in.receiveCloseStatus()
+				                    .subscribeWith(statusServer);
+
+				                  return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
+				                                                  new CloseWebSocketFrame(1008, "something")))
+				                            .then(in.receiveFrames()
+				                                    .subscribeWith(incomingData)
+				                                    .then());
+				              })
+				          )
+				          .wiretap(true)
+				          .bindNow();
+
+		HttpClient.create()
+		          .port(httpServer.port())
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) -> out.sendObject(in.receiveFrames()
+		                                                .doOnNext(WebSocketFrame::retain)))
+		          .subscribe();
+
+		StepVerifier.create(incomingData)
+		            .expectNext(new TextWebSocketFrame("echo"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(statusServer)
+		            .expectNext(new WebSocketCloseStatus(1008, "something"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 }

@@ -137,11 +137,10 @@ final class WebsocketServerOperations extends HttpServerOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
-			onInboundComplete();
 			CloseWebSocketFrame close = (CloseWebSocketFrame) frame;
 			sendCloseNow(new CloseWebSocketFrame(true,
 					close.rsv(),
-					close.content()), f -> terminate());
+					close.content()), f -> terminate()); // terminate() will invoke onInboundComplete()
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {

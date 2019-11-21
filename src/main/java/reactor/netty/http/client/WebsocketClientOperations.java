@@ -139,11 +139,11 @@ final class WebsocketClientOperations extends HttpClientOperations
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "CloseWebSocketFrame detected. Closing Websocket"));
 			}
-			onInboundComplete();
 			CloseWebSocketFrame close = (CloseWebSocketFrame) msg;
 			sendCloseNow(new CloseWebSocketFrame(true,
 					close.rsv(),
 					close.content()));
+			onInboundComplete();
 		}
 		else if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
 			super.onInboundNext(ctx, msg);
