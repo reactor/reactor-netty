@@ -45,7 +45,6 @@ import reactor.core.publisher.ReplayProcessor;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
-import reactor.netty.NettyPipeline;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.http.websocket.WebsocketInbound;
@@ -130,39 +129,6 @@ public class WebsocketTest {
 		            .verify(Duration.ofSeconds(30));
 	}
 
-//	static final byte[] testData;
-//
-//	static {
-//		testData = new byte[10000];
-//		for (int i = 0; i < testData.length; i++) {
-//			testData[i] = 88;
-//		}
-//
-//	}
-//
-//	@Test
-//	public void largeChunk() throws Exception {
-//		httpServer = HttpServer.create(0)
-//		                       .newHandler((in, out) -> out.sendWebsocket((i, o) -> o
-//				                       .sendByteArray(Mono.just(testData))
-//		                                                                             .neverComplete()))
-//		                       .block(Duration.ofSeconds(30));
-//
-//		HttpClient.create(httpServer.address()
-//		                                         .getPort())
-//		                       .get("/test",
-//				                       out -> out.addHeader("Authorization", auth)
-//				                                 .sendWebsocket())
-//		                       .flatMapMany(in -> in.receiveWebsocket()
-//		                                        .receive()
-//		                                        .asByteArray())
-//		                       .doOnNext(d -> log.debug(d.length))
-//		                       .log()
-//		                       .subscribe();
-//
-//		Thread.sleep(200000);
-//	}
-
 	@Test
 	public void unidirectional() {
 		int c = 10;
@@ -228,7 +194,7 @@ public class WebsocketTest {
 		Mono<List<String>> response =
 				client.headers(h -> h.add("Content-Type", "text/plain")
 				                     .add("test", "test"))
-				      .websocket() //TODO investigate why get not working
+				      .websocket()
 				      .uri("/test/World")
 				      .handle((i, o) -> {
 				          o.sendString(Flux.range(1, 1000)
