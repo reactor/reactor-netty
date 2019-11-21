@@ -538,6 +538,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				PendingConnectionObserver pending = (PendingConnectionObserver)current;
 				PendingConnectionObserver.Pending p;
 				current = null;
+				registerClose(pooledRef, pool);
 
 				while((p = pending.pendingQueue.poll()) != null) {
 					if (p.error != null) {
@@ -547,6 +548,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 						onStateChange(p.connection, p.state);
 					}
 				}
+			}
+			else if (current == null) {
+				registerClose(pooledRef, pool);
 			}
 
 
@@ -581,6 +585,24 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			if (opsFactory == ChannelOperations.OnSetup.empty()) {
 				sink.success(Connection.from(c));
 			}
+		}
+
+		void registerClose(PooledRef<PooledConnection> pooledRef, InstrumentedPool<PooledConnection> pool) {
+			Channel channel = pooledRef.poolable().channel;
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "Registering pool release on close event for channel"));
+			}
+			channel.closeFuture()
+			       .addListener(ff ->
+			           pooledRef.invalidate()
+			                    .subscribe(null, null, () -> {
+			                        if (log.isDebugEnabled()) {
+			                            log.debug(format(channel, "Channel closed, now {} active connections and " +
+			                                "{} inactive connections"),
+			                                    pool.metrics().acquiredSize(),
+			                                    pool.metrics().idleSize());
+			                        }
+			                    }));
 		}
 	}
 

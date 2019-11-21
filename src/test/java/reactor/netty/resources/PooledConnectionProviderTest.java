@@ -17,6 +17,7 @@ package reactor.netty.resources;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -33,6 +34,8 @@ import java.util.concurrent.locks.LockSupport;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -42,6 +45,8 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.PooledConnectionProvider.PooledConnection;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientTests;
@@ -267,6 +272,33 @@ public class PooledConnectionProviderTest {
 		}
 	}
 
+	@Test
+	public void testIssue903() throws CertificateException {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.key(), cert.cert());
+		DisposableServer server =
+				HttpServer.create()
+				          .secure(s -> s.sslContext(serverCtx))
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, resp) -> resp.sendHeaders())
+				          .bindNow();
+
+		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("testIssue903", 1);
+		HttpClient.create(provider)
+		          .port(server.port())
+		          .get()
+		          .uri("/")
+		          .response()
+		          .onErrorResume(e -> Mono.empty())
+		          .block(Duration.ofSeconds(30));
+
+		provider.channelPools.forEach((k, v) -> assertThat(v.metrics().acquiredSize()).isEqualTo(0));
+
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
+		server.disposeNow();
+	}
 
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {
 
