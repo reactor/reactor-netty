@@ -99,7 +99,7 @@ $ ./gradlew build
 If you want to publish the artifacts to your local `Maven` repository use:
 
 ```shell
-$ ./gradlew install
+$ ./gradlew publishToMavenLocal
 ```
 
 ## Javadoc
