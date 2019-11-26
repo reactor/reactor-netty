@@ -90,7 +90,8 @@ configure(rootProject) {
   }
 
   task docsZip(type: Zip, dependsOn: asciidoctor) {
-	baseName = 'reactor-netty-docs'
+	archiveBaseName.set("reactor-netty")
+  archiveClassifier.set("docs")
 	afterEvaluate() {
 		//we copy the pdf late, when a potential customVersion has been applied to rootProject
 		from("$buildDir/asciidoc/pdf/index.pdf") {
