@@ -16,7 +16,6 @@
 
 configure(rootProject) { subproject ->
 	apply from: "$gradleScriptDir/doc.gradle"
-	apply plugin: 'propdeps-maven'
 	apply plugin: 'maven-publish'
 	apply plugin: 'com.jfrog.artifactory'
 
