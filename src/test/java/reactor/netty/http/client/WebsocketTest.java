@@ -1215,7 +1215,8 @@ public class WebsocketTest {
 				                    .subscribeWith(statusServer);
 
 				                  return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
-				                                                  new CloseWebSocketFrame(1008, "something")))
+				                                                  new CloseWebSocketFrame(1008, "something"))
+				                                            .delayElements(Duration.ofMillis(100)))
 				                            .then(in.receiveFrames()
 				                                    .subscribeWith(incomingData)
 				                                    .then());

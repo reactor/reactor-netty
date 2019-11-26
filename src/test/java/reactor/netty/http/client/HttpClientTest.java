@@ -956,8 +956,9 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
+		ConnectionProvider provider = ConnectionProvider.fixed("testIssue407", 1);
 		HttpClient client =
-				createHttpClientForContextWithAddress(server)
+				createHttpClientForContextWithAddress(server, provider)
 				        .secure(spec -> spec.sslContext(
 				                SslContextBuilder.forClient()
 				                                 .trustManager(InsecureTrustManagerFactory.INSTANCE)));
@@ -1005,6 +1006,8 @@ public class HttpClientTest {
 		assertThat(ch1.get()).isNotSameAs(ch3.get());
 
 		server.disposeNow();
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
 	}
 
 

@@ -158,7 +158,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					PooledConnectionProviderMetrics.registerMetrics(name,
 							poolKey.hashCode() + "",
 							Metrics.formatSocketAddress(bootstrap.config().remoteAddress()),
-							newPool);
+							newPool.metrics());
 				}
 				return newPool;
 			});

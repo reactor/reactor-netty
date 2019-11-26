@@ -28,25 +28,25 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 final class PooledConnectionProviderMetrics {
 
 	static void registerMetrics(String poolName, String id, String remoteAddress,
-			InstrumentedPool<PooledConnectionProvider.PooledConnection> pool) {
+			InstrumentedPool.PoolMetrics metrics) {
 		String name = String.format(NAME, poolName);
 
-		Gauge.builder(name + TOTAL_CONNECTIONS, pool, p -> p.metrics().allocatedSize())
+		Gauge.builder(name + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
 		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
 		     .register(registry);
 
-		Gauge.builder(name + ACTIVE_CONNECTIONS, pool, p -> p.metrics().acquiredSize())
+		Gauge.builder(name + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
 		     .description("The number of the connections that have been successfully acquired and are in active use")
 		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
 		     .register(registry);
 
-		Gauge.builder(name + IDLE_CONNECTIONS, pool, p -> p.metrics().idleSize())
+		Gauge.builder(name + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
 		     .description("The number of the idle connections")
 		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
 		     .register(registry);
 
-		Gauge.builder(name + PENDING_CONNECTIONS, pool, p -> p.metrics().pendingAcquireSize())
+		Gauge.builder(name + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
 		     .description("The number of the request, that are pending acquire a connection")
 		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
 		     .register(registry);
