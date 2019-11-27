@@ -15,7 +15,7 @@
  */
 
 /**
- * Components for writing TCP-based clients and servers using Reactor abstractions.
+ * Components for writing UDP-based clients and servers using Reactor abstractions.
  */
 @NonNullApi
 package reactor.netty.udp;
