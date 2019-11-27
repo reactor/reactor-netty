@@ -235,7 +235,7 @@ public class PooledConnectionProviderTest {
 		try {
 			AtomicReference<InstrumentedPool<PooledConnection>> pool = new AtomicReference<>();
 			Flux.range(0, 5)
-			    .flatMap(i ->
+			    .flatMapDelayError(i ->
 					    TcpClient.create(provider)
 					             .port(server.port())
 					             .doOnConnected(conn -> {
@@ -247,8 +247,8 @@ public class PooledConnectionProviderTest {
 					             .handle((in, out) -> in.receive().then())
 					             .wiretap(true)
 					             .connect()
-					             .materialize()
-			    )
+					             .materialize(),
+			    256, 32)
 			    .collectList()
 			    .doFinally(fin -> latch.countDown())
 			    .subscribe(l -> {

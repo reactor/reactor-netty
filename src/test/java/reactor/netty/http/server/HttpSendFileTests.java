@@ -331,9 +331,9 @@ public class HttpSendFileTests {
 				                ByteBuffer buf = ByteBuffer.allocate(chunk);
 				                ch.read(buf, 0, buf, handler);
 				        }),
-				        HttpSendFileTests::closeChannel)
+				        ch -> {/*the channel will be closed in the handler*/})
 				    .doOnDiscard(ByteBuf.class, ByteBuf::release)
-				.log("send", Level.INFO, SignalType.REQUEST, SignalType.ON_COMPLETE);
+				    .log("send", Level.INFO, SignalType.REQUEST, SignalType.ON_COMPLETE);
 
 		DisposableServer context =
 				customizeServerOptions(HttpServer.create()

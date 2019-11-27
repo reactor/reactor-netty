@@ -867,13 +867,16 @@ public class HttpServerTests {
 
 	@Test
 	public void testDropPublisher() throws Exception {
+		CountDownLatch latch = new CountDownLatch(1);
 		ByteBuf data = ByteBufAllocator.DEFAULT.buffer();
 		data.writeCharSequence("test", Charset.defaultCharset());
 		doTestDropData(
 				(req, res) -> res.header("Content-Length", "0")
-				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain())))
+				                 .send(Flux.defer(() -> Flux.just(data, data.retain(), data.retain()))
+				                           .doFinally(s -> latch.countDown()))
 				                 .then(),
 				(req, out) -> out);
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(ReferenceCountUtil.refCnt(data)).isEqualTo(0);
 	}
 
