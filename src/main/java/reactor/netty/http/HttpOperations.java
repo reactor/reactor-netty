@@ -52,6 +52,9 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
 
+import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.ReactorNetty.toPrettyHexDump;
+
 /**
  * An HTTP ready {@link ChannelOperations} with state management for status and headers
  * (first HTTP response packet).
@@ -104,6 +107,12 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 								ReferenceCountUtil.release(msg);
 								throw e;
 							}
+							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
+								log.debug(format(channel(), "Dropped HTTP content, " +
+										"since response has Content-Length: 0 {}"), toPrettyHexDump(msg));
+								msg.release();
+								return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
+							}
 							return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(msg)));
 						}
 						return FutureMono.from(channel().writeAndFlush(msg));
@@ -121,7 +130,19 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		ByteBuf b = (ByteBuf) message;
 		return new PostHeadersNettyOutbound(FutureMono.deferFuture(() -> {
 			if (markSentHeaderAndBody()) {
-				preSendHeadersAndStatus();
+				try {
+					preSendHeadersAndStatus();
+				}
+				catch (RuntimeException e) {
+					b.release();
+					throw e;
+				}
+				if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
+					log.debug(format(channel(), "Dropped HTTP content, " +
+							"since response has Content-Length: 0 {}"), toPrettyHexDump(b));
+					b.release();
+					return channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
+				}
 				return channel().writeAndFlush(newFullBodyMessage(b));
 			}
 			return channel().writeAndFlush(b);
@@ -157,7 +178,13 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 					msg = outboundHttpMessage();
 				}
 
-				preSendHeadersAndStatus();
+				try {
+					preSendHeadersAndStatus();
+				}
+				catch (RuntimeException e) {
+					ReferenceCountUtil.release(msg);
+					throw e;
+				}
 
 				return channel().writeAndFlush(msg);
 			}
