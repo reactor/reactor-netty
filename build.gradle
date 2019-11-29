@@ -70,8 +70,8 @@ ext {
 				  "https://projectreactor.io/docs/netty/release/api/",] as String[]
 
 	bndOptions = [
-			"-exportcontents" : "!*internal*,*;-noimport:=true",
-			"Import-Package": '!reactor.netty.internal*,!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",*',
+			"Export-Package": "!reactor.netty.internal*,reactor.netty.*;-noimport:=true",
+			"Import-Package": '!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",*',
 			"Bundle-Name" : "reactor-netty",
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty"
 	]
