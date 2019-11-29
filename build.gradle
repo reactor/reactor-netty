@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.gradle.api.internal.plugins.osgi.OsgiHelper
 
 buildscript {
   repositories {
@@ -41,7 +40,6 @@ ext {
 	  realVersion = version.toString().replace("BUILD-SNAPSHOT", versionBranch + ".BUILD-SNAPSHOT")
 	  project.version = realVersion
 	  println "Building special snapshot ${project.version}"
-	  println "OSGI version would be: ${new OsgiHelper().getVersion(project.version.toString())}"
 	}
   }
 
@@ -70,6 +68,13 @@ ext {
 				  "https://projectreactor.io/docs/core/release/api/",
 				  "https://netty.io/4.1/api/",
 				  "https://projectreactor.io/docs/netty/release/api/",] as String[]
+
+	bndOptions = [
+			"-exportcontents" : "!*internal*,*;-noimport:=true",
+			"Import-Package": '!reactor.netty.internal*,!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",*',
+			"Bundle-Name" : "reactor-netty",
+			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty"
+	]
 }
 
 
@@ -239,10 +244,7 @@ configure(rootProject) { project ->
 			  "Implementation-Title": project.name,
 			  "Implementation-Version": project.version)
 	}
-	bnd(
-			"-exportcontents": "!*internal*,*;-noimport:=true",
-			"Import-Package": '!*internal*,!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",*'
-	)
+	bnd(bndOptions)
   }
 
   check.dependsOn jacocoTestReport
