@@ -28,11 +28,12 @@ import static java.util.Collections.emptyMap;
  */
 class AbstractJarFileTest {
 
+	static Path jarFilePath;
 	static Path root;
 
 	static {
 		try {
-			Path jarFilePath = Paths.get(System.getProperty("jarFile"));
+			jarFilePath = Paths.get(System.getProperty("jarFile"));
 			URI jarFileUri = new URI("jar", jarFilePath.toUri().toString(), null);
 			FileSystem fileSystem = FileSystems.newFileSystem(jarFileUri, emptyMap());
 			root = fileSystem.getPath("/");
