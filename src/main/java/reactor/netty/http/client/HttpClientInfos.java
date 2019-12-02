@@ -19,6 +19,8 @@ package reactor.netty.http.client;
 import reactor.netty.http.HttpInfos;
 import reactor.util.context.Context;
 
+import javax.annotation.Nullable;
+
 public interface HttpClientInfos extends HttpInfos {
 
     /**
@@ -43,5 +45,6 @@ public interface HttpClientInfos extends HttpInfos {
      * @return The URL of the retrieved resource. This method can return null in case there was an error before the
      * client could create the URL
      */
+    @Nullable
     String resourceUrl();
 }

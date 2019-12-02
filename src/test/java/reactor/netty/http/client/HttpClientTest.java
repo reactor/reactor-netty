@@ -1897,20 +1897,20 @@ public class HttpClientTest {
 	public void testResourceUrlSetInResponse() {
 		DisposableServer server =
 				HttpServer.create()
-						.port(0)
-						.handle((req, res) -> res.send())
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .handle((req, res) -> res.send())
+				          .wiretap(true)
+				          .bindNow();
 
 		final String requestUri = "http://localhost:" + server.port() + "/foo";
 		StepVerifier.create(
-				createHttpClientForContextWithAddress(server)
-						.get()
-						.uri(requestUri)
-						.responseConnection((res, conn) -> Mono.just(res.resourceUrl())))
-				.expectNext(requestUri)
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		        createHttpClientForContextWithAddress(server)
+		                .get()
+		                .uri(requestUri)
+		                .responseConnection((res, conn) -> Mono.justOrEmpty(res.resourceUrl())))
+		            .expectNext(requestUri)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 
 		server.disposeNow();
 	}

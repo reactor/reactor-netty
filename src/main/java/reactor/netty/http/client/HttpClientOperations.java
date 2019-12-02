@@ -96,8 +96,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final ClientCookieEncoder   cookieEncoder;
 	final ClientCookieDecoder   cookieDecoder;
 
-	Supplier<String>[]    		redirectedFrom = EMPTY_REDIRECTIONS;
-	String    		    		resourceUrl;
+	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
+	String                      resourceUrl;
 
 	volatile ResponseState responseState;
 

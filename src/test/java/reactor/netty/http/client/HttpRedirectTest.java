@@ -470,41 +470,44 @@ public class HttpRedirectTest {
 		final String destinationPath = "/destination";
 		final String responseContent = "Success";
 
-		SelfSignedCertificate redirectServerCert = new SelfSignedCertificate();
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverSslCtxBuilder =
+				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		DisposableServer redirectServer =
 				HttpServer.create()
-						.port(0)
-						.route(r -> r
-								.get(redirectPath, (req, res) -> res.sendRedirect(destinationPath))
-								.get(destinationPath, (req, res) -> res.sendString(Mono.just(responseContent)))
-						)
-						.secure(spec -> spec.sslContext(SslContextBuilder
-								.forServer(redirectServerCert.certificate(), redirectServerCert.privateKey())))
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .route(r ->
+				                  r.get(redirectPath, (req, res) -> res.sendRedirect(destinationPath))
+				                   .get(destinationPath, (req, res) -> res.sendString(Mono.just(responseContent)))
+				          )
+				          .secure(spec -> spec.sslContext(serverSslCtxBuilder))
+				          .wiretap(true)
+				          .bindNow();
+
 		DisposableServer initialServer =
 				HttpServer.create()
-						.port(0)
-						.handle((req, res) ->
-								res.sendRedirect("https://localhost:" + redirectServer.port() + destinationPath)
-						)
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .handle((req, res) ->
+				              res.sendRedirect("https://localhost:" + redirectServer.port() + destinationPath)
+				          )
+				          .wiretap(true)
+				          .bindNow();
 
+		SslContextBuilder clientSslCtxBuilder =
+				SslContextBuilder.forClient()
+				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		final String requestUri = "http://localhost:" + initialServer.port();
 		StepVerifier.create(
-				HttpClient.create()
-						.wiretap(true)
-						.followRedirect(true)
-						.secure(spec -> spec.sslContext(SslContextBuilder
-								.forClient()
-								.trustManager(InsecureTrustManagerFactory.INSTANCE)))
-						.get()
-						.uri(requestUri)
-						.responseConnection((res, conn) -> Mono.just(res.resourceUrl())))
-				.expectNext("https://localhost:" + redirectServer.port() + destinationPath)
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		        HttpClient.create()
+		                  .wiretap(true)
+		                  .followRedirect(true)
+		                  .secure(spec -> spec.sslContext(clientSslCtxBuilder))
+		                  .get()
+		                  .uri(requestUri)
+		                  .responseConnection((res, conn) -> Mono.justOrEmpty(res.resourceUrl())))
+		            .expectNext("https://localhost:" + redirectServer.port() + destinationPath)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 
 		initialServer.disposeNow();
 		redirectServer.disposeNow();
