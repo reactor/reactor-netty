@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -461,5 +462,54 @@ public class HttpRedirectTest {
 		            .verify(Duration.ofSeconds(5));
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void testLastLocationSetToResourceUrlOnRedirect() throws CertificateException {
+		final String redirectPath = "/redirect";
+		final String destinationPath = "/destination";
+		final String responseContent = "Success";
+
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverSslCtxBuilder =
+				SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		DisposableServer redirectServer =
+				HttpServer.create()
+				          .port(0)
+				          .route(r ->
+				                  r.get(redirectPath, (req, res) -> res.sendRedirect(destinationPath))
+				                   .get(destinationPath, (req, res) -> res.sendString(Mono.just(responseContent)))
+				          )
+				          .secure(spec -> spec.sslContext(serverSslCtxBuilder))
+				          .wiretap(true)
+				          .bindNow();
+
+		DisposableServer initialServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) ->
+				              res.sendRedirect("https://localhost:" + redirectServer.port() + destinationPath)
+				          )
+				          .wiretap(true)
+				          .bindNow();
+
+		SslContextBuilder clientSslCtxBuilder =
+				SslContextBuilder.forClient()
+				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		final String requestUri = "http://localhost:" + initialServer.port();
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .wiretap(true)
+		                  .followRedirect(true)
+		                  .secure(spec -> spec.sslContext(clientSslCtxBuilder))
+		                  .get()
+		                  .uri(requestUri)
+		                  .responseConnection((res, conn) -> Mono.justOrEmpty(res.resourceUrl())))
+		            .expectNext("https://localhost:" + redirectServer.port() + destinationPath)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		initialServer.disposeNow();
+		redirectServer.disposeNow();
 	}
 }

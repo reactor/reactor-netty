@@ -117,6 +117,11 @@ final class HttpClientDoOnError extends HttpClientOperator {
 			return EMPTY;
 		}
 
+		@Override
+		public String resourceUrl() {
+			return null;
+		}
+
 		final static String[] EMPTY = new String[0];
 
 		@Override
