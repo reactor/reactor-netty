@@ -1016,8 +1016,9 @@ public class HttpServerTests {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				              res.sendString(Mono.delay(Duration.ofSeconds(3))
-				                                 .thenReturn("OK")))
+				              // Not consuming the incoming data is deliberate
+				              res.sendString(Flux.just("OK")
+				                                 .delayElements(Duration.ofSeconds(3))))
 				          .bindNow();
 
 		Flux.range(0, 70)
