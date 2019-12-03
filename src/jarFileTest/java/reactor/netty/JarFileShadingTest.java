@@ -15,17 +15,29 @@
  */
 package reactor.netty;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import org.assertj.core.api.ListAssert;
 import org.junit.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.*;
 
 /**
- * This test must be executed with Gradle because it requires a shadow JAR
+ * This test must be executed with Gradle because it requires a shadow JAR.
+ * For example it can be run with {@code ./gradlew jarFileTest --tests *JarFileShadingTest}
  */
 public class JarFileShadingTest extends AbstractJarFileTest {
 
@@ -56,6 +68,55 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 		}
 		try (Stream<Path> stream = Files.list(root.resolve("META-INF/services"))) {
 			assertThatFileList(stream).containsOnly("reactor.blockhound.integration.BlockHoundIntegration");
+		}
+	}
+
+	@Test
+	public void testManifestContent() throws IOException {
+		ZipFile jar = new ZipFile(jarFilePath.toString());
+		ZipEntry manifest = jar
+				.stream()
+				.filter(ze -> ze.getName().equals("META-INF/MANIFEST.MF"))
+				.findFirst()
+				.get();
+
+		String version = jarFilePath.getFileName().toString()
+				.replace("reactor-netty-", "")
+				.replace("-original.jar", "")
+				.replace(".jar", "");
+		//for the case where there is a customVersion. OSGI only want 4 components to the version,
+		//so BND would simply remove the 4th dot between customVersion and RELEASE/BUILD-SNAPSHOT.
+		String osgiVersion = Arrays.stream(version.split("\\.", 4))
+		                           .map(comp -> comp.replace(".", ""))
+		                           .collect(Collectors.joining("."));
+
+		try (InputStream inputStream = jar.getInputStream(manifest);
+		     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))) {
+			String lines = reader.lines()
+			                     //we eliminate the intermediate details of import-package & co
+			                     //since we won't assert them -> so that assertion error is more readable
+			                     .filter(s -> !s.startsWith(" "))
+			                     .collect(Collectors.joining("\n"));
+			assertThat(lines)
+					.as("base content")
+					.contains(
+							"Implementation-Title: reactor-netty",
+							"Implementation-Version: " + version,
+							"Automatic-Module-Name: reactor.netty"
+					);
+			assertThat(lines)
+					.as("OSGI content")
+					.contains(
+							"Bundle-Name: reactor-netty",
+							"Bundle-SymbolicName: io.projectreactor.netty.reactor-netty",
+							"Import-Package: ", //only assert the section is there
+							"Require-Capability:",
+							"Export-Package:", //only assert the section is there
+							"Bundle-Version: " + osgiVersion
+					);
+		}
+		catch (IOException ioe) {
+			fail("Coudn't inspect the manifest", ioe);
 		}
 	}
 
