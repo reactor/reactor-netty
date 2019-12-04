@@ -52,7 +52,7 @@ final class TcpServerHandle extends TcpServerOperator implements ConnectionObser
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onStateChange(Connection connection, State newState) {
 		if (newState == State.CONFIGURED) {
 			try {
@@ -65,6 +65,7 @@ final class TcpServerHandle extends TcpServerOperator implements ConnectionObser
 			}
 			catch (Throwable t) {
 				log.error(format(connection.channel(), ""), t);
+				//"FutureReturnValueIgnored" this is deliberate
 				connection.channel()
 				          .close();
 			}

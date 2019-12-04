@@ -70,7 +70,9 @@ public interface DisposableChannel extends Disposable {
 	 * Releases or closes the underlying {@link Channel}
 	 */
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	default void dispose() {
+		//"FutureReturnValueIgnored" this is deliberate
 		channel().close();
 	}
 

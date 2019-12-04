@@ -52,7 +52,7 @@ final class HttpServerHandle extends HttpServerOperator implements ConnectionObs
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onStateChange(Connection connection, State newState) {
 		if (newState == HttpServerState.REQUEST_RECEIVED) {
 			try {
@@ -65,6 +65,7 @@ final class HttpServerHandle extends HttpServerOperator implements ConnectionObs
 			}
 			catch (Throwable t) {
 				log.error(format(connection.channel(), ""), t);
+				//"FutureReturnValueIgnored" this is deliberate
 				connection.channel()
 				          .close();
 			}

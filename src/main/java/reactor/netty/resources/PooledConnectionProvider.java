@@ -402,6 +402,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
 			if(log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "onStateChange({}, {})"), connection, newState);
@@ -410,6 +411,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 				if (!isPersistent() && channel.isActive()) {
 					//will be released by closeFuture internals
+					//"FutureReturnValueIgnored" this is deliberate
 					channel.close();
 					owner().onStateChange(connection, State.DISCONNECTING);
 					return;
@@ -428,6 +430,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				ConnectionObserver obs = channel.attr(OWNER)
 						.getAndSet(ConnectionObserver.emptyListener());
 
+				//"FutureReturnValueIgnored" this is deliberate
 				pool.release(channel)
 				    .addListener(f -> {
 					    if (log.isDebugEnabled() && !f.isSuccess()) {
@@ -471,6 +474,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public final void dispose() {
 			if (isDisposed()) {
 				return;
@@ -581,10 +585,12 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		// so it will have a implicit reference to `DisposableAcquire.this`,
 		// As a result this will avoid GC from recycling other references of this.
 		// Use Pool in the method declaration to avoid it.
+		@SuppressWarnings("FutureReturnValueIgnored")
 		void registerClose(Channel c, Pool pool) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(c, "Registering pool release on close event for channel"));
 			}
+			//"FutureReturnValueIgnored" this is deliberate
 			c.closeFuture()
 			 .addListener(ff -> {
 			     if (AttributeKey.exists("channelPool." + System.identityHashCode(pool.pool))) {

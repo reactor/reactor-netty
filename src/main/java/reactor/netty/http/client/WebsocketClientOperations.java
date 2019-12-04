@@ -39,7 +39,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
-import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -96,7 +95,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof FullHttpResponse) {
 			started = true;
@@ -126,6 +125,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			return;
 		}
 		if (msg instanceof PingWebSocketFrame) {
+			//"FutureReturnValueIgnored" this is deliberate
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
 			ctx.read();
 			return;
@@ -216,8 +216,10 @@ final class WebsocketClientOperations extends HttpClientOperations
 		return Mono.empty();
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	void sendCloseNow(@Nullable CloseWebSocketFrame frame) {
 		if (frame != null && !frame.isFinalFragment()) {
+			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(frame);
 			return;
 		}
