@@ -1841,14 +1841,14 @@ public class HttpClientTest {
 
 	@Test
 	public void testConnectionIdleTimeFixedPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100, Duration.ofMillis(10));
+		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100, Duration.ofMillis(10), null);
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
 
 	@Test
 	public void testConnectionIdleTimeElasticPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.elastic("test", Duration.ofMillis(10));
+		ConnectionProvider provider = ConnectionProvider.elastic("test", Duration.ofMillis(10), null);
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
@@ -1892,6 +1892,63 @@ public class HttpClientTest {
 		provider.dispose();
 		return new ChannelId[] {id1, id2};
 	}
+
+	@Test
+	public void testConnectionLifeTimeFixedPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100, null, Duration.ofMillis(30));
+		ChannelId[] ids = doTestConnectionLifeTime(provider);
+		assertThat(ids[0]).isNotEqualTo(ids[1]);
+	}
+
+	@Test
+	public void testConnectionLifeTimeElasticPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.elastic("test", null, Duration.ofMillis(30));
+		ChannelId[] ids = doTestConnectionLifeTime(provider);
+		assertThat(ids[0]).isNotEqualTo(ids[1]);
+	}
+
+	@Test
+	public void testConnectionNoLifeTimeFixedPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100);
+		ChannelId[] ids = doTestConnectionLifeTime(provider);
+		assertThat(ids[0]).isEqualTo(ids[1]);
+	}
+
+	@Test
+	public void testConnectionNoLifeTimeElasticPool() throws Exception {
+		ConnectionProvider provider = ConnectionProvider.elastic("test");
+		ChannelId[] ids = doTestConnectionLifeTime(provider);
+		assertThat(ids[0]).isEqualTo(ids[1]);
+	}
+
+	private ChannelId[] doTestConnectionLifeTime(ConnectionProvider provider) throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) ->
+				              resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
+				                                                         .map(Objects::toString))))
+				          .wiretap(true)
+				          .bindNow();
+
+		Flux<ChannelId> id = createHttpClientForContextWithAddress(server, provider)
+		                       .get()
+		                       .uri("/")
+		                       .responseConnection((res, conn) -> Mono.just(conn.channel().id())
+		                                                              .delayUntil(ch -> conn.inbound().receive()));
+
+		ChannelId id1 = id.blockLast(Duration.ofSeconds(30));
+		Thread.sleep(10);
+		ChannelId id2 = id.blockLast(Duration.ofSeconds(30));
+
+		assertThat(id1).isNotNull();
+		assertThat(id2).isNotNull();
+
+		server.disposeNow();
+		provider.dispose();
+		return new ChannelId[] {id1, id2};
+	}
+
 
 	@Test
 	public void testResourceUrlSetInResponse() {
