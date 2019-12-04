@@ -1924,16 +1924,18 @@ public class HttpClientTest {
 	private ChannelId[] doTestConnectionLifeTime(ConnectionProvider provider) throws Exception {
 		DisposableServer server =
 				HttpServer.create()
-						.port(0)
-						.handle((req, resp) -> resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30)).map(Objects::toString))))
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .handle((req, resp) ->
+				              resp.sendObject(ByteBufFlux.fromString(Mono.delay(Duration.ofMillis(30))
+				                                                         .map(Objects::toString))))
+				          .wiretap(true)
+				          .bindNow();
 
 		Flux<ChannelId> id = createHttpClientForContextWithAddress(server, provider)
-				.get()
-				.uri("/")
-				.responseConnection((res, conn) -> Mono.just(conn.channel().id())
-						.delayUntil(ch -> conn.inbound().receive()));
+		                       .get()
+		                       .uri("/")
+		                       .responseConnection((res, conn) -> Mono.just(conn.channel().id())
+		                                                              .delayUntil(ch -> conn.inbound().receive()));
 
 		ChannelId id1 = id.blockLast(Duration.ofSeconds(30));
 		Thread.sleep(10);

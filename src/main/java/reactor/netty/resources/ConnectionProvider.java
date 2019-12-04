@@ -171,7 +171,7 @@ public interface ConnectionProvider extends Disposable {
 	 * @param maxConnections the maximum number of connections before starting pending
 	 * @param acquireTimeout the maximum time in millis after which a pending acquire
 	 *                          must complete or the {@link TimeoutException} will be thrown.
-	 * @param maxIdleTime the {@link Duration} after which the channel will be closed (resolution: ms),
+	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
 	 *                    if {@code NULL} there is no max idle time
 	 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms),
 	 *                    if {@code NULL} there is no max life time
