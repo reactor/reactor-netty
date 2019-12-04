@@ -79,6 +79,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	final public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg == null || msg == Unpooled.EMPTY_BUFFER || msg instanceof EmptyByteBuf) {
 			return;
@@ -108,6 +109,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			ReferenceCountUtil.safeRelease(msg);
 			log.error(format(ctx.channel(), "Error was received while reading the incoming data." +
 					" The connection will be closed."), err);
+			//"FutureReturnValueIgnored" this is deliberate
 			ctx.close();
 			exceptionCaught(ctx, err);
 		}
