@@ -81,7 +81,7 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name) {
-		return elastic(name, null);
+		return elastic(name, null, null);
 	}
 
 	/**
@@ -91,20 +91,22 @@ public interface ConnectionProvider extends Disposable {
 	 * of clients using it.
 	 *
 	 * @param name the channel pool map name
-	 * @param maxIdleTime the {@link Duration} after which the channel will be closed (resolution: ms),
+	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
 	 *                    if {@code NULL} there is no max idle time
+	 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms),
+	 *                    if {@code NULL} there is no max life time
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and grow on demand
 	 * {@link Connection}
 	 */
-	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime) {
+	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
 		return new PooledConnectionProvider(name,
 				(allocator, destroyHandler, evictionPredicate) ->
 				                PoolBuilder.from(allocator)
 				                           .destroyHandler(destroyHandler)
 				                           .evictionPredicate(evictionPredicate
-				                                   .or((poolable, meta) -> maxIdleTime != null &&
-				                                           meta.idleTime() >= maxIdleTime.toMillis()))
+				                                   .or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+				                                           || (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
 				                           .fifo());
 	}
 
@@ -156,7 +158,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout) {
-		return fixed(name, maxConnections, acquireTimeout, null);
+		return fixed(name, maxConnections, acquireTimeout, null, null);
 	}
 
 	/**
@@ -171,11 +173,13 @@ public interface ConnectionProvider extends Disposable {
 	 *                          must complete or the {@link TimeoutException} will be thrown.
 	 * @param maxIdleTime the {@link Duration} after which the channel will be closed (resolution: ms),
 	 *                    if {@code NULL} there is no max idle time
+	 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms),
+	 *                    if {@code NULL} there is no max life time
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
 	 */
-	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime) {
+	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
 		if (maxConnections == -1) {
 			return elastic(name);
 		}
@@ -192,8 +196,8 @@ public interface ConnectionProvider extends Disposable {
 				                           .maxPendingAcquireUnbounded()
 				                           .destroyHandler(destroyHandler)
 				                           .evictionPredicate(evictionPredicate
-				                                   .or((poolable, meta) -> maxIdleTime != null &&
-				                                           meta.idleTime() >= maxIdleTime.toMillis()))
+				                                   .or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+				                                           || (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
 				                           .fifo(),
 				acquireTimeout,
 				maxConnections);
