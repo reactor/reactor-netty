@@ -190,6 +190,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "onStateChange({}, {})"), newState, connection);
@@ -199,6 +200,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 			}
 			else if (newState == State.DISCONNECTING && connection.channel()
 			                                                      .isActive()) {
+				//"FutureReturnValueIgnored" this is deliberate
 				connection.channel()
 				          .close();
 			}

@@ -348,7 +348,9 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 		}
 
+		@SuppressWarnings("FutureReturnValueIgnored")
 		void onInterruptionCleanup() {
+			//"FutureReturnValueIgnored" this is deliberate
 			ctx.channel()
 			   .closeFuture()
 			   .removeListener(this);

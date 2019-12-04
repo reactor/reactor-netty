@@ -147,6 +147,7 @@ final class TcpServerBind extends TcpServer {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public final void dispose() {
 			// Returned value is deliberately ignored
 			f.removeListener(this);
@@ -154,6 +155,7 @@ final class TcpServerBind extends TcpServer {
 			if (f.channel()
 			     .isActive()) {
 
+				//"FutureReturnValueIgnored" this is deliberate
 				f.channel()
 				 .close();
 

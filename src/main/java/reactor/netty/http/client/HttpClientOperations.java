@@ -235,10 +235,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	protected void onInboundCancel() {
 		if (isInboundDisposed()){
 			return;
 		}
+		//"FutureReturnValueIgnored" this is deliberate
 		channel().close();
 	}
 
@@ -448,6 +450,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	protected void onOutboundComplete() {
 		if (isWebsocket() || isInboundCancelled()) {
 			return;
@@ -457,9 +460,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				log.debug(format(channel(), "No sendHeaders() called before complete, sending " +
 						"zero-length header"));
 			}
+			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER));
 		}
 		else if (markSentBody()) {
+			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
@@ -699,6 +704,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 		}
 
+		@SuppressWarnings("FutureReturnValueIgnored")
 		void _subscribe(CoreSubscriber<? super Void> s) {
 			if (!parent.markSentHeaders()) {
 				Operators.error(s,
@@ -750,6 +756,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					if (progressCallback != null) {
 						progressCallback.accept(tail);
 					}
+					//"FutureReturnValueIgnored" this is deliberate
 					parent.channel()
 					      .writeAndFlush(encoder);
 				}

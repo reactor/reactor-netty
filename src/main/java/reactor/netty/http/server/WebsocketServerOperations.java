@@ -66,6 +66,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 
 	volatile int closeSent;
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	WebsocketServerOperations(String wsUrl,
 			@Nullable String protocols,
 			int maxFramePayloadLength,
@@ -80,6 +81,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 				new WebSocketServerHandshakerFactory(wsUrl, protocols, true, maxFramePayloadLength);
 		handshaker = wsFactory.newHandshaker(replaced.nettyRequest);
 		if (handshaker == null) {
+			//"FutureReturnValueIgnored" this is deliberate
 			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(channel);
 			handshakerResult = null;
 		}
@@ -132,6 +134,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	}
 
 	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void onInboundNext(ChannelHandlerContext ctx, Object frame) {
 		if (frame instanceof CloseWebSocketFrame && ((CloseWebSocketFrame) frame).isFinalFragment()) {
 			if (log.isDebugEnabled()) {
@@ -144,6 +147,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {
+			//"FutureReturnValueIgnored" this is deliberate
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()));
 			ctx.read();
 			return;
@@ -221,8 +225,10 @@ final class WebsocketServerOperations extends HttpServerOperations
 		return Mono.empty();
 	}
 
+	@SuppressWarnings("FutureReturnValueIgnored")
 	void sendCloseNow(@Nullable CloseWebSocketFrame frame, ChannelFutureListener listener) {
 		if (frame != null && !frame.isFinalFragment()) {
+			//"FutureReturnValueIgnored" this is deliberate
 			channel().writeAndFlush(frame);
 			return;
 		}

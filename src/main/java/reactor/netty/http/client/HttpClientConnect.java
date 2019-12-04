@@ -957,7 +957,7 @@ final class HttpClientConnect extends HttpClient {
 
 	}
 
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({"rawtypes", "FutureReturnValueIgnored"})
 	static void openStream(Channel ch, ConnectionObserver listener,
 			HttpClientInitializer initializer) {
 		Http2StreamChannelBootstrap http2StreamChannelBootstrap =
@@ -978,6 +978,7 @@ final class HttpClientConnect extends HttpClient {
 					}
 				});
 
+		//"FutureReturnValueIgnored" this is deliberate
 		http2StreamChannelBootstrap.open()
 		                           .addListener(initializer);
 	}
