@@ -111,13 +111,13 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 				if (recorder == null) {
 					MicrometerChannelMetricsRecorder._recordResolveAddressTime(
 							remoteAddress,
-							Duration.ofMillis(System.nanoTime() - resolveTimeStart),
+							Duration.ofNanos(System.nanoTime() - resolveTimeStart),
 							status);
 				}
 				else {
 					recorder.recordResolveAddressTime(
 							remoteAddress,
-							Duration.ofMillis(System.nanoTime() - resolveTimeStart),
+							Duration.ofNanos(System.nanoTime() - resolveTimeStart),
 							status);
 				}
 			}

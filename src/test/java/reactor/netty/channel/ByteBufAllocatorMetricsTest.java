@@ -20,7 +20,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocatorMetric;
 import io.netty.channel.ChannelOption;
 import org.junit.After;
 import org.junit.Before;
@@ -58,17 +57,16 @@ public class ByteBufAllocatorMetricsTest {
 
 	@Test
 	public void test() throws Exception {
-		PooledByteBufAllocator alloc = new PooledByteBufAllocator(true);
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
-				          .tcpConfiguration(tcpServer -> tcpServer.option(ChannelOption.ALLOCATOR, alloc))
 				          .handle((req, res) -> res.header("Connection", "close")
 				                                   .sendString(Mono.just("test")))
 				          .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(1);
 
+		PooledByteBufAllocator alloc = new PooledByteBufAllocator(true);
 		HttpClient.create()
 		          .port(server.port())
 		          .tcpConfiguration(tcpClient -> tcpClient.option(ChannelOption.ALLOCATOR, alloc))
@@ -85,22 +83,23 @@ public class ByteBufAllocatorMetricsTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
-		assertThat(getGaugeValue(NAME + USED_HEAP_MEMORY)).isGreaterThanOrEqualTo(0);
-		assertThat(getGaugeValue(NAME + USED_DIRECT_MEMORY)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + HEAP_ARENAS)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + DIRECT_ARENAS)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + THREAD_LOCAL_CACHES)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + TINY_CACHE_SIZE)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + SMALL_CACHE_SIZE)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + NORMAL_CACHE_SIZE)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + CHUNK_SIZE)).isGreaterThan(0);
+		String id = alloc.hashCode() + "";
+		assertThat(getGaugeValue(NAME + USED_HEAP_MEMORY, id)).isEqualTo(0);
+		assertThat(getGaugeValue(NAME + USED_DIRECT_MEMORY, id)).isGreaterThan(0);
+		assertThat(getGaugeValue(NAME + HEAP_ARENAS, id)).isGreaterThan(0);
+		assertThat(getGaugeValue(NAME + DIRECT_ARENAS, id)).isGreaterThan(0);
+		assertThat(getGaugeValue(NAME + THREAD_LOCAL_CACHES, id)).isGreaterThan(0);
+		assertThat(getGaugeValue(NAME + TINY_CACHE_SIZE, id)).isGreaterThan(0);
+		assertThat(getGaugeValue(NAME + SMALL_CACHE_SIZE, id)).isGreaterThan(0);
+		assertThat(getGaugeValue(NAME + NORMAL_CACHE_SIZE, id)).isGreaterThan(0);
+		assertThat(getGaugeValue(NAME + CHUNK_SIZE, id)).isGreaterThan(0);
 
 		server.disposeNow();
 	}
 
 
-	private double getGaugeValue(String name) {
-		Gauge gauge = registry.find(name).tagKeys(ID).gauge();
+	private double getGaugeValue(String name, String id) {
+		Gauge gauge = registry.find(name).tags(ID, id).gauge();
 		double result = -1;
 		if (gauge != null) {
 			result = gauge.value();

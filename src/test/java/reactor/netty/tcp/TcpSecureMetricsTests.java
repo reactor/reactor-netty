@@ -74,8 +74,8 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 	}
 
 	@Override
-	protected void checkTlsTimer(String name, String[] tags, long expectedCount, double expectedTime) {
-		checkTimer(name, tags, expectedCount, expectedTime);
+	protected void checkTlsTimer(String name, String[] tags, boolean exists) {
+		checkTimer(name, tags, exists);
 	}
 
 	@Test
@@ -107,7 +107,7 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		String[] timerTags = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "ERROR"};
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
-		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0);
+		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, true);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 0, 0);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 0, 0);
 		checkCounter(SERVER_ERRORS, summaryTags, 2);
@@ -117,7 +117,7 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
 		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
 
-		//checkTimer(CLIENT_CONNECT_TIME, timerTags, 1, 0.0001);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags, true);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 0, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags, 0);

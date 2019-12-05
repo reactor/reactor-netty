@@ -17,6 +17,7 @@ package reactor.netty.tcp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static reactor.netty.Metrics.*;
@@ -27,14 +28,16 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
+import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.resources.ConnectionProvider;
 
 import java.net.InetSocketAddress;
@@ -128,21 +131,34 @@ public class TcpMetricsTests {
 	}
 
 	@Test
-	@Ignore
-	public void testFailedConnect() {
+	public void testFailedConnect() throws Exception {
 		disposableServer = tcpServer.bindNow();
 
+		CountDownLatch latch = new CountDownLatch(1);
 		int port = SocketUtils.findAvailableTcpPort();
 		try {
-			connection = customizeClientOptions(tcpClient)
-			                     .host("localhost")
-			                     .port(port)
-			                     .connectNow();
+			connection = tcpClient.host("127.0.0.1")
+			                      .port(port)
+			                      .doOnConnect(b ->
+			                          BootstrapHandlers.updateConfiguration(b, "testFailedConnect",
+			                              (o, c) ->
+			                                  c.pipeline()
+			                                   .addLast(new ChannelInboundHandlerAdapter() {
+
+			                                       @Override
+			                                       public void channelUnregistered(ChannelHandlerContext ctx) {
+			                                           latch.countDown();
+			                                           ctx.fireChannelUnregistered();
+			                                       }
+			                                   })))
+			                      .connectNow();
 			fail("Connect should fail.");
 		}
 		catch(Exception e) {
 			// expected
 		}
+
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
 
 		checkExpectationsNegative(port);
 	}
@@ -153,7 +169,7 @@ public class TcpMetricsTests {
 		String[] timerTags = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "SUCCESS"};
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
-		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
+		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, true);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 1, 5);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 1, 5);
 		checkCounter(SERVER_ERRORS, summaryTags, 0);
@@ -162,21 +178,21 @@ public class TcpMetricsTests {
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
 		timerTags = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
 		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
-		//checkTimer(CLIENT_CONNECT_TIME, timerTags, 1, 0.0001);
-		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags, 1, 0.0001);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags, true);
+		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags, true);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 1, 5);
 		checkCounter(CLIENT_ERRORS, summaryTags, 0);
 	}
 
 	private void checkExpectationsNegative(int port) {
-		String address = "localhost:" + port;
+		String address = "127.0.0.1:" + port;
 		String[] timerTags1 = new String[] {REMOTE_ADDRESS, address, STATUS, "ERROR"};
 		String[] timerTags2 = new String[] {REMOTE_ADDRESS, address, STATUS, "SUCCESS"};
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, address, URI, "tcp"};
 
-		checkTimer(CLIENT_CONNECT_TIME, timerTags1, 1, 0.0001);
-		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags2, 0, 0);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags1, true);
+		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags2, false);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 0, 0);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 0, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags, 0);
@@ -191,23 +207,28 @@ public class TcpMetricsTests {
 		return tcpClient;
 	}
 
-	protected void checkTlsTimer(String name, String[] tags, long expectedCount, double expectedTime) {
+	protected void checkTlsTimer(String name, String[] tags, boolean exists) {
 		//no-op
 	}
 
 
-	void checkTimer(String name, String[] tags, long expectedCount, double expectedTime) {
+	void checkTimer(String name, String[] tags, boolean exists) {
 		Timer timer = registry.find(name).tags(tags).timer();
-		assertNotNull(timer);
-		assertEquals(expectedCount, timer.count());
-		assertTrue(timer.totalTime(TimeUnit.SECONDS) >= expectedTime);
+		if (exists) {
+			assertNotNull(timer);
+			assertEquals(1, timer.count());
+			assertTrue(timer.totalTime(TimeUnit.NANOSECONDS) >= 0);
+		}
+		else {
+			assertNull(timer);
+		}
 	}
 
-	void checkDistributionSummary(String name, String[] tags, long expectedCount, double expectedAmound) {
+	void checkDistributionSummary(String name, String[] tags, long expectedCount, int expectedAmount) {
 		DistributionSummary summary = registry.find(name).tags(tags).summary();
 		assertNotNull(summary);
 		assertEquals(expectedCount, summary.count());
-		assertTrue(summary.totalAmount() >= expectedAmound);
+		assertTrue(summary.totalAmount() >= expectedAmount);
 	}
 
 	void checkCounter(String name, String[] tags, double expectedCount) {

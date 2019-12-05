@@ -52,7 +52,7 @@ public interface ChannelMetricsRecorder {
 	 * Records the time that is spent for TLS handshake
 	 *
 	 * @param remoteAddress The remote peer
-	 * @param time the time that is spent for TLS handshake
+	 * @param time the time in nanoseconds that is spent for TLS handshake
 	 * @param status the status of the operation
 	 */
 	void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status);
@@ -62,7 +62,7 @@ public interface ChannelMetricsRecorder {
 	 * Relevant only when on the client
 	 *
 	 * @param remoteAddress The remote peer
-	 * @param time the time that is spent for connecting to the remote address
+	 * @param time the time in nanoseconds that is spent for connecting to the remote address
 	 * @param status the status of the operation
 	 */
 	void recordConnectTime(SocketAddress remoteAddress, Duration time, String status);
@@ -72,7 +72,7 @@ public interface ChannelMetricsRecorder {
 	 * Relevant only when on the client
 	 *
 	 * @param remoteAddress The remote peer
-	 * @param time the time that is spent for resolving to the remote address
+	 * @param time the time in nanoseconds that is spent for resolving to the remote address
 	 * @param status the status of the operation
 	 */
 	void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status);

@@ -63,7 +63,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 				return;
 			}
 
-			dataSentTime = System.currentTimeMillis();
+			dataSentTime = System.nanoTime();
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -82,21 +82,21 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 							ops.uri(),
 							ops.method().name(),
 							ops.status().codeAsText().toString(),
-							Duration.ofMillis(System.currentTimeMillis() - dataSentTime));
+							Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 					if (dataReceivedTime != 0) {
 						recorder.recordResponseTime(
 								ops.uri(),
 								ops.method().name(),
 								ops.status().codeAsText().toString(),
-								Duration.ofMillis(System.currentTimeMillis() - dataReceivedTime));
+								Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 					}
 					else {
-						recorder.recordDataSentTime(
+						recorder.recordResponseTime(
 								ops.uri(),
 								ops.method().name(),
 								ops.status().codeAsText().toString(),
-								Duration.ofMillis(System.currentTimeMillis() - dataSentTime));
+								Duration.ofNanos(System.nanoTime() - dataSentTime));
 					}
 
 					recorder.recordDataSent(ops.remoteAddress(), ops.uri(), dataSent);
@@ -113,7 +113,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
-			dataReceivedTime = System.currentTimeMillis();
+			dataReceivedTime = System.nanoTime();
 			HttpRequest request = (HttpRequest) msg;
 			uri = request.uri();
 			method = request.method()
@@ -128,7 +128,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		if (msg instanceof LastHttpContent) {
-			recorder.recordDataReceivedTime(uri, method, Duration.ofMillis(System.currentTimeMillis() - dataReceivedTime));
+			recorder.recordDataReceivedTime(uri, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder.recordDataReceived(ctx.channel().remoteAddress(), uri, dataReceived);
 
