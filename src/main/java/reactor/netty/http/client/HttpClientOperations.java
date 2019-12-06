@@ -636,7 +636,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	final void withWebsocketSupport(String protocols, int maxFramePayloadLength, boolean compress) {
+	final void withWebsocketSupport(String protocols, int maxFramePayloadLength, boolean proxyPing, boolean compress) {
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
@@ -652,7 +652,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				                WebSocketClientCompressionHandler.INSTANCE);
 			}
 
-			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, maxFramePayloadLength, this);
+			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, maxFramePayloadLength, proxyPing, this);
 
 			if(!rebind(ops)) {
 				log.error(format(channel(), "Error while rebinding websocket in channel attribute: " +
