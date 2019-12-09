@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -34,6 +36,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -420,11 +423,19 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		else if (channel().pipeline()
 		                  .get(NettyPipeline.CompressionHandler) == null) {
 			SimpleCompressionHandler handler = new SimpleCompressionHandler();
-
 			try {
-				handler.channelRead(channel().pipeline()
-				                             .context(NettyPipeline.ReactiveBridge),
-						nettyRequest);
+				List<Object> out = new ArrayList<>();
+				try {
+					//Do not invoke handler.channelRead as it will trigger ctx.fireChannelRead
+					handler.decode(channel().pipeline().context(NettyPipeline.ReactiveBridge), nettyRequest, out);
+				} catch (DecoderException e) {
+					throw e;
+				} catch (Exception e) {
+					throw new DecoderException(e);
+				} finally {
+					ReferenceCountUtil.release(nettyRequest);
+					out.clear();
+				}
 
 				addHandlerFirst(NettyPipeline.CompressionHandler, handler);
 			}
@@ -434,6 +445,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		}
 		return this;
 	}
+
 	@Override
 	protected void onInboundNext(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
