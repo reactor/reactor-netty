@@ -31,7 +31,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.ByteBuf;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.netty.ByteBufFlux;
@@ -126,6 +125,8 @@ public class HttpMetricsHandlerTests {
 
 		InetSocketAddress ca = (InetSocketAddress) clientAddress.get();
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+
+		Thread.sleep(1000);
 		checkExpectationsExisting("/1", ca.getHostString() + ":" + ca.getPort(),
 				sa.getHostString() + ":" + sa.getPort(), 1);
 
@@ -135,7 +136,7 @@ public class HttpMetricsHandlerTests {
 		                                      .closeFuture()
 		                                      .addListener(f -> latch2.countDown()))
 		                              .post()
-		                              .uri("/2")
+		                              .uri("/2?i=1&j=2")
 		                              .send(body)
 		                              .responseContent()
 		                              .aggregate()
@@ -148,43 +149,68 @@ public class HttpMetricsHandlerTests {
 
 		ca = (InetSocketAddress) clientAddress.get();
 		sa = (InetSocketAddress) serverAddress.get();
+
+		Thread.sleep(1000);
 		checkExpectationsExisting("/2", ca.getHostString() + ":" + ca.getPort(),
 				sa.getHostString() + ":" + sa.getPort(), 2);
 	}
 
 	@Test
-	@Ignore
 	public void testNonExistingEndpoint() throws Exception {
 		disposableServer = httpServer.bindNow();
 
 		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
-		httpClient = httpClient.doAfterRequest((req, conn) -> clientAddress.set(conn.channel().localAddress()));
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		httpClient = httpClient.doAfterRequest((req, conn) -> {
+			clientAddress.set(conn.channel().localAddress());
+			serverAddress.set(conn.channel().remoteAddress());
+		});
 
-		StepVerifier.create(httpClient.post()
+		CountDownLatch latch1 = new CountDownLatch(1);
+		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
+		                                  conn.channel()
+		                                      .closeFuture()
+		                                      .addListener(f -> latch1.countDown()))
+		                              .headers(h -> h.add("Connection", "close"))
+		                              .get()
 		                              .uri("/3")
-		                              .send(body)
 		                              .responseContent()
 		                              .aggregate()
 		                              .asString())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		Thread.sleep(5000);
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+
 		InetSocketAddress ca = (InetSocketAddress) clientAddress.get();
-		checkExpectationsNonExisting(ca.getHostString() + ":" + ca.getPort(), 1);
+		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
 
-		StepVerifier.create(httpClient.post()
+		Thread.sleep(1000);
+		checkExpectationsNonExisting(ca.getHostString() + ":" + ca.getPort(),
+				sa.getHostString() + ":" + sa.getPort(), 1);
+
+		CountDownLatch latch2 = new CountDownLatch(1);
+		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
+		                                  conn.channel()
+		                                      .closeFuture()
+		                                      .addListener(f -> latch2.countDown()))
+		                              .headers(h -> h.add("Connection", "close"))
+		                              .get()
 		                              .uri("/3")
-		                              .send(body)
 		                              .responseContent()
 		                              .aggregate()
 		                              .asString())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		Thread.sleep(5000);
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+
 		ca = (InetSocketAddress) clientAddress.get();
-		checkExpectationsNonExisting(ca.getHostString() + ":" + ca.getPort(), 2);
+		sa = (InetSocketAddress) serverAddress.get();
+
+		Thread.sleep(1000);
+		checkExpectationsNonExisting(ca.getHostString() + ":" + ca.getPort(),
+				sa.getHostString() + ":" + sa.getPort(), 2);
 	}
 
 	private void checkExpectationsExisting(String uri, String clientAddress, String serverAddress, int index) {
@@ -224,10 +250,10 @@ public class HttpMetricsHandlerTests {
 		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
 	}
 
-	private void checkExpectationsNonExisting(String clientAddress, int index) {
+	private void checkExpectationsNonExisting(String clientAddress, String serverAddress, int index) {
 		String uri = "/3";
-		String[] timerTags1 = new String[] {URI, uri, METHOD, "POST", STATUS, "404"};
-		String[] timerTags2 = new String[] {URI, uri, METHOD, "POST"};
+		String[] timerTags1 = new String[] {URI, uri, METHOD, "GET", STATUS, "404"};
+		String[] timerTags2 = new String[] {URI, uri, METHOD, "GET"};
 		String[] timerTags3 = new String[] {REMOTE_ADDRESS, clientAddress, STATUS, "SUCCESS"};
 		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, clientAddress, URI, uri};
 		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "http"};
@@ -236,16 +262,13 @@ public class HttpMetricsHandlerTests {
 		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, index);
 		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, index);
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, 1);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, index, 0);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, index, 0);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, 1, 0);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, index, 45*index);
-		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, 1, 64);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
-		String serverAddress = disposableServer.address().getHostString();
-		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST", STATUS, "404"};
-		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
+		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "404"};
+		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
 		timerTags3 = new String[] {REMOTE_ADDRESS, serverAddress, STATUS, "SUCCESS"};
 		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
 		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
@@ -253,13 +276,12 @@ public class HttpMetricsHandlerTests {
 		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, index);
 		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, index);
 		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, index);
-		checkTimer(CLIENT_CONNECT_TIME, timerTags3, 1);
-		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, 1);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, index, 24);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags3, index);
+		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14*index, 292*index);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 45*index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123*index);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
 	}
 

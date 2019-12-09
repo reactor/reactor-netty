@@ -42,10 +42,6 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	long dataSentTime;
 
-	String uri;
-
-	String method;
-
 
 	final HttpServerMetricsRecorder recorder;
 
@@ -78,28 +74,25 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 				ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
+					String path = "/" + ops.path;
+					String method = ops.method().name();
+					String status = ops.status().codeAsText().toString();
 					recorder.recordDataSentTime(
-							ops.uri(),
-							ops.method().name(),
-							ops.status().codeAsText().toString(),
+							path, method, status,
 							Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 					if (dataReceivedTime != 0) {
 						recorder.recordResponseTime(
-								ops.uri(),
-								ops.method().name(),
-								ops.status().codeAsText().toString(),
+								path, method, status,
 								Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 					}
 					else {
 						recorder.recordResponseTime(
-								ops.uri(),
-								ops.method().name(),
-								ops.status().codeAsText().toString(),
+								path, method, status,
 								Duration.ofNanos(System.nanoTime() - dataSentTime));
 					}
 
-					recorder.recordDataSent(ops.remoteAddress(), ops.uri(), dataSent);
+					recorder.recordDataSent(ops.remoteAddress(), path, dataSent);
 
 					dataSent = 0;
 				}
@@ -114,10 +107,6 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpRequest) {
 			dataReceivedTime = System.nanoTime();
-			HttpRequest request = (HttpRequest) msg;
-			uri = request.uri();
-			method = request.method()
-			                .name();
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -128,9 +117,15 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 		}
 
 		if (msg instanceof LastHttpContent) {
-			recorder.recordDataReceivedTime(uri, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
+			ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
+			if (channelOps instanceof HttpServerOperations) {
+				HttpServerOperations ops = (HttpServerOperations) channelOps;
+				String path = "/" + ops.path;
+				String method = ops.method().name();
+				recorder.recordDataReceivedTime(path, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
-			recorder.recordDataReceived(ctx.channel().remoteAddress(), uri, dataReceived);
+				recorder.recordDataReceived(ctx.channel().remoteAddress(), path, dataReceived);
+			}
 
 			dataReceived = 0;
 		}
@@ -140,8 +135,10 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		if (uri != null) {
-			recorder.incrementErrorsCount(ctx.channel().remoteAddress(), uri);
+		ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
+		if (channelOps instanceof HttpServerOperations) {
+			HttpServerOperations ops = (HttpServerOperations) channelOps;
+			recorder.incrementErrorsCount(ctx.channel().remoteAddress(), "/" + ops.path);
 		}
 
 		ctx.fireExceptionCaught(cause);
