@@ -155,7 +155,7 @@ public class UdpMetricsTests {
 		Timer timer = registry.find(CLIENT_CONNECT_TIME).tags(tags).timer();
 		assertNotNull(timer);
 		assertEquals(1, timer.count());
-//		assertTrue(timer.totalTime(TimeUnit.MILLISECONDS) > 0);
+		assertTrue(timer.totalTime(TimeUnit.NANOSECONDS) > 0);
 	}
 
 	private void checkDistributionSummary(String name, String[] tags) {

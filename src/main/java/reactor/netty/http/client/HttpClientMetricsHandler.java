@@ -60,7 +60,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpRequest) {
 			request = (HttpRequest) msg;
 
-			dataSentTime = System.currentTimeMillis();
+			dataSentTime = System.nanoTime();
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -77,7 +77,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 				recorder.recordDataSentTime(address,
 						request.uri(),
 						request.method().name(),
-						Duration.ofMillis(System.currentTimeMillis() - dataSentTime));
+						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 				recorder.recordDataSent(address, request.uri(), dataSent);
 			});
@@ -91,7 +91,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof HttpResponse) {
 			response = (HttpResponse) msg;
 
-			dataReceivedTime = System.currentTimeMillis();
+			dataReceivedTime = System.nanoTime();
 		}
 
 		if (msg instanceof ByteBufHolder) {
@@ -107,13 +107,13 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 					request.uri(),
 					request.method().name(),
 					response.status().codeAsText().toString(),
-					Duration.ofMillis(System.currentTimeMillis() - dataReceivedTime));
+					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder.recordResponseTime(address,
 					request.uri(),
 					request.method().name(),
 					response.status().codeAsText().toString(),
-					Duration.ofMillis(System.currentTimeMillis() - dataSentTime));
+					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
 			recorder.recordDataReceived(address, request.uri(), dataReceived);
 			reset();

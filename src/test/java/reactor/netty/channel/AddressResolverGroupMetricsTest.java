@@ -91,7 +91,7 @@ public class AddressResolverGroupMetricsTest {
 		Timer timer = registry.find("reactor.netty.address.resolver").tags(REMOTE_ADDRESS, address, STATUS, SUCCESS).timer();
 		double result = -1;
 		if (timer != null) {
-			result = timer.totalTime(TimeUnit.SECONDS);
+			result = timer.totalTime(TimeUnit.NANOSECONDS);
 		}
 		return result;
 	}

@@ -31,7 +31,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	 *
 	 * @param uri the requested URI
 	 * @param method the HTTP method
-	 * @param time the time that is spent in consuming incoming data
+	 * @param time the time in nanoseconds that is spent in consuming incoming data
 	 */
 	void recordDataReceivedTime(String uri, String method, Duration time);
 
@@ -41,7 +41,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	 * @param uri the requested URI
 	 * @param method the HTTP method
 	 * @param status the HTTP status
-	 * @param time the time that is spent in sending outgoing data
+	 * @param time the time in nanoseconds that is spent in sending outgoing data
 	 */
 	void recordDataSentTime(String uri, String method, String status, Duration time);
 
@@ -51,7 +51,7 @@ public interface HttpServerMetricsRecorder extends HttpMetricsRecorder {
 	 * @param uri the requested URI
 	 * @param method the HTTP method
 	 * @param status the HTTP status
-	 * @param time the total time for the request/response
+	 * @param time the total time in nanoseconds for the request/response
 	 */
 	void recordResponseTime(String uri, String method, String status, Duration time);
 }

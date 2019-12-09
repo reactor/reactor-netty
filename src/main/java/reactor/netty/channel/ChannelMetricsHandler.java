@@ -146,7 +146,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 		TlsMetricsHandler(ChannelMetricsRecorder recorder, SocketAddress remoteAddress) {
 			this.recorder = recorder;
 			this.remoteAddress = remoteAddress;
-			this.tlsHandshakeTimeStart = System.currentTimeMillis();
+			this.tlsHandshakeTimeStart = System.nanoTime();
 		}
 
 		@Override
@@ -165,7 +165,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 
 				recorder.recordTlsHandshakeTime(
 						remoteAddress,
-						Duration.ofMillis(System.currentTimeMillis() - tlsHandshakeTimeStart),
+						Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
 						status);
 			}
 
@@ -185,7 +185,7 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 		@Override
 		public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
 				SocketAddress localAddress, ChannelPromise promise) throws Exception {
-			long connectTimeStart = System.currentTimeMillis();
+			long connectTimeStart = System.nanoTime();
 			super.connect(ctx, remoteAddress, localAddress, promise);
 			promise.addListener(future -> {
 				ctx.pipeline().remove(this);
@@ -197,10 +197,9 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 				else {
 					status = ERROR;
 				}
-
 				recorder.recordConnectTime(
 						remoteAddress,
-						Duration.ofMillis(System.currentTimeMillis() - connectTimeStart),
+						Duration.ofNanos(System.nanoTime() - connectTimeStart),
 						status);
 			});
 		}

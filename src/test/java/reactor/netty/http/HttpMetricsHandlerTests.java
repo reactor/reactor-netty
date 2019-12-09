@@ -40,8 +40,6 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -124,9 +122,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
-		Thread.sleep(5000);
 
 		InetSocketAddress ca = (InetSocketAddress) clientAddress.get();
 		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
@@ -148,9 +144,7 @@ public class HttpMetricsHandlerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
-		Thread.sleep(5000);
 
 		ca = (InetSocketAddress) clientAddress.get();
 		sa = (InetSocketAddress) serverAddress.get();
@@ -200,14 +194,14 @@ public class HttpMetricsHandlerTests {
 		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, clientAddress, URI, uri};
 		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "http"};
 
-		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, 1);
-		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, 1);
-		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, true, 1);
-		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, 1, 12);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, true, 1, 12);
+		checkTimer(SERVER_RESPONSE_TIME, timerTags1, 1);
+		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, 1);
+		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, 1);
+		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, 1);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, 1, 12);
+		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, 1, 12);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, 14, 84);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, 14, 84);
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 2*index, 151*index);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
@@ -217,15 +211,15 @@ public class HttpMetricsHandlerTests {
 		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
 		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
 
-		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, 1);
-		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, 1);
-		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, true, 1);
-		//checkTimer(CLIENT_CONNECT_TIME, timerTags3, true, index);
-		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, true, index);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, true, 1, 12);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, true, 1, 12);
+		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, 1);
+		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, 1);
+		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, 1);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags3, index);
+		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, 1, 12);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, 1, 12);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, true, 14*index, 151*index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14*index, 151*index);
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
 	}
@@ -238,14 +232,14 @@ public class HttpMetricsHandlerTests {
 		String[] summaryTags1 = new String[] {REMOTE_ADDRESS, clientAddress, URI, uri};
 		String[] summaryTags2 = new String[] {REMOTE_ADDRESS, clientAddress, URI, "http"};
 
-		checkTimer(SERVER_RESPONSE_TIME, timerTags1, true, index);
-		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, true, index);
-		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, true, index);
-		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, true, index, 0);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, true, index, 0);
+		checkTimer(SERVER_RESPONSE_TIME, timerTags1, index);
+		checkTimer(SERVER_DATA_SENT_TIME, timerTags1, index);
+		checkTimer(SERVER_DATA_RECEIVED_TIME, timerTags2, index);
+		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags3, 1);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, index, 0);
+		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags1, index, 0);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, true, index, 45*index);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, index, 45*index);
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 6, 292);
 		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
 
@@ -256,16 +250,16 @@ public class HttpMetricsHandlerTests {
 		summaryTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri};
 		summaryTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, "http"};
 
-		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, true, index);
-		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, true, index);
-		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, true, index);
-		checkTimer(CLIENT_CONNECT_TIME, timerTags3, true, 1);
-		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, true, 1);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, true, index, 24);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, true, index, 0);
+		checkTimer(CLIENT_RESPONSE_TIME, timerTags1, index);
+		checkTimer(CLIENT_DATA_SENT_TIME, timerTags2, index);
+		checkTimer(CLIENT_DATA_RECEIVED_TIME, timerTags1, index);
+		checkTimer(CLIENT_CONNECT_TIME, timerTags3, 1);
+		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags3, 1);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags1, index, 24);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags1, index, 0);
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, true, 14*index, 292*index);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, index, 45*index);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14*index, 292*index);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 45*index);
 		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
 	}
 
@@ -278,44 +272,22 @@ public class HttpMetricsHandlerTests {
 		return httpClient;
 	}
 
-	protected void checkTlsTimer(String name, String[] tags, boolean exists, long expectedCount) {
+	protected void checkTlsTimer(String name, String[] tags, long expectedCount) {
 		//no-op
 	}
 
-	void checkTimer(String name, String[] tags, boolean exists, long expectedCount) {
+	void checkTimer(String name, String[] tags, long expectedCount) {
 		Timer timer = registry.find(name).tags(tags).timer();
-		if (exists) {
-			assertNotNull(timer);
-			assertEquals(expectedCount, timer.count());
-			try {
-				assertTrue(timer.totalTime(TimeUnit.MICROSECONDS) > 0);
-			}
-			catch (AssertionError e) {
-				log.error("timer "+ timer +" - time: "+timer.totalTime(TimeUnit.NANOSECONDS), e);
-				throw e;
-			}
-		}
-		else {
-			assertNull(timer);
-		}
+		assertNotNull(timer);
+		assertEquals(expectedCount, timer.count());
+		assertTrue(timer.totalTime(TimeUnit.NANOSECONDS) > 0);
 	}
 
-	private void checkDistributionSummary(String name, String[] tags, boolean exists, long expectedCount, double expectedAmound) {
+	private void checkDistributionSummary(String name, String[] tags, long expectedCount, double expectedAmount) {
 		DistributionSummary summary = registry.find(name).tags(tags).summary();
-		if (exists) {
-			assertNotNull(summary);
-			assertEquals(expectedCount, summary.count());
-			try {
-				assertTrue(summary.totalAmount() >= expectedAmound);
-			}
-			catch (AssertionError e) {
-				log.error("total: "+summary.totalAmount(), e);
-				throw e;
-			}
-		}
-		else {
-			assertNull(summary);
-		}
+		assertNotNull(summary);
+		assertEquals(expectedCount, summary.count());
+		assertTrue(summary.totalAmount() >= expectedAmount);
 	}
 
 	void checkCounter(String name, String[] tags, boolean exists, double expectedCount) {
@@ -328,8 +300,6 @@ public class HttpMetricsHandlerTests {
 			assertNull(counter);
 		}
 	}
-
-	static final Logger log = Loggers.getLogger(HttpMetricsHandlerTests.class);
 
 
 	private static final String SERVER_METRICS_NAME = "reactor.netty.http.server";

@@ -24,7 +24,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.tcp.TcpServer;
@@ -78,8 +77,8 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 	}
 
 	@Override
-	protected void checkTlsTimer(String name, String[] tags, boolean exists, long expectedCount) {
-		checkTimer(name, tags, exists, expectedCount);
+	protected void checkTlsTimer(String name, String[] tags, long expectedCount) {
+		checkTimer(name, tags, expectedCount);
 	}
 
 
@@ -89,13 +88,9 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 		                             .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(1);
-		httpClient.observe((conn, state) -> {
-		              if (state == ConnectionObserver.State.DISCONNECTING) {
-		                  conn.channel()
-		                      .closeFuture()
-		                      .addListener(f -> latch.countDown());
-		              }
-		          })
+		httpClient.observe((conn, state) -> conn.channel()
+		                                        .closeFuture()
+		                                        .addListener(f -> latch.countDown()))
 		          .post()
 		          .uri("/1")
 		          .send(ByteBufFlux.fromString(Mono.just("hello")))
