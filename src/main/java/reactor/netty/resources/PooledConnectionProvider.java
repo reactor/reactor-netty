@@ -147,8 +147,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 			InstrumentedPool<PooledConnection> pool = channelPools.computeIfAbsent(holder, poolKey -> {
 				if (log.isDebugEnabled()) {
-					log.debug("Creating new client pool [{}] for {}",
-							name, bootstrap.config().remoteAddress());
+					String poolType = maxConnections == -1 ? "elastic" : "fixed";
+					log.debug("Creating a new {} client pool with name [{}] and max connections [{}] for [{}]",
+							poolType, name, maxConnections, bootstrap.config().remoteAddress());
 				}
 
 				InstrumentedPool<PooledConnection> newPool =
@@ -266,7 +267,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				Channel ch = ctx.channel();
 
 				if (log.isDebugEnabled()) {
-					log.debug(format(ch, "Created new pooled channel, now {} active connections and {} inactive connections"),
+					log.debug(format(ch, "Created a new pooled channel, now {} active connections and {} inactive connections"),
 							pool.metrics().acquiredSize(),
 							pool.metrics().idleSize());
 				}
