@@ -20,6 +20,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpContentCompressor;
+import io.netty.handler.codec.http.HttpRequest;
+
+import java.util.List;
 
 /**
  * @author Stephane Maldini
@@ -36,5 +39,10 @@ final class SimpleCompressionHandler extends HttpContentCompressor {
 		else {
 			super.write(ctx, msg, promise);
 		}
+	}
+
+	@Override
+	public void decode(ChannelHandlerContext ctx, HttpRequest msg, List<Object> out) throws Exception {
+		super.decode(ctx, msg, out);
 	}
 }
