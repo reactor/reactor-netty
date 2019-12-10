@@ -1445,7 +1445,7 @@ public class HttpServerTests {
 				          .bindNow();
 
 		int port = disposableServer.port();
-		String address = disposableServer.host() + ":" + port;
+		String address = HttpUtil.formatHostnameForHttp(disposableServer.address()) + ":" + port;
 		doTest(port, "GET http://" + address + "/ HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 		doTest(port, "GET http://" + address + " HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 	}
