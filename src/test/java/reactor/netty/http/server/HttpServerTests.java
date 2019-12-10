@@ -1458,7 +1458,7 @@ public class HttpServerTests {
 
 		Connection connection = tcpClient.connectNow();
 
-		CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch latch = new CountDownLatch(2);
 		connection.channel()
 		          .closeFuture()
 		          .addListener(f -> latch.countDown());
@@ -1467,7 +1467,10 @@ public class HttpServerTests {
 		connection.inbound()
 		          .receive()
 		          .asString()
-		          .doOnNext(result::set)
+		          .doOnNext(s -> {
+		              result.set(s);
+		              latch.countDown();
+		          })
 		          .subscribe();
 
 		connection.outbound()
