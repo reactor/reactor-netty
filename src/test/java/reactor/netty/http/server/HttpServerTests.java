@@ -55,6 +55,7 @@ import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -1176,7 +1177,7 @@ public class HttpServerTests {
 				          .bindNow();
 
 		int port = disposableServer.port();
-		String address = disposableServer.host() + ":" + port;
+		String address = HttpUtil.formatHostnameForHttp(disposableServer.address()) + ":" + port;
 		doTest(port, "GET http://" + address + "/ HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 		doTest(port, "GET http://" + address + " HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 	}
