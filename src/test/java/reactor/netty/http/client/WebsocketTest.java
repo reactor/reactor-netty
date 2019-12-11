@@ -1246,63 +1246,63 @@ public class WebsocketTest {
 		            .verify(Duration.ofSeconds(30));
 	}
 
-	@Test
-	public void testIssue927() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+    @Test
+    public void testIssue927() {
+        DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
 
-		httpServer = HttpServer.create()
-				.port(0)
-				.handle((req, resp) ->
-						resp.sendWebsocket((i, o) -> {
-							return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame()))
-									.then(i.receiveFrames()
-											.subscribeWith(incomingData)
-											.then());
-				}))
-				.wiretap(true)
-				.bindNow();
+        httpServer = HttpServer.create()
+                .port(0)
+                .handle((req, resp) ->
+                        resp.sendWebsocket((i, o) -> {
+                            return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame()))
+                                    .then(i.receiveFrames()
+                                            .subscribeWith(incomingData)
+                                            .then());
+                }))
+                .wiretap(true)
+                .bindNow();
 
-		HttpClient.create()
-				.port(httpServer.address().getPort())
-				.wiretap(true)
-				.websocket()
-				.uri("/")
-				.handle((in, out) -> in.receiveFrames())
-				.subscribe();
+        HttpClient.create()
+                .port(httpServer.address().getPort())
+                .wiretap(true)
+                .websocket()
+                .uri("/")
+                .handle((in, out) -> in.receiveFrames())
+                .subscribe();
 
-		StepVerifier.create(incomingData)
-				.expectNext(new PongWebSocketFrame())
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
-	}
+        StepVerifier.create(incomingData)
+                .expectNext(new PongWebSocketFrame())
+                .expectComplete()
+                .verify(Duration.ofSeconds(30));
+    }
 
-	@Test
-	public void testIssue927_2() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+    @Test
+    public void testIssue927_2() {
+        DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
 
-		httpServer = HttpServer.create()
-				.port(0)
-				.handle((req, resp) ->
-						resp.sendWebsocket((i, o) -> {
-							return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame()))
-									.then(i.receiveFrames()
-											.subscribeWith(incomingData)
-											.then());
-						}))
-				.wiretap(true)
-				.bindNow();
+        httpServer = HttpServer.create()
+                .port(0)
+                .handle((req, resp) ->
+                        resp.sendWebsocket((i, o) -> {
+                            return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame()))
+                                    .then(i.receiveFrames()
+                                            .subscribeWith(incomingData)
+                                            .then());
+                        }))
+                .wiretap(true)
+                .bindNow();
 
-		HttpClient.create()
-				.port(httpServer.address().getPort())
-				.wiretap(true)
-				.websocket(true)
-				.uri("/")
-				.handle((in, out) -> in.receiveFrames())
-				.subscribe();
+        HttpClient.create()
+                .port(httpServer.address().getPort())
+                .wiretap(true)
+                .websocket(true)
+                .uri("/")
+                .handle((in, out) -> in.receiveFrames())
+                .subscribe();
 
-		StepVerifier.create(incomingData)
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
-	}
+        StepVerifier.create(incomingData)
+                .expectComplete()
+                .verify(Duration.ofSeconds(30));
+    }
 
 }
