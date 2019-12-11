@@ -15,7 +15,6 @@
  */
 package reactor.netty.http;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 
@@ -64,23 +63,9 @@ public interface HttpInfos {
 	/**
 	 * Returns a normalized {@link #uri()} without the leading and trailing '/' if present
 	 *
-	 * @return a normalized {@link #uri()} without the leading and trailing
+	 * @return a normalized {@link #uri()} without the leading and trailing '/' if present
 	 */
-	default String path() {
-		String uri = URI.create(uri()).getPath();
-		if (!uri.isEmpty()) {
-			if(uri.charAt(0) == '/'){
-				uri = uri.substring(1);
-				if(uri.length() <= 1){
-					return uri;
-				}
-			}
-			if(uri.charAt(uri.length() - 1) == '/'){
-				return uri.substring(0, uri.length() - 1);
-			}
-		}
-		return uri;
-	}
+	String path();
 
 	/**
 	 * Returns the resolved target address

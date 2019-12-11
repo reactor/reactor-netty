@@ -16,6 +16,7 @@
 
 package reactor.netty.http;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -288,6 +289,27 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 */
 	protected final boolean markSentHeaderAndBody() {
 		return HTTP_STATE.compareAndSet(this, READY, BODY_SENT);
+	}
+
+	/**
+	 * Returns a normalized uri without the leading and trailing '/' if present
+	 *
+	 * @return a normalized uri without the leading and trailing '/' if present
+	 */
+	public static String resolvePath(String uri) {
+		String path = URI.create(uri).getPath();
+		if (!path.isEmpty()) {
+			if(path.charAt(0) == '/'){
+				path = path.substring(1);
+				if(path.length() <= 1){
+					return path;
+				}
+			}
+			if(path.charAt(path.length() - 1) == '/'){
+				return path.substring(0, path.length() - 1);
+			}
+		}
+		return path;
 	}
 
 	/**

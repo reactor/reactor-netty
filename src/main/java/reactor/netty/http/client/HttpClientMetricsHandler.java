@@ -33,9 +33,11 @@ import java.time.Duration;
  */
 final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
-	HttpRequest request;
+	String path;
 
-	HttpResponse response;
+	String method;
+
+	String status;
 
 
 	long dataReceived;
@@ -58,7 +60,12 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
 		if (msg instanceof HttpRequest) {
-			request = (HttpRequest) msg;
+			ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
+			if (channelOps instanceof HttpClientOperations) {
+				HttpClientOperations ops = (HttpClientOperations) channelOps;
+				path = "/" + ops.path;
+				method = ops.method().name();
+			}
 
 			dataSentTime = System.nanoTime();
 		}
@@ -75,11 +82,10 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 				SocketAddress address = ctx.channel().remoteAddress();
 
 				recorder.recordDataSentTime(address,
-						request.uri(),
-						request.method().name(),
+						path, method,
 						Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-				recorder.recordDataSent(address, request.uri(), dataSent);
+				recorder.recordDataSent(address, path, dataSent);
 			});
 		}
 		//"FutureReturnValueIgnored" this is deliberate
@@ -89,7 +95,8 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (msg instanceof HttpResponse) {
-			response = (HttpResponse) msg;
+			HttpResponse response = (HttpResponse) msg;
+			status = response.status().codeAsText().toString();
 
 			dataReceivedTime = System.nanoTime();
 		}
@@ -104,18 +111,14 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 		if (msg instanceof LastHttpContent) {
 			SocketAddress address = ctx.channel().remoteAddress();
 			recorder.recordDataReceivedTime(address,
-					request.uri(),
-					request.method().name(),
-					response.status().codeAsText().toString(),
+					path, method, status,
 					Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
 			recorder.recordResponseTime(address,
-					request.uri(),
-					request.method().name(),
-					response.status().codeAsText().toString(),
+					path, method, status,
 					Duration.ofNanos(System.nanoTime() - dataSentTime));
 
-			recorder.recordDataReceived(address, request.uri(), dataReceived);
+			recorder.recordDataReceived(address, path, dataReceived);
 			reset();
 		}
 
@@ -125,7 +128,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
 		recorder.incrementErrorsCount(ctx.channel().remoteAddress(),
-				request != null ? request.uri() : resolveUri(ctx));
+				path != null ? path : resolveUri(ctx));
 
 		ctx.fireExceptionCaught(cause);
 	}
@@ -141,8 +144,9 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 	}
 
 	private void reset() {
-		request = null;
-		response = null;
+		path = null;
+		method = null;
+		status = null;
 		dataReceived = 0;
 		dataSent = 0;
 		dataReceivedTime = 0;

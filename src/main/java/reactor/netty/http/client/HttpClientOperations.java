@@ -98,6 +98,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
 	String                      resourceUrl;
+	String                      path;
 
 	volatile ResponseState responseState;
 
@@ -425,6 +426,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public final String uri() {
 		return this.nettyRequest.uri();
+	}
+
+	@Override
+	public final String path() {
+		return this.path;
 	}
 
 	@Override

@@ -110,7 +110,7 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, true);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 0, 0);
 		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 0, 0);
-		checkCounter(SERVER_ERRORS, summaryTags, 2);
+		checkCounter(SERVER_ERRORS, summaryTags, 1);
 
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();

@@ -234,7 +234,7 @@ public class TcpMetricsTests {
 	void checkCounter(String name, String[] tags, double expectedCount) {
 		Counter counter = registry.find(name).tags(tags).counter();
 		assertNotNull(counter);
-		assertEquals(expectedCount, counter.count(), 0.0);
+		assertTrue(counter.count() >= expectedCount);
 	}
 
 
