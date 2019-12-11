@@ -1254,7 +1254,8 @@ public class WebsocketTest {
                 .port(0)
                 .handle((req, resp) ->
                         resp.sendWebsocket((i, o) -> {
-                            return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame()))
+                            return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
+                                    .delayElements(Duration.ofMillis(100)))
                                     .then(i.receiveFrames()
                                             .subscribeWith(incomingData)
                                             .then());
@@ -1284,7 +1285,8 @@ public class WebsocketTest {
                 .port(0)
                 .handle((req, resp) ->
                         resp.sendWebsocket((i, o) -> {
-                            return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame()))
+                            return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
+                                    .delayElements(Duration.ofMillis(100)))
                                     .then(i.receiveFrames()
                                             .subscribeWith(incomingData)
                                             .then());
