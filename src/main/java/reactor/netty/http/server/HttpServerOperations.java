@@ -573,7 +573,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 					HttpResponseStatus.INTERNAL_SERVER_ERROR);
 			response.headers()
 			        .set(responseHeaders)
-			        .remove(HttpHeaderValues.CHUNKED)
+			        .remove(HttpHeaderNames.TRANSFER_ENCODING)
 			        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
 			        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
 			channel().writeAndFlush(response)
