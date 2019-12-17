@@ -904,16 +904,41 @@ public abstract class HttpClient {
 	/**
 	 * HTTP Websocket to connect the {@link HttpClient}.
 	 *
+	 * @param proxyPing whether to proxy websocket ping frames or respond to them
+	 *
+	 * @return a {@link WebsocketSender} ready to consume for response
+	 */
+	public final WebsocketSender websocket(boolean proxyPing) {
+		return websocket("", 65536, proxyPing);
+	}
+
+	/**
+	 * HTTP Websocket to connect the {@link HttpClient}.
+	 *
 	 * @param subprotocols a websocket subprotocol comma separated list
 	 * @param maxFramePayloadLength maximum allowable frame payload length
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response
 	 */
 	public final WebsocketSender websocket(String subprotocols, int maxFramePayloadLength) {
+		return websocket(subprotocols, maxFramePayloadLength, false);
+	}
+
+	/**
+	 * HTTP Websocket to connect the {@link HttpClient}.
+	 *
+	 * @param subprotocols a websocket subprotocol comma separated list
+	 * @param maxFramePayloadLength maximum allowable frame payload length
+	 * @param proxyPing whether to proxy websocket ping frames or respond to them
+	 *
+	 * @return a {@link WebsocketSender} ready to consume for response
+	 */
+	public final WebsocketSender websocket(String subprotocols, int maxFramePayloadLength, boolean proxyPing) {
 		Objects.requireNonNull(subprotocols, "subprotocols");
 		TcpClient tcpConfiguration = tcpConfiguration()
 				.bootstrap(b -> HttpClientConfiguration.websocketSubprotocols(b, subprotocols))
-				.bootstrap(b -> HttpClientConfiguration.websocketMaxFramePayloadLength(b, maxFramePayloadLength));
+				.bootstrap(b -> HttpClientConfiguration.websocketMaxFramePayloadLength(b, maxFramePayloadLength))
+				.bootstrap(b -> HttpClientConfiguration.websocketProxyPing(b, proxyPing));
 		return new WebsocketFinalizer(tcpConfiguration);
 	}
 

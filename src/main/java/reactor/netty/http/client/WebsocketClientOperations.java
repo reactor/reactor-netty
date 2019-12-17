@@ -57,14 +57,17 @@ final class WebsocketClientOperations extends HttpClientOperations
 
 	final WebSocketClientHandshaker handshaker;
 	final MonoProcessor<WebSocketCloseStatus> onCloseState;
+	final boolean proxyPing;
 
 	volatile int closeSent;
 
 	WebsocketClientOperations(URI currentURI,
 			String protocols,
 			int maxFramePayloadLength,
+			boolean proxyPing,
 			HttpClientOperations replaced) {
 		super(replaced);
+		this.proxyPing = proxyPing;
 		Channel channel = channel();
 		onCloseState = MonoProcessor.create();
 
@@ -128,7 +131,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 			}
 			return;
 		}
-		if (msg instanceof PingWebSocketFrame) {
+		if (!this.proxyPing && msg instanceof PingWebSocketFrame) {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) msg).content()));
 			ctx.read();
