@@ -31,6 +31,8 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -1243,4 +1245,66 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
+
+    @Test
+    public void testIssue927() {
+        DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+
+        httpServer = HttpServer.create()
+                .port(0)
+                .handle((req, resp) ->
+                        resp.sendWebsocket((i, o) -> {
+                            return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
+                                    .delayElements(Duration.ofMillis(100)))
+                                    .then(i.receiveFrames()
+                                            .subscribeWith(incomingData)
+                                            .then());
+                }))
+                .wiretap(true)
+                .bindNow();
+
+        HttpClient.create()
+                .port(httpServer.address().getPort())
+                .wiretap(true)
+                .websocket()
+                .uri("/")
+                .handle((in, out) -> in.receiveFrames())
+                .subscribe();
+
+        StepVerifier.create(incomingData)
+                .expectNext(new PongWebSocketFrame())
+                .expectComplete()
+                .verify(Duration.ofSeconds(30));
+    }
+
+    @Test
+    public void testIssue927_2() {
+        DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+
+        httpServer = HttpServer.create()
+                .port(0)
+                .handle((req, resp) ->
+                        resp.sendWebsocket((i, o) -> {
+                            return o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
+                                    .delayElements(Duration.ofMillis(100)))
+                                    .then(i.receiveFrames()
+                                            .subscribeWith(incomingData)
+                                            .then());
+                        }))
+                .wiretap(true)
+                .bindNow();
+
+        HttpClient.create()
+                .port(httpServer.address().getPort())
+                .wiretap(true)
+                .websocket(true)
+                .uri("/")
+                .handle((in, out) -> in.receiveFrames())
+                .subscribe();
+
+        StepVerifier.create(incomingData)
+                .expectComplete()
+                .verify(Duration.ofSeconds(30));
+    }
+
 }
