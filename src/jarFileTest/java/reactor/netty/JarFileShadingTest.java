@@ -62,16 +62,6 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 	}
 
 	@Test
-	public void testMetaInf() throws Exception {
-		try (Stream<Path> stream = Files.list(root.resolve("META-INF"))) {
-			assertThatFileList(stream).containsOnly("MANIFEST.MF", "services");
-		}
-		try (Stream<Path> stream = Files.list(root.resolve("META-INF/services"))) {
-			assertThatFileList(stream).containsOnly("reactor.blockhound.integration.BlockHoundIntegration");
-		}
-	}
-
-	@Test
 	public void testManifestContent() throws IOException {
 		ZipFile jar = new ZipFile(jarFilePath.toString());
 		ZipEntry manifest = jar
