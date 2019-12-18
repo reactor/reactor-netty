@@ -64,8 +64,7 @@ public class Application {
                              .subscribe(System.out::println);
 
                       final byte[] msgBytes = "hello".getBytes(CharsetUtil.ISO_8859_1);
-                      return outbound.send(Flux.just(Unpooled.wrappedBuffer(msgBytes), Unpooled.wrappedBuffer(msgBytes)),
-                                           b -> true)
+                      return outbound.send(Flux.just(Unpooled.wrappedBuffer(msgBytes), Unpooled.wrappedBuffer(msgBytes)))
                                      .neverComplete();
                   })
                   .blockLast();
