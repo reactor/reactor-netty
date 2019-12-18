@@ -47,9 +47,6 @@ ext {
 
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  //NOTE: reactor dependencies versions are now defined in gradle.properties
-  blockHoundVersion = "1.0.1.RELEASE"
-
   //Metrics
   micrometerVersion = '1.3.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
 
@@ -60,7 +57,7 @@ ext {
   assertJVersion = '3.6.1'
 
   // Netty
-  nettyDefaultVersion = '4.1.43.Final'
+  nettyDefaultVersion = '4.1.44.Final'
   if (!project.hasProperty("forceNettyVersion")) {
 	nettyVersion = nettyDefaultVersion
   }
@@ -86,7 +83,7 @@ ext {
 
 	bndOptions = [
 			"Export-Package": "!reactor.netty.internal*,reactor.netty.*;-noimport:=true",
-			"Import-Package": '!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",io.netty.handler.codec.haproxy;resolution:=optional;version="[4.1,5)",io.micrometer.*;resolution:=optional,reactor.blockhound.*;resolution:=optional,*',
+			"Import-Package": '!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",io.netty.handler.codec.haproxy;resolution:=optional;version="[4.1,5)",io.micrometer.*;resolution:=optional,*',
 			"Bundle-Name" : "reactor-netty",
 			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty"
 	]
@@ -250,7 +247,6 @@ configure(rootProject) { project ->
 	shaded("io.projectreactor.addons:reactor-pool:$reactorPoolVersion") {
 		exclude module: "reactor-core"
 	}
-	optional "io.projectreactor.tools:blockhound:$blockHoundVersion"
 
 	compile "io.netty:netty-handler:${nettyVersion}"
 	compile "io.netty:netty-codec-http:${nettyVersion}"
@@ -294,7 +290,7 @@ configure(rootProject) { project ->
 	testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
 
 	// Needed for HTTP/2 testing
-	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.26.Final" + os_suffix
+	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.28.Final" + os_suffix
 
 	jarFileTestCompile 'org.assertj:assertj-core:3.12.2'
 	jarFileTestCompile 'junit:junit:4.12'
