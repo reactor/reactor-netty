@@ -593,7 +593,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			//"FutureReturnValueIgnored" this is deliberate
 			c.closeFuture()
 			 .addListener(ff -> {
-			     if (AttributeKey.exists("channelPool." + System.identityHashCode(pool.pool))) {
+			     if (AttributeKey.exists("io.netty.channel.pool.SimpleChannelPool")) {
 			         pool.release(c);
 			     }
 			     pool.inactiveConnections.decrementAndGet();
