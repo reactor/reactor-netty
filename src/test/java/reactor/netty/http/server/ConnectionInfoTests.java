@@ -130,6 +130,38 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
+	public void xForwardedHostAndEmptyPort() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
+					clientRequestHeaders.add("X-Forwarded-Port", "");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+				},
+				httpClient -> httpClient,
+				httpServer -> httpServer.port(8080),
+				false);
+	}
+
+	@Test
+	public void xForwardedHostAndNonNumericPort() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
+					clientRequestHeaders.add("X-Forwarded-Port", "test");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+				},
+				httpClient -> httpClient,
+				httpServer -> httpServer.port(8080),
+				false);
+	}
+
+	@Test
 	public void xForwardedForHostAndPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
@@ -406,7 +438,7 @@ public class ConnectionInfoTests {
 
 	@Test
 	public void parseAddressForHostNameNoPort() {
-		testParseAddress("a.example.com", 8080, inetSocketAddress -> {
+		testParseAddress("a.example.com", inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("a.example.com");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
 		});
@@ -414,7 +446,7 @@ public class ConnectionInfoTests {
 
 	@Test
 	public void parseAddressForHostNameWithPort() {
-		testParseAddress("a.example.com:443", 8080, inetSocketAddress -> {
+		testParseAddress("a.example.com:443", inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("a.example.com");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
 		});
@@ -422,7 +454,7 @@ public class ConnectionInfoTests {
 
 	@Test
 	public void parseAddressForIpV4NoPort() {
-		testParseAddress("192.0.2.60", 8080, inetSocketAddress -> {
+		testParseAddress("192.0.2.60", inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("192.0.2.60");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
 		});
@@ -430,7 +462,7 @@ public class ConnectionInfoTests {
 
 	@Test
 	public void parseAddressForIpV4WithPort() {
-		testParseAddress("192.0.2.60:443", 8080, inetSocketAddress -> {
+		testParseAddress("192.0.2.60:443", inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("192.0.2.60");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
 		});
@@ -438,7 +470,7 @@ public class ConnectionInfoTests {
 
 	@Test
 	public void parseAddressForIpV6NoPortNoBrackets() {
-		testParseAddress("1abc:2abc:3abc:0:0:0:5abc:6abc", 8080, inetSocketAddress -> {
+		testParseAddress("1abc:2abc:3abc:0:0:0:5abc:6abc", inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
 		});
@@ -446,7 +478,7 @@ public class ConnectionInfoTests {
 
 	@Test
 	public void parseAddressForIpV6NoPortWithBrackets() {
-		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]", 8080, inetSocketAddress -> {
+		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]", inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
 		});
@@ -454,7 +486,7 @@ public class ConnectionInfoTests {
 
 	@Test
 	public void parseAddressForIpV6WithPortAndBrackets_1() {
-		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]:443", 8080, inetSocketAddress -> {
+		testParseAddress("[1abc:2abc:3abc::5ABC:6abc]:443", inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(443);
 		});
@@ -462,7 +494,7 @@ public class ConnectionInfoTests {
 
 	@Test
 	public void parseAddressForIpV6WithPortAndBrackets_2() {
-		testParseAddress("[2001:db8:a0b:12f0::1]:dba2", 8080, inetSocketAddress -> {
+		testParseAddress("[2001:db8:a0b:12f0::1]:dba2", inetSocketAddress -> {
 			Assertions.assertThat(inetSocketAddress.getHostName()).isEqualTo("2001:db8:a0b:12f0:0:0:0:1");
 			Assertions.assertThat(inetSocketAddress.getPort()).isEqualTo(8080);
 		});
@@ -521,8 +553,8 @@ public class ConnectionInfoTests {
 		assertThat(response).isEqualTo("OK");
 	}
 
-	private void testParseAddress(String address, int defaultPort, Consumer<InetSocketAddress> inetSocketAddressConsumer) {
-		inetSocketAddressConsumer.accept(ConnectionInfo.parseAddress(address, defaultPort));
+	private void testParseAddress(String address, Consumer<InetSocketAddress> inetSocketAddressConsumer) {
+		inetSocketAddressConsumer.accept(ConnectionInfo.parseAddress(address, 8080));
 	}
 
 	@After
