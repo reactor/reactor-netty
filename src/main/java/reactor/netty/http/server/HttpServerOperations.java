@@ -467,6 +467,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			if (msg instanceof FullHttpRequest) {
 				super.onInboundNext(ctx, msg);
 				if (isHttp2()) {
+					//force auto read to enable more accurate close selection now inbound is done
+					channel().config().setAutoRead(true);
 					onInboundComplete();
 				}
 			}
@@ -477,6 +479,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				super.onInboundNext(ctx, msg);
 			}
 			if (msg instanceof LastHttpContent) {
+				//force auto read to enable more accurate close selection now inbound is done
+				channel().config().setAutoRead(true);
 				onInboundComplete();
 			}
 		}

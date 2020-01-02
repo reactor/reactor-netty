@@ -67,6 +67,7 @@ import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
@@ -1198,5 +1199,44 @@ public class HttpServerTests {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(result.get()).contains("test", "connection: close");
 		assertThat(connection.channel().isActive()).isFalse();
+	}
+
+	@Test
+	public void testIssue940() {
+		AtomicInteger counter = new AtomicInteger();
+		Flux<String> response =
+				Flux.interval(Duration.ofMillis(100))
+				    .map(l -> "" + counter.getAndIncrement())
+				    .doFinally(sig -> {
+				        if (SignalType.ON_ERROR.equals(sig)) {
+				            counter.getAndDecrement();
+				        }
+				    });
+
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) -> res.sendString(response))
+				          .bindNow();
+
+		HttpClient client =
+				HttpClient.create()
+				          .port(disposableServer.port());
+
+		doTestIssue940(client, "0", "1");
+
+		doTestIssue940(client, "2", "3");
+	}
+
+	private void doTestIssue940(HttpClient client, String... expectations) {
+		StepVerifier.create(
+		        client.get()
+		              .responseContent()
+		              .asString()
+		              .take(2))
+		            .expectNext(expectations)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 }
