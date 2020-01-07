@@ -170,9 +170,9 @@ public class TcpMetricsTests {
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, true);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 1, 5);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 1, 5);
-		checkCounter(SERVER_ERRORS, summaryTags, 0);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 1, 5, true);
+		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 1, 5, true);
+		checkCounter(SERVER_ERRORS, summaryTags, 0, false);
 
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
@@ -180,9 +180,9 @@ public class TcpMetricsTests {
 		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
 		checkTimer(CLIENT_CONNECT_TIME, timerTags, true);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags, true);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 1, 5);
-		checkCounter(CLIENT_ERRORS, summaryTags, 0);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5, true);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 1, 5, true);
+		checkCounter(CLIENT_ERRORS, summaryTags, 0, false);
 	}
 
 	private void checkExpectationsNegative(int port) {
@@ -193,9 +193,9 @@ public class TcpMetricsTests {
 
 		checkTimer(CLIENT_CONNECT_TIME, timerTags1, true);
 		checkTlsTimer(CLIENT_TLS_HANDSHAKE_TIME, timerTags2, false);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 0, 0);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 0, 0);
-		checkCounter(CLIENT_ERRORS, summaryTags, 0);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 0, 0, false);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 0, 0, false);
+		checkCounter(CLIENT_ERRORS, summaryTags, 0, false);
 	}
 
 
@@ -224,17 +224,27 @@ public class TcpMetricsTests {
 		}
 	}
 
-	void checkDistributionSummary(String name, String[] tags, long expectedCount, int expectedAmount) {
+	void checkDistributionSummary(String name, String[] tags, long expectedCount, int expectedAmount, boolean exists) {
 		DistributionSummary summary = registry.find(name).tags(tags).summary();
-		assertNotNull(summary);
-		assertEquals(expectedCount, summary.count());
-		assertTrue(summary.totalAmount() >= expectedAmount);
+		if (exists) {
+			assertNotNull(summary);
+			assertEquals(expectedCount, summary.count());
+			assertTrue(summary.totalAmount() >= expectedAmount);
+		}
+		else {
+			assertNull(summary);
+		}
 	}
 
-	void checkCounter(String name, String[] tags, double expectedCount) {
+	void checkCounter(String name, String[] tags, double expectedCount, boolean exists) {
 		Counter counter = registry.find(name).tags(tags).counter();
-		assertNotNull(counter);
-		assertTrue(counter.count() >= expectedCount);
+		if (exists) {
+			assertNotNull(counter);
+			assertTrue(counter.count() >= expectedCount);
+		}
+		else {
+			assertNull(counter);
+		}
 	}
 
 

@@ -20,63 +20,76 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.buffer.ByteBufAllocatorMetric;
 import io.netty.buffer.PooledByteBufAllocatorMetric;
+import io.netty.util.internal.PlatformDependent;
+
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * @author Violeta Georgieva
  */
 final class ByteBufAllocatorMetrics {
+	static final ByteBufAllocatorMetrics INSTANCE = new ByteBufAllocatorMetrics();
 
-	static void registerMetrics(String allocName, String id, ByteBufAllocatorMetric metrics) {
-		String name = String.format(NAME, allocName);
+	final ConcurrentMap<String, ByteBufAllocatorMetric> cache = PlatformDependent.newConcurrentHashMap();
 
-		Gauge.builder(name + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)
-		     .description("The number of the bytes of the heap memory.")
-		     .tags(ID, id)
-		     .register(registry);
+	private ByteBufAllocatorMetrics() {
+	}
 
-		Gauge.builder(name + USED_DIRECT_MEMORY, metrics, ByteBufAllocatorMetric::usedDirectMemory)
-		     .description("The number of the bytes of the direct memory.")
-		     .tags(ID, id)
-		     .register(registry);
+	void registerMetrics(String allocName, ByteBufAllocatorMetric metrics) {
+		cache.computeIfAbsent(metrics.hashCode() + "", key -> {
+			String name = String.format(NAME, allocName);
 
-		if (metrics instanceof PooledByteBufAllocatorMetric) {
-			PooledByteBufAllocatorMetric pooledMetrics = (PooledByteBufAllocatorMetric) metrics;
-
-			Gauge.builder(name + HEAP_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numHeapArenas)
-			     .description("The number of heap arenas.")
-			     .tags(ID, id)
+			Gauge.builder(name + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)
+			     .description("The number of the bytes of the heap memory.")
+			     .tags(ID, key)
 			     .register(registry);
 
-			Gauge.builder(name + DIRECT_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numDirectArenas)
-			     .description("The number of direct arenas.")
-			     .tags(ID, id)
+			Gauge.builder(name + USED_DIRECT_MEMORY, metrics, ByteBufAllocatorMetric::usedDirectMemory)
+			     .description("The number of the bytes of the direct memory.")
+			     .tags(ID, key)
 			     .register(registry);
 
-			Gauge.builder(name + THREAD_LOCAL_CACHES, pooledMetrics, PooledByteBufAllocatorMetric::numThreadLocalCaches)
-			     .description("The number of thread local caches.")
-			     .tags(ID, id)
-			     .register(registry);
+			if (metrics instanceof PooledByteBufAllocatorMetric) {
+				PooledByteBufAllocatorMetric pooledMetrics = (PooledByteBufAllocatorMetric) metrics;
 
-			Gauge.builder(name + TINY_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::tinyCacheSize)
-			     .description("The size of the tiny cache.")
-			     .tags(ID, id)
-			     .register(registry);
+				Gauge.builder(name + HEAP_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numHeapArenas)
+				     .description("The number of heap arenas.")
+				     .tags(ID, key)
+				     .register(registry);
 
-			Gauge.builder(name + SMALL_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::smallCacheSize)
-			     .description("The size of the small cache.")
-			     .tags(ID, id)
-			     .register(registry);
+				Gauge.builder(name + DIRECT_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numDirectArenas)
+				     .description("The number of direct arenas.")
+				     .tags(ID, key)
+				     .register(registry);
 
-			Gauge.builder(name + NORMAL_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::normalCacheSize)
-			     .description("The size of the normal cache.")
-			     .tags(ID, id)
-			     .register(registry);
+				Gauge.builder(name + THREAD_LOCAL_CACHES, pooledMetrics, PooledByteBufAllocatorMetric::numThreadLocalCaches)
+				     .description("The number of thread local caches.")
+				     .tags(ID, key)
+				     .register(registry);
 
-			Gauge.builder(name + CHUNK_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::chunkSize)
-			     .description("The chunk size for an arena.")
-			     .tags(ID, id)
-			     .register(registry);
-		}
+				Gauge.builder(name + TINY_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::tinyCacheSize)
+				     .description("The size of the tiny cache.")
+				     .tags(ID, key)
+				     .register(registry);
+
+				Gauge.builder(name + SMALL_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::smallCacheSize)
+				     .description("The size of the small cache.")
+				     .tags(ID, key)
+				     .register(registry);
+
+				Gauge.builder(name + NORMAL_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::normalCacheSize)
+				     .description("The size of the normal cache.")
+				     .tags(ID, key)
+				     .register(registry);
+
+				Gauge.builder(name + CHUNK_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::chunkSize)
+				     .description("The chunk size for an arena.")
+				     .tags(ID, key)
+				     .register(registry);
+			}
+
+			return metrics;
+		});
 	}
 
 	static final MeterRegistry registry = Metrics.globalRegistry;

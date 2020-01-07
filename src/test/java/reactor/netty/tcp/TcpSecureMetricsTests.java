@@ -108,9 +108,9 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		String[] summaryTags = new String[] {REMOTE_ADDRESS, clientAddress, URI, "tcp"};
 
 		checkTlsTimer(SERVER_TLS_HANDSHAKE_TIME, timerTags, true);
-		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 0, 0);
-		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 0, 0);
-		checkCounter(SERVER_ERRORS, summaryTags, 1);
+		checkDistributionSummary(SERVER_DATA_SENT, summaryTags, 0, 0, false);
+		checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags, 0, 0, false);
+		checkCounter(SERVER_ERRORS, summaryTags, 1, true);
 
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
@@ -118,8 +118,8 @@ public class TcpSecureMetricsTests extends TcpMetricsTests {
 		summaryTags = new String[] {REMOTE_ADDRESS, serverAddress, URI, "tcp"};
 
 		checkTimer(CLIENT_CONNECT_TIME, timerTags, true);
-		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5);
-		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 0, 0);
-		checkCounter(CLIENT_ERRORS, summaryTags, 0);
+		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags, 1, 5, true);
+		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags, 0, 0, false);
+		checkCounter(CLIENT_ERRORS, summaryTags, 0, false);
 	}
 }

@@ -54,7 +54,6 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
-import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
@@ -360,18 +359,10 @@ final class HttpServerBind extends HttpServer
 
 			ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 			if (handler != null) {
-				// TODO doesn't take into account proxy protocol address and forward headers
 				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
-				HttpServerMetricsHandler httpMetrics;
-				if (channelMetricsRecorder instanceof MicrometerChannelMetricsRecorder) {
-					MicrometerChannelMetricsRecorder recorder = (MicrometerChannelMetricsRecorder) channelMetricsRecorder;
-					httpMetrics = new HttpServerMetricsHandler(
-							new MicrometerHttpServerMetricsRecorder(recorder.name(), recorder.remoteAddress(), "http"));
-					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
-				}
-				else if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
-					httpMetrics = new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder);
-					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
+				if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
+					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
+							new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder));
 				}
 			}
 
@@ -462,18 +453,10 @@ final class HttpServerBind extends HttpServer
 
 			ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 			if (handler != null) {
-				// TODO doesn't take into account proxy protocol address and forward headers
 				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
-				HttpServerMetricsHandler httpMetrics;
-				if (channelMetricsRecorder instanceof MicrometerChannelMetricsRecorder) {
-					MicrometerChannelMetricsRecorder recorder = (MicrometerChannelMetricsRecorder) channelMetricsRecorder;
-					httpMetrics = new HttpServerMetricsHandler(
-							new MicrometerHttpServerMetricsRecorder(recorder.name(), recorder.remoteAddress(), "http"));
-					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
-				}
-				else if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
-					httpMetrics = new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder);
-					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
+				if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
+					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
+							new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder));
 				}
 			}
 		}
@@ -682,18 +665,10 @@ final class HttpServerBind extends HttpServer
 
 				ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
 				if (handler != null) {
-					// TODO doesn't take into account proxy protocol address and forward headers
 					ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
-					HttpServerMetricsHandler httpMetrics;
-					if (channelMetricsRecorder instanceof MicrometerChannelMetricsRecorder) {
-						MicrometerChannelMetricsRecorder recorder = (MicrometerChannelMetricsRecorder) channelMetricsRecorder;
-						httpMetrics = new HttpServerMetricsHandler(
-								new MicrometerHttpServerMetricsRecorder(recorder.name(), recorder.remoteAddress(), "http"));
-						p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
-					}
-					else if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
-						httpMetrics = new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder);
-						p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler, httpMetrics);
+					if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
+						p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
+								new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder));
 					}
 				}
 				return;

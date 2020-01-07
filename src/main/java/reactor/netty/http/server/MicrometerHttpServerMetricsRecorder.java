@@ -15,39 +15,51 @@
  */
 package reactor.netty.http.server;
 
+import io.micrometer.core.instrument.Timer;
+import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 
-import javax.annotation.Nullable;
 import java.time.Duration;
 
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
 
+/**
+ * @author Violeta Georgieva
+ */
 final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpServerMetricsRecorder {
 
-	MicrometerHttpServerMetricsRecorder(String name, @Nullable String remoteAddress, String protocol) {
-		super(name, remoteAddress, protocol);
+	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
+
+	private MicrometerHttpServerMetricsRecorder() {
+		super("reactor.netty.http.server", "http");
 	}
 
 	@Override
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
-		dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
-		                       .register(registry)
-		                       .record(time);
+		MeterKey meterKey = MeterKey.builder().uri(uri).method(method).build();
+		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(meterKey,
+				key -> dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
+				                              .register(registry));
+		dataReceivedTime.record(time);
 	}
 
 	@Override
 	public void recordDataSentTime(String uri, String method, String status, Duration time) {
-		dataSentTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
-		                   .register(registry)
-		                   .record(time);
+		MeterKey meterKey = MeterKey.builder().uri(uri).method(method).status(status).build();
+		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(meterKey,
+				key -> dataSentTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
+				                          .register(registry));
+		dataSentTime.record(time);
 	}
 
 	@Override
 	public void recordResponseTime(String uri, String method, String status, Duration time) {
-		responseTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
-		                   .register(registry)
-		                   .record(time);
+		MeterKey meterKey = MeterKey.builder().uri(uri).method(method).status(status).build();
+		Timer responseTime = responseTimeCache.computeIfAbsent(meterKey,
+				key -> responseTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
+				                          .register(registry));
+		responseTime.record(time);
 	}
 }

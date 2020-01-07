@@ -38,10 +38,6 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 
 	final ChannelMetricsRecorder recorder;
 
-	AddressResolverGroupMetrics(AddressResolverGroup<SocketAddress> resolverGroup) {
-		this(resolverGroup, null);
-	}
-
 	AddressResolverGroupMetrics(AddressResolverGroup<SocketAddress> resolverGroup,
 			@Nullable ChannelMetricsRecorder recorder) {
 		this.resolverGroup = resolverGroup;
@@ -108,18 +104,10 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 			}
 
 			void record(long resolveTimeStart, String status, SocketAddress remoteAddress) {
-				if (recorder == null) {
-					MicrometerChannelMetricsRecorder._recordResolveAddressTime(
-							remoteAddress,
-							Duration.ofNanos(System.nanoTime() - resolveTimeStart),
-							status);
-				}
-				else {
-					recorder.recordResolveAddressTime(
-							remoteAddress,
-							Duration.ofNanos(System.nanoTime() - resolveTimeStart),
-							status);
-				}
+				recorder.recordResolveAddressTime(
+						remoteAddress,
+						Duration.ofNanos(System.nanoTime() - resolveTimeStart),
+						status);
 			}
 		};
 	}

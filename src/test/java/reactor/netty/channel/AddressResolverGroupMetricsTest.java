@@ -88,7 +88,8 @@ public class AddressResolverGroupMetricsTest {
 
 
 	private double getTimerValue(String address) {
-		Timer timer = registry.find("reactor.netty.address.resolver").tags(REMOTE_ADDRESS, address, STATUS, SUCCESS).timer();
+		Timer timer = registry.find("reactor.netty.http.client.address.resolver")
+		                      .tags(REMOTE_ADDRESS, address, STATUS, SUCCESS).timer();
 		double result = -1;
 		if (timer != null) {
 			result = timer.totalTime(TimeUnit.NANOSECONDS);

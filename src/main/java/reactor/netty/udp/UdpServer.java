@@ -19,6 +19,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -41,12 +42,11 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.Metrics;
-
-import javax.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -376,7 +376,7 @@ public abstract class UdpServer {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, "reactor.netty.udp.server", "udp"));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, getOrCreateMetricsRecorder()));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);
@@ -464,6 +464,17 @@ public abstract class UdpServer {
 	 * @return a {@link Mono} of {@link Connection}
 	 */
 	protected abstract Mono<? extends Connection> bind(Bootstrap b);
+
+	final AtomicReference<MicrometerChannelMetricsRecorder> channelMetricsRecorder = new AtomicReference<>();
+	final MicrometerChannelMetricsRecorder getOrCreateMetricsRecorder() {
+		MicrometerChannelMetricsRecorder recorder = channelMetricsRecorder.get();
+		if (recorder == null) {
+			channelMetricsRecorder.compareAndSet(null,
+					new MicrometerChannelMetricsRecorder("reactor.netty.udp.server", "udp"));
+			recorder = getOrCreateMetricsRecorder();
+		}
+		return recorder;
+	}
 
 	/**
 	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via

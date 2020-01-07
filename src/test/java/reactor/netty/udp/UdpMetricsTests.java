@@ -147,7 +147,7 @@ public class UdpMetricsTests {
 		checkClientConnectTime(timerTags);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2);
-		checkCounter(CLIENT_ERRORS, summaryTags2, true);
+		checkCounter(CLIENT_ERRORS, summaryTags2, false);
 	}
 
 

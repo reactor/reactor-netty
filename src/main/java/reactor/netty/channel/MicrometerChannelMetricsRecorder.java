@@ -20,11 +20,13 @@ import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
+import io.netty.util.internal.PlatformDependent;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentMap;
 
+import static reactor.netty.Metrics.ADDRESS_RESOLVER;
 import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
@@ -34,31 +36,33 @@ import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.URI;
 
+/**
+ * @author Violeta Georgieva
+ */
 public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder {
 
 	protected final static MeterRegistry registry = Metrics.globalRegistry;
 
-	protected final String name;
-
-	protected final String remoteAddress;
-
 	final DistributionSummary.Builder dataReceivedBuilder;
-	DistributionSummary dataReceived;
+	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = PlatformDependent.newConcurrentHashMap();
 
 	final DistributionSummary.Builder dataSentBuilder;
-	DistributionSummary dataSent;
+	final ConcurrentMap<String, DistributionSummary> dataSentCache = PlatformDependent.newConcurrentHashMap();
 
 	final Counter.Builder errorCountBuilder;
-	Counter errorCount;
+	final ConcurrentMap<String, Counter> errorsCache = PlatformDependent.newConcurrentHashMap();
+
+	final Timer.Builder connectTimeBuilder;
+	final ConcurrentMap<MeterKey, Timer> connectTimeCache = PlatformDependent.newConcurrentHashMap();
+
+	final Timer.Builder tlsHandshakeTimeBuilder;
+	final ConcurrentMap<MeterKey, Timer> tlsHandshakeTimeCache = PlatformDependent.newConcurrentHashMap();
+
+	final Timer.Builder addressResolverTimeBuilder;
+	final ConcurrentMap<MeterKey, Timer> addressResolverTimeCache = PlatformDependent.newConcurrentHashMap();
 
 
-	protected MicrometerChannelMetricsRecorder(String name, @Nullable String remoteAddress, String protocol) {
-		this.name = name;
-		this.remoteAddress = remoteAddress;
-		if (remoteAddress == null && !"udp".equals(protocol)) {
-			throw new IllegalArgumentException("remoteAddress is null for protocol " + protocol);
-		}
-
+	public MicrometerChannelMetricsRecorder(String name, String protocol) {
 		this.dataReceivedBuilder =
 				DistributionSummary.builder(name + DATA_RECEIVED)
 				                   .baseUnit("bytes")
@@ -76,94 +80,73 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 				       .description("Number of the errors that are occurred")
 				       .tag(URI, protocol);
 
-		if (remoteAddress != null) {
-			this.dataReceivedBuilder.tag(REMOTE_ADDRESS, remoteAddress);
-			this.dataReceived = dataReceivedBuilder.register(registry);
+		this.connectTimeBuilder =
+				Timer.builder(name + CONNECT_TIME)
+				     .description("Time that is spent for connecting to the remote address");
 
-			this.dataSentBuilder.tag(REMOTE_ADDRESS, remoteAddress);
-			this.dataSent = dataSentBuilder.register(registry);
+		this.tlsHandshakeTimeBuilder =
+				Timer.builder(name + TLS_HANDSHAKE_TIME)
+				     .description("Time that is spent for TLS handshake");
 
-			this.errorCountBuilder.tag(REMOTE_ADDRESS, remoteAddress);
-			this.errorCount = errorCountBuilder.register(registry);
-		}
+		this.addressResolverTimeBuilder =
+				Timer.builder(name + ADDRESS_RESOLVER)
+				     .description("Time that is spent for resolving the address");
 	}
 
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
-		if (dataReceived != null) {
-			dataReceived.record(bytes);
-		}
-		else {
-			dataReceivedBuilder.tag(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(remoteAddress))
-			                   .register(registry)
-			                   .record(bytes);
-		}
+		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		DistributionSummary ds = dataReceivedCache.computeIfAbsent(address,
+				key -> dataReceivedBuilder.tag(REMOTE_ADDRESS, address)
+				                          .register(registry));
+		ds.record(bytes);
 	}
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, long bytes) {
-		if (dataSent != null) {
-			dataSent.record(bytes);
-		}
-		else {
-			dataSentBuilder.tag(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(remoteAddress))
-			               .register(registry)
-			               .record(bytes);
-		}
+		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		DistributionSummary ds = dataSentCache.computeIfAbsent(address,
+				key -> dataSentBuilder.tag(REMOTE_ADDRESS, address)
+				                      .register(registry));
+		ds.record(bytes);
 	}
 
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress) {
-		if (errorCount != null) {
-			errorCount.increment();
-		}
-		else {
-			errorCountBuilder.tag(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(remoteAddress))
-			                 .register(registry)
-			                 .increment();
-		}
+		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		Counter c = errorsCache.computeIfAbsent(address,
+				key -> errorCountBuilder.tag(REMOTE_ADDRESS, address)
+				                        .register(registry));
+		c.increment();
 	}
 
 	@Override
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
-		Timer.builder(name + TLS_HANDSHAKE_TIME)
-		     .tags(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(remoteAddress), STATUS, status)
-		     .description("Time that is spent for TLS handshake")
-		     .register(registry)
-		     .record(time);
+		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		MeterKey meterKey = MeterKey.builder().remoteAddress(address).status(status).build();
+		Timer timer = tlsHandshakeTimeCache.computeIfAbsent(meterKey,
+				key -> tlsHandshakeTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
+				                              .register(registry));
+		timer.record(time);
 	}
 
 	@Override
 	public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
-		Timer.builder(name + CONNECT_TIME)
-		     .tags(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(remoteAddress), STATUS, status)
-		     .description("Time that is spent for connecting to the remote address")
-		     .register(registry)
-		     .record(time);
+		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		MeterKey meterKey = MeterKey.builder().remoteAddress(address).status(status).build();
+		Timer timer = connectTimeCache.computeIfAbsent(meterKey,
+				key -> connectTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
+				                         .register(registry));
+		timer.record(time);
 	}
 
 	@Override
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
-		_recordResolveAddressTime(remoteAddress, time, status);
-	}
-
-	public MeterRegistry registry() {
-		return registry;
-	}
-
-	public String name() {
-		return name;
-	}
-
-	public String remoteAddress() {
-		return remoteAddress;
-	}
-
-	static void _recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
-		Timer.builder("reactor.netty.address.resolver")
-		     .tags(REMOTE_ADDRESS, reactor.netty.Metrics.formatSocketAddress(remoteAddress), STATUS, status)
-		     .description("Time that is spent for resolving the address")
-		     .register(registry)
-		     .record(time);
+		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
+		MeterKey meterKey = MeterKey.builder().remoteAddress(address).status(status).build();
+		Timer timer = addressResolverTimeCache.computeIfAbsent(meterKey,
+				key -> addressResolverTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
+				                                 .register(registry));
+		timer.record(time);
 	}
 }
