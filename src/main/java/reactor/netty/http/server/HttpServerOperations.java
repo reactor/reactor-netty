@@ -398,8 +398,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public Mono<Void> sendWebsocket(@Nullable String protocols,
 			int maxFramePayloadLength,
+			boolean proxyPing,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return withWebsocketSupport(uri(), protocols, maxFramePayloadLength, websocketHandler);
+		return withWebsocketSupport(uri(), protocols, maxFramePayloadLength, proxyPing, websocketHandler);
 	}
 
 	@Override
@@ -599,11 +600,12 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final Mono<Void> withWebsocketSupport(String url,
 			@Nullable String protocols,
 			int maxFramePayloadLength,
+			boolean proxyPing,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
 			WebsocketServerOperations
-					ops = new WebsocketServerOperations(url, protocols, maxFramePayloadLength, this);
+					ops = new WebsocketServerOperations(url, protocols, maxFramePayloadLength, proxyPing, this);
 
 			if (rebind(ops)) {
 				return FutureMono.from(ops.handshakerResult)
