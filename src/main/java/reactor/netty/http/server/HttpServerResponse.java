@@ -26,7 +26,6 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
-import reactor.netty.NettyPipeline;
 import reactor.netty.http.HttpInfos;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
@@ -164,6 +163,20 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	}
 
 	/**
+	 * Upgrades the connection to websocket. A {@link Mono} completing when the upgrade
+	 * is confirmed, then the provided callback is invoked, if the upgrade is not
+	 * successful the returned {@link Mono} fails.
+	 *
+	 * @param proxyPing whether to proxy websocket ping frames or respond to them
+	 * @param websocketHandler the I/O handler for websocket transport
+	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
+	 */
+	default Mono<Void> sendWebsocket(boolean proxyPing,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return sendWebsocket(null, 65536, proxyPing, websocketHandler);
+	}
+
+	/**
 	 * Upgrades the connection to websocket with optional subprotocol(s). A {@link Mono}
 	 * completing when the upgrade is confirmed, then the provided callback is invoked,
 	 * if the upgrade is not successful the returned {@link Mono} fails.
@@ -189,8 +202,27 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
+	default Mono<Void> sendWebsocket(@Nullable String protocols,
+			int maxFramePayloadLength,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return sendWebsocket(protocols, maxFramePayloadLength, false, websocketHandler);
+	}
+
+	/**
+	 * Upgrades the connection to websocket with optional subprotocol(s). A {@link Mono}
+	 * completing when the upgrade is confirmed, then the provided callback is invoked,
+	 * if the upgrade is not successful the returned {@link Mono} fails.
+	 *
+	 * @param protocols optional sub-protocol
+	 * @param maxFramePayloadLength maximum allowable frame payload length
+	 * @param proxyPing whether to proxy websocket ping frames or respond to them
+	 * @param websocketHandler the I/O handler for websocket transport
+	 *
+	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
+	 */
 	Mono<Void> sendWebsocket(@Nullable String protocols,
 			int maxFramePayloadLength,
+			boolean proxyPing,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
 
 

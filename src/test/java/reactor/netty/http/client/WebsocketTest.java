@@ -1307,4 +1307,63 @@ public class WebsocketTest {
 		            .verify(Duration.ofSeconds(30));
 	}
 
+	@Test
+	public void testIssue663_3() {
+		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) -> resp.sendWebsocket((i, o) -> i.receiveFrames().then()))
+				          .wiretap(true)
+				          .bindNow();
+
+		HttpClient.create()
+		          .port(httpServer.address().getPort())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) ->
+		              out.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
+		                                 .delayElements(Duration.ofMillis(100)))
+		                 .then(in.receiveFrames()
+		                         .subscribeWith(incomingData)
+		                         .then()))
+		          .subscribe();
+
+		StepVerifier.create(incomingData)
+		            .expectNext(new PongWebSocketFrame())
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testIssue663_4() {
+		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, resp) -> resp.sendWebsocket(true, (i, o) -> i.receiveFrames().then()))
+				          .wiretap(true)
+				          .bindNow();
+
+		HttpClient.create()
+		          .port(httpServer.address().getPort())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) ->
+		              out.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
+		                                 .delayElements(Duration.ofMillis(100)))
+		                 .then(in.receiveFrames()
+		                         .subscribeWith(incomingData)
+		                         .then()))
+		          .subscribe();
+
+		StepVerifier.create(incomingData)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+	}
+
 }

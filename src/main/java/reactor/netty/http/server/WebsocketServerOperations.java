@@ -21,7 +21,6 @@ import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -63,6 +62,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 	final WebSocketServerHandshaker           handshaker;
 	final ChannelPromise                      handshakerResult;
 	final MonoProcessor<WebSocketCloseStatus> onCloseState;
+	final boolean                             proxyPing;
 
 	volatile int closeSent;
 
@@ -70,8 +70,10 @@ final class WebsocketServerOperations extends HttpServerOperations
 	WebsocketServerOperations(String wsUrl,
 			@Nullable String protocols,
 			int maxFramePayloadLength,
+			boolean proxyPing,
 			HttpServerOperations replaced) {
 		super(replaced);
+		this.proxyPing = proxyPing;
 
 		Channel channel = replaced.channel();
 		onCloseState = MonoProcessor.create();
@@ -146,7 +148,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 					close.content()), f -> terminate()); // terminate() will invoke onInboundComplete()
 			return;
 		}
-		if (frame instanceof PingWebSocketFrame) {
+		if (!this.proxyPing && frame instanceof PingWebSocketFrame) {
 			//"FutureReturnValueIgnored" this is deliberate
 			ctx.writeAndFlush(new PongWebSocketFrame(((PingWebSocketFrame) frame).content()));
 			ctx.read();
