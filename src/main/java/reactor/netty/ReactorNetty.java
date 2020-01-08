@@ -87,7 +87,16 @@ public final class ReactorNetty {
 	 * (but with a minimum value of 4)
 	 */
 	public static final String UDP_IO_THREAD_COUNT = "reactor.netty.udp.ioThreadCount";
-
+	/**
+	 * Default quite period that guarantees that the disposal of the underlying LoopResources
+	 * will not happen, fallback to 2 seconds.
+	 */
+	public static final String SHUTDOWN_QUIET_PERIOD = "reactor.netty.ioShutdownQuietPeriod";
+	/**
+	 * Default maximum amount of time to wait until the disposal of the underlying LoopResources
+	 * regardless if a task was submitted during the quiet period, fallback to 15 seconds.
+	 */
+	public static final String SHUTDOWN_TIMEOUT = "reactor.netty.ioShutdownTimeout";
 
 	/**
 	 * Default value whether the native transport (epoll, kqueue) will be preferred,

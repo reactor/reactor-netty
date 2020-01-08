@@ -15,6 +15,7 @@
  */
 package reactor.netty.http;
 
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.bootstrap.Bootstrap;
@@ -50,7 +51,7 @@ public class HttpResourcesTest {
 			}
 
 			@Override
-			public Mono<Void> disposeLater() {
+			public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
 				return Mono.<Void>empty().doOnSuccess(c -> loopDisposed.set(true));
 			}
 
