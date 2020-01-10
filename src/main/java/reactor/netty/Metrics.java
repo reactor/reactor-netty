@@ -44,6 +44,7 @@ public class Metrics {
 
 	public static final String RESPONSE_TIME = ".response.time";
 
+	public static final String ADDRESS_RESOLVER = ".address.resolver";
 
 	// Tags
 	public static final String REMOTE_ADDRESS = "remote.address";

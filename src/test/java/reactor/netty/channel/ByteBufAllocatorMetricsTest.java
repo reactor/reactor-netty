@@ -83,7 +83,7 @@ public class ByteBufAllocatorMetricsTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
-		String id = alloc.hashCode() + "";
+		String id = alloc.metric().hashCode() + "";
 		assertThat(getGaugeValue(NAME + USED_HEAP_MEMORY, id)).isEqualTo(0);
 		assertThat(getGaugeValue(NAME + USED_DIRECT_MEMORY, id)).isGreaterThan(0);
 		assertThat(getGaugeValue(NAME + HEAP_ARENAS, id)).isGreaterThan(0);

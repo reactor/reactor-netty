@@ -15,10 +15,11 @@
  */
 package reactor.netty.http.client;
 
+import io.micrometer.core.instrument.Timer;
 import reactor.netty.Metrics;
+import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 
@@ -27,38 +28,41 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
 
+/**
+ * @author Violeta Georgieva
+ */
 final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpClientMetricsRecorder {
 
-	MicrometerHttpClientMetricsRecorder(String name, @Nullable String remoteAddress, String protocol) {
-		super(name, remoteAddress, protocol);
+	final static MicrometerHttpClientMetricsRecorder INSTANCE = new MicrometerHttpClientMetricsRecorder();
+
+	private MicrometerHttpClientMetricsRecorder() {
+		super("reactor.netty.http.client", "http");
 	}
 
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, Metrics.formatSocketAddress(remoteAddress),
-		                             URI, uri,
-		                             METHOD, method,
-		                             STATUS, status)
-		                       .register(registry)
-		                       .record(time);
+		String address = Metrics.formatSocketAddress(remoteAddress);
+		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
+				key -> dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+				                              .register(registry));
+		dataReceivedTime.record(time);
 	}
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
-		dataSentTimeBuilder.tags(REMOTE_ADDRESS, Metrics.formatSocketAddress(remoteAddress),
-		                         URI, uri,
-		                         METHOD, method)
-		                   .register(registry)
-		                   .record(time);
+		String address = Metrics.formatSocketAddress(remoteAddress);
+		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, address, method, null),
+				key -> dataSentTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
+				                          .register(registry));
+		dataSentTime.record(time);
 	}
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
-		responseTimeBuilder.tags(REMOTE_ADDRESS, Metrics.formatSocketAddress(remoteAddress),
-		                         URI, uri,
-		                         METHOD, method,
-		                         STATUS, status)
-		                   .register(registry)
-		                   .record(time);
+		String address = Metrics.formatSocketAddress(remoteAddress);
+		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
+				key -> responseTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+				                          .register(registry));
+		responseTime.record(time);
 	}
 }

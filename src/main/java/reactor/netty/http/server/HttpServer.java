@@ -317,7 +317,8 @@ public abstract class HttpServer {
 			}
 
 			return tcpConfiguration(tcpServer ->
-					tcpServer.bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, "reactor.netty.http.server", "http")));
+					tcpServer.bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b,
+							MicrometerHttpServerMetricsRecorder.INSTANCE)));
 		}
 		else {
 			return tcpConfiguration(tcpServer -> tcpServer.bootstrap(BootstrapHandlers::removeMetricsSupport));

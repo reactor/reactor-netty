@@ -838,7 +838,8 @@ public abstract class HttpClient {
 			}
 
 			return tcpConfiguration(tcpClient ->
-					tcpClient.bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, "reactor.netty.http.client", "http")));
+					tcpClient.bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b,
+							MicrometerHttpClientMetricsRecorder.INSTANCE)));
 		}
 		else {
 			return tcpConfiguration(tcpClient -> tcpClient.bootstrap(BootstrapHandlers::removeMetricsSupport));

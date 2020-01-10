@@ -40,7 +40,6 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.Metrics;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
@@ -441,27 +440,10 @@ public abstract class BootstrapHandlers {
 		return new LoggingHandlerSupportConsumer(handler, debugSsl);
 	}
 
-	public static ServerBootstrap updateMetricsSupport(ServerBootstrap b, String name, String protocol) {
-		return updateConfiguration(b,
-				NettyPipeline.ChannelMetricsHandler,
-				new MetricsSupportConsumer(name, protocol, true));
-	}
-
 	public static ServerBootstrap updateMetricsSupport(ServerBootstrap b, ChannelMetricsRecorder recorder) {
 		return updateConfiguration(b,
 				NettyPipeline.ChannelMetricsHandler,
 				new MetricsSupportConsumer(recorder, true));
-	}
-
-	@SuppressWarnings("unchecked")
-	public static Bootstrap updateMetricsSupport(Bootstrap b, String name, String protocol) {
-		updateConfiguration(b,
-				NettyPipeline.ChannelMetricsHandler,
-				new DeferredMetricsSupport(name, protocol, false));
-
-		b.resolver(new AddressResolverGroupMetrics((AddressResolverGroup<SocketAddress>) b.config().resolver()));
-
-		return b;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -687,36 +669,18 @@ public abstract class BootstrapHandlers {
 	static final class DeferredMetricsSupport
 			implements Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>> {
 
-		final String name;
-
-		final String protocol;
-
 		final ChannelMetricsRecorder recorder;
 
 		final boolean onServer;
 
-		DeferredMetricsSupport(String name, String protocol, boolean onServer) {
-			this.name = name;
-			this.protocol = protocol;
-			this.recorder = null;
-			this.onServer = onServer;
-		}
-
 		DeferredMetricsSupport(ChannelMetricsRecorder recorder, boolean onServer) {
-			this.name = null;
-			this.protocol = null;
 			this.recorder = recorder;
 			this.onServer = onServer;
 		}
 
 		@Override
 		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
-			if (recorder != null) {
-				return new MetricsSupportConsumer(recorder, bootstrap.config().remoteAddress(), onServer);
-			}
-			else {
-				return new MetricsSupportConsumer(name, bootstrap.config().remoteAddress(), protocol, onServer);
-			}
+			return new MetricsSupportConsumer(recorder, bootstrap.config().remoteAddress(), onServer);
 		}
 
 		@Override
@@ -729,50 +693,30 @@ public abstract class BootstrapHandlers {
 			}
 			DeferredMetricsSupport that = (DeferredMetricsSupport) o;
 			return onServer == that.onServer &&
-					Objects.equals(name, that.name) &&
-					Objects.equals(protocol, that.protocol) &&
 					Objects.equals(recorder, that.recorder);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(name, protocol, recorder, onServer);
+			return Objects.hash(recorder, onServer);
 		}
 	}
 
 	static final class MetricsSupportConsumer
 			implements BiConsumer<ConnectionObserver, Channel> {
 
-		final String name;
-
 		final SocketAddress remoteAddress;
-
-		final String protocol;
 
 		final ChannelMetricsRecorder recorder;
 
 		final boolean onServer;
-
-		MetricsSupportConsumer(String name, String protocol, boolean onServer) {
-			this(name, null, protocol, onServer);
-		}
-
-		MetricsSupportConsumer(String name, @Nullable SocketAddress remoteAddress, String protocol, boolean onServer) {
-			this.name = name;
-			this.remoteAddress = remoteAddress;
-			this.protocol = protocol;
-			this.recorder = null;
-			this.onServer = onServer;
-		}
 
 		MetricsSupportConsumer(ChannelMetricsRecorder recorder, boolean onServer) {
 			this(recorder, null, onServer);
 		}
 
 		MetricsSupportConsumer(ChannelMetricsRecorder recorder, @Nullable SocketAddress remoteAddress, boolean onServer) {
-			this.name = null;
 			this.remoteAddress = remoteAddress;
-			this.protocol = null;
 			this.recorder = recorder;
 			this.onServer = onServer;
 		}
@@ -783,26 +727,20 @@ public abstract class BootstrapHandlers {
 			//TODO or after the proxy?
 			SocketAddress address = remoteAddress != null ?  remoteAddress : channel.remoteAddress();
 
-			ChannelMetricsRecorder channelMetricsRecorder = recorder;
-			if (channelMetricsRecorder == null) {
-				channelMetricsRecorder =
-						new MicrometerChannelMetricsRecorder(name, Metrics.formatSocketAddress(address), protocol);
-			}
-
 			channel.pipeline()
 			       .addFirst(NettyPipeline.ChannelMetricsHandler,
-			                 new ChannelMetricsHandler(channelMetricsRecorder,
+			                 new ChannelMetricsHandler(recorder,
 			                                           //Check the remote address is it on the proxy or not
 			                                           address,
 			                                           onServer));
 
 			ByteBufAllocator alloc = channel.alloc();
 			if (alloc instanceof PooledByteBufAllocator) {
-				ByteBufAllocatorMetrics.registerMetrics("pooled", alloc.hashCode() + "",
+				ByteBufAllocatorMetrics.INSTANCE.registerMetrics("pooled",
 						((PooledByteBufAllocator) alloc).metric());
 			}
 			else if (alloc instanceof UnpooledByteBufAllocator) {
-				ByteBufAllocatorMetrics.registerMetrics("unpooled", alloc.hashCode() + "",
+				ByteBufAllocatorMetrics.INSTANCE.registerMetrics("unpooled",
 						((UnpooledByteBufAllocator) alloc).metric());
 			}
 		}

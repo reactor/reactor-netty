@@ -19,6 +19,7 @@ package reactor.netty.tcp;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -45,6 +46,7 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -561,7 +563,7 @@ public abstract class TcpServer {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, "reactor.netty.tcp.server", "tcp"));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, getOrCreateMetricsRecorder()));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);
@@ -596,6 +598,17 @@ public abstract class TcpServer {
 	 */
 	public final TcpServer wiretap(String category) {
 		return wiretap(category, LogLevel.DEBUG);
+	}
+
+	final AtomicReference<MicrometerChannelMetricsRecorder> channelMetricsRecorder = new AtomicReference<>();
+	final MicrometerChannelMetricsRecorder getOrCreateMetricsRecorder() {
+		MicrometerChannelMetricsRecorder recorder = channelMetricsRecorder.get();
+		if (recorder == null) {
+			channelMetricsRecorder.compareAndSet(null,
+					new MicrometerChannelMetricsRecorder("reactor.netty.tcp.server", "tcp"));
+			recorder = getOrCreateMetricsRecorder();
+		}
+		return recorder;
 	}
 
 	/**

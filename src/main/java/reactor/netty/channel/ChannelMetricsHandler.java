@@ -18,12 +18,9 @@ package reactor.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import reactor.netty.NettyPipeline;
 
 import javax.annotation.Nullable;
@@ -57,13 +54,6 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 			   .addAfter(NettyPipeline.ChannelMetricsHandler,
 			             NettyPipeline.ConnectMetricsHandler,
 			             new ConnectMetricsHandler(recorder));
-		}
-
-		if (ctx.pipeline().get(SslHandler.class) != null) {
-			ctx.pipeline()
-			   .addAfter(NettyPipeline.SslHandler,
-			             NettyPipeline.SslMetricsHandler,
-			             new TlsMetricsHandler(recorder, remoteAddress));
 		}
 
 		ctx.fireChannelRegistered();
@@ -133,45 +123,6 @@ public class ChannelMetricsHandler extends ChannelDuplexHandler {
 
 	public ChannelMetricsRecorder recorder() {
 		return recorder;
-	}
-
-	static final class TlsMetricsHandler extends ChannelInboundHandlerAdapter {
-
-		final ChannelMetricsRecorder recorder;
-
-		final SocketAddress remoteAddress;
-
-		final long tlsHandshakeTimeStart;
-
-		TlsMetricsHandler(ChannelMetricsRecorder recorder, SocketAddress remoteAddress) {
-			this.recorder = recorder;
-			this.remoteAddress = remoteAddress;
-			this.tlsHandshakeTimeStart = System.nanoTime();
-		}
-
-		@Override
-		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-			if (evt instanceof SslHandshakeCompletionEvent) {
-				ctx.pipeline().remove(this);
-
-				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
-				String status;
-				if (handshake.isSuccess()) {
-					status = SUCCESS;
-				}
-				else {
-					status = ERROR;
-				}
-
-				recorder.recordTlsHandshakeTime(
-						remoteAddress,
-						Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
-						status);
-			}
-
-			super.userEventTriggered(ctx, evt);
-		}
-
 	}
 
 	static final class ConnectMetricsHandler extends ChannelOutboundHandlerAdapter {

@@ -229,7 +229,7 @@ public class HttpMetricsHandlerTests {
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, 14, 84);
 		//checkDistributionSummary(SERVER_DATA_RECEIVED, summaryTags2, true, 2*index, 151*index);
-		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
+		checkCounter(SERVER_ERRORS, summaryTags2, false, 0);
 
 		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST", STATUS, "200"};
 		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "POST"};
@@ -247,7 +247,7 @@ public class HttpMetricsHandlerTests {
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, 14*index, 151*index);
 		//checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, true, 3*index, 84*index);
-		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 
 	private void checkExpectationsNonExisting(String clientAddress, String serverAddress, int index) {
@@ -265,7 +265,7 @@ public class HttpMetricsHandlerTests {
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags1, 1, 0);
 		checkCounter(SERVER_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(SERVER_DATA_SENT, summaryTags2, 1, 64);
-		checkCounter(SERVER_ERRORS, summaryTags2, true, 0);
+		checkCounter(SERVER_ERRORS, summaryTags2, false, 0);
 
 		timerTags1 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET", STATUS, "404"};
 		timerTags2 = new String[] {REMOTE_ADDRESS, serverAddress, URI, uri, METHOD, "GET"};
@@ -282,7 +282,7 @@ public class HttpMetricsHandlerTests {
 		checkCounter(CLIENT_ERRORS, summaryTags1, false, 0);
 		checkDistributionSummary(CLIENT_DATA_SENT, summaryTags2, index, 123*index);
 		checkDistributionSummary(CLIENT_DATA_RECEIVED, summaryTags2, index, 64*index);
-		checkCounter(CLIENT_ERRORS, summaryTags2, true, 0);
+		checkCounter(CLIENT_ERRORS, summaryTags2, false, 0);
 	}
 
 

@@ -29,6 +29,7 @@ import javax.net.ssl.SSLException;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -45,9 +46,13 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.BootstrapHandlers;
+import reactor.netty.channel.ChannelMetricsHandler;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
+import static reactor.netty.Metrics.ERROR;
+import static reactor.netty.Metrics.SUCCESS;
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -703,22 +708,36 @@ public final class SslProvider {
 
 		boolean handshakeDone;
 
+		ChannelMetricsRecorder recorder;
+
+		long tlsHandshakeTimeStart;
+
+		@Override
+		public void channelRegistered(ChannelHandlerContext ctx) {
+			ChannelHandler handler = ctx.pipeline().get(NettyPipeline.ChannelMetricsHandler);
+			if (handler != null) {
+				recorder = ((ChannelMetricsHandler) handler).recorder();
+				tlsHandshakeTimeStart = System.nanoTime();
+			}
+
+			ctx.fireChannelRegistered();
+		}
+
 		@Override
 		public void channelActive(ChannelHandlerContext ctx) {
 			ctx.read(); //consume handshake
 		}
 
 		@Override
-		public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+		public void channelReadComplete(ChannelHandlerContext ctx) {
 			if (!handshakeDone) {
 				ctx.read(); /* continue consuming. */
 			}
-			super.channelReadComplete(ctx);
+			ctx.fireChannelReadComplete();
 		}
 
 		@Override
-		public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
-				throws Exception {
+		public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
 			if (evt instanceof SslHandshakeCompletionEvent) {
 				handshakeDone = true;
 				if (ctx.pipeline()
@@ -728,13 +747,25 @@ public final class SslProvider {
 				}
 				SslHandshakeCompletionEvent handshake = (SslHandshakeCompletionEvent) evt;
 				if (handshake.isSuccess()) {
+					if (recorder != null) {
+						recorder.recordTlsHandshakeTime(
+								ctx.channel().remoteAddress(),
+								Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+								SUCCESS);
+					}
 					ctx.fireChannelActive();
 				}
 				else {
+					if (recorder != null) {
+						recorder.recordTlsHandshakeTime(
+								ctx.channel().remoteAddress(),
+								Duration.ofNanos(System.nanoTime() - tlsHandshakeTimeStart),
+								ERROR);
+					}
 					ctx.fireExceptionCaught(handshake.cause());
 				}
 			}
-			super.userEventTriggered(ctx, evt);
+			ctx.fireUserEventTriggered(evt);
 		}
 
 	}
