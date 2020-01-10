@@ -1489,7 +1489,7 @@ public class HttpServerTests {
 	public void testIssue940() {
 		AtomicInteger counter = new AtomicInteger();
 		Flux<String> response =
-				Flux.interval(Duration.ofMillis(100))
+				Flux.interval(Duration.ofMillis(200))
 				    .map(l -> "" + counter.getAndIncrement())
 				    .doFinally(sig -> {
 				        if (SignalType.ON_ERROR.equals(sig)) {
