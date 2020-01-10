@@ -99,8 +99,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().uri(uri).remoteAddress(address).build();
-		DistributionSummary dataReceived = dataReceivedCache.computeIfAbsent(meterKey,
+		DistributionSummary dataReceived = dataReceivedCache.computeIfAbsent(new MeterKey(uri, address, null, null),
 				key -> dataReceivedBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
 				                          .register(registry));
 		dataReceived.record(bytes);
@@ -109,8 +108,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().uri(uri).remoteAddress(address).build();
-		DistributionSummary dataSent = dataSentCache.computeIfAbsent(meterKey,
+		DistributionSummary dataSent = dataSentCache.computeIfAbsent(new MeterKey(uri, address, null, null),
 				key -> dataSentBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
 				                      .register(registry));
 		dataSent.record(bytes);
@@ -119,8 +117,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().uri(uri).remoteAddress(address).build();
-		Counter errors = errorsCache.computeIfAbsent(meterKey,
+		Counter errors = errorsCache.computeIfAbsent(new MeterKey(uri, address, null, null),
 				key -> errorsBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
 				                    .register(registry));
 		errors.increment();

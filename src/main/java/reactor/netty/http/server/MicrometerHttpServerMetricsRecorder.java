@@ -38,8 +38,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
-		MeterKey meterKey = MeterKey.builder().uri(uri).method(method).build();
-		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(meterKey,
+		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, null, method, null),
 				key -> dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
 				                              .register(registry));
 		dataReceivedTime.record(time);
@@ -47,8 +46,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordDataSentTime(String uri, String method, String status, Duration time) {
-		MeterKey meterKey = MeterKey.builder().uri(uri).method(method).status(status).build();
-		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(meterKey,
+		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, null, method, status),
 				key -> dataSentTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
 				                          .register(registry));
 		dataSentTime.record(time);
@@ -56,8 +54,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 
 	@Override
 	public void recordResponseTime(String uri, String method, String status, Duration time) {
-		MeterKey meterKey = MeterKey.builder().uri(uri).method(method).status(status).build();
-		Timer responseTime = responseTimeCache.computeIfAbsent(meterKey,
+		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, null, method, status),
 				key -> responseTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
 				                          .register(registry));
 		responseTime.record(time);

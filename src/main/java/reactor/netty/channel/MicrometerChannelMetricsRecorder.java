@@ -123,8 +123,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().remoteAddress(address).status(status).build();
-		Timer timer = tlsHandshakeTimeCache.computeIfAbsent(meterKey,
+		Timer timer = tlsHandshakeTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
 				key -> tlsHandshakeTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
 				                              .register(registry));
 		timer.record(time);
@@ -133,8 +132,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().remoteAddress(address).status(status).build();
-		Timer timer = connectTimeCache.computeIfAbsent(meterKey,
+		Timer timer = connectTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
 				key -> connectTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
 				                         .register(registry));
 		timer.record(time);
@@ -143,8 +141,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	@Override
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().remoteAddress(address).status(status).build();
-		Timer timer = addressResolverTimeCache.computeIfAbsent(meterKey,
+		Timer timer = addressResolverTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
 				key -> addressResolverTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
 				                                 .register(registry));
 		timer.record(time);

@@ -15,6 +15,7 @@
  */
 package reactor.netty.channel;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -22,20 +23,17 @@ import java.util.Objects;
  */
 public final class MeterKey {
 
-	public static MeterKey.Builder builder() {
-		return new MeterKey.Builder();
-	}
-
 	private final String uri;
 	private final String remoteAddress;
 	private final String method;
 	private final String status;
 
-	private MeterKey(Builder builder) {
-		this.uri = builder.uri;
-		this.remoteAddress = builder.remoteAddress;
-		this.method = builder.method;
-		this.status = builder.status;
+	public MeterKey(@Nullable String uri, @Nullable String remoteAddress,
+			@Nullable String method, @Nullable String status) {
+		this.uri = uri;
+		this.remoteAddress = remoteAddress;
+		this.method = method;
+		this.status = status;
 	}
 
 	@Override
@@ -56,36 +54,5 @@ public final class MeterKey {
 	@Override
 	public int hashCode() {
 		return Objects.hash(uri, remoteAddress, method, status);
-	}
-
-	public static final class Builder {
-		String uri;
-		String remoteAddress;
-		String method;
-		String status;
-
-		public Builder uri(String uri) {
-			this.uri = uri;
-			return this;
-		}
-
-		public Builder remoteAddress(String remoteAddress) {
-			this.remoteAddress = remoteAddress;
-			return this;
-		}
-
-		public Builder method(String method) {
-			this.method = method;
-			return this;
-		}
-
-		public Builder status(String status) {
-			this.status = status;
-			return this;
-		}
-
-		public MeterKey build() {
-			return new MeterKey(this);
-		}
 	}
 }

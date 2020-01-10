@@ -42,8 +42,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().uri(uri).remoteAddress(address).method(method).status(status).build();
-		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(meterKey,
+		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
 				key -> dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
 				                              .register(registry));
 		dataReceivedTime.record(time);
@@ -52,8 +51,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().uri(uri).remoteAddress(address).method(method).build();
-		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(meterKey,
+		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, address, method, null),
 				key -> dataSentTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
 				                          .register(registry));
 		dataSentTime.record(time);
@@ -62,8 +60,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
-		MeterKey meterKey = MeterKey.builder().uri(uri).remoteAddress(address).method(method).status(status).build();
-		Timer responseTime = responseTimeCache.computeIfAbsent(meterKey,
+		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
 				key -> responseTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
 				                          .register(registry));
 		responseTime.record(time);
