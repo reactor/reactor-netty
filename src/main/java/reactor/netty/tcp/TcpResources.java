@@ -167,19 +167,6 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 
 	/**
 	 * Dispose underlying resources in a listenable fashion.
-	 * The quiet period will be {@code 2s} and the timeout will be {@code 15s}
-	 *
-	 * @return the Mono that represents the end of disposal
-	 * @deprecated Use {@link #_disposeLater(Duration, Duration)}
-	 */
-	@Deprecated
-	protected Mono<Void> _disposeLater() {
-		return disposeLater(Duration.ofSeconds(LoopResources.DEFAULT_SHUTDOWN_QUIET_PERIOD),
-				Duration.ofSeconds(LoopResources.DEFAULT_SHUTDOWN_TIMEOUT));
-	}
-
-	/**
-	 * Dispose underlying resources in a listenable fashion.
 	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
 	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
 	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
