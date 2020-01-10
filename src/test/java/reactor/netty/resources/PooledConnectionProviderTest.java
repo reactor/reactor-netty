@@ -223,7 +223,6 @@ public class PooledConnectionProviderTest {
 	}
 
 	@Test
-	@SuppressWarnings("rawtypes")
 	public void testIssue673_TimeoutException() throws InterruptedException {
 		DisposableServer server =
 				TcpServer.create()
@@ -232,7 +231,7 @@ public class PooledConnectionProviderTest {
 				                                                 .delayElement(Duration.ofMillis(100))))
 				         .wiretap(true)
 				         .bindNow();
-		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("test", 1, 20);
+		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("test", 1, 10);
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
@@ -260,12 +259,23 @@ public class PooledConnectionProviderTest {
 			assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch 30s").isTrue();
 
 			assertThat(list).isNotNull()
-					.hasSize(5)
-					.element(0).matches(Signal::isOnNext);
+					.hasSize(5);
 
-			assertThat(list.subList(1, list.size())).allSatisfy(s -> assertThat(s.getThrowable())
-					.isInstanceOf(TimeoutException.class)
-					.hasMessage("Pool#acquire(Duration) has been pending for more than the configured timeout of 20ms"));
+			int onNext = 0;
+			int onError = 0;
+			String msg = "Pool#acquire(Duration) has been pending for more than the configured timeout of 10ms";
+			for (int i = 0; i < 5; i++) {
+				Signal<? extends Connection> signal = list.get(i);
+				if (signal.isOnNext()) {
+					onNext++;
+				}
+				else if (signal.getThrowable() instanceof TimeoutException &&
+						msg.equals(signal.getThrowable().getMessage())) {
+					onError++;
+				}
+			}
+			assertThat(onNext).isEqualTo(1);
+			assertThat(onError).isEqualTo(4);
 
 			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
 			assertThat(pool.get().metrics().idleSize()).as("currently idle").isEqualTo(0);

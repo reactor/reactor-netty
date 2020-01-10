@@ -16,7 +16,9 @@
 
 package reactor.netty.resources;
 
+import java.time.Duration;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -92,8 +94,11 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public Mono<Void> disposeLater() {
+	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
 		return Mono.defer(() -> {
+			long quietPeriodMillis = quietPeriod.toMillis();
+			long timeoutMillis = timeout.toMillis();
+
 			EventLoopGroup serverLoopsGroup = serverLoops.get();
 			EventLoopGroup clientLoopsGroup = clientLoops.get();
 			EventLoopGroup serverSelectLoopsGroup = serverSelectLoops.get();
@@ -109,22 +114,28 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 			Mono<?> cnsrvlMono = Mono.empty();
 			if(running.compareAndSet(true, false)) {
 				if (clientLoopsGroup != null) {
-					clMono = FutureMono.from((Future) clientLoopsGroup.shutdownGracefully());
+					clMono = FutureMono.from((Future) clientLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
 				if (serverSelectLoopsGroup != null) {
-					sslMono = FutureMono.from((Future) serverSelectLoopsGroup.shutdownGracefully());
+					sslMono = FutureMono.from((Future) serverSelectLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
 				if (serverLoopsGroup != null) {
-					slMono = FutureMono.from((Future) serverLoopsGroup.shutdownGracefully());
+					slMono = FutureMono.from((Future) serverLoopsGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
 				if(cacheNativeClientGroup != null){
-					cnclMono = FutureMono.from((Future) cacheNativeClientGroup.shutdownGracefully());
+					cnclMono = FutureMono.from((Future) cacheNativeClientGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
 				if(cacheNativeSelectGroup != null){
-					cnslMono = FutureMono.from((Future) cacheNativeSelectGroup.shutdownGracefully());
+					cnslMono = FutureMono.from((Future) cacheNativeSelectGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
 				if(cacheNativeServerGroup != null){
-					cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.shutdownGracefully());
+					cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.shutdownGracefully(
+							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
 			}
 

@@ -15,6 +15,7 @@
  */
 package reactor.netty.resources;
 
+import java.time.Duration;
 import java.util.Objects;
 
 import io.netty.channel.Channel;
@@ -60,6 +61,22 @@ public interface LoopResources extends Disposable {
 	boolean DEFAULT_NATIVE = Boolean.parseBoolean(System.getProperty(
 			ReactorNetty.NATIVE,
 			"true"));
+
+	/**
+	 * Default quite period that guarantees that the disposal of the underlying LoopResources
+	 * will not happen, fallback to 2 seconds.
+	 */
+	long DEFAULT_SHUTDOWN_QUIET_PERIOD = Long.parseLong(System.getProperty(
+			ReactorNetty.SHUTDOWN_QUIET_PERIOD,
+			"" + 2));
+
+	/**
+	 * Default maximum amount of time to wait until the disposal of the underlying LoopResources
+	 * regardless if a task was submitted during the quiet period, fallback to 15 seconds.
+	 */
+	long DEFAULT_SHUTDOWN_TIMEOUT = Long.parseLong(System.getProperty(
+			ReactorNetty.SHUTDOWN_TIMEOUT,
+			"" + 15));
 
 	/**
 	 * Create a delegating {@link EventLoopGroup} which reuse local event loop if already
@@ -240,10 +257,27 @@ public interface LoopResources extends Disposable {
 
 	/**
 	 * Returns a Mono that triggers the disposal of the underlying LoopResources when subscribed to.
+	 * The quiet period will be {@code 2s} and the timeout will be {@code 15s}
 	 *
 	 * @return a Mono representing the completion of the LoopResources disposal.
 	 **/
 	default Mono<Void> disposeLater() {
+		return disposeLater(Duration.ofSeconds(DEFAULT_SHUTDOWN_QUIET_PERIOD),
+				Duration.ofSeconds(DEFAULT_SHUTDOWN_TIMEOUT));
+	}
+
+	/**
+	 * Returns a Mono that triggers the disposal of the underlying LoopResources when subscribed to.
+	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
+	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
+	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
+	 *
+	 * @param quietPeriod the quiet period as described above
+	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
+	 *                LoopResources regardless if a task was submitted during the quiet period
+	 * @return a Mono representing the completion of the LoopResources disposal.
+	 **/
+	default Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
 		//noop default
 		return Mono.empty();
 	}

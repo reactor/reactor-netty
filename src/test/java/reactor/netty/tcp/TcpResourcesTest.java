@@ -15,6 +15,7 @@
  */
 package reactor.netty.tcp;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -56,7 +57,7 @@ public class TcpResourcesTest {
 			}
 
 			@Override
-			public Mono<Void> disposeLater() {
+			public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
 				return Mono.<Void>empty().doOnSuccess(c -> loopDisposed.set(true));
 			}
 

@@ -16,6 +16,7 @@
 
 package reactor.netty.http;
 
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
@@ -88,14 +89,33 @@ public final class HttpResources extends TcpResources {
 	 * Prepare to shutdown the global {@link HttpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones. This only
 	 * occurs when the returned {@link Mono} is subscribed to.
+	 * The quiet period will be {@code 2s} and the timeout will be {@code 15s}
 	 *
 	 * @return a {@link Mono} triggering the {@link #disposeLoopsAndConnections()} when subscribed to.
 	 */
 	public static Mono<Void> disposeLoopsAndConnectionsLater() {
+		return disposeLoopsAndConnectionsLater(Duration.ofSeconds(LoopResources.DEFAULT_SHUTDOWN_QUIET_PERIOD),
+				Duration.ofSeconds(LoopResources.DEFAULT_SHUTDOWN_TIMEOUT));
+	}
+
+	/**
+	 * Prepare to shutdown the global {@link HttpResources} without resetting them,
+	 * effectively cleaning up associated resources without creating new ones. This only
+	 * occurs when the returned {@link Mono} is subscribed to.
+	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
+	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
+	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
+	 *
+	 * @param quietPeriod the quiet period as described above
+	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
+	 *                LoopResources regardless if a task was submitted during the quiet period
+	 * @return a {@link Mono} triggering the {@link #disposeLoopsAndConnections()} when subscribed to.
+	 */
+	public static Mono<Void> disposeLoopsAndConnectionsLater(Duration quietPeriod, Duration timeout) {
 		return Mono.defer(() -> {
 			HttpResources resources = httpResources.getAndSet(null);
 			if (resources != null) {
-				return resources._disposeLater();
+				return resources._disposeLater(quietPeriod, timeout);
 			}
 			return Mono.empty();
 		});
