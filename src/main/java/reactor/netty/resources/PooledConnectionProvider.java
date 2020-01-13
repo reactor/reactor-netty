@@ -123,9 +123,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				target instanceof InetSocketAddress) {
 			InetSocketAddress isaOrigin = (InetSocketAddress) origin;
 			InetSocketAddress isaTarget = (InetSocketAddress) target;
-			InetAddress iaTarget = isaTarget.getAddress();
-			return iaTarget != null && iaTarget.isAnyLocalAddress() &&
-					isaOrigin.getPort() == isaTarget.getPort();
+			if (isaOrigin.getPort() == isaTarget.getPort()) {
+				InetAddress iaTarget = isaTarget.getAddress();
+				return (iaTarget != null && iaTarget.isAnyLocalAddress()) ||
+						Objects.equals(isaOrigin.getHostString(), isaTarget.getHostString());
+			}
 		}
 		return false;
 	}

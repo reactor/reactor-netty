@@ -114,6 +114,8 @@ configure(rootProject) { subproject ->
 	}
 
 	artifactoryPublish {
+		//don't activate the onlyIf clause below yet, so that Bamboo builds will publish stuff...
+		//onlyIf { project.hasProperty("artifactory_publish_password") }
 		publications(publishing.publications.mavenJava)
 	}
 }
