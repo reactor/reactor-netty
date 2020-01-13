@@ -38,6 +38,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxOperator;
 import reactor.core.publisher.Mono;
 
+import static io.netty.util.ReferenceCountUtil.safeRelease;
+
 /**
  * A decorating {@link Flux} {@link NettyInbound} with various {@link ByteBuf} related
  * operations.
@@ -262,16 +264,18 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		               CompositeByteBuf output = alloc.compositeBuffer();
 		               return doOnNext(ByteBuf::retain)
 		                       .collectList()
-		                       .doOnDiscard(ByteBuf.class, ByteBuf::release)
+		                       .doOnDiscard(ByteBuf.class, b -> {
+		                           if (b.refCnt() > 0) {
+		                               safeRelease(b);
+		                           }
+		                       })
 		                       .handle((list, sink) -> {
 		                           if (!list.isEmpty()) {
-		                               for (ByteBuf component : list) {
-		                                   if (component.isReadable()) {
-		                                       output.addComponent(true, component);
-		                                   }
-		                                   else {
-		                                       component.release();
-		                                   }
+		                               try {
+		                                   output.addComponents(true, list);
+		                               }
+		                               catch(IllegalReferenceCountException e) {
+		                                   // buffers in the list were released
 		                               }
 		                           }
 		                           if (output.isReadable()) {
@@ -283,7 +287,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		                       })
 		                       .doFinally(signalType -> {
 		                           if (output.refCnt() > 0) {
-		                               output.release();
+		                               safeRelease(output);
 		                           }
 		                       });
 		               })
