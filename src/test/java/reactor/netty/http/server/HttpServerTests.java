@@ -157,34 +157,42 @@ public class HttpServerTests {
 	//from https://github.com/reactor/reactor-netty/issues/90
 	@Test
 	public void testRestart() {
-		doTestRestart(HttpServer.create()
-		                        .port(8080),
-		              HttpClient.create()
-		                        .port(8080));
-		doTestRestart(HttpServer.create()
-		                        // Any local address
-		                        .tcpConfiguration(tcpServer -> tcpServer.addressSupplier(() -> new InetSocketAddress(8080))),
-		              HttpClient.create()
-		                        .port(8080));
+		HttpServer server1 = HttpServer.create()
+		                               .host("localhost")
+		                               .port(8080);
+		HttpServer server2 =
+				HttpServer.create()
+				          // Any local address
+				          .tcpConfiguration(tcpServer -> tcpServer.addressSupplier(() -> new InetSocketAddress(8080)));
+		HttpClient client1 = HttpClient.create()
+		                               .port(8080)
+		                               .tcpConfiguration(tcpClient -> tcpClient.host("localhost"));
+		HttpClient client2 = HttpClient.create()
+		                               .baseUrl("http://localhost:8080");
+		doTestRestart(server1, client1);
+		doTestRestart(server1, client2);
+		doTestRestart(server2, client1);
+		doTestRestart(server2, client2);
 	}
 
 	private void doTestRestart(HttpServer server, HttpClient client) {
-		Integer code;
+		String response;
 		try {
 			// start a first server with a handler that answers HTTP 200 OK
-			disposableServer = server.handle((req, resp) -> resp.status(200).send())
+			disposableServer = server.handle((req, resp) -> resp.sendString(Mono.just("200")))
 			                         .wiretap(true)
 			                         .bindNow();
 
-			code = client.wiretap(true)
+			response = client.wiretap(true)
 			                 .get()
 			                 .uri("/")
-			                 .response()
-			                 .map(res -> res.status().code())
+			                 .responseContent()
+			                 .aggregate()
+			                 .asString()
 			                 .block();
 
 			// checking the response status, OK
-			assertThat(code).isEqualTo(200);
+			assertThat(response).isEqualTo("200");
 		}
 		finally {
 			// dispose the Netty context and wait for the channel close
@@ -195,17 +203,19 @@ public class HttpServerTests {
 
 		try {
 			// create a totally new server instance, with a different handler that answers HTTP 201
-			disposableServer = server.handle((req, resp) -> resp.status(201).send())
+			disposableServer = server.handle((req, resp) -> resp.sendString(Mono.just("201")))
 			                         .wiretap(true)
 			                         .bindNow();
 
-			code = client.wiretap(true)
-			             .get()
-			             .uri("/")
-			             .responseSingle((res, buf) -> Mono.just(res.status().code()))
-			             .block();
+			response = client.wiretap(true)
+			                 .get()
+			                 .uri("/")
+			                 .responseContent()
+			                 .aggregate()
+			                 .asString()
+			                 .block();
 
-			assertThat(code).isEqualTo(201);
+			assertThat(response).isEqualTo("201");
 		}
 		finally {
 			// dispose the Netty context and wait for the channel close
