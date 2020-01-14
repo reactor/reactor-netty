@@ -61,9 +61,9 @@ public interface HttpInfos {
 	HttpMethod method();
 
 	/**
-	 * Returns a normalized {@link #uri()} without the leading and trailing '/' if present
+	 * Returns the decoded path portion from the {@link #uri()} without the leading and trailing '/' if present
 	 *
-	 * @return a normalized {@link #uri()} without the leading and trailing '/' if present
+	 * @return the decoded path portion from the {@link #uri()} without the leading and trailing '/' if present
 	 */
 	String path();
 
