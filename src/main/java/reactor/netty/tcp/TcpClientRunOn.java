@@ -21,7 +21,6 @@ import java.util.function.Supplier;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.JdkSslContext;
 import reactor.netty.resources.LoopResources;
 
 /**
