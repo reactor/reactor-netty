@@ -33,7 +33,11 @@ import io.netty.util.CharsetUtil;
 import org.junit.Test;
 import reactor.netty.Connection;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -90,4 +94,28 @@ public class HttpOperationsTest {
 		assertThat(t, nullValue());
 	}
 
+	@Test
+	public void testIssue948() {
+		assertEquals("", HttpOperations.resolvePath("http://localhost:8080"));
+		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/"));
+		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080//"));
+		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a"));
+		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a/"));
+		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/?b"));
+		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a?b"));
+		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/#b"));
+		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a#b"));
+		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a?b#c"));
+
+		assertEquals("", HttpOperations.resolvePath(""));
+		assertEquals("", HttpOperations.resolvePath("/"));
+		assertEquals("/", HttpOperations.resolvePath("//"));
+		assertEquals("a", HttpOperations.resolvePath("/a"));
+		assertEquals("a", HttpOperations.resolvePath("/a/"));
+		assertEquals("", HttpOperations.resolvePath("/?b"));
+		assertEquals("a", HttpOperations.resolvePath("/a?b"));
+		assertEquals("", HttpOperations.resolvePath("/#b"));
+		assertEquals("a", HttpOperations.resolvePath("/a#b"));
+		assertEquals("a", HttpOperations.resolvePath("/a?b#c"));
+	}
 }
