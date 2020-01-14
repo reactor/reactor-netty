@@ -29,7 +29,7 @@ configure(rootProject) {
   apply plugin: "java"
   apply plugin: org.asciidoctor.gradle.AsciidoctorPlugin // use class name, plugin id not available due to https://github.com/gradle/gradle/issues/1262
 
-  // put asciidoctor dependendencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
+  // put asciidoctor dependencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
   dependencies {
 	asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.16'
 	asciidoctor 'org.jruby:jruby-complete:9.1.17.0' // fixes PDF rendering on Windows
