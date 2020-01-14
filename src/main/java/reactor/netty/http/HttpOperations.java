@@ -292,33 +292,22 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Returns a normalized uri without the leading and trailing '/' if present
+	 * Returns the decoded path portion from the provided {@code uri} without the leading and trailing '/' if present
 	 *
-	 * @return a normalized uri without the leading and trailing '/' if present
+	 * @param uri an HTTP URL that may contain a path with query/fragment
+	 * @return the decoded path portion from the provided {@code uri} without the leading and trailing '/' if present
 	 */
 	public static String resolvePath(String uri) {
 		if (uri.isEmpty()) {
 			return uri;
 		}
 
-		String path;
-		if (uri.charAt(0) == '/') {
-			path = uri;
-			for (int i = 0; i < path.length(); i++) {
-				char c = path.charAt(i);
-				if (c == '?' || c == '#') {
-					path = path.substring(0, i);
-					break;
-				}
-			}
-		}
-		else {
-			path = URI.create(uri).getPath();
-		}
+		String path = URI.create(uri.charAt(0) == '/' ? "http://localhost:8080" + uri : uri)
+		                 .getPath();
 		if (!path.isEmpty()) {
 			if (path.charAt(0) == '/') {
 				path = path.substring(1);
-				if (path.length() <= 1) {
+				if (path.isEmpty()) {
 					return path;
 				}
 			}
