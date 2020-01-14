@@ -98,7 +98,8 @@ public class HttpOperationsTest {
 	public void testIssue948() {
 		assertEquals("", HttpOperations.resolvePath("http://localhost:8080"));
 		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/"));
-		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080//"));
+		assertEquals("", HttpOperations.resolvePath("http://localhost:8080//"));
+		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080///"));
 		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a"));
 		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a/"));
 		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/?b"));
@@ -106,10 +107,12 @@ public class HttpOperationsTest {
 		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/#b"));
 		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a#b"));
 		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a?b#c"));
+		assertEquals("a b", HttpOperations.resolvePath("http://localhost:8080/a%20b"));
 
 		assertEquals("", HttpOperations.resolvePath(""));
 		assertEquals("", HttpOperations.resolvePath("/"));
-		assertEquals("/", HttpOperations.resolvePath("//"));
+		assertEquals("", HttpOperations.resolvePath("//"));
+		assertEquals("/", HttpOperations.resolvePath("///"));
 		assertEquals("a", HttpOperations.resolvePath("/a"));
 		assertEquals("a", HttpOperations.resolvePath("/a/"));
 		assertEquals("", HttpOperations.resolvePath("/?b"));
@@ -117,5 +120,6 @@ public class HttpOperationsTest {
 		assertEquals("", HttpOperations.resolvePath("/#b"));
 		assertEquals("a", HttpOperations.resolvePath("/a#b"));
 		assertEquals("a", HttpOperations.resolvePath("/a?b#c"));
+		assertEquals("a b", HttpOperations.resolvePath("/a%20b"));
 	}
 }
