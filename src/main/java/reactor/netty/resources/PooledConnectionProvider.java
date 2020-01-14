@@ -34,10 +34,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.Metrics;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
-import reactor.pool.InstrumentedPool;
-import reactor.pool.PoolBuilder;
-import reactor.pool.PooledRef;
-import reactor.pool.PooledRefMetadata;
+import reactor.pool.*;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.NonNull;
@@ -93,9 +90,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
-		if(builder.poolFactory == null){
-			throw new IllegalArgumentException("PoolFactory not specified");
-		}
 		this.poolFactory = builder.poolFactory;
 		this.acquireTimeout = builder.maxConnections == MAX_CONNECTIONS_ELASTIC ? 0 : builder.acquireTimeout;
 		this.maxConnections = builder.maxConnections;
@@ -693,24 +687,26 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		public final PooledConnectionProvider build() {
-			this.poolFactory = poolFactory == null && maxConnections == MAX_CONNECTIONS_ELASTIC
-					? ((allocator, destroyHandler, evictionPredicate) ->
-					PoolBuilder.from(allocator)
-							.destroyHandler(destroyHandler)
-							.evictionPredicate(evictionPredicate
-									.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-											|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
-							.fifo())
-					: (allocator, destroyHandler, evictionPredicate) ->
-					PoolBuilder.from(allocator)
-							.sizeBetween(0, maxConnections)
-							.maxPendingAcquireUnbounded()
-							.destroyHandler(destroyHandler)
-							.evictionPredicate(evictionPredicate
-									.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-											|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
-							.fifo();
+			if(this.poolFactory == null){
+				this.poolFactory = this::configureDefaultPoolFactory;
+			}
 			return new PooledConnectionProvider(this);
+		}
+
+		private InstrumentedPool<PooledConnection> configureDefaultPoolFactory(
+				Publisher<PooledConnection> allocator,Function<PooledConnection,
+				Publisher<Void>> destroyHandler,
+				BiPredicate<PooledConnection, PooledRefMetadata> evictionPredicate
+		){
+			PoolBuilder<PooledConnection, PoolConfig<PooledConnection>> pb = PoolBuilder.from(allocator)
+					.destroyHandler(destroyHandler)
+					.evictionPredicate(evictionPredicate
+							.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+									|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())));
+			if(maxConnections != MAX_CONNECTIONS_ELASTIC){
+				pb = pb.sizeBetween(0, maxConnections).maxPendingAcquireUnbounded();
+			}
+			return pb.fifo();
 		}
 	}
 }
