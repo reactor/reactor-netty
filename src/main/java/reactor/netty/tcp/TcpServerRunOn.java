@@ -20,7 +20,6 @@ import java.util.Objects;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.JdkSslContext;
 import reactor.netty.resources.LoopResources;
 
 /**
