@@ -14,7 +14,7 @@ and adds `Reactive Streams` backpressure.
 To start a `TCP` server, you must create and configure a
 {javadoc}/reactor/netty/tcp/TcpServer.html[`TcpServer`] instance.
 By default, the `host` is configured for any local address, and the system picks up an ephemeral port
-when the `bind` operation is invoked. The folloiwng example shows how to create and
+when the `bind` operation is invoked. The following example shows how to create and
 configure a `TcpServer` instance:
 
 ====

@@ -17,7 +17,7 @@ configure(rootProject) {
   apply plugin: "java"
   apply plugin: 'org.asciidoctor.convert'
 
-  // put asciidoctor dependendencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
+  // put asciidoctor dependencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
   dependencies {
 	asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.16'
 	asciidoctor 'org.jruby:jruby-complete:9.2.5.0'

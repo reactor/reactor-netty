@@ -88,7 +88,7 @@ public class InetSocketAddressUtilTest {
 	}
 
 	@Test
-	public void shouldNotReplaceIfAlreadyResolvedWhenCallingReplaceUnresolveNumericIp() {
+	public void shouldNotReplaceIfAlreadyResolvedWhenCallingReplaceUnresolvedNumericIp() {
 		InetSocketAddress socketAddress = new InetSocketAddress("127.0.0.1", 80);
 		InetSocketAddress processedAddress = InetSocketAddressUtil
 				.replaceUnresolvedNumericIp(socketAddress);
