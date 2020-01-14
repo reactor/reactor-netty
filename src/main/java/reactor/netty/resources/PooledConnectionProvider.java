@@ -16,27 +16,8 @@
 
 package reactor.netty.resources;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.BiPredicate;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import javax.annotation.Nullable;
-
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.*;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.PlatformDependent;
 import org.reactivestreams.Publisher;
@@ -62,6 +43,17 @@ import reactor.util.annotation.NonNull;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
+import javax.annotation.Nullable;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import static reactor.netty.ReactorNetty.format;
 
 /**
@@ -69,6 +61,8 @@ import static reactor.netty.ReactorNetty.format;
  * @author Violeta Georgieva
  */
 final class PooledConnectionProvider implements ConnectionProvider {
+
+	public final static int MAX_CONNECTIONS_ELASTIC = -1;
 
 	interface PoolFactory {
 
@@ -86,7 +80,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final int                          maxConnections;
 
 	PooledConnectionProvider(String name, PoolFactory poolFactory) {
-		this(name, poolFactory, 0, -1);
+		this(name, poolFactory, 0, MAX_CONNECTIONS_ELASTIC);
 	}
 
 	PooledConnectionProvider(String name, PoolFactory poolFactory, long acquireTimeout, int maxConnections) {

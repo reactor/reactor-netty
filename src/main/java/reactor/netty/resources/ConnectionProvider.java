@@ -16,10 +16,6 @@
 
 package reactor.netty.resources;
 
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.concurrent.TimeoutException;
-
 import io.netty.bootstrap.Bootstrap;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
@@ -29,6 +25,9 @@ import reactor.pool.PoolBuilder;
 import reactor.util.annotation.NonNull;
 
 import javax.annotation.Nullable;
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 
 /**
  * A {@link ConnectionProvider} will produce {@link Connection}
@@ -100,14 +99,16 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return new PooledConnectionProvider(name,
-				(allocator, destroyHandler, evictionPredicate) ->
-				                PoolBuilder.from(allocator)
-				                           .destroyHandler(destroyHandler)
-				                           .evictionPredicate(evictionPredicate
-				                                   .or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-				                                           || (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
-				                           .fifo());
+		return PooledConnectionProviderBuilder.newInstance()
+				.name(name)
+				.poolFactory((allocator, destroyHandler, evictionPredicate) ->
+						PoolBuilder.from(allocator)
+								.destroyHandler(destroyHandler)
+								.evictionPredicate(evictionPredicate
+										.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+												|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
+								.fifo())
+				.build();
 	}
 
 	/**
@@ -189,18 +190,20 @@ public interface ConnectionProvider extends Disposable {
 		if (acquireTimeout < 0) {
 			throw new IllegalArgumentException("Acquire Timeout value must be positive");
 		}
-		return new PooledConnectionProvider(name,
-				(allocator, destroyHandler, evictionPredicate) ->
-				                PoolBuilder.from(allocator)
-				                           .sizeBetween(0, maxConnections)
-				                           .maxPendingAcquireUnbounded()
-				                           .destroyHandler(destroyHandler)
-				                           .evictionPredicate(evictionPredicate
-				                                   .or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-				                                           || (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
-				                           .fifo(),
-				acquireTimeout,
-				maxConnections);
+		return PooledConnectionProviderBuilder.newInstance()
+				.name(name)
+				.poolFactory((allocator, destroyHandler, evictionPredicate) ->
+						PoolBuilder.from(allocator)
+								.sizeBetween(0, maxConnections)
+								.maxPendingAcquireUnbounded()
+								.destroyHandler(destroyHandler)
+								.evictionPredicate(evictionPredicate
+										.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+												|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
+								.fifo())
+				.acquireTimeout(acquireTimeout)
+				.maxConnections(maxConnections)
+				.build();
 	}
 
 	/**
