@@ -17,17 +17,24 @@
 package reactor.netty.resources;
 
 import io.netty.bootstrap.Bootstrap;
+import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
+import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolBuilder;
+import reactor.pool.PoolConfig;
+import reactor.pool.PooledRefMetadata;
 import reactor.util.annotation.NonNull;
 
 import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 
 /**
  * A {@link ConnectionProvider} will produce {@link Connection}
@@ -70,8 +77,14 @@ public interface ConnectionProvider extends Disposable {
 		return NewConnectionProvider.INSTANCE;
 	}
 
-	static PooledConnectionProvider.Builder builder(){
-		return new PooledConnectionProvider.Builder();
+	static Builder elastic(){
+		return new Builder()
+				.maxConnections(MAX_CONNECTIONS_ELASTIC)
+				.acquireTimeout(0);
+	}
+
+	static Builder fixed(){
+		return new Builder();
 	}
 
 	/**
@@ -86,7 +99,7 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name) {
-		return builder().name(name).maxConnections(MAX_CONNECTIONS_ELASTIC).build();
+		return elastic().name(name).build();
 	}
 
 	/**
@@ -105,7 +118,7 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return builder().name(name).maxIdleTime(maxIdleTime).maxLifeTime(maxLifeTime).build();
+		return elastic().name(name).maxIdleTime(maxIdleTime).maxLifeTime(maxLifeTime).build();
 	}
 
 	/**
@@ -121,7 +134,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name) {
-		return fixed(name, DEFAULT_POOL_MAX_CONNECTIONS);
+		return fixed().name(name).build();
 	}
 
 	/**
@@ -138,7 +151,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name, int maxConnections) {
-		return fixed(name, maxConnections, DEFAULT_POOL_ACQUIRE_TIMEOUT);
+		return fixed().name(name).maxConnections(maxConnections).build();
 	}
 
 	/**
@@ -156,7 +169,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout) {
-		return fixed(name, maxConnections, acquireTimeout, null, null);
+		return fixed().name(name).maxConnections(maxConnections).acquireTimeout(acquireTimeout).build();
 	}
 
 	/**
@@ -178,10 +191,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		if (maxConnections == -1) {
-			return elastic(name);
-		}
-		return builder().name(name)
+		return fixed().name(name)
 				.maxConnections(maxConnections)
 				.acquireTimeout(acquireTimeout)
 				.maxIdleTime(maxIdleTime)
@@ -232,5 +242,67 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	default int maxConnections() {
 		return -1;
+	}
+
+	final class Builder {
+		String                       name;
+		PooledConnectionProvider.PoolFactory poolFactory;
+		long                         acquireTimeout = ConnectionProvider.DEFAULT_POOL_ACQUIRE_TIMEOUT;
+		int                          maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
+		Duration maxIdleTime;
+		Duration maxLifeTime;
+
+		public final Builder name(String name) {
+			Objects.requireNonNull(name, "name");
+			this.name = name;
+			return this;
+		}
+
+		public final Builder acquireTimeout(long acquireTimeout) {
+			if (acquireTimeout < 0) {
+				throw new IllegalArgumentException("Acquire Timeout value must be positive");
+			}
+			this.acquireTimeout = acquireTimeout;
+			return this;
+		}
+
+		public final Builder maxConnections(int maxConnections) {
+			if (maxConnections != MAX_CONNECTIONS_ELASTIC && maxConnections <= 0) {
+				throw new IllegalArgumentException("Max Connections value must be strictly positive");
+			}
+			this.maxConnections = maxConnections;
+			return this;
+		}
+
+		public final Builder maxIdleTime(Duration maxIdleTime) {
+			this.maxIdleTime = maxIdleTime;
+			return this;
+		}
+
+		public final Builder maxLifeTime(Duration maxLifeTime) {
+			this.maxLifeTime = maxLifeTime;
+			return this;
+		}
+
+		public final PooledConnectionProvider build() {
+			this.poolFactory = this::configureDefaultPoolFactory;
+			return new PooledConnectionProvider(this);
+		}
+
+		private InstrumentedPool<PooledConnectionProvider.PooledConnection> configureDefaultPoolFactory(
+				Publisher<PooledConnectionProvider.PooledConnection> allocator, Function<PooledConnectionProvider.PooledConnection,
+				Publisher<Void>> destroyHandler,
+				BiPredicate<PooledConnectionProvider.PooledConnection, PooledRefMetadata> evictionPredicate
+		){
+			PoolBuilder<PooledConnectionProvider.PooledConnection, PoolConfig<PooledConnectionProvider.PooledConnection>> pb = PoolBuilder.from(allocator)
+					.destroyHandler(destroyHandler)
+					.evictionPredicate(evictionPredicate
+							.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+									|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())));
+			if(maxConnections != MAX_CONNECTIONS_ELASTIC){
+				pb = pb.sizeBetween(0, maxConnections).maxPendingAcquireUnbounded();
+			}
+			return pb.fifo();
+		}
 	}
 }

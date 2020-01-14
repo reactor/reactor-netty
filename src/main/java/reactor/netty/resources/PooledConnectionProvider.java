@@ -91,7 +91,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
 		this.poolFactory = builder.poolFactory;
-		this.acquireTimeout = builder.maxConnections == MAX_CONNECTIONS_ELASTIC ? 0 : builder.acquireTimeout;
+		this.acquireTimeout = builder.acquireTimeout;
 		this.maxConnections = builder.maxConnections;
 	}
 
@@ -640,73 +640,4 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 	}
 
-	public static final class Builder {
-		String                       name;
-		PoolFactory                  poolFactory;
-		long                         acquireTimeout = ConnectionProvider.DEFAULT_POOL_ACQUIRE_TIMEOUT;
-		int                          maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
-		Duration maxIdleTime;
-		Duration maxLifeTime;
-
-		public final Builder name(String name) {
-			Objects.requireNonNull(name, "name");
-			this.name = name;
-			return this;
-		}
-
-		public final Builder poolFactory(PoolFactory poolFactory) {
-			Objects.requireNonNull(poolFactory, "poolFactory");
-			this.poolFactory = poolFactory;
-			return this;
-		}
-
-		public final Builder acquireTimeout(long acquireTimeout) {
-			if (acquireTimeout < 0) {
-				throw new IllegalArgumentException("Acquire Timeout value must be positive");
-			}
-			this.acquireTimeout = acquireTimeout;
-			return this;
-		}
-
-		public final Builder maxConnections(int maxConnections) {
-			if (maxConnections != MAX_CONNECTIONS_ELASTIC && maxConnections <= 0) {
-				throw new IllegalArgumentException("Max Connections value must be strictly positive");
-			}
-			this.maxConnections = maxConnections;
-			return this;
-		}
-
-		public final Builder maxIdleTime(Duration maxIdleTime) {
-			this.maxIdleTime = maxIdleTime;
-			return this;
-		}
-
-		public final Builder maxLifeTime(Duration maxLifeTime) {
-			this.maxLifeTime = maxLifeTime;
-			return this;
-		}
-
-		public final PooledConnectionProvider build() {
-			if(this.poolFactory == null){
-				this.poolFactory = this::configureDefaultPoolFactory;
-			}
-			return new PooledConnectionProvider(this);
-		}
-
-		private InstrumentedPool<PooledConnection> configureDefaultPoolFactory(
-				Publisher<PooledConnection> allocator,Function<PooledConnection,
-				Publisher<Void>> destroyHandler,
-				BiPredicate<PooledConnection, PooledRefMetadata> evictionPredicate
-		){
-			PoolBuilder<PooledConnection, PoolConfig<PooledConnection>> pb = PoolBuilder.from(allocator)
-					.destroyHandler(destroyHandler)
-					.evictionPredicate(evictionPredicate
-							.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-									|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())));
-			if(maxConnections != MAX_CONNECTIONS_ELASTIC){
-				pb = pb.sizeBetween(0, maxConnections).maxPendingAcquireUnbounded();
-			}
-			return pb.fifo();
-		}
-	}
 }
