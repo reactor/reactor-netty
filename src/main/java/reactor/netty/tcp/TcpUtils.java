@@ -30,8 +30,6 @@ import io.netty.util.NetUtil;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 /**
  * @author Stephane Maldini

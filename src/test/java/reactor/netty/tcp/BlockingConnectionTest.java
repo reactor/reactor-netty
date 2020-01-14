@@ -30,7 +30,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
-import reactor.netty.NettyPipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;

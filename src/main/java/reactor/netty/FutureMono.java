@@ -17,13 +17,10 @@ package reactor.netty;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
-import io.netty.channel.Channel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
