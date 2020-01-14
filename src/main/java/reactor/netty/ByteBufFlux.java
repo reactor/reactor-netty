@@ -37,8 +37,8 @@ import reactor.core.Fuseable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxOperator;
 import reactor.core.publisher.Mono;
-
-import static io.netty.util.ReferenceCountUtil.safeRelease;
+import reactor.util.Logger;
+import reactor.util.Loggers;
 
 /**
  * A decorating {@link Flux} {@link NettyInbound} with various {@link ByteBuf} related
@@ -266,18 +266,16 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		               CompositeByteBuf output = alloc.compositeBuffer();
 		               return doOnNext(ByteBuf::retain)
 		                       .collectList()
-		                       .doOnDiscard(ByteBuf.class, b -> {
-		                           if (b.refCnt() > 0) {
-		                               safeRelease(b);
-		                           }
-		                       })
+		                       .doOnDiscard(ByteBuf.class, ByteBufFlux::safeRelease)
 		                       .handle((list, sink) -> {
 		                           if (!list.isEmpty()) {
 		                               try {
 		                                   output.addComponents(true, list);
 		                               }
 		                               catch(IllegalReferenceCountException e) {
-		                                   // buffers in the list were released
+		                                   if (log.isDebugEnabled()) {
+		                                       log.debug("", e);
+		                                   }
 		                               }
 		                           }
 		                           if (output.isReadable()) {
@@ -287,11 +285,7 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 		                               sink.complete();
 		                           }
 		                       })
-		                       .doFinally(signalType -> {
-		                           if (output.refCnt() > 0) {
-		                               safeRelease(output);
-		                           }
-		                       });
+		                       .doFinally(signalType -> safeRelease(output));
 		               })
 		           .as(ByteBufMono::maybeFuse);
 	}
@@ -359,4 +353,19 @@ public class ByteBufFlux extends FluxOperator<ByteBuf, ByteBuf> {
 	};
 
 	final static int MAX_CHUNK_SIZE = 1024 * 512; //500k
+
+	final static Logger log = Loggers.getLogger(ByteBufFlux.class);
+
+	static void safeRelease(ByteBuf byteBuf) {
+		if (byteBuf.refCnt() > 0) {
+			try {
+				byteBuf.release();
+			}
+			catch (IllegalReferenceCountException e) {
+				if (log.isDebugEnabled()) {
+					log.debug("", e);
+				}
+			}
+		}
+	}
 }
