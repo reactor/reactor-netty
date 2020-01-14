@@ -79,11 +79,11 @@ image::images/net-latency.png[Net Latency, width=650, align="center", link="imag
 
 Blocking Read or Write become more like a nightmare for concurrent services use over long-living connections such as TCP or WebSocket. Apart from network routing component which might timeout a too long connection, little can be done with a blocking socket in the application locking the thread on read or write IO methods.
 
-Of course there is always the choice to provide for a pool of threads or any _Async Facade_ such as a *Core Processor* to mitigate the blocking read/write contention. The problem is there won't be many of these threads available in a *Reactive* world of non blocking dispatching, so blocking behind 4/8/16 async facades is a limited option. Again the thread pool with a large queue or even many threads won't necessarely solve the situation neither.
+Of course there is always the choice to provide for a pool of threads or any _Async Facade_ such as a *Core Processor* to mitigate the blocking read/write contention. The problem is there won't be many of these threads available in a *Reactive* world of non blocking dispatching, so blocking behind 4/8/16 async facades is a limited option. Again the thread pool with a large queue or even many threads won't necessarily solve the situation neither.
 
 .Instead why not invoking callbacks on different IO operations: _connection, read, write, close..._ ?
 
-*Reactor Net* aims to provide an *Asynchronous IO* runtime that supports *Reactive Streams* backpressure for client or server needs over a range of protocols and drivers. Some drivers will not implement every protocol but at least one, *Netty*, implements all current protocols. At the moment, Reactor Net is  *supporting Netty 4.x* and *ZeroMQ* through *jeroMQ 0.3.+* and you must add explicitely one of them in the application classpath.
+*Reactor Net* aims to provide an *Asynchronous IO* runtime that supports *Reactive Streams* backpressure for client or server needs over a range of protocols and drivers. Some drivers will not implement every protocol but at least one, *Netty*, implements all current protocols. At the moment, Reactor Net is  *supporting Netty 4.x* and *ZeroMQ* through *jeroMQ 0.3.+* and you must add explicitly one of them in the application classpath.
 
 
 *Reactor Net* has the following artifacts:
@@ -105,12 +105,12 @@ Of course there is always the choice to provide for a pool of threads or any _As
 * *HTTP/WS/UDP/TCP* protocol `ReactorPeer` implementations
 ** `HttpServer` & `HttpClient` will provide routing extensions
 ** `DatagramServer` will provide multicast extensions
-** `TcpServer` & `TcpClient` will provide additional TCP/IP context informations
+** `TcpServer` & `TcpClient` will provide additional TCP/IP context information
 * *Netty* and *ZeroMQ* drivers
 ****
 
 [NOTE]
-*Reactor Net* implements a model discussed under the https://github.com/reactive-ipc/reactive-ipc-jvm[Reactive IPC] initiative. As we progress we will align more and eventually depend on the specified artefacts likely over 2016. We give you a chance to experiment as of today with some of the principles and make our best to prepare our users to this next-generation standard.
+*Reactor Net* implements a model discussed under the https://github.com/reactive-ipc/reactive-ipc-jvm[Reactive IPC] initiative. As we progress we will align more and eventually depend on the specified artifacts likely over 2016. We give you a chance to experiment as of today with some of the principles and make our best to prepare our users to this next-generation standard.
 
 
 === Channels

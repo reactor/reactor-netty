@@ -318,7 +318,7 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param condition a predicate given each inbound request
 	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in webspcket handshake signature
+	 * @param protocols sub-protocol to use in websocket handshake signature
 	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
 	 *
 	 * @return this {@link HttpServerRoutes}

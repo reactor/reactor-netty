@@ -106,7 +106,7 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 					);
 		}
 		catch (IOException ioe) {
-			fail("Coudn't inspect the manifest", ioe);
+			fail("Couldn't inspect the manifest", ioe);
 		}
 	}
 
