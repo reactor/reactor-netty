@@ -35,6 +35,7 @@ import reactor.netty.Metrics;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.pool.InstrumentedPool;
+import reactor.pool.PoolBuilder;
 import reactor.pool.PooledRef;
 import reactor.pool.PooledRefMetadata;
 import reactor.util.Logger;
@@ -62,8 +63,6 @@ import static reactor.netty.ReactorNetty.format;
  */
 final class PooledConnectionProvider implements ConnectionProvider {
 
-	public final static int MAX_CONNECTIONS_ELASTIC = -1;
-
 	interface PoolFactory {
 
 		InstrumentedPool<PooledConnection> newPool(
@@ -79,15 +78,27 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final long                         acquireTimeout;
 	final int                          maxConnections;
 
+	//delete
 	PooledConnectionProvider(String name, PoolFactory poolFactory) {
 		this(name, poolFactory, 0, MAX_CONNECTIONS_ELASTIC);
 	}
 
+	//delete
 	PooledConnectionProvider(String name, PoolFactory poolFactory, long acquireTimeout, int maxConnections) {
 		this.name = name;
 		this.poolFactory = poolFactory;
 		this.acquireTimeout = acquireTimeout;
 		this.maxConnections = maxConnections;
+	}
+
+	PooledConnectionProvider(Builder builder){
+		this.name = builder.name;
+		if(builder.poolFactory == null){
+			throw new IllegalArgumentException("PoolFactory not specified");
+		}
+		this.poolFactory = builder.poolFactory;
+		this.acquireTimeout = builder.maxConnections == MAX_CONNECTIONS_ELASTIC ? 0 : builder.acquireTimeout;
+		this.maxConnections = builder.maxConnections;
 	}
 
 	@Override
@@ -632,6 +643,74 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		@Override
 		public int hashCode() {
 			return Objects.hash(holder, pipelineKey, fqdn);
+		}
+	}
+
+	public static final class Builder {
+		String                       name;
+		PoolFactory                  poolFactory;
+		long                         acquireTimeout = ConnectionProvider.DEFAULT_POOL_ACQUIRE_TIMEOUT;
+		int                          maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
+		Duration maxIdleTime;
+		Duration maxLifeTime;
+
+		public final Builder name(String name) {
+			Objects.requireNonNull(name, "name");
+			this.name = name;
+			return this;
+		}
+
+		public final Builder poolFactory(PoolFactory poolFactory) {
+			Objects.requireNonNull(poolFactory, "poolFactory");
+			this.poolFactory = poolFactory;
+			return this;
+		}
+
+		public final Builder acquireTimeout(long acquireTimeout) {
+			if (acquireTimeout < 0) {
+				throw new IllegalArgumentException("Acquire Timeout value must be positive");
+			}
+			this.acquireTimeout = acquireTimeout;
+			return this;
+		}
+
+		public final Builder maxConnections(int maxConnections) {
+			if (maxConnections != MAX_CONNECTIONS_ELASTIC && maxConnections <= 0) {
+				throw new IllegalArgumentException("Max Connections value must be strictly positive");
+			}
+			this.maxConnections = maxConnections;
+			return this;
+		}
+
+		public final Builder maxIdleTime(Duration maxIdleTime) {
+			this.maxIdleTime = maxIdleTime;
+			return this;
+		}
+
+		public final Builder maxLifeTime(Duration maxLifeTime) {
+			this.maxLifeTime = maxLifeTime;
+			return this;
+		}
+
+		public final PooledConnectionProvider build() {
+			this.poolFactory = poolFactory == null && maxConnections == MAX_CONNECTIONS_ELASTIC
+					? ((allocator, destroyHandler, evictionPredicate) ->
+					PoolBuilder.from(allocator)
+							.destroyHandler(destroyHandler)
+							.evictionPredicate(evictionPredicate
+									.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+											|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
+							.fifo())
+					: (allocator, destroyHandler, evictionPredicate) ->
+					PoolBuilder.from(allocator)
+							.sizeBetween(0, maxConnections)
+							.maxPendingAcquireUnbounded()
+							.destroyHandler(destroyHandler)
+							.evictionPredicate(evictionPredicate
+									.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+											|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
+							.fifo();
+			return new PooledConnectionProvider(this);
 		}
 	}
 }

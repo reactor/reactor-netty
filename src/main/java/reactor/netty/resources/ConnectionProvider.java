@@ -38,6 +38,8 @@ import java.util.concurrent.TimeoutException;
 @FunctionalInterface
 public interface ConnectionProvider extends Disposable {
 
+	int MAX_CONNECTIONS_ELASTIC = -1;
+
 	/**
 	 * Default max connections, if -1 will never wait to acquire before opening a new
 	 * connection in an unbounded fashion. Fallback to
@@ -68,6 +70,10 @@ public interface ConnectionProvider extends Disposable {
 		return NewConnectionProvider.INSTANCE;
 	}
 
+	static PooledConnectionProvider.Builder builder(){
+		return new PooledConnectionProvider.Builder();
+	}
+
 	/**
 	 * Create a {@link ConnectionProvider} to cache and grow on demand {@link Connection}.
 	 * <p>An elastic {@link ConnectionProvider} will never wait before opening a new
@@ -80,7 +86,7 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name) {
-		return elastic(name, null, null);
+		return builder().name(name).maxConnections(MAX_CONNECTIONS_ELASTIC).build();
 	}
 
 	/**
@@ -99,16 +105,7 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return PooledConnectionProviderBuilder.newInstance()
-				.name(name)
-				.poolFactory((allocator, destroyHandler, evictionPredicate) ->
-						PoolBuilder.from(allocator)
-								.destroyHandler(destroyHandler)
-								.evictionPredicate(evictionPredicate
-										.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-												|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
-								.fifo())
-				.build();
+		return builder().name(name).maxIdleTime(maxIdleTime).maxLifeTime(maxLifeTime).build();
 	}
 
 	/**
@@ -184,25 +181,11 @@ public interface ConnectionProvider extends Disposable {
 		if (maxConnections == -1) {
 			return elastic(name);
 		}
-		if (maxConnections <= 0) {
-			throw new IllegalArgumentException("Max Connections value must be strictly positive");
-		}
-		if (acquireTimeout < 0) {
-			throw new IllegalArgumentException("Acquire Timeout value must be positive");
-		}
-		return PooledConnectionProviderBuilder.newInstance()
-				.name(name)
-				.poolFactory((allocator, destroyHandler, evictionPredicate) ->
-						PoolBuilder.from(allocator)
-								.sizeBetween(0, maxConnections)
-								.maxPendingAcquireUnbounded()
-								.destroyHandler(destroyHandler)
-								.evictionPredicate(evictionPredicate
-										.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-												|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
-								.fifo())
-				.acquireTimeout(acquireTimeout)
+		return builder().name(name)
 				.maxConnections(maxConnections)
+				.acquireTimeout(acquireTimeout)
+				.maxIdleTime(maxIdleTime)
+				.maxLifeTime(maxLifeTime)
 				.build();
 	}
 
