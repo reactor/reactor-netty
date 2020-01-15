@@ -247,16 +247,34 @@ public interface ConnectionProvider extends Disposable {
 
 		private Builder(){}
 
+		/**
+		 * Returns {@link Builder} new instance with name and default properties.
+		 * @param name {@link ConnectionProvider} name
+		 * @return {@link Builder}
+		 */
 		public static Builder newInstance(String name){
 			return new Builder().name(name);
 		}
 
+		/**
+		 * {@link ConnectionProvider} name is used for metrics
+		 * @param name {@link ConnectionProvider} name
+		 * @return {@literal this}
+		 * @throws NullPointerException if name is null
+		 */
 		public final Builder name(String name) {
 			Objects.requireNonNull(name, "name");
 			this.name = name;
 			return this;
 		}
 
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} acquire timeout.
+		 * Default to DEFAULT_POOL_ACQUIRE_TIMEOUT.
+		 * @param acquireTimeout value must be a positive.
+		 * @return {@literal this}
+		 * @throws IllegalArgumentException if acquireTimeout is negative
+		 */
 		public final Builder acquireTimeout(long acquireTimeout) {
 			if (acquireTimeout < 0) {
 				throw new IllegalArgumentException("Acquire Timeout value must be positive");
@@ -265,6 +283,13 @@ public interface ConnectionProvider extends Disposable {
 			return this;
 		}
 
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} maximum connections.
+		 * Default to DEFAULT_POOL_MAX_CONNECTIONS.
+		 * @param maxConnections the count of connections
+		 * @return {@literal this}
+		 * @throws IllegalArgumentException if maxConnections is negative
+		 */
 		public final Builder maxConnections(int maxConnections) {
 			if (maxConnections != MAX_CONNECTIONS_ELASTIC && maxConnections <= 0) {
 				throw new IllegalArgumentException("Max Connections value must be strictly positive");
@@ -273,17 +298,32 @@ public interface ConnectionProvider extends Disposable {
 			return this;
 		}
 
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} max idle time.
+		 * @param maxIdleTime The timeout {@link Duration}
+		 * @return {@literal this}
+		 */
 		public final Builder maxIdleTime(Duration maxIdleTime) {
 			this.maxIdleTime = maxIdleTime;
 			return this;
 		}
 
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} max life time.
+		 * @param maxLifeTime The timeout {@link Duration}
+		 * @return {@literal this}
+		 */
 		public final Builder maxLifeTime(Duration maxLifeTime) {
 			this.maxLifeTime = maxLifeTime;
 			return this;
 		}
 
-		public final PooledConnectionProvider build() {
+		/**
+		 * Builds new ConnectionProvider
+		 *
+		 * @return builds new ConnectionProvider
+		 */
+		public final ConnectionProvider build() {
 			this.poolFactory = this::configureDefaultPoolFactory;
 			return new PooledConnectionProvider(this);
 		}
