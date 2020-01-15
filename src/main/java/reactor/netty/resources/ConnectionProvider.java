@@ -328,6 +328,28 @@ public interface ConnectionProvider extends Disposable {
 			return new PooledConnectionProvider(this);
 		}
 
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			Builder builder = (Builder) o;
+			return acquireTimeout == builder.acquireTimeout &&
+					maxConnections == builder.maxConnections &&
+					name.equals(builder.name) &&
+					Objects.equals(poolFactory, builder.poolFactory) &&
+					Objects.equals(maxIdleTime, builder.maxIdleTime) &&
+					Objects.equals(maxLifeTime, builder.maxLifeTime);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(name, poolFactory, acquireTimeout, maxConnections, maxIdleTime, maxLifeTime);
+		}
+
 		private InstrumentedPool<PooledConnectionProvider.PooledConnection> configureDefaultPoolFactory(
 				Publisher<PooledConnectionProvider.PooledConnection> allocator, Function<PooledConnectionProvider.PooledConnection,
 				Publisher<Void>> destroyHandler,
