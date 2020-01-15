@@ -75,12 +75,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final long                         acquireTimeout;
 	final int                          maxConnections;
 
-	//delete
 	PooledConnectionProvider(String name, PoolFactory poolFactory) {
 		this(name, poolFactory, 0, MAX_CONNECTIONS_ELASTIC);
 	}
 
-	//delete
 	PooledConnectionProvider(String name, PoolFactory poolFactory, long acquireTimeout, int maxConnections) {
 		this.name = name;
 		this.poolFactory = poolFactory;
