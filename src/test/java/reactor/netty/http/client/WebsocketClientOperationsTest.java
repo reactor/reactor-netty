@@ -80,15 +80,6 @@ public class WebsocketClientOperationsTest {
 		httpServer.disposeNow();
 	}
 
-	private Mono<HttpClientRequest> doLoginFirst(Mono<HttpClientRequest> request, int port) {
-		return Mono.zip(request, login(port))
-		           .map(tuple -> {
-		               HttpClientRequest req = tuple.getT1();
-		               req.addHeader("Authorization", tuple.getT2());
-		               return req;
-		           });
-	}
-
 	private Mono<String> login(int port) {
 		return HttpClient.create()
 		                 .port(port)

@@ -131,6 +131,7 @@ public class HttpTests {
 		Flux<ByteBuf> flux1 = Flux.range(0, 257)
 		                         .flatMap(i -> {
 		                             if (i == 4) {
+		                                 // this is deliberate
 		                                 throw new RuntimeException("test");
 		                             }
 		                             return Mono.just(Unpooled.copyInt(i));

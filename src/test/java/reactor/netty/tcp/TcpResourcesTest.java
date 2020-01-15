@@ -41,8 +41,6 @@ public class TcpResourcesTest {
 
 	private AtomicBoolean      loopDisposed;
 	private AtomicBoolean      poolDisposed;
-	private LoopResources      loopResources;
-	private ConnectionProvider poolResources;
 	private TcpResources       tcpResources;
 
 	@Before
@@ -50,7 +48,7 @@ public class TcpResourcesTest {
 		loopDisposed = new AtomicBoolean();
 		poolDisposed = new AtomicBoolean();
 
-		loopResources = new LoopResources() {
+		LoopResources loopResources = new LoopResources() {
 			@Override
 			public EventLoopGroup onServer(boolean useNative) {
 				throw new NotImplementedException();
@@ -67,7 +65,7 @@ public class TcpResourcesTest {
 			}
 		};
 
-		poolResources = new ConnectionProvider() {
+		ConnectionProvider poolResources = new ConnectionProvider() {
 
 			@Override
 			public Mono<? extends Connection> acquire(Bootstrap bootstrap) {

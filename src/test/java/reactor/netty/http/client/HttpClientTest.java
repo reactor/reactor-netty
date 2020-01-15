@@ -1549,7 +1549,9 @@ public class HttpClientTest {
 				      .timeout(Duration.ofMillis(ThreadLocalRandom.current().nextInt(1, 35)))
 				      .block(Duration.ofMillis(100));
 			}
-			catch (Throwable t) {}
+			catch (Throwable t) {
+				// ignore
+			}
 		}
 
 		System.gc();

@@ -221,7 +221,7 @@ public class NettyOutboundTest {
 		} catch (IllegalStateException e) {
 			if (!"Timeout on blocking read for 1000 MILLISECONDS".equals(e.getMessage()))
 				throw e;
-			System.err.println(e);
+			e.printStackTrace();
 		}
 
 		assertThat(messageWritten).containsExactly(Integer.class, ChunkedNioFile.class);
