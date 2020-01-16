@@ -75,17 +75,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final long                         acquireTimeout;
 	final int                          maxConnections;
 
-	PooledConnectionProvider(String name, PoolFactory poolFactory) {
-		this(name, poolFactory, 0, MAX_CONNECTIONS_ELASTIC);
-	}
-
-	PooledConnectionProvider(String name, PoolFactory poolFactory, long acquireTimeout, int maxConnections) {
-		this.name = name;
-		this.poolFactory = poolFactory;
-		this.acquireTimeout = acquireTimeout;
-		this.maxConnections = maxConnections;
-	}
-
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
 		this.poolFactory = builder.poolFactory;

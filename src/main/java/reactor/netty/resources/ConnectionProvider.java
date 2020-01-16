@@ -241,26 +241,29 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	final class Builder {
-		String                       name;
+		String name;
 		PooledConnectionProvider.PoolFactory poolFactory;
-		long                         acquireTimeout = ConnectionProvider.DEFAULT_POOL_ACQUIRE_TIMEOUT;
-		int                          maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
+		long acquireTimeout = ConnectionProvider.DEFAULT_POOL_ACQUIRE_TIMEOUT;
+		int maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
 		Duration maxIdleTime;
 		Duration maxLifeTime;
 
-		private Builder(){}
+		private Builder() {
+		}
 
 		/**
 		 * Returns {@link Builder} new instance with name and default properties.
+		 *
 		 * @param name {@link ConnectionProvider} name
 		 * @return {@link Builder}
 		 */
-		public static Builder newInstance(String name){
+		public static Builder newInstance(String name) {
 			return new Builder().name(name);
 		}
 
 		/**
 		 * {@link ConnectionProvider} name is used for metrics
+		 *
 		 * @param name {@link ConnectionProvider} name
 		 * @return {@literal this}
 		 * @throws NullPointerException if name is null
@@ -274,6 +277,7 @@ public interface ConnectionProvider extends Disposable {
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} acquire timeout.
 		 * Default to DEFAULT_POOL_ACQUIRE_TIMEOUT.
+		 *
 		 * @param acquireTimeout value must be a positive.
 		 * @return {@literal this}
 		 * @throws IllegalArgumentException if acquireTimeout is negative
@@ -289,6 +293,7 @@ public interface ConnectionProvider extends Disposable {
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} maximum connections.
 		 * Default to DEFAULT_POOL_MAX_CONNECTIONS.
+		 *
 		 * @param maxConnections the count of connections
 		 * @return {@literal this}
 		 * @throws IllegalArgumentException if maxConnections is negative
@@ -303,6 +308,7 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} max idle time.
+		 *
 		 * @param maxIdleTime The timeout {@link Duration}
 		 * @return {@literal this}
 		 */
@@ -313,6 +319,7 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} max life time.
+		 *
 		 * @param maxLifeTime The timeout {@link Duration}
 		 * @return {@literal this}
 		 */
@@ -357,13 +364,13 @@ public interface ConnectionProvider extends Disposable {
 				Publisher<PooledConnectionProvider.PooledConnection> allocator, Function<PooledConnectionProvider.PooledConnection,
 				Publisher<Void>> destroyHandler,
 				BiPredicate<PooledConnectionProvider.PooledConnection, PooledRefMetadata> evictionPredicate
-		){
+		) {
 			PoolBuilder<PooledConnectionProvider.PooledConnection, PoolConfig<PooledConnectionProvider.PooledConnection>> pb = PoolBuilder.from(allocator)
 					.destroyHandler(destroyHandler)
 					.evictionPredicate(evictionPredicate
 							.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
 									|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())));
-			if(maxConnections != MAX_CONNECTIONS_ELASTIC){
+			if (maxConnections != MAX_CONNECTIONS_ELASTIC) {
 				pb = pb.sizeBetween(0, maxConnections).maxPendingAcquireUnbounded();
 			}
 			return pb.fifo();
