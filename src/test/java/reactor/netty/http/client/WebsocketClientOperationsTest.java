@@ -21,6 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.test.StepVerifier;
 
 /**
@@ -54,7 +55,8 @@ public class WebsocketClientOperationsTest {
 						if (token >= 400) {
 							return res.status(token).send();
 						}
-						return res.sendWebsocket(serverSubprotocol, (i, o) -> o.sendString(Mono.just("test")));
+						return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
+								WebSocketConfigurer.newInstance().setProtocols(serverSubprotocol));
 					})
 			)
 		                                  .wiretap(true)

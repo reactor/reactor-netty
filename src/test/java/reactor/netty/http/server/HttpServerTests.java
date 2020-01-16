@@ -83,6 +83,7 @@ import reactor.netty.channel.AbortedException;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.PrematureCloseException;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
@@ -1105,8 +1106,8 @@ public class HttpServerTests {
 			                                  .then(out.sendClose(4404, "test"))
 			                                  .then(in.receiveCloseStatus()
 			                                          .subscribeWith(statusServer)
-			                                          .then())
-		                               ))
+			                                          .then()),
+											   WebSocketConfigurer.newInstance()))
 		                               .wiretap(true)
 		                               .bindNow();
 
@@ -1158,7 +1159,8 @@ public class HttpServerTests {
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) -> in.receiveCloseStatus()
 		                                                                   .subscribeWith(statusServer)
-		                                                                   .then()))
+		                                                                   .then(),
+												 WebSocketConfigurer.newInstance()))
 		                             .wiretap(true)
 		                             .bindNow();
 
@@ -1194,7 +1196,8 @@ public class HttpServerTests {
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) -> in.receiveCloseStatus()
 		                                                                   .subscribeWith(statusServer)
-		                                                                   .then()))
+		                                                                   .then(),
+												 WebSocketConfigurer.newInstance()))
 		                             .wiretap(true)
 		                             .bindNow();
 
@@ -1239,7 +1242,7 @@ public class HttpServerTests {
 
 		                                     return out.sendString(Flux.interval(Duration.ofMillis(10))
 		                                                               .map(l -> l + ""));
-		                                 }))
+		                                 }, WebSocketConfigurer.newInstance()))
 		                             .wiretap(true)
 		                             .bindNow();
 
@@ -1286,7 +1289,7 @@ public class HttpServerTests {
 		                                 in.withConnection(Connection::dispose);
 
 		                                 return Mono.never();
-		                             }))
+		                             }, WebSocketConfigurer.newInstance()))
 		                             .wiretap(true)
 		                             .bindNow();
 
@@ -1331,7 +1334,7 @@ public class HttpServerTests {
 		                                   .subscribe();
 
 		                                 return Mono.never();
-		                             }))
+		                             }, WebSocketConfigurer.newInstance()))
 		                             .wiretap(true)
 		                             .bindNow();
 

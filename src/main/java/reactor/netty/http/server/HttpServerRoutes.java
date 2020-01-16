@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -262,21 +263,26 @@ public interface HttpServerRoutes extends
 			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler);
 
 	/**
-	 * Listens for websocket on the passed path to be used as a routing condition. Incoming
-	 * connections will query the internal registry to invoke the matching handler.
-	 * <p>Additional regex matching is available e.g. "/test/{param}".
-	 * Params are resolved using {@link HttpServerRequest#param(CharSequence)}
-	 * They are NOT accessible in the I/O handler provided as parameter.</p>
+	 * Listens for websocket with the given route predicate to invoke the matching handler.
 	 *
-	 * @param path The websocket path used by clients
+	 * @param condition a predicate given each inbound request
 	 * @param handler an I/O handler to invoke for the given condition
+	 * @param configurer {@link WebSocketConfigurer} for websocket configuration
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
-	default HttpServerRoutes ws(String path,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
-					Publisher<Void>> handler) {
-		return ws(path, handler, null);
+	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
+								BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+								WebSocketConfigurer configurer) {
+		return route(condition, (req, resp) -> {
+			if (req.requestHeaders()
+					.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+				HttpServerOperations ops = (HttpServerOperations) req;
+				return ops.withWebsocketSupport(req.uri(), configurer.getProtocols(), configurer.getMaxFramePayloadLength(),
+						configurer.isProxyPing(), handler);
+			}
+			return resp.sendNotFound();
+		});
 	}
 
 	/**
@@ -288,72 +294,14 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param path The websocket path used by clients
 	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in websocket handshake signature
+	 * @param configurer {@link WebSocketConfigurer} for websocket configuration
 	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(String path,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			@Nullable String protocols) {
-		return ws(HttpPredicate.get(path), handler, protocols);
-	}
-
-	/**
-	 * Listens for websocket with the given route predicate to invoke the matching I/O handler.
-	 *
-	 * @param condition a predicate given each inbound request
-	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in websocket handshake signature
-	 *
-	 * @return this {@link HttpServerRoutes}
-	 */
-	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			@Nullable String protocols) {
-		return ws(condition, handler, protocols, 65536);
-	}
-
-	/**
-	 * Listens for websocket with the given route predicate to invoke the matching handler.
-	 *
-	 * @param condition a predicate given each inbound request
-	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in websocket handshake signature
-	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
-	 *
-	 * @return this {@link HttpServerRoutes}
-	 */
-	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			@Nullable String protocols,
-			int maxFramePayloadLength) {
-		return ws(condition, handler, protocols, maxFramePayloadLength, false);
-	}
-
-	/**
-	 * Listens for websocket with the given route predicate to invoke the matching handler.
-	 *
-	 * @param condition a predicate given each inbound request
-	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in websocket handshake signature
-	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
-	 * @param proxyPing whether to proxy websocket ping frames or respond to them
-	 *
-	 * @return this {@link HttpServerRoutes}
-	 */
-	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			@Nullable String protocols,
-			int maxFramePayloadLength,
-			boolean proxyPing) {
-		return route(condition, (req, resp) -> {
-			if (req.requestHeaders()
-			       .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), protocols, maxFramePayloadLength, proxyPing, handler);
-			}
-			return resp.sendNotFound();
-		});
+								BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
+								WebSocketConfigurer configurer) {
+		return ws(HttpPredicate.get(path), handler, configurer);
 	}
 
 	Predicate<HttpServerRequest> INDEX_PREDICATE = req -> {
