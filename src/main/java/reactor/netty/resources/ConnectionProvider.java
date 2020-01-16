@@ -241,12 +241,12 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	final class Builder {
-		String name;
-		PooledConnectionProvider.PoolFactory poolFactory;
-		long acquireTimeout = ConnectionProvider.DEFAULT_POOL_ACQUIRE_TIMEOUT;
-		int maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
-		Duration maxIdleTime;
-		Duration maxLifeTime;
+		String									name;
+		PooledConnectionProvider.PoolFactory	poolFactory;
+		long									acquireTimeout = ConnectionProvider.DEFAULT_POOL_ACQUIRE_TIMEOUT;
+		int										maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
+		Duration								maxIdleTime;
+		Duration								maxLifeTime;
 
 		private Builder() {
 		}
@@ -269,8 +269,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @throws NullPointerException if name is null
 		 */
 		public final Builder name(String name) {
-			Objects.requireNonNull(name, "name");
-			this.name = name;
+			this.name = Objects.requireNonNull(name, "name");
 			return this;
 		}
 
