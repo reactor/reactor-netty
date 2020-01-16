@@ -35,8 +35,6 @@ public class HttpResourcesTest {
 
 	private AtomicBoolean      loopDisposed;
 	private AtomicBoolean      poolDisposed;
-	private LoopResources      loopResources;
-	private ConnectionProvider poolResources;
 	private HttpResources      testResources;
 
 	@Before
@@ -44,7 +42,7 @@ public class HttpResourcesTest {
 		loopDisposed = new AtomicBoolean();
 		poolDisposed = new AtomicBoolean();
 
-		loopResources = new LoopResources() {
+		LoopResources loopResources = new LoopResources() {
 			@Override
 			public EventLoopGroup onServer(boolean useNative) {
 				throw new NotImplementedException();
@@ -61,7 +59,7 @@ public class HttpResourcesTest {
 			}
 		};
 
-		poolResources = new ConnectionProvider() {
+		ConnectionProvider poolResources = new ConnectionProvider() {
 			@Override
 			public Mono<? extends Connection> acquire(Bootstrap bootstrap) {
 				return Mono.never();

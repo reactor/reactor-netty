@@ -355,7 +355,7 @@ public class HttpSendFileTests {
 					    .responseContent()
 					    .aggregate()
 					    .asByteArray()
-					    .onErrorReturn(IOException.class, expectedContent)
+					    .onErrorReturn(IOException.class, expectedContent == null ? new byte[0] :  expectedContent)
 					    .block();
 
 			assertThat(response).isEqualTo(expectedContent == null ? Files.readAllBytes(tempFile) : expectedContent);
@@ -385,7 +385,7 @@ public class HttpSendFileTests {
 
 		private final int chunk;
 
-		private AtomicLong position;
+		private final AtomicLong position =  new AtomicLong(0);
 
 		private final AtomicBoolean disposed = new AtomicBoolean();
 
@@ -395,7 +395,6 @@ public class HttpSendFileTests {
 			this.sink = sink;
 			this.allocator = allocator;
 			this.chunk = chunk;
-			this.position = new AtomicLong(0);
 		}
 
 		@Override

@@ -34,8 +34,6 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -58,8 +56,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
@@ -67,7 +63,6 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
@@ -91,23 +86,6 @@ import static org.junit.Assert.assertTrue;
 public class TcpServerTests {
 
 	final Logger log     = Loggers.getLogger(TcpServerTests.class);
-	final int    msgs    = 10;
-	final int    threads = 4;
-
-	ExecutorService threadPool;
-	CountDownLatch  latch;
-
-	@Before
-	public void loadEnv() {
-		latch = new CountDownLatch(msgs * threads);
-		threadPool = Executors.newCachedThreadPool();
-	}
-
-	@After
-	public void cleanup() {
-		threadPool.shutdownNow();
-		Schedulers.shutdownNow();
-	}
 
 	@Test
 		public void tcpServerHandlesJsonPojosOverSsl() throws Exception {

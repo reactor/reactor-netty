@@ -28,8 +28,8 @@ import static java.util.Collections.emptyMap;
  */
 class AbstractJarFileTest {
 
-	static Path jarFilePath;
-	static Path root;
+	static final Path jarFilePath;
+	static final Path root;
 
 	static {
 		try {

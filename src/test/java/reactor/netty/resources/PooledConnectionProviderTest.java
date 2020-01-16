@@ -75,9 +75,11 @@ public class PooledConnectionProviderTest {
 						new Bootstrap(),
 						(allocator, destroyHandler, evictionPredicate) ->
 								channelPool, ChannelOperations.OnSetup.empty());
-
-		PooledConnectionProvider poolResources = new PooledConnectionProvider("test",
-				(allocator, destroyHandler, evictionPredicate) -> channelPool);
+		ConnectionProvider.Builder connectionProviderBuilder = ConnectionProvider.Builder.newInstance("test")
+				.maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC)
+				.acquireTimeout(ConnectionProvider.ACQUIRE_TIMEOUT_NEVER_WAIT);
+		connectionProviderBuilder.poolFactory = (allocator, destroyHandler, evictionPredicate) -> channelPool;
+		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
@@ -102,8 +104,11 @@ public class PooledConnectionProviderTest {
 						(allocator, destroyHandler, evictionPredicate) ->
 								channelPool, ChannelOperations.OnSetup.empty());
 
-		PooledConnectionProvider poolResources = new PooledConnectionProvider("test",
-				(allocator, destroyHandler, evictionPredicate) -> channelPool);
+		ConnectionProvider.Builder connectionProviderBuilder = ConnectionProvider.Builder.newInstance("test")
+				.maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC)
+				.acquireTimeout(ConnectionProvider.ACQUIRE_TIMEOUT_NEVER_WAIT);
+		connectionProviderBuilder.poolFactory = (allocator, destroyHandler, evictionPredicate) -> channelPool;
+		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(

@@ -28,7 +28,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class UriEndpointFactoryTest {
-	private UriEndpointFactoryBuilder builder = new UriEndpointFactoryBuilder();
+	private final UriEndpointFactoryBuilder builder = new UriEndpointFactoryBuilder();
 
 	@Test
 	public void shouldParseUrls() {
@@ -209,7 +209,7 @@ public class UriEndpointFactoryTest {
 	}
 
 	@Test
-	public void createUriEndpointWithQuery() throws Exception {
+	public void createUriEndpointWithQuery() {
 		assertThat(this.builder.build()
 				.createUriEndpoint("http://localhost/foo?key=val", false)
 				.toExternalForm()).isEqualTo("http://localhost/foo?key=val");
@@ -280,7 +280,7 @@ public class UriEndpointFactoryTest {
 		public UriEndpointFactory build() {
 			return new UriEndpointFactory(
 					() -> InetSocketAddress.createUnresolved(host, port != -1 ? port : (secure ? 443 : 80)), secure,
-					(host, port) -> InetSocketAddress.createUnresolved(host, port));
+					InetSocketAddress::createUnresolved);
 		}
 
 		public UriEndpointFactoryBuilder sslSupport() {

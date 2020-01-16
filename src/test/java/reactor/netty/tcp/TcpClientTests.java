@@ -420,8 +420,8 @@ public class TcpClientTests {
 			assertTrue("Initial connection is made", connectionLatch.await(5, TimeUnit.SECONDS));
 			assertTrue("A reconnect attempt was made", reconnectionLatch.await(5, TimeUnit.SECONDS));
 		}
-		catch (AbortedException ise){
-			return;
+		catch (AbortedException e){
+			// ignored
 		}
 	}
 
@@ -706,6 +706,7 @@ public class TcpClientTests {
 				}
 			}
 			catch (IOException e) {
+				// ignore
 			}
 		}
 
@@ -756,7 +757,7 @@ public class TcpClientTests {
 				// Server closed
 			}
 			catch (InterruptedException ie) {
-
+				// ignore
 			}
 		}
 

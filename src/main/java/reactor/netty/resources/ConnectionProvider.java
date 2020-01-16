@@ -16,19 +16,25 @@
 
 package reactor.netty.resources;
 
-import java.net.SocketAddress;
-import java.time.Duration;
-import java.util.concurrent.TimeoutException;
-
 import io.netty.bootstrap.Bootstrap;
+import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
+import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolBuilder;
+import reactor.pool.PoolConfig;
+import reactor.pool.PooledRefMetadata;
 import reactor.util.annotation.NonNull;
 
 import javax.annotation.Nullable;
+import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.Objects;
+import java.util.concurrent.TimeoutException;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 
 /**
  * A {@link ConnectionProvider} will produce {@link Connection}
@@ -38,6 +44,9 @@ import javax.annotation.Nullable;
  */
 @FunctionalInterface
 public interface ConnectionProvider extends Disposable {
+
+	int MAX_CONNECTIONS_ELASTIC = -1;
+	int ACQUIRE_TIMEOUT_NEVER_WAIT = 0;
 
 	/**
 	 * Default max connections, if -1 will never wait to acquire before opening a new
@@ -100,14 +109,12 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return new PooledConnectionProvider(name,
-				(allocator, destroyHandler, evictionPredicate) ->
-				                PoolBuilder.from(allocator)
-				                           .destroyHandler(destroyHandler)
-				                           .evictionPredicate(evictionPredicate
-				                                   .or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-				                                           || (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
-				                           .fifo());
+		return Builder.newInstance(name)
+				.maxConnections(MAX_CONNECTIONS_ELASTIC)
+				.acquireTimeout(ACQUIRE_TIMEOUT_NEVER_WAIT)
+				.maxIdleTime(maxIdleTime)
+				.maxLifeTime(maxLifeTime)
+				.build();
 	}
 
 	/**
@@ -180,27 +187,12 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		if (maxConnections == -1) {
-			return elastic(name);
-		}
-		if (maxConnections <= 0) {
-			throw new IllegalArgumentException("Max Connections value must be strictly positive");
-		}
-		if (acquireTimeout < 0) {
-			throw new IllegalArgumentException("Acquire Timeout value must be positive");
-		}
-		return new PooledConnectionProvider(name,
-				(allocator, destroyHandler, evictionPredicate) ->
-				                PoolBuilder.from(allocator)
-				                           .sizeBetween(0, maxConnections)
-				                           .maxPendingAcquireUnbounded()
-				                           .destroyHandler(destroyHandler)
-				                           .evictionPredicate(evictionPredicate
-				                                   .or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
-				                                           || (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())))
-				                           .fifo(),
-				acquireTimeout,
-				maxConnections);
+		return Builder.newInstance(name)
+				.maxConnections(maxConnections)
+				.acquireTimeout(acquireTimeout)
+				.maxIdleTime(maxIdleTime)
+				.maxLifeTime(maxLifeTime)
+				.build();
 	}
 
 	/**
@@ -246,5 +238,141 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	default int maxConnections() {
 		return -1;
+	}
+
+	final class Builder {
+		String									name;
+		PooledConnectionProvider.PoolFactory	poolFactory;
+		long									acquireTimeout = ConnectionProvider.DEFAULT_POOL_ACQUIRE_TIMEOUT;
+		int										maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
+		Duration								maxIdleTime;
+		Duration								maxLifeTime;
+
+		private Builder() {
+		}
+
+		/**
+		 * Returns {@link Builder} new instance with name and default properties.
+		 *
+		 * @param name {@link ConnectionProvider} name
+		 * @return {@link Builder}
+		 */
+		public static Builder newInstance(String name) {
+			return new Builder().name(name);
+		}
+
+		/**
+		 * {@link ConnectionProvider} name is used for metrics
+		 *
+		 * @param name {@link ConnectionProvider} name
+		 * @return {@literal this}
+		 * @throws NullPointerException if name is null
+		 */
+		public final Builder name(String name) {
+			this.name = Objects.requireNonNull(name, "name");
+			return this;
+		}
+
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} acquire timeout.
+		 * Default to DEFAULT_POOL_ACQUIRE_TIMEOUT.
+		 *
+		 * @param acquireTimeout value must be a positive.
+		 * @return {@literal this}
+		 * @throws IllegalArgumentException if acquireTimeout is negative
+		 */
+		public final Builder acquireTimeout(long acquireTimeout) {
+			if (acquireTimeout < 0) {
+				throw new IllegalArgumentException("Acquire Timeout value must be positive");
+			}
+			this.acquireTimeout = acquireTimeout;
+			return this;
+		}
+
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} maximum connections.
+		 * Default to DEFAULT_POOL_MAX_CONNECTIONS.
+		 *
+		 * @param maxConnections the count of connections
+		 * @return {@literal this}
+		 * @throws IllegalArgumentException if maxConnections is negative
+		 */
+		public final Builder maxConnections(int maxConnections) {
+			if (maxConnections != MAX_CONNECTIONS_ELASTIC && maxConnections <= 0) {
+				throw new IllegalArgumentException("Max Connections value must be strictly positive");
+			}
+			this.maxConnections = maxConnections;
+			return this;
+		}
+
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} max idle time.
+		 *
+		 * @param maxIdleTime The timeout {@link Duration}
+		 * @return {@literal this}
+		 */
+		public final Builder maxIdleTime(Duration maxIdleTime) {
+			this.maxIdleTime = maxIdleTime;
+			return this;
+		}
+
+		/**
+		 * Set the options to use for configuring {@link ConnectionProvider} max life time.
+		 *
+		 * @param maxLifeTime The timeout {@link Duration}
+		 * @return {@literal this}
+		 */
+		public final Builder maxLifeTime(Duration maxLifeTime) {
+			this.maxLifeTime = maxLifeTime;
+			return this;
+		}
+
+		/**
+		 * Builds new ConnectionProvider
+		 *
+		 * @return builds new ConnectionProvider
+		 */
+		public final ConnectionProvider build() {
+			this.poolFactory = this::configureDefaultPoolFactory;
+			return new PooledConnectionProvider(this);
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (o == null || getClass() != o.getClass()) {
+				return false;
+			}
+			Builder builder = (Builder) o;
+			return acquireTimeout == builder.acquireTimeout &&
+					maxConnections == builder.maxConnections &&
+					name.equals(builder.name) &&
+					Objects.equals(poolFactory, builder.poolFactory) &&
+					Objects.equals(maxIdleTime, builder.maxIdleTime) &&
+					Objects.equals(maxLifeTime, builder.maxLifeTime);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(name, poolFactory, acquireTimeout, maxConnections, maxIdleTime, maxLifeTime);
+		}
+
+		private InstrumentedPool<PooledConnectionProvider.PooledConnection> configureDefaultPoolFactory(
+				Publisher<PooledConnectionProvider.PooledConnection> allocator, Function<PooledConnectionProvider.PooledConnection,
+				Publisher<Void>> destroyHandler,
+				BiPredicate<PooledConnectionProvider.PooledConnection, PooledRefMetadata> evictionPredicate
+		) {
+			PoolBuilder<PooledConnectionProvider.PooledConnection, PoolConfig<PooledConnectionProvider.PooledConnection>> pb = PoolBuilder.from(allocator)
+					.destroyHandler(destroyHandler)
+					.evictionPredicate(evictionPredicate
+							.or((poolable, meta) -> (maxIdleTime != null && meta.idleTime() >= maxIdleTime.toMillis())
+									|| (maxLifeTime != null && meta.lifeTime() >= maxLifeTime.toMillis())));
+			if (maxConnections != MAX_CONNECTIONS_ELASTIC) {
+				pb = pb.sizeBetween(0, maxConnections).maxPendingAcquireUnbounded();
+			}
+			return pb.fifo();
+		}
 	}
 }
