@@ -70,7 +70,7 @@ public class HttpRedirectTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.create("redirectTests", 1);
 
 		HttpClient client =
 				HttpClient.create(pool)
