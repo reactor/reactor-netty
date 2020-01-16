@@ -23,10 +23,7 @@ import reactor.netty.http.MicrometerHttpMetricsRecorder;
 import java.net.SocketAddress;
 import java.time.Duration;
 
-import static reactor.netty.Metrics.METHOD;
-import static reactor.netty.Metrics.REMOTE_ADDRESS;
-import static reactor.netty.Metrics.STATUS;
-import static reactor.netty.Metrics.URI;
+import static reactor.netty.Metrics.*;
 
 /**
  * @author Violeta Georgieva
@@ -36,7 +33,11 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	final static MicrometerHttpClientMetricsRecorder INSTANCE = new MicrometerHttpClientMetricsRecorder();
 
 	private MicrometerHttpClientMetricsRecorder() {
-		super("reactor.netty.http.client", "http");
+		this(Metrics.MAX_URI_TAGS);
+	}
+
+	public MicrometerHttpClientMetricsRecorder(int maxUriTags) {
+		super("reactor.netty.http.client", "http", maxUriTags);
 	}
 
 	@Override

@@ -37,7 +37,6 @@ import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.DATA_SENT_TIME;
 import static reactor.netty.Metrics.ERRORS;
-import static reactor.netty.Metrics.MAX_URI_TAGS;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.URI;
@@ -65,7 +64,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	final Counter.Builder errorsBuilder;
 	final ConcurrentMap<MeterKey, Counter> errorsCache = PlatformDependent.newConcurrentHashMap();
 
-	protected MicrometerHttpMetricsRecorder(String name, String protocol) {
+	protected MicrometerHttpMetricsRecorder(String name, String protocol, int maxUriTags) {
 		super(name, protocol);
 		this.dataReceivedTimeBuilder =
 				Timer.builder(name + DATA_RECEIVED_TIME)
@@ -92,8 +91,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		this.errorsBuilder =
 				Counter.builder(name + ERRORS)
 				       .description("Number of the errors that are occurred");
-
-		registry.config().meterFilter(maxUriTagsMeterFilter(name));
+		registry.config().meterFilter(maxUriTagsMeterFilter(name, maxUriTags));
 	}
 
 	@Override
@@ -123,8 +121,8 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		errors.increment();
 	}
 
-	static MeterFilter maxUriTagsMeterFilter(String meterNamePrefix) {
-		return MeterFilter.maximumAllowableTags(meterNamePrefix, URI, MAX_URI_TAGS, new MaxUriTagsMeterFilter(meterNamePrefix));
+	static MeterFilter maxUriTagsMeterFilter(String meterNamePrefix, int maxUriTags) {
+		return MeterFilter.maximumAllowableTags(meterNamePrefix, URI, maxUriTags, new MaxUriTagsMeterFilter(meterNamePrefix));
 	}
 
 	static final class MaxUriTagsMeterFilter extends AtomicBoolean implements MeterFilter {

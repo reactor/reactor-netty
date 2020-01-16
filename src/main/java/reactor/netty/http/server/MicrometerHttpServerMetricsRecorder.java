@@ -16,14 +16,13 @@
 package reactor.netty.http.server;
 
 import io.micrometer.core.instrument.Timer;
+import reactor.netty.Metrics;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 
 import java.time.Duration;
 
-import static reactor.netty.Metrics.METHOD;
-import static reactor.netty.Metrics.STATUS;
-import static reactor.netty.Metrics.URI;
+import static reactor.netty.Metrics.*;
 
 /**
  * @author Violeta Georgieva
@@ -33,7 +32,11 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
 
 	private MicrometerHttpServerMetricsRecorder() {
-		super("reactor.netty.http.server", "http");
+		this(Metrics.MAX_URI_TAGS);
+	}
+
+	public MicrometerHttpServerMetricsRecorder(int maxLabels) {
+		super("reactor.netty.http.server", "http", maxLabels);
 	}
 
 	@Override
