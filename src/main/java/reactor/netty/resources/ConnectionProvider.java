@@ -90,9 +90,7 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name) {
-		return Builder.newInstance(name)
-				.maxConnections(MAX_CONNECTIONS_ELASTIC)
-				.acquireTimeout(ACQUIRE_TIMEOUT_NEVER_WAIT).build();
+		return elastic(name, null, null);
 	}
 
 	/**
@@ -111,7 +109,12 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}
 	 */
 	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return Builder.newInstance(name).maxIdleTime(maxIdleTime).maxLifeTime(maxLifeTime).build();
+		return Builder.newInstance(name)
+				.maxConnections(MAX_CONNECTIONS_ELASTIC)
+				.acquireTimeout(ACQUIRE_TIMEOUT_NEVER_WAIT)
+				.maxIdleTime(maxIdleTime)
+				.maxLifeTime(maxLifeTime)
+				.build();
 	}
 
 	/**
@@ -127,7 +130,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name) {
-		return Builder.newInstance(name).build();
+		return fixed(name, DEFAULT_POOL_MAX_CONNECTIONS);
 	}
 
 	/**
@@ -144,7 +147,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name, int maxConnections) {
-		return Builder.newInstance(name).maxConnections(maxConnections).build();
+		return fixed(name, maxConnections, DEFAULT_POOL_ACQUIRE_TIMEOUT);
 	}
 
 	/**
@@ -162,7 +165,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout) {
-		return Builder.newInstance(name).maxConnections(maxConnections).acquireTimeout(acquireTimeout).build();
+		return fixed(name, maxConnections, acquireTimeout, null, null);
 	}
 
 	/**
