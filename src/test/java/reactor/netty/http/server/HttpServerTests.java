@@ -339,7 +339,9 @@ public class HttpServerTests {
 		                             .wiretap(true)
 		                             .bindNow();
 
-		ConnectionProvider p = ConnectionProvider.fixed("http", 1);
+		ConnectionProvider p = ConnectionProvider.Builder.newInstance("keepAlive")
+		                                                 .maxConnections(1)
+		                                                 .build();
 
 		Channel response0 = HttpClient.create(p)
 		                              .port(disposableServer.address().getPort())
@@ -643,7 +645,9 @@ public class HttpServerTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.create(ConnectionProvider.fixed("test", 1))
+				HttpClient.create(ConnectionProvider.Builder.newInstance("testIssue186")
+				                                            .maxConnections(1)
+				                                            .build())
 				          .addressSupplier(disposableServer::address)
 				          .wiretap(true);
 
@@ -708,7 +712,10 @@ public class HttpServerTests {
 				          .bindNow();
 
 		HttpClient client =
-				HttpClient.create(ConnectionProvider.fixed("test", 1))
+				HttpClient.create(ConnectionProvider.Builder
+				                                    .newInstance("contextShouldBeTransferredFromDownStreamToUpStream")
+				                                    .maxConnections(1)
+				                                    .build())
 				          .addressSupplier(disposableServer::address);
 
 		Mono<String> content = client.post()

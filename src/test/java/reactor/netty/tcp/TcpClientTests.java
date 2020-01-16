@@ -68,6 +68,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
+import static reactor.netty.resources.ConnectionProvider.MAX_CONNECTIONS_ELASTIC;
 
 /**
  * @author Stephane Maldini
@@ -277,7 +278,9 @@ public class TcpClientTests {
 				            new LineBasedFrameDecoder(8 * 1024));
 
 		tcpClientHandlesLineFeedData(
-				TcpClient.create(ConnectionProvider.elastic("tcpClientHandlesLineFeedDataElasticPool"))
+				TcpClient.create(ConnectionProvider.Builder.newInstance("tcpClientHandlesLineFeedDataElasticPool")
+				                                           .maxConnections(MAX_CONNECTIONS_ELASTIC)
+				                                           .build())
 				         .host("localhost")
 				         .port(echoServerPort)
 				         .doOnConnected(channelInit)
@@ -382,7 +385,10 @@ public class TcpClientTests {
 	public void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool()
 			throws InterruptedException {
 		connectionWillRetryConnectionAttemptWhenItFails(
-				TcpClient.create(ConnectionProvider.fixed("test", 1))
+				TcpClient.create(ConnectionProvider.Builder
+				                                   .newInstance("connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool")
+				                                   .maxConnections(1)
+				                                   .build())
 				         .host("localhost")
 				         .port(abortServerPort + 3)
 				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));
@@ -789,7 +795,9 @@ public class TcpClientTests {
 				         .wiretap(true)
 				         .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 10);
+		ConnectionProvider pool = ConnectionProvider.Builder.newInstance("doTestIssue600")
+		                                                    .maxConnections(10)
+		                                                    .build();
 		LoopResources loop = LoopResources.create("test", 4, true);
 		TcpClient client;
 		if (withLoop) {

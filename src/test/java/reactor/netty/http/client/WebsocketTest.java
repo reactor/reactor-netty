@@ -590,7 +590,9 @@ public class WebsocketTest {
 
 	@Test
 	public void closePool() {
-		ConnectionProvider pr = ConnectionProvider.fixed("wstest", 1);
+		ConnectionProvider pr = ConnectionProvider.Builder.newInstance("closePool")
+		                                                  .maxConnections(1)
+		                                                  .build();
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(

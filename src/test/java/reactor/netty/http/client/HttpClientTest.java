@@ -98,6 +98,7 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.resources.ConnectionProvider.MAX_CONNECTIONS_ELASTIC;
 
 /**
  * @author Stephane Maldini
@@ -124,7 +125,9 @@ public class HttpClientTest {
 				         .wiretap(true)
 				         .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.Builder.newInstance("abort")
+		                                                    .maxConnections(1)
+		                                                    .build();
 
 		HttpClient client = createHttpClientForContextWithPort(x, pool);
 
@@ -162,7 +165,9 @@ public class HttpClientTest {
 
 	@Test
 	public void userIssue() throws Exception {
-		final ConnectionProvider pool = ConnectionProvider.fixed("local", 1);
+		final ConnectionProvider pool = ConnectionProvider.Builder.newInstance("userIssue")
+		                                                          .maxConnections(1)
+		                                                          .build();
 		CountDownLatch latch = new CountDownLatch(3);
 		Set<String> localAddresses = ConcurrentHashMap.newKeySet();
 		DisposableServer serverContext =
@@ -214,7 +219,9 @@ public class HttpClientTest {
 				         .wiretap(true)
 				         .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.Builder.newInstance("pipelined")
+		                                                    .maxConnections(1)
+		                                                    .build();
 
 		HttpClient client = createHttpClientForContextWithAddress(x, pool);
 
@@ -248,7 +255,9 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.Builder.newInstance("testClientReuseIssue405")
+		                                                    .maxConnections(1)
+		                                                    .build();
 		HttpClient httpClient = createHttpClientForContextWithPort(c, pool);
 
 		Mono<String> mono1 =
@@ -782,7 +791,9 @@ public class HttpClientTest {
 
 	@Test
 	public void closePool() {
-		ConnectionProvider pr = ConnectionProvider.fixed("wstest", 1);
+		ConnectionProvider pr = ConnectionProvider.Builder.newInstance("closePool")
+		                                                  .maxConnections(1)
+		                                                  .build();
 		DisposableServer httpServer =
 				HttpServer.create()
 				          .port(0)
@@ -891,7 +902,9 @@ public class HttpClientTest {
 
 		assertThat(server).isNotNull();
 
-		ConnectionProvider connectionProvider = ConnectionProvider.fixed("test", 1);
+		ConnectionProvider connectionProvider = ConnectionProvider.Builder.newInstance("testIssue361")
+		                                                                  .maxConnections(1)
+		                                                                  .build();
 		HttpClient client = createHttpClientForContextWithPort(server, connectionProvider);
 
 		String response = client.post()
@@ -956,7 +969,9 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
-		ConnectionProvider provider = ConnectionProvider.fixed("testIssue407", 1);
+		ConnectionProvider provider = ConnectionProvider.Builder.newInstance("testIssue407")
+		                                                        .maxConnections(1)
+		                                                        .build();
 		HttpClient client =
 				createHttpClientForContextWithAddress(server, provider)
 				        .secure(spec -> spec.sslContext(
@@ -1201,7 +1216,9 @@ public class HttpClientTest {
 				          .handle((req, res) -> res.send(req.receive().retain()))
 				          .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.Builder.newInstance("testExplicitEmptyBodyOnGetWorks")
+		                                                    .maxConnections(1)
+		                                                    .build();
 
 		for (int i = 0; i < 4; i++) {
 			StepVerifier.create(createHttpClientForContextWithAddress(server, pool)
@@ -1226,7 +1243,9 @@ public class HttpClientTest {
 				          .handle((req, res) -> res.send(req.receive().retain()))
 				          .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 1);
+		ConnectionProvider pool = ConnectionProvider.Builder.newInstance("test")
+		                                                    .maxConnections(1)
+		                                                    .build();
 
 		StepVerifier.create(
 				Flux.range(0, 1000)
@@ -1346,7 +1365,9 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 10);
+		ConnectionProvider pool = ConnectionProvider.Builder.newInstance("doTestIssue600")
+		                                                    .maxConnections(10)
+		                                                    .build();
 		LoopResources loop = LoopResources.create("test", 4, true);
 		HttpClient client;
 		if (withLoop) {
@@ -1391,7 +1412,10 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
-		ConnectionProvider connectionProvider = ConnectionProvider.elastic("disposeLater");
+		ConnectionProvider connectionProvider =
+				ConnectionProvider.Builder.newInstance("testChannelGroupClosesAllConnections")
+				                          .maxConnections(MAX_CONNECTIONS_ELASTIC)
+				                          .build();
 
 		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
 
@@ -1841,28 +1865,44 @@ public class HttpClientTest {
 
 	@Test
 	public void testConnectionIdleTimeFixedPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100, Duration.ofMillis(10), null);
+		ConnectionProvider provider =
+				ConnectionProvider.Builder.newInstance("testConnectionIdleTimeFixedPool")
+				                          .maxConnections(1)
+				                          .acquireTimeout(Duration.ofMillis(100))
+				                          .maxIdleTime(Duration.ofMillis(10))
+				                          .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
 
 	@Test
 	public void testConnectionIdleTimeElasticPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.elastic("test", Duration.ofMillis(10), null);
+		ConnectionProvider provider =
+				ConnectionProvider.Builder.newInstance("testConnectionIdleTimeElasticPool")
+				                          .maxConnections(MAX_CONNECTIONS_ELASTIC)
+				                          .maxIdleTime(Duration.ofMillis(10))
+				                          .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
 
 	@Test
 	public void testConnectionNoIdleTimeFixedPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100);
+		ConnectionProvider provider =
+				ConnectionProvider.Builder.newInstance("testConnectionNoIdleTimeFixedPool")
+				                          .maxConnections(1)
+				                          .acquireTimeout(Duration.ofMillis(100))
+				                          .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
 	}
 
 	@Test
 	public void testConnectionNoIdleTimeElasticPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.elastic("test");
+		ConnectionProvider provider =
+				ConnectionProvider.Builder.newInstance("testConnectionNoIdleTimeElasticPool")
+				                          .maxConnections(MAX_CONNECTIONS_ELASTIC)
+				                          .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
 	}
@@ -1895,28 +1935,44 @@ public class HttpClientTest {
 
 	@Test
 	public void testConnectionLifeTimeFixedPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100, null, Duration.ofMillis(30));
+		ConnectionProvider provider =
+				ConnectionProvider.Builder.newInstance("testConnectionLifeTimeFixedPool")
+				                          .maxConnections(1)
+				                          .acquireTimeout(Duration.ofMillis(100))
+				                          .maxLifeTime(Duration.ofMillis(30))
+				                          .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
 
 	@Test
 	public void testConnectionLifeTimeElasticPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.elastic("test", null, Duration.ofMillis(30));
+		ConnectionProvider provider =
+				ConnectionProvider.Builder.newInstance("testConnectionNoLifeTimeElasticPool")
+				                          .maxConnections(MAX_CONNECTIONS_ELASTIC)
+				                          .maxLifeTime(Duration.ofMillis(30))
+				                          .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
 
 	@Test
 	public void testConnectionNoLifeTimeFixedPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.fixed("test", 1, 100);
+		ConnectionProvider provider =
+				ConnectionProvider.Builder.newInstance("testConnectionNoLifeTimeFixedPool")
+				                          .maxConnections(1)
+				                          .acquireTimeout(Duration.ofMillis(100))
+				                          .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
 	}
 
 	@Test
 	public void testConnectionNoLifeTimeElasticPool() throws Exception {
-		ConnectionProvider provider = ConnectionProvider.elastic("test");
+		ConnectionProvider provider =
+				ConnectionProvider.Builder.newInstance("testConnectionNoLifeTimeElasticPool")
+				                          .maxConnections(MAX_CONNECTIONS_ELASTIC)
+				                          .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
 	}

@@ -71,7 +71,9 @@ public class HttpMetricsHandlerTests {
 				                       .post("/2", (req, res) -> res.header("Connection", "close")
 				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))));
 
-		provider = ConnectionProvider.fixed("test", 1);
+		provider = ConnectionProvider.Builder.newInstance("HttpMetricsHandlerTests")
+		                                     .maxConnections(1)
+		                                     .build();
 		httpClient =
 				customizeClientOptions(HttpClient.create(provider)
 				                                 .addressSupplier(() -> disposableServer.address())
