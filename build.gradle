@@ -54,7 +54,7 @@ ext {
   assertJVersion = '3.6.1'
 
   // Libraries
-  nettyVersion = '4.1.44.Final'
+  nettyVersion = '4.1.45.Final'
   jacksonDatabindVersion = '2.5.1'
 
   // Testing
