@@ -68,6 +68,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
+import static reactor.netty.resources.ConnectionProvider.MAX_CONNECTIONS_ELASTIC;
 
 /**
  * @author Stephane Maldini
@@ -277,7 +278,7 @@ public class TcpClientTests {
 				            new LineBasedFrameDecoder(8 * 1024));
 
 		tcpClientHandlesLineFeedData(
-				TcpClient.create(ConnectionProvider.elastic("tcpClientHandlesLineFeedDataElasticPool"))
+				TcpClient.create(ConnectionProvider.create("tcpClientHandlesLineFeedDataElasticPool", MAX_CONNECTIONS_ELASTIC))
 				         .host("localhost")
 				         .port(echoServerPort)
 				         .doOnConnected(channelInit)
@@ -382,7 +383,7 @@ public class TcpClientTests {
 	public void connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool()
 			throws InterruptedException {
 		connectionWillRetryConnectionAttemptWhenItFails(
-				TcpClient.create(ConnectionProvider.fixed("test", 1))
+				TcpClient.create(ConnectionProvider.create("connectionWillRetryConnectionAttemptWhenItFailsFixedChannelPool", 1))
 				         .host("localhost")
 				         .port(abortServerPort + 3)
 				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100));
@@ -790,7 +791,7 @@ public class TcpClientTests {
 				         .wiretap(true)
 				         .bindNow();
 
-		ConnectionProvider pool = ConnectionProvider.fixed("test", 10);
+		ConnectionProvider pool = ConnectionProvider.create("doTestIssue600", 10);
 		LoopResources loop = LoopResources.create("test", 4, true);
 		TcpClient client;
 		if (withLoop) {

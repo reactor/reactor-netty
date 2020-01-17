@@ -72,13 +72,10 @@ public class PooledConnectionProviderTest {
 	public void disposeLaterDefers() throws Exception {
 		PooledConnectionProvider.PooledConnectionAllocator pooledConnectionAllocator =
 				new PooledConnectionProvider.PooledConnectionAllocator(
-						new Bootstrap(),
-						(allocator, destroyHandler, evictionPredicate) ->
-								channelPool, ChannelOperations.OnSetup.empty());
-		ConnectionProvider.Builder connectionProviderBuilder = ConnectionProvider.Builder.newInstance("test")
-				.maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC)
-				.acquireTimeout(ConnectionProvider.ACQUIRE_TIMEOUT_NEVER_WAIT);
-		connectionProviderBuilder.poolFactory = (allocator, destroyHandler, evictionPredicate) -> channelPool;
+						new Bootstrap(), allocator -> channelPool, ChannelOperations.OnSetup.empty());
+		ConnectionProvider.Builder connectionProviderBuilder =
+				ConnectionProvider.builder("disposeLaterDefers")
+				                  .maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC);
 		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
@@ -100,14 +97,11 @@ public class PooledConnectionProviderTest {
 	public void disposeOnlyOnce() throws Exception {
 		PooledConnectionProvider.PooledConnectionAllocator pooledConnectionAllocator =
 				new PooledConnectionProvider.PooledConnectionAllocator(
-						new Bootstrap(),
-						(allocator, destroyHandler, evictionPredicate) ->
-								channelPool, ChannelOperations.OnSetup.empty());
+						new Bootstrap(), allocator -> channelPool, ChannelOperations.OnSetup.empty());
 
-		ConnectionProvider.Builder connectionProviderBuilder = ConnectionProvider.Builder.newInstance("test")
-				.maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC)
-				.acquireTimeout(ConnectionProvider.ACQUIRE_TIMEOUT_NEVER_WAIT);
-		connectionProviderBuilder.poolFactory = (allocator, destroyHandler, evictionPredicate) -> channelPool;
+		ConnectionProvider.Builder connectionProviderBuilder =
+				ConnectionProvider.builder("disposeOnlyOnce")
+				                  .maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC);
 		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
@@ -141,8 +135,7 @@ public class PooledConnectionProviderTest {
 		ScheduledFuture<?> sf = null;
 		try {
 			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
-			ConnectionProvider pool = ConnectionProvider.fixed("fixedPoolTwoAcquire",
-					2);
+			ConnectionProvider pool = ConnectionProvider.create("fixedPoolTwoAcquire", 2);
 
 			Bootstrap bootstrap = new Bootstrap().remoteAddress(address)
 			                                     .channelFactory(NioSocketChannel::new)
@@ -236,7 +229,11 @@ public class PooledConnectionProviderTest {
 				                                                 .delayElement(Duration.ofMillis(100))))
 				         .wiretap(true)
 				         .bindNow();
-		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("test", 1, 10);
+		PooledConnectionProvider provider =
+				(PooledConnectionProvider) ConnectionProvider.builder("testIssue673_TimeoutException")
+				                                             .maxConnections(1)
+				                                             .acquireTimeout(Duration.ofMillis(10))
+				                                             .build();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
@@ -303,7 +300,7 @@ public class PooledConnectionProviderTest {
 				          .handle((req, resp) -> resp.sendHeaders())
 				          .bindNow();
 
-		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.fixed("testIssue903", 1);
+		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.create("testIssue903", 1);
 		HttpClient.create(provider)
 		          .port(server.port())
 		          .get()

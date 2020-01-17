@@ -64,7 +64,7 @@ public class TcpMetricsTests {
 				                                .port(0)
 				                                .metrics(true));
 
-		provider = ConnectionProvider.fixed("test", 1);
+		provider = ConnectionProvider.create("TcpMetricsTests", 1);
 		tcpClient =
 				customizeClientOptions(TcpClient.create(provider)
 				                                .addressSupplier(() -> disposableServer.address())
