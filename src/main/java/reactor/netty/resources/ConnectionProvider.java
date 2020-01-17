@@ -23,7 +23,6 @@ import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
 import reactor.util.annotation.NonNull;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
@@ -116,152 +115,6 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
-	 * Create a {@link ConnectionProvider} to cache and grow on demand {@link Connection}.
-	 * <p>An elastic {@link ConnectionProvider} will never wait before opening a new
-	 * connection. The reuse window is limited but it cannot starve an undetermined volume
-	 * of clients using it.
-	 *
-	 * @param name the channel pool map name
-	 *
-	 * @return a new {@link ConnectionProvider} to cache and grow on demand {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
-	 */
-	@Deprecated
-	static ConnectionProvider elastic(String name) {
-		return elastic(name, null, null);
-	}
-
-	/**
-	 * Create a {@link ConnectionProvider} to cache and grow on demand {@link Connection}.
-	 * <p>An elastic {@link ConnectionProvider} will never wait before opening a new
-	 * connection. The reuse window is limited but it cannot starve an undetermined volume
-	 * of clients using it.
-	 *
-	 * @param name the channel pool map name
-	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
-	 *                    if {@code NULL} there is no max idle time
-	 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms),
-	 *                    if {@code NULL} there is no max life time
-	 *
-	 * @return a new {@link ConnectionProvider} to cache and grow on demand {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
-	 */
-	@Deprecated
-	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return builder(name).maxConnections(MAX_CONNECTIONS_ELASTIC)
-		                    .maxIdleTime(maxIdleTime)
-		                    .maxLifeTime(maxLifeTime)
-		                    .build();
-	}
-
-	/**
-	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}.
-	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max number of
-	 * processors observed by this jvm (minimum 4).
-	 * Further connections will be pending acquisition until {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
-	 *
-	 * @param name the connection pool name
-	 *
-	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}
-	 * @deprecated Use {@link #create(String)}
-	 */
-	@Deprecated
-	static ConnectionProvider fixed(String name) {
-		return fixed(name, DEFAULT_POOL_MAX_CONNECTIONS);
-	}
-
-	/**
-	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}.
-	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max connection value.
-	 * Further connections will be pending acquisition until {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
-	 *
-	 * @param name the connection pool name
-	 * @param maxConnections the maximum number of connections before starting pending
-	 * acquisition on existing ones
-	 *
-	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}
-	 * @deprecated Use {@link #create(String, int)}
-	 */
-	@Deprecated
-	static ConnectionProvider fixed(String name, int maxConnections) {
-		return fixed(name, maxConnections, DEFAULT_POOL_ACQUIRE_TIMEOUT);
-	}
-
-	/**
-	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}.
-	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max connection value.
-	 * Further connections will be pending acquisition until acquireTimeout.
-	 *
-	 * @param name the connection pool name
-	 * @param maxConnections the maximum number of connections before starting pending
-	 * @param acquireTimeout the maximum time in millis after which a pending acquire
-	 *                          must complete or the {@link TimeoutException} will be thrown.
-	 *
-	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
-	 */
-	@Deprecated
-	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout) {
-		return fixed(name, maxConnections, acquireTimeout, null, null);
-	}
-
-	/**
-	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}.
-	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max connection value.
-	 * Further connections will be pending acquisition until acquireTimeout.
-	 *
-	 * @param name the connection pool name
-	 * @param maxConnections the maximum number of connections before starting pending
-	 * @param acquireTimeout the maximum time in millis after which a pending acquire
-	 *                          must complete or the {@link TimeoutException} will be thrown.
-	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
-	 *                    if {@code NULL} there is no max idle time
-	 *
-	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
-	 */
-	@Deprecated
-	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime) {
-		return fixed(name, maxConnections, acquireTimeout, maxIdleTime, null);
-	}
-
-	/**
-	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}.
-	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max connection value.
-	 * Further connections will be pending acquisition until acquireTimeout.
-	 *
-	 * @param name the connection pool name
-	 * @param maxConnections the maximum number of connections before starting pending
-	 * @param acquireTimeout the maximum time in millis after which a pending acquire
-	 *                          must complete or the {@link TimeoutException} will be thrown.
-	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
-	 *                    if {@code NULL} there is no max idle time
-	 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms),
-	 *                    if {@code NULL} there is no max life time
-	 *
-	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
-	 * number of {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
-	 */
-	@Deprecated
-	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return builder(name).maxConnections(maxConnections)
-		                    .acquireTimeout(Duration.ofMillis(acquireTimeout))
-		                    .maxIdleTime(maxIdleTime)
-		                    .maxLifeTime(maxLifeTime)
-		                    .build();
-	}
-
-	/**
 	 * Return an existing or new {@link Connection} on subscribe.
 	 *
 	 * @param bootstrap the client connection {@link Bootstrap}
@@ -298,9 +151,9 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
-	 * Returns the maximum number of connections before starting pending
+	 * Returns the maximum number of connections before start pending
 	 *
-	 * @return the maximum number of connections before starting pending
+	 * @return the maximum number of connections before start pending
 	 */
 	default int maxConnections() {
 		return -1;
@@ -381,9 +234,10 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms)
 		 * @return {@literal this}
+		 * @throws NullPointerException if maxIdleTime is null
 		 */
 		public final Builder maxIdleTime(Duration maxIdleTime) {
-			this.maxIdleTime = maxIdleTime;
+			this.maxIdleTime = Objects.requireNonNull(maxIdleTime);
 			return this;
 		}
 
@@ -392,9 +246,10 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms)
 		 * @return {@literal this}
+		 * @throws NullPointerException if maxLifeTime is null
 		 */
 		public final Builder maxLifeTime(Duration maxLifeTime) {
-			this.maxLifeTime = maxLifeTime;
+			this.maxLifeTime = Objects.requireNonNull(maxLifeTime);
 			return this;
 		}
 
