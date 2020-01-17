@@ -74,8 +74,8 @@ public class PooledConnectionProviderTest {
 				new PooledConnectionProvider.PooledConnectionAllocator(
 						new Bootstrap(), allocator -> channelPool, ChannelOperations.OnSetup.empty());
 		ConnectionProvider.Builder connectionProviderBuilder =
-				ConnectionProvider.Builder.newInstance("disposeLaterDefers")
-				                          .maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC);
+				ConnectionProvider.builder("disposeLaterDefers")
+				                  .maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC);
 		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
@@ -100,8 +100,8 @@ public class PooledConnectionProviderTest {
 						new Bootstrap(), allocator -> channelPool, ChannelOperations.OnSetup.empty());
 
 		ConnectionProvider.Builder connectionProviderBuilder =
-				ConnectionProvider.Builder.newInstance("disposeOnlyOnce")
-				                          .maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC);
+				ConnectionProvider.builder("disposeOnlyOnce")
+				                  .maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC);
 		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
@@ -136,9 +136,7 @@ public class PooledConnectionProviderTest {
 		try {
 			final InetSocketAddress address = InetSocketAddress.createUnresolved("localhost", echoServerPort);
 			ConnectionProvider pool =
-					ConnectionProvider.Builder.newInstance("fixedPoolTwoAcquire")
-					                          .maxConnections(2)
-					                          .build();
+					ConnectionProvider.create("fixedPoolTwoAcquire", 2);
 
 			Bootstrap bootstrap = new Bootstrap().remoteAddress(address)
 			                                     .channelFactory(NioSocketChannel::new)
@@ -233,7 +231,7 @@ public class PooledConnectionProviderTest {
 				         .wiretap(true)
 				         .bindNow();
 		PooledConnectionProvider provider =
-				(PooledConnectionProvider) ConnectionProvider.Builder.newInstance("testIssue673_TimeoutException")
+				(PooledConnectionProvider) ConnectionProvider.builder("testIssue673_TimeoutException")
 				                                             .maxConnections(1)
 				                                             .acquireTimeout(Duration.ofMillis(10))
 				                                             .build();
@@ -304,9 +302,7 @@ public class PooledConnectionProviderTest {
 				          .bindNow();
 
 		PooledConnectionProvider provider =
-				(PooledConnectionProvider) ConnectionProvider.Builder.newInstance("testIssue903")
-				                                                     .maxConnections(1)
-				                                                     .build();
+				(PooledConnectionProvider) ConnectionProvider.create("testIssue903", 1);
 		HttpClient.create(provider)
 		          .port(server.port())
 		          .get()

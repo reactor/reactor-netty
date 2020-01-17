@@ -61,6 +61,16 @@ public interface ConnectionProvider extends Disposable {
 			"" + 45000));
 
 	/**
+	 * Creates a builder for {@link ConnectionProvider}
+	 *
+	 * @param name {@link ConnectionProvider} name
+	 * @return a new ConnectionProvider builder
+	 */
+	static ConnectionProvider.Builder builder(String name) {
+		return new Builder(name);
+	}
+
+	/**
 	 * Return a {@link ConnectionProvider} that will always create a new
 	 * {@link Connection}.
 	 *
@@ -72,6 +82,40 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
+	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
+	 * number of {@link Connection}.
+	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max number of
+	 * processors observed by this jvm (minimum 4).
+	 * Further connections will be pending acquisition until {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
+	 *
+	 * @param name the connection pool name
+	 *
+	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
+	 * number of {@link Connection}
+	 */
+	static ConnectionProvider create(String name) {
+		return create(name, DEFAULT_POOL_MAX_CONNECTIONS);
+	}
+
+	/**
+	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
+	 * number of {@link Connection}.
+	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max connection value.
+	 * Further connections will be pending acquisition until {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
+	 *
+	 * @param name the connection pool name
+	 * @param maxConnections the maximum number of connections before starting pending
+	 * acquisition on existing ones
+	 *
+	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
+	 * number of {@link Connection}
+	 */
+	static ConnectionProvider create(String name, int maxConnections) {
+		return builder(name).maxConnections(maxConnections)
+		                    .build();
+	}
+
+	/**
 	 * Create a {@link ConnectionProvider} to cache and grow on demand {@link Connection}.
 	 * <p>An elastic {@link ConnectionProvider} will never wait before opening a new
 	 * connection. The reuse window is limited but it cannot starve an undetermined volume
@@ -80,7 +124,7 @@ public interface ConnectionProvider extends Disposable {
 	 * @param name the channel pool map name
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and grow on demand {@link Connection}
-	 * @deprecated Use {@link Builder#newInstance(String)}
+	 * @deprecated Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider elastic(String name) {
@@ -100,15 +144,14 @@ public interface ConnectionProvider extends Disposable {
 	 *                    if {@code NULL} there is no max life time
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and grow on demand {@link Connection}
-	 * @deprecated Use {@link Builder#newInstance(String)}
+	 * @deprecated Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return Builder.newInstance(name)
-		              .maxConnections(MAX_CONNECTIONS_ELASTIC)
-		              .maxIdleTime(maxIdleTime)
-		              .maxLifeTime(maxLifeTime)
-		              .build();
+		return builder(name).maxConnections(MAX_CONNECTIONS_ELASTIC)
+		                    .maxIdleTime(maxIdleTime)
+		                    .maxLifeTime(maxLifeTime)
+		                    .build();
 	}
 
 	/**
@@ -116,13 +159,13 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}.
 	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max number of
 	 * processors observed by this jvm (minimum 4).
-	 * Further connections will be pending acquisition until DEFAULT_POOL_ACQUIRE_TIMEOUT.
+	 * Further connections will be pending acquisition until {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
 	 *
 	 * @param name the connection pool name
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link Builder#newInstance(String)}
+	 * @deprecated Use {@link #create(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name) {
@@ -133,7 +176,7 @@ public interface ConnectionProvider extends Disposable {
 	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}.
 	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max connection value.
-	 * Further connections will be pending acquisition until DEFAULT_POOL_ACQUIRE_TIMEOUT.
+	 * Further connections will be pending acquisition until {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
 	 *
 	 * @param name the connection pool name
 	 * @param maxConnections the maximum number of connections before starting pending
@@ -141,7 +184,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link Builder#newInstance(String)}
+	 * @deprecated Use {@link #create(String, int)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name, int maxConnections) {
@@ -161,7 +204,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link Builder#newInstance(String)}
+	 * @deprecated Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout) {
@@ -185,16 +228,15 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link Builder#newInstance(String)}
+	 * @deprecated Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
-		return Builder.newInstance(name)
-		              .maxConnections(maxConnections)
-		              .acquireTimeout(Duration.ofMillis(acquireTimeout))
-		              .maxIdleTime(maxIdleTime)
-		              .maxLifeTime(maxLifeTime)
-		              .build();
+		return builder(name).maxConnections(maxConnections)
+		                    .acquireTimeout(Duration.ofMillis(acquireTimeout))
+		                    .maxIdleTime(maxIdleTime)
+		                    .maxLifeTime(maxLifeTime)
+		                    .build();
 	}
 
 	/**
@@ -243,16 +285,10 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
-	 * Create a {@link ConnectionProvider}.
+	 * Build a {@link ConnectionProvider}.
 	 * <ul>
 	 *     <li>
-	 *         Elastic {@link ConnectionProvider} will cache and grow on demand {@link Connection}.
-	 *         <p>It will never wait before opening a new connection.
-	 *         The reuse window is limited but it cannot starve an undetermined volume of clients using it.
-	 *     </li>
-	 *     <li>
-	 *         Fixed {@link ConnectionProvider} will cache and reuse a fixed maximum number of {@link Connection}.
-	 *         <p>It will open up to the given max number of processors observed by this jvm (minimum 4).
+	 *         A {@link ConnectionProvider} to cache and reuse a fixed maximum number of {@link Connection}.
 	 *         Further connections will be pending acquisition depending on acquireTimeout.
 	 *     </li>
 	 * </ul>
@@ -266,17 +302,13 @@ public interface ConnectionProvider extends Disposable {
 		Duration maxIdleTime;
 		Duration maxLifeTime;
 
-		private Builder() {
-		}
-
 		/**
 		 * Returns {@link Builder} new instance with name and default properties.
 		 *
 		 * @param name {@link ConnectionProvider} name
-		 * @return {@link Builder}
 		 */
-		public static Builder newInstance(String name) {
-			return new Builder().name(name);
+		private Builder(String name) {
+			name(name);
 		}
 
 		/**
@@ -293,7 +325,7 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} acquire timeout.
-		 * Default to DEFAULT_POOL_ACQUIRE_TIMEOUT.
+		 * Default to {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
 		 *
 		 * @param acquireTimeout the maximum time after which a pending acquire
 		 * must complete or the {@link TimeoutException} will be thrown (resolution: ms)
@@ -307,9 +339,9 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} maximum connections.
-		 * Default to DEFAULT_POOL_MAX_CONNECTIONS.
-		 * When invoked with MAX_CONNECTIONS_ELASTIC an elastic ConnectionProvider will be created
-		 * and acquireTimeout will be set automatically to ACQUIRE_TIMEOUT_NEVER_WAIT.
+		 * Default to {@link #DEFAULT_POOL_MAX_CONNECTIONS}.
+		 * When invoked with {@link #MAX_CONNECTIONS_ELASTIC} an elastic ConnectionProvider will be created
+		 * and acquireTimeout will be set automatically to {@link #ACQUIRE_TIMEOUT_NEVER_WAIT}.
 		 *
 		 * @param maxConnections the maximum number of connections before start pending
 		 * @return {@literal this}

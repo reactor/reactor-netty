@@ -117,9 +117,7 @@ public class HttpClientWithTomcatTest {
 
 	@Test
 	public void simpleTest404_1() {
-		ConnectionProvider pool = ConnectionProvider.Builder.newInstance("simpleTest404_1")
-		                                                    .maxConnections(1)
-		                                                    .build();
+		ConnectionProvider pool = ConnectionProvider.create("simpleTest404_1", 1);
 		HttpClient client =
 				HttpClient.create(pool)
 				          .port(getPort())
@@ -193,9 +191,7 @@ public class HttpClientWithTomcatTest {
 
 	@Test
 	public void simpleClientPooling() {
-		ConnectionProvider p = ConnectionProvider.Builder.newInstance("simpleClientPooling")
-		                                                 .maxConnections(1)
-		                                                 .build();
+		ConnectionProvider p = ConnectionProvider.create("simpleClientPooling", 1);
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
 
@@ -228,9 +224,7 @@ public class HttpClientWithTomcatTest {
 
 	@Test
 	public void disableChunkImplicitDefault() {
-		ConnectionProvider p = ConnectionProvider.Builder.newInstance("disableChunkImplicitDefault")
-		                                                 .maxConnections(1)
-		                                                 .build();
+		ConnectionProvider p = ConnectionProvider.create("disableChunkImplicitDefault", 1);
 		HttpClient client =
 				HttpClient.create(p)
 				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
@@ -264,9 +258,7 @@ public class HttpClientWithTomcatTest {
 
 	@Test
 	public void contentHeader() {
-		ConnectionProvider fixed = ConnectionProvider.Builder.newInstance("contentHeader")
-		                                                     .maxConnections(1)
-		                                                     .build();
+		ConnectionProvider fixed = ConnectionProvider.create("contentHeader", 1);
 		HttpClient client =
 				HttpClient.create(fixed)
 				          .wiretap(true)

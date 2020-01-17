@@ -73,9 +73,7 @@ public class PooledConnectionProviderMetricsTest {
 		CountDownLatch latch = new CountDownLatch(1);
 
 		PooledConnectionProvider fixed =
-				(PooledConnectionProvider) ConnectionProvider.Builder.newInstance("test")
-				                                                     .maxConnections(1)
-				                                                     .build();
+				(PooledConnectionProvider) ConnectionProvider.create("test", 1);
 		AtomicReference<String[]> tags = new AtomicReference<>();
 
 		HttpClient.create(fixed)
