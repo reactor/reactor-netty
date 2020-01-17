@@ -93,6 +93,23 @@ public interface ConnectionProvider extends Disposable {
 	 * @param name the channel pool map name
 	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
 	 *                    if {@code NULL} there is no max idle time
+	 *
+	 * @return a new {@link ConnectionProvider} to cache and grow on demand
+	 * {@link Connection}
+	 */
+	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime) {
+		return elastic(name, maxIdleTime, null);
+	}
+
+	/**
+	 * Create a {@link ConnectionProvider} to cache and grow on demand {@link Connection}.
+	 * <p>An elastic {@link ConnectionProvider} will never wait before opening a new
+	 * connection. The reuse window is limited but it cannot starve an undetermined volume
+	 * of clients using it.
+	 *
+	 * @param name the channel pool map name
+	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
+	 *                    if {@code NULL} there is no max idle time
 	 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms),
 	 *                    if {@code NULL} there is no max life time
 	 *
@@ -159,6 +176,26 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout) {
 		return fixed(name, maxConnections, acquireTimeout, null, null);
+	}
+
+	/**
+	 * Create a new {@link ConnectionProvider} to cache and reuse a fixed maximum
+	 * number of {@link Connection}.
+	 * <p>A Fixed {@link ConnectionProvider} will open up to the given max connection value.
+	 * Further connections will be pending acquisition indefinitely.
+	 *
+	 * @param name the connection pool name
+	 * @param maxConnections the maximum number of connections before starting pending
+	 * @param acquireTimeout the maximum time in millis after which a pending acquire
+	 *                          must complete or the {@link TimeoutException} will be thrown.
+	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
+	 *                    if {@code NULL} there is no max idle time
+	 *
+	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
+	 * number of {@link Connection}
+	 */
+	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime) {
+		return fixed(name, maxConnections, acquireTimeout, maxIdleTime, null);
 	}
 
 	/**
