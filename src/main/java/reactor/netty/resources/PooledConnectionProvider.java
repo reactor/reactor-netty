@@ -223,7 +223,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, InstrumentedPool<PooledConnection> pool,
 			ChannelOperations.OnSetup opsFactory, long acquireTimeout) {
 		DisposableAcquire disposableAcquire =
-				new DisposableAcquire(sink, pool, obs, opsFactory, acquireTimeout);
+				new DisposableAcquire(sink, pool, obs, opsFactory);
 
 		Mono<PooledRef<PooledConnection>> mono = pool.acquire(Duration.ofMillis(acquireTimeout));
 		mono.subscribe(disposableAcquire);
@@ -468,7 +468,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final InstrumentedPool<PooledConnection> pool;
 		final ConnectionObserver                 obs;
 		final ChannelOperations.OnSetup          opsFactory;
-		final long                               acquireTimeout;
 
 		PooledRef<PooledConnection> pooledRef;
 		Subscription subscription;
@@ -476,13 +475,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		DisposableAcquire(MonoSink<Connection> sink,
 				InstrumentedPool<PooledConnection> pool,
 				ConnectionObserver obs,
-				ChannelOperations.OnSetup opsFactory,
-				long acquireTimeout) {
+				ChannelOperations.OnSetup opsFactory) {
 			this.pool = pool;
 			this.sink = sink;
 			this.obs = obs;
 			this.opsFactory = opsFactory;
-			this.acquireTimeout = acquireTimeout;
 		}
 
 		@Override
