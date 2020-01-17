@@ -140,6 +140,24 @@ public interface ConnectionProvider extends Disposable {
 	 * @param name the channel pool map name
 	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
 	 *                    if {@code NULL} there is no max idle time
+	 *
+	 * @return a new {@link ConnectionProvider} to cache and grow on demand {@link Connection}
+	 * @deprecated Use {@link #builder(String)}
+	 */
+	@Deprecated
+	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime) {
+		return elastic(name, maxIdleTime, null);
+	}
+
+	/**
+	 * Create a {@link ConnectionProvider} to cache and grow on demand {@link Connection}.
+	 * <p>An elastic {@link ConnectionProvider} will never wait before opening a new
+	 * connection. The reuse window is limited but it cannot starve an undetermined volume
+	 * of clients using it.
+	 *
+	 * @param name the channel pool map name
+	 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms),
+	 *                    if {@code NULL} there is no max idle time
 	 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms),
 	 *                    if {@code NULL} there is no max life time
 	 *
