@@ -79,17 +79,19 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	final ConcurrentMap<PoolKey, InstrumentedPool<PooledConnection>> channelPools =
 			PlatformDependent.newConcurrentHashMap();
-	final String                       name;
-	final int                          maxConnections;
-	final long                         acquireTimeout;
-	final long                         maxIdleTime;
-	final long                         maxLifeTime;
-	final PoolFactory                  poolFactory;
+	final String      name;
+	final int         maxConnections;
+	final int         maxPendingAcquire;
+	final long        acquireTimeout;
+	final long        maxIdleTime;
+	final long        maxLifeTime;
+	final PoolFactory poolFactory;
 
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
-		this.acquireTimeout = builder.acquireTimeout.toMillis();
 		this.maxConnections = builder.maxConnections;
+		this.maxPendingAcquire = builder.maxPendingAcquire;
+		this.acquireTimeout = builder.acquireTimeout.toMillis();
 		this.maxIdleTime = builder.maxIdleTime != null ? builder.maxIdleTime.toMillis() : -1;
 		this.maxLifeTime = builder.maxLifeTime != null ? builder.maxLifeTime.toMillis() : -1;
 		this.poolFactory = allocator -> {
@@ -98,10 +100,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					           .destroyHandler(DEFAULT_DESTROY_HANDLER)
 					           .evictionPredicate(DEFAULT_EVICTION_PREDICATE
 					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
-					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)));
+					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
+					           .maxPendingAcquire(maxPendingAcquire);
 			if (maxConnections != MAX_CONNECTIONS_ELASTIC) {
-				pb = pb.sizeBetween(0, maxConnections)
-				       .maxPendingAcquireUnbounded();
+				pb = pb.sizeBetween(0, maxConnections);
 			}
 			return pb.fifo();
 		};
@@ -213,8 +215,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	public String toString() {
 		return "PooledConnectionProvider {" +
 		               "name='" + name + '\'' +
-		               ", acquireTimeout=" + acquireTimeout +
 		               ", maxConnections=" + maxConnections +
+		               ", maxPendingAcquire=" + maxPendingAcquire +
+		               ", acquireTimeout=" + acquireTimeout +
 		               ", maxIdleTime=" + maxIdleTime +
 		               ", maxLifeTime=" + maxLifeTime +
 		               '}';

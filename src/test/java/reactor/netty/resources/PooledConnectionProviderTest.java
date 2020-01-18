@@ -54,6 +54,7 @@ import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientTests;
 import reactor.netty.tcp.TcpServer;
 import reactor.pool.InstrumentedPool;
+import reactor.pool.PoolAcquirePendingLimitException;
 import reactor.pool.PooledRef;
 import reactor.test.StepVerifier;
 
@@ -314,6 +315,82 @@ public class PooledConnectionProviderTest {
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
 		server.disposeNow();
+	}
+
+	@Test
+	public void testIssue951_MaxPendingAcquire() throws InterruptedException {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((in, out) -> out.sendString(Mono.just("test")
+				                                                 .delayElement(Duration.ofMillis(100))))
+				         .wiretap(true)
+				         .bindNow();
+		PooledConnectionProvider provider =
+				(PooledConnectionProvider) ConnectionProvider.builder("testIssue951_MaxPendingAcquire")
+				                                             .maxConnections(1)
+				                                             .acquireTimeout(Duration.ofMillis(10))
+				                                             .maxPendingAcquire(1)
+				                                             .build();
+		CountDownLatch latch = new CountDownLatch(2);
+
+		try {
+			AtomicReference<InstrumentedPool<PooledConnection>> pool = new AtomicReference<>();
+			List<? extends Signal<? extends Connection>> list =
+					Flux.range(0, 3)
+					    .flatMapDelayError(i ->
+					        TcpClient.create(provider)
+					                 .port(server.port())
+					                 .doOnConnected(conn -> {
+					                     ConcurrentMap<PooledConnectionProvider.PoolKey, InstrumentedPool<PooledConnection>> pools =
+					                         provider.channelPools;
+					                     pool.set(pools.get(pools.keySet().toArray()[0]));
+					                 })
+					                 .doOnDisconnected(conn -> latch.countDown())
+					                 .handle((in, out) -> in.receive().then())
+					                 .wiretap(true)
+					                 .connect()
+					                 .materialize(),
+					    256, 32)
+					    .collectList()
+					    .doFinally(fin -> latch.countDown())
+					    .block(Duration.ofSeconds(30));
+
+			assertThat(latch.await(30, TimeUnit.SECONDS)).as("latch 30s").isTrue();
+
+			assertThat(list).isNotNull()
+					.hasSize(3);
+
+			int onNext = 0;
+			int onErrorTimeout = 0;
+			int onErrorPendingAcquire = 0;
+			String msg1 = "Pool#acquire(Duration) has been pending for more than the configured timeout of 10ms";
+			String msg2 = "Pending acquire queue has reached its maximum size of 1";
+			for (int i = 0; i < 3; i++) {
+				Signal<? extends Connection> signal = list.get(i);
+				if (signal.isOnNext()) {
+					onNext++;
+				}
+				else if (signal.getThrowable() instanceof TimeoutException &&
+						msg1.equals(signal.getThrowable().getMessage())) {
+					onErrorTimeout++;
+				}
+				else if (signal.getThrowable() instanceof PoolAcquirePendingLimitException &&
+						msg2.equals(signal.getThrowable().getMessage())) {
+					onErrorPendingAcquire++;
+				}
+			}
+			assertThat(onNext).isEqualTo(1);
+			assertThat(onErrorTimeout).isEqualTo(1);
+			assertThat(onErrorPendingAcquire).isEqualTo(1);
+
+			assertThat(pool.get().metrics().acquiredSize()).as("currently acquired").isEqualTo(0);
+			assertThat(pool.get().metrics().idleSize()).as("currently idle").isEqualTo(0);
+		}
+		finally {
+			server.disposeNow();
+			provider.dispose();
+		}
 	}
 
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {
