@@ -67,7 +67,7 @@ public class DefaultLoopResourcesTest {
 	public void testIssue416() {
 		TestResources resources = TestResources.get();
 
-		TestResources.set(ConnectionProvider.fixed("test"));
+		TestResources.set(ConnectionProvider.create("testIssue416"));
 		assertThat(resources.provider.isDisposed()).isTrue();
 		assertThat(resources.loops.isDisposed()).isFalse();
 

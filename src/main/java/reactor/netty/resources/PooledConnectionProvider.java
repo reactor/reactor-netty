@@ -54,6 +54,8 @@ import reactor.netty.Metrics;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.pool.InstrumentedPool;
+import reactor.pool.PoolBuilder;
+import reactor.pool.PoolConfig;
 import reactor.pool.PooledRef;
 import reactor.pool.PooledRefMetadata;
 import reactor.util.Logger;
@@ -72,24 +74,39 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	interface PoolFactory {
 
-		InstrumentedPool<PooledConnection> newPool(
-				Publisher<PooledConnection> allocator,
-				Function<PooledConnection, Publisher<Void>> destroyHandler,
-				BiPredicate<PooledConnection, PooledRefMetadata> evictionPredicate);
+		InstrumentedPool<PooledConnection> newPool(Publisher<PooledConnection> allocator);
 	}
 
 	final ConcurrentMap<PoolKey, InstrumentedPool<PooledConnection>> channelPools =
 			PlatformDependent.newConcurrentHashMap();
-	final String                       name;
-	final PoolFactory                  poolFactory;
-	final long                         acquireTimeout;
-	final int                          maxConnections;
+	final String      name;
+	final int         maxConnections;
+	final int         maxPendingAcquire;
+	final long        acquireTimeout;
+	final long        maxIdleTime;
+	final long        maxLifeTime;
+	final PoolFactory poolFactory;
 
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
-		this.poolFactory = builder.poolFactory;
-		this.acquireTimeout = builder.acquireTimeout;
 		this.maxConnections = builder.maxConnections;
+		this.maxPendingAcquire = builder.maxPendingAcquire;
+		this.acquireTimeout = builder.acquireTimeout.toMillis();
+		this.maxIdleTime = builder.maxIdleTime != null ? builder.maxIdleTime.toMillis() : -1;
+		this.maxLifeTime = builder.maxLifeTime != null ? builder.maxLifeTime.toMillis() : -1;
+		this.poolFactory = allocator -> {
+			PoolBuilder<PooledConnection, PoolConfig<PooledConnection>> pb =
+					PoolBuilder.from(allocator)
+					           .destroyHandler(DEFAULT_DESTROY_HANDLER)
+					           .evictionPredicate(DEFAULT_EVICTION_PREDICATE
+					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
+					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
+					           .maxPendingAcquire(maxPendingAcquire);
+			if (maxConnections != MAX_CONNECTIONS_ELASTIC) {
+				pb = pb.sizeBetween(0, maxConnections);
+			}
+			return pb.fifo();
+		};
 	}
 
 	@Override
@@ -146,8 +163,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			InstrumentedPool<PooledConnection> pool = channelPools.computeIfAbsent(holder, poolKey -> {
 				if (log.isDebugEnabled()) {
 					String poolType = maxConnections == -1 ? "elastic" : "fixed";
-					log.debug("Creating a new {} client pool with name [{}] and max connections [{}] for [{}]",
-							poolType, name, maxConnections, bootstrap.config().remoteAddress());
+					log.debug("Creating a new {} client pool [{}] for [{}]",
+							poolType, this, bootstrap.config().remoteAddress());
 				}
 
 				InstrumentedPool<PooledConnection> newPool =
@@ -196,13 +213,20 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	@Override
 	public String toString() {
-		return "PooledConnectionProvider {" + "name=" + name + ", poolFactory=" + poolFactory + '}';
+		return "PooledConnectionProvider {" +
+		               "name='" + name + '\'' +
+		               ", maxConnections=" + maxConnections +
+		               ", maxPendingAcquire=" + maxPendingAcquire +
+		               ", acquireTimeout=" + acquireTimeout +
+		               ", maxIdleTime=" + maxIdleTime +
+		               ", maxLifeTime=" + maxLifeTime +
+		               '}';
 	}
 
 	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, InstrumentedPool<PooledConnection> pool,
 			ChannelOperations.OnSetup opsFactory, long acquireTimeout) {
 		DisposableAcquire disposableAcquire =
-				new DisposableAcquire(sink, pool, obs, opsFactory, acquireTimeout);
+				new DisposableAcquire(sink, pool, obs, opsFactory);
 
 		Mono<PooledRef<PooledConnection>> mono = pool.acquire(Duration.ofMillis(acquireTimeout));
 		mono.subscribe(disposableAcquire);
@@ -213,10 +237,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	static final AttributeKey<ConnectionObserver> OWNER =
 			AttributeKey.valueOf("connectionOwner");
 
-	static final BiPredicate<PooledConnection, PooledRefMetadata> EVICTION_PREDICATE =
+	static final BiPredicate<PooledConnection, PooledRefMetadata> DEFAULT_EVICTION_PREDICATE =
 			(pooledConnection, metadata) -> !pooledConnection.channel.isActive() || !pooledConnection.isPersistent();
 
-	static final Function<PooledConnection, Publisher<Void>> DESTROY_HANDLER =
+	static final Function<PooledConnection, Publisher<Void>> DEFAULT_DESTROY_HANDLER =
 			pooledConnection -> {
 				if (!pooledConnection.channel.isActive()) {
 					return Mono.empty();
@@ -233,7 +257,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		PooledConnectionAllocator(Bootstrap b, PoolFactory provider, ChannelOperations.OnSetup opsFactory) {
 			this.bootstrap = b.clone();
 			this.opsFactory = opsFactory;
-			this.pool = provider.newPool(connectChannel(), DESTROY_HANDLER, EVICTION_PREDICATE);
+			this.pool = provider.newPool(connectChannel());
 		}
 
 		Publisher<PooledConnection> connectChannel() {
@@ -447,7 +471,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final InstrumentedPool<PooledConnection> pool;
 		final ConnectionObserver                 obs;
 		final ChannelOperations.OnSetup          opsFactory;
-		final long                               acquireTimeout;
 
 		PooledRef<PooledConnection> pooledRef;
 		Subscription subscription;
@@ -455,13 +478,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		DisposableAcquire(MonoSink<Connection> sink,
 				InstrumentedPool<PooledConnection> pool,
 				ConnectionObserver obs,
-				ChannelOperations.OnSetup opsFactory,
-				long acquireTimeout) {
+				ChannelOperations.OnSetup opsFactory) {
 			this.pool = pool;
 			this.sink = sink;
 			this.obs = obs;
 			this.opsFactory = opsFactory;
-			this.acquireTimeout = acquireTimeout;
 		}
 
 		@Override
