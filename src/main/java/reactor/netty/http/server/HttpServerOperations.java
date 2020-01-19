@@ -72,7 +72,6 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
-import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
@@ -394,6 +393,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			throw new IllegalStateException("Status and headers already sent");
 		}
 		return this;
+	}
+
+	@Override
+	public Mono<Void> sendWebsocket(@Nullable String protocols,
+									int maxFramePayloadLength,
+									boolean proxyPing,
+									BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		return withWebsocketSupport(uri(), protocols, maxFramePayloadLength, proxyPing, websocketHandler);
 	}
 
 	@Override
