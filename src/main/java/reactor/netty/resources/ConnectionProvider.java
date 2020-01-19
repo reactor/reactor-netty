@@ -247,6 +247,7 @@ public interface ConnectionProvider extends Disposable {
 		int										maxConnections = ConnectionProvider.DEFAULT_POOL_MAX_CONNECTIONS;
 		Duration								maxIdleTime;
 		Duration								maxLifeTime;
+		boolean									lifo;
 
 		private Builder() {
 		}
@@ -328,6 +329,19 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
+		 * Switch order for the channels in the pool to LIFO.
+		 * <br>
+		 * Default FIFO.
+		 *
+		 * @param lifo flag for switching order for the channel to LIFO
+		 * @return {@literal this}
+		 */
+		public final Builder lifo(boolean lifo) {
+			this.lifo = lifo;
+			return this;
+		}
+
+		/**
 		 * Builds new ConnectionProvider
 		 *
 		 * @return builds new ConnectionProvider
@@ -348,6 +362,7 @@ public interface ConnectionProvider extends Disposable {
 			Builder builder = (Builder) o;
 			return acquireTimeout == builder.acquireTimeout &&
 					maxConnections == builder.maxConnections &&
+					lifo == builder.lifo &&
 					name.equals(builder.name) &&
 					Objects.equals(poolFactory, builder.poolFactory) &&
 					Objects.equals(maxIdleTime, builder.maxIdleTime) &&
@@ -356,7 +371,7 @@ public interface ConnectionProvider extends Disposable {
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(name, poolFactory, acquireTimeout, maxConnections, maxIdleTime, maxLifeTime);
+			return Objects.hash(name, poolFactory, acquireTimeout, maxConnections, maxIdleTime, maxLifeTime, lifo);
 		}
 
 		private InstrumentedPool<PooledConnectionProvider.PooledConnection> configureDefaultPoolFactory(
@@ -372,7 +387,7 @@ public interface ConnectionProvider extends Disposable {
 			if (maxConnections != MAX_CONNECTIONS_ELASTIC) {
 				pb = pb.sizeBetween(0, maxConnections).maxPendingAcquireUnbounded();
 			}
-			return pb.fifo();
+			return lifo ? pb.lifo() : pb.fifo();
 		}
 	}
 }
