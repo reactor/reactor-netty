@@ -16,6 +16,8 @@
 
 package reactor.netty.http.server;
 
+import java.util.Objects;
+
 /**
  * Configurer implementation for {@link WebSocketConfigurer}
  *
@@ -45,5 +47,24 @@ final class WebsocketServerConfigurer implements WebSocketConfigurer {
     @Override
     public final boolean isProxyPing() {
         return proxyPing;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof WebsocketServerConfigurer)) {
+            return false;
+        }
+        WebsocketServerConfigurer that = (WebsocketServerConfigurer) o;
+        return maxFramePayloadLength == that.maxFramePayloadLength &&
+                proxyPing == that.proxyPing &&
+                Objects.equals(protocols, that.protocols);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(protocols, maxFramePayloadLength, proxyPing);
     }
 }

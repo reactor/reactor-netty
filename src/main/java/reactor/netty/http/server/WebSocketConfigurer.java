@@ -1,6 +1,7 @@
 package reactor.netty.http.server;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Configurer for websocket
@@ -78,6 +79,25 @@ public interface WebSocketConfigurer {
          */
         public final WebSocketConfigurer build() {
             return new WebsocketServerConfigurer(this);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Builder)) {
+                return false;
+            }
+            Builder builder = (Builder) o;
+            return maxFramePayloadLength == builder.maxFramePayloadLength &&
+                    proxyPing == builder.proxyPing &&
+                    Objects.equals(protocols, builder.protocols);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(protocols, maxFramePayloadLength, proxyPing);
         }
     }
 }
