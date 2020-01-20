@@ -31,7 +31,7 @@ final class WebsocketServerConfigurer implements WebSocketConfigurer {
     WebsocketServerConfigurer(WebSocketConfigurer.Builder builder) {
         this.protocols = builder.protocols;
         this.maxFramePayloadLength = builder.maxFramePayloadLength;
-        this.proxyPing = builder.proxyPing;
+        this.proxyPing = builder.handlePing;
     }
 
     @Override
@@ -45,7 +45,7 @@ final class WebsocketServerConfigurer implements WebSocketConfigurer {
     }
 
     @Override
-    public final boolean isProxyPing() {
+    public final boolean isHandlePing() {
         return proxyPing;
     }
 

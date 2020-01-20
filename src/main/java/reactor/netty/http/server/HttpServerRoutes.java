@@ -273,11 +273,9 @@ public interface HttpServerRoutes extends
      *
      * @return this {@link HttpServerRoutes}
      */
-    @Deprecated
     default HttpServerRoutes ws(String path,
-                                BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
-                                        Publisher<Void>> handler) {
-        return ws(path, handler, (String) null);
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler) {
+        return ws(path, handler, WebSocketConfigurer.builder().build());
     }
 
     /**
@@ -292,11 +290,12 @@ public interface HttpServerRoutes extends
      * @param protocols sub-protocol to use in websocket handshake signature
      *
      * @return this {@link HttpServerRoutes}
+	 * @deprecated Use {@link #ws(String, BiFunction, WebSocketConfigurer)}
      */
     @Deprecated
     default HttpServerRoutes ws(String path,
-                                BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-                                @Nullable String protocols) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+			@Nullable String protocols) {
         return ws(HttpPredicate.get(path), handler, protocols);
     }
 
@@ -306,13 +305,13 @@ public interface HttpServerRoutes extends
      * @param condition a predicate given each inbound request
      * @param handler an I/O handler to invoke for the given condition
      * @param protocols sub-protocol to use in websocket handshake signature
-     *
      * @return this {@link HttpServerRoutes}
+	 * @deprecated Use {@link #ws(Predicate, BiFunction, WebSocketConfigurer)}
      */
     @Deprecated
     default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-                                BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-                                @Nullable String protocols) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+			@Nullable String protocols) {
         return ws(condition, handler, protocols, 65536);
     }
 
@@ -323,14 +322,14 @@ public interface HttpServerRoutes extends
      * @param handler an I/O handler to invoke for the given condition
      * @param protocols sub-protocol to use in websocket handshake signature
      * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
-     *
      * @return this {@link HttpServerRoutes}
+	 * @deprecated Use {@link #ws(Predicate, BiFunction, WebSocketConfigurer)}
      */
     @Deprecated
     default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-                                BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-                                @Nullable String protocols,
-                                int maxFramePayloadLength) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+			@Nullable String protocols,
+			int maxFramePayloadLength) {
         return ws(condition, handler, protocols, maxFramePayloadLength, false);
     }
 
@@ -342,15 +341,15 @@ public interface HttpServerRoutes extends
      * @param protocols sub-protocol to use in websocket handshake signature
      * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
      * @param proxyPing whether to proxy websocket ping frames or respond to them
-     *
-     * @return this {@link HttpServerRoutes}
-     */
+	 * @return this {@link HttpServerRoutes}
+	 * @deprecated Use {@link #ws(Predicate, BiFunction, WebSocketConfigurer)}
+	 */
     @Deprecated
     default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-                                BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-                                @Nullable String protocols,
-                                int maxFramePayloadLength,
-                                boolean proxyPing) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+			@Nullable String protocols,
+			int maxFramePayloadLength,
+			boolean proxyPing) {
         return route(condition, (req, resp) -> {
             if (req.requestHeaders()
                     .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
@@ -375,8 +374,8 @@ public interface HttpServerRoutes extends
      * @return this {@link HttpServerRoutes}
      */
     default HttpServerRoutes ws(String path,
-                                BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
-								WebSocketConfigurer configurer) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
+			WebSocketConfigurer configurer) {
         return ws(HttpPredicate.get(path), handler, configurer);
     }
 
@@ -390,14 +389,14 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-								BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-								WebSocketConfigurer configurer) {
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
+			WebSocketConfigurer configurer) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
 					.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
 				return ops.withWebsocketSupport(req.uri(), configurer.getProtocols(), configurer.getMaxFramePayloadLength(),
-						configurer.isProxyPing(), handler);
+						configurer.isHandlePing(), handler);
 			}
 			return resp.sendNotFound();
 		});

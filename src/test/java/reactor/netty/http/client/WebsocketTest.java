@@ -1370,7 +1370,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, resp) -> resp.sendWebsocket((i, o) -> i.receiveFrames().then(),
-								  WebSocketConfigurer.builder().proxyPing(true).build()))
+								  WebSocketConfigurer.builder().handlePing(true).build()))
 				          .wiretap(true)
 				          .bindNow();
 

@@ -31,7 +31,7 @@ public interface WebSocketConfigurer {
 
     int getMaxFramePayloadLength();
 
-    boolean isProxyPing();
+    boolean isHandlePing();
 
     /**
      * Create builder with default properties:<br>
@@ -50,7 +50,7 @@ public interface WebSocketConfigurer {
     final class Builder {
         String protocols;
         int maxFramePayloadLength = 65536;
-        boolean proxyPing = false;
+        boolean handlePing = false;
 
         private Builder() {
         }
@@ -80,11 +80,11 @@ public interface WebSocketConfigurer {
         /**
          * Sets flag whether to proxy websocket ping frames or respond to them
          *
-         * @param proxyPing whether to proxy websocket ping frames or respond to them
+         * @param handlePing whether to proxy websocket ping frames or respond to them
          * @return {@literal this}
          */
-        public final Builder proxyPing(boolean proxyPing) {
-            this.proxyPing = proxyPing;
+        public final Builder handlePing(boolean handlePing) {
+            this.handlePing = handlePing;
             return this;
         }
 
@@ -107,13 +107,13 @@ public interface WebSocketConfigurer {
             }
             Builder builder = (Builder) o;
             return maxFramePayloadLength == builder.maxFramePayloadLength &&
-                    proxyPing == builder.proxyPing &&
+                    handlePing == builder.handlePing &&
                     Objects.equals(protocols, builder.protocols);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(protocols, maxFramePayloadLength, proxyPing);
+            return Objects.hash(protocols, maxFramePayloadLength, handlePing);
         }
     }
 }

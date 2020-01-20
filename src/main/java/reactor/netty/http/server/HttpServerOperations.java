@@ -397,9 +397,9 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public Mono<Void> sendWebsocket(@Nullable String protocols,
-									int maxFramePayloadLength,
-									boolean proxyPing,
-									BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+			int maxFramePayloadLength,
+			boolean proxyPing,
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return withWebsocketSupport(uri(), protocols, maxFramePayloadLength, proxyPing, websocketHandler);
 	}
 
@@ -407,7 +407,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public Mono<Void> sendWebsocket(
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
 			WebSocketConfigurer configurer) {
-		return withWebsocketSupport(uri(), configurer.getProtocols(), configurer.getMaxFramePayloadLength(), configurer.isProxyPing(), websocketHandler);
+		return withWebsocketSupport(uri(), configurer.getProtocols(), configurer.getMaxFramePayloadLength(), configurer.isHandlePing(), websocketHandler);
 	}
 
 	@Override
