@@ -291,12 +291,12 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 * @deprecated Use {@link #ws(String, BiFunction, WebSocketConfigurer)}
 	 */
-    @Deprecated
-    default HttpServerRoutes ws(String path,
+	@Deprecated
+	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			@Nullable String protocols) {
 		return ws(HttpPredicate.get(path), handler, protocols);
-    }
+	}
 
 	/**
 	 * Listens for websocket with the given route predicate to invoke the matching I/O handler.
@@ -307,12 +307,12 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 * @deprecated Use {@link #ws(Predicate, BiFunction, WebSocketConfigurer)}
 	 */
-    @Deprecated
-    default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
+	@Deprecated
+	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			@Nullable String protocols) {
 		return ws(condition, handler, protocols, 65536);
-    }
+	}
 
 	/**
 	 * Listens for websocket with the given route predicate to invoke the matching handler.
@@ -324,27 +324,27 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 * @deprecated Use {@link #ws(Predicate, BiFunction, WebSocketConfigurer)}
 	 */
-    @Deprecated
-    default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
+	@Deprecated
+	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			@Nullable String protocols,
 			int maxFramePayloadLength) {
 		return ws(condition, handler, protocols, maxFramePayloadLength, false);
-    }
+	}
 
-    /**
-     * Listens for websocket with the given route predicate to invoke the matching handler.
-     *
-     * @param condition a predicate given each inbound request
-     * @param handler an I/O handler to invoke for the given condition
-     * @param protocols sub-protocol to use in websocket handshake signature
-     * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
-     * @param proxyPing whether to proxy websocket ping frames or respond to them
+	/**
+	 * Listens for websocket with the given route predicate to invoke the matching handler.
+	 *
+	 * @param condition a predicate given each inbound request
+	 * @param handler an I/O handler to invoke for the given condition
+	 * @param protocols sub-protocol to use in websocket handshake signature
+	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
+	 * @param proxyPing whether to proxy websocket ping frames or respond to them
 	 * @return this {@link HttpServerRoutes}
 	 * @deprecated Use {@link #ws(Predicate, BiFunction, WebSocketConfigurer)}
 	 */
-    @Deprecated
-    default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
+	@Deprecated
+	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
 			@Nullable String protocols,
 			int maxFramePayloadLength,
@@ -357,26 +357,25 @@ public interface HttpServerRoutes extends
             }
             return resp.sendNotFound();
         });
-    }
+	}
 
-    /**
-     * Listens for websocket on the passed path to be used as a routing condition. Incoming
-     * connections will query the internal registry to invoke the matching handler.
-     * <p>Additional regex matching is available e.g. "/test/{param}".
-     * Params are resolved using {@link HttpServerRequest#param(CharSequence)}
-     * They are NOT accessible in the handler provided as parameter.</p>
-     *
-     * @param path The websocket path used by clients
-     * @param handler an I/O handler to invoke for the given condition
-     * @param configurer {@link WebSocketConfigurer} for websocket configuration
-     *
-     * @return this {@link HttpServerRoutes}
-     */
-    default HttpServerRoutes ws(String path,
+	/**
+	 * Listens for websocket on the passed path to be used as a routing condition. Incoming
+	 * connections will query the internal registry to invoke the matching handler.
+	 * <p>Additional regex matching is available e.g. "/test/{param}".
+	 * Params are resolved using {@link HttpServerRequest#param(CharSequence)}
+	 * They are NOT accessible in the handler provided as parameter.</p>
+	 *
+	 * @param path The websocket path used by clients
+	 * @param handler an I/O handler to invoke for the given condition
+	 * @param configurer {@link WebSocketConfigurer} for websocket configuration
+	 * @return this {@link HttpServerRoutes}
+	 */
+	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
 			WebSocketConfigurer configurer) {
-        return ws(HttpPredicate.get(path), handler, configurer);
-    }
+		return ws(HttpPredicate.get(path), handler, configurer);
+	}
 
 	/**
 	 * Listens for websocket with the given route predicate to invoke the matching handler.
@@ -384,7 +383,6 @@ public interface HttpServerRoutes extends
 	 * @param condition a predicate given each inbound request
 	 * @param handler an I/O handler to invoke for the given condition
 	 * @param configurer {@link WebSocketConfigurer} for websocket configuration
-	 *
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
