@@ -302,8 +302,8 @@ public class Application {
 
 == Connection Pool
 
-By default, the `TCP` client uses a "`fixed`" connection pool with `500` as the maximum number of the channels and
-`45s` as the acquisition timeout.
+By default, the `TCP` client uses a "`fixed`" connection pool with `500` as the maximum number of the channels,
+`45s` as the pending acquire timeout and `1000` as the maximum number of the registered requests for acquire to keep in the pending queue.
 This means that the implementation creates a new channel if someone tries to acquire a channel but none is in the pool.
 When the maximum number of the channels in the pool is reached, new tries to acquire a channel are delayed
 until a channel is returned to the pool again.
