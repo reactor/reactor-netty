@@ -924,7 +924,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue460() {
-		DisposableServer server =
+		httpServer =
 				HttpServer.create()
 				          .port(0)
 				          .host("::1")
@@ -934,7 +934,7 @@ public class WebsocketTest {
 
 		HttpClient httpClient =
 				HttpClient.create()
-				          .addressSupplier(server::address)
+				          .addressSupplier(httpServer::address)
 				          .wiretap(true)
 				          .headers(h -> h.add(HttpHeaderNames.HOST, "[::1"));
 
@@ -942,8 +942,6 @@ public class WebsocketTest {
 		                              .connect())
 		                              .expectError()
 		                              .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 	@Test
@@ -1375,7 +1373,7 @@ public class WebsocketTest {
 
 		ReplayProcessor<String> someConsumer = ReplayProcessor.create();
 
-		DisposableServer server =
+		httpServer =
 				HttpServer.create()
 				          .port(0)
 				          .wiretap(true)
@@ -1398,7 +1396,7 @@ public class WebsocketTest {
 		                          .map(i -> Integer.toString(i));
 
 		HttpClient.create()
-		          .port(server.port())
+		          .port(httpServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1414,7 +1412,5 @@ public class WebsocketTest {
 		StepVerifier.create(clientFlux)
 		            .expectNextCount(10)
 		            .verifyComplete();
-
-		server.disposeNow();
 	}
 }
