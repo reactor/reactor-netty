@@ -18,9 +18,12 @@ package reactor.netty.http.server;
 import java.net.InetSocketAddress;
 import java.util.Optional;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -30,7 +33,7 @@ import reactor.netty.ConnectionObserver;
 
 import static reactor.netty.ReactorNetty.format;
 
-final class Http2StreamBridgeHandler extends ChannelInboundHandlerAdapter {
+final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
 	final boolean             readForwardHeaders;
 	Boolean                   secured;
@@ -86,4 +89,17 @@ final class Http2StreamBridgeHandler extends ChannelInboundHandlerAdapter {
 		ctx.fireChannelRead(msg);
 	}
 
+
+	@Override
+	@SuppressWarnings("FutureReturnValueIgnored")
+	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+		if (msg instanceof ByteBuf) {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
+		}
+		else {
+			//"FutureReturnValueIgnored" this is deliberate
+			ctx.write(msg, promise);
+		}
+	}
 }
