@@ -165,7 +165,8 @@ public interface ConnectionProvider extends Disposable {
 	/**
 	 * Build a {@link ConnectionProvider} to cache and reuse a fixed maximum number of
 	 * {@link Connection}. Further connections will be pending acquisition depending on
-	 * pendingAcquireTimeout.
+	 * pendingAcquireTime. The maximum number of connections is for the connections in a single
+	 * connection pool, where a connection pool corresponds to a concrete remote host.
 	 */
 	final class Builder {
 
@@ -214,10 +215,10 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
-		 * Set the options to use for configuring {@link ConnectionProvider} maximum connections.
+		 * Set the options to use for configuring {@link ConnectionProvider} maximum connections per connection pool.
 		 * Default to {@link #DEFAULT_POOL_MAX_CONNECTIONS}.
 		 *
-		 * @param maxConnections the maximum number of connections before start pending
+		 * @param maxConnections the maximum number of connections (per connection pool) before start pending
 		 * @return {@literal this}
 		 * @throws IllegalArgumentException if maxConnections is negative
 		 */
