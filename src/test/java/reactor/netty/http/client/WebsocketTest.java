@@ -1166,4 +1166,55 @@ public class WebsocketTest {
 		scheduler.dispose();
 	}
 
+	@Test
+	public void testIssue970() {
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .compress(true)
+				          .compress(2048)
+				          .wiretap(true)
+				          .route(r -> r.ws("/ws", (in, out) -> out.sendString(Mono.just("test"))))
+				          .bindNow();
+
+		AtomicBoolean clientHandler = new AtomicBoolean();
+		HttpClient client =
+				HttpClient.create()
+				          .addressSupplier(httpServer::address)
+				          .wiretap(true);
+
+		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
+		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
+				(in, out) -> {
+				    in.withConnection(conn ->
+				        clientHandler.set(conn.channel()
+				                              .pipeline()
+				                              .get(perMessageDeflateEncoder) != null)
+				    );
+
+				    String header = in.headers()
+				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+				    return in.receive()
+				             .aggregate()
+				             .asString()
+				             .zipWith(Mono.just(header == null ? "null" : header));
+				};
+
+		StepVerifier.create(client.websocket()
+		                          .uri("/ws")
+		                          .handle(receiver))
+		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+		assertThat(clientHandler.get()).isFalse();
+
+		StepVerifier.create(client.compress(true)
+		                          .websocket()
+		                          .uri("/ws")
+		                          .handle(receiver))
+		            .expectNextMatches(t -> "test".equals(t.getT1()) && !"null".equals(t.getT2()))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+		assertThat(clientHandler.get()).isTrue();
+	}
 }

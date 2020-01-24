@@ -93,7 +93,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			       .set(replaced.nettyRequest.headers());
 
 			if (channel().pipeline()
-			             .get(NettyPipeline.CompressionHandler) != null) {
+			             .get(NettyPipeline.CompressionHandler) != null || compressionPredicate != null) {
 				removeHandler(NettyPipeline.CompressionHandler);
 
 				WebSocketServerCompressionHandler wsServerCompressionHandler =
