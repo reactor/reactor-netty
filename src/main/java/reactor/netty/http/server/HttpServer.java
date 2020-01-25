@@ -309,6 +309,20 @@ public abstract class HttpServer {
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer metrics(boolean metricsEnabled) {
+		return metrics(metricsEnabled, reactor.netty.Metrics.MAX_URI_TAGS);
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpServer}
+	 * and the maximum number of uri tags allowed on the http server metrics.
+	 * All generated metrics are registered in the Micrometer MeterRegistry,
+	 * assuming Micrometer is on the classpath.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param maxUriTags maximum number of uri tags allowed on metrics
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer metrics(boolean metricsEnabled, int maxUriTags) {
 		if (metricsEnabled) {
 			if (!Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
@@ -318,7 +332,7 @@ public abstract class HttpServer {
 
 			return tcpConfiguration(tcpServer ->
 					tcpServer.bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b,
-							MicrometerHttpServerMetricsRecorder.INSTANCE)));
+							new MicrometerHttpServerMetricsRecorder(maxUriTags))));
 		}
 		else {
 			return tcpConfiguration(tcpServer -> tcpServer.bootstrap(BootstrapHandlers::removeMetricsSupport));

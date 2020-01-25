@@ -35,7 +35,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		this(Metrics.MAX_URI_TAGS);
 	}
 
-	public MicrometerHttpServerMetricsRecorder(int maxLabels) {
+	MicrometerHttpServerMetricsRecorder(int maxLabels) {
 		super("reactor.netty.http.server", "http", maxLabels);
 	}
 
