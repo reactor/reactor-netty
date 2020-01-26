@@ -1105,7 +1105,8 @@ public class HttpServerTests {
 			                                  .then(out.sendClose(4404, "test"))
 			                                  .then(in.receiveCloseStatus()
 			                                          .subscribeWith(statusServer)
-			                                          .then())))
+			                                          .then())
+									   ))
 		                               .wiretap(true)
 		                               .bindNow();
 

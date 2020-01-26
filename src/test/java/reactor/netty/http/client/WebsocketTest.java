@@ -526,8 +526,7 @@ public class WebsocketTest {
 	public void testMaxFramePayloadLengthSuccess() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901")),
-									   WebSocketConfigurer.builder().build()))
+		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901"))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -879,7 +878,8 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
+				              res.sendWebsocket((in, out) ->
+								  out.sendString(Mono.just("test"))))
 				          .wiretap(true)
 				          .bindNow();
 
