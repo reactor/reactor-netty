@@ -26,6 +26,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.HttpInfos;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 

@@ -52,7 +52,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.WebSocketConfigurer;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
@@ -86,8 +86,7 @@ public class WebsocketTest {
 	public void simpleTest() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
-									   WebSocketConfigurer.builder().build()))
+		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -116,8 +115,7 @@ public class WebsocketTest {
 				              if (!in.requestHeaders().contains("Authorization")) {
 				                  return out.status(401);
 				              } else {
-				                  return out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
-										  WebSocketConfigurer.builder().build());
+				                  return out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")));
 				              }
 				          })
 				          .wiretap(true)
@@ -146,8 +144,7 @@ public class WebsocketTest {
 		                               (i, o) -> o.sendString(
 		                                                  Mono.just("test")
 		                                                      .delayElement(Duration.ofMillis(100))
-		                                                      .repeat()),
-									   WebSocketConfigurer.builder().build()))
+		                                                      .repeat())))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -191,8 +188,7 @@ public class WebsocketTest {
 				                                                 .publishOn(Schedulers.single())
 				                                                 .doOnNext(s -> serverRes.incrementAndGet())
 				                                                 .map(it -> it + ' ' + req.param("param") + '!')
-				                                                 .log("server-reply")),
-												WebSocketConfigurer.builder().build());
+				                                                 .log("server-reply")));
 				          }))
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(5));
@@ -243,8 +239,7 @@ public class WebsocketTest {
 		                               (i, o) -> o.sendByteArray(
 		                                                  Mono.just("test".getBytes(Charset.defaultCharset()))
 		                                                      .delayElement(Duration.ofMillis(100))
-		                                                      .repeat()),
-									   WebSocketConfigurer.builder().build()))
+		                                                      .repeat())))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -293,8 +288,7 @@ public class WebsocketTest {
 		                               i.receive()
 		                                .asString()
 		                                .take(c)
-		                                .subscribeWith(server)),
-									   WebSocketConfigurer.builder().build()))
+		                                .subscribeWith(server))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -321,8 +315,7 @@ public class WebsocketTest {
 	public void simpleSubprotocolServerNoSubprotocol() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
-									   WebSocketConfigurer.builder().build()))
+		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -420,8 +413,7 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
-		                               Mono.just("SERVER:" + o.selectedSubprotocol())),
-									   WebSocketConfigurer.builder().build()))
+		                               Mono.just("SERVER:" + o.selectedSubprotocol()))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -512,8 +504,7 @@ public class WebsocketTest {
 	public void testMaxFramePayloadLengthFailed() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901")),
-									   WebSocketConfigurer.builder().build()))
+		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("12345678901"))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -611,8 +602,7 @@ public class WebsocketTest {
 		                               (i, o) -> o.sendString(
 		                                                  Mono.just("test")
 		                                                      .delayElement(Duration.ofMillis(100))
-		                                                      .repeat()),
-									   WebSocketConfigurer.builder().build()))
+		                                                      .repeat())))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -649,8 +639,7 @@ public class WebsocketTest {
 				          .port(0)
 				          .handle((req, res) ->
 				                  res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
-				                                                                  .doOnNext(WebSocketFrame::retain)),
-										  WebSocketConfigurer.builder().build()))
+				                                                                  .doOnNext(WebSocketFrame::retain))))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -679,8 +668,7 @@ public class WebsocketTest {
 				          .port(0)
 				          .handle((req, res) ->
 				                  res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
-				                                                    .sendObject(new CloseWebSocketFrame()),
-										  WebSocketConfigurer.builder().build()))
+				                                                    .sendObject(new CloseWebSocketFrame())))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -737,7 +725,7 @@ public class WebsocketTest {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((req, res) -> res.sendWebsocket(handler, WebSocketConfigurer.builder().build()))
+				          .handle((req, res) -> res.sendWebsocket(handler))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -770,8 +758,7 @@ public class WebsocketTest {
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) ->
 				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
-				                                        .map(l -> l + "")),
-									  WebSocketConfigurer.builder().build()))
+				                                        .map(l -> l + ""))))
 				          .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(3);
@@ -832,8 +819,7 @@ public class WebsocketTest {
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) ->
 				                     out.sendString(Flux.interval(Duration.ofSeconds(1))
-				                                        .map(l -> l + "")),
-									  WebSocketConfigurer.builder().build()))
+				                                        .map(l -> l + ""))))
 				          .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(3);
@@ -893,8 +879,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test")),
-									  WebSocketConfigurer.builder().build()))
+				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -948,8 +933,7 @@ public class WebsocketTest {
 				          .port(0)
 				          .host("::1")
 				          .wiretap(true)
-				          .handle((req, res) -> res.sendWebsocket((in, out) -> Mono.never(),
-								  WebSocketConfigurer.builder().build()))
+				          .handle((req, res) -> res.sendWebsocket((in, out) -> Mono.never()))
 				          .bindNow();
 
 		HttpClient httpClient =
@@ -993,7 +977,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .host("localhost")
 				          .port(0)
-				          .handle((req, res) -> res.sendWebsocket(fn, WebSocketConfigurer.builder().build()))
+				          .handle((req, res) -> res.sendWebsocket(fn))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -1016,8 +1000,7 @@ public class WebsocketTest {
 				          .port(0)
 				          .compress(true)
 				          .handle((req, res) ->
-				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test")),
-									  WebSocketConfigurer.builder().build()))
+				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -1068,8 +1051,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, res) ->
-				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test")),
-									  WebSocketConfigurer.builder().build()))
+				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -1118,8 +1100,7 @@ public class WebsocketTest {
 	public void firefoxConnectionTest() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .route(r -> r.ws("/ws", (in, out) -> out.sendString(Mono.just("test")),
-									   WebSocketConfigurer.builder().build()))
+		                       .route(r -> r.ws("/ws", (in, out) -> out.sendString(Mono.just("test"))))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -1160,7 +1141,7 @@ public class WebsocketTest {
 		                                          null)
 		                           , 500, TimeUnit.MILLISECONDS);
 		                           return out.sendString(Mono.just("test"));
-		                       }, WebSocketConfigurer.builder().build()))
+		                       }))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -1194,8 +1175,7 @@ public class WebsocketTest {
 				          .port(0)
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) -> out.sendObject(in.receiveFrames()
-				                                                              .doOnNext(WebSocketFrame::retain)),
-									  WebSocketConfigurer.builder().build()))
+				                                                              .doOnNext(WebSocketFrame::retain))))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -1246,7 +1226,7 @@ public class WebsocketTest {
 				                            .then(in.receiveFrames()
 				                                    .subscribeWith(incomingData)
 				                                    .then());
-				              }, WebSocketConfigurer.builder().build())
+				              })
 				          )
 				          .wiretap(true)
 				          .bindNow();
@@ -1283,7 +1263,7 @@ public class WebsocketTest {
 				                                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
 				                          .subscribeWith(incomingData)
-				                          .then()), WebSocketConfigurer.builder().build()))
+				                          .then())))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -1314,7 +1294,7 @@ public class WebsocketTest {
 				                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
 				                          .subscribeWith(incomingData)
-				                          .then()), WebSocketConfigurer.builder().build()))
+				                          .then())))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -1338,8 +1318,7 @@ public class WebsocketTest {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((req, resp) -> resp.sendWebsocket((i, o) -> i.receiveFrames().then(),
-								  WebSocketConfigurer.builder().build()))
+				          .handle((req, resp) -> resp.sendWebsocket((i, o) -> i.receiveFrames().then()))
 				          .wiretap(true)
 				          .bindNow();
 

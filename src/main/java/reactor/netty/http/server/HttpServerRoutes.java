@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -273,10 +274,10 @@ public interface HttpServerRoutes extends
      *
      * @return this {@link HttpServerRoutes}
      */
-    default HttpServerRoutes ws(String path,
+	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler) {
-        return ws(path, handler, WebSocketConfigurer.builder().build());
-    }
+		return ws(path, handler, WebSocketConfigurer.builder().build());
+	}
 
 	/**
 	 * Listens for websocket on the passed path to be used as a routing condition. Incoming
@@ -350,13 +351,13 @@ public interface HttpServerRoutes extends
 			int maxFramePayloadLength,
 			boolean proxyPing) {
 		return route(condition, (req, resp) -> {
-            if (req.requestHeaders()
-                    .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
-                HttpServerOperations ops = (HttpServerOperations) req;
-                return ops.withWebsocketSupport(req.uri(), protocols, maxFramePayloadLength, proxyPing, handler);
-            }
-            return resp.sendNotFound();
-        });
+			if (req.requestHeaders()
+					.containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
+				HttpServerOperations ops = (HttpServerOperations) req;
+				return ops.withWebsocketSupport(req.uri(), protocols, maxFramePayloadLength, proxyPing, handler);
+			}
+			return resp.sendNotFound();
+		});
 	}
 
 	/**

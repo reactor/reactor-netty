@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.netty.http.server;
+package reactor.netty.http.websocket;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -94,7 +94,7 @@ public interface WebSocketConfigurer {
          * @return builds new {@link WebSocketConfigurer}
          */
         public final WebSocketConfigurer build() {
-            return new WebsocketServerConfigurer(this);
+            return new WebsocketConfigurerImpl(this);
         }
 
         @Override

@@ -72,6 +72,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;

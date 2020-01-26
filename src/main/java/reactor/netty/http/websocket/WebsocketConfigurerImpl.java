@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.netty.http.server;
+package reactor.netty.http.websocket;
 
 import java.util.Objects;
 
@@ -23,12 +23,12 @@ import java.util.Objects;
  *
  * @author Dmitrii Borin
  */
-final class WebsocketServerConfigurer implements WebSocketConfigurer {
+final class WebsocketConfigurerImpl implements WebSocketConfigurer {
     private final String protocols;
     private final int maxFramePayloadLength;
     private final boolean proxyPing;
 
-    WebsocketServerConfigurer(WebSocketConfigurer.Builder builder) {
+    WebsocketConfigurerImpl(WebSocketConfigurer.Builder builder) {
         this.protocols = builder.protocols;
         this.maxFramePayloadLength = builder.maxFramePayloadLength;
         this.proxyPing = builder.handlePing;
@@ -54,10 +54,10 @@ final class WebsocketServerConfigurer implements WebSocketConfigurer {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof WebsocketServerConfigurer)) {
+        if (!(o instanceof WebsocketConfigurerImpl)) {
             return false;
         }
-        WebsocketServerConfigurer that = (WebsocketServerConfigurer) o;
+        WebsocketConfigurerImpl that = (WebsocketConfigurerImpl) o;
         return maxFramePayloadLength == that.maxFramePayloadLength &&
                 proxyPing == that.proxyPing &&
                 Objects.equals(protocols, that.protocols);

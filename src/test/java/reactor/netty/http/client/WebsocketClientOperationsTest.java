@@ -21,7 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.WebSocketConfigurer;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.test.StepVerifier;
 
 /**

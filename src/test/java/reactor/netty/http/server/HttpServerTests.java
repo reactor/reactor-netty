@@ -83,6 +83,7 @@ import reactor.netty.channel.AbortedException;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.PrematureCloseException;
+import reactor.netty.http.websocket.WebSocketConfigurer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
