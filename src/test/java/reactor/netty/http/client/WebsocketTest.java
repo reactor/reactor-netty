@@ -879,7 +879,7 @@ public class WebsocketTest {
 				          .port(0)
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) ->
-								  out.sendString(Mono.just("test"))))
+				                  out.sendString(Mono.just("test"))))
 				          .wiretap(true)
 				          .bindNow();
 
