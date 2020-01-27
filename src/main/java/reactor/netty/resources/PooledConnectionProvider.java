@@ -86,7 +86,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final long        maxIdleTime;
 	final long        maxLifeTime;
 	final PoolFactory poolFactory;
-	final boolean     lifo;
 
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
@@ -95,7 +94,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		this.acquireTimeout = builder.acquireTimeout.toMillis();
 		this.maxIdleTime = builder.maxIdleTime != null ? builder.maxIdleTime.toMillis() : -1;
 		this.maxLifeTime = builder.maxLifeTime != null ? builder.maxLifeTime.toMillis() : -1;
-		this.lifo = builder.lifo;
 		this.poolFactory = allocator -> {
 			PoolBuilder<PooledConnection, PoolConfig<PooledConnection>> pb =
 					PoolBuilder.from(allocator)
@@ -107,7 +105,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			if (maxConnections != MAX_CONNECTIONS_ELASTIC) {
 				pb = pb.sizeBetween(0, maxConnections);
 			}
-			return lifo ? pb.lifo() : pb.fifo();
+			return builder.leasingStrategy.apply(pb);
 		};
 	}
 
