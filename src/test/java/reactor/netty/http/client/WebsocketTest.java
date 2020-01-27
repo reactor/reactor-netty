@@ -924,7 +924,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue460() {
-		DisposableServer server =
+		httpServer =
 				HttpServer.create()
 				          .port(0)
 				          .host("::1")
@@ -934,7 +934,7 @@ public class WebsocketTest {
 
 		HttpClient httpClient =
 				HttpClient.create()
-				          .addressSupplier(server::address)
+				          .addressSupplier(httpServer::address)
 				          .wiretap(true)
 				          .headers(h -> h.add(HttpHeaderNames.HOST, "[::1"));
 
@@ -942,8 +942,6 @@ public class WebsocketTest {
 		                              .connect())
 		                              .expectError()
 		                              .verify(Duration.ofSeconds(30));
-
-		server.disposeNow();
 	}
 
 	@Test
@@ -1366,4 +1364,53 @@ public class WebsocketTest {
 		            .verify(Duration.ofSeconds(30));
 	}
 
+
+	@Test
+	public void testIssue967() {
+		Flux<String> somePublisher = Flux.range(1, 10)
+		                                 .map(i -> Integer.toString(i))
+		                                 .delayElements(Duration.ofMillis(50));
+
+		ReplayProcessor<String> someConsumer = ReplayProcessor.create();
+
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) ->
+				              res.sendWebsocket((in, out) ->
+				                  Mono.when(out.sendString(somePublisher),
+				                            in.receiveFrames()
+				                              .cast(TextWebSocketFrame.class)
+				                              .map(TextWebSocketFrame::text)
+				                              .publish()     // We want the connection alive even after takeUntil
+				                              .autoConnect() // which will trigger cancel
+				                              .takeUntil(msg -> msg.equals("5"))
+				                              .subscribeWith(someConsumer)
+				                              .then())))
+				          .bindNow();
+
+		ReplayProcessor<String> clientFlux = ReplayProcessor.create();
+
+		Flux<String> toSend = Flux.range(1, 10)
+		                          .map(i -> Integer.toString(i));
+
+		HttpClient.create()
+		          .port(httpServer.port())
+		          .wiretap(true)
+		          .websocket()
+		          .uri("/")
+		          .handle((in, out) ->
+		              Mono.when(out.sendString(toSend),
+		                        in.receiveFrames()
+		                          .cast(TextWebSocketFrame.class)
+		                          .map(TextWebSocketFrame::text)
+		                          .subscribeWith(clientFlux)
+		                          .then()))
+		          .subscribe();
+
+		StepVerifier.create(clientFlux)
+		            .expectNextCount(10)
+		            .verifyComplete();
+	}
 }

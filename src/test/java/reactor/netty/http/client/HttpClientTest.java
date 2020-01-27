@@ -98,7 +98,6 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static reactor.netty.resources.ConnectionProvider.MAX_CONNECTIONS_ELASTIC;
 
 /**
  * @author Stephane Maldini
@@ -1393,7 +1392,7 @@ public class HttpClientTest {
 				          .bindNow(Duration.ofSeconds(30));
 
 		ConnectionProvider connectionProvider =
-				ConnectionProvider.create("testChannelGroupClosesAllConnections", MAX_CONNECTIONS_ELASTIC);
+				ConnectionProvider.create("testChannelGroupClosesAllConnections", Integer.MAX_VALUE);
 
 		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
 
@@ -1848,7 +1847,7 @@ public class HttpClientTest {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionIdleTimeFixedPool")
 				                  .maxConnections(1)
-				                  .acquireTimeout(Duration.ofMillis(100))
+				                  .pendingAcquireTimeout(Duration.ofMillis(100))
 				                  .maxIdleTime(Duration.ofMillis(10))
 				                  .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
@@ -1859,7 +1858,7 @@ public class HttpClientTest {
 	public void testConnectionIdleTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionIdleTimeElasticPool")
-				                  .maxConnections(MAX_CONNECTIONS_ELASTIC)
+				                  .maxConnections(Integer.MAX_VALUE)
 				                  .maxIdleTime(Duration.ofMillis(10))
 				                  .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
@@ -1871,7 +1870,7 @@ public class HttpClientTest {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionNoIdleTimeFixedPool")
 				                  .maxConnections(1)
-				                  .acquireTimeout(Duration.ofMillis(100))
+				                  .pendingAcquireTimeout(Duration.ofMillis(100))
 				                  .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
@@ -1880,7 +1879,7 @@ public class HttpClientTest {
 	@Test
 	public void testConnectionNoIdleTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
-				ConnectionProvider.create("testConnectionNoIdleTimeElasticPool", MAX_CONNECTIONS_ELASTIC);
+				ConnectionProvider.create("testConnectionNoIdleTimeElasticPool", Integer.MAX_VALUE);
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
 	}
@@ -1916,7 +1915,7 @@ public class HttpClientTest {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionLifeTimeFixedPool")
 				                  .maxConnections(1)
-				                  .acquireTimeout(Duration.ofMillis(100))
+				                  .pendingAcquireTimeout(Duration.ofMillis(100))
 				                  .maxLifeTime(Duration.ofMillis(30))
 				                  .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
@@ -1927,7 +1926,7 @@ public class HttpClientTest {
 	public void testConnectionLifeTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionNoLifeTimeElasticPool")
-				                  .maxConnections(MAX_CONNECTIONS_ELASTIC)
+				                  .maxConnections(Integer.MAX_VALUE)
 				                  .maxLifeTime(Duration.ofMillis(30))
 				                  .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
@@ -1939,7 +1938,7 @@ public class HttpClientTest {
 		ConnectionProvider provider =
 				ConnectionProvider.builder("testConnectionNoLifeTimeFixedPool")
 				                  .maxConnections(1)
-				                  .acquireTimeout(Duration.ofMillis(100))
+				                  .pendingAcquireTimeout(Duration.ofMillis(100))
 				                  .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
@@ -1948,7 +1947,7 @@ public class HttpClientTest {
 	@Test
 	public void testConnectionNoLifeTimeElasticPool() throws Exception {
 		ConnectionProvider provider =
-				ConnectionProvider.create("testConnectionNoLifeTimeElasticPool", MAX_CONNECTIONS_ELASTIC);
+				ConnectionProvider.create("testConnectionNoLifeTimeElasticPool", Integer.MAX_VALUE);
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
 	}
