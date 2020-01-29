@@ -17,7 +17,6 @@ package reactor.netty.http.server;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import javax.annotation.Nullable;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -27,8 +26,11 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.HttpInfos;
+import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
+
+import javax.annotation.Nullable;
 
 /**
  *
@@ -159,7 +161,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
 	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(null, websocketHandler);
+		return sendWebsocket(websocketHandler, WebSocketSpec.builder().build());
 	}
 
 	/**
@@ -170,7 +172,9 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @param proxyPing whether to proxy websocket ping frames or respond to them
 	 * @param websocketHandler the I/O handler for websocket transport
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
+	 * @deprecated Use {@link #sendWebsocket(BiFunction, WebSocketSpec)}
 	 */
+	@Deprecated
 	default Mono<Void> sendWebsocket(boolean proxyPing,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return sendWebsocket(null, 65536, proxyPing, websocketHandler);
@@ -183,25 +187,28 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 *
 	 * @param protocols optional sub-protocol
 	 * @param websocketHandler the I/O handler for websocket transport
-	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
+	 * @deprecated Use {@link #sendWebsocket(BiFunction, WebSocketSpec)}
 	 */
+	@Deprecated
 	default Mono<Void> sendWebsocket(@Nullable String protocols,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return sendWebsocket(protocols, 65536, websocketHandler);
 	}
 
-	 /**
+	/**
 	 * Upgrades the connection to websocket with optional subprotocol(s). A {@link Mono}
-	  * completing when the upgrade is confirmed, then the provided callback is invoked,
-	  * if the upgrade is not successful the returned {@link Mono} fails.
+	 * completing when the upgrade is confirmed, then the provided callback is invoked,
+	 * if the upgrade is not successful the returned {@link Mono} fails.
 	 *
 	 * @param protocols optional sub-protocol
 	 * @param maxFramePayloadLength maximum allowable frame payload length
 	 * @param websocketHandler the I/O handler for websocket transport
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
+	 * @deprecated Use {@link #sendWebsocket(BiFunction, WebSocketSpec)}
 	 */
+	@Deprecated
 	default Mono<Void> sendWebsocket(@Nullable String protocols,
 			int maxFramePayloadLength,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
@@ -219,12 +226,26 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @param websocketHandler the I/O handler for websocket transport
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
+	 * @deprecated Use {@link #sendWebsocket(BiFunction, WebSocketSpec)}
 	 */
+	@Deprecated
 	Mono<Void> sendWebsocket(@Nullable String protocols,
 			int maxFramePayloadLength,
 			boolean proxyPing,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler);
 
+	/**
+	 * Upgrades the connection to websocket. A {@link Mono} completing when the upgrade
+	 * is confirmed, then the provided callback is invoked, if the upgrade is not
+	 * successful the returned {@link Mono} fails.
+	 *
+	 * @param websocketHandler the I/O handler for websocket transport
+	 * @param webSocketSpec {@link WebSocketSpec} for websocket configuration
+	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
+	 */
+	Mono<Void> sendWebsocket(
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
+			WebSocketSpec webSocketSpec);
 
 	/**
 	 * Adds "text/event-stream" content-type for Server-Sent Events

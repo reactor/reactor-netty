@@ -21,6 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.test.StepVerifier;
 
 /**
@@ -54,7 +55,8 @@ public class WebsocketClientOperationsTest {
 						if (token >= 400) {
 							return res.status(token).send();
 						}
-						return res.sendWebsocket(serverSubprotocol, (i, o) -> o.sendString(Mono.just("test")));
+						return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
+								WebSocketSpec.builder().protocols(serverSubprotocol).build());
 					})
 			)
 		                                  .wiretap(true)
@@ -78,15 +80,6 @@ public class WebsocketClientOperationsTest {
 		            .verify();
 
 		httpServer.disposeNow();
-	}
-
-	private Mono<HttpClientRequest> doLoginFirst(Mono<HttpClientRequest> request, int port) {
-		return Mono.zip(request, login(port))
-		           .map(tuple -> {
-		               HttpClientRequest req = tuple.getT1();
-		               req.addHeader("Authorization", tuple.getT2());
-		               return req;
-		           });
 	}
 
 	private Mono<String> login(int port) {
