@@ -127,7 +127,7 @@ public interface ConnectionProvider extends Disposable {
 	 * @param name the channel pool map name
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and grow on demand {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
+	 * @deprecated as of 0.9.5. Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider elastic(String name) {
@@ -145,7 +145,7 @@ public interface ConnectionProvider extends Disposable {
 	 *                    if {@code NULL} there is no max idle time
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and grow on demand {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
+	 * @deprecated as of 0.9.5. Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime) {
@@ -165,7 +165,7 @@ public interface ConnectionProvider extends Disposable {
 	 *                    if {@code NULL} there is no max life time
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and grow on demand {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
+	 * @deprecated as of 0.9.5. Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider elastic(String name, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
@@ -189,7 +189,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link #create(String)}
+	 * @deprecated as of 0.9.5. Use {@link #create(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name) {
@@ -209,7 +209,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link #create(String, int)}
+	 * @deprecated as of 0.9.5. Use {@link #create(String, int)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name, int maxConnections) {
@@ -230,7 +230,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
+	 * @deprecated as of 0.9.5. Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout) {
@@ -253,7 +253,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
+	 * @deprecated as of 0.9.5. Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime) {
@@ -278,7 +278,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
-	 * @deprecated Use {@link #builder(String)}
+	 * @deprecated as of 0.9.5. Use {@link #builder(String)}
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {

@@ -170,7 +170,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 * The quiet period will be {@code 2s} and the timeout will be {@code 15s}
 	 *
 	 * @return the Mono that represents the end of disposal
-	 * @deprecated Use {@link #_disposeLater(Duration, Duration)}
+	 * @deprecated as of 0.9.3. Use {@link #_disposeLater(Duration, Duration)}
 	 */
 	@Deprecated
 	protected Mono<Void> _disposeLater() {
