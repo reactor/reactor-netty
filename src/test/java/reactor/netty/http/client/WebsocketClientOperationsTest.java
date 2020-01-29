@@ -21,6 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.test.StepVerifier;
 
 /**
@@ -45,33 +46,32 @@ public class WebsocketClientOperationsTest {
 
 	private void failOnClientServerError(
 			int serverStatus, String serverSubprotocol, String clientSubprotocol) {
-		DisposableServer httpServer = HttpServer.create()
-		                                  .port(0)
-		                                  .route(
-			routes -> routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
-					.get("/ws", (req, res) -> {
-						int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
-						if (token >= 400) {
-							return res.status(token).send();
-						}
-						return res.sendWebsocket(serverSubprotocol, (i, o) -> o.sendString(Mono.just("test")));
-					})
-			)
-		                                  .wiretap(true)
-		                                  .bindNow();
+		DisposableServer httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .route(routes ->
+				              routes.post("/login", (req, res) -> res.status(serverStatus).sendHeaders())
+				                    .get("/ws", (req, res) -> {
+				                        int token = Integer.parseInt(req.requestHeaders().get("Authorization"));
+				                        if (token >= 400) {
+				                            return res.status(token).send();
+				                        }
+				                        return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
+				                                WebSocketSpec.builder().protocols(serverSubprotocol).build());
+				                    }))
+				          .wiretap(true)
+				          .bindNow();
 
 		Flux<String> response =
-			HttpClient.create()
-			          .port(httpServer.port())
-			          .wiretap(true)
-			          .headersWhen(h -> login(httpServer.port()).map(token -> h.set(
-					          "Authorization",
-					          token)))
-			          .websocket(clientSubprotocol)
-			          .uri("/ws")
-			          .handle((i, o) -> i.receive().asString())
-			          .log()
-			          .switchIfEmpty(Mono.error(new Exception()));
+				HttpClient.create()
+				          .port(httpServer.port())
+				          .wiretap(true)
+				          .headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
+				          .websocket(clientSubprotocol)
+				          .uri("/ws")
+				          .handle((i, o) -> i.receive().asString())
+				          .log()
+				          .switchIfEmpty(Mono.error(new Exception()));
 
 		StepVerifier.create(response)
 		            .expectError(WebSocketHandshakeException.class)
