@@ -17,21 +17,20 @@
 package reactor.netty.http.websocket;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
- * Configurer for websocket
+ * Wrapper for websocket configuration
  *
  * @author Dmitrii Borin
  */
-public interface WebSocketConfigurer {
+public interface WebSocketSpec {
 
     @Nullable
-    String getProtocols();
+    String protocols();
 
-    int getMaxFramePayloadLength();
+    int maxFramePayloadLength();
 
-    boolean isHandlePing();
+    boolean handlePing();
 
     /**
      * Create builder with default properties:<br>
@@ -39,7 +38,7 @@ public interface WebSocketConfigurer {
      * <br>
      * maxFramePayloadLength = 65536
      * <br>
-     * proxyPing = false
+     * handlePing = false
      *
      * @return {@link Builder}
      */
@@ -56,7 +55,8 @@ public interface WebSocketConfigurer {
         }
 
         /**
-         * Sets sub-protocol to use in websocket handshake signature
+         * Sets sub-protocol to use in websocket handshake signature.
+         * Null by default.
          *
          * @param protocols sub-protocol
          * @return {@literal this}
@@ -67,7 +67,8 @@ public interface WebSocketConfigurer {
         }
 
         /**
-         * Sets specifies a custom maximum allowable frame payload length
+         * Sets specifies a custom maximum allowable frame payload length.
+         * 65536 by default.
          *
          * @param maxFramePayloadLength maximum allowable frame payload length
          * @return {@literal this}
@@ -78,7 +79,8 @@ public interface WebSocketConfigurer {
         }
 
         /**
-         * Sets flag whether to proxy websocket ping frames or respond to them
+         * Sets flag whether to proxy websocket ping frames or respond to them.
+         * False by default.
          *
          * @param handlePing whether to proxy websocket ping frames or respond to them
          * @return {@literal this}
@@ -89,31 +91,12 @@ public interface WebSocketConfigurer {
         }
 
         /**
-         * Builds new {@link WebSocketConfigurer}
+         * Builds new {@link WebSocketSpec}
          *
-         * @return builds new {@link WebSocketConfigurer}
+         * @return builds new {@link WebSocketSpec}
          */
-        public final WebSocketConfigurer build() {
-            return new WebsocketConfigurerImpl(this);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o instanceof Builder)) {
-                return false;
-            }
-            Builder builder = (Builder) o;
-            return maxFramePayloadLength == builder.maxFramePayloadLength &&
-                    handlePing == builder.handlePing &&
-                    Objects.equals(protocols, builder.protocols);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(protocols, maxFramePayloadLength, handlePing);
+        public final WebSocketSpec build() {
+            return new WebsocketSpecImpl(this);
         }
     }
 }
