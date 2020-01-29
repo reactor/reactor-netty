@@ -17,6 +17,7 @@
 package reactor.netty.http.websocket;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Wrapper for websocket configuration
@@ -63,7 +64,7 @@ public interface WebSocketSpec {
 		 * @return {@literal this}
 		 */
 		public final Builder protocols(String protocols) {
-			this.protocols = protocols;
+			this.protocols = Objects.requireNonNull(protocols, "protocols");
 			return this;
 		}
 
@@ -75,6 +76,9 @@ public interface WebSocketSpec {
 		 * @return {@literal this}
 		 */
 		public final Builder maxFramePayloadLength(int maxFramePayloadLength) {
+			if (maxFramePayloadLength <= 0) {
+				throw new IllegalArgumentException("Max frame payload length value must be strictly positive");
+			}
 			this.maxFramePayloadLength = maxFramePayloadLength;
 			return this;
 		}
