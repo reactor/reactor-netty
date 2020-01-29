@@ -16,55 +16,35 @@
 
 package reactor.netty.http.websocket;
 
-import java.util.Objects;
-
 /**
  * Configurer implementation for {@link WebSocketSpec}
  *
  * @author Dmitrii Borin
+ * @since 0.9.5
  */
 final class WebsocketSpecImpl implements WebSocketSpec {
-    private final String protocols;
-    private final int maxFramePayloadLength;
-    private final boolean proxyPing;
+	private final String protocols;
+	private final int maxFramePayloadLength;
+	private final boolean proxyPing;
 
-    WebsocketSpecImpl(WebSocketSpec.Builder builder) {
-        this.protocols = builder.protocols;
-        this.maxFramePayloadLength = builder.maxFramePayloadLength;
-        this.proxyPing = builder.handlePing;
-    }
+	WebsocketSpecImpl(WebSocketSpec.Builder builder) {
+		this.protocols = builder.protocols;
+		this.maxFramePayloadLength = builder.maxFramePayloadLength;
+		this.proxyPing = builder.handlePing;
+	}
 
-    @Override
-    public final String protocols() {
-        return protocols;
-    }
+	@Override
+	public final String protocols() {
+		return protocols;
+	}
 
-    @Override
-    public final int maxFramePayloadLength() {
-        return maxFramePayloadLength;
-    }
+	@Override
+	public final int maxFramePayloadLength() {
+		return maxFramePayloadLength;
+	}
 
-    @Override
-    public final boolean handlePing() {
-        return proxyPing;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof WebsocketSpecImpl)) {
-            return false;
-        }
-        WebsocketSpecImpl that = (WebsocketSpecImpl) o;
-        return maxFramePayloadLength == that.maxFramePayloadLength &&
-                proxyPing == that.proxyPing &&
-                Objects.equals(protocols, that.protocols);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(protocols, maxFramePayloadLength, proxyPing);
-    }
+	@Override
+	public final boolean handlePing() {
+		return proxyPing;
+	}
 }

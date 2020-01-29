@@ -22,81 +22,82 @@ import javax.annotation.Nullable;
  * Wrapper for websocket configuration
  *
  * @author Dmitrii Borin
+ * @since 0.9.5
  */
 public interface WebSocketSpec {
 
-    @Nullable
-    String protocols();
+	@Nullable
+	String protocols();
 
-    int maxFramePayloadLength();
+	int maxFramePayloadLength();
 
-    boolean handlePing();
+	boolean handlePing();
 
-    /**
-     * Create builder with default properties:<br>
-     * protocols = null
-     * <br>
-     * maxFramePayloadLength = 65536
-     * <br>
-     * handlePing = false
-     *
-     * @return {@link Builder}
-     */
-    static Builder builder() {
-        return new Builder();
-    }
+	/**
+	 * Create builder with default properties:<br>
+	 * protocols = null
+	 * <br>
+	 * maxFramePayloadLength = 65536
+	 * <br>
+	 * handlePing = false
+	 *
+	 * @return {@link Builder}
+	 */
+	static Builder builder() {
+		return new Builder();
+	}
 
-    final class Builder {
-        String protocols;
-        int maxFramePayloadLength = 65536;
-        boolean handlePing = false;
+	final class Builder {
+		String protocols;
+		int maxFramePayloadLength = 65536;
+		boolean handlePing = false;
 
-        private Builder() {
-        }
+		private Builder() {
+		}
 
-        /**
-         * Sets sub-protocol to use in websocket handshake signature.
-         * Null by default.
-         *
-         * @param protocols sub-protocol
-         * @return {@literal this}
-         */
-        public final Builder protocols(@Nullable String protocols) {
-            this.protocols = protocols;
-            return this;
-        }
+		/**
+		 * Sets sub-protocol to use in websocket handshake signature.
+		 * Null by default.
+		 *
+		 * @param protocols sub-protocol
+		 * @return {@literal this}
+		 */
+		public final Builder protocols(String protocols) {
+			this.protocols = protocols;
+			return this;
+		}
 
-        /**
-         * Sets specifies a custom maximum allowable frame payload length.
-         * 65536 by default.
-         *
-         * @param maxFramePayloadLength maximum allowable frame payload length
-         * @return {@literal this}
-         */
-        public final Builder maxFramePayloadLength(int maxFramePayloadLength) {
-            this.maxFramePayloadLength = maxFramePayloadLength;
-            return this;
-        }
+		/**
+		 * Sets specifies a custom maximum allowable frame payload length.
+		 * 65536 by default.
+		 *
+		 * @param maxFramePayloadLength maximum allowable frame payload length
+		 * @return {@literal this}
+		 */
+		public final Builder maxFramePayloadLength(int maxFramePayloadLength) {
+			this.maxFramePayloadLength = maxFramePayloadLength;
+			return this;
+		}
 
-        /**
-         * Sets flag whether to proxy websocket ping frames or respond to them.
-         * False by default.
-         *
-         * @param handlePing whether to proxy websocket ping frames or respond to them
-         * @return {@literal this}
-         */
-        public final Builder handlePing(boolean handlePing) {
-            this.handlePing = handlePing;
-            return this;
-        }
+		/**
+		 * Sets flag whether to proxy websocket ping frames or respond to them.
+		 * False by default.
+		 *
+		 * @param handlePing whether to proxy websocket ping frames or respond to them
+		 * @return {@literal this}
+		 */
+		public final Builder handlePing(boolean handlePing) {
+			this.handlePing = handlePing;
+			return this;
+		}
 
-        /**
-         * Builds new {@link WebSocketSpec}
-         *
-         * @return builds new {@link WebSocketSpec}
-         */
-        public final WebSocketSpec build() {
-            return new WebsocketSpecImpl(this);
-        }
-    }
+		/**
+		 * Builds new {@link WebSocketSpec}
+		 *
+		 * @return builds new {@link WebSocketSpec}
+		 */
+		public final WebSocketSpec build() {
+			return new WebsocketSpecImpl(this);
+		}
+	}
 }

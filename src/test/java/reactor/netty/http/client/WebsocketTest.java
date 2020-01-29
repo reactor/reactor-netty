@@ -337,7 +337,7 @@ public class WebsocketTest {
 		                               (i, o) -> {
 		                                   return o.sendString(Mono.just("test"));
 		                               },
-									   WebSocketSpec.builder().protocols("protoA,protoB").build()))
+		                               WebSocketSpec.builder().protocols("protoA,protoB").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -358,7 +358,7 @@ public class WebsocketTest {
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
 		                               (i, o) -> o.sendString(Mono.just("test")),
-									   WebSocketSpec.builder().protocols("SUBPROTOCOL").build()))
+		                               WebSocketSpec.builder().protocols("SUBPROTOCOL").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -386,7 +386,7 @@ public class WebsocketTest {
 		                       .handle((in, out) -> out.sendWebsocket(
 		                               (i, o) -> o.sendString(
 		                                       Mono.just("SERVER:" + o.selectedSubprotocol())),
-									   WebSocketSpec.builder().protocols("NOT, Common").build()))
+		                               WebSocketSpec.builder().protocols("NOT, Common").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -440,7 +440,7 @@ public class WebsocketTest {
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
 		                               Mono.just("SERVER:" + o.selectedSubprotocol())),
-									   WebSocketSpec.builder().protocols("proto2,*").build()))
+		                               WebSocketSpec.builder().protocols("proto2,*").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -478,7 +478,8 @@ public class WebsocketTest {
 		                                           .asString()
 		                                           .doOnNext(System.err::println)
 		                                           .then();
-		                               }, WebSocketSpec.builder().protocols("not,proto1").build()))
+		                               },
+		                               WebSocketSpec.builder().protocols("not,proto1").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -567,7 +568,7 @@ public class WebsocketTest {
 				                               .map(byteBuf ->
 				                                   byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 				                               .map(TextWebSocketFrame::new)),
-								  WebSocketSpec.builder().maxFramePayloadLength(maxFramePayloadLength).build()))
+				              WebSocketSpec.builder().maxFramePayloadLength(maxFramePayloadLength).build()))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -1347,7 +1348,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .port(0)
 				          .handle((req, resp) -> resp.sendWebsocket((i, o) -> i.receiveFrames().then(),
-								  WebSocketSpec.builder().handlePing(true).build()))
+				                  WebSocketSpec.builder().handlePing(true).build()))
 				          .wiretap(true)
 				          .bindNow();
 
