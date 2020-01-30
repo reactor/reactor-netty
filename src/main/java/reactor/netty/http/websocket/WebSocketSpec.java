@@ -22,16 +22,39 @@ import javax.annotation.Nullable;
  * Wrapper for websocket configuration
  *
  * @author Dmitrii Borin
+ * @author Violeta Georgieva
  * @since 0.9.5
  */
 public interface WebSocketSpec {
 
+	/**
+	 * Returns the configured sub protocols.
+	 *
+	 * @return returns the configured sub protocols.
+	 */
 	@Nullable
 	String protocols();
 
+	/**
+	 * Returns the configured maximum allowable frame payload length.
+	 *
+	 * @return returns the configured maximum allowable frame payload length.
+	 */
 	int maxFramePayloadLength();
 
+	/**
+	 * Returns whether to proxy websocket PING frames or respond to them.
+	 *
+	 * @return returns whether to proxy websocket PING frames or respond to them.
+	 */
 	boolean handlePing();
+
+	/**
+	 * Returns whether the websocket compression extension is enabled.
+	 *
+	 * @return returns whether the websocket compression extension is enabled.
+	 */
+	boolean compress();
 
 	/**
 	 * Create builder with default properties:<br>
@@ -50,7 +73,8 @@ public interface WebSocketSpec {
 	final class Builder {
 		String protocols;
 		int maxFramePayloadLength = 65536;
-		boolean handlePing = false;
+		boolean handlePing;
+		boolean compress;
 
 		private Builder() {
 		}
@@ -88,6 +112,20 @@ public interface WebSocketSpec {
 		 */
 		public final Builder handlePing(boolean handlePing) {
 			this.handlePing = handlePing;
+			return this;
+		}
+
+		/**
+		 * Sets flag whether the websocket compression extension is enabled
+		 * if the client request presents websocket extensions headers.
+		 * By default compression is disabled.
+		 *
+		 * @param compress whether the websocket compression extension is enabled
+		 * if the client request presents websocket extensions headers.
+		 * @return {@literal this}
+		 */
+		public final Builder compress(boolean compress) {
+			this.compress = compress;
 			return this;
 		}
 
