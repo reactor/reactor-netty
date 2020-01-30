@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
@@ -993,11 +994,16 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testIssue507_1() {
+	public void testIssue507() {
+		doTestIssue507(true);
+		doTestIssue507(false);
+	}
+
+	private void doTestIssue507(boolean compress) {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
-				          .compress(true)
+				          .compress(compress)
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
 				          .wiretap(true)
@@ -1026,72 +1032,26 @@ public class WebsocketTest {
 				             .zipWith(Mono.just(header == null ? "null" : header));
 				};
 
+		Predicate<Tuple2<String, String>> predicate = t -> "test".equals(t.getT1()) && "null".equals(t.getT2());
 		StepVerifier.create(client.websocket()
 		                          .uri("/")
 		                          .handle(receiver))
-		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
+		            .expectNextMatches(predicate)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 		assertThat(clientHandler.get()).isFalse();
 
+		if (compress) {
+			predicate = t -> "test".equals(t.getT1()) && !"null".equals(t.getT2());
+		}
 		StepVerifier.create(client.compress(true)
 		                          .websocket()
 		                          .uri("/")
 		                          .handle(receiver))
-		            .expectNextMatches(t -> "test".equals(t.getT1()) && !"null".equals(t.getT2()))
+		            .expectNextMatches(predicate)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
-		assertThat(clientHandler.get()).isTrue();
-	}
-
-	@Test
-	public void testIssue507_2() {
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .handle((req, res) ->
-				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
-				          .wiretap(true)
-				          .bindNow();
-
-		AtomicBoolean clientHandler = new AtomicBoolean();
-		HttpClient client =
-				HttpClient.create()
-				          .addressSupplier(httpServer::address)
-				          .wiretap(true);
-
-		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
-		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
-				(in, out) -> {
-				    in.withConnection(conn ->
-				        clientHandler.set(conn.channel()
-				                     .pipeline()
-				                     .get(perMessageDeflateEncoder) != null)
-				    );
-				    String header = in.headers()
-				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
-				    return in.receive()
-				             .aggregate()
-				             .asString()
-				             .zipWith(Mono.just(header == null ? "null" : header));
-				};
-
-		StepVerifier.create(client.websocket()
-		                          .uri("/")
-		                          .handle(receiver))
-		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-		assertThat(clientHandler.get()).isFalse();
-
-		StepVerifier.create(client.compress(true)
-		                          .websocket()
-		                          .uri("/")
-		                          .handle(receiver))
-		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-		assertThat(clientHandler.get()).isFalse();
+		assertThat(clientHandler.get()).isEqualTo(compress);
 	}
 
 	// https://bugzilla.mozilla.org/show_bug.cgi?id=691300
