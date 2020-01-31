@@ -171,17 +171,11 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Specifies whether GZip response compression/websocket compression
-	 * extension is enabled if the client request
-	 * presents accept encoding/websocket extensions headers.
-	 * <p>
-	 * Note: Using this method for enabling websocket compression is strongly discouraged.
-	 * As of 0.9.5, use {@link WebSocketSpec#builder()} for providing websocket configuration.
-	 * </p>
+	 * Specifies whether GZip response compression is enabled if the client request
+	 * presents accept encoding.
 	 *
-	 * @param compressionEnabled if true GZip response compression/websocket compression
-	 *                             extension is enabled if the client request presents
-	 *                             accept encoding/websocket extensions headers, otherwise disabled.
+	 * @param compressionEnabled if true GZip response compression
+	 * is enabled if the client request presents accept encoding, otherwise disabled.
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer compress(boolean compressionEnabled) {
