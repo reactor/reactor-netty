@@ -517,7 +517,7 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doOnRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest) {
 		Objects.requireNonNull(doOnRequest, "doOnRequest");
-		return new HttpClientDoOn(this, doOnRequest, null, null, null, null);
+		return new HttpClientDoOn(this, doOnRequest, null, null, null);
 	}
 
 	/**
@@ -545,7 +545,7 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doAfterRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest) {
 		Objects.requireNonNull(doAfterRequest, "doAfterRequest");
-		return new HttpClientDoOn(this, null, doAfterRequest, null, null, null);
+		return new HttpClientDoOn(this, null, doAfterRequest, null, null);
 	}
 
 	/**
@@ -558,7 +558,7 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doOnResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse) {
 		Objects.requireNonNull(doOnResponse, "doOnResponse");
-		return new HttpClientDoOn(this, null, null, doOnResponse, null, null);
+		return new HttpClientDoOn(this, null, null, doOnResponse, null);
 	}
 
 	/**
@@ -575,27 +575,6 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Setup a callback called after
-	 * {@link HttpClientState#RESPONSE_RECEIVED} has been emitted and the connection is
-	 * returned to the pool or closed. The callback is invoked in both cases when the
-	 * response is successful/there are errors.
-	 *
-	 * @param doAfterResponse a callback called after
-	 * {@link HttpClientState#RESPONSE_RECEIVED} has been emitted and the connection is
-	 * returned to the pool or closed. The callback is invoked in both cases when the
-	 * response is successful/there are errors.
-	 *
-	 * @return a new {@link HttpClient}
-	 * @deprecated as of 0.9.5. Consider using {@link #doAfterResponseSuccess(BiConsumer)} or
-	 * {@link #doOnResponseError(BiConsumer)}
-	 */
-	@Deprecated
-	public final HttpClient doAfterResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponse) {
-		Objects.requireNonNull(doAfterResponse, "doAfterResponse");
-		return new HttpClientDoOn(this, null, null, null, doAfterResponse, null);
-	}
-
-	/**
 	 * Setup a callback called after {@link HttpClientResponse} has been fully received
 	 * and {@link HttpClientState#RESPONSE_COMPLETED} has been emitted.
 	 *
@@ -606,7 +585,7 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doAfterResponseSuccess(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess) {
 		Objects.requireNonNull(doAfterResponseSuccess, "doAfterResponseSuccess");
-		return new HttpClientDoOn(this, null, null, null, null, doAfterResponseSuccess);
+		return new HttpClientDoOn(this, null, null, null, doAfterResponseSuccess);
 	}
 
 	/**

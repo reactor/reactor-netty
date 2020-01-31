@@ -643,7 +643,6 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void test() {
 		disposableServer =
 				HttpServer.create()
@@ -661,7 +660,7 @@ public class HttpClientTest {
 		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
 		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
 		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
-		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
+		        .doAfterResponseSuccess((r, c) -> log.debug("afterResp: "+r))
 		        .put()
 		        .uri("/201")
 		        .responseContent()
@@ -671,7 +670,7 @@ public class HttpClientTest {
 		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
 		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
 		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
-		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
+		        .doAfterResponseSuccess((r, c) -> log.debug("afterResp: "+r))
 		        .put()
 		        .uri("/204")
 		        .responseContent()
@@ -681,7 +680,7 @@ public class HttpClientTest {
 		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
 		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
 		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
-		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
+		        .doAfterResponseSuccess((r, c) -> log.debug("afterResp: "+r))
 		        .get()
 		        .uri("/200")
 		        .responseContent()
@@ -995,7 +994,6 @@ public class HttpClientTest {
 		doTestClientContext(HttpClient.create(ConnectionProvider.newConnection()));
 	}
 
-	@SuppressWarnings("deprecation")
 	private void doTestClientContext(HttpClient client) throws Exception {
 		CountDownLatch latch = new CountDownLatch(4);
 
@@ -1023,7 +1021,7 @@ public class HttpClientTest {
 				              latch.countDown();
 				          }
 				      })
-				      .doAfterResponse((req, c) -> {
+				      .doAfterResponseSuccess((req, c) -> {
 				          if (req.currentContext().hasKey("test")) {
 				              latch.countDown();
 				          }
@@ -1945,7 +1943,6 @@ public class HttpClientTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void testIssue975() throws Exception {
 		disposableServer =
 				HttpServer.create()
@@ -1962,12 +1959,10 @@ public class HttpClientTest {
 				                          }))))
 				          .bindNow();
 
-		AtomicBoolean doAfterResponse = new AtomicBoolean();
 		AtomicBoolean doAfterResponseSuccess = new AtomicBoolean();
 		AtomicBoolean doOnResponseError = new AtomicBoolean();
 		CountDownLatch latch = new CountDownLatch(1);
 		HttpClient.create()
-		          .doAfterResponse((resp, conn) -> doAfterResponse.set(true))
 		          .doAfterResponseSuccess((resp, conn) -> doAfterResponseSuccess.set(true))
 		          .doOnResponseError((resp, exc) -> doOnResponseError.set(true))
 		          .get()
@@ -1976,7 +1971,6 @@ public class HttpClientTest {
 		          .subscribe(null, t -> latch.countDown());
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
-		assertThat(doAfterResponse.get()).isTrue();
 		assertThat(doAfterResponseSuccess.get()).isFalse();
 		assertThat(doOnResponseError.get()).isTrue();
 	}

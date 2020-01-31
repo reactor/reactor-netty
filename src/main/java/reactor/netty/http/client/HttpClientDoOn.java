@@ -35,7 +35,6 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 	final BiConsumer<? super HttpClientRequest, ? super Connection>  onRequest;
 	final BiConsumer<? super HttpClientRequest, ? super Connection>  afterRequest;
 	final BiConsumer<? super HttpClientResponse, ? super Connection> onResponse;
-	final BiConsumer<? super HttpClientResponse, ? super Connection> afterResponse;
 	final BiConsumer<? super HttpClientResponse, ? super Connection> afterResponseSuccess;
 
 
@@ -43,13 +42,11 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 			@Nullable BiConsumer<? super HttpClientRequest,  ? super Connection> onRequest,
 			@Nullable BiConsumer<? super HttpClientRequest,  ? super Connection> afterRequest,
 			@Nullable BiConsumer<? super HttpClientResponse, ? super Connection> onResponse,
-			@Nullable BiConsumer<? super HttpClientResponse,  ? super Connection> afterResponse,
 			@Nullable BiConsumer<? super HttpClientResponse,  ? super Connection> afterResponseSuccess) {
 		super(client);
 		this.onRequest = onRequest;
 		this.afterRequest = afterRequest;
 		this.onResponse = onResponse;
-		this.afterResponse = afterResponse;
 		this.afterResponseSuccess = afterResponseSuccess;
 	}
 
@@ -64,14 +61,6 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 	public void onStateChange(Connection connection, State newState) {
 		if (onRequest != null && newState == State.CONFIGURED) {
 			onRequest.accept(connection.as(HttpClientOperations.class), connection);
-			return;
-		}
-		if (afterResponse != null && newState == HttpClientState.RESPONSE_RECEIVED) {
-			HttpClientOperations ops = connection.as(HttpClientOperations.class);
-			if (ops != null) {
-				ops.onTerminate().subscribe(null, null,
-						() -> afterResponse.accept(connection.as(HttpClientOperations.class), connection));
-			}
 			return;
 		}
 		if (afterResponseSuccess != null && newState == HttpClientState.RESPONSE_COMPLETED) {
