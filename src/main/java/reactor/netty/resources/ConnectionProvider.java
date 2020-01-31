@@ -282,6 +282,12 @@ public interface ConnectionProvider extends Disposable {
 	 */
 	@Deprecated
 	static ConnectionProvider fixed(String name, int maxConnections, long acquireTimeout, @Nullable Duration maxIdleTime, @Nullable Duration maxLifeTime) {
+		if (maxConnections == -1) {
+			return elastic(name, maxIdleTime, maxLifeTime);
+		}
+		if (acquireTimeout < 0) {
+			throw new IllegalArgumentException("Acquire Timeout value must be positive");
+		}
 		return builder(name).maxConnections(maxConnections)
 		                    .pendingAcquireMaxCount(-1) // keep the backwards compatibility
 		                    .pendingAcquireTimeout(Duration.ofMillis(acquireTimeout))
