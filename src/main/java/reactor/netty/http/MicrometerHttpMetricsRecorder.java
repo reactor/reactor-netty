@@ -17,27 +17,20 @@ package reactor.netty.http;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.config.MeterFilter;
-import io.micrometer.core.instrument.config.MeterFilterReply;
 import io.netty.util.internal.PlatformDependent;
 import reactor.netty.Metrics;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
-import reactor.util.Logger;
-import reactor.util.Loggers;
 
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.DATA_SENT_TIME;
 import static reactor.netty.Metrics.ERRORS;
-import static reactor.netty.Metrics.MAX_URI_TAGS;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.URI;
@@ -92,8 +85,6 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		this.errorsBuilder =
 				Counter.builder(name + ERRORS)
 				       .description("Number of the errors that are occurred");
-
-		registry.config().meterFilter(maxUriTagsMeterFilter(name));
 	}
 
 	@Override
@@ -121,27 +112,5 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 				key -> errorsBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
 				                    .register(registry));
 		errors.increment();
-	}
-
-	static MeterFilter maxUriTagsMeterFilter(String meterNamePrefix) {
-		return MeterFilter.maximumAllowableTags(meterNamePrefix, URI, MAX_URI_TAGS, new MaxUriTagsMeterFilter(meterNamePrefix));
-	}
-
-	static final class MaxUriTagsMeterFilter extends AtomicBoolean implements MeterFilter {
-		final String meterNamePrefix;
-
-		MaxUriTagsMeterFilter(String meterNamePrefix) {
-			this.meterNamePrefix = meterNamePrefix;
-		}
-
-		@Override
-		public MeterFilterReply accept(Meter.Id id) {
-			if (logger.isWarnEnabled() && compareAndSet(false, true)) {
-				logger.warn("Reached the maximum number of URI tags for meter name prefix [" + meterNamePrefix + "].");
-			}
-			return MeterFilterReply.DENY;
-		}
-
-		static final Logger logger = Loggers.getLogger(MaxUriTagsMeterFilter.class);
 	}
 }

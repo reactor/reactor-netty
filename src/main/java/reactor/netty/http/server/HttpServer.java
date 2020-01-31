@@ -306,11 +306,19 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
-	 * All generated metrics are registered in the Micrometer MeterRegistry,
-	 * assuming Micrometer is on the classpath.
+	 * Whether to enable metrics to be collected and registered in Micrometer's
+	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
+	 * under the name {@link reactor.netty.Metrics#HTTP_SERVER_NAME_PREFIX}. Applications can
+	 * separately register their own
+	 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
+	 * For example, to put an upper bound on the number of tags produced:
+	 * <pre class="code">
+	 * MeterFilter filter = ... ;
+	 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(HTTP_SERVER_NAME_PREFIX, 100, filter));
+	 * </pre>
+	 * <p>By default this is not enabled.
 	 *
-	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param metricsEnabled true enables metrics collection; false disables it
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer metrics(boolean metricsEnabled) {
