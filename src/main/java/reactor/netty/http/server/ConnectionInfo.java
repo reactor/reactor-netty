@@ -173,7 +173,7 @@ final class ConnectionInfo {
 		}
 		String protoHeader = request.headers().get(XFORWARDED_PROTO_HEADER);
 		if (protoHeader != null) {
-			scheme = protoHeader.trim();
+			scheme = protoHeader.split(",", 2)[0].trim();
 		}
 		return new ConnectionInfo(hostAddress, remoteAddress, scheme);
 	}
