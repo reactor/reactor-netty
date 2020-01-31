@@ -41,6 +41,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -81,6 +82,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
+import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.SocketUtils;
@@ -641,6 +643,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void test() {
 		disposableServer =
 				HttpServer.create()
@@ -992,6 +995,7 @@ public class HttpClientTest {
 		doTestClientContext(HttpClient.create(ConnectionProvider.newConnection()));
 	}
 
+	@SuppressWarnings("deprecation")
 	private void doTestClientContext(HttpClient client) throws Exception {
 		CountDownLatch latch = new CountDownLatch(4);
 
@@ -1938,5 +1942,42 @@ public class HttpClientTest {
 		            .expectNext(requestUri)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	public void testIssue975() throws Exception {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .route(routes ->
+				              routes.get("/dispose",
+				                  (req, res) -> res.sendString(
+				                      Flux.range(0, 10_000)
+				                          .map(i -> {
+				                              if (i == 1_000) {
+				                                  res.withConnection(Connection::disposeNow);
+				                              }
+				                              return "a";
+				                          }))))
+				          .bindNow();
+
+		AtomicBoolean doAfterResponse = new AtomicBoolean();
+		AtomicBoolean doAfterResponseSuccess = new AtomicBoolean();
+		AtomicBoolean doOnResponseError = new AtomicBoolean();
+		CountDownLatch latch = new CountDownLatch(1);
+		HttpClient.create()
+		          .doAfterResponse((resp, conn) -> doAfterResponse.set(true))
+		          .doAfterResponseSuccess((resp, conn) -> doAfterResponseSuccess.set(true))
+		          .doOnResponseError((resp, exc) -> doOnResponseError.set(true))
+		          .get()
+		          .uri("http://localhost:" + disposableServer.port() + "/dispose")
+		          .responseSingle((resp, bytes) -> bytes.asString())
+		          .subscribe(null, t -> latch.countDown());
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(doAfterResponse.get()).isTrue();
+		assertThat(doAfterResponseSuccess.get()).isFalse();
+		assertThat(doOnResponseError.get()).isTrue();
 	}
 }

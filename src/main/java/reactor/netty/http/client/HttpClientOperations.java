@@ -569,6 +569,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (markSentBody()) {
 				markPersistent(false);
 			}
+			listener().onStateChange(this, HttpClientState.RESPONSE_COMPLETED);
 			terminate();
 			return;
 		}
