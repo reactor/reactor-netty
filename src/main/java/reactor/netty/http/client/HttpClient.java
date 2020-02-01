@@ -494,7 +494,7 @@ public abstract class HttpClient {
 	 * {@link #doOnRequest(BiConsumer)} or {@link RequestSender#send(BiFunction)} might
 	 * not be visible if the error results from a connection failure.
 	 *
-	 * @param doOnRequest a consumer observing connected events
+	 * @param doOnRequest a consumer observing request failures
 	 * @param doOnResponse a consumer observing response failures
 	 *
 	 * @return a new {@link HttpClient}
@@ -508,9 +508,10 @@ public abstract class HttpClient {
 
 
 	/**
-	 * Setup a callback called when {@link HttpClientRequest} is about to be sent.
+	 * Setup a callback called when {@link HttpClientRequest} is about to be sent
+	 * and {@link HttpClientState#CONFIGURED} has been emitted.
 	 *
-	 * @param doOnRequest a consumer observing connected events
+	 * @param doOnRequest a callback called when {@link HttpClientRequest} is about to be sent
 	 *
 	 * @return a new {@link HttpClient}
 	 */
@@ -525,7 +526,7 @@ public abstract class HttpClient {
 	 * {@link #doOnRequest(BiConsumer)} or {@link RequestSender#send(BiFunction)} might
 	 * not be visible if the error results from a connection failure.
 	 *
-	 * @param doOnRequest a consumer observing connected events
+	 * @param doOnRequest a consumer observing request failures
 	 *
 	 * @return a new {@link HttpClient}
 	 */
@@ -536,8 +537,9 @@ public abstract class HttpClient {
 
 	/**
 	 * Setup a callback called when {@link HttpClientRequest} has been sent
+	 * and {@link HttpClientState#REQUEST_SENT} has been emitted.
 	 *
-	 * @param doAfterRequest a consumer observing connected events
+	 * @param doAfterRequest a callback called when {@link HttpClientRequest} has been sent
 	 *
 	 * @return a new {@link HttpClient}
 	 */
@@ -548,9 +550,9 @@ public abstract class HttpClient {
 
 	/**
 	 * Setup a callback called after {@link HttpClientResponse} headers have been
-	 * received
+	 * received and {@link HttpClientState#RESPONSE_RECEIVED} has been emitted.
 	 *
-	 * @param doOnResponse a consumer observing connected events
+	 * @param doOnResponse a callback called after {@link HttpClientResponse} headers have been received
 	 *
 	 * @return a new {@link HttpClient}
 	 */
@@ -561,7 +563,7 @@ public abstract class HttpClient {
 
 	/**
 	 * Setup a callback called when {@link HttpClientResponse} has not been fully
-	 * received.
+	 * received, {@link HttpClientState#RESPONSE_INCOMPLETE} has been emitted.
 	 *
 	 * @param doOnResponse a consumer observing response failures
 	 *
@@ -573,15 +575,17 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Setup a callback called after {@link HttpClientResponse} has been fully received.
+	 * Setup a callback called after {@link HttpClientResponse} has been fully received
+	 * and {@link HttpClientState#RESPONSE_COMPLETED} has been emitted.
 	 *
-	 * @param doAfterResponse a consumer observing disconnected events
+	 * @param doAfterResponseSuccess a callback called after {@link HttpClientResponse} has been fully received
+	 * and {@link HttpClientState#RESPONSE_COMPLETED} has been emitted.
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient doAfterResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponse) {
-		Objects.requireNonNull(doAfterResponse, "doAfterResponse");
-		return new HttpClientDoOn(this, null, null, null, doAfterResponse);
+	public final HttpClient doAfterResponseSuccess(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess) {
+		Objects.requireNonNull(doAfterResponseSuccess, "doAfterResponseSuccess");
+		return new HttpClientDoOn(this, null, null, null, doAfterResponseSuccess);
 	}
 
 	/**

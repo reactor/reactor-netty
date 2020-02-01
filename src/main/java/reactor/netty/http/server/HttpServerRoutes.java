@@ -31,6 +31,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -274,9 +275,8 @@ public interface HttpServerRoutes extends
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(String path,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends
-					Publisher<Void>> handler) {
-		return ws(path, handler, null);
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler) {
+		return ws(path, handler, WebSocketSpec.builder().build());
 	}
 
 	/**
@@ -288,29 +288,13 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param path The websocket path used by clients
 	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in websocket handshake signature
-	 *
+	 * @param configurer {@link WebSocketSpec} for websocket configuration
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(String path,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			@Nullable String protocols) {
-		return ws(HttpPredicate.get(path), handler, protocols);
-	}
-
-	/**
-	 * Listens for websocket with the given route predicate to invoke the matching I/O handler.
-	 *
-	 * @param condition a predicate given each inbound request
-	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in websocket handshake signature
-	 *
-	 * @return this {@link HttpServerRoutes}
-	 */
-	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			@Nullable String protocols) {
-		return ws(condition, handler, protocols, 65536);
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
+			WebSocketSpec configurer) {
+		return ws(HttpPredicate.get(path), handler, configurer);
 	}
 
 	/**
@@ -318,39 +302,17 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param condition a predicate given each inbound request
 	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in websocket handshake signature
-	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
-	 *
+	 * @param webSocketSpec {@link WebSocketSpec} for websocket configuration
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			@Nullable String protocols,
-			int maxFramePayloadLength) {
-		return ws(condition, handler, protocols, maxFramePayloadLength, false);
-	}
-
-	/**
-	 * Listens for websocket with the given route predicate to invoke the matching handler.
-	 *
-	 * @param condition a predicate given each inbound request
-	 * @param handler an I/O handler to invoke for the given condition
-	 * @param protocols sub-protocol to use in websocket handshake signature
-	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
-	 * @param proxyPing whether to proxy websocket ping frames or respond to them
-	 *
-	 * @return this {@link HttpServerRoutes}
-	 */
-	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			@Nullable String protocols,
-			int maxFramePayloadLength,
-			boolean proxyPing) {
+			WebSocketSpec webSocketSpec) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
 			       .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), protocols, maxFramePayloadLength, proxyPing, handler);
+				return ops.withWebsocketSupport(req.uri(), webSocketSpec, handler);
 			}
 			return resp.sendNotFound();
 		});

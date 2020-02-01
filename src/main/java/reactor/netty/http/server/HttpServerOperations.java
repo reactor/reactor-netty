@@ -72,6 +72,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
+import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
@@ -396,11 +397,10 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public Mono<Void> sendWebsocket(@Nullable String protocols,
-			int maxFramePayloadLength,
-			boolean proxyPing,
-			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return withWebsocketSupport(uri(), protocols, maxFramePayloadLength, proxyPing, websocketHandler);
+	public Mono<Void> sendWebsocket(
+			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
+			WebSocketSpec configurer) {
+		return withWebsocketSupport(uri(), configurer, websocketHandler);
 	}
 
 	@Override
@@ -598,22 +598,20 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,
-			@Nullable String protocols,
-			int maxFramePayloadLength,
-			boolean proxyPing,
+			WebSocketSpec webSocketSpec,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
+		Objects.requireNonNull(webSocketSpec, "webSocketSpec");
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
-			WebsocketServerOperations
-					ops = new WebsocketServerOperations(url, protocols, maxFramePayloadLength, proxyPing, this);
+			WebsocketServerOperations ops = new WebsocketServerOperations(url, webSocketSpec, this);
 
 			if (rebind(ops)) {
 				return FutureMono.from(ops.handshakerResult)
 				                 .doOnEach(signal -> {
-				                 	if(!signal.hasError() && (protocols == null || ops.selectedSubprotocol() != null)) {
-					                    websocketHandler.apply(ops, ops)
-					                                    .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
-				                    }
+				                     if(!signal.hasError() && (webSocketSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
+				                         websocketHandler.apply(ops, ops)
+				                                         .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
+				                     }
 				                 });
 			}
 		}

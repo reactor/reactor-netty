@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
@@ -52,6 +53,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
@@ -333,10 +335,10 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-		                               "protoA,protoB",
 		                               (i, o) -> {
 		                                   return o.sendString(Mono.just("test"));
-		                               }))
+		                               },
+		                               WebSocketSpec.builder().protocols("protoA,protoB").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -355,8 +357,9 @@ public class WebsocketTest {
 	public void simpleSubprotocolServerSupported() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handle((in, out) -> out.sendWebsocket("SUBPROTOCOL",
-		                               (i, o) -> o.sendString(Mono.just("test"))))
+		                       .handle((in, out) -> out.sendWebsocket(
+		                               (i, o) -> o.sendString(Mono.just("test")),
+		                               WebSocketSpec.builder().protocols("SUBPROTOCOL").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -382,9 +385,9 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-		                               "NOT, Common",
 		                               (i, o) -> o.sendString(
-		                                       Mono.just("SERVER:" + o.selectedSubprotocol()))))
+		                                       Mono.just("SERVER:" + o.selectedSubprotocol())),
+		                               WebSocketSpec.builder().protocols("NOT, Common").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -436,8 +439,9 @@ public class WebsocketTest {
 	public void anySubprotocolSelectsFirstClientProvided() {
 		httpServer = HttpServer.create()
 		                       .port(0)
-		                       .handle((in, out) -> out.sendWebsocket("proto2,*", (i, o) -> o.sendString(
-		                               Mono.just("SERVER:" + o.selectedSubprotocol()))))
+		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(
+		                               Mono.just("SERVER:" + o.selectedSubprotocol())),
+		                               WebSocketSpec.builder().protocols("proto2,*").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -468,14 +472,15 @@ public class WebsocketTest {
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket(
-		                               "not,proto1", (i, o) -> {
+		                               (i, o) -> {
 		                                   serverSelectedProtocol.set(i.selectedSubprotocol());
 		                                   latch.countDown();
 		                                   return i.receive()
 		                                           .asString()
 		                                           .doOnNext(System.err::println)
 		                                           .then();
-		                               }))
+		                               },
+		                               WebSocketSpec.builder().protocols("not,proto1").build()))
 		                       .wiretap(true)
 		                       .bindNow();
 
@@ -557,13 +562,14 @@ public class WebsocketTest {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((req, res) -> res.sendWebsocket(null, maxFramePayloadLength, (in, out) ->
+				          .handle((req, res) -> res.sendWebsocket((in, out) ->
 				              out.sendObject(in.aggregateFrames()
 				                               .receiveFrames()
 				                               .map(WebSocketFrame::content)
 				                               .map(byteBuf ->
 				                                   byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
-				                               .map(TextWebSocketFrame::new))))
+				                               .map(TextWebSocketFrame::new)),
+				              WebSocketSpec.builder().maxFramePayloadLength(maxFramePayloadLength).build()))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -971,7 +977,7 @@ public class WebsocketTest {
 				HttpServer.create()
 				          .host("localhost")
 				          .port(0)
-				          .handle((req, res) -> res.sendWebsocket(null, fn))
+				          .handle((req, res) -> res.sendWebsocket(fn))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -985,108 +991,6 @@ public class WebsocketTest {
 				                             .then()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
-	}
-
-	@Test
-	public void testIssue507_1() {
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .compress(true)
-				          .handle((req, res) ->
-				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
-				          .wiretap(true)
-				          .bindNow();
-
-		AtomicBoolean clientHandler = new AtomicBoolean();
-		HttpClient client =
-				HttpClient.create()
-				          .addressSupplier(httpServer::address)
-				          .wiretap(true);
-
-		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
-		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
-				(in, out) -> {
-				    in.withConnection(conn ->
-				        clientHandler.set(conn.channel()
-				                              .pipeline()
-				                              .get(perMessageDeflateEncoder) != null)
-				    );
-
-				    String header = in.headers()
-				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
-				    return in.receive()
-				             .aggregate()
-				             .asString()
-				             .zipWith(Mono.just(header == null ? "null" : header));
-				};
-
-		StepVerifier.create(client.websocket()
-		                          .uri("/")
-		                          .handle(receiver))
-		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-		assertThat(clientHandler.get()).isFalse();
-
-		StepVerifier.create(client.compress(true)
-		                          .websocket()
-		                          .uri("/")
-		                          .handle(receiver))
-		            .expectNextMatches(t -> "test".equals(t.getT1()) && !"null".equals(t.getT2()))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-		assertThat(clientHandler.get()).isTrue();
-	}
-
-	@Test
-	public void testIssue507_2() {
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .handle((req, res) ->
-				              res.sendWebsocket((in, out) -> out.sendString(Mono.just("test"))))
-				          .wiretap(true)
-				          .bindNow();
-
-		AtomicBoolean clientHandler = new AtomicBoolean();
-		HttpClient client =
-				HttpClient.create()
-				          .addressSupplier(httpServer::address)
-				          .wiretap(true);
-
-		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
-		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
-				(in, out) -> {
-				    in.withConnection(conn ->
-				        clientHandler.set(conn.channel()
-				                     .pipeline()
-				                     .get(perMessageDeflateEncoder) != null)
-				    );
-				    String header = in.headers()
-				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
-				    return in.receive()
-				             .aggregate()
-				             .asString()
-				             .zipWith(Mono.just(header == null ? "null" : header));
-				};
-
-		StepVerifier.create(client.websocket()
-		                          .uri("/")
-		                          .handle(receiver))
-		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-		assertThat(clientHandler.get()).isFalse();
-
-		StepVerifier.create(client.compress(true)
-		                          .websocket()
-		                          .uri("/")
-		                          .handle(receiver))
-		            .expectNextMatches(t -> "test".equals(t.getT1()) && "null".equals(t.getT2()))
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
-		assertThat(clientHandler.get()).isFalse();
 	}
 
 	// https://bugzilla.mozilla.org/show_bug.cgi?id=691300
@@ -1342,7 +1246,8 @@ public class WebsocketTest {
 		httpServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((req, resp) -> resp.sendWebsocket(true, (i, o) -> i.receiveFrames().then()))
+				          .handle((req, resp) -> resp.sendWebsocket((i, o) -> i.receiveFrames().then(),
+				                  WebSocketSpec.builder().handlePing(true).build()))
 				          .wiretap(true)
 				          .bindNow();
 
@@ -1412,5 +1317,67 @@ public class WebsocketTest {
 		StepVerifier.create(clientFlux)
 		            .expectNextCount(10)
 		            .verifyComplete();
+	}
+
+	@Test
+	public void testIssue970() {
+		doTestIssue970(true);
+		doTestIssue970(false);
+	}
+
+	private void doTestIssue970(boolean compress) {
+		httpServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) ->
+				              res.sendWebsocket(
+				                  (in, out) -> out.sendString(Mono.just("test")),
+				                  WebSocketSpec.builder().compress(compress).build()))
+				          .wiretap(true)
+				          .bindNow();
+
+		AtomicBoolean clientHandler = new AtomicBoolean();
+		HttpClient client =
+				HttpClient.create()
+				          .addressSupplier(httpServer::address)
+				          .wiretap(true);
+
+		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";
+		BiFunction<WebsocketInbound, WebsocketOutbound, Mono<Tuple2<String, String>>> receiver =
+				(in, out) -> {
+				    in.withConnection(conn ->
+				        clientHandler.set(conn.channel()
+				                              .pipeline()
+				                              .get(perMessageDeflateEncoder) != null)
+				    );
+
+				    String header = in.headers()
+				                      .get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+				    return in.receive()
+				             .aggregate()
+				             .asString()
+				             .zipWith(Mono.just(header == null ? "null" : header));
+				};
+
+		Predicate<Tuple2<String, String>> predicate = t -> "test".equals(t.getT1()) && "null".equals(t.getT2());
+		StepVerifier.create(client.websocket()
+		                          .uri("/")
+		                          .handle(receiver))
+		            .expectNextMatches(predicate)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+		assertThat(clientHandler.get()).isFalse();
+
+		if (compress) {
+			predicate = t -> "test".equals(t.getT1()) && !"null".equals(t.getT2());
+		}
+		StepVerifier.create(client.compress(true)
+		                          .websocket()
+		                          .uri("/")
+		                          .handle(receiver))
+		            .expectNextMatches(predicate)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+		assertThat(clientHandler.get()).isEqualTo(compress);
 	}
 }

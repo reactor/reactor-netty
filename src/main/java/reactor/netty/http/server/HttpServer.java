@@ -39,6 +39,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.Logger;
@@ -170,13 +171,11 @@ public abstract class HttpServer {
 	}
 
 	/**
-	 * Specifies whether GZip response compression/websocket compression
-	 * extension is enabled if the client request
-	 * presents accept encoding/websocket extensions headers.
+	 * Specifies whether GZip response compression is enabled if the client request
+	 * presents accept encoding.
 	 *
-	 * @param compressionEnabled if true GZip response compression/websocket compression
-	 *                             extension is enabled if the client request presents
-	 *                             accept encoding/websocket extensions headers, otherwise disabled.
+	 * @param compressionEnabled if true GZip response compression
+	 * is enabled if the client request presents accept encoding, otherwise disabled.
 	 * @return a new {@link HttpServer}
 	 */
 	public final HttpServer compress(boolean compressionEnabled) {
