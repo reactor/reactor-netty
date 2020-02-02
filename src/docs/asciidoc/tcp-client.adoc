@@ -188,7 +188,7 @@ By default, the `TCP` client is configured with the following options:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/tcp/TcpClient.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpClient.java[lines=617..619]
+include::{sourcedir}/reactor/netty/tcp/TcpClient.java[lines=630..632]
 ----
 ====
 
@@ -302,43 +302,13 @@ public class Application {
 
 == Connection Pool
 
-By default, the `TCP` client uses a "`fixed`" connection pool with `500` as the maximum number of the channels and
-`45s` as the acquisition timeout.
+By default, the `TCP` client uses a "`fixed`" connection pool with `500` as the maximum number of the channels,
+`45s` as the pending acquire timeout and `1000` as the maximum number of the registered requests for acquire to keep in the pending queue.
 This means that the implementation creates a new channel if someone tries to acquire a channel but none is in the pool.
 When the maximum number of the channels in the pool is reached, new tries to acquire a channel are delayed
 until a channel is returned to the pool again.
-The implementation uses `FIFO` order for channels in the pool regardless of whether it is "`elastic`" or "`fixed`".
+The implementation uses `FIFO` order for channels in the pool.
 By default, there is no idle time specified for the channels in the pool.
-
-If you need an "`elastic`" connection pool, you can apply the following configuration by using
-{javadoc}/reactor/netty/resources/ConnectionProvider.html[`ConnectionProvider`].
-The following example shows how to do so:
-
-====
-[source,java]
-----
-import reactor.netty.Connection;
-import reactor.netty.resources.ConnectionProvider;
-import reactor.netty.tcp.TcpClient;
-import static reactor.netty.resources.ConnectionProvider.MAX_CONNECTIONS_ELASTIC;
-
-public class Application {
-
-    public static void main(String[] args) {
-        ConnectionProvider provider =
-                ConnectionProvider.create("elastic", MAX_CONNECTIONS_ELASTIC);
-        Connection connection =
-                TcpClient.create(provider)
-                         .host("example.com")
-                         .port(80)
-                         .connectNow();
-
-        connection.onDispose()
-                  .block();
-    }
-}
-----
-====
 
 If you need to disable the connection pool, you can apply the following configuration:
 
@@ -380,7 +350,7 @@ public class Application {
         ConnectionProvider provider =
                 ConnectionProvider.builder("fixed")
                                   .maxConnections(50)
-                                  .acquireTimeout(Duration.ofMillis(30000))
+                                  .pendingAcquireTimeout(Duration.ofMillis(30000))
                                   .maxIdleTime(Duration.ofMillis(60))
                                   .build();
         Connection connection =
@@ -396,7 +366,7 @@ public class Application {
 ----
 ====
 
-NOTE: Be cautious with an "`elastic`" connection pool when you expect a high load. You might experience
+NOTE: When you expect a high load, be cautious with a connection pool with a very high value for maximum connections. You might experience
 `reactor.netty.http.client.PrematureCloseException` exception with a root cause "Connect Timeout" due
 to too many concurrent connections opened/acquired.
 

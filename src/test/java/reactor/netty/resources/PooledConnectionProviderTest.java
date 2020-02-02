@@ -76,7 +76,7 @@ public class PooledConnectionProviderTest {
 						new Bootstrap(), allocator -> channelPool, ChannelOperations.OnSetup.empty());
 		ConnectionProvider.Builder connectionProviderBuilder =
 				ConnectionProvider.builder("disposeLaterDefers")
-				                  .maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC);
+				                  .maxConnections(Integer.MAX_VALUE);
 		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
@@ -102,7 +102,7 @@ public class PooledConnectionProviderTest {
 
 		ConnectionProvider.Builder connectionProviderBuilder =
 				ConnectionProvider.builder("disposeOnlyOnce")
-				                  .maxConnections(ConnectionProvider.MAX_CONNECTIONS_ELASTIC);
+				                  .maxConnections(Integer.MAX_VALUE);
 		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
@@ -233,8 +233,9 @@ public class PooledConnectionProviderTest {
 		PooledConnectionProvider provider =
 				(PooledConnectionProvider) ConnectionProvider.builder("testIssue673_TimeoutException")
 				                                             .maxConnections(1)
-				                                             .acquireTimeout(Duration.ofMillis(10))
-				                                             .fifo();
+				                                             .pendingAcquireMaxCount(4)
+				                                             .pendingAcquireTimeout(Duration.ofMillis(10))
+				                                             .build();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
@@ -329,9 +330,9 @@ public class PooledConnectionProviderTest {
 		PooledConnectionProvider provider =
 				(PooledConnectionProvider) ConnectionProvider.builder("testIssue951_MaxPendingAcquire")
 				                                             .maxConnections(1)
-				                                             .acquireTimeout(Duration.ofMillis(10))
-				                                             .maxPendingAcquire(1)
-				                                             .fifo();
+				                                             .pendingAcquireTimeout(Duration.ofMillis(10))
+				                                             .pendingAcquireMaxCount(1)
+				                                             .build();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {

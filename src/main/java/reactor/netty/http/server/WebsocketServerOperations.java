@@ -45,6 +45,7 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.http.HttpOperations;
+import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -67,20 +68,16 @@ final class WebsocketServerOperations extends HttpServerOperations
 	volatile int closeSent;
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	WebsocketServerOperations(String wsUrl,
-			@Nullable String protocols,
-			int maxFramePayloadLength,
-			boolean proxyPing,
-			HttpServerOperations replaced) {
+	WebsocketServerOperations(String wsUrl, WebSocketSpec webSocketSpec, HttpServerOperations replaced) {
 		super(replaced);
-		this.proxyPing = proxyPing;
+		this.proxyPing = webSocketSpec.handlePing();
 
 		Channel channel = replaced.channel();
 		onCloseState = MonoProcessor.create();
 
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory =
-				new WebSocketServerHandshakerFactory(wsUrl, protocols, true, maxFramePayloadLength);
+				new WebSocketServerHandshakerFactory(wsUrl, webSocketSpec.protocols(), true, webSocketSpec.maxFramePayloadLength());
 		handshaker = wsFactory.newHandshaker(replaced.nettyRequest);
 		if (handshaker == null) {
 			//"FutureReturnValueIgnored" this is deliberate
@@ -99,8 +96,7 @@ final class WebsocketServerOperations extends HttpServerOperations
 			request.headers()
 			       .set(replaced.nettyRequest.headers());
 
-			if (channel().pipeline()
-			             .get(NettyPipeline.CompressionHandler) != null) {
+			if (webSocketSpec.compress()) {
 				removeHandler(NettyPipeline.CompressionHandler);
 
 				WebSocketServerCompressionHandler wsServerCompressionHandler =

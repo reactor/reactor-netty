@@ -195,12 +195,17 @@ configure(rootProject) { project ->
 	}
   }
 
-	sourceSets {
-		jarFileTest
-	}
+  sourceSets {
+	  examples {
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	  }
+	  jarFileTest
+  }
 
 	//TODO evaluate if this is still necessary, if not remove that and `idea` plugin
 	idea.module.testSourceDirs += sourceSets.jarFileTest.allSource.srcDirs
+	idea.module.testSourceDirs += sourceSets.examples.allSource.srcDirs
 
 	repositories {
 	mavenCentral()
@@ -225,6 +230,8 @@ configure(rootProject) { project ->
 	}
 
 	configurations {
+		examplesImplementation.extendsFrom implementation
+		examplesRuntimeOnly.extendsFrom runtimeOnly
 		shaded
 	}
 
@@ -294,6 +301,9 @@ configure(rootProject) { project ->
 
 	jarFileTestCompile 'org.assertj:assertj-core:3.12.2'
 	jarFileTestCompile 'junit:junit:4.12'
+
+	examplesRuntime "ch.qos.logback:logback-classic:$logbackVersion"
+	examplesRuntime "io.netty:netty-tcnative-boringssl-static:2.0.28.Final" + os_suffix
 
 	for (dependency in project.configurations.shaded.dependencies) {
 	    compileOnly(dependency)
@@ -374,6 +384,11 @@ configure(rootProject) { project ->
 	  dependsOn(shadowJar)
   }
   project.tasks.check.dependsOn(jarFileTest)
+
+  task examples(type: Jar) {
+	  from sourceSets.examples.output
+  }
+  project.tasks.check.dependsOn(examples)
 
   project.tasks.compileTestJava.classpath += configurations.shaded
   project.tasks.test.classpath += configurations.shaded

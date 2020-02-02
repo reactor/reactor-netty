@@ -21,17 +21,17 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
 
     dependencies {
       //compile "io.projectreactor.netty:reactor-netty:1.0.0.BUILD-SNAPSHOT"
-      compile "io.projectreactor.netty:reactor-netty:0.9.3.RELEASE"
+      compile "io.projectreactor.netty:reactor-netty:0.9.4.RELEASE"
     }
 ```
 
-See the [Reference documentation](https://projectreactor.io/docs/netty/milestone/reference/index.html#getting)
+See the [Reference documentation](https://projectreactor.io/docs/netty/release/reference/index.html#getting)
 for more information on getting it (eg. using `Maven`, or on how to get milestones and snapshots).
 
 
 ## Getting Started
 New to `Reactor Netty`? Check this [Reactor Netty Workshop](https://violetagg.github.io/reactor-netty-workshop/)
-and the [Reference documentation](https://projectreactor.io/docs/netty/milestone/reference/index.html)
+and the [Reference documentation](https://projectreactor.io/docs/netty/release/reference/index.html)
 
 Here is a very simple `HTTP` server and the corresponding `HTTP` client example
 
@@ -79,7 +79,7 @@ Having trouble with `Reactor Netty`? We'd like to help!
 If you want to raise an issue, please follow the recommendations below:
 * Before you log a bug, please [search the issue tracker](https://github.com/reactor/reactor-netty/search?type=Issues)
   to see if someone has already reported the problem.
-* If the issue doesn't already exist, [create a new issue](https://github.com/reactor/reactor-netty/issues/new).
+* If the issue doesn't already exist, [create a new issue](https://github.com/reactor/reactor-netty/issues/new/choose).
 * Please provide as much information as possible with the issue report, we like to know
   the version of `Reactor Netty` that you are using, as well as your `Operating System` and
   `JVM` version.
@@ -107,7 +107,7 @@ https://projectreactor.io/docs/netty/release/api/
 
 ## Guides
 
-* https://projectreactor.io/docs/netty/milestone/reference/index.html
+* https://projectreactor.io/docs/netty/release/reference/index.html
 * https://violetagg.github.io/reactor-netty-workshop/
 
 ## License

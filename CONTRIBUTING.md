@@ -1,6 +1,8 @@
 # Contributing to Reactor Projects
 
-We’d love to accept your patches and contributions to this project. Please review the following guidelines you'll need to follow in order to make a contribution.
+:+1::tada: We’d love to accept your patches and contributions to this project. :+1::tada:
+
+Please review the following guidelines you'll need to follow in order to make a contribution.
 
 ## Contributor License Agreement
 
@@ -13,3 +15,17 @@ Note: if you would like to submit an "_obvious fix_" for something like a typo, 
 ## Code reviews
 
 All submissions, including submissions by project members, require review and we use GitHub's pull requests for this purpose. Please consult [GitHub Help](https://help.github.com/articles/about-pull-requests/) if you need more information about using pull requests.
+
+## Code style
+
+Please carefully follow the whitespace and formatting conventions already
+present in the codebase. Here is a short summary of the style:
+
+1. Tabs (smart tabs), not spaces
+2. Unix (LF), not DOS (CRLF) line endings
+3. Eliminate all trailing whitespace
+4. Wrap Javadoc at 120 characters
+5. Aim to wrap code at 120 characters, but favor readability over wrapping
+6. Preserve existing formatting; i.e. do not reformat code for its own sake
+7. Open brackets on same line, close brackets isolated on a dedicated new line
+8. `else`, `catch`, `finally` on a new line

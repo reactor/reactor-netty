@@ -68,7 +68,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
-import static reactor.netty.resources.ConnectionProvider.MAX_CONNECTIONS_ELASTIC;
 
 /**
  * @author Stephane Maldini
@@ -278,7 +277,7 @@ public class TcpClientTests {
 				            new LineBasedFrameDecoder(8 * 1024));
 
 		tcpClientHandlesLineFeedData(
-				TcpClient.create(ConnectionProvider.create("tcpClientHandlesLineFeedDataElasticPool", MAX_CONNECTIONS_ELASTIC))
+				TcpClient.create(ConnectionProvider.create("tcpClientHandlesLineFeedDataElasticPool", Integer.MAX_VALUE))
 				         .host("localhost")
 				         .port(echoServerPort)
 				         .doOnConnected(channelInit)
