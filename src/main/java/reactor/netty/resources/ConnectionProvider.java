@@ -98,7 +98,7 @@ public interface ConnectionProvider extends Disposable {
 		return builder(name).maxConnections(DEFAULT_POOL_MAX_CONNECTIONS)
 		                    .pendingAcquireMaxCount(500)
 		                    .pendingAcquireTimeout(Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT))
-		                    .build();
+		                    .fifo();
 	}
 
 	/**

@@ -94,14 +94,13 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		this.maxIdleTime = builder.maxIdleTime != null ? builder.maxIdleTime.toMillis() : -1;
 		this.maxLifeTime = builder.maxLifeTime != null ? builder.maxLifeTime.toMillis() : -1;
 		this.poolFactory = allocator ->
-				PoolBuilder.from(allocator)
-				           .destroyHandler(DEFAULT_DESTROY_HANDLER)
-				           .evictionPredicate(DEFAULT_EVICTION_PREDICATE
-				                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
-				                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
-				           .maxPendingAcquire(pendingAcquireMaxCount)
-				           .sizeBetween(0, maxConnections)
-				           .fifo();
+				builder.leasingStrategy.apply(PoolBuilder.from(allocator)
+						.destroyHandler(DEFAULT_DESTROY_HANDLER)
+						.evictionPredicate(DEFAULT_EVICTION_PREDICATE
+								.or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
+										|| (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
+						.maxPendingAcquire(pendingAcquireMaxCount)
+						.sizeBetween(0, maxConnections));
 	}
 
 	@Override
