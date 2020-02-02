@@ -21,12 +21,16 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
+import reactor.pool.InstrumentedPool;
+import reactor.pool.Pool;
+import reactor.pool.PoolBuilder;
 import reactor.util.annotation.NonNull;
 
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 
 /**
  * A {@link ConnectionProvider} will produce {@link Connection}
@@ -94,7 +98,7 @@ public interface ConnectionProvider extends Disposable {
 		return builder(name).maxConnections(DEFAULT_POOL_MAX_CONNECTIONS)
 		                    .pendingAcquireMaxCount(500)
 		                    .pendingAcquireTimeout(Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT))
-		                    .build();
+		                    .fifo();
 	}
 
 	/**
@@ -114,7 +118,7 @@ public interface ConnectionProvider extends Disposable {
 	static ConnectionProvider create(String name, int maxConnections) {
 		return builder(name).maxConnections(maxConnections)
 		                    .pendingAcquireTimeout(Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT))
-		                    .build();
+		                    .fifo();
 	}
 
 	/**
@@ -178,6 +182,8 @@ public interface ConnectionProvider extends Disposable {
 		Duration pendingAcquireTimeout  = Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT);
 		Duration maxIdleTime;
 		Duration maxLifeTime;
+		Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
+				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
 
 		/**
 		 * Returns {@link Builder} new instance with name and default properties.
@@ -274,11 +280,35 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
+		 * Build a LIFO flavor of {@link Pool}, that is to say a flavor where the last
+		 * {@link Pool#acquire()} {@link Mono Mono} that was pending is served first
+		 * whenever a resource becomes available.
+		 *
+		 * @return a builder of {@link Pool} with LIFO pending acquire ordering
+		 */
+		public final ConnectionProvider lifo() {
+			return build(PoolBuilder::lifo);
+		}
+
+		/**
+		 * Build a FIFO flavor of {@link Pool}, that is to say a flavor where the first
+		 * {@link Pool#acquire()} {@link Mono Mono} that was pending is served first
+		 * whenever a resource becomes available.
+		 *
+		 * @return a builder of {@link Pool} with FIFO pending acquire ordering
+		 */
+		public final ConnectionProvider fifo() {
+			return build(PoolBuilder::fifo);
+		}
+
+		/**
 		 * Builds new ConnectionProvider
 		 *
 		 * @return builds new ConnectionProvider
 		 */
-		public final ConnectionProvider build() {
+		private ConnectionProvider build(Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
+				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy) {
+			this.leasingStrategy = Objects.requireNonNull(leasingStrategy);
 			if (pendingAcquireMaxCount == PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED) {
 				this.pendingAcquireMaxCount = 2 * this.maxConnections;
 			}
@@ -299,12 +329,13 @@ public interface ConnectionProvider extends Disposable {
 			        name.equals(builder.name) &&
 			        pendingAcquireTimeout.equals(builder.pendingAcquireTimeout) &&
 			        Objects.equals(maxIdleTime, builder.maxIdleTime) &&
-			        Objects.equals(maxLifeTime, builder.maxLifeTime);
+			        Objects.equals(maxLifeTime, builder.maxLifeTime) &&
+			        Objects.equals(leasingStrategy, builder.leasingStrategy);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(name, pendingAcquireTimeout, maxConnections, pendingAcquireMaxCount, maxIdleTime, maxLifeTime);
+			return Objects.hash(name, pendingAcquireTimeout, maxConnections, pendingAcquireMaxCount, maxIdleTime, maxLifeTime, leasingStrategy);
 		}
 	}
 }

@@ -235,7 +235,7 @@ public class PooledConnectionProviderTest {
 				                                             .maxConnections(1)
 				                                             .pendingAcquireMaxCount(4)
 				                                             .pendingAcquireTimeout(Duration.ofMillis(10))
-				                                             .build();
+				                                             .fifo();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
@@ -332,7 +332,7 @@ public class PooledConnectionProviderTest {
 				                                             .maxConnections(1)
 				                                             .pendingAcquireTimeout(Duration.ofMillis(10))
 				                                             .pendingAcquireMaxCount(1)
-				                                             .build();
+				                                             .fifo();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
