@@ -115,7 +115,7 @@ public interface ConnectionProvider extends Disposable {
 	 * number of {@link Connection}
 	 */
 	static ConnectionProvider create(String name, int maxConnections) {
-		return builder(name).maxConnections(maxConnections).lifo();
+		return builder(name).maxConnections(maxConnections).fifo();
 	}
 
 	/**
@@ -291,8 +291,8 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
-		 * Build the default flavor of {@link Pool}, which has FIFO semantics on pending
-		 * {@link Pool#acquire()} {@link Mono Mono}, serving the oldest pending acquire first
+		 * Build a FIFO flavor of {@link Pool}, that is to say a flavor where the first
+		 * {@link Pool#acquire()} {@link Mono Mono} that was pending is served first
 		 * whenever a resource becomes available.
 		 *
 		 * @return a builder of {@link Pool} with FIFO pending acquire ordering

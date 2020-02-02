@@ -234,7 +234,7 @@ public class PooledConnectionProviderTest {
 				(PooledConnectionProvider) ConnectionProvider.builder("testIssue673_TimeoutException")
 				                                             .maxConnections(1)
 				                                             .acquireTimeout(Duration.ofMillis(10))
-				                                             .build();
+				                                             .fifo();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
@@ -331,7 +331,7 @@ public class PooledConnectionProviderTest {
 				                                             .maxConnections(1)
 				                                             .acquireTimeout(Duration.ofMillis(10))
 				                                             .maxPendingAcquire(1)
-				                                             .build();
+				                                             .fifo();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
