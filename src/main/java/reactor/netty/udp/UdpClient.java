@@ -358,13 +358,19 @@ public abstract class UdpClient {
 	}
 
 	/**
-	 * Specifies whether the metrics are enabled on the {@link UdpClient}.
-	 * All generated metrics are registered in the Micrometer MeterRegistry,
-	 * assuming Micrometer is on the classpath.
-	 * if {@code name} is {@code NULL} - {@code reactor.netty.udp.client}
-	 * will be used as a name.
+	 * Whether to enable metrics to be collected and registered in Micrometer's
+	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
+	 * under the name {@link reactor.netty.Metrics#UDP_CLIENT_NAME_PREFIX}. Applications can
+	 * separately register their own
+	 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
+	 * For example, to put an upper bound on the number of tags produced:
+	 * <pre class="code">
+	 * MeterFilter filter = ... ;
+	 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(UDP_CLIENT_NAME_PREFIX, 100, filter));
+	 * </pre>
+	 * <p>By default this is not enabled.
 	 *
-	 * @param metricsEnabled if true enables the metrics on the client.
+	 * @param metricsEnabled true enables metrics collection; false disables it
 	 * @return a new {@link UdpClient}
 	 */
 	public final UdpClient metrics(boolean metricsEnabled) {
@@ -469,7 +475,7 @@ public abstract class UdpClient {
 		MicrometerChannelMetricsRecorder recorder = channelMetricsRecorder.get();
 		if (recorder == null) {
 			channelMetricsRecorder.compareAndSet(null,
-					new MicrometerChannelMetricsRecorder("reactor.netty.udp.client", "udp"));
+					new MicrometerChannelMetricsRecorder(reactor.netty.Metrics.UDP_CLIENT_NAME_PREFIX, "udp"));
 			recorder = getOrCreateMetricsRecorder();
 		}
 		return recorder;

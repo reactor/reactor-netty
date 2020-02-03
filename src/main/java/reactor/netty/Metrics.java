@@ -20,6 +20,18 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 public class Metrics {
+	public static final String HTTP_SERVER_NAME_PREFIX = "reactor.netty.http.server";
+
+	public static final String HTTP_CLIENT_NAME_PREFIX = "reactor.netty.http.client";
+
+	public static final String TCP_SERVER_NAME_PREFIX = "reactor.netty.tcp.server";
+
+	public static final String TCP_CLIENT_NAME_PREFIX = "reactor.netty.tcp.client";
+
+	public static final String UDP_SERVER_NAME_PREFIX = "reactor.netty.udp.server";
+
+	public static final String UDP_CLIENT_NAME_PREFIX = "reactor.netty.udp.client";
+
 	// Metrics
 	public static final String DATA_RECEIVED = ".data.received";
 
@@ -51,8 +63,6 @@ public class Metrics {
 	public static final String SUCCESS = "SUCCESS";
 
 	public static final String ERROR = "ERROR";
-
-	public static final int MAX_URI_TAGS = 100;
 
 
 	@Nullable
