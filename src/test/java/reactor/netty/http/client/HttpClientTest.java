@@ -943,7 +943,7 @@ public class HttpClientTest {
 	}
 
 	@Test
-	public void testIssue407() throws Exception {
+	public void testIssue407_1() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		DisposableServer server =
 				HttpServer.create()
@@ -954,8 +954,9 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
+		ConnectionProvider provider = ConnectionProvider.fixed("testIssue407", 1);
 		HttpClient client =
-				createHttpClientForContextWithAddress(server)
+				createHttpClientForContextWithAddress(server, provider)
 				        .secure(spec -> spec.sslContext(
 				                SslContextBuilder.forClient()
 				                                 .trustManager(InsecureTrustManagerFactory.INSTANCE)));
@@ -1002,6 +1003,72 @@ public class HttpClientTest {
 		assertThat(ch1.get()).isSameAs(ch2.get());
 		assertThat(ch1.get()).isNotSameAs(ch3.get());
 
+		provider.dispose();
+		server.disposeNow();
+	}
+
+	@Test
+	public void testIssue407_2() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .secure(spec -> spec.sslContext(
+				                  SslContextBuilder.forServer(cert.certificate(), cert.privateKey())))
+				          .handle((req, res) -> res.sendString(Mono.just("test")))
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(30));
+
+		SslContextBuilder clientSslContextBuilder =
+				SslContextBuilder.forClient()
+				                 .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		ConnectionProvider provider = ConnectionProvider.fixed("testIssue407", 1);
+		HttpClient client =
+				createHttpClientForContextWithAddress(server, provider)
+				        .tcpConfiguration(tcpClient -> tcpClient.secure(spec -> spec.sslContext(clientSslContextBuilder)));
+
+		AtomicReference<Channel> ch1 = new AtomicReference<>();
+		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch1.set(c.channel())))
+				                  .get()
+				                  .uri("/1")
+				                  .responseContent()
+				                  .aggregate()
+				                  .asString())
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		AtomicReference<Channel> ch2 = new AtomicReference<>();
+		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch2.set(c.channel())))
+				                  .post()
+				                  .uri("/2")
+				                  .send(ByteBufFlux.fromString(Mono.just("test")))
+				                  .responseContent()
+				                  .aggregate()
+				                  .asString())
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		AtomicReference<Channel> ch3 = new AtomicReference<>();
+		StepVerifier.create(
+				client.tcpConfiguration(tcpClient ->
+				          tcpClient.doOnConnected(c -> ch3.set(c.channel()))
+				                   .secure(spec -> spec.sslContext(clientSslContextBuilder)
+				                                       .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP)))
+				      .post()
+				      .uri("/3")
+				      .responseContent()
+				      .aggregate()
+				      .asString())
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		assertThat(ch1.get()).isSameAs(ch2.get());
+		assertThat(ch1.get()).isNotSameAs(ch3.get());
+
+		provider.dispose();
 		server.disposeNow();
 	}
 
