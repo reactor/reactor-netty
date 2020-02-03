@@ -131,6 +131,24 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
+	public void xForwardedMultipleHeaders() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.1");
+					clientRequestHeaders.add("X-Forwarded-Host", "192.168.0.2");
+					clientRequestHeaders.add("X-Forwarded-Port", "8080");
+					clientRequestHeaders.add("X-Forwarded-Port", "8081");
+					clientRequestHeaders.add("X-Forwarded-Proto", "http");
+					clientRequestHeaders.add("X-Forwarded-Proto", "https");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+				});
+	}
+
+	@Test
 	public void xForwardedHostAndEmptyPort() {
 		testClientRequest(
 				clientRequestHeaders -> {
