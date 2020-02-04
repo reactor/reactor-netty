@@ -25,12 +25,14 @@ import java.time.Duration;
 
 import static reactor.netty.Metrics.HTTP_CLIENT_NAME_PREFIX;
 import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
 
 /**
  * @author Violeta Georgieva
+ * @since 0.9
  */
 final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpClientMetricsRecorder {
 
@@ -45,7 +47,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
 				key -> dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-				                              .register(registry));
+				                              .register(REGISTRY));
 		dataReceivedTime.record(time);
 	}
 
@@ -54,7 +56,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, address, method, null),
 				key -> dataSentTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
-				                          .register(registry));
+				                          .register(REGISTRY));
 		dataSentTime.record(time);
 	}
 
@@ -63,7 +65,7 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
 				key -> responseTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-				                          .register(registry));
+				                          .register(REGISTRY));
 		responseTime.record(time);
 	}
 }

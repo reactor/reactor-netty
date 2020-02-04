@@ -16,16 +16,28 @@
 package reactor.netty.channel;
 
 import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.buffer.ByteBufAllocatorMetric;
 import io.netty.buffer.PooledByteBufAllocatorMetric;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.concurrent.ConcurrentMap;
 
+import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_NAME_PREFIX;
+import static reactor.netty.Metrics.CHUNK_SIZE;
+import static reactor.netty.Metrics.DIRECT_ARENAS;
+import static reactor.netty.Metrics.HEAP_ARENAS;
+import static reactor.netty.Metrics.ID;
+import static reactor.netty.Metrics.NORMAL_CACHE_SIZE;
+import static reactor.netty.Metrics.REGISTRY;
+import static reactor.netty.Metrics.SMALL_CACHE_SIZE;
+import static reactor.netty.Metrics.THREAD_LOCAL_CACHES;
+import static reactor.netty.Metrics.TINY_CACHE_SIZE;
+import static reactor.netty.Metrics.USED_DIRECT_MEMORY;
+import static reactor.netty.Metrics.USED_HEAP_MEMORY;
+
 /**
  * @author Violeta Georgieva
+ * @since 0.9
  */
 final class ByteBufAllocatorMetrics {
 	static final ByteBufAllocatorMetrics INSTANCE = new ByteBufAllocatorMetrics();
@@ -37,17 +49,17 @@ final class ByteBufAllocatorMetrics {
 
 	void registerMetrics(String allocName, ByteBufAllocatorMetric metrics) {
 		cache.computeIfAbsent(metrics.hashCode() + "", key -> {
-			String name = String.format(NAME, allocName);
+			String name = String.format(BYTE_BUF_ALLOCATOR_NAME_PREFIX, allocName);
 
 			Gauge.builder(name + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)
 			     .description("The number of the bytes of the heap memory.")
 			     .tags(ID, key)
-			     .register(registry);
+			     .register(REGISTRY);
 
 			Gauge.builder(name + USED_DIRECT_MEMORY, metrics, ByteBufAllocatorMetric::usedDirectMemory)
 			     .description("The number of the bytes of the direct memory.")
 			     .tags(ID, key)
-			     .register(registry);
+			     .register(REGISTRY);
 
 			if (metrics instanceof PooledByteBufAllocatorMetric) {
 				PooledByteBufAllocatorMetric pooledMetrics = (PooledByteBufAllocatorMetric) metrics;
@@ -55,64 +67,40 @@ final class ByteBufAllocatorMetrics {
 				Gauge.builder(name + HEAP_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numHeapArenas)
 				     .description("The number of heap arenas.")
 				     .tags(ID, key)
-				     .register(registry);
+				     .register(REGISTRY);
 
 				Gauge.builder(name + DIRECT_ARENAS, pooledMetrics, PooledByteBufAllocatorMetric::numDirectArenas)
 				     .description("The number of direct arenas.")
 				     .tags(ID, key)
-				     .register(registry);
+				     .register(REGISTRY);
 
 				Gauge.builder(name + THREAD_LOCAL_CACHES, pooledMetrics, PooledByteBufAllocatorMetric::numThreadLocalCaches)
 				     .description("The number of thread local caches.")
 				     .tags(ID, key)
-				     .register(registry);
+				     .register(REGISTRY);
 
 				Gauge.builder(name + TINY_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::tinyCacheSize)
 				     .description("The size of the tiny cache.")
 				     .tags(ID, key)
-				     .register(registry);
+				     .register(REGISTRY);
 
 				Gauge.builder(name + SMALL_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::smallCacheSize)
 				     .description("The size of the small cache.")
 				     .tags(ID, key)
-				     .register(registry);
+				     .register(REGISTRY);
 
 				Gauge.builder(name + NORMAL_CACHE_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::normalCacheSize)
 				     .description("The size of the normal cache.")
 				     .tags(ID, key)
-				     .register(registry);
+				     .register(REGISTRY);
 
 				Gauge.builder(name + CHUNK_SIZE, pooledMetrics, PooledByteBufAllocatorMetric::chunkSize)
 				     .description("The chunk size for an arena.")
 				     .tags(ID, key)
-				     .register(registry);
+				     .register(REGISTRY);
 			}
 
 			return metrics;
 		});
 	}
-
-	static final MeterRegistry registry = Metrics.globalRegistry;
-
-	static final String NAME = "reactor.netty.%s.bytebuf.allocator";
-
-	static final String USED_HEAP_MEMORY = ".used.heap.memory";
-
-	static final String USED_DIRECT_MEMORY = ".used.direct.memory";
-
-	static final String HEAP_ARENAS = ".heap.arenas";
-
-	static final String DIRECT_ARENAS = ".direct.arenas";
-
-	static final String THREAD_LOCAL_CACHES = ".threadlocal.caches";
-
-	static final String TINY_CACHE_SIZE = ".tiny.cache.size";
-
-	static final String SMALL_CACHE_SIZE = ".small.cache.size";
-
-	static final String NORMAL_CACHE_SIZE = ".normal.cache.size";
-
-	static final String CHUNK_SIZE = ".chunk.size";
-
-	static final String ID = "id";
 }

@@ -44,6 +44,8 @@ public class Metrics {
 
 	public static final String CONNECTION_PROVIDER_NAME_PREFIX = "reactor.netty.connection.provider";
 
+	public static final String BYTE_BUF_ALLOCATOR_NAME_PREFIX = "reactor.netty.%s.bytebuf.allocator";
+
 
 	// Metrics
 	public static final String DATA_RECEIVED = ".data.received";
@@ -71,6 +73,24 @@ public class Metrics {
 	public static final String IDLE_CONNECTIONS = ".idle.connections";
 
 	public static final String PENDING_CONNECTIONS = ".pending.connections";
+
+	public static final String USED_HEAP_MEMORY = ".used.heap.memory";
+
+	public static final String USED_DIRECT_MEMORY = ".used.direct.memory";
+
+	public static final String HEAP_ARENAS = ".heap.arenas";
+
+	public static final String DIRECT_ARENAS = ".direct.arenas";
+
+	public static final String THREAD_LOCAL_CACHES = ".threadlocal.caches";
+
+	public static final String TINY_CACHE_SIZE = ".tiny.cache.size";
+
+	public static final String SMALL_CACHE_SIZE = ".small.cache.size";
+
+	public static final String NORMAL_CACHE_SIZE = ".normal.cache.size";
+
+	public static final String CHUNK_SIZE = ".chunk.size";
 
 
 	// Tags
