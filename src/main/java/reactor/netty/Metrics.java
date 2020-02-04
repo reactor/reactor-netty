@@ -15,11 +15,21 @@
  */
 package reactor.netty;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+/**
+ * @author Violeta Georgieva
+ * @since 0.9
+ */
 public class Metrics {
+	public static final MeterRegistry REGISTRY = io.micrometer.core.instrument.Metrics.globalRegistry;
+
+
+	// Names
 	public static final String HTTP_SERVER_NAME_PREFIX = "reactor.netty.http.server";
 
 	public static final String HTTP_CLIENT_NAME_PREFIX = "reactor.netty.http.client";
@@ -31,6 +41,9 @@ public class Metrics {
 	public static final String UDP_SERVER_NAME_PREFIX = "reactor.netty.udp.server";
 
 	public static final String UDP_CLIENT_NAME_PREFIX = "reactor.netty.udp.client";
+
+	public static final String CONNECTION_PROVIDER_NAME_PREFIX = "reactor.netty.connection.provider";
+
 
 	// Metrics
 	public static final String DATA_RECEIVED = ".data.received";
@@ -51,6 +64,15 @@ public class Metrics {
 
 	public static final String ADDRESS_RESOLVER = ".address.resolver";
 
+	public static final String TOTAL_CONNECTIONS = ".total.connections";
+
+	public static final String ACTIVE_CONNECTIONS = ".active.connections";
+
+	public static final String IDLE_CONNECTIONS = ".idle.connections";
+
+	public static final String PENDING_CONNECTIONS = ".pending.connections";
+
+
 	// Tags
 	public static final String REMOTE_ADDRESS = "remote.address";
 
@@ -59,6 +81,10 @@ public class Metrics {
 	public static final String STATUS = "status";
 
 	public static final String METHOD = "method";
+
+	public static final String ID = "id";
+
+	public static final String POOL_NAME = "pool.name";
 
 	public static final String SUCCESS = "SUCCESS";
 
