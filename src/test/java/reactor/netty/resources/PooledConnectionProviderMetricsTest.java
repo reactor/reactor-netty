@@ -74,16 +74,13 @@ public class PooledConnectionProviderMetricsTest {
 				                                   .sendString(Mono.just("test")))
 				          .bindNow();
 
-		AtomicBoolean metrics1 = new AtomicBoolean(false);
-		AtomicBoolean metrics2 = new AtomicBoolean(false);
+		AtomicBoolean metrics = new AtomicBoolean(false);
 
 		CountDownLatch latch = new CountDownLatch(1);
 
 		String poolName = "test";
-		String namePrefix = CONNECTION_PROVIDER_NAME_PREFIX + "." + poolName;
 		PooledConnectionProvider fixed = (PooledConnectionProvider) ConnectionProvider.create(poolName, 1);
-		AtomicReference<String[]> tags1 = new AtomicReference<>();
-		AtomicReference<String[]> tags2 = new AtomicReference<>();
+		AtomicReference<String[]> tags = new AtomicReference<>();
 
 		HttpClient.create(fixed)
 		          .port(server.port())
@@ -95,7 +92,7 @@ public class PooledConnectionProviderMetricsTest {
 		              PooledConnectionProvider.PoolKey key = (PooledConnectionProvider.PoolKey) fixed.channelPools.keySet().toArray()[0];
 		              InetSocketAddress sa = (InetSocketAddress) conn.channel().remoteAddress();
 		              String[] tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort(), POOL_NAME, poolName};
-		              tags1.set(tagsArr);
+		              tags.set(tagsArr);
 
 		              double totalConnections = getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + TOTAL_CONNECTIONS, tagsArr);
 		              double activeConnections = getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
@@ -104,20 +101,8 @@ public class PooledConnectionProviderMetricsTest {
 
 		              if (totalConnections == 1 && activeConnections == 1 &&
 		                      idleConnections == 0 && pendingConnections == 0) {
-		                  metrics1.set(true);
+		                  metrics.set(true);
 		              }
-			          tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort()};
-			          tags2.set(tagsArr);
-
-			          totalConnections = getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr);
-			          activeConnections = getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr);
-			          idleConnections = getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr);
-			          pendingConnections = getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr);
-
-			          if (totalConnections == 1 && activeConnections == 1 &&
-			                  idleConnections == 0 && pendingConnections == 0) {
-			              metrics2.set(true);
-			          }
 		          })
 		          .metrics(true)
 		          .get()
@@ -128,21 +113,13 @@ public class PooledConnectionProviderMetricsTest {
 		          .block(Duration.ofSeconds(30));
 
 		assertTrue(latch.await(30, TimeUnit.SECONDS));
-		assertTrue(metrics1.get());
-		String[] tagsArr = tags1.get();
+		assertTrue(metrics.get());
+		String[] tagsArr = tags.get();
 		assertNotNull(tagsArr);
 		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + TOTAL_CONNECTIONS, tagsArr), 0.0);
 		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + ACTIVE_CONNECTIONS, tagsArr), 0.0);
 		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + IDLE_CONNECTIONS, tagsArr), 0.0);
 		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + PENDING_CONNECTIONS, tagsArr), 0.0);
-
-		assertTrue(metrics2.get());
-		tagsArr = tags2.get();
-		assertNotNull(tagsArr);
-		assertEquals(0, getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr), 0.0);
 
 		fixed.disposeLater()
 		     .block(Duration.ofSeconds(30));
