@@ -16,53 +16,53 @@
 package reactor.netty.resources;
 
 import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import reactor.pool.InstrumentedPool;
 
+import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
+import static reactor.netty.Metrics.CONNECTION_PROVIDER_NAME_PREFIX;
+import static reactor.netty.Metrics.ID;
+import static reactor.netty.Metrics.IDLE_CONNECTIONS;
+import static reactor.netty.Metrics.PENDING_CONNECTIONS;
+import static reactor.netty.Metrics.POOL_NAME;
+import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
+import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 
 /**
  * @author Violeta Georgieva
+ * @since 0.9
  */
 final class PooledConnectionProviderMetrics {
 
 	static void registerMetrics(String poolName, String id, String remoteAddress,
 			InstrumentedPool.PoolMetrics metrics) {
-		String name = String.format(NAME, poolName);
+		// This is for backwards compatibility and will be removed in the next versions
+		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress};
+		registerMetricsInternal(CONNECTION_PROVIDER_NAME_PREFIX + "." + poolName, metrics, tags);
 
+		tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName};
+		registerMetricsInternal(CONNECTION_PROVIDER_NAME_PREFIX, metrics, tags);
+	}
+
+	private static void registerMetricsInternal(String name, InstrumentedPool.PoolMetrics metrics, String... tags) {
 		Gauge.builder(name + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
-		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
-		     .register(registry);
+		     .tags(tags)
+		     .register(REGISTRY);
 
 		Gauge.builder(name + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
 		     .description("The number of the connections that have been successfully acquired and are in active use")
-		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
-		     .register(registry);
+		     .tags(tags)
+		     .register(REGISTRY);
 
 		Gauge.builder(name + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
 		     .description("The number of the idle connections")
-		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
-		     .register(registry);
+		     .tags(tags)
+		     .register(REGISTRY);
 
 		Gauge.builder(name + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
 		     .description("The number of the request, that are pending acquire a connection")
-		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
-		     .register(registry);
+		     .tags(tags)
+		     .register(REGISTRY);
 	}
-
-	static final MeterRegistry registry = Metrics.globalRegistry;
-
-	static final String NAME = "reactor.netty.connection.provider.%s";
-
-	static final String TOTAL_CONNECTIONS = ".total.connections";
-
-	static final String ACTIVE_CONNECTIONS = ".active.connections";
-
-	static final String IDLE_CONNECTIONS = ".idle.connections";
-
-	static final String PENDING_CONNECTIONS = ".pending.connections";
-
-	static final String ID = "id";
 }

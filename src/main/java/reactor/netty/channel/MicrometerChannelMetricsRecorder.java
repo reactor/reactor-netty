@@ -17,8 +17,6 @@ package reactor.netty.channel;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.netty.util.internal.PlatformDependent;
 
@@ -31,6 +29,7 @@ import static reactor.netty.Metrics.CONNECT_TIME;
 import static reactor.netty.Metrics.DATA_RECEIVED;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
@@ -38,10 +37,9 @@ import static reactor.netty.Metrics.URI;
 
 /**
  * @author Violeta Georgieva
+ * @since 0.9
  */
 public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder {
-
-	protected final static MeterRegistry registry = Metrics.globalRegistry;
 
 	final DistributionSummary.Builder dataReceivedBuilder;
 	final ConcurrentMap<String, DistributionSummary> dataReceivedCache = PlatformDependent.newConcurrentHashMap();
@@ -98,7 +96,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary ds = dataReceivedCache.computeIfAbsent(address,
 				key -> dataReceivedBuilder.tag(REMOTE_ADDRESS, address)
-				                          .register(registry));
+				                          .register(REGISTRY));
 		ds.record(bytes);
 	}
 
@@ -107,7 +105,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary ds = dataSentCache.computeIfAbsent(address,
 				key -> dataSentBuilder.tag(REMOTE_ADDRESS, address)
-				                      .register(registry));
+				                      .register(REGISTRY));
 		ds.record(bytes);
 	}
 
@@ -116,7 +114,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Counter c = errorsCache.computeIfAbsent(address,
 				key -> errorCountBuilder.tag(REMOTE_ADDRESS, address)
-				                        .register(registry));
+				                        .register(REGISTRY));
 		c.increment();
 	}
 
@@ -125,7 +123,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Timer timer = tlsHandshakeTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
 				key -> tlsHandshakeTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
-				                              .register(registry));
+				                              .register(REGISTRY));
 		timer.record(time);
 	}
 
@@ -134,7 +132,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Timer timer = connectTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
 				key -> connectTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
-				                         .register(registry));
+				                         .register(REGISTRY));
 		timer.record(time);
 	}
 
@@ -143,7 +141,7 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Timer timer = addressResolverTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
 				key -> addressResolverTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
-				                                 .register(registry));
+				                                 .register(REGISTRY));
 		timer.record(time);
 	}
 }

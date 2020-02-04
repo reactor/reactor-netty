@@ -23,11 +23,13 @@ import java.time.Duration;
 
 import static reactor.netty.Metrics.HTTP_SERVER_NAME_PREFIX;
 import static reactor.netty.Metrics.METHOD;
+import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.STATUS;
 import static reactor.netty.Metrics.URI;
 
 /**
  * @author Violeta Georgieva
+ * @since 0.9
  */
 final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRecorder implements HttpServerMetricsRecorder {
 
@@ -41,7 +43,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
 		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, null, method, null),
 				key -> dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
-				                              .register(registry));
+				                              .register(REGISTRY));
 		dataReceivedTime.record(time);
 	}
 
@@ -49,7 +51,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	public void recordDataSentTime(String uri, String method, String status, Duration time) {
 		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, null, method, status),
 				key -> dataSentTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
-				                          .register(registry));
+				                          .register(REGISTRY));
 		dataSentTime.record(time);
 	}
 
@@ -57,7 +59,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	public void recordResponseTime(String uri, String method, String status, Duration time) {
 		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, null, method, status),
 				key -> responseTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
-				                          .register(registry));
+				                          .register(REGISTRY));
 		responseTime.record(time);
 	}
 }

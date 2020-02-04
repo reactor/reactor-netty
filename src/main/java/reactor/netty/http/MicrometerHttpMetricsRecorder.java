@@ -31,12 +31,14 @@ import static reactor.netty.Metrics.DATA_RECEIVED_TIME;
 import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.DATA_SENT_TIME;
 import static reactor.netty.Metrics.ERRORS;
+import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.URI;
 
 /**
  * @author Violeta Georgieva
+ * @since 0.9
  */
 public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecorder implements HttpMetricsRecorder {
 
@@ -92,7 +94,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary dataReceived = dataReceivedCache.computeIfAbsent(new MeterKey(uri, address, null, null),
 				key -> dataReceivedBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
-				                          .register(registry));
+				                          .register(REGISTRY));
 		dataReceived.record(bytes);
 	}
 
@@ -101,7 +103,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary dataSent = dataSentCache.computeIfAbsent(new MeterKey(uri, address, null, null),
 				key -> dataSentBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
-				                      .register(registry));
+				                      .register(REGISTRY));
 		dataSent.record(bytes);
 	}
 
@@ -110,7 +112,7 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		Counter errors = errorsCache.computeIfAbsent(new MeterKey(uri, address, null, null),
 				key -> errorsBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
-				                    .register(registry));
+				                    .register(REGISTRY));
 		errors.increment();
 	}
 }
