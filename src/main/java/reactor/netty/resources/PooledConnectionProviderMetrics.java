@@ -29,40 +29,41 @@ final class PooledConnectionProviderMetrics {
 
 	static void registerMetrics(String poolName, String id, String remoteAddress,
 			InstrumentedPool.PoolMetrics metrics) {
-		String name = String.format(NAME, poolName);
 
-		Gauge.builder(name + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
+		Gauge.builder(TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
-		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
+		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName)
 		     .register(registry);
 
-		Gauge.builder(name + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
+		Gauge.builder(ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
 		     .description("The number of the connections that have been successfully acquired and are in active use")
-		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
+		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName)
 		     .register(registry);
 
-		Gauge.builder(name + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
+		Gauge.builder(IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
 		     .description("The number of the idle connections")
-		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
+		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName)
 		     .register(registry);
 
-		Gauge.builder(name + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
+		Gauge.builder(PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
 		     .description("The number of the request, that are pending acquire a connection")
-		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress)
+		     .tags(ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName)
 		     .register(registry);
 	}
 
 	static final MeterRegistry registry = Metrics.globalRegistry;
 
-	static final String NAME = "reactor.netty.connection.provider.%s";
+	static final String NAME = "reactor.netty.connection.provider";
 
-	static final String TOTAL_CONNECTIONS = ".total.connections";
+	static final String TOTAL_CONNECTIONS = NAME + ".total.connections";
 
-	static final String ACTIVE_CONNECTIONS = ".active.connections";
+	static final String ACTIVE_CONNECTIONS = NAME + ".active.connections";
 
-	static final String IDLE_CONNECTIONS = ".idle.connections";
+	static final String IDLE_CONNECTIONS = NAME + ".idle.connections";
 
-	static final String PENDING_CONNECTIONS = ".pending.connections";
+	static final String PENDING_CONNECTIONS = NAME + ".pending.connections";
 
 	static final String ID = "id";
+
+	static final String POOL_NAME = "pool.name";
 }
