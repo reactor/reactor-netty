@@ -36,6 +36,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
 import reactor.core.Exceptions;
@@ -370,6 +371,20 @@ public abstract class BootstrapHandlers {
 	}
 
 	/**
+	 * Configure log support for a {@link Bootstrap}
+	 *
+	 * @param b the bootstrap to setup
+	 * @param category the logger category
+	 * @param level the logger level
+	 *
+	 * @return a mutated {@link Bootstrap}
+	 */
+	public static Bootstrap updateLogSupport(Bootstrap b, String category, LogLevel level) {
+		updateConfiguration(b, NettyPipeline.LoggingHandler, logConfiguration(category, level, SSL_CLIENT_DEBUG));
+		return b;
+	}
+
+	/**
 	 * Configure log support for a {@link ServerBootstrap}
 	 *
 	 * @param b the bootstrap to setup
@@ -482,6 +497,12 @@ public abstract class BootstrapHandlers {
 	@Nullable
 	public static Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>> findMetricsSupport(Bootstrap b) {
 		return BootstrapHandlers.findConfiguration(DeferredMetricsSupport.class, b.config().handler());
+	}
+
+	static BiConsumer<ConnectionObserver, ? super Channel> logConfiguration(String category, LogLevel level, boolean debugSsl) {
+		Objects.requireNonNull(category, "category");
+		Objects.requireNonNull(level, "level");
+		return new LoggingHandlerSupportConsumer(category, level, debugSsl);
 	}
 
 	@ChannelHandler.Sharable
@@ -614,16 +635,31 @@ public abstract class BootstrapHandlers {
 			implements BiConsumer<ConnectionObserver, Channel> {
 
 		final ChannelHandler handler;
+		final String category;
+		final LogLevel level;
 		final boolean debugSsl;
+
+		LoggingHandlerSupportConsumer(String category, LogLevel level, boolean debugSsl) {
+			this.handler = null;
+			this.category = category;
+			this.level = level;
+			this.debugSsl = debugSsl;
+		}
 
 		LoggingHandlerSupportConsumer(ChannelHandler handler, boolean debugSsl) {
 			this.handler = handler;
+			this.category = null;
+			this.level = null;
 			this.debugSsl = debugSsl;
 		}
 
 		@Override
 		public void accept(ConnectionObserver connectionObserver, Channel channel) {
 			ChannelPipeline pipeline = channel.pipeline();
+			ChannelHandler loggingHandler = handler;
+			if (loggingHandler == null) {
+				loggingHandler = new LoggingHandler(category, level);
+			}
 			if (pipeline.get(NettyPipeline.SslHandler) != null) {
 				if (debugSsl) {
 					pipeline.addBefore(NettyPipeline.SslHandler,
@@ -632,7 +668,7 @@ public abstract class BootstrapHandlers {
 				}
 				pipeline.addAfter(NettyPipeline.SslHandler,
 						NettyPipeline.LoggingHandler,
-						handler);
+						loggingHandler);
 			}
 			else if (pipeline.get(NettyPipeline.ProxyHandler) != null) {
 				pipeline.addBefore(NettyPipeline.ProxyHandler,
@@ -640,10 +676,10 @@ public abstract class BootstrapHandlers {
 				                   new LoggingHandler("reactor.netty.proxy"))
 				        .addAfter(NettyPipeline.ProxyHandler,
 				                  NettyPipeline.LoggingHandler,
-				                  handler);
+				                  loggingHandler);
 			}
 			else {
-				pipeline.addFirst(NettyPipeline.LoggingHandler, handler);
+				pipeline.addFirst(NettyPipeline.LoggingHandler, loggingHandler);
 			}
 		}
 
@@ -656,12 +692,15 @@ public abstract class BootstrapHandlers {
 				return false;
 			}
 			LoggingHandlerSupportConsumer that = (LoggingHandlerSupportConsumer) o;
-			return Objects.equals(handler, that.handler);
+			return Objects.equals(handler, that.handler) &&
+					Objects.equals(category, that.category) &&
+					level == that.level &&
+					debugSsl == that.debugSsl;
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(handler);
+			return Objects.hash(handler, category, level, debugSsl);
 		}
 	}
 

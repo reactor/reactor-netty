@@ -66,6 +66,7 @@ import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -2042,5 +2043,62 @@ public class HttpClientTest {
 		assertThat(doAfterResponse.get()).isTrue();
 		assertThat(doAfterResponseSuccess.get()).isFalse();
 		assertThat(doOnResponseError.get()).isTrue();
+	}
+
+	@Test
+	public void testIssue988() {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.sendString(Mono.just("test")))
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(30));
+
+		ConnectionProvider provider = ConnectionProvider.create("testIssue988", 1);
+		HttpClient client =
+				createHttpClientForContextWithAddress(provider)
+				        .tcpConfiguration(tcpClient -> tcpClient.wiretap("testIssue988", LogLevel.INFO));
+
+		AtomicReference<Channel> ch1 = new AtomicReference<>();
+		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch1.set(c.channel())))
+				                  .get()
+				                  .uri("/1")
+				                  .responseContent()
+				                  .aggregate()
+				                  .asString())
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		AtomicReference<Channel> ch2 = new AtomicReference<>();
+		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch2.set(c.channel())))
+				                  .post()
+				                  .uri("/2")
+				                  .send(ByteBufFlux.fromString(Mono.just("test")))
+				                  .responseContent()
+				                  .aggregate()
+				                  .asString())
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		AtomicReference<Channel> ch3 = new AtomicReference<>();
+		StepVerifier.create(
+				client.tcpConfiguration(tcpClient ->
+				          tcpClient.doOnConnected(c -> ch3.set(c.channel()))
+				                   .wiretap("testIssue988", LogLevel.ERROR))
+				      .post()
+				      .uri("/3")
+				      .responseContent()
+				      .aggregate()
+				      .asString())
+				    .expectNextMatches("test"::equals)
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
+
+		assertThat(ch1.get()).isSameAs(ch2.get());
+		assertThat(ch1.get()).isNotSameAs(ch3.get());
+
+		provider.dispose();
 	}
 }

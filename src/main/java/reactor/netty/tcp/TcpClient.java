@@ -610,8 +610,7 @@ public abstract class TcpClient {
 	public final TcpClient wiretap(String category, LogLevel level) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
-		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b,
-				new LoggingHandler(category, level)));
+		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, category, level));
 	}
 
 	final AtomicReference<MicrometerChannelMetricsRecorder> channelMetricsRecorder = new AtomicReference<>();
