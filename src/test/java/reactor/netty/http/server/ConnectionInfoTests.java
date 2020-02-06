@@ -195,6 +195,40 @@ public class ConnectionInfoTests {
 	}
 
 	@Test
+	public void xForwardedForHostAndPortAndProto() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1");
+					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com");
+					clientRequestHeaders.add("X-Forwarded-Port", "8080");
+					clientRequestHeaders.add("X-Forwarded-Proto", "http");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+				});
+	}
+
+	@Test
+	public void xForwardedForMultipleHostAndPortAndProto() {
+		testClientRequest(
+				clientRequestHeaders -> {
+					clientRequestHeaders.add("X-Forwarded-For", "192.168.0.1,10.20.30.1,10.20.30.2");
+					clientRequestHeaders.add("X-Forwarded-Host", "a.example.com,b.example.com");
+					clientRequestHeaders.add("X-Forwarded-Port", "8080,8090");
+					clientRequestHeaders.add("X-Forwarded-Proto", "http,https");
+				},
+				serverRequest -> {
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
+				});
+	}
+
+	@Test
 	public void proxyProtocolOn() throws InterruptedException {
 		String remoteAddress = "202.112.144.236";
 		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
