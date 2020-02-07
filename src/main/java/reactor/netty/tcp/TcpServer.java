@@ -548,7 +548,7 @@ public abstract class TcpServer {
 	/**
 	 * Whether to enable metrics to be collected and registered in Micrometer's
 	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
-	 * under the name {@link reactor.netty.Metrics#TCP_SERVER_NAME_PREFIX}. Applications can
+	 * under the name {@link reactor.netty.Metrics#TCP_SERVER_PREFIX}. Applications can
 	 * separately register their own
 	 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
 	 * For example, to put an upper bound on the number of tags produced:
@@ -611,7 +611,7 @@ public abstract class TcpServer {
 		MicrometerChannelMetricsRecorder recorder = channelMetricsRecorder.get();
 		if (recorder == null) {
 			channelMetricsRecorder.compareAndSet(null,
-					new MicrometerChannelMetricsRecorder(reactor.netty.Metrics.TCP_SERVER_NAME_PREFIX, "tcp"));
+					new MicrometerChannelMetricsRecorder(reactor.netty.Metrics.TCP_SERVER_PREFIX, "tcp"));
 			recorder = getOrCreateMetricsRecorder();
 		}
 		return recorder;

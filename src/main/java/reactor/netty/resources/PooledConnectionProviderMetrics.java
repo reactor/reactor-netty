@@ -19,7 +19,7 @@ import io.micrometer.core.instrument.Gauge;
 import reactor.pool.InstrumentedPool;
 
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
-import static reactor.netty.Metrics.CONNECTION_PROVIDER_NAME_PREFIX;
+import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.IDLE_CONNECTIONS;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
@@ -37,22 +37,22 @@ final class PooledConnectionProviderMetrics {
 	static void registerMetrics(String poolName, String id, String remoteAddress,
 			InstrumentedPool.PoolMetrics metrics) {
 		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName};
-		Gauge.builder(CONNECTION_PROVIDER_NAME_PREFIX + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(CONNECTION_PROVIDER_NAME_PREFIX + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
 		     .description("The number of the connections that have been successfully acquired and are in active use")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(CONNECTION_PROVIDER_NAME_PREFIX + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
 		     .description("The number of the idle connections")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(CONNECTION_PROVIDER_NAME_PREFIX + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
 		     .description("The number of the request, that are pending acquire a connection")
 		     .tags(tags)
 		     .register(REGISTRY);

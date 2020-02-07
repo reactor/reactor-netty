@@ -21,7 +21,7 @@ import reactor.netty.http.MicrometerHttpMetricsRecorder;
 
 import java.time.Duration;
 
-import static reactor.netty.Metrics.HTTP_SERVER_NAME_PREFIX;
+import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
 import static reactor.netty.Metrics.METHOD;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.STATUS;
@@ -36,7 +36,7 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	final static MicrometerHttpServerMetricsRecorder INSTANCE = new MicrometerHttpServerMetricsRecorder();
 
 	private MicrometerHttpServerMetricsRecorder() {
-		super(HTTP_SERVER_NAME_PREFIX, "http");
+		super(HTTP_SERVER_PREFIX, "http");
 	}
 
 	@Override

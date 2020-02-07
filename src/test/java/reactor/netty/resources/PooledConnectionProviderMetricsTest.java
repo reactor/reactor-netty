@@ -38,7 +38,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
-import static reactor.netty.Metrics.CONNECTION_PROVIDER_NAME_PREFIX;
+import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.IDLE_CONNECTIONS;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
@@ -94,10 +94,10 @@ public class PooledConnectionProviderMetricsTest {
 		              String[] tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort(), POOL_NAME, poolName};
 		              tags.set(tagsArr);
 
-		              double totalConnections = getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + TOTAL_CONNECTIONS, tagsArr);
-		              double activeConnections = getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
-		              double idleConnections = getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + IDLE_CONNECTIONS, tagsArr);
-		              double pendingConnections = getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + PENDING_CONNECTIONS, tagsArr);
+		              double totalConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr);
+		              double activeConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
+		              double idleConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr);
+		              double pendingConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr);
 
 		              if (totalConnections == 1 && activeConnections == 1 &&
 		                      idleConnections == 0 && pendingConnections == 0) {
@@ -116,10 +116,10 @@ public class PooledConnectionProviderMetricsTest {
 		assertTrue(metrics.get());
 		String[] tagsArr = tags.get();
 		assertNotNull(tagsArr);
-		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + TOTAL_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + ACTIVE_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + IDLE_CONNECTIONS, tagsArr), 0.0);
-		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_NAME_PREFIX + PENDING_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr), 0.0);
+		assertEquals(0, getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr), 0.0);
 
 		fixed.disposeLater()
 		     .block(Duration.ofSeconds(30));

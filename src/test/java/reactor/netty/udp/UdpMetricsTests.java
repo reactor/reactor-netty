@@ -46,8 +46,8 @@ import static reactor.netty.Metrics.DATA_SENT;
 import static reactor.netty.Metrics.ERRORS;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.STATUS;
-import static reactor.netty.Metrics.UDP_CLIENT_NAME_PREFIX;
-import static reactor.netty.Metrics.UDP_SERVER_NAME_PREFIX;
+import static reactor.netty.Metrics.UDP_CLIENT_PREFIX;
+import static reactor.netty.Metrics.UDP_SERVER_PREFIX;
 import static reactor.netty.Metrics.URI;
 
 /**
@@ -179,12 +179,12 @@ public class UdpMetricsTests {
 	}
 
 
-	private static final String SERVER_DATA_SENT = UDP_SERVER_NAME_PREFIX + DATA_SENT;
-	private static final String SERVER_DATA_RECEIVED = UDP_SERVER_NAME_PREFIX + DATA_RECEIVED;
-	private static final String SERVER_ERRORS = UDP_SERVER_NAME_PREFIX + ERRORS;
+	private static final String SERVER_DATA_SENT = UDP_SERVER_PREFIX + DATA_SENT;
+	private static final String SERVER_DATA_RECEIVED = UDP_SERVER_PREFIX + DATA_RECEIVED;
+	private static final String SERVER_ERRORS = UDP_SERVER_PREFIX + ERRORS;
 
-	private static final String CLIENT_DATA_SENT = UDP_CLIENT_NAME_PREFIX + DATA_SENT;
-	private static final String CLIENT_DATA_RECEIVED = UDP_CLIENT_NAME_PREFIX + DATA_RECEIVED;
-	private static final String CLIENT_ERRORS = UDP_CLIENT_NAME_PREFIX + ERRORS;
-	private static final String CLIENT_CONNECT_TIME = UDP_CLIENT_NAME_PREFIX + CONNECT_TIME;
+	private static final String CLIENT_DATA_SENT = UDP_CLIENT_PREFIX + DATA_SENT;
+	private static final String CLIENT_DATA_RECEIVED = UDP_CLIENT_PREFIX + DATA_RECEIVED;
+	private static final String CLIENT_ERRORS = UDP_CLIENT_PREFIX + ERRORS;
+	private static final String CLIENT_CONNECT_TIME = UDP_CLIENT_PREFIX + CONNECT_TIME;
 }
