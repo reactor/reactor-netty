@@ -24,6 +24,7 @@ import reactor.netty.ReactorNetty;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.Pool;
 import reactor.pool.PoolBuilder;
+import reactor.util.Metrics;
 import reactor.util.annotation.NonNull;
 
 import javax.annotation.Nullable;
@@ -361,6 +362,7 @@ public interface ConnectionProvider extends Disposable {
 		Duration pendingAcquireTimeout  = Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT);
 		Duration maxIdleTime;
 		Duration maxLifeTime;
+		boolean  metricsEnabled;
 		Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
 				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
 
@@ -457,6 +459,34 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
+		 * Whether to enable metrics to be collected and registered in Micrometer's
+		 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
+		 * under the name {@link reactor.netty.Metrics#CONNECTION_PROVIDER_PREFIX}. Applications can
+		 * separately register their own
+		 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
+		 * For example, to put an upper bound on the number of tags produced:
+		 * <pre class="code">
+		 * MeterFilter filter = ... ;
+		 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(CONNECTION_PROVIDER_PREFIX, 100, filter));
+		 * </pre>
+		 * <p>By default this is not enabled.
+		 *
+		 * @param metricsEnabled true enables metrics collection; false disables it
+		 * @return {@literal this}
+		 */
+		public final Builder metrics(boolean metricsEnabled) {
+			if (metricsEnabled) {
+				if (!Metrics.isInstrumentationAvailable()) {
+					throw new UnsupportedOperationException(
+							"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+									" to the class path first");
+				}
+			}
+			this.metricsEnabled = metricsEnabled;
+			return this;
+		}
+
+		/**
 		 * Build a LIFO flavor of {@link Pool}, that is to say a flavor where the last
 		 * {@link Pool#acquire()} {@link Mono Mono} that was pending is served first
 		 * whenever a resource becomes available.
@@ -490,29 +520,6 @@ public interface ConnectionProvider extends Disposable {
 				this.pendingAcquireMaxCount = 2 * this.maxConnections;
 			}
 			return new PooledConnectionProvider(this);
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) {
-				return true;
-			}
-			if (o == null || getClass() != o.getClass()) {
-				return false;
-			}
-			Builder builder = (Builder) o;
-			return maxConnections == builder.maxConnections &&
-			        pendingAcquireMaxCount == builder.pendingAcquireMaxCount &&
-			        name.equals(builder.name) &&
-			        pendingAcquireTimeout.equals(builder.pendingAcquireTimeout) &&
-			        Objects.equals(maxIdleTime, builder.maxIdleTime) &&
-			        Objects.equals(maxLifeTime, builder.maxLifeTime) &&
-			        Objects.equals(leasingStrategy, builder.leasingStrategy);
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(name, pendingAcquireTimeout, maxConnections, pendingAcquireMaxCount, maxIdleTime, maxLifeTime, leasingStrategy);
 		}
 	}
 }

@@ -84,6 +84,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final long        pendingAcquireTimeout;
 	final long        maxIdleTime;
 	final long        maxLifeTime;
+	final boolean     metricsEnabled;
 	final PoolFactory poolFactory;
 
 	PooledConnectionProvider(Builder builder){
@@ -93,6 +94,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		this.pendingAcquireTimeout = builder.pendingAcquireTimeout.toMillis();
 		this.maxIdleTime = builder.maxIdleTime != null ? builder.maxIdleTime.toMillis() : -1;
 		this.maxLifeTime = builder.maxLifeTime != null ? builder.maxLifeTime.toMillis() : -1;
+		this.metricsEnabled = builder.metricsEnabled;
 		this.poolFactory = allocator ->
 				builder.leasingStrategy.apply(PoolBuilder.from(allocator)
 				           .destroyHandler(DEFAULT_DESTROY_HANDLER)
@@ -163,7 +165,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				InstrumentedPool<PooledConnection> newPool =
 						new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
 
-				if (BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
+				if (metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
 					PooledConnectionProviderMetrics.registerMetrics(name,
 							poolKey.hashCode() + "",
 							Metrics.formatSocketAddress(bootstrap.config().remoteAddress()),
@@ -213,6 +215,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		               ", pendingAcquireTimeout=" + pendingAcquireTimeout +
 		               ", maxIdleTime=" + maxIdleTime +
 		               ", maxLifeTime=" + maxLifeTime +
+		               ", metricsEnabled=" + metricsEnabled +
 		               '}';
 	}
 

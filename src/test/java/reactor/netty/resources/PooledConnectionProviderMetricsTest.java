@@ -66,7 +66,17 @@ public class PooledConnectionProviderMetricsTest {
 	}
 
 	@Test
-	public void test() throws Exception {
+	public void testClientMetricsEnabled() throws Exception {
+		doTest(ConnectionProvider.create("test", 1), true);
+	}
+
+	@Test
+	public void testClientMetricsDisabled() throws Exception {
+		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo(),
+		       false);
+	}
+
+	private void doTest(ConnectionProvider provider, boolean clientMetricsEnabled) throws Exception {
 		DisposableServer server =
 				HttpServer.create()
 				          .port(0)
@@ -79,9 +89,8 @@ public class PooledConnectionProviderMetricsTest {
 
 		CountDownLatch latch = new CountDownLatch(1);
 
-		String poolName = "test";
-		String namePrefix = CONNECTION_PROVIDER_PREFIX + "." + poolName;
-		PooledConnectionProvider fixed = (PooledConnectionProvider) ConnectionProvider.create(poolName, 1);
+		String namePrefix = CONNECTION_PROVIDER_PREFIX + ".test";
+		PooledConnectionProvider fixed = (PooledConnectionProvider) provider;
 		AtomicReference<String[]> tags1 = new AtomicReference<>();
 		AtomicReference<String[]> tags2 = new AtomicReference<>();
 
@@ -94,7 +103,7 @@ public class PooledConnectionProviderMetricsTest {
 
 		              PooledConnectionProvider.PoolKey key = (PooledConnectionProvider.PoolKey) fixed.channelPools.keySet().toArray()[0];
 		              InetSocketAddress sa = (InetSocketAddress) conn.channel().remoteAddress();
-		              String[] tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort(), POOL_NAME, poolName};
+		              String[] tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort(), POOL_NAME, "test"};
 		              tags1.set(tagsArr);
 
 		              double totalConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr);
@@ -119,7 +128,7 @@ public class PooledConnectionProviderMetricsTest {
 			              metrics2.set(true);
 			          }
 		          })
-		          .metrics(true)
+		          .metrics(clientMetricsEnabled)
 		          .get()
 		          .uri("/")
 		          .responseContent()
