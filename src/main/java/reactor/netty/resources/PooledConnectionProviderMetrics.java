@@ -23,7 +23,7 @@ import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.IDLE_CONNECTIONS;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
-import static reactor.netty.Metrics.POOL_NAME;
+import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
@@ -36,7 +36,7 @@ final class PooledConnectionProviderMetrics {
 
 	static void registerMetrics(String poolName, String id, String remoteAddress,
 			InstrumentedPool.PoolMetrics metrics) {
-		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName};
+		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, NAME, poolName};
 		Gauge.builder(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
 		     .tags(tags)
