@@ -19,7 +19,7 @@ import io.micrometer.core.instrument.Gauge;
 import reactor.pool.InstrumentedPool;
 
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
-import static reactor.netty.Metrics.CONNECTION_PROVIDER_NAME_PREFIX;
+import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.IDLE_CONNECTIONS;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
@@ -38,10 +38,10 @@ final class PooledConnectionProviderMetrics {
 			InstrumentedPool.PoolMetrics metrics) {
 		// This is for backwards compatibility and will be removed in the next versions
 		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress};
-		registerMetricsInternal(CONNECTION_PROVIDER_NAME_PREFIX + "." + poolName, metrics, tags);
+		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX + "." + poolName, metrics, tags);
 
 		tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName};
-		registerMetricsInternal(CONNECTION_PROVIDER_NAME_PREFIX, metrics, tags);
+		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX, metrics, tags);
 	}
 
 	private static void registerMetricsInternal(String name, InstrumentedPool.PoolMetrics metrics, String... tags) {

@@ -22,7 +22,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.util.concurrent.ConcurrentMap;
 
-import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_NAME_PREFIX;
+import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_PREFIX;
 import static reactor.netty.Metrics.CHUNK_SIZE;
 import static reactor.netty.Metrics.DIRECT_ARENAS;
 import static reactor.netty.Metrics.HEAP_ARENAS;
@@ -49,7 +49,7 @@ final class ByteBufAllocatorMetrics {
 
 	void registerMetrics(String allocName, ByteBufAllocatorMetric metrics) {
 		cache.computeIfAbsent(metrics.hashCode() + "", key -> {
-			String name = String.format(BYTE_BUF_ALLOCATOR_NAME_PREFIX, allocName);
+			String name = String.format(BYTE_BUF_ALLOCATOR_PREFIX, allocName);
 
 			Gauge.builder(name + USED_HEAP_MEMORY, metrics, ByteBufAllocatorMetric::usedHeapMemory)
 			     .description("The number of the bytes of the heap memory.")

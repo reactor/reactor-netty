@@ -849,7 +849,7 @@ public abstract class HttpClient {
 	/**
 	 * Whether to enable metrics to be collected and registered in Micrometer's
 	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
-	 * under the name {@link reactor.netty.Metrics#HTTP_CLIENT_NAME_PREFIX}. Applications can
+	 * under the name {@link reactor.netty.Metrics#HTTP_CLIENT_PREFIX}. Applications can
 	 * separately register their own
 	 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
 	 * For example, to put an upper bound on the number of tags produced:
