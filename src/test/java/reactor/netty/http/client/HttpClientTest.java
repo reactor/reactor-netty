@@ -1120,16 +1120,17 @@ public class HttpClientTest {
 				          })
 				          .bindNow();
 
-		AtomicInteger requestError = new AtomicInteger();
-		AtomicInteger responseError = new AtomicInteger();
+		AtomicReference<String> requestError1 = new AtomicReference<>();
+		AtomicReference<String> responseError1 = new AtomicReference<>();
 
 		Mono<String> content =
 				createHttpClientForContextWithPort()
 				        .headers(h -> h.add("before", "test"))
 				        .doOnRequestError((req, err) ->
-				            requestError.incrementAndGet())
+				            requestError1.set(req.currentContext().getOrDefault("test", "empty")))
 				        .doOnResponseError((res, err) ->
-				            responseError.incrementAndGet())
+				            responseError1.set(res.currentContext().getOrDefault("test", "empty")))
+				        .mapConnect((c, b) -> c.subscriberContext(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1139,16 +1140,20 @@ public class HttpClientTest {
 		StepVerifier.create(content)
 		            .verifyError(PrematureCloseException.class);
 
-		assertThat(requestError.getAndSet(0)).isEqualTo(1);
-		assertThat(responseError.getAndSet(0)).isEqualTo(0);
+		assertThat(requestError1.get()).isEqualTo("success");
+		assertThat(responseError1.get()).isNull();
+
+		AtomicReference<String> requestError2 = new AtomicReference<>();
+		AtomicReference<String> responseError2 = new AtomicReference<>();
 
 		content =
 				createHttpClientForContextWithPort()
 				        .headers(h -> h.add("during", "test"))
 				        .doOnError((req, err) ->
-				            requestError.incrementAndGet()
+				            requestError2.set(req.currentContext().getOrDefault("test", "empty"))
 				            ,(res, err) ->
-				            responseError.incrementAndGet())
+				            responseError2.set(res.currentContext().getOrDefault("test", "empty")))
+				        .mapConnect((c, b) -> c.subscriberContext(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1158,8 +1163,8 @@ public class HttpClientTest {
 		StepVerifier.create(content)
 		            .verifyError(PrematureCloseException.class);
 
-		assertThat(requestError.getAndSet(0)).isEqualTo(0);
-		assertThat(responseError.getAndSet(0)).isEqualTo(1);
+		assertThat(requestError2.get()).isNull();
+		assertThat(responseError2.get()).isEqualTo("success");
 	}
 
 	@Test
