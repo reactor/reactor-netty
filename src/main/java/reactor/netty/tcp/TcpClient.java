@@ -529,7 +529,7 @@ public abstract class TcpClient {
 	 * For example, to put an upper bound on the number of tags produced:
 	 * <pre class="code">
 	 * MeterFilter filter = ... ;
-	 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(TCP_CLIENT_NAME_PREFIX, 100, filter));
+	 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(TCP_CLIENT_PREFIX, 100, filter));
 	 * </pre>
 	 * <p>By default this is not enabled.
 	 *
