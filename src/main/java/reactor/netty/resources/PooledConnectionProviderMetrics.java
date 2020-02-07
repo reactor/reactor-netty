@@ -23,7 +23,7 @@ import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
 import static reactor.netty.Metrics.ID;
 import static reactor.netty.Metrics.IDLE_CONNECTIONS;
 import static reactor.netty.Metrics.PENDING_CONNECTIONS;
-import static reactor.netty.Metrics.POOL_NAME;
+import static reactor.netty.Metrics.NAME;
 import static reactor.netty.Metrics.REGISTRY;
 import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
@@ -40,7 +40,7 @@ final class PooledConnectionProviderMetrics {
 		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress};
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX + "." + poolName, metrics, tags);
 
-		tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, POOL_NAME, poolName};
+		tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, NAME, poolName};
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX, metrics, tags);
 	}
 
