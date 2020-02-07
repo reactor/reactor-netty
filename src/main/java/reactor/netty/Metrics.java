@@ -76,7 +76,7 @@ public class Metrics {
 	 * Name prefix that will be used for the ByteBufAllocator's metrics
 	 * registered in Micrometer's global registry
 	 */
-	public static final String BYTE_BUF_ALLOCATOR_PREFIX = "reactor.netty.%s.bytebuf.allocator";
+	public static final String BYTE_BUF_ALLOCATOR_PREFIX = "reactor.netty.bytebuf.allocator";
 
 
 	// Metrics
@@ -209,6 +209,8 @@ public class Metrics {
 	public static final String ID = "id";
 
 	public static final String POOL_NAME = "pool.name";
+
+	public static final String TYPE = "type";
 
 	public static final String SUCCESS = "SUCCESS";
 
