@@ -34,6 +34,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static reactor.netty.Metrics.BYTE_BUF_ALLOCATOR_PREFIX;
 import static reactor.netty.Metrics.CHUNK_SIZE;
 import static reactor.netty.Metrics.DIRECT_ARENAS;
 import static reactor.netty.Metrics.HEAP_ARENAS;
@@ -42,6 +43,7 @@ import static reactor.netty.Metrics.NORMAL_CACHE_SIZE;
 import static reactor.netty.Metrics.SMALL_CACHE_SIZE;
 import static reactor.netty.Metrics.THREAD_LOCAL_CACHES;
 import static reactor.netty.Metrics.TINY_CACHE_SIZE;
+import static reactor.netty.Metrics.TYPE;
 import static reactor.netty.Metrics.USED_DIRECT_MEMORY;
 import static reactor.netty.Metrics.USED_HEAP_MEMORY;
 
@@ -93,27 +95,35 @@ public class ByteBufAllocatorMetricsTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
 		String id = alloc.metric().hashCode() + "";
-		assertThat(getGaugeValue(NAME + USED_HEAP_MEMORY, id)).isEqualTo(0);
-		assertThat(getGaugeValue(NAME + USED_DIRECT_MEMORY, id)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + HEAP_ARENAS, id)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + DIRECT_ARENAS, id)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + THREAD_LOCAL_CACHES, id)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + TINY_CACHE_SIZE, id)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + SMALL_CACHE_SIZE, id)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + NORMAL_CACHE_SIZE, id)).isGreaterThan(0);
-		assertThat(getGaugeValue(NAME + CHUNK_SIZE, id)).isGreaterThan(0);
+		String[] tags = new String[] {ID, id};
+		checkExpectations(NAME, tags);
+
+		tags = new String[] {ID, id, TYPE, "pooled"};
+		checkExpectations(BYTE_BUF_ALLOCATOR_PREFIX, tags);
 
 		server.disposeNow();
 	}
 
 
-	private double getGaugeValue(String name, String id) {
-		Gauge gauge = registry.find(name).tags(ID, id).gauge();
+	private double getGaugeValue(String name, String... tags) {
+		Gauge gauge = registry.find(name).tags(tags).gauge();
 		double result = -1;
 		if (gauge != null) {
 			result = gauge.value();
 		}
 		return result;
+	}
+
+	private void checkExpectations(String name, String... tags) {
+		assertThat(getGaugeValue(name + USED_HEAP_MEMORY, tags)).isEqualTo(0);
+		assertThat(getGaugeValue(name + USED_DIRECT_MEMORY, tags)).isGreaterThan(0);
+		assertThat(getGaugeValue(name + HEAP_ARENAS, tags)).isGreaterThan(0);
+		assertThat(getGaugeValue(name + DIRECT_ARENAS, tags)).isGreaterThan(0);
+		assertThat(getGaugeValue(name + THREAD_LOCAL_CACHES, tags)).isGreaterThan(0);
+		assertThat(getGaugeValue(name + TINY_CACHE_SIZE, tags)).isGreaterThan(0);
+		assertThat(getGaugeValue(name + SMALL_CACHE_SIZE, tags)).isGreaterThan(0);
+		assertThat(getGaugeValue(name + NORMAL_CACHE_SIZE, tags)).isGreaterThan(0);
+		assertThat(getGaugeValue(name + CHUNK_SIZE, tags)).isGreaterThan(0);
 	}
 
 	private static final String NAME = "reactor.netty.pooled.bytebuf.allocator";
