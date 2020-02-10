@@ -20,56 +20,57 @@ import org.junit.Test;
 import reactor.test.StepVerifier;
 
 import java.nio.channels.ClosedChannelException;
+import java.time.Duration;
 import java.util.function.Supplier;
 
 public class FutureMonoTest {
 
-    @Test
-    public void testImmediateFutureMonoImmediate() {
-        ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
-        Future<Void> promise = eventExecutor.newFailedFuture(new ClosedChannelException());
+	@Test
+	public void testImmediateFutureMonoImmediate() {
+		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
+		Future<Void> promise = eventExecutor.newFailedFuture(new ClosedChannelException());
 
-        StepVerifier.create(FutureMono.from(promise))
-                .expectError(ReactorNetty.InternalNettyException.class)
-                .verify();
-    }
+		StepVerifier.create(FutureMono.from(promise))
+		            .expectError(ReactorNetty.InternalNettyException.class)
+		            .verify(Duration.ofSeconds(30));
+	}
 
-    // return value of setFailure not needed
-    @SuppressWarnings("FutureReturnValueIgnored")
-    @Test
-    public void testImmediateFutureMonoLater() {
-        ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
-        Promise<Void> promise = eventExecutor.newPromise();
+	// return value of setFailure not needed
+	@SuppressWarnings("FutureReturnValueIgnored")
+	@Test
+	public void testImmediateFutureMonoLater() {
+		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
+		Promise<Void> promise = eventExecutor.newPromise();
 
-        StepVerifier.create(FutureMono.from(promise))
-                .expectSubscription()
-                .then(() -> promise.setFailure(new ClosedChannelException()))
-                .expectError(ReactorNetty.InternalNettyException.class)
-                .verify();
-    }
+		StepVerifier.create(FutureMono.from(promise))
+		            .expectSubscription()
+		            .then(() -> promise.setFailure(new ClosedChannelException()))
+		            .expectError(ReactorNetty.InternalNettyException.class)
+		            .verify(Duration.ofSeconds(30));
+	}
 
-    @Test
-    public void testDeferredFutureMonoImmediate() {
-        ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
-        Supplier<Future<Void>> promiseSupplier = () -> eventExecutor.newFailedFuture(new ClosedChannelException());
+	@Test
+	public void testDeferredFutureMonoImmediate() {
+		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
+		Supplier<Future<Void>> promiseSupplier = () -> eventExecutor.newFailedFuture(new ClosedChannelException());
 
-        StepVerifier.create(FutureMono.deferFuture(promiseSupplier))
-                .expectError(ReactorNetty.InternalNettyException.class)
-                .verify();
-    }
+		StepVerifier.create(FutureMono.deferFuture(promiseSupplier))
+		            .expectError(ReactorNetty.InternalNettyException.class)
+		            .verify(Duration.ofSeconds(30));
+	}
 
-    // return value of setFailure not needed
-    @SuppressWarnings("FutureReturnValueIgnored")
-    @Test
-    public void testDeferredFutureMonoLater() {
-        ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
-        Promise<Void> promise = eventExecutor.newPromise();
-        Supplier<Promise<Void>> promiseSupplier = () -> promise;
+	// return value of setFailure not needed
+	@SuppressWarnings("FutureReturnValueIgnored")
+	@Test
+	public void testDeferredFutureMonoLater() {
+		ImmediateEventExecutor eventExecutor = ImmediateEventExecutor.INSTANCE;
+		Promise<Void> promise = eventExecutor.newPromise();
+		Supplier<Promise<Void>> promiseSupplier = () -> promise;
 
-        StepVerifier.create(FutureMono.deferFuture(promiseSupplier))
-                .expectSubscription()
-                .then(() -> promise.setFailure(new ClosedChannelException()))
-                .expectError(ReactorNetty.InternalNettyException.class)
-                .verify();
-    }
+		StepVerifier.create(FutureMono.deferFuture(promiseSupplier))
+		            .expectSubscription()
+		            .then(() -> promise.setFailure(new ClosedChannelException()))
+		            .expectError(ReactorNetty.InternalNettyException.class)
+		            .verify(Duration.ofSeconds(30));
+	}
 }
