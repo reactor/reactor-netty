@@ -182,6 +182,7 @@ public abstract class FutureMono extends Mono<Void> {
 
 		private static Throwable wrapError(Throwable error) {
 			if(error instanceof ClosedChannelException) {
+				//Update with a common aborted exception?
 				return ReactorNetty.wrapException(error);
 			} else {
 				return error;
