@@ -47,7 +47,7 @@ public abstract class FutureMono extends Mono<Void> {
 	public static <F extends Future<Void>> Mono<Void> from(F future) {
 		if(future.isDone()){
 			if(!future.isSuccess()){
-				return Mono.error(future.cause());
+				return Mono.error(FutureSubscription.wrapError(future.cause()));
 			}
 			return Mono.empty();
 		}
@@ -84,7 +84,7 @@ public abstract class FutureMono extends Mono<Void> {
 					Operators.complete(s);
 				}
 				else{
-					Operators.error(s, future.cause());
+					Operators.error(s, FutureSubscription.wrapError(future.cause()));
 				}
 				return;
 			}
@@ -129,7 +129,7 @@ public abstract class FutureMono extends Mono<Void> {
 					Operators.complete(s);
 				}
 				else {
-					Operators.error(s, f.cause());
+					Operators.error(s, FutureSubscription.wrapError(f.cause()));
 				}
 				return;
 			}
@@ -173,18 +173,20 @@ public abstract class FutureMono extends Mono<Void> {
 		@SuppressWarnings("unchecked")
 		public void operationComplete(F future) {
 			if (!future.isSuccess()) {//Avoid singleton
-				if (future.cause() instanceof ClosedChannelException) {
-					//Update with a common aborted exception?
-					s.onError(ReactorNetty.wrapException(future.cause()));
-				}
-				else {
-					s.onError(future.cause());
-				}
+				s.onError(wrapError(future.cause()));
 			}
 			else {
 				s.onComplete();
 			}
 		}
 
+		private static Throwable wrapError(Throwable error) {
+			if(error instanceof ClosedChannelException) {
+				//Update with a common aborted exception?
+				return ReactorNetty.wrapException(error);
+			} else {
+				return error;
+			}
+		}
 	}
 }
