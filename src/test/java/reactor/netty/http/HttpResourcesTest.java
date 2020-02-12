@@ -27,7 +27,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -47,7 +46,7 @@ public class HttpResourcesTest {
 		loopResources = new LoopResources() {
 			@Override
 			public EventLoopGroup onServer(boolean useNative) {
-				throw new NotImplementedException();
+				throw new UnsupportedOperationException();
 			}
 
 			@Override

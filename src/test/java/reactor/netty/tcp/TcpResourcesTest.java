@@ -32,7 +32,6 @@ import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -53,7 +52,7 @@ public class TcpResourcesTest {
 		loopResources = new LoopResources() {
 			@Override
 			public EventLoopGroup onServer(boolean useNative) {
-				throw new NotImplementedException();
+				throw new UnsupportedOperationException();
 			}
 
 			@Override
