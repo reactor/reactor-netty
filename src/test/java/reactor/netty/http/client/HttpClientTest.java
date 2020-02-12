@@ -171,6 +171,32 @@ public class HttpClientTest {
 		return r;
 	}
 
+	/** This ensures that non-default values for the HTTP request line are visible for parsing. */
+	@Test
+	public void postVisibleToOnRequest() {
+		disposableServer = HttpServer.create().port(0)
+				.route(r -> r.post("/foo", (in, out) -> out.sendString(Flux.just("bar"))))
+				.bindNow();
+
+		final AtomicReference<HttpMethod> method = new AtomicReference<>();
+		final AtomicReference<String> path = new AtomicReference<>();
+
+		final HttpClientResponse response = createHttpClientForContextWithPort()
+				.doOnRequest((req, con) -> {
+					method.set(req.method());
+					path.set(req.path());
+				})
+				.post()
+				.uri("/foo")
+				.send(ByteBufFlux.fromString(Mono.just("bar")))
+				.response().block();
+
+		assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+		assertThat(method.get()).isEqualTo(HttpMethod.POST);
+		// req.path() returns the decoded path, without a leading "/"
+		assertThat(path.get()).isEqualTo("foo");
+	}
+
 	@Test
 	public void userIssue() throws Exception {
 		final ConnectionProvider pool = ConnectionProvider.create("userIssue", 1);

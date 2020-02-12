@@ -48,7 +48,7 @@ public class PostAndGetTests {
 	private DisposableServer httpServer;
 
 	@Before
-	public void setup() throws InterruptedException {
+	public void setup() {
 		setupServer();
 	}
 
