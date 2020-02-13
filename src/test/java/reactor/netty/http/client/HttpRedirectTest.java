@@ -122,6 +122,41 @@ public class HttpRedirectTest {
 		server.disposeNow();
 	}
 
+	/** This ensures functionality such as metrics and tracing can accurately count requests. */
+	@Test
+	public void redirect_issuesOnRequestForEachAttempt() {
+		DisposableServer server =
+				HttpServer.create()
+						.port(0)
+						.host("localhost")
+						.wiretap(true)
+						.route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+								.get("/3", (req, res) -> res.status(200)
+										.sendString(Mono.just("OK"))))
+						.wiretap(true)
+						.bindNow();
+
+		AtomicInteger onRequestCount = new AtomicInteger();
+		AtomicInteger onResponseCount = new AtomicInteger();
+
+		HttpClientResponse response = HttpClient.create()
+				.addressSupplier(server::address)
+				.wiretap(true)
+				.followRedirect(true)
+				.doOnRequest((r, c) -> onRequestCount.incrementAndGet())
+				.doOnResponse((r, c) -> onResponseCount.incrementAndGet())
+				.get()
+				.uri("/1")
+				.response()
+				.block(Duration.ofSeconds(30));
+
+		assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+		assertThat(onRequestCount.get()).isEqualTo(2);
+		assertThat(onResponseCount.get()).isEqualTo(2);
+
+		server.disposeNow();
+	}
+
 	@Test
 	public void testIssue253() {
 		final int serverPort1 = SocketUtils.findAvailableTcpPort();
