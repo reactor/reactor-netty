@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,7 +27,6 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -36,6 +36,8 @@ import reactor.netty.SocketUtils;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class HttpRedirectTest {
 
@@ -92,6 +94,35 @@ public class HttpRedirectTest {
 	}
 
 	@Test
+	public void redirectDisabledByDefault() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .host("localhost")
+				          .wiretap(true)
+				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+				                       .get("/3", (req, res) -> res.status(200)
+				                                                   .sendString(Mono.just("OK"))))
+				          .wiretap(true)
+				          .bindNow();
+
+		HttpClientResponse response =
+				HttpClient.create()
+				          .addressSupplier(server::address)
+				          .wiretap(true)
+				          .get()
+				          .uri("/1")
+				          .response()
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(response).isNotNull();
+		assertThat(response.status()).isEqualTo(HttpResponseStatus.FOUND);
+		assertThat(response.responseHeaders().get("location")).isEqualTo("/3");
+
+		server.disposeNow();
+	}
+
+	@Test
 	public void testIssue253() {
 		final int serverPort1 = SocketUtils.findAvailableTcpPort();
 
@@ -125,7 +156,7 @@ public class HttpRedirectTest {
 				      .aggregate()
 				      .asString()
 				      .block(Duration.ofSeconds(30));
-		Assertions.assertThat(value).isEqualTo("OK");
+		assertThat(value).isEqualTo("OK");
 
 		value = client.get()
 		              .uri("/1")
@@ -133,7 +164,7 @@ public class HttpRedirectTest {
 		              .aggregate()
 		              .asString()
 		              .block(Duration.ofSeconds(30));
-		Assertions.assertThat(value).isNull();
+		assertThat(value).isNull();
 
 		value = client.followRedirect(true)
 		              .get()
@@ -142,7 +173,7 @@ public class HttpRedirectTest {
 		              .aggregate()
 		              .asString()
 		              .block(Duration.ofSeconds(30));
-		Assertions.assertThat(value).isEqualTo("OK");
+		assertThat(value).isEqualTo("OK");
 
 		value = client.get()
 		              .uri("/2")
@@ -150,7 +181,7 @@ public class HttpRedirectTest {
 		              .aggregate()
 		              .asString()
 		              .block(Duration.ofSeconds(30));
-		Assertions.assertThat(value).isNull();
+		assertThat(value).isNull();
 
 		server.disposeNow();
 	}
@@ -350,7 +381,7 @@ public class HttpRedirectTest {
 
 		server.disposeNow();
 
-		Assertions.assertThat(followRedirects.get()).isEqualTo(4);
+		assertThat(followRedirects.get()).isEqualTo(4);
 	}
 
 	@Test
@@ -422,7 +453,7 @@ public class HttpRedirectTest {
 		          .responseContent()
 		          .blockLast(Duration.ofSeconds(30));
 
-		Assertions.assertThat(peerPort.get()).isEqualTo(server2Port);
+		assertThat(peerPort.get()).isEqualTo(server2Port);
 
 		server1.disposeNow();
 		server2.disposeNow();
