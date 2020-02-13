@@ -571,6 +571,7 @@ final class HttpClientConnect extends HttpClient {
 					ch.chunkedTransfer(true);
 				}
 
+				ch.listener().onStateChange(ch, HttpClientState.REQUEST_PREPARED);
 				if (handler != null) {
 					if (websocketProtocols != null) {
 						return Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, maxFramePayloadLength, websocketProxyPing, compress))
