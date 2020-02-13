@@ -97,24 +97,25 @@ public class HttpRedirectTest {
 	public void redirectDisabledByDefault() {
 		DisposableServer server =
 				HttpServer.create()
-						.port(0)
-						.host("localhost")
-						.wiretap(true)
-						.route(r -> r.get("/1",
-								(req, res) -> res.sendRedirect("/3"))
-								.get("/3",
-										(req, res) -> res.status(200)
-												.sendString(Mono.just("OK"))))
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .host("localhost")
+				          .wiretap(true)
+				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+				                       .get("/3", (req, res) -> res.status(200)
+				                                                   .sendString(Mono.just("OK"))))
+				          .wiretap(true)
+				          .bindNow();
 
-		HttpClientResponse response = HttpClient.create()
-				.addressSupplier(server::address)
-				.wiretap(true)
-				.get()
-				.uri("/1")
-				.response().block();
+		HttpClientResponse response =
+				HttpClient.create()
+				          .addressSupplier(server::address)
+				          .wiretap(true)
+				          .get()
+				          .uri("/1")
+				          .response()
+				          .block(Duration.ofSeconds(30));
 
+		assertThat(response).isNotNull();
 		assertThat(response.status()).isEqualTo(HttpResponseStatus.FOUND);
 		assertThat(response.responseHeaders().get("location")).isEqualTo("/3");
 
