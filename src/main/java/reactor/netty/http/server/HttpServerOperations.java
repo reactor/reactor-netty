@@ -93,6 +93,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	final HttpHeaders  responseHeaders;
 	final Cookies     cookieHolder;
 	final HttpRequest nettyRequest;
+	final String path;
 	final ConnectionInfo connectionInfo;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
@@ -109,6 +110,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		this.nettyResponse = replaced.nettyResponse;
 		this.paramsResolver = replaced.paramsResolver;
 		this.nettyRequest = replaced.nettyRequest;
+		this.path = replaced.path;
 		this.compressionPredicate = replaced.compressionPredicate;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
@@ -123,6 +125,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ServerCookieDecoder decoder) {
 		super(c, listener);
 		this.nettyRequest = nettyRequest;
+		this.path = resolvePath(nettyRequest.uri());
 		this.nettyResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
 		this.responseHeaders = nettyResponse.headers();
 		this.responseHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
@@ -410,6 +413,14 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	public String uri() {
 		if (nettyRequest != null) {
 			return nettyRequest.uri();
+		}
+		throw new IllegalStateException("request not parsed");
+	}
+
+	@Override
+	public String path() {
+		if (path != null) {
+			return path;
 		}
 		throw new IllegalStateException("request not parsed");
 	}

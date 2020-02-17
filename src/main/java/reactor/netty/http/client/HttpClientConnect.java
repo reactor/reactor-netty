@@ -78,6 +78,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.HttpOperations;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.InetSocketAddressUtil;
@@ -539,6 +540,8 @@ final class HttpClientConnect extends HttpClient {
 				                        .setMethod(method)
 				                        .setProtocolVersion(HttpVersion.HTTP_1_1)
 				                        .headers();
+
+				ch.path = HttpOperations.resolvePath(ch.uri());
 
 				if (defaultHeaders != null) {
 					headers.set(defaultHeaders);

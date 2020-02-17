@@ -36,6 +36,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.Cookies;
+import reactor.netty.http.HttpOperations;
 import reactor.netty.tcp.ProxyProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
@@ -69,6 +70,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		final HttpHeaders         headers;
 		final HttpMethod          method;
 		final String              uri;
+		final String              path;
 		final Context             context;
 		final ClientCookieDecoder cookieDecoder;
 		final boolean             isWebsocket;
@@ -78,6 +80,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 			this.headers = c.headers;
 			this.cookieDecoder = c.cookieDecoder;
 			this.uri = c.uri;
+			this.path = HttpOperations.resolvePath(this.uri);
 			this.method = c.method;
 			this.isWebsocket = c.websocketSubprotocols != null;
 		}
@@ -156,6 +159,11 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		@Override
 		public String uri() {
 			return uri;
+		}
+
+		@Override
+		public String path() {
+			return path;
 		}
 
 		@Override
