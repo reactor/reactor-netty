@@ -95,8 +95,7 @@ public final class ReactorNetty {
 
 
 	/**
-	 * Default max connections, if -1 will never wait to acquire before opening a new
-	 * connection in an unbounded fashion. Fallback to
+	 * Default max connections. Fallback to
 	 * available number of processors (but with a minimum value of 16)
 	 */
 	public static final String POOL_MAX_CONNECTIONS = "reactor.netty.pool.maxConnections";
