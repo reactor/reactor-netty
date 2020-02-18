@@ -37,6 +37,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -561,6 +562,25 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			//if already disposed, we can immediately call terminate
 			((HttpServerOperations) ops).terminate();
 		}
+	}
+
+	static void sendDecodingFailures(ChannelHandlerContext ctx, Throwable t, Object msg) {
+		Throwable cause = t.getCause() != null ? t.getCause() : t;
+
+		if (log.isDebugEnabled()) {
+			log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "), cause);
+		}
+
+		ReferenceCountUtil.release(msg);
+
+		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
+				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
+				                                         HttpResponseStatus.BAD_REQUEST);
+		response.headers()
+		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+		ctx.writeAndFlush(response)
+		   .addListener(ChannelFutureListener.CLOSE);
 	}
 
 	/**
