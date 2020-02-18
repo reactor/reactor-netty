@@ -43,14 +43,12 @@ import java.util.function.Function;
 public interface ConnectionProvider extends Disposable {
 
 	/**
-	 * Default max connections, if -1 will never wait to acquire before opening a new
-	 * connection in an unbounded fashion. Fallback to
+	 * Default max connections. Fallback to
 	 * available number of processors (but with a minimum value of 16)
 	 */
 	int DEFAULT_POOL_MAX_CONNECTIONS =
 			Integer.parseInt(System.getProperty(ReactorNetty.POOL_MAX_CONNECTIONS,
-			"" + Math.max(Runtime.getRuntime()
-			            .availableProcessors(), 8) * 2));
+			"" + Math.max(Runtime.getRuntime().availableProcessors(), 8) * 2));
 
 	/**
 	 * Default acquisition timeout (milliseconds) before error. If -1 will never wait to
