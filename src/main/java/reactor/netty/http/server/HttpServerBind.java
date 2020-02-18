@@ -424,10 +424,18 @@ final class HttpServerBind extends HttpServer
 			final ChannelHandler http2ServerHandler = new ChannelHandlerAdapter() {
 				@Override
 				public void handlerAdded(ChannelHandlerContext ctx) {
-					ctx.pipeline()
-							.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec)
-							.addAfter(NettyPipeline.HttpCodec, null, new Http2MultiplexHandler(upgrader));
-					ctx.pipeline().remove(this);
+					ChannelPipeline pipeline = ctx.pipeline();
+					pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec)
+					        .addAfter(NettyPipeline.HttpCodec, null, new Http2MultiplexHandler(upgrader))
+					        .remove(this);
+					if (pipeline.get(NettyPipeline.AccessLogHandler) != null){
+						pipeline.remove(NettyPipeline.AccessLogHandler);
+					}
+					if (pipeline.get(NettyPipeline.CompressionHandler) != null) {
+						pipeline.remove(NettyPipeline.CompressionHandler);
+					}
+					pipeline.remove(NettyPipeline.HttpTrafficHandler);
+					pipeline.remove(NettyPipeline.ReactiveBridge);
 				}
 			};
 			final CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
@@ -435,7 +443,7 @@ final class HttpServerBind extends HttpServer
 					new HttpServerUpgradeHandler(httpServerCodec, upgrader),
 					http2ServerHandler);
 
-			p.addLast(NettyPipeline.HttpCodec, h2cUpgradeHandler);
+			p.addLast(h2cUpgradeHandler);
 
 			if (ACCESS_LOG) {
 				p.addLast(NettyPipeline.AccessLogHandler, new AccessLogHandler());
