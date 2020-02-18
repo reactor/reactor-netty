@@ -1533,4 +1533,54 @@ public class HttpServerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
+
+	@Test
+	public void testIssue1001() throws Exception {
+		disposableServer =
+				HttpServer.create()
+				          .host("localhost")
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) -> res.sendString(Mono.just("testIssue1001")))
+				          .bindNow();
+
+		int port = disposableServer.port();
+		Connection connection =
+				TcpClient.create()
+				         .addressSupplier(disposableServer::address)
+				         .wiretap(true)
+				         .connectNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		connection.channel()
+		          .closeFuture()
+		          .addListener(f -> latch.countDown());
+
+		AtomicReference<String> result = new AtomicReference<>();
+		connection.inbound()
+		          .receive()
+		          .asString()
+		          .doOnNext(result::set)
+		          .subscribe();
+
+		String address = HttpUtil.formatHostnameForHttp(disposableServer.address()) + ":" + port;
+		connection.outbound()
+		          .sendString(Mono.just("GET http://" + address + "/< HTTP/1.1\r\nHost: " + address + "\r\n\r\n"))
+		          .then()
+		          .subscribe();
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(result.get()).contains("400", "connection: close");
+		assertThat(connection.channel().isActive()).isFalse();
+
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .addressSupplier(disposableServer::address)
+		                  .wiretap(true)
+		                  .get()
+		                  .uri("/<")
+		                  .response())
+		            .expectError(IllegalArgumentException.class)
+		            .verify(Duration.ofSeconds(30));
+	}
 }

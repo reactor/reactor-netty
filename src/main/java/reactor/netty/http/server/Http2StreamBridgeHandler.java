@@ -72,17 +72,24 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 		}
 		if (msg instanceof HttpRequest) {
 			HttpRequest request = (HttpRequest) msg;
-			HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
-					listener,
-					null,
-					request,
-					ConnectionInfo.from(ctx.channel().parent(),
-					                    readForwardHeaders,
-					                    request,
-					                    secured,
-					                    remoteAddress),
-					cookieEncoder,
-					cookieDecoder);
+			HttpServerOperations ops;
+			try {
+				ops = new HttpServerOperations(Connection.from(ctx.channel()),
+						listener,
+						null,
+						request,
+						ConnectionInfo.from(ctx.channel().parent(),
+						                    readForwardHeaders,
+						                    request,
+						                    secured,
+						                    remoteAddress),
+						cookieEncoder,
+						cookieDecoder);
+			}
+			catch (IllegalArgumentException e) {
+				HttpServerOperations.sendDecodingFailures(ctx, e, msg);
+				return;
+			}
 			ops.bind();
 			listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 		}

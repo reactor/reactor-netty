@@ -30,15 +30,11 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
-import io.netty.handler.codec.TooLongFrameException;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -151,16 +147,23 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 					return;
 				}
 
-				HttpServerOperations ops = new HttpServerOperations(Connection.from(ctx.channel()),
-						listener,
-						compress, request,
-						ConnectionInfo.from(ctx.channel(),
-						                    readForwardHeaders,
-						                    request,
-						                    secure,
-						                    remoteAddress),
-						cookieEncoder,
-						cookieDecoder);
+				HttpServerOperations ops;
+				try {
+					ops = new HttpServerOperations(Connection.from(ctx.channel()),
+							listener,
+							compress, request,
+							ConnectionInfo.from(ctx.channel(),
+							                    readForwardHeaders,
+							                    request,
+							                    secure,
+							                    remoteAddress),
+							cookieEncoder,
+							cookieDecoder);
+				}
+				catch (IllegalArgumentException e) {
+					sendDecodingFailures(e, msg);
+					return;
+				}
 				ops.bind();
 				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 
@@ -211,23 +214,9 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		ctx.fireChannelRead(msg);
 	}
 
-	void sendDecodingFailures(Throwable cause, Object msg) {
-		if (HttpServerOperations.log.isDebugEnabled()) {
-			HttpServerOperations.log.debug(format(ctx.channel(), "Decoding failed: " + msg + " : "), cause);
-		}
-
+	void sendDecodingFailures(Throwable t, Object msg) {
 		persistentConnection = false;
-
-		ReferenceCountUtil.release(msg);
-
-		HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_0,
-				cause instanceof TooLongFrameException ? HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE:
-				                                         HttpResponseStatus.BAD_REQUEST);
-		response.headers()
-		        .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
-		        .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-		ctx.writeAndFlush(response)
-		   .addListener(ChannelFutureListener.CLOSE);
+		HttpServerOperations.sendDecodingFailures(ctx, t, msg);
 	}
 
 	void doPipeline(ChannelHandlerContext ctx, Object msg) {
