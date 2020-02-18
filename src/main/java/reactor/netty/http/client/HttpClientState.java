@@ -25,6 +25,15 @@ import reactor.netty.ConnectionObserver;
  */
 public enum HttpClientState implements ConnectionObserver.State {
 	/**
+	 * The request has been prepared and ready for I/O handler to be invoked
+	 */
+	REQUEST_PREPARED() {
+		@Override
+		public String toString() {
+			return "[request_prepared]";
+		}
+	},
+	/**
 	 * The request has been sent
 	 */
 	REQUEST_SENT() {

@@ -509,7 +509,7 @@ public abstract class HttpClient {
 
 	/**
 	 * Setup a callback called when {@link HttpClientRequest} is about to be sent
-	 * and {@link HttpClientState#CONFIGURED} has been emitted.
+	 * and {@link HttpClientState#REQUEST_PREPARED} has been emitted.
 	 *
 	 * @param doOnRequest a callback called when {@link HttpClientRequest} is about to be sent
 	 *

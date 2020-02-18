@@ -59,7 +59,7 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 
 	@Override
 	public void onStateChange(Connection connection, State newState) {
-		if (onRequest != null && newState == State.CONFIGURED) {
+		if (onRequest != null && newState == HttpClientState.REQUEST_PREPARED) {
 			onRequest.accept(connection.as(HttpClientOperations.class), connection);
 			return;
 		}
