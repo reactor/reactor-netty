@@ -146,6 +146,12 @@ public abstract class HttpClient {
 		 * Configure a body to send on request using the {@link NettyOutbound} sending
 		 * builder and returning a {@link Publisher} to signal end of the request.
 		 *
+		 * <p><strong>Note:</strong> the sender {@code BiFunction} passed in may implement
+		 * {@link RedirectSendHandler} to indicate explicitly that it has special handling
+		 * for redirect requests. This is entirely optional, and redirect request handling
+		 * may also be handled globally via {@link #followRedirect(boolean, Consumer)} or
+		 * {@link #followRedirect(BiPredicate, Consumer)}.
+		 *
 		 * @param sender a bifunction given the outgoing request and the sending
 		 * {@link NettyOutbound}, returns a publisher that will terminate the request
 		 * body on complete
@@ -315,6 +321,20 @@ public abstract class HttpClient {
 		 * @return a {@link ByteBufFlux} of the inbound websocket content
 		 */
 		ByteBufFlux receive();
+	}
+
+	/**
+	 * Marker interface for use with {@link RequestSender#send(BiFunction)}.
+	 * <p>When the {@code BiFunction} passed into {@code send} is an implementation of this
+	 * interface, it indicates it differentiates between original and redirect requests,
+	 * e.g. as a result of enabling {@link #followRedirect(boolean)}, and is capable of
+	 * applying separate logic for each individually. Redirect scenarios may be detected
+	 * by checking {@link HttpClientRequest#redirectedFrom()}.
+	 * <p>When the {@code BiFunction} passsed in is not an implementation of this interface,
+	 * it indicates it does not differentiate between original and redirect requests, and
+	 * applies the same initialization logic.
+	 */
+	public interface RedirectSendHandler extends BiFunction<HttpClientRequest, NettyOutbound, Publisher<Void>> {
 	}
 
 	/**
@@ -652,8 +672,25 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient followRedirect(boolean followRedirect) {
+		return followRedirect(followRedirect, null);
+	}
+
+	/**
+	 * Variant of {@link #followRedirect(boolean)} that also accepts a redirect request
+	 * processor.
+	 *
+	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
+	 *                       is enabled, otherwise disabled (default: false).
+	 * @param redirectRequestConsumer redirect request consumer, invoked on redirects, after
+	 * the redirect request has been initialized, in order to apply further changes such as
+	 * add/remove headers and cookies; use {@link HttpClientRequest#redirectedFrom()} to
+	 * check the original and any number of subsequent redirect(s), including the one that
+	 * is in progress.
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient followRedirect(boolean followRedirect, @Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		if (followRedirect) {
-			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_CONFIG);
+			return followRedirect(HttpClientConfiguration.FOLLOW_REDIRECT_PREDICATE, redirectRequestConsumer);
 		}
 		else {
 			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
@@ -672,9 +709,26 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
+		return followRedirect(predicate, null);
+	}
+
+	/**
+	 * Variant of {@link #followRedirect(BiPredicate)} that also accepts a redirect request
+	 * processor.
+	 *
+	 * @param predicate that returns true to enable auto-redirect support.
+	 * @param redirectRequestConsumer redirect request consumer, invoked on redirects, after
+	 * the redirect request has been initialized, in order to apply further changes such as
+	 * add/remove headers and cookies; use {@link HttpClientRequest#redirectedFrom()} to
+	 * check the original and any number of subsequent redirect(s), including the one that
+	 * is in progress.
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		Objects.requireNonNull(predicate, "predicate");
 		return tcpConfiguration(tcp -> tcp.bootstrap(
-				b -> HttpClientConfiguration.followRedirectPredicate(b, predicate)));
+				b -> HttpClientConfiguration.followRedirectPredicate(b, predicate, redirectRequestConsumer)));
 	}
 
 	/**
@@ -991,9 +1045,6 @@ public abstract class HttpClient {
 
 	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_KEEPALIVE);
-
-	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_CONFIG =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_REDIRECT);
 
 	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_REDIRECT);
