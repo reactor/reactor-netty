@@ -104,6 +104,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	boolean started;
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
+	Consumer<HttpClientRequest> redirectRequestConsumer;
 
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
@@ -234,6 +235,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.followRedirectPredicate = predicate;
 	}
 
+	void redirectRequestConsumer(@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
+		this.redirectRequestConsumer = redirectRequestConsumer;
+	}
+
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	protected void onInboundCancel() {
@@ -353,7 +358,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			                .collectList()
 			                .doOnDiscard(ByteBuf.class, ByteBuf::release)
 			                .flatMap(list -> {
-				                if (markSentHeaderAndBody()) {
+				                if (markSentHeaderAndBody(list.toArray())) {
 					                if (list.isEmpty()) {
 						                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
 					                }
@@ -444,8 +449,15 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	protected void preSendHeadersAndStatus() {
+	protected void afterMarkSentHeaders() {
 		//Noop
+	}
+
+	@Override
+	protected void beforeMarkSentHeaders() {
+		if (redirectedFrom.length > 0 && redirectRequestConsumer != null) {
+			redirectRequestConsumer.accept(this);
+		}
 	}
 
 	@Override

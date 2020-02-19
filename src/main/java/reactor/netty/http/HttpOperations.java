@@ -100,13 +100,13 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		if (source instanceof Mono) {
 			return new PostHeadersNettyOutbound(((Mono<ByteBuf>)source)
 					.flatMap(msg -> {
-						if (markSentHeaderAndBody()) {
+						if (markSentHeaderAndBody(msg)) {
 							try {
-								preSendHeadersAndStatus();
+								afterMarkSentHeaders();
 							}
 							catch (RuntimeException e) {
 								ReferenceCountUtil.release(msg);
-								throw e;
+								return Mono.error(e);
 							}
 							if (HttpUtil.getContentLength(outboundHttpMessage(), -1) == 0) {
 								log.debug(format(channel(), "Dropped HTTP content, " +
@@ -130,9 +130,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 		ByteBuf b = (ByteBuf) message;
 		return new PostHeadersNettyOutbound(FutureMono.deferFuture(() -> {
-			if (markSentHeaderAndBody()) {
+			if (markSentHeaderAndBody(b)) {
 				try {
-					preSendHeadersAndStatus();
+					afterMarkSentHeaders();
 				}
 				catch (RuntimeException e) {
 					b.release();
@@ -161,7 +161,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		}
 
 		return FutureMono.deferFuture(() -> {
-			if (markSentHeaders()) {
+			if (markSentHeaders(outboundHttpMessage())) {
 				HttpMessage msg;
 
 				if (HttpUtil.isContentLengthSet(outboundHttpMessage())) {
@@ -180,7 +180,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				}
 
 				try {
-					preSendHeadersAndStatus();
+					afterMarkSentHeaders();
 				}
 				catch (RuntimeException e) {
 					ReferenceCountUtil.release(msg);
@@ -195,7 +195,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 		});
 	}
 
-	protected abstract void preSendHeadersAndStatus();
+	protected abstract void beforeMarkSentHeaders();
+
+	protected abstract void afterMarkSentHeaders();
 
 	protected abstract HttpMessage newFullBodyMessage(ByteBuf body);
 
@@ -268,7 +270,23 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 *
 	 * @return true if marked for the first time
 	 */
-	protected final boolean markSentHeaders() {
+	protected final boolean markSentHeaders(Object... objectsToRelease) {
+		try {
+			if (!hasSentHeaders()) {
+				beforeMarkSentHeaders();
+			}
+		}
+		catch (RuntimeException e) {
+			for (Object o : objectsToRelease) {
+				try {
+					ReferenceCountUtil.release(o);
+				}
+				catch (Throwable e2) {
+					// keep going
+				}
+			}
+			throw e;
+		}
 		return HTTP_STATE.compareAndSet(this, READY, HEADERS_SENT);
 	}
 
@@ -286,7 +304,23 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	 *
 	 * @return true if marked for the first time
 	 */
-	protected final boolean markSentHeaderAndBody() {
+	protected final boolean markSentHeaderAndBody(Object... objectsToRelease) {
+		try {
+			if (!hasSentHeaders()) {
+				beforeMarkSentHeaders();
+			}
+		}
+		catch (RuntimeException e) {
+			for (Object o : objectsToRelease) {
+				try {
+					ReferenceCountUtil.release(o);
+				}
+				catch (Throwable e2) {
+					// keep going
+				}
+			}
+			throw e;
+		}
 		return HTTP_STATE.compareAndSet(this, READY, BODY_SENT);
 	}
 
