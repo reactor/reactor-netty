@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -64,6 +65,7 @@ import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.resources.ConnectionProvider.ConnectionPoolSpec.PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
 
 /**
  * @author Stephane Maldini
@@ -71,38 +73,18 @@ import static reactor.netty.ReactorNetty.format;
  */
 final class PooledConnectionProvider implements ConnectionProvider {
 
-	interface PoolFactory {
-
-		InstrumentedPool<PooledConnection> newPool(Publisher<PooledConnection> allocator);
-	}
-
 	final ConcurrentMap<PoolKey, InstrumentedPool<PooledConnection>> channelPools =
 			PlatformDependent.newConcurrentHashMap();
-	final String      name;
-	final int         maxConnections;
-	final int         pendingAcquireMaxCount;
-	final long        pendingAcquireTimeout;
-	final long        maxIdleTime;
-	final long        maxLifeTime;
-	final boolean     metricsEnabled;
-	final PoolFactory poolFactory;
+	final String                          name;
+	final Map<SocketAddress, PoolFactory> poolFactoryPerRemoteHost = new HashMap<>();
+	final PoolFactory                     defaultPoolFactory;
 
 	PooledConnectionProvider(Builder builder){
 		this.name = builder.name;
-		this.maxConnections = builder.maxConnections;
-		this.pendingAcquireMaxCount = builder.pendingAcquireMaxCount;
-		this.pendingAcquireTimeout = builder.pendingAcquireTimeout.toMillis();
-		this.maxIdleTime = builder.maxIdleTime != null ? builder.maxIdleTime.toMillis() : -1;
-		this.maxLifeTime = builder.maxLifeTime != null ? builder.maxLifeTime.toMillis() : -1;
-		this.metricsEnabled = builder.metricsEnabled;
-		this.poolFactory = allocator ->
-				builder.leasingStrategy.apply(PoolBuilder.from(allocator)
-				           .destroyHandler(DEFAULT_DESTROY_HANDLER)
-				           .evictionPredicate(DEFAULT_EVICTION_PREDICATE
-				                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
-				                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
-				           .maxPendingAcquire(pendingAcquireMaxCount)
-				           .sizeBetween(0, maxConnections));
+		this.defaultPoolFactory = new PoolFactory(builder);
+		for(Map.Entry<SocketAddress, ConnectionPoolSpec<?>> entry : builder.confPerRemoteHost.entrySet()) {
+			poolFactoryPerRemoteHost.put(entry.getKey(), new PoolFactory(entry.getValue()));
+		}
 	}
 
 	@Override
@@ -153,28 +135,28 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 			NewConnectionProvider.convertLazyRemoteAddress(bootstrap);
 			ChannelHandler handler = bootstrap.config().handler();
-			PoolKey holder = new PoolKey(bootstrap.config().remoteAddress(),
-					handler != null ? handler.hashCode() : -1);
+			SocketAddress remoteAddress = bootstrap.config().remoteAddress();
+			PoolKey holder = new PoolKey(remoteAddress, handler != null ? handler.hashCode() : -1);
 
+			PoolFactory poolFactory = poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
 			InstrumentedPool<PooledConnection> pool = channelPools.computeIfAbsent(holder, poolKey -> {
 				if (log.isDebugEnabled()) {
-					log.debug("Creating a new client pool [{}] for [{}]",
-							this, bootstrap.config().remoteAddress());
+					log.debug("Creating a new client pool [{}] for [{}]", poolFactory, remoteAddress);
 				}
 
 				InstrumentedPool<PooledConnection> newPool =
 						new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
 
-				if (metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
+				if (poolFactory.metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
 					PooledConnectionProviderMetrics.registerMetrics(name,
 							poolKey.hashCode() + "",
-							Metrics.formatSocketAddress(bootstrap.config().remoteAddress()),
+							Metrics.formatSocketAddress(remoteAddress),
 							newPool.metrics());
 				}
 				return newPool;
 			});
 
-			disposableAcquire(sink, obs, pool, opsFactory, pendingAcquireTimeout);
+			disposableAcquire(sink, obs, pool, opsFactory, poolFactory.pendingAcquireTimeout);
 
 		});
 
@@ -202,21 +184,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public int maxConnections() {
-		return maxConnections;
-	}
-
-	@Override
-	public String toString() {
-		return "PooledConnectionProvider {" +
-		               "name='" + name + '\'' +
-		               ", maxConnections=" + maxConnections +
-		               ", pendingAcquireMaxCount=" + pendingAcquireMaxCount +
-		               ", pendingAcquireTimeout=" + pendingAcquireTimeout +
-		               ", maxIdleTime=" + maxIdleTime +
-		               ", maxLifeTime=" + maxLifeTime +
-		               ", metricsEnabled=" + metricsEnabled +
-		               '}';
+		return defaultPoolFactory.maxConnections;
 	}
 
 	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, InstrumentedPool<PooledConnection> pool,
@@ -232,17 +202,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	static final AttributeKey<ConnectionObserver> OWNER =
 			AttributeKey.valueOf("connectionOwner");
-
-	static final BiPredicate<PooledConnection, PooledRefMetadata> DEFAULT_EVICTION_PREDICATE =
-			(pooledConnection, metadata) -> !pooledConnection.channel.isActive() || !pooledConnection.isPersistent();
-
-	static final Function<PooledConnection, Publisher<Void>> DEFAULT_DESTROY_HANDLER =
-			pooledConnection -> {
-				if (!pooledConnection.channel.isActive()) {
-					return Mono.empty();
-				}
-				return FutureMono.from(pooledConnection.channel.close());
-			};
 
 	final static class PooledConnectionAllocator {
 
@@ -654,4 +613,60 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 	}
 
+
+	final static class PoolFactory {
+		final int         maxConnections;
+		final int         pendingAcquireMaxCount;
+		final long        pendingAcquireTimeout;
+		final long        maxIdleTime;
+		final long        maxLifeTime;
+		final boolean     metricsEnabled;
+		final Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
+				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
+
+		PoolFactory(ConnectionPoolSpec<?> conf) {
+			this.maxConnections = conf.maxConnections;
+			this.pendingAcquireMaxCount = conf.pendingAcquireMaxCount == PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED ?
+					2 * conf.maxConnections : conf.pendingAcquireMaxCount;
+			this.pendingAcquireTimeout = conf.pendingAcquireTimeout.toMillis();
+			this.maxIdleTime = conf.maxIdleTime != null ? conf.maxIdleTime.toMillis() : -1;
+			this.maxLifeTime = conf.maxLifeTime != null ? conf.maxLifeTime.toMillis() : -1;
+			this.metricsEnabled = conf.metricsEnabled;
+			this.leasingStrategy = conf.leasingStrategy;
+		}
+
+		InstrumentedPool<PooledConnection> newPool(Publisher<PooledConnection> allocator) {
+			return leasingStrategy.apply(
+					PoolBuilder.from(allocator)
+					           .destroyHandler(DEFAULT_DESTROY_HANDLER)
+					           .evictionPredicate(DEFAULT_EVICTION_PREDICATE
+					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
+					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
+					           .maxPendingAcquire(pendingAcquireMaxCount)
+					           .sizeBetween(0, maxConnections));
+		}
+
+		@Override
+		public String toString() {
+			return "PoolFactory {" +
+					"maxConnections=" + maxConnections +
+					", pendingAcquireMaxCount=" + pendingAcquireMaxCount +
+					", pendingAcquireTimeout=" + pendingAcquireTimeout +
+					", maxIdleTime=" + maxIdleTime +
+					", maxLifeTime=" + maxLifeTime +
+					", metricsEnabled=" + metricsEnabled +
+					'}';
+		}
+
+		static final BiPredicate<PooledConnection, PooledRefMetadata> DEFAULT_EVICTION_PREDICATE =
+				(pooledConnection, metadata) -> !pooledConnection.channel.isActive() || !pooledConnection.isPersistent();
+
+		static final Function<PooledConnection, Publisher<Void>> DEFAULT_DESTROY_HANDLER =
+				pooledConnection -> {
+					if (!pooledConnection.channel.isActive()) {
+						return Mono.empty();
+					}
+					return FutureMono.from(pooledConnection.channel.close());
+				};
+	}
 }

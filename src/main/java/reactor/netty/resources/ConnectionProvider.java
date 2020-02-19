@@ -30,9 +30,13 @@ import reactor.util.annotation.NonNull;
 import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * A {@link ConnectionProvider} will produce {@link Connection}
@@ -66,7 +70,7 @@ public interface ConnectionProvider extends Disposable {
 	 * @param name {@link ConnectionProvider} name
 	 * @return a new ConnectionProvider builder
 	 */
-	static ConnectionProvider.Builder builder(String name) {
+	static Builder builder(String name) {
 		return new Builder(name);
 	}
 
@@ -98,7 +102,7 @@ public interface ConnectionProvider extends Disposable {
 		return builder(name).maxConnections(DEFAULT_POOL_MAX_CONNECTIONS)
 		                    .pendingAcquireMaxCount(500)
 		                    .pendingAcquireTimeout(Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT))
-		                    .fifo();
+		                    .build();
 	}
 
 	/**
@@ -118,7 +122,7 @@ public interface ConnectionProvider extends Disposable {
 	static ConnectionProvider create(String name, int maxConnections) {
 		return builder(name).maxConnections(maxConnections)
 		                    .pendingAcquireTimeout(Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT))
-		                    .fifo();
+		                    .build();
 	}
 
 	/**
@@ -177,7 +181,7 @@ public interface ConnectionProvider extends Disposable {
 		                    .pendingAcquireMaxCount(-1)
 		                    .maxIdleTime(maxIdleTime)
 		                    .maxLifeTime(maxLifeTime)
-		                    .fifo();
+		                    .build();
 	}
 
 	/**
@@ -296,7 +300,7 @@ public interface ConnectionProvider extends Disposable {
 		                    .pendingAcquireTimeout(Duration.ofMillis(acquireTimeout))
 		                    .maxIdleTime(maxIdleTime)
 		                    .maxLifeTime(maxLifeTime)
-		                    .fifo();
+		                    .build();
 	}
 
 	/**
@@ -339,7 +343,9 @@ public interface ConnectionProvider extends Disposable {
 	 * Returns the maximum number of connections before starting pending
 	 *
 	 * @return the maximum number of connections before starting pending
+	 * @deprecated as of 0.9.5.
 	 */
+	@Deprecated
 	default int maxConnections() {
 		return -1;
 	}
@@ -349,23 +355,16 @@ public interface ConnectionProvider extends Disposable {
 	 * {@link Connection}. Further connections will be pending acquisition depending on
 	 * pendingAcquireTime. The maximum number of connections is for the connections in a single
 	 * connection pool, where a connection pool corresponds to a concrete remote host.
+	 * The configuration can be either global for all connection pools or
+	 * be tuned for each individual connection pool, per remote host.
 	 */
-	final class Builder {
+	final class Builder extends ConnectionPoolSpec<Builder> {
 
-		static final int PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED = -2;
-
-		String   name;
-		int      maxConnections         = DEFAULT_POOL_MAX_CONNECTIONS;
-		int      pendingAcquireMaxCount = PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
-		Duration pendingAcquireTimeout  = Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT);
-		Duration maxIdleTime;
-		Duration maxLifeTime;
-		boolean  metricsEnabled;
-		Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
-				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
+		String name;
+		final Map<SocketAddress, ConnectionPoolSpec<?>> confPerRemoteHost = new HashMap<>();
 
 		/**
-		 * Returns {@link Builder} new instance with name and default properties.
+		 * Returns {@link Builder} new instance with name and default properties for all connection pools.
 		 *
 		 * @param name {@link ConnectionProvider} name
 		 */
@@ -386,6 +385,52 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
+		 * Connection pool configuration for a specific remote host.
+		 *
+		 * @param remoteHost the remote host
+		 * @param spec connection pool configuration for a this remote host
+		 * @return {@literal this}
+		 * @throws NullPointerException if remoteHost or/and spec are null
+		 */
+		public final Builder forRemoteHost(SocketAddress remoteHost, Consumer<HostSpecificSpec> spec) {
+			Objects.requireNonNull(remoteHost, "remoteHost");
+			Objects.requireNonNull(spec, "spec");
+			HostSpecificSpec builder = new HostSpecificSpec();
+			spec.accept(builder);
+			this.confPerRemoteHost.put(remoteHost, builder);
+			return this;
+		}
+
+		/**
+		 * Builds new ConnectionProvider
+		 *
+		 * @return builds new ConnectionProvider
+		 */
+		public ConnectionProvider build() {
+			return new PooledConnectionProvider(this);
+		}
+	}
+
+	class ConnectionPoolSpec<SPEC extends ConnectionPoolSpec<SPEC>> implements Supplier<SPEC> {
+
+		static final int PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED = -2;
+
+		int      maxConnections         = DEFAULT_POOL_MAX_CONNECTIONS;
+		int      pendingAcquireMaxCount = PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED;
+		Duration pendingAcquireTimeout  = Duration.ofMillis(DEFAULT_POOL_ACQUIRE_TIMEOUT);
+		Duration maxIdleTime;
+		Duration maxLifeTime;
+		boolean  metricsEnabled;
+		Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
+				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy = PoolBuilder::fifo;
+
+		/**
+		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
+		 */
+		private ConnectionPoolSpec() {
+		}
+
+		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} acquire timeout.
 		 * Default to {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
 		 *
@@ -394,9 +439,9 @@ public interface ConnectionProvider extends Disposable {
 		 * @return {@literal this}
 		 * @throws NullPointerException if pendingAcquireTimeout is null
 		 */
-		public final Builder pendingAcquireTimeout(Duration pendingAcquireTimeout) {
+		public final SPEC pendingAcquireTimeout(Duration pendingAcquireTimeout) {
 			this.pendingAcquireTimeout = Objects.requireNonNull(pendingAcquireTimeout, "pendingAcquireTimeout");
-			return this;
+			return get();
 		}
 
 		/**
@@ -407,12 +452,12 @@ public interface ConnectionProvider extends Disposable {
 		 * @return {@literal this}
 		 * @throws IllegalArgumentException if maxConnections is negative
 		 */
-		public final Builder maxConnections(int maxConnections) {
+		public final SPEC maxConnections(int maxConnections) {
 			if (maxConnections <= 0) {
 				throw new IllegalArgumentException("Max Connections value must be strictly positive");
 			}
 			this.maxConnections = maxConnections;
-			return this;
+			return get();
 		}
 
 		/**
@@ -426,12 +471,12 @@ public interface ConnectionProvider extends Disposable {
 		 * @return {@literal this}
 		 * @throws IllegalArgumentException if pendingAcquireMaxCount is negative
 		 */
-		public final Builder pendingAcquireMaxCount(int pendingAcquireMaxCount) {
+		public final SPEC pendingAcquireMaxCount(int pendingAcquireMaxCount) {
 			if (pendingAcquireMaxCount != -1 && pendingAcquireMaxCount <= 0) {
 				throw new IllegalArgumentException("Pending acquire max count must be strictly positive");
 			}
 			this.pendingAcquireMaxCount = pendingAcquireMaxCount;
-			return this;
+			return get();
 		}
 
 		/**
@@ -440,9 +485,9 @@ public interface ConnectionProvider extends Disposable {
 		 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms)
 		 * @return {@literal this}
 		 */
-		public final Builder maxIdleTime(Duration maxIdleTime) {
+		public final SPEC maxIdleTime(Duration maxIdleTime) {
 			this.maxIdleTime = maxIdleTime;
-			return this;
+			return get();
 		}
 
 		/**
@@ -451,9 +496,9 @@ public interface ConnectionProvider extends Disposable {
 		 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms)
 		 * @return {@literal this}
 		 */
-		public final Builder maxLifeTime(Duration maxLifeTime) {
+		public final SPEC maxLifeTime(Duration maxLifeTime) {
 			this.maxLifeTime = maxLifeTime;
-			return this;
+			return get();
 		}
 
 		/**
@@ -472,7 +517,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @param metricsEnabled true enables metrics collection; false disables it
 		 * @return {@literal this}
 		 */
-		public final Builder metrics(boolean metricsEnabled) {
+		public final SPEC metrics(boolean metricsEnabled) {
 			if (metricsEnabled) {
 				if (!Metrics.isInstrumentationAvailable()) {
 					throw new UnsupportedOperationException(
@@ -481,7 +526,7 @@ public interface ConnectionProvider extends Disposable {
 				}
 			}
 			this.metricsEnabled = metricsEnabled;
-			return this;
+			return get();
 		}
 
 		/**
@@ -491,8 +536,9 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @return a builder of {@link Pool} with LIFO pending acquire ordering
 		 */
-		public final ConnectionProvider lifo() {
-			return build(PoolBuilder::lifo);
+		public final SPEC lifo() {
+			this.leasingStrategy = PoolBuilder::lifo;
+			return get();
 		}
 
 		/**
@@ -502,22 +548,21 @@ public interface ConnectionProvider extends Disposable {
 		 *
 		 * @return a builder of {@link Pool} with FIFO pending acquire ordering
 		 */
-		public final ConnectionProvider fifo() {
-			return build(PoolBuilder::fifo);
+		public final SPEC fifo() {
+			this.leasingStrategy = PoolBuilder::fifo;
+			return get();
 		}
 
-		/**
-		 * Builds new ConnectionProvider
-		 *
-		 * @return builds new ConnectionProvider
-		 */
-		private ConnectionProvider build(Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
-				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy) {
-			this.leasingStrategy = Objects.requireNonNull(leasingStrategy);
-			if (pendingAcquireMaxCount == PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED) {
-				this.pendingAcquireMaxCount = 2 * this.maxConnections;
-			}
-			return new PooledConnectionProvider(this);
+		@Override
+		@SuppressWarnings("unchecked")
+		public SPEC get() {
+			return (SPEC) this;
 		}
+	}
+
+	/**
+	 * Configuration for a connection pool per remote host
+	 */
+	final class HostSpecificSpec extends ConnectionPoolSpec<HostSpecificSpec> {
 	}
 }

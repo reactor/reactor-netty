@@ -46,7 +46,6 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
-import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.PooledConnectionProvider.PooledConnection;
@@ -71,9 +70,6 @@ public class PooledConnectionProviderTest {
 
 	@Test
 	public void disposeLaterDefers() throws Exception {
-		PooledConnectionProvider.PooledConnectionAllocator pooledConnectionAllocator =
-				new PooledConnectionProvider.PooledConnectionAllocator(
-						new Bootstrap(), allocator -> channelPool, ChannelOperations.OnSetup.empty());
 		ConnectionProvider.Builder connectionProviderBuilder =
 				ConnectionProvider.builder("disposeLaterDefers")
 				                  .maxConnections(Integer.MAX_VALUE);
@@ -82,7 +78,7 @@ public class PooledConnectionProviderTest {
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
 						InetSocketAddress.createUnresolved("localhost", 80), -1),
-				pooledConnectionAllocator.pool);
+				channelPool);
 
 		Mono<Void> disposer = poolResources.disposeLater();
 		assertThat(((AtomicInteger) channelPool).get()).as("pool closed by disposeLater()").isEqualTo(0);
@@ -96,10 +92,6 @@ public class PooledConnectionProviderTest {
 
 	@Test
 	public void disposeOnlyOnce() throws Exception {
-		PooledConnectionProvider.PooledConnectionAllocator pooledConnectionAllocator =
-				new PooledConnectionProvider.PooledConnectionAllocator(
-						new Bootstrap(), allocator -> channelPool, ChannelOperations.OnSetup.empty());
-
 		ConnectionProvider.Builder connectionProviderBuilder =
 				ConnectionProvider.builder("disposeOnlyOnce")
 				                  .maxConnections(Integer.MAX_VALUE);
@@ -108,7 +100,7 @@ public class PooledConnectionProviderTest {
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
 						InetSocketAddress.createUnresolved("localhost", 80), -1),
-				pooledConnectionAllocator.pool);
+				channelPool);
 
 		CountDownLatch latch1 = new CountDownLatch(1);
 		poolResources.disposeLater().subscribe(null, null, latch1::countDown);
@@ -235,7 +227,7 @@ public class PooledConnectionProviderTest {
 				                                             .maxConnections(1)
 				                                             .pendingAcquireMaxCount(4)
 				                                             .pendingAcquireTimeout(Duration.ofMillis(10))
-				                                             .fifo();
+				                                             .build();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
@@ -332,7 +324,7 @@ public class PooledConnectionProviderTest {
 				                                             .maxConnections(1)
 				                                             .pendingAcquireTimeout(Duration.ofMillis(20))
 				                                             .pendingAcquireMaxCount(1)
-				                                             .fifo();
+				                                             .build();
 		CountDownLatch latch = new CountDownLatch(2);
 
 		try {
@@ -392,6 +384,69 @@ public class PooledConnectionProviderTest {
 			server.disposeNow();
 			provider.dispose();
 		}
+	}
+
+	@Test
+	public void testIssue973() {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, resp) -> resp.sendHeaders())
+				          .bindNow();
+
+		PooledConnectionProvider provider =
+				(PooledConnectionProvider) ConnectionProvider.builder("testIssue973")
+				                                             .maxConnections(2)
+				                                             .forRemoteHost(InetSocketAddress.createUnresolved("localhost", server.port()),
+				                                                            spec -> spec.maxConnections(1))
+				                                             .build();
+		AtomicReference<InstrumentedPool<PooledConnection>> pool1 = new AtomicReference<>();
+		HttpClient.create(provider)
+		          .tcpConfiguration(tcpClient -> tcpClient.doOnConnected(conn -> {
+		              ConcurrentMap<PooledConnectionProvider.PoolKey, InstrumentedPool<PooledConnection>> pools =
+		                  provider.channelPools;
+		              for (InstrumentedPool<PooledConnection> pool : pools.values()) {
+		                  if (pool.metrics().acquiredSize() == 1) {
+		                      pool1.set(pool);
+		                      return;
+		                  }
+		              }
+		          }))
+		          .wiretap(true)
+		          .get()
+		          .uri("http://localhost:" + server.port() +"/")
+		          .responseContent()
+		          .aggregate()
+		          .block(Duration.ofSeconds(30));
+
+		assertThat(pool1.get()).isNotNull();
+
+		AtomicReference<InstrumentedPool<PooledConnection>> pool2 = new AtomicReference<>();
+		HttpClient.create(provider)
+		          .tcpConfiguration(tcpClient -> tcpClient.doOnConnected(conn -> {
+		              ConcurrentMap<PooledConnectionProvider.PoolKey, InstrumentedPool<PooledConnection>> pools =
+		                  provider.channelPools;
+		              for (InstrumentedPool<PooledConnection> pool : pools.values()) {
+		                  if (pool.metrics().acquiredSize() == 1) {
+		                      pool2.set(pool);
+		                      return;
+		                  }
+		              }
+		          }))
+		          .wiretap(true)
+		          .get()
+		          .uri("http://example.com/")
+		          .responseContent()
+		          .aggregate()
+		          .block(Duration.ofSeconds(30));
+
+		assertThat(pool2.get()).isNotNull();
+		assertThat(pool1.get()).as(pool1.get() + " " + pool2.get()).isNotSameAs(pool2.get());
+
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
+		server.disposeNow();
 	}
 
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {

@@ -1889,7 +1889,7 @@ public class HttpClientTest {
 				                  .maxConnections(1)
 				                  .pendingAcquireTimeout(Duration.ofMillis(100))
 				                  .maxIdleTime(Duration.ofMillis(10))
-				                  .fifo();
+				                  .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
@@ -1900,7 +1900,7 @@ public class HttpClientTest {
 				ConnectionProvider.builder("testConnectionIdleTimeElasticPool")
 				                  .maxConnections(Integer.MAX_VALUE)
 				                  .maxIdleTime(Duration.ofMillis(10))
-				                  .fifo();
+				                  .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
@@ -1911,7 +1911,7 @@ public class HttpClientTest {
 				ConnectionProvider.builder("testConnectionNoIdleTimeFixedPool")
 				                  .maxConnections(1)
 				                  .pendingAcquireTimeout(Duration.ofMillis(100))
-				                  .fifo();
+				                  .build();
 		ChannelId[] ids = doTestConnectionIdleTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
 	}
@@ -1956,7 +1956,7 @@ public class HttpClientTest {
 				                  .maxConnections(1)
 				                  .pendingAcquireTimeout(Duration.ofMillis(100))
 				                  .maxLifeTime(Duration.ofMillis(30))
-				                  .fifo();
+				                  .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
@@ -1967,7 +1967,7 @@ public class HttpClientTest {
 				ConnectionProvider.builder("testConnectionNoLifeTimeElasticPool")
 				                  .maxConnections(Integer.MAX_VALUE)
 				                  .maxLifeTime(Duration.ofMillis(30))
-				                  .fifo();
+				                  .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isNotEqualTo(ids[1]);
 	}
@@ -1978,7 +1978,7 @@ public class HttpClientTest {
 				ConnectionProvider.builder("testConnectionNoLifeTimeFixedPool")
 				                  .maxConnections(1)
 				                  .pendingAcquireTimeout(Duration.ofMillis(100))
-				                  .fifo();
+				                  .build();
 		ChannelId[] ids = doTestConnectionLifeTime(provider);
 		assertThat(ids[0]).isEqualTo(ids[1]);
 	}
