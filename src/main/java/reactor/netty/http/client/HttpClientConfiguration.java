@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -61,6 +62,7 @@ final class HttpClientConfiguration {
 	ClientCookieDecoder cookieDecoder = ClientCookieDecoder.STRICT;
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate = null;
+	Consumer<HttpClientRequest> redirectRequestConsumer = null;
 
 	Function<Mono<HttpClientConfiguration>, Mono<HttpClientConfiguration>> deferredConf                   = null;
 
@@ -77,6 +79,7 @@ final class HttpClientConfiguration {
 		this.cookieDecoder = from.cookieDecoder;
 		this.decoder = from.decoder;
 		this.followRedirectPredicate = from.followRedirectPredicate;
+		this.redirectRequestConsumer = from.redirectRequestConsumer;
 		this.baseUrl = from.baseUrl;
 		this.headers = from.headers;
 		this.method = from.method;
@@ -165,13 +168,11 @@ final class HttpClientConfiguration {
 			(req, res) -> FOLLOW_REDIRECT_CODES.matcher(res.status()
 			                                               .codeAsText())
 			                                   .matches();
-	static final Function<Bootstrap, Bootstrap> MAP_REDIRECT = b -> {
-		getOrCreate(b).followRedirectPredicate = FOLLOW_REDIRECT_PREDICATE;
-		return b;
-	};
 
 	static final Function<Bootstrap, Bootstrap> MAP_NO_REDIRECT = b -> {
-		getOrCreate(b).followRedirectPredicate = null;
+		HttpClientConfiguration conf = getOrCreate(b);
+		conf.followRedirectPredicate = null;
+		conf.redirectRequestConsumer = null;
 		return b;
 	};
 
@@ -275,8 +276,11 @@ final class HttpClientConfiguration {
 		return b;
 	}
 
-	static Bootstrap followRedirectPredicate(Bootstrap b, BiPredicate<HttpClientRequest, HttpClientResponse> predicate) {
-		getOrCreate(b).followRedirectPredicate = predicate;
+	static Bootstrap followRedirectPredicate(Bootstrap b, BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
+			@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
+		HttpClientConfiguration conf = getOrCreate(b);
+		conf.followRedirectPredicate = predicate;
+		conf.redirectRequestConsumer = redirectRequestConsumer;
 		return b;
 	}
 

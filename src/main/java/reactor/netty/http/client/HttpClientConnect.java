@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -448,6 +449,8 @@ final class HttpClientConnect extends HttpClient {
 		final ClientCookieDecoder     cookieDecoder;
 		final BiPredicate<HttpClientRequest, HttpClientResponse>
 		                              followRedirectPredicate;
+		final Consumer<HttpClientRequest>
+		                              redirectRequestConsumer;
 		final HttpResponseDecoderSpec decoder;
 		final ProxyProvider           proxyProvider;
 
@@ -462,6 +465,7 @@ final class HttpClientConnect extends HttpClient {
 			this.method = configuration.method;
 			this.compress = configuration.acceptGzip;
 			this.followRedirectPredicate = configuration.followRedirectPredicate;
+			this.redirectRequestConsumer = configuration.redirectRequestConsumer;
 			this.cookieEncoder = configuration.cookieEncoder;
 			this.cookieDecoder = configuration.cookieDecoder;
 			this.decoder = configuration.decoder;
@@ -544,14 +548,6 @@ final class HttpClientConnect extends HttpClient {
 					headers.set(HttpHeaderNames.USER_AGENT, USER_AGENT);
 				}
 
-				if (fromURI != null && !toURI.equals(fromURI)) {
-					headers.remove(HttpHeaderNames.HOST)
-					       .remove(HttpHeaderNames.EXPECT)
-					       .remove(HttpHeaderNames.COOKIE)
-					       .remove(HttpHeaderNames.AUTHORIZATION)
-					       .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
-				}
-
 				SocketAddress remoteAddress = uri.getRemoteAddress();
 				if (!headers.contains(HttpHeaderNames.HOST) && remoteAddress instanceof InetSocketAddress) {
 					headers.set(HttpHeaderNames.HOST,
@@ -572,23 +568,38 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				ch.listener().onStateChange(ch, HttpClientState.REQUEST_PREPARED);
-				if (handler != null) {
-					if (websocketProtocols != null) {
-						return Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, maxFramePayloadLength, websocketProxyPing, compress))
-						           .thenEmpty(Mono.fromRunnable(() -> Flux.concat(handler.apply(ch, ch))));
+				if (websocketProtocols != null) {
+					Mono<Void> result =
+							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, maxFramePayloadLength, websocketProxyPing, compress));
+					if (handler != null) {
+						result = result.thenEmpty(Mono.fromRunnable(() -> Flux.concat(handler.apply(ch, ch))));
+					}
+					return result;
+				}
+
+				Consumer<HttpClientRequest> consumer = null;
+				if (fromURI != null && !toURI.equals(fromURI)) {
+					if (handler instanceof RedirectSendHandler) {
+						headers.remove(HttpHeaderNames.EXPECT)
+						       .remove(HttpHeaderNames.COOKIE)
+						       .remove(HttpHeaderNames.AUTHORIZATION)
+						       .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
 					}
 					else {
-						return handler.apply(ch, ch);
+						consumer = request ->
+						        request.requestHeaders()
+						               .remove(HttpHeaderNames.EXPECT)
+						               .remove(HttpHeaderNames.COOKIE)
+						               .remove(HttpHeaderNames.AUTHORIZATION)
+						               .remove(HttpHeaderNames.PROXY_AUTHORIZATION);
 					}
 				}
-				else {
-					if (websocketProtocols != null) {
-						return Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, maxFramePayloadLength, websocketProxyPing, compress));
-					}
-					else {
-						return ch.send();
-					}
+				if (this.redirectRequestConsumer != null) {
+					consumer = consumer != null ? consumer.andThen(this.redirectRequestConsumer) :
+					                              this.redirectRequestConsumer;
 				}
+				ch.redirectRequestConsumer(consumer);
+				return handler != null ? handler.apply(ch, ch) : ch.send();
 			}
 			catch (Throwable t) {
 				return Mono.error(t);

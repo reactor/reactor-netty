@@ -496,7 +496,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	protected void preSendHeadersAndStatus(){
+	protected void afterMarkSentHeaders(){
 		if (HttpResponseStatus.NOT_MODIFIED.equals(status())) {
 			responseHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING)
 			               .remove(HttpHeaderNames.CONTENT_LENGTH);
@@ -504,6 +504,11 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (compressionPredicate != null && compressionPredicate.test(this, this)) {
 			compression(true);
 		}
+	}
+
+	@Override
+	protected void beforeMarkSentHeaders() {
+		//noop
 	}
 
 	@Override
