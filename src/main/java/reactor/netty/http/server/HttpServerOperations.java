@@ -73,7 +73,6 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
-import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
@@ -400,7 +399,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	@Override
 	public Mono<Void> sendWebsocket(
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
-			WebSocketSpec configurer) {
+			WebsocketServerSpec configurer) {
 		return withWebsocketSupport(uri(), configurer, websocketHandler);
 	}
 
@@ -623,17 +622,17 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	final Mono<Void> withWebsocketSupport(String url,
-			WebSocketSpec webSocketSpec,
+			WebsocketServerSpec websocketServerSpec,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		Objects.requireNonNull(webSocketSpec, "webSocketSpec");
+		Objects.requireNonNull(websocketServerSpec, "websocketServerSpec");
 		Objects.requireNonNull(websocketHandler, "websocketHandler");
 		if (markSentHeaders()) {
-			WebsocketServerOperations ops = new WebsocketServerOperations(url, webSocketSpec, this);
+			WebsocketServerOperations ops = new WebsocketServerOperations(url, websocketServerSpec, this);
 
 			if (rebind(ops)) {
 				return FutureMono.from(ops.handshakerResult)
 				                 .doOnEach(signal -> {
-				                     if(!signal.hasError() && (webSocketSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
+				                     if(!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
 				                         websocketHandler.apply(ops, ops)
 				                                         .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
 				                     }

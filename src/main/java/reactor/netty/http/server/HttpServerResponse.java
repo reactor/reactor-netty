@@ -26,7 +26,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.HttpInfos;
-import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -161,7 +160,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
 	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(websocketHandler, WebSocketSpec.builder().build());
+		return sendWebsocket(websocketHandler, WebsocketServerSpec.builder().build());
 	}
 
 	/**
@@ -172,7 +171,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @param proxyPing whether to proxy websocket ping frames or respond to them
 	 * @param websocketHandler the I/O handler for websocket transport
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
-	 * @deprecated as of 0.9.5. Use {@link #sendWebsocket(BiFunction, WebSocketSpec)}
+	 * @deprecated as of 0.9.5. Use {@link #sendWebsocket(BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
 	default Mono<Void> sendWebsocket(boolean proxyPing,
@@ -188,7 +187,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @param protocols optional sub-protocol
 	 * @param websocketHandler the I/O handler for websocket transport
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
-	 * @deprecated as of 0.9.5. Use {@link #sendWebsocket(BiFunction, WebSocketSpec)}
+	 * @deprecated as of 0.9.5. Use {@link #sendWebsocket(BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
 	default Mono<Void> sendWebsocket(@Nullable String protocols,
@@ -206,7 +205,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @param websocketHandler the I/O handler for websocket transport
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
-	 * @deprecated as of 0.9.5. Use {@link #sendWebsocket(BiFunction, WebSocketSpec)}
+	 * @deprecated as of 0.9.5. Use {@link #sendWebsocket(BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
 	default Mono<Void> sendWebsocket(@Nullable String protocols,
@@ -226,7 +225,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @param websocketHandler the I/O handler for websocket transport
 	 *
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
-	 * @deprecated as of 0.9.5. Use {@link #sendWebsocket(BiFunction, WebSocketSpec)}
+	 * @deprecated as of 0.9.5. Use {@link #sendWebsocket(BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
 	default Mono<Void> sendWebsocket(@Nullable String protocols,
@@ -235,11 +234,11 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
 		return sendWebsocket(
 				websocketHandler,
-				WebSocketSpec.builder()
-				             .protocols(protocols)
-				             .maxFramePayloadLength(maxFramePayloadLength)
-				             .handlePing(proxyPing)
-				             .build());
+				WebsocketServerSpec.builder()
+				                   .protocols(protocols)
+				                   .maxFramePayloadLength(maxFramePayloadLength)
+				                   .handlePing(proxyPing)
+				                   .build());
 	}
 
 	/**
@@ -248,12 +247,12 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * successful the returned {@link Mono} fails.
 	 *
 	 * @param websocketHandler the I/O handler for websocket transport
-	 * @param webSocketSpec {@link WebSocketSpec} for websocket configuration
+	 * @param websocketServerSpec {@link WebsocketServerSpec} for websocket configuration
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
 	Mono<Void> sendWebsocket(
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
-			WebSocketSpec webSocketSpec);
+			WebsocketServerSpec websocketServerSpec);
 
 	/**
 	 * Adds "text/event-stream" content-type for Server-Sent Events

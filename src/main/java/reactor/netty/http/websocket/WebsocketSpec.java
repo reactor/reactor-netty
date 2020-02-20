@@ -17,6 +17,7 @@
 package reactor.netty.http.websocket;
 
 import javax.annotation.Nullable;
+import java.util.function.Supplier;
 
 /**
  * Wrapper for websocket configuration
@@ -25,7 +26,7 @@ import javax.annotation.Nullable;
  * @author Violeta Georgieva
  * @since 0.9.5
  */
-public interface WebSocketSpec {
+public interface WebsocketSpec {
 
 	/**
 	 * Returns the configured sub protocols.
@@ -56,27 +57,13 @@ public interface WebSocketSpec {
 	 */
 	boolean compress();
 
-	/**
-	 * Create builder with default properties:<br>
-	 * protocols = null
-	 * <br>
-	 * maxFramePayloadLength = 65536
-	 * <br>
-	 * handlePing = false
-	 *
-	 * @return {@link Builder}
-	 */
-	static Builder builder() {
-		return new Builder();
-	}
-
-	final class Builder {
+	class Builder<SPEC extends Builder<SPEC>> implements Supplier<SPEC> {
 		String protocols;
 		int maxFramePayloadLength = 65536;
 		boolean handlePing;
 		boolean compress;
 
-		private Builder() {
+		protected Builder() {
 		}
 
 		/**
@@ -86,9 +73,9 @@ public interface WebSocketSpec {
 		 * @param protocols sub-protocol
 		 * @return {@literal this}
 		 */
-		public final Builder protocols(String protocols) {
+		public final SPEC protocols(String protocols) {
 			this.protocols = protocols;
-			return this;
+			return get();
 		}
 
 		/**
@@ -98,9 +85,9 @@ public interface WebSocketSpec {
 		 * @param maxFramePayloadLength maximum allowable frame payload length
 		 * @return {@literal this}
 		 */
-		public final Builder maxFramePayloadLength(int maxFramePayloadLength) {
+		public final SPEC maxFramePayloadLength(int maxFramePayloadLength) {
 			this.maxFramePayloadLength = maxFramePayloadLength;
-			return this;
+			return get();
 		}
 
 		/**
@@ -110,9 +97,9 @@ public interface WebSocketSpec {
 		 * @param handlePing whether to proxy websocket ping frames or respond to them
 		 * @return {@literal this}
 		 */
-		public final Builder handlePing(boolean handlePing) {
+		public final SPEC handlePing(boolean handlePing) {
 			this.handlePing = handlePing;
-			return this;
+			return get();
 		}
 
 		/**
@@ -124,18 +111,15 @@ public interface WebSocketSpec {
 		 * if the client request presents websocket extensions headers.
 		 * @return {@literal this}
 		 */
-		public final Builder compress(boolean compress) {
+		public final SPEC compress(boolean compress) {
 			this.compress = compress;
-			return this;
+			return get();
 		}
 
-		/**
-		 * Builds new {@link WebSocketSpec}
-		 *
-		 * @return builds new {@link WebSocketSpec}
-		 */
-		public final WebSocketSpec build() {
-			return new WebsocketSpecImpl(this);
+		@Override
+		@SuppressWarnings("unchecked")
+		public SPEC get() {
+			return (SPEC) this;
 		}
 	}
 }

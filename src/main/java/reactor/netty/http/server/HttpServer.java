@@ -39,7 +39,6 @@ import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
-import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.util.Logger;
@@ -176,7 +175,7 @@ public abstract class HttpServer {
 	 * presents accept encoding/websocket extensions headers.
 	 * <p>
 	 * Note: Using this method for enabling websocket compression is strongly discouraged.
-	 * As of 0.9.5, use {@link WebSocketSpec#builder()} for providing websocket configuration.
+	 * As of 0.9.5, use {@link WebsocketServerSpec#builder()} for providing websocket configuration.
 	 * </p>
 	 *
 	 * @param compressionEnabled if true GZip response compression/websocket compression

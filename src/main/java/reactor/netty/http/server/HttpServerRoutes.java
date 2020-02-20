@@ -31,7 +31,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -276,7 +275,7 @@ public interface HttpServerRoutes extends
 	 */
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler) {
-		return ws(path, handler, WebSocketSpec.builder().build());
+		return ws(path, handler, WebsocketServerSpec.builder().build());
 	}
 
 	/**
@@ -290,7 +289,7 @@ public interface HttpServerRoutes extends
 	 * @param handler an I/O handler to invoke for the given condition
 	 * @param protocols sub-protocol to use in websocket handshake signature
 	 * @return this {@link HttpServerRoutes}
-	 * @deprecated as of 0.9.5. Use {@link #ws(String, BiFunction, WebSocketSpec)}
+	 * @deprecated as of 0.9.5. Use {@link #ws(String, BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
 	default HttpServerRoutes ws(String path,
@@ -306,7 +305,7 @@ public interface HttpServerRoutes extends
 	 * @param handler an I/O handler to invoke for the given condition
 	 * @param protocols sub-protocol to use in websocket handshake signature
 	 * @return this {@link HttpServerRoutes}
-	 * @deprecated as of 0.9.5. Use {@link #ws(Predicate, BiFunction, WebSocketSpec)}
+	 * @deprecated as of 0.9.5. Use {@link #ws(Predicate, BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
@@ -323,7 +322,7 @@ public interface HttpServerRoutes extends
 	 * @param protocols sub-protocol to use in websocket handshake signature
 	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
 	 * @return this {@link HttpServerRoutes}
-	 * @deprecated as of 0.9.5. Use {@link #ws(Predicate, BiFunction, WebSocketSpec)}
+	 * @deprecated as of 0.9.5. Use {@link #ws(Predicate, BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
@@ -342,7 +341,7 @@ public interface HttpServerRoutes extends
 	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
 	 * @param proxyPing whether to proxy websocket ping frames or respond to them
 	 * @return this {@link HttpServerRoutes}
-	 * @deprecated as of 0.9.5. Use {@link #ws(Predicate, BiFunction, WebSocketSpec)}
+	 * @deprecated as of 0.9.5. Use {@link #ws(Predicate, BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
@@ -353,11 +352,11 @@ public interface HttpServerRoutes extends
 		return ws(
 				condition,
 				handler,
-				WebSocketSpec.builder()
-				             .protocols(protocols)
-				             .maxFramePayloadLength(maxFramePayloadLength)
-				             .handlePing(proxyPing)
-				             .build());
+				WebsocketServerSpec.builder()
+				                   .protocols(protocols)
+				                   .maxFramePayloadLength(maxFramePayloadLength)
+				                   .handlePing(proxyPing)
+				                   .build());
 	}
 
 	/**
@@ -369,12 +368,12 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param path The websocket path used by clients
 	 * @param handler an I/O handler to invoke for the given condition
-	 * @param configurer {@link WebSocketSpec} for websocket configuration
+	 * @param configurer {@link WebsocketServerSpec} for websocket configuration
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
-			WebSocketSpec configurer) {
+			WebsocketServerSpec configurer) {
 		return ws(HttpPredicate.get(path), handler, configurer);
 	}
 
@@ -383,17 +382,17 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param condition a predicate given each inbound request
 	 * @param handler an I/O handler to invoke for the given condition
-	 * @param webSocketSpec {@link WebSocketSpec} for websocket configuration
+	 * @param websocketServerSpec {@link WebsocketServerSpec} for websocket configuration
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			WebSocketSpec webSocketSpec) {
+			WebsocketServerSpec websocketServerSpec) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
 			       .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), webSocketSpec, handler);
+				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}
 			return resp.sendNotFound();
 		});
