@@ -72,7 +72,7 @@ public class PooledConnectionProviderMetricsTest {
 
 	@Test
 	public void testClientMetricsDisabled() throws Exception {
-		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo(),
+		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(),
 		       false);
 	}
 
