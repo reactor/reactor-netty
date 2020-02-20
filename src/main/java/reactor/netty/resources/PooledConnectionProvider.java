@@ -183,12 +183,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		                                             .allMatch(Disposable::isDisposed);
 	}
 
-	@Override
-	@SuppressWarnings("deprecation")
-	public int maxConnections() {
-		return defaultPoolFactory.maxConnections;
-	}
-
 	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, InstrumentedPool<PooledConnection> pool,
 			ChannelOperations.OnSetup opsFactory, long acquireTimeout) {
 		DisposableAcquire disposableAcquire =

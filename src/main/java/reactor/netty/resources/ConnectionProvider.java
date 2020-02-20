@@ -161,17 +161,6 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
-	 * Returns the maximum number of connections before start pending
-	 *
-	 * @return the maximum number of connections before start pending
-	 * @deprecated as of 0.9.5.
-	 */
-	@Deprecated
-	default int maxConnections() {
-		return -1;
-	}
-
-	/**
 	 * Build a {@link ConnectionProvider} to cache and reuse a fixed maximum number of
 	 * {@link Connection}. Further connections will be pending acquisition depending on
 	 * pendingAcquireTime. The maximum number of connections is for the connections in a single
