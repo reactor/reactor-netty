@@ -26,7 +26,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.NettyOutbound;
 import reactor.netty.http.HttpInfos;
-import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -159,7 +158,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
 	default Mono<Void> sendWebsocket(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler) {
-		return sendWebsocket(websocketHandler, WebSocketSpec.builder().build());
+		return sendWebsocket(websocketHandler, WebsocketServerSpec.builder().build());
 	}
 
 	/**
@@ -168,12 +167,12 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * successful the returned {@link Mono} fails.
 	 *
 	 * @param websocketHandler the I/O handler for websocket transport
-	 * @param webSocketSpec {@link WebSocketSpec} for websocket configuration
+	 * @param websocketServerSpec {@link WebsocketServerSpec} for websocket configuration
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
 	 */
 	Mono<Void> sendWebsocket(
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,
-			WebSocketSpec webSocketSpec);
+			WebsocketServerSpec websocketServerSpec);
 
 	/**
 	 * Adds "text/event-stream" content-type for Server-Sent Events

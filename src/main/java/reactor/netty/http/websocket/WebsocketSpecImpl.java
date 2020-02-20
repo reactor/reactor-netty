@@ -17,19 +17,19 @@
 package reactor.netty.http.websocket;
 
 /**
- * Configurer implementation for {@link WebSocketSpec}
+ * Configurer implementation for {@link WebsocketSpec}
  *
  * @author Dmitrii Borin
  * @author Violeta Georgieva
  * @since 0.9.5
  */
-final class WebsocketSpecImpl implements WebSocketSpec {
+public class WebsocketSpecImpl implements WebsocketSpec {
 	private final String protocols;
 	private final int maxFramePayloadLength;
 	private final boolean proxyPing;
 	private final boolean compress;
 
-	WebsocketSpecImpl(WebSocketSpec.Builder builder) {
+	protected WebsocketSpecImpl(WebsocketSpec.Builder<?> builder) {
 		this.protocols = builder.protocols;
 		this.maxFramePayloadLength = builder.maxFramePayloadLength;
 		this.proxyPing = builder.handlePing;

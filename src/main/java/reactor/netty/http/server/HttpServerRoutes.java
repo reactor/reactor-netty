@@ -31,7 +31,6 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import org.reactivestreams.Publisher;
 import reactor.netty.ByteBufFlux;
-import reactor.netty.http.websocket.WebSocketSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 
@@ -276,7 +275,7 @@ public interface HttpServerRoutes extends
 	 */
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler) {
-		return ws(path, handler, WebSocketSpec.builder().build());
+		return ws(path, handler, WebsocketServerSpec.builder().build());
 	}
 
 	/**
@@ -288,12 +287,12 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param path The websocket path used by clients
 	 * @param handler an I/O handler to invoke for the given condition
-	 * @param configurer {@link WebSocketSpec} for websocket configuration
+	 * @param configurer {@link WebsocketServerSpec} for websocket configuration
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
-			WebSocketSpec configurer) {
+			WebsocketServerSpec configurer) {
 		return ws(HttpPredicate.get(path), handler, configurer);
 	}
 
@@ -302,17 +301,17 @@ public interface HttpServerRoutes extends
 	 *
 	 * @param condition a predicate given each inbound request
 	 * @param handler an I/O handler to invoke for the given condition
-	 * @param webSocketSpec {@link WebSocketSpec} for websocket configuration
+	 * @param websocketServerSpec {@link WebsocketServerSpec} for websocket configuration
 	 * @return this {@link HttpServerRoutes}
 	 */
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,
-			WebSocketSpec webSocketSpec) {
+			WebsocketServerSpec websocketServerSpec) {
 		return route(condition, (req, resp) -> {
 			if (req.requestHeaders()
 			       .containsValue(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true)) {
 				HttpServerOperations ops = (HttpServerOperations) req;
-				return ops.withWebsocketSupport(req.uri(), webSocketSpec, handler);
+				return ops.withWebsocketSupport(req.uri(), websocketServerSpec, handler);
 			}
 			return resp.sendNotFound();
 		});

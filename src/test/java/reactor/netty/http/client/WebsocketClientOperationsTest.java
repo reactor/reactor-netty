@@ -21,7 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.websocket.WebSocketSpec;
+import reactor.netty.http.server.WebsocketServerSpec;
 import reactor.test.StepVerifier;
 
 /**
@@ -57,7 +57,7 @@ public class WebsocketClientOperationsTest {
 				                            return res.status(token).send();
 				                        }
 				                        return res.sendWebsocket((i, o) -> o.sendString(Mono.just("test")),
-				                                WebSocketSpec.builder().protocols(serverSubprotocol).build());
+				                                WebsocketServerSpec.builder().protocols(serverSubprotocol).build());
 				                    }))
 				          .wiretap(true)
 				          .bindNow();
