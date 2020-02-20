@@ -436,7 +436,7 @@ public class PooledConnectionProviderTest {
 		          }))
 		          .wiretap(true)
 		          .get()
-		          .uri("http://example.com/")
+		          .uri("https://example.com/")
 		          .responseContent()
 		          .aggregate()
 		          .block(Duration.ofSeconds(30));
