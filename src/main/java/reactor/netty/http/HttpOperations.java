@@ -153,7 +153,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public Mono<Void> then() {
 		if (!channel().isActive()) {
-			return Mono.error(new AbortedException("Connection has been closed BEFORE response"));
+			return Mono.error(new AbortedException("Connection has been closed BEFORE send operation"));
 		}
 
 		if (hasSentHeaders()) {
