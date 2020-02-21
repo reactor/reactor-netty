@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -336,7 +337,15 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			return uri;
 		}
 
-		String path = URI.create(uri.charAt(0) == '/' ? "http://localhost:8080" + uri : uri)
+		String tempUri = uri;
+		if (tempUri.charAt(0) == '/') {
+			tempUri = "http://localhost:8080" + tempUri;
+		}
+		else if (!SCHEME_PATTERN.matcher(tempUri).matches()) {
+			tempUri = "http://" + tempUri;
+		}
+
+		String path = URI.create(tempUri)
 		                 .getPath();
 		if (!path.isEmpty()) {
 			if (path.charAt(0) == '/') {
@@ -384,7 +393,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 				}
 			}
 	);
+
 	static final Logger log = Loggers.getLogger(HttpOperations.class);
+
+	static final Pattern SCHEME_PATTERN = Pattern.compile("^(https?|wss?)://.*$");
 
 	protected static final class PostHeadersNettyOutbound implements NettyOutbound, Consumer<Throwable>, Runnable {
 
