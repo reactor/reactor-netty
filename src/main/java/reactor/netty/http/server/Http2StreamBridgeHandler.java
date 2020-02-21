@@ -86,7 +86,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 						cookieEncoder,
 						cookieDecoder);
 			}
-			catch (IllegalArgumentException e) {
+			catch (RuntimeException e) {
 				HttpServerOperations.sendDecodingFailures(ctx, e, msg);
 				return;
 			}
