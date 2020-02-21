@@ -116,6 +116,18 @@ public final class ReactorNetty {
 	 * connection in an unbounded fashion. Fallback 45 seconds
 	 */
 	public static final String POOL_ACQUIRE_TIMEOUT = "reactor.netty.pool.acquireTimeout";
+	/**
+	 * Default max idle time, fallback - max idle time is not specified.
+	 */
+	public static final String POOL_MAX_IDLE_TIME = "reactor.netty.pool.maxIdleTime";
+	/**
+	 * Default leasing strategy (fifo, lifo), fallback to fifo.
+	 * <ul>
+	 *     <li>fifo - The connection selection is first in, first out</li>
+	 *     <li>lifo - The connection selection is last in, first out</li>
+	 * </ul>
+	 */
+	public static final String POOL_LEASING_STRATEGY = "reactor.netty.pool.leasingStrategy";
 
 
 	/**

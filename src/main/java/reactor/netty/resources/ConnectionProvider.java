@@ -30,6 +30,7 @@ import reactor.util.annotation.NonNull;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
@@ -62,6 +63,33 @@ public interface ConnectionProvider extends Disposable {
 	long DEFAULT_POOL_ACQUIRE_TIMEOUT = Long.parseLong(System.getProperty(
 			ReactorNetty.POOL_ACQUIRE_TIMEOUT,
 			"" + 45000));
+
+	/**
+	 * Default max idle time, fallback - max idle time is not specified.
+	 */
+	long DEFAULT_POOL_MAX_IDLE_TIME = Long.parseLong(System.getProperty(
+			ReactorNetty.POOL_MAX_IDLE_TIME,
+			"-1"));
+
+	/**
+	 * The connection selection is first in, first out.
+	 */
+	String LEASING_STRATEGY_FIFO = "fifo";
+
+	/**
+	 * The connection selection is last in, first out.
+	 */
+	String LEASING_STRATEGY_LIFO = "lifo";
+
+	/**
+	* Default leasing strategy (fifo, lifo), fallback to fifo.
+	* <ul>
+	*     <li>fifo - The connection selection is first in, first out</li>
+	*     <li>lifo - The connection selection is last in, first out</li>
+	* </ul>
+	*/
+	String DEFAULT_POOL_LEASING_STRATEGY = System.getProperty(ReactorNetty.POOL_LEASING_STRATEGY, LEASING_STRATEGY_FIFO)
+					.toLowerCase(Locale.ENGLISH);
 
 	/**
 	 * Creates a builder for {@link ConnectionProvider}
@@ -179,6 +207,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @param name {@link ConnectionProvider} name
 		 */
 		private Builder(String name) {
+			super();
 			name(name);
 		}
 
@@ -232,16 +261,25 @@ public interface ConnectionProvider extends Disposable {
 		Duration maxLifeTime;
 		boolean  metricsEnabled;
 		Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
-				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy = PoolBuilder::fifo;
+				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
 
 		/**
 		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
 		 */
 		private ConnectionPoolSpec() {
+			if (DEFAULT_POOL_MAX_IDLE_TIME > -1) {
+				maxIdleTime(Duration.ofMillis(DEFAULT_POOL_MAX_IDLE_TIME));
+			}
+			if(LEASING_STRATEGY_LIFO.equals(DEFAULT_POOL_LEASING_STRATEGY)) {
+				lifo();
+			}
+			else {
+				fifo();
+			}
 		}
 
 		/**
-		 * Set the options to use for configuring {@link ConnectionProvider} acquire timeout.
+		 * Set the options to use for configuring {@link ConnectionProvider} acquire timeout (resolution: ms).
 		 * Default to {@link #DEFAULT_POOL_ACQUIRE_TIMEOUT}.
 		 *
 		 * @param pendingAcquireTimeout the maximum time after which a pending acquire
@@ -274,7 +312,7 @@ public interface ConnectionProvider extends Disposable {
 		 * Set the options to use for configuring {@link ConnectionProvider} the maximum number of registered
 		 * requests for acquire to keep in a pending queue
 		 * When invoked with -1 the pending queue will not have upper limit.
-		 * If this option is not specified, 2 * max connections will be used as a default.
+		 * Default to {@code 2 * max connections}.
 		 *
 		 * @param pendingAcquireMaxCount the maximum number of registered requests for acquire to keep
 		 * in a pending queue
@@ -290,7 +328,8 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
-		 * Set the options to use for configuring {@link ConnectionProvider} max idle time.
+		 * Set the options to use for configuring {@link ConnectionProvider} max idle time (resolution: ms).
+		 * Default to {@link #DEFAULT_POOL_MAX_IDLE_TIME} if specified otherwise - no max idle time.
 		 *
 		 * @param maxIdleTime the {@link Duration} after which the channel will be closed when idle (resolution: ms)
 		 * @return {@literal this}
@@ -302,7 +341,8 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
-		 * Set the options to use for configuring {@link ConnectionProvider} max life time.
+		 * Set the options to use for configuring {@link ConnectionProvider} max life time (resolution: ms).
+		 * By default no max life time.
 		 *
 		 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms)
 		 * @return {@literal this}
