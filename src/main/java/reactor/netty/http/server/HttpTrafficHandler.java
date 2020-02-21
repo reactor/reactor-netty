@@ -160,7 +160,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 							cookieEncoder,
 							cookieDecoder);
 				}
-				catch (IllegalArgumentException e) {
+				catch (RuntimeException e) {
 					sendDecodingFailures(e, msg);
 					return;
 				}
