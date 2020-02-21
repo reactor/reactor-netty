@@ -109,6 +109,19 @@ public class HttpOperationsTest {
 		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a?b#c"));
 		assertEquals("a b", HttpOperations.resolvePath("http://localhost:8080/a%20b"));
 
+		assertEquals("", HttpOperations.resolvePath("localhost:8080"));
+		assertEquals("", HttpOperations.resolvePath("localhost:8080/"));
+		assertEquals("", HttpOperations.resolvePath("localhost:8080//"));
+		assertEquals("/", HttpOperations.resolvePath("localhost:8080///"));
+		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a"));
+		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a/"));
+		assertEquals("", HttpOperations.resolvePath("localhost:8080/?b"));
+		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a?b"));
+		assertEquals("", HttpOperations.resolvePath("localhost:8080/#b"));
+		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a#b"));
+		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a?b#c"));
+		assertEquals("a b", HttpOperations.resolvePath("localhost:8080/a%20b"));
+
 		assertEquals("", HttpOperations.resolvePath(""));
 		assertEquals("", HttpOperations.resolvePath("/"));
 		assertEquals("", HttpOperations.resolvePath("//"));
