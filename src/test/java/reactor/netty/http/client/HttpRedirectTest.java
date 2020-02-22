@@ -152,6 +152,7 @@ public class HttpRedirectTest {
 
 		assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
 		assertThat(onRequestCount.get()).isEqualTo(2);
+		// This fails, with only 1. This means we can get success count, but not error count or duration
 		assertThat(onResponseCount.get()).isEqualTo(2);
 
 		server.disposeNow();
