@@ -435,7 +435,7 @@ public class TcpServerTests {
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 		path.toFile().deleteOnExit();
 
-		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, (ClassLoader) null)) {
 			Path fromZipFile = zipFs.getPath("/largeFile.txt");
 			long fileSize = Files.size(fromZipFile);
 			assertSendFile(out -> out.sendFileChunked(fromZipFile, 0, fileSize));
@@ -447,7 +447,7 @@ public class TcpServerTests {
 		Path path = Files.createTempFile(null, ".zip");
 		Files.copy(this.getClass().getResourceAsStream("/zipFile.zip"), path, StandardCopyOption.REPLACE_EXISTING);
 
-		try (FileSystem zipFs = FileSystems.newFileSystem(path, null)) {
+		try (FileSystem zipFs = FileSystems.newFileSystem(path, (ClassLoader) null)) {
 			Path fromZipFile = zipFs.getPath("/largeFile.txt");
 			long fileSize = Files.size(fromZipFile);
 			assertSendFile(out -> out.sendFile(fromZipFile, 0, fileSize));
