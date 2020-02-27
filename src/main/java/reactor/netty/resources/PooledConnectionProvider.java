@@ -366,11 +366,26 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void onStateChange(Connection connection, State newState) {
 			if(log.isDebugEnabled()) {
 				log.debug(format(connection.channel(), "onStateChange({}, {})"), connection, newState);
 			}
+
 			if (newState == State.DISCONNECTING) {
+				if (!isPersistent() && channel.isActive()) {
+					//will be released by closeFuture
+					//"FutureReturnValueIgnored" this is deliberate
+					channel.close();
+					owner().onStateChange(connection, State.DISCONNECTING);
+					return;
+				}
+
+				if (!channel.isActive()) {
+					owner().onStateChange(connection, State.DISCONNECTING);
+					//will be released by closeFuture
+					return;
+				}
 
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "Releasing channel"));
