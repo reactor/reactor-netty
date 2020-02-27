@@ -132,6 +132,16 @@ public abstract class HttpClient {
 		/**
 		 * Configure a body to send on request.
 		 *
+		 * <p><strong>Note:</strong> The body {@code Publisher} passed in will be invoked also for redirect requests
+		 * when {@code followRedirect} is enabled. If you need to control what will be sent when
+		 * {@code followRedirect} is enabled then use {@link #send(BiFunction)}.
+		 * <p><strong>Note:</strong> For redirect requests, sensitive headers
+		 * {@link #followRedirect(boolean, Consumer) followRedirect} are removed
+		 * from the initialized request when redirecting to a different domain, they can be re-added globally via
+		 * {@link #followRedirect(boolean, Consumer)}/{@link #followRedirect(BiPredicate, Consumer)}
+		 * or alternatively for full control per redirect request, consider using {@link RedirectSendHandler}
+		 * with {@link #send(BiFunction)}
+		 *
 		 * @param body a body publisher that will terminate the request on complete
 		 *
 		 * @return a new {@link ResponseReceiver}
@@ -142,11 +152,14 @@ public abstract class HttpClient {
 		 * Configure a body to send on request using the {@link NettyOutbound} sending
 		 * builder and returning a {@link Publisher} to signal end of the request.
 		 *
-		 * <p><strong>Note:</strong> the sender {@code BiFunction} passed in may implement
-		 * {@link RedirectSendHandler} to indicate explicitly that it has special handling
-		 * for redirect requests. This is entirely optional, and redirect request handling
-		 * may also be handled globally via {@link #followRedirect(boolean, Consumer)} or
-		 * {@link #followRedirect(BiPredicate, Consumer)}.
+		 * <p><strong>Note:</strong> The sender {@code BiFunction} passed in will be invoked also for redirect requests
+		 * when {@code followRedirect} is enabled. For redirect requests, sensitive headers
+		 * {@link #followRedirect(boolean, Consumer) followRedirect} are removed
+		 * from the initialized request when redirecting to a different domain, they can be re-added globally via
+		 * {@link #followRedirect(boolean, Consumer)}/{@link #followRedirect(BiPredicate, Consumer)}
+		 * or alternatively for full control per redirect request, consider using {@link RedirectSendHandler}.
+		 * {@link RedirectSendHandler} can be used to indicate explicitly that this {@code BiFunction} has special
+		 * handling for redirect requests.
 		 *
 		 * @param sender a bifunction given the outgoing request and the sending
 		 * {@link NettyOutbound}, returns a publisher that will terminate the request
@@ -161,6 +174,15 @@ public abstract class HttpClient {
 		 * chunked file upload. It will by default be encoded as Multipart but can be
 		 * adapted via {@link HttpClientForm#multipart(boolean)}.
 		 *
+		 * <p><strong>Note:</strong> The HTTP Form passed in will be invoked also for redirect requests
+		 * when {@code followRedirect} is enabled. If you need to control what will be sent when
+		 * {@code followRedirect} is enabled use {@link HttpClientRequest#redirectedFrom()} to check the original
+		 * and any number of subsequent redirect(s), including the one that is in progress.
+		 * <p><strong>Note:</strong> For redirect requests, sensitive headers
+		 * {@link #followRedirect(boolean, Consumer) followRedirect} are removed
+		 * from the initialized request when redirecting to a different domain, they can be re-added globally via
+		 * {@link #followRedirect(boolean, Consumer)}/{@link #followRedirect(BiPredicate, Consumer)}.
+		 *
 		 * @param formCallback called when form generator is created
 		 *
 		 * @return a new {@link ResponseReceiver}
@@ -173,6 +195,15 @@ public abstract class HttpClient {
 		 * Prepare to send an HTTP Form including Multipart encoded Form which support
 		 * chunked file upload. It will by default be encoded as Multipart but can be
 		 * adapted via {@link HttpClientForm#multipart(boolean)}.
+		 *
+		 * <p><strong>Note:</strong> The HTTP Form passed in will be invoked also for redirect requests
+		 * when {@code followRedirect} is enabled. If you need to control what will be sent when
+		 * {@code followRedirect} is enabled use {@link HttpClientRequest#redirectedFrom()} to check the original
+		 * and any number of subsequent redirect(s), including the one that is in progress.
+		 * <p><strong>Note:</strong> For redirect requests, sensitive headers
+		 * {@link #followRedirect(boolean, Consumer) followRedirect} are removed
+		 * from the initialized request when redirecting to a different domain, they can be re-added globally via
+		 * {@link #followRedirect(boolean, Consumer)}/{@link #followRedirect(BiPredicate, Consumer)}.
 		 *
 		 * @param formCallback called when form generator is created
 		 * @param progress called after form is being sent and passed with a {@link Flux} of latest in-flight or uploaded bytes
@@ -326,7 +357,7 @@ public abstract class HttpClient {
 	 * e.g. as a result of enabling {@link #followRedirect(boolean)}, and is capable of
 	 * applying separate logic for each individually. Redirect scenarios may be detected
 	 * by checking {@link HttpClientRequest#redirectedFrom()}.
-	 * <p>When the {@code BiFunction} passsed in is not an implementation of this interface,
+	 * <p>When the {@code BiFunction} passed in is not an implementation of this interface,
 	 * it indicates it does not differentiate between original and redirect requests, and
 	 * applies the same initialization logic.
 	 */
@@ -678,6 +709,10 @@ public abstract class HttpClient {
 	/**
 	 * Specifies whether HTTP status 301|302|307|308 auto-redirect support is enabled.
 	 *
+	 * <p><strong>Note:</strong> The sensitive headers {@link #followRedirect(boolean, Consumer) followRedirect}
+	 * are removed from the initialized request when redirecting to a different domain, they can be re-added
+	 * via {@link #followRedirect(boolean, Consumer)}.
+	 *
 	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
 	 *                       is enabled, otherwise disabled (default: false).
 	 * @return a new {@link HttpClient}
@@ -689,6 +724,16 @@ public abstract class HttpClient {
 	/**
 	 * Variant of {@link #followRedirect(boolean)} that also accepts a redirect request
 	 * processor.
+	 *
+	 * <p><strong>Note:</strong> The sensitive headers:
+	 * <ul>
+	 *     <li>Expect</li>
+	 *     <li>Cookie</li>
+	 *     <li>Authorization</li>
+	 *     <li>Proxy-Authorization</li>
+	 * </ul>
+	 * are removed from the initialized request when redirecting to a different domain,
+	 * they can be re-added using {@code redirectRequestConsumer}.
 	 *
 	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
 	 *                       is enabled, otherwise disabled (default: false).
@@ -711,10 +756,14 @@ public abstract class HttpClient {
 	/**
 	 * Enables auto-redirect support if the passed
 	 * {@link java.util.function.Predicate} matches.
-	 * <p>
-	 *     note the passed {@link HttpClientRequest} and {@link HttpClientResponse}
-	 *     should be considered read-only and the implement SHOULD NOT consume or
-	 *     write the request/response in this predicate.
+	 *
+	 * <p><strong>Note:</strong> The passed {@link HttpClientRequest} and {@link HttpClientResponse}
+	 * should be considered read-only and the implement SHOULD NOT consume or
+	 * write the request/response in this predicate.
+	 *
+	 * <p><strong>Note:</strong> The sensitive headers {@link #followRedirect(BiPredicate, Consumer) followRedirect}
+	 * are removed from the initialized request when redirecting to a different domain, they can be re-added
+	 * via {@link #followRedirect(BiPredicate, Consumer)}.
 	 *
 	 * @param predicate that returns true to enable auto-redirect support.
 	 * @return a new {@link HttpClient}
@@ -726,6 +775,16 @@ public abstract class HttpClient {
 	/**
 	 * Variant of {@link #followRedirect(BiPredicate)} that also accepts a redirect request
 	 * processor.
+	 *
+	 * <p><strong>Note:</strong> The sensitive headers:
+	 * <ul>
+	 *     <li>Expect</li>
+	 *     <li>Cookie</li>
+	 *     <li>Authorization</li>
+	 *     <li>Proxy-Authorization</li>
+	 * </ul>
+	 * are removed from the initialized request when redirecting to a different domain,
+	 * they can be re-added using {@code redirectRequestConsumer}.
 	 *
 	 * @param predicate that returns true to enable auto-redirect support.
 	 * @param redirectRequestConsumer redirect request consumer, invoked on redirects, after
