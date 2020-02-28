@@ -53,6 +53,7 @@ import reactor.netty.tcp.TcpServer;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertNotNull;
 
 public class PooledConnectionProviderTest {
 
@@ -236,7 +237,7 @@ public class PooledConnectionProviderTest {
 			assertThat(f1.get()).isNull();
 			assertThat(f2).isNotNull();
 			assertThat(f2.get()).isNull();
-			assertThat(sf).isNotNull();
+			assertNotNull(sf);
 			assertThat(sf.get()).isNull();
 		}
 	}

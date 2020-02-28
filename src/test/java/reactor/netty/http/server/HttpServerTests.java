@@ -461,7 +461,7 @@ public class HttpServerTests {
 
 		//the router is not done and is still blocking the thread
 		assertThat(f.isDone()).isFalse();
-		assertThat(ref.get()).isNotNull().withFailMessage("Server is not initialized after 1s");
+		assertThat(ref.get()).withFailMessage("Server is not initialized after 1s").isNotNull();
 
 		//shutdown the router to unblock the thread
 		ref.get().disposeNow();
