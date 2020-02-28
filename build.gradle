@@ -57,7 +57,7 @@ ext {
   assertJVersion = '3.6.1'
 
   // Netty
-  nettyDefaultVersion = '4.1.45.Final'
+  nettyDefaultVersion = '4.1.46.Final'
   if (!project.hasProperty("forceNettyVersion")) {
 	nettyVersion = nettyDefaultVersion
   }
@@ -297,7 +297,7 @@ configure(rootProject) { project ->
 	testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
 
 	// Needed for HTTP/2 testing
-	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.28.Final" + os_suffix
+	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.29.Final" + os_suffix
 
 	jarFileTestCompile 'org.assertj:assertj-core:3.12.2'
 	jarFileTestCompile 'junit:junit:4.12'
