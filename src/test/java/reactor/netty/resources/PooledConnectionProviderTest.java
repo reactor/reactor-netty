@@ -450,6 +450,49 @@ public class PooledConnectionProviderTest {
 		server.disposeNow();
 	}
 
+	@Test
+	public void testIssue1012() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .route(r -> r.get("/1", (req, resp) -> resp.sendString(Mono.just("testIssue1012")))
+				                       .get("/2", (req, res) -> Mono.error(new RuntimeException("testIssue1012"))))
+				          .bindNow();
+
+		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.create("testIssue1012", 1);
+		CountDownLatch latch = new CountDownLatch(1);
+		HttpClient client =
+				HttpClient.create(provider)
+				          .port(server.port())
+				          .wiretap(true)
+				          .tcpConfiguration(tcpClient ->
+				              tcpClient.doOnConnected(conn -> conn.channel().closeFuture().addListener(f -> latch.countDown())));
+
+		client.get()
+		      .uri("/1")
+		      .responseContent()
+		      .aggregate()
+		      .block(Duration.ofSeconds(30));
+
+		client.get()
+		      .uri("/2")
+		      .responseContent()
+		      .aggregate()
+		      .onErrorResume(e -> Mono.empty())
+		      .block(Duration.ofSeconds(30));
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		provider.channelPools.forEach((k, v) -> {
+			assertThat(v.metrics().acquiredSize()).isEqualTo(0);
+		});
+
+		provider.disposeLater()
+				.block(Duration.ofSeconds(30));
+		server.disposeNow();
+	}
+
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {
 
 		@Override

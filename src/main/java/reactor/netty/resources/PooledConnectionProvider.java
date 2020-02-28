@@ -578,7 +578,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 			channel.closeFuture()
 			       .addListener(ff ->
-			           pooledRef.invalidate()
+			           ((DisposableAcquire) channel.attr(OWNER).get()).pooledRef
+			                    .invalidate()
 			                    .subscribe(null, null, () -> {
 			                        if (log.isDebugEnabled()) {
 			                            log.debug(format(channel, "Channel closed, now {} active connections and " +
