@@ -50,11 +50,11 @@ ext {
   //Metrics
   micrometerVersion = '1.3.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
 
+  jsr305Version = '3.0.2'
+
   // Logging
-  slf4jVersion = '1.7.12'
-  logbackVersion = '1.1.2'
-  testAddonVersion = reactorCoreVersion
-  assertJVersion = '3.6.1'
+  slf4jVersion = '1.7.30'
+  logbackVersion = '1.2.3'
 
   // Netty
   nettyDefaultVersion = '4.1.46.Final'
@@ -66,12 +66,15 @@ ext {
 	println "Netty version defined from command line: ${forceNettyVersion}"
   }
 
-  // Libraries
-  jacksonDatabindVersion = '2.5.1'
-
   // Testing
-  mockitoVersion = '1.10.19'
-  hoverflyJavaVersion = '0.11.1'
+  jacksonDatabindVersion = '2.9.10.3'
+  testAddonVersion = reactorCoreVersion
+  hamcrestVersion = '2.2'
+  assertJVersion = '3.15.0'
+  hoverflyJavaVersion = '0.12.3'
+  tomcatVersion = '9.0.31'
+  boringSslVersion = '2.0.29.Final'
+  junitVersion = '4.12'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
 				  "https://docs.oracle.com/javaee/6/api/",
@@ -231,14 +234,14 @@ configure(rootProject) { project ->
 	// dependencies that are common across all java projects
   dependencies {
 	// JSR-305 annotations
-	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
+	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	compile "io.netty:netty-handler-proxy:${nettyVersion}"
-	compile "io.netty:netty-codec-http2:${nettyVersion}"
-	optional "io.netty:netty-codec-haproxy:${nettyVersion}"
+	compile "io.netty:netty-handler-proxy:$nettyVersion"
+	compile "io.netty:netty-codec-http2:$nettyVersion"
+	optional "io.netty:netty-codec-haproxy:$nettyVersion"
 
 	//Metrics
-	optional "io.micrometer:micrometer-core:${micrometerVersion}"
+	optional "io.micrometer:micrometer-core:$micrometerVersion"
 
 	// Logging
 	optional "org.slf4j:slf4j-api:$slf4jVersion"
@@ -248,23 +251,23 @@ configure(rootProject) { project ->
 		exclude module: "reactor-core"
 	}
 
-	compile "io.netty:netty-handler:${nettyVersion}"
-	compile "io.netty:netty-codec-http:${nettyVersion}"
+	compile "io.netty:netty-handler:$nettyVersion"
+	compile "io.netty:netty-codec-http:$nettyVersion"
 
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
 	if (project.hasProperty("forceTransport")) {
 	  //so that the main code compiles
-	  optional "io.netty:netty-transport-native-epoll:${nettyVersion}"
-	  optional "io.netty:netty-transport-native-kqueue:${nettyVersion}"
+	  optional "io.netty:netty-transport-native-epoll:$nettyVersion"
+	  optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
 	  //now we explicitly add correctly qualified native, or do nothing if we want to test NIO
 	  if (forceTransport == "native") {
 		if (osdetector.os == "osx") {
-		  testRuntime "io.netty:netty-transport-native-kqueue:${nettyVersion}${os_suffix}"
+		  testRuntime "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
 		}
 		else if (osdetector.os == "linux") {
-		  testRuntime "io.netty:netty-transport-native-epoll:${nettyVersion}${os_suffix}"
+		  testRuntime "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
 		}
 	  }
 	  else if (forceTransport != "nio") {
@@ -273,27 +276,25 @@ configure(rootProject) { project ->
 	}
 	else {
 	  //classic build to be distributed
-	  compile "io.netty:netty-transport-native-epoll:${nettyVersion}:linux-x86_64"
-	  optional "io.netty:netty-transport-native-kqueue:${nettyVersion}"
+	  compile "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
+	  optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
 	}
 
 	// Testing
 	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
 	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
-	testCompile "org.hamcrest:hamcrest-library:1.3"
+	testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
-	testCompile "io.specto:hoverfly-java:${hoverflyJavaVersion}"
-	testCompile "org.apache.tomcat.embed:tomcat-embed-core:9.0.20"
+	testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
+	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
 
 	testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
-
 	testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
-
 	// Needed for HTTP/2 testing
-	testRuntime "io.netty:netty-tcnative-boringssl-static:2.0.29.Final" + os_suffix
+	testRuntime "io.netty:netty-tcnative-boringssl-static:$boringSslVersion" + os_suffix
 
-	jarFileTestCompile 'org.assertj:assertj-core:3.12.2'
-	jarFileTestCompile 'junit:junit:4.12'
+	jarFileTestCompile "org.assertj:assertj-core:$assertJVersion"
+	jarFileTestCompile "junit:junit:$junitVersion"
 
 	for (dependency in project.configurations.shaded.dependencies) {
 	    compileOnly(dependency)
