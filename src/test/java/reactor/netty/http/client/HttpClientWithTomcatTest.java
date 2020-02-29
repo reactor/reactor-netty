@@ -34,6 +34,9 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
 
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -93,7 +96,8 @@ public class HttpClientWithTomcatTest {
 				          .wiretap(true);
 
 		Tuple2<Integer, String> res;
-		try (InputStream f = getClass().getResourceAsStream("/smallFile.txt")) {
+		Path file = Paths.get(getClass().getResource("/smallFile.txt").toURI());
+		try (InputStream f = Files.newInputStream(file)) {
 			res = client.post()
 			            .uri("/multipart")
 			            .sendForm((req, form) -> form.multipart(true)

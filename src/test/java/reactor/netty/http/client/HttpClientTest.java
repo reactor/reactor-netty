@@ -689,35 +689,44 @@ public class HttpClientTest {
 				                                                     .sendHeaders()))
 				          .bindNow();
 
+		AtomicInteger onReq = new AtomicInteger();
+		AtomicInteger afterReq = new AtomicInteger();
+		AtomicInteger onResp = new AtomicInteger();
+		AtomicInteger afterResp = new AtomicInteger();
 		createHttpClientForContextWithAddress()
-		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
-		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
-		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
-		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
+		        .doOnRequest((r, c) -> onReq.getAndIncrement())
+		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
+		        .doOnResponse((r, c) -> onResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
 		        .put()
 		        .uri("/201")
 		        .responseContent()
 		        .blockLast();
 
 		createHttpClientForContextWithAddress()
-		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
-		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
-		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
-		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
+		        .doOnRequest((r, c) -> onReq.getAndIncrement())
+		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
+		        .doOnResponse((r, c) -> onResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
 		        .put()
 		        .uri("/204")
 		        .responseContent()
 		        .blockLast(Duration.ofSeconds(30));
 
 		createHttpClientForContextWithAddress()
-		        .doOnRequest((r, c) -> log.debug("onReq: "+r))
-		        .doAfterRequest((r, c) -> log.debug("afterReq: "+r))
-		        .doOnResponse((r, c) -> log.debug("onResp: "+r))
-		        .doAfterResponse((r, c) -> log.debug("afterResp: "+r))
+		        .doOnRequest((r, c) -> onReq.getAndIncrement())
+		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
+		        .doOnResponse((r, c) -> onResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
 		        .get()
 		        .uri("/200")
 		        .responseContent()
 		        .blockLast(Duration.ofSeconds(30));
+
+		assertThat(onReq.get()).isEqualTo(3);
+		assertThat(afterReq.get()).isEqualTo(3);
+		assertThat(onResp.get()).isEqualTo(3);
+		assertThat(afterResp.get()).isEqualTo(3);
 	}
 
 	@Test
