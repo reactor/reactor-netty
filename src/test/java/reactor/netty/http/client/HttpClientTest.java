@@ -660,36 +660,44 @@ public class HttpClientTest {
 				                                                     .sendHeaders()))
 				          .bindNow();
 
+		AtomicInteger onReq = new AtomicInteger();
+		AtomicInteger afterReq = new AtomicInteger();
+		AtomicInteger onResp = new AtomicInteger();
+		AtomicInteger afterResp = new AtomicInteger();
 		createHttpClientForContextWithAddress(context)
-		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
-		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
-		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .doOnRequest((r, c) -> onReq.getAndIncrement())
+		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
+		        .doOnResponse((r, c) -> onResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
 		        .put()
 		        .uri("/201")
 		        .responseContent()
 		        .blockLast();
 
 		createHttpClientForContextWithAddress(context)
-		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
-		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
-		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .doOnRequest((r, c) -> onReq.getAndIncrement())
+		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
+		        .doOnResponse((r, c) -> onResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
 		        .put()
 		        .uri("/204")
 		        .responseContent()
 		        .blockLast(Duration.ofSeconds(30));
 
 		createHttpClientForContextWithAddress(context)
-		        .doOnRequest((r, c) -> System.out.println("onReq: "+r))
-		        .doAfterRequest((r, c) -> System.out.println("afterReq: "+r))
-		        .doOnResponse((r, c) -> System.out.println("onResp: "+r))
-		        .doAfterResponse((r, c) -> System.out.println("afterResp: "+r))
+		        .doOnRequest((r, c) -> onReq.getAndIncrement())
+		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
+		        .doOnResponse((r, c) -> onResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
 		        .get()
 		        .uri("/200")
 		        .responseContent()
 		        .blockLast(Duration.ofSeconds(30));
 
+		assertThat(onReq.get()).isEqualTo(3);
+		assertThat(afterReq.get()).isEqualTo(3);
+		assertThat(onResp.get()).isEqualTo(3);
+		assertThat(afterResp.get()).isEqualTo(3);
 		context.disposeNow();
 	}
 
@@ -711,7 +719,6 @@ public class HttpClientTest {
 
 		AtomicInteger i = new AtomicInteger();
 		createHttpClientForContextWithAddress(context)
-		        .observe((c, s) -> System.out.println(s + "" + c))
 		        .get()
 		        .uri(Mono.fromCallable(() -> {
 		            switch (i.incrementAndGet()) {
@@ -741,7 +748,6 @@ public class HttpClientTest {
 
 		createHttpClientForContextWithAddress(context)
 		        .headersWhen(h -> Mono.just(h.set("test", "test")).delayElement(Duration.ofSeconds(2)))
-		        .observe((c, s) -> System.out.println(s + "" + c))
 		        .get()
 		        .uri("/201")
 		        .responseContent()
