@@ -16,6 +16,7 @@
 
 package reactor.netty.resources;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -156,7 +157,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				return newPool;
 			});
 
-			disposableAcquire(sink, obs, pool, opsFactory, poolFactory.pendingAcquireTimeout);
+			disposableAcquire(sink, obs, pool, opsFactory, poolFactory.pendingAcquireTimeout, false);
 
 		});
 
@@ -190,11 +191,11 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	}
 
 	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, InstrumentedPool<PooledConnection> pool,
-			ChannelOperations.OnSetup opsFactory, long acquireTimeout) {
+			ChannelOperations.OnSetup opsFactory, long pendingAcquireTimeout, boolean retried) {
 		DisposableAcquire disposableAcquire =
-				new DisposableAcquire(sink, pool, obs, opsFactory);
+				new DisposableAcquire(sink, pool, obs, opsFactory, pendingAcquireTimeout, retried);
 
-		Mono<PooledRef<PooledConnection>> mono = pool.acquire(Duration.ofMillis(acquireTimeout));
+		Mono<PooledRef<PooledConnection>> mono = pool.acquire(Duration.ofMillis(pendingAcquireTimeout));
 		mono.subscribe(disposableAcquire);
 	}
 
@@ -441,6 +442,8 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final InstrumentedPool<PooledConnection> pool;
 		final ConnectionObserver                 obs;
 		final ChannelOperations.OnSetup          opsFactory;
+		final long                               pendingAcquireTimeout;
+		final boolean                            retried;
 
 		PooledRef<PooledConnection> pooledRef;
 		Subscription subscription;
@@ -448,11 +451,15 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		DisposableAcquire(MonoSink<Connection> sink,
 				InstrumentedPool<PooledConnection> pool,
 				ConnectionObserver obs,
-				ChannelOperations.OnSetup opsFactory) {
+				ChannelOperations.OnSetup opsFactory,
+				long pendingAcquireTimeout,
+				boolean retried) {
 			this.pool = pool;
 			this.sink = sink;
 			this.obs = obs;
 			this.opsFactory = opsFactory;
+			this.pendingAcquireTimeout = pendingAcquireTimeout;
+			this.retried = retried;
 		}
 
 		@Override
@@ -524,6 +531,22 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			ConnectionObserver current = c.attr(OWNER)
 			                              .getAndSet(this);
 
+			// The connection might be closed after checking the eviction predicate
+			if (!c.isActive()) {
+				registerClose(pooledRef, pool);
+				if (!retried) {
+					if (log.isDebugEnabled()) {
+						log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
+					}
+					disposableAcquire(sink, obs, pool, opsFactory, pendingAcquireTimeout, true);
+
+				}
+				else {
+					sink.error(new IOException("Error while acquiring from " + pool));
+				}
+				return;
+			}
+
 			if (current instanceof PendingConnectionObserver) {
 				PendingConnectionObserver pending = (PendingConnectionObserver)current;
 				PendingConnectionObserver.Pending p;
@@ -584,6 +607,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 			channel.closeFuture()
 			       .addListener(ff -> {
+			           // When the connection is released the owner is NOOP
 			           ConnectionObserver owner = channel.attr(OWNER).get();
 			           if (owner instanceof DisposableAcquire) {
 			               ((DisposableAcquire) owner).pooledRef
