@@ -583,17 +583,21 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				log.debug(format(channel, "Registering pool release on close event for channel"));
 			}
 			channel.closeFuture()
-			       .addListener(ff ->
-			           ((DisposableAcquire) channel.attr(OWNER).get()).pooledRef
-			                    .invalidate()
-			                    .subscribe(null, null, () -> {
-			                        if (log.isDebugEnabled()) {
-			                            log.debug(format(channel, "Channel closed, now {} active connections and " +
-			                                "{} inactive connections"),
-			                                    pool.metrics().acquiredSize(),
-			                                    pool.metrics().idleSize());
-			                        }
-			                    }));
+			       .addListener(ff -> {
+			           ConnectionObserver owner = channel.attr(OWNER).get();
+			           if (owner instanceof DisposableAcquire) {
+			               ((DisposableAcquire) owner).pooledRef
+			                        .invalidate()
+			                        .subscribe(null, null, () -> {
+			                            if (log.isDebugEnabled()) {
+			                                log.debug(format(channel, "Channel closed, now {} active connections and " +
+			                                    "{} inactive connections"),
+			                                        pool.metrics().acquiredSize(),
+			                                        pool.metrics().idleSize());
+			                            }
+			                        });
+			               }
+			           });
 		}
 	}
 
