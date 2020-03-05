@@ -49,6 +49,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.ReactorNetty;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
@@ -99,6 +100,9 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
+		if (!channel().isActive()) {
+			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+		}
 		if (source instanceof Mono) {
 			return new PostHeadersNettyOutbound(((Mono<ByteBuf>)source)
 					.flatMap(msg -> {
@@ -127,6 +131,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 
 	@Override
 	public NettyOutbound sendObject(Object message) {
+		if (!channel().isActive()) {
+			ReactorNetty.safeRelease(message);
+			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+		}
 		if (!(message instanceof ByteBuf)) {
 			return super.sendObject(message);
 		}
