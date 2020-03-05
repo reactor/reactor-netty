@@ -301,9 +301,11 @@ public class PooledConnectionProviderTest {
 		                     pool.set(pools.get(pools.keySet().toArray()[0]));
 		                     provider.disposeLater()
 		                             .subscribe(null, null, latch::countDown);
-		                     conn.channel()
-		                         .closeFuture()
-		                         .addListener(future -> latch.countDown());
+		                 })
+		                 .observe((conn, state) -> {
+		                     if (ConnectionObserver.State.DISCONNECTING == state) {
+		                         latch.countDown();
+		                     }
 		                 })
 		                 .handle((in, out) -> in.receive().then())
 		                 .wiretap(true)
