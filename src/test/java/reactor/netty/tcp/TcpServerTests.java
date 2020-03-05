@@ -369,10 +369,10 @@ public class TcpServerTests {
 
 		assertNotNull(client);
 
+		assertThat("Latch was counted down", countDownLatch.await(5, TimeUnit.SECONDS));
+
 		client.disposeNow();
 		server.disposeNow();
-
-		assertThat("Latch was counted down", countDownLatch.await(5, TimeUnit.SECONDS));
 	}
 
 	@Test
