@@ -1321,6 +1321,15 @@ public class HttpClientTest {
 
 	@Test
 	public void testRetryNotEndlessIssue587() throws Exception {
+		doTestRetry(false);
+	}
+
+	@Test
+	public void testRetryDisabledIssue995() throws Exception {
+		doTestRetry(true);
+	}
+
+	private void doTestRetry(boolean retryDisabled) throws Exception {
 		ExecutorService threadPool = Executors.newCachedThreadPool();
 		int serverPort = SocketUtils.findAvailableTcpPort();
 		ConnectionResetByPeerServer server = new ConnectionResetByPeerServer(serverPort);
@@ -1329,17 +1338,42 @@ public class HttpClientTest {
 			throw new IOException("fail to start test server");
 		}
 
-		StepVerifier.create(
-		        HttpClient.create()
-		                  .port(serverPort)
-		                  .wiretap(true)
-		                  .get()
-		                  .uri("/")
-		                  .responseContent())
-		            .expectErrorMatches(t -> t.getMessage() != null &&
-		                    (t.getMessage().contains("Connection reset by peer") ||
-		                            t.getMessage().contains("Connection prematurely closed BEFORE response")))
+		AtomicInteger doOnRequest = new AtomicInteger();
+		AtomicInteger doOnRequestError = new AtomicInteger();
+		AtomicInteger doOnResponseError = new AtomicInteger();
+		HttpClient client =
+				HttpClient.create()
+				          .port(serverPort)
+				          .wiretap(true)
+				          .doOnRequest((req, conn) -> doOnRequest.getAndIncrement())
+				          .doOnError((req, t) -> doOnRequestError.getAndIncrement(),
+				                     (res, t) -> doOnResponseError.getAndIncrement());
+
+		if (retryDisabled) {
+			client = client.disableRetry(retryDisabled);
+		}
+
+		AtomicReference<Throwable> error = new AtomicReference<>();
+		StepVerifier.create(client.get()
+		                          .uri("/")
+		                          .responseContent())
+		            .expectErrorMatches(t -> {
+		                error.set(t);
+		                return t.getMessage() != null &&
+		                               (t.getMessage().contains("Connection reset by peer") ||
+		                                        t.getMessage().contains("Connection prematurely closed BEFORE response"));
+		            })
 		            .verify(Duration.ofSeconds(30));
+
+		int requestCount = 1;
+		int requestErrorCount = 1;
+		if (!retryDisabled && !(error.get() instanceof PrematureCloseException)) {
+			requestCount = 2;
+			requestErrorCount = 2;
+		}
+		assertThat(doOnRequest.get()).isEqualTo(requestCount);
+		assertThat(doOnRequestError.get()).isEqualTo(requestErrorCount);
+		assertThat(doOnResponseError.get()).isEqualTo(0);
 
 		server.close();
 		assertThat(serverFuture.get()).isNull();

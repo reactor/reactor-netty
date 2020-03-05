@@ -145,12 +145,14 @@ public class HttpClientOperationsTest {
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
 		ops1.followRedirectPredicate((req, res) -> true);
 		ops1.started = true;
+		ops1.retrying = true;
 		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"));
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
 
 		assertSame(ops1.channel(), ops2.channel());
 		assertSame(ops1.started, ops2.started);
+		assertSame(ops1.retrying, ops2.retrying);
 		assertSame(ops1.redirecting, ops2.redirecting);
 		assertSame(ops1.redirectedFrom, ops2.redirectedFrom);
 		assertSame(ops1.isSecure, ops2.isSecure);

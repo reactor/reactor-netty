@@ -380,10 +380,14 @@ final class HttpClientConnect extends HttpClient {
 					log.debug(format(connection.channel(), "The request will be redirected"));
 				}
 			}
-			else if (AbortedException.isConnectionReset(error)) {
+			else if (AbortedException.isConnectionReset(error) && handler.shouldRetry) {
+				HttpClientOperations ops = connection.as(HttpClientOperations.class);
+				if (ops != null) {
+					ops.retrying = true;
+				}
 				if (log.isDebugEnabled()) {
-					log.debug(format(connection.channel(), "The connection observed an error, " +
-							"the request will be retried"), error);
+					log.debug(format(connection.channel(),
+							"The connection observed an error, the request will be retried"), error);
 				}
 			}
 			else if (log.isWarnEnabled()) {
@@ -457,7 +461,7 @@ final class HttpClientConnect extends HttpClient {
 		volatile UriEndpoint        toURI;
 		volatile UriEndpoint        fromURI;
 		volatile Supplier<String>[] redirectedFrom;
-		volatile boolean            retried;
+		volatile boolean            shouldRetry;
 
 		@SuppressWarnings("unchecked")
 		HttpClientHandler(HttpClientConfiguration configuration, @Nullable SocketAddress address,
@@ -512,6 +516,7 @@ final class HttpClientConnect extends HttpClient {
 			this.websocketProtocols = configuration.websocketSubprotocols;
 			this.maxFramePayloadLength = configuration.websocketMaxFramePayloadLength;
 			this.websocketProxyPing = configuration.websocketProxyPing;
+			this.shouldRetry = !configuration.retryDisabled;
 			this.handler = configuration.body;
 			this.toURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketSubprotocols != null);
 		}
@@ -675,8 +680,8 @@ final class HttpClientConnect extends HttpClient {
 				redirect(re.location);
 				return true;
 			}
-			if (AbortedException.isConnectionReset(throwable) && !retried) {
-				retried = true;
+			if (AbortedException.isConnectionReset(throwable) && shouldRetry) {
+				shouldRetry = false;
 				redirect(toURI.toString());
 				return true;
 			}
