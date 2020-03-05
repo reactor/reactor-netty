@@ -39,6 +39,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -281,6 +282,7 @@ public class PooledConnectionProviderTest {
 	}
 
 	@Test
+	@Ignore
 	public void testIssue673_IllegalStateException() throws InterruptedException {
 		DisposableServer server =
 				TcpServer.create()
