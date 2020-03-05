@@ -299,15 +299,17 @@ public class PooledConnectionProviderTest {
 		                 .doOnConnected(conn -> {
 		                     ConcurrentMap<PooledConnectionProvider.PoolKey, PooledConnectionProvider.Pool> pools = provider.channelPools;
 		                     pool.set(pools.get(pools.keySet().toArray()[0]));
-		                     provider.disposeLater()
-		                             .subscribe(null, null, latch::countDown);
 		                 })
 		                 .observe((conn, state) -> {
 		                     if (ConnectionObserver.State.DISCONNECTING == state) {
 		                         latch.countDown();
 		                     }
 		                 })
-		                 .handle((in, out) -> in.receive().then())
+		                 .handle((in, out) -> {
+		                     provider.disposeLater()
+		                             .subscribe(null, null, latch::countDown);
+		                     return in.receive().then();
+		                 })
 		                 .wiretap(true)
 		                 .connect())
 		    .subscribe(null, t -> assertThat(t instanceof IllegalStateException).isTrue());
