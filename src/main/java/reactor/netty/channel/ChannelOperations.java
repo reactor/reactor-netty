@@ -241,7 +241,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream) {
 		if (!channel().isActive()) {
-			return then(Mono.error(new AbortedException("Connection has been closed")));
+			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
 		}
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
@@ -254,7 +254,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@SuppressWarnings("unchecked")
 	public NettyOutbound sendObject(Publisher<?> dataStream) {
 		if (!channel().isActive()) {
-			return then(Mono.error(new AbortedException("Connection has been closed")));
+			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
 		}
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
@@ -265,6 +265,10 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 
 	@Override
 	public NettyOutbound sendObject(Object message) {
+		if (!channel().isActive()) {
+			ReactorNetty.safeRelease(message);
+			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+		}
 		return then(FutureMono.deferFuture(() -> connection.channel()
 		                                                   .writeAndFlush(message)),
 				() -> ReactorNetty.safeRelease(message));

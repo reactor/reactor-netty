@@ -75,6 +75,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.NettyPipeline;
+import reactor.netty.channel.AbortedException;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
@@ -348,6 +349,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
+		if (!channel().isActive()) {
+			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+		}
 		if (source instanceof Mono) {
 			return super.send(source);
 		}
@@ -629,6 +633,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	final Mono<Void> send() {
+		if (!channel().isActive()) {
+			return Mono.error(new AbortedException("Connection has been closed BEFORE send operation"));
+		}
 		if (markSentHeaderAndBody()) {
 			HttpMessage request = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
 			return FutureMono.deferFuture(() -> channel().writeAndFlush(request));
