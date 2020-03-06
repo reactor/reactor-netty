@@ -28,15 +28,16 @@ import reactor.netty.tcp.TcpClient;
 
 /**
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
-final class HttpClientDoOn extends HttpClientOperator implements ConnectionObserver,
-                                                           Function<Bootstrap, Bootstrap> {
+final class HttpClientDoOn extends HttpClientOperator implements ConnectionObserver, Function<Bootstrap, Bootstrap> {
 
 	final BiConsumer<? super HttpClientRequest, ? super Connection>  onRequest;
 	final BiConsumer<? super HttpClientRequest, ? super Connection>  afterRequest;
 	final BiConsumer<? super HttpClientResponse, ? super Connection> onResponse;
 	final BiConsumer<? super HttpClientResponse, ? super Connection> afterResponse;
 	final BiConsumer<? super HttpClientResponse, ? super Connection> afterResponseSuccess;
+	final BiConsumer<? super HttpClientResponse, ? super Connection> onRedirect;
 
 
 	HttpClientDoOn(HttpClient client,
@@ -44,13 +45,15 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 			@Nullable BiConsumer<? super HttpClientRequest,  ? super Connection> afterRequest,
 			@Nullable BiConsumer<? super HttpClientResponse, ? super Connection> onResponse,
 			@Nullable BiConsumer<? super HttpClientResponse,  ? super Connection> afterResponse,
-			@Nullable BiConsumer<? super HttpClientResponse,  ? super Connection> afterResponseSuccess) {
+			@Nullable BiConsumer<? super HttpClientResponse,  ? super Connection> afterResponseSuccess,
+			@Nullable BiConsumer<? super HttpClientResponse, ? super Connection> onRedirect) {
 		super(client);
 		this.onRequest = onRequest;
 		this.afterRequest = afterRequest;
 		this.onResponse = onResponse;
 		this.afterResponse = afterResponse;
 		this.afterResponseSuccess = afterResponseSuccess;
+		this.onRedirect = onRedirect;
 	}
 
 	@Override
@@ -84,6 +87,13 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 		}
 		if (onResponse != null && newState == HttpClientState.RESPONSE_RECEIVED) {
 			onResponse.accept(connection.as(HttpClientOperations.class), connection);
+		}
+	}
+
+	@Override
+	public void onUncaughtException(Connection connection, Throwable error) {
+		if (onRedirect != null && error instanceof RedirectClientException) {
+			onRedirect.accept(connection.as(HttpClientOperations.class), connection);
 		}
 	}
 
