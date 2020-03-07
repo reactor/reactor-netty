@@ -70,7 +70,6 @@ public class UdpClientTest {
 				         .handle((in, out) -> {
 				                                  in.receive()
 				                                    .subscribe(b -> {
-				                                        System.out.println("Client1 received " + b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8));
 				                                        latch.countDown();
 				                                    });
 				                                  return out.sendString(Mono.just("ping1"))
