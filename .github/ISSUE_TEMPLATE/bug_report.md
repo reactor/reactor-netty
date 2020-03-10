@@ -11,7 +11,7 @@ assignees: ''
 
 <!--- /!\ Make sure to follow the Contribution Guidelines and notably for security issues:
 https://github.com/reactor/reactor-netty/blob/master/CONTRIBUTING.md
-https://pivotal.io/security
+https://tanzu.vmware.com/security
 -->
 <!--- /!\ Questions should be asked on [Gitter](https://gitter.im/reactor/reactor-netty) or [StackOverflow](https://stackoverflow.com/questions/tagged/reactor-netty). -->
 
