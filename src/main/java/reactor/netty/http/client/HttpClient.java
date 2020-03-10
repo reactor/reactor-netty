@@ -568,7 +568,7 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doOnRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest) {
 		Objects.requireNonNull(doOnRequest, "doOnRequest");
-		return new HttpClientDoOn(this, doOnRequest, null, null, null);
+		return new HttpClientDoOn(this, doOnRequest, null, null, null, null);
 	}
 
 	/**
@@ -596,7 +596,7 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doAfterRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest) {
 		Objects.requireNonNull(doAfterRequest, "doAfterRequest");
-		return new HttpClientDoOn(this, null, doAfterRequest, null, null);
+		return new HttpClientDoOn(this, null, doAfterRequest, null, null, null);
 	}
 
 	/**
@@ -609,7 +609,25 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doOnResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse) {
 		Objects.requireNonNull(doOnResponse, "doOnResponse");
-		return new HttpClientDoOn(this, null, null, doOnResponse, null);
+		return new HttpClientDoOn(this, null, null, doOnResponse, null, null);
+	}
+
+	/**
+	 * Setup a callback called after {@link HttpClientResponse} headers have been
+	 * received and the request is about to be redirected.
+	 *
+	 * <p>Note: This callback applies only if auto-redirect is enabled, e.g. via
+	 * {@link HttpClient#followRedirect(boolean)}.
+	 *
+	 * @param doOnRedirect a callback called after {@link HttpClientResponse} headers have been received
+	 * and the request is about to be redirected
+	 *
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.6
+	 */
+	public final HttpClient doOnRedirect(BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect) {
+		Objects.requireNonNull(doOnRedirect, "doOnRedirect");
+		return new HttpClientDoOn(this, null, null, null, null, doOnRedirect);
 	}
 
 	/**
@@ -636,7 +654,7 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doAfterResponseSuccess(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess) {
 		Objects.requireNonNull(doAfterResponseSuccess, "doAfterResponseSuccess");
-		return new HttpClientDoOn(this, null, null, null, doAfterResponseSuccess);
+		return new HttpClientDoOn(this, null, null, null, doAfterResponseSuccess, null);
 	}
 
 	/**
