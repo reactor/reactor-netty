@@ -167,7 +167,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		}
 
 		@Override
-		public String path() {
+		public String fullPath() {
 			return path;
 		}
 

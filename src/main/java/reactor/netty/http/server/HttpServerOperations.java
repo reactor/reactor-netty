@@ -412,7 +412,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public String path() {
+	public String fullPath() {
 		if (path != null) {
 			return path;
 		}

@@ -24,14 +24,20 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.cookie.Cookie;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
+import reactor.core.publisher.Flux;
 import reactor.netty.Connection;
+
+import java.util.Map;
+import java.util.Set;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -95,44 +101,127 @@ public class HttpOperationsTest {
 	}
 
 	@Test
-	public void testIssue948() {
+	public void testPath() {
+		TestHttpInfos infos = new TestHttpInfos();
+		Flux<String> expectations = Flux.just("", "", "", "/", "a", "a", "", "a", "", "a", "a", "a b");
+
+		doTestPath(infos, expectations,
+				Flux.just("http://localhost:8080",
+						"http://localhost:8080/",
+						"http://localhost:8080//",
+						"http://localhost:8080///",
+						"http://localhost:8080/a",
+						"http://localhost:8080/a/",
+						"http://localhost:8080/?b",
+						"http://localhost:8080/a?b",
+						"http://localhost:8080/#b",
+						"http://localhost:8080/a#b",
+						"http://localhost:8080/a?b#c",
+						"http://localhost:8080/a%20b"));
+
+		doTestPath(infos, expectations,
+				Flux.just("localhost:8080",
+						"localhost:8080/",
+						"localhost:8080//",
+						"localhost:8080///",
+						"localhost:8080/a",
+						"localhost:8080/a/",
+						"localhost:8080/?b",
+						"localhost:8080/a?b",
+						"localhost:8080/#b",
+						"localhost:8080/a#b",
+						"localhost:8080/a?b#c",
+						"localhost:8080/a%20b"));
+
+		doTestPath(infos, expectations, Flux.just("", "/", "//", "///", "/a", "/a/", "/?b", "/a?b", "/#b", "/a#b", "/a?b#c", "/a%20b"));
+	}
+	private void doTestPath(TestHttpInfos infos, Flux<String> expectations, Flux<String> uris) {
+		uris.zipWith(expectations)
+		            .doOnNext(tuple -> {
+		                infos.uri = tuple.getT1();
+		                assertEquals(tuple.getT2(), infos.path());
+		            })
+		            .blockLast();
+	}
+
+	@Test
+	public void testFullPath() {
 		assertEquals("", HttpOperations.resolvePath("http://localhost:8080"));
-		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/"));
-		assertEquals("", HttpOperations.resolvePath("http://localhost:8080//"));
-		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080///"));
-		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a"));
-		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a/"));
-		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/?b"));
-		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a?b"));
-		assertEquals("", HttpOperations.resolvePath("http://localhost:8080/#b"));
-		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a#b"));
-		assertEquals("a", HttpOperations.resolvePath("http://localhost:8080/a?b#c"));
-		assertEquals("a b", HttpOperations.resolvePath("http://localhost:8080/a%20b"));
+		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080/"));
+		assertEquals("//", HttpOperations.resolvePath("http://localhost:8080//"));
+		assertEquals("///", HttpOperations.resolvePath("http://localhost:8080///"));
+		assertEquals("/a", HttpOperations.resolvePath("http://localhost:8080/a"));
+		assertEquals("/a/", HttpOperations.resolvePath("http://localhost:8080/a/"));
+		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080/?b"));
+		assertEquals("/a", HttpOperations.resolvePath("http://localhost:8080/a?b"));
+		assertEquals("/", HttpOperations.resolvePath("http://localhost:8080/#b"));
+		assertEquals("/a", HttpOperations.resolvePath("http://localhost:8080/a#b"));
+		assertEquals("/a", HttpOperations.resolvePath("http://localhost:8080/a?b#c"));
+		assertEquals("/a b", HttpOperations.resolvePath("http://localhost:8080/a%20b"));
 
 		assertEquals("", HttpOperations.resolvePath("localhost:8080"));
-		assertEquals("", HttpOperations.resolvePath("localhost:8080/"));
-		assertEquals("", HttpOperations.resolvePath("localhost:8080//"));
-		assertEquals("/", HttpOperations.resolvePath("localhost:8080///"));
-		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a"));
-		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a/"));
-		assertEquals("", HttpOperations.resolvePath("localhost:8080/?b"));
-		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a?b"));
-		assertEquals("", HttpOperations.resolvePath("localhost:8080/#b"));
-		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a#b"));
-		assertEquals("a", HttpOperations.resolvePath("localhost:8080/a?b#c"));
-		assertEquals("a b", HttpOperations.resolvePath("localhost:8080/a%20b"));
+		assertEquals("/", HttpOperations.resolvePath("localhost:8080/"));
+		assertEquals("//", HttpOperations.resolvePath("localhost:8080//"));
+		assertEquals("///", HttpOperations.resolvePath("localhost:8080///"));
+		assertEquals("/a", HttpOperations.resolvePath("localhost:8080/a"));
+		assertEquals("/a/", HttpOperations.resolvePath("localhost:8080/a/"));
+		assertEquals("/", HttpOperations.resolvePath("localhost:8080/?b"));
+		assertEquals("/a", HttpOperations.resolvePath("localhost:8080/a?b"));
+		assertEquals("/", HttpOperations.resolvePath("localhost:8080/#b"));
+		assertEquals("/a", HttpOperations.resolvePath("localhost:8080/a#b"));
+		assertEquals("/a", HttpOperations.resolvePath("localhost:8080/a?b#c"));
+		assertEquals("/a b", HttpOperations.resolvePath("localhost:8080/a%20b"));
 
 		assertEquals("", HttpOperations.resolvePath(""));
-		assertEquals("", HttpOperations.resolvePath("/"));
-		assertEquals("", HttpOperations.resolvePath("//"));
-		assertEquals("/", HttpOperations.resolvePath("///"));
-		assertEquals("a", HttpOperations.resolvePath("/a"));
-		assertEquals("a", HttpOperations.resolvePath("/a/"));
-		assertEquals("", HttpOperations.resolvePath("/?b"));
-		assertEquals("a", HttpOperations.resolvePath("/a?b"));
-		assertEquals("", HttpOperations.resolvePath("/#b"));
-		assertEquals("a", HttpOperations.resolvePath("/a#b"));
-		assertEquals("a", HttpOperations.resolvePath("/a?b#c"));
-		assertEquals("a b", HttpOperations.resolvePath("/a%20b"));
+		assertEquals("/", HttpOperations.resolvePath("/"));
+		assertEquals("//", HttpOperations.resolvePath("//"));
+		assertEquals("///", HttpOperations.resolvePath("///"));
+		assertEquals("/a", HttpOperations.resolvePath("/a"));
+		assertEquals("/a/", HttpOperations.resolvePath("/a/"));
+		assertEquals("/", HttpOperations.resolvePath("/?b"));
+		assertEquals("/a", HttpOperations.resolvePath("/a?b"));
+		assertEquals("/", HttpOperations.resolvePath("/#b"));
+		assertEquals("/a", HttpOperations.resolvePath("/a#b"));
+		assertEquals("/a", HttpOperations.resolvePath("/a?b#c"));
+		assertEquals("/a b", HttpOperations.resolvePath("/a%20b"));
+	}
+
+	static final class TestHttpInfos implements HttpInfos {
+		String uri;
+
+		@Override
+		public Map<CharSequence, Set<Cookie>> cookies() {
+			return null;
+		}
+
+		@Override
+		public boolean isKeepAlive() {
+			return false;
+		}
+
+		@Override
+		public boolean isWebsocket() {
+			return false;
+		}
+
+		@Override
+		public HttpMethod method() {
+			return null;
+		}
+
+		@Override
+		public String fullPath() {
+			return HttpOperations.resolvePath(uri);
+		}
+
+		@Override
+		public String uri() {
+			return null;
+		}
+
+		@Override
+		public HttpVersion version() {
+			return null;
+		}
 	}
 }

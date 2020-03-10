@@ -63,7 +63,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpClientOperations) {
 				HttpClientOperations ops = (HttpClientOperations) channelOps;
-				path = "/" + ops.path;
+				path = ops.path;
 				method = ops.method().name();
 			}
 
