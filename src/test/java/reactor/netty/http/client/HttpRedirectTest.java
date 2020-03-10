@@ -36,6 +36,7 @@ import reactor.netty.SocketUtils;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.test.StepVerifier;
+import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -138,7 +139,7 @@ public class HttpRedirectTest {
 		AtomicInteger onRequestCount = new AtomicInteger();
 		AtomicInteger onResponseCount = new AtomicInteger();
 		AtomicInteger onRedirectCount = new AtomicInteger();
-		HttpClientResponse response =
+		Tuple2<String, HttpResponseStatus> response =
 				HttpClient.create()
 				          .addressSupplier(server::address)
 				          .wiretap(true)
@@ -148,11 +149,12 @@ public class HttpRedirectTest {
 				          .doOnRedirect((r, c) -> onRedirectCount.incrementAndGet())
 				          .get()
 				          .uri("/1")
-				          .response()
+				          .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res.status())))
 				          .block(Duration.ofSeconds(30));
 
 		assertThat(response).isNotNull();
-		assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
+		assertThat(response.getT1()).isEqualTo("OK");
+		assertThat(response.getT2()).isEqualTo(HttpResponseStatus.OK);
 		assertThat(onRequestCount.get()).isEqualTo(2);
 		assertThat(onResponseCount.get()).isEqualTo(1);
 		assertThat(onRedirectCount.get()).isEqualTo(1);
