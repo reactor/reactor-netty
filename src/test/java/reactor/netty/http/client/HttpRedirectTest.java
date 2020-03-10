@@ -127,33 +127,35 @@ public class HttpRedirectTest {
 	public void redirect_issuesOnRequestForEachAttempt() {
 		DisposableServer server =
 				HttpServer.create()
-						.port(0)
-						.host("localhost")
-						.wiretap(true)
-						.route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
-								.get("/3", (req, res) -> res.status(200)
-										.sendString(Mono.just("OK"))))
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .host("localhost")
+				          .wiretap(true)
+				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+				                       .get("/3", (req, res) -> res.status(200)
+				                                                   .sendString(Mono.just("OK"))))
+				          .bindNow();
 
 		AtomicInteger onRequestCount = new AtomicInteger();
 		AtomicInteger onResponseCount = new AtomicInteger();
+		AtomicInteger onRedirectCount = new AtomicInteger();
+		HttpClientResponse response =
+				HttpClient.create()
+				          .addressSupplier(server::address)
+				          .wiretap(true)
+				          .followRedirect(true)
+				          .doOnRequest((r, c) -> onRequestCount.incrementAndGet())
+				          .doOnResponse((r, c) -> onResponseCount.incrementAndGet())
+				          .doOnRedirect((r, c) -> onRedirectCount.incrementAndGet())
+				          .get()
+				          .uri("/1")
+				          .response()
+				          .block(Duration.ofSeconds(30));
 
-		HttpClientResponse response = HttpClient.create()
-				.addressSupplier(server::address)
-				.wiretap(true)
-				.followRedirect(true)
-				.doOnRequest((r, c) -> onRequestCount.incrementAndGet())
-				.doOnResponse((r, c) -> onResponseCount.incrementAndGet())
-				.get()
-				.uri("/1")
-				.response()
-				.block(Duration.ofSeconds(30));
-
+		assertThat(response).isNotNull();
 		assertThat(response.status()).isEqualTo(HttpResponseStatus.OK);
 		assertThat(onRequestCount.get()).isEqualTo(2);
-		// This fails, with only 1. This means we can get success count, but not error count or duration
-		assertThat(onResponseCount.get()).isEqualTo(2);
+		assertThat(onResponseCount.get()).isEqualTo(1);
+		assertThat(onRedirectCount.get()).isEqualTo(1);
 
 		server.disposeNow();
 	}
