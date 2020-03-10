@@ -28,4 +28,4 @@ jobs:
         with:
           java-version: 1.8
       - name: Build with Gradle
-        run: ./gradlew clean check -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.47.Final-SNAPSHOT'
+        run: ./gradlew clean check -PforceTransport=${{ matrix.transport }} -PforceNettyVersion='4.1.48.Final-SNAPSHOT'
