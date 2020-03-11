@@ -335,10 +335,10 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	}
 
 	/**
-	 * Returns the decoded path portion from the provided {@code uri} without the leading and trailing '/' if present
+	 * Returns the decoded path portion from the provided {@code uri}
 	 *
 	 * @param uri an HTTP URL that may contain a path with query/fragment
-	 * @return the decoded path portion from the provided {@code uri} without the leading and trailing '/' if present
+	 * @return the decoded path portion from the provided {@code uri}
 	 */
 	public static String resolvePath(String uri) {
 		if (uri.isEmpty()) {
@@ -353,20 +353,8 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 			tempUri = "http://" + tempUri;
 		}
 
-		String path = URI.create(tempUri)
-		                 .getPath();
-		if (!path.isEmpty()) {
-			if (path.charAt(0) == '/') {
-				path = path.substring(1);
-				if (path.isEmpty()) {
-					return path;
-				}
-			}
-			if (path.charAt(path.length() - 1) == '/') {
-				return path.substring(0, path.length() - 1);
-			}
-		}
-		return path;
+		return URI.create(tempUri)
+		          .getPath();
 	}
 
 	/**

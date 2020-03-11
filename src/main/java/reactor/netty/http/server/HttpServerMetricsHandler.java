@@ -74,7 +74,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 				ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					String path = "/" + ops.path;
+					String path = ops.path;
 					String method = ops.method().name();
 					String status = ops.status().codeAsText().toString();
 					recorder.recordDataSentTime(
@@ -121,7 +121,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				String path = "/" + ops.path;
+				String path = ops.path;
 				String method = ops.method().name();
 				recorder.recordDataReceivedTime(path, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
@@ -141,7 +141,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 		if (channelOps instanceof HttpServerOperations) {
 			HttpServerOperations ops = (HttpServerOperations) channelOps;
 			// Always take the remote address from the operations in order to consider proxy information
-			recorder.incrementErrorsCount(ops.remoteAddress(), "/" + ops.path);
+			recorder.incrementErrorsCount(ops.remoteAddress(), ops.path);
 		}
 
 		ctx.fireExceptionCaught(cause);

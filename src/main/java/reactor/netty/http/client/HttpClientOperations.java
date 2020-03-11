@@ -438,7 +438,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public final String path() {
+	public final String fullPath() {
 		return this.path;
 	}
 

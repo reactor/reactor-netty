@@ -65,7 +65,28 @@ public interface HttpInfos {
 	 *
 	 * @return the decoded path portion from the {@link #uri()} without the leading and trailing '/' if present
 	 */
-	String path();
+	default String path() {
+		String path = fullPath();
+		if (!path.isEmpty()) {
+			if (path.charAt(0) == '/') {
+				path = path.substring(1);
+				if (path.isEmpty()) {
+					return path;
+				}
+			}
+			if (path.charAt(path.length() - 1) == '/') {
+				return path.substring(0, path.length() - 1);
+			}
+		}
+		return path;
+	}
+
+	/**
+	 * Returns the decoded path portion from the {@link #uri()}
+	 *
+	 * @return the decoded path portion from the {@link #uri()}
+	 */
+	String fullPath();
 
 	/**
 	 * Returns the resolved target address
