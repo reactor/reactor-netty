@@ -104,6 +104,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	volatile ResponseState responseState;
 
 	boolean started;
+	boolean redirected;
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 	Consumer<HttpClientRequest> redirectRequestConsumer;
@@ -111,6 +112,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
 		this.started = replaced.started;
+		this.redirected = replaced.redirected;
 		this.redirectedFrom = replaced.redirectedFrom;
 		this.isSecure = replaced.isSecure;
 		this.nettyRequest = replaced.nettyRequest;
@@ -558,13 +560,22 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					ReferenceCountUtil.release(msg);
 					return;
 				}
+			} else {
+				redirected = true;
 			}
+
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
 				terminate();
 			}
 			return;
 		}
+
+		if(redirected) {
+			ReferenceCountUtil.release(msg);
+			return;
+		}
+
 		if (msg instanceof LastHttpContent) {
 			if (!started) {
 				if (log.isDebugEnabled()) {
