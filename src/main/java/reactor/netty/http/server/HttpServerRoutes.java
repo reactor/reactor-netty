@@ -341,6 +341,7 @@ public interface HttpServerRoutes extends
 	 * @param maxFramePayloadLength specifies a custom maximum allowable frame payload length
 	 * @param proxyPing whether to proxy websocket ping frames or respond to them
 	 * @return this {@link HttpServerRoutes}
+	 * @since 0.9.3
 	 * @deprecated as of 0.9.5. Use {@link #ws(Predicate, BiFunction, WebsocketServerSpec)}
 	 */
 	@Deprecated
@@ -370,6 +371,7 @@ public interface HttpServerRoutes extends
 	 * @param handler an I/O handler to invoke for the given condition
 	 * @param configurer {@link WebsocketServerSpec} for websocket configuration
 	 * @return this {@link HttpServerRoutes}
+	 * @since 0.9.5
 	 */
 	default HttpServerRoutes ws(String path,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound,? extends Publisher<Void>> handler,
@@ -384,6 +386,7 @@ public interface HttpServerRoutes extends
 	 * @param handler an I/O handler to invoke for the given condition
 	 * @param websocketServerSpec {@link WebsocketServerSpec} for websocket configuration
 	 * @return this {@link HttpServerRoutes}
+	 * @since 0.9.5
 	 */
 	default HttpServerRoutes ws(Predicate<? super HttpServerRequest> condition,
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> handler,

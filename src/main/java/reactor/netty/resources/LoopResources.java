@@ -276,6 +276,7 @@ public interface LoopResources extends Disposable {
 	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
 	 *                LoopResources regardless if a task was submitted during the quiet period
 	 * @return a Mono representing the completion of the LoopResources disposal.
+	 * @since 0.9.3
 	 **/
 	default Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
 		//noop default

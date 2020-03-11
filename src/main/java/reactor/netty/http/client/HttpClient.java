@@ -364,6 +364,7 @@ public abstract class HttpClient {
 	 * <p>When the {@code BiFunction} passed in is not an implementation of this interface,
 	 * it indicates it does not differentiate between original and redirect requests, and
 	 * applies the same initialization logic.
+	 * @since 0.9.5
 	 */
 	public interface RedirectSendHandler extends BiFunction<HttpClientRequest, NettyOutbound, Publisher<Void>> {
 	}
@@ -672,6 +673,7 @@ public abstract class HttpClient {
 	 * and {@link HttpClientState#RESPONSE_COMPLETED} has been emitted.
 	 *
 	 * @return a new {@link HttpClient}
+	 * @since 0.9.5
 	 */
 	public final HttpClient doAfterResponseSuccess(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess) {
 		Objects.requireNonNull(doAfterResponseSuccess, "doAfterResponseSuccess");
@@ -771,6 +773,7 @@ public abstract class HttpClient {
 	 * check the original and any number of subsequent redirect(s), including the one that
 	 * is in progress.
 	 * @return a new {@link HttpClient}
+	 * @since 0.9.5
 	 */
 	public final HttpClient followRedirect(boolean followRedirect, @Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		if (followRedirect) {
@@ -821,6 +824,7 @@ public abstract class HttpClient {
 	 * check the original and any number of subsequent redirect(s), including the one that
 	 * is in progress.
 	 * @return a new {@link HttpClient}
+	 * @since 0.9.5
 	 */
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
 			@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
@@ -1071,6 +1075,7 @@ public abstract class HttpClient {
 	 * @param proxyPing whether to proxy websocket ping frames or respond to them
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response
+	 * @since 0.9.3
 	 */
 	public final WebsocketSender websocket(boolean proxyPing) {
 		return websocket("", 65536, proxyPing);
@@ -1096,6 +1101,7 @@ public abstract class HttpClient {
 	 * @param proxyPing whether to proxy websocket ping frames or respond to them
 	 *
 	 * @return a {@link WebsocketSender} ready to consume for response
+	 * @since 0.9.3
 	 */
 	public final WebsocketSender websocket(String subprotocols, int maxFramePayloadLength, boolean proxyPing) {
 		Objects.requireNonNull(subprotocols, "subprotocols");

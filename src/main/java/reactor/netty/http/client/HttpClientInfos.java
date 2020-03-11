@@ -21,6 +21,9 @@ import reactor.util.context.Context;
 
 import javax.annotation.Nullable;
 
+/**
+ * @since 0.9.3
+ */
 public interface HttpClientInfos extends HttpInfos {
 
     /**
