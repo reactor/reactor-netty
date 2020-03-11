@@ -85,6 +85,7 @@ public interface HttpInfos {
 	 * Returns the decoded path portion from the {@link #uri()}
 	 *
 	 * @return the decoded path portion from the {@link #uri()}
+	 * @since 0.9.6
 	 */
 	String fullPath();
 
