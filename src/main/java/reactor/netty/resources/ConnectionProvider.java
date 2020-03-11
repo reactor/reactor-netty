@@ -96,6 +96,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @param name {@link ConnectionProvider} name
 	 * @return a new ConnectionProvider builder
+	 * @since 0.9.5
 	 */
 	static Builder builder(String name) {
 		return new Builder(name);
@@ -124,6 +125,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
+	 * @since 0.9.5
 	 */
 	static ConnectionProvider create(String name) {
 		return builder(name).maxConnections(DEFAULT_POOL_MAX_CONNECTIONS)
@@ -145,6 +147,7 @@ public interface ConnectionProvider extends Disposable {
 	 *
 	 * @return a new {@link ConnectionProvider} to cache and reuse a fixed maximum
 	 * number of {@link Connection}
+	 * @since 0.9.5
 	 */
 	static ConnectionProvider create(String name, int maxConnections) {
 		return builder(name).maxConnections(maxConnections)
@@ -195,6 +198,7 @@ public interface ConnectionProvider extends Disposable {
 	 * connection pool, where a connection pool corresponds to a concrete remote host.
 	 * The configuration can be either global for all connection pools or
 	 * be tuned for each individual connection pool, per remote host.
+	 * @since 0.9.5
 	 */
 	final class Builder extends ConnectionPoolSpec<Builder> {
 
@@ -250,6 +254,9 @@ public interface ConnectionProvider extends Disposable {
 		}
 	}
 
+	/**
+	 * @since 0.9.5
+	 */
 	class ConnectionPoolSpec<SPEC extends ConnectionPoolSpec<SPEC>> implements Supplier<SPEC> {
 
 		static final int PENDING_ACQUIRE_MAX_COUNT_NOT_SPECIFIED = -2;
@@ -414,6 +421,7 @@ public interface ConnectionProvider extends Disposable {
 
 	/**
 	 * Configuration for a connection pool per remote host
+	 * @since 0.9.5
 	 */
 	final class HostSpecificSpec extends ConnectionPoolSpec<HostSpecificSpec> {
 	}

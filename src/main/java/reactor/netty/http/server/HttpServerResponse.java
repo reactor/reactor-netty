@@ -169,6 +169,7 @@ public interface HttpServerResponse extends NettyOutbound, HttpInfos {
 	 * @param websocketHandler the I/O handler for websocket transport
 	 * @param websocketServerSpec {@link WebsocketServerSpec} for websocket configuration
 	 * @return a {@link Mono} completing when upgrade is confirmed, otherwise fails
+	 * @since 0.9.5
 	 */
 	Mono<Void> sendWebsocket(
 			BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<Void>> websocketHandler,

@@ -20,6 +20,7 @@ import java.util.Objects;
 
 /**
  * @author Violeta Georgieva
+ * @since 0.9.3
  */
 public final class MeterKey {
 

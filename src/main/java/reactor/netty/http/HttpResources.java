@@ -110,6 +110,7 @@ public final class HttpResources extends TcpResources {
 	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
 	 *                LoopResources regardless if a task was submitted during the quiet period
 	 * @return a {@link Mono} triggering the {@link #disposeLoopsAndConnections()} when subscribed to.
+	 * @since 0.9.3
 	 */
 	public static Mono<Void> disposeLoopsAndConnectionsLater(Duration quietPeriod, Duration timeout) {
 		return Mono.defer(() -> {
