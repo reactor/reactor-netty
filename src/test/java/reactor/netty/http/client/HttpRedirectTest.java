@@ -462,8 +462,9 @@ public class HttpRedirectTest {
 				          .wiretap(true)
 				          .bindNow();
 
+		ConnectionProvider provider = ConnectionProvider.fixed("doTestBuffersForRedirectWithContentShouldBeReleased", 1);
 		final List<Integer> redirectBufferRefCounts = new ArrayList<>();
-		HttpClient.create()
+		HttpClient.create(provider)
 		          .doOnRequest((r, c) -> c.addHandler("test-buffer-released", new ChannelInboundHandlerAdapter() {
 
 		              @Override
@@ -487,6 +488,8 @@ public class HttpRedirectTest {
 		assertThat(redirectBufferRefCounts).as("The HttpContents belonging to the redirection response should all be released")
 		                                   .containsOnly(0);
 
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
 		server.disposeNow();
 	}
 }

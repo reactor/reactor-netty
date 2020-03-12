@@ -122,6 +122,11 @@ final class WebsocketClientOperations extends HttpClientOperations
 				}
 
 			}
+			else {
+				response.content()
+				        .release();
+				listener().onUncaughtException(this, redirecting);
+			}
 			return;
 		}
 		if (msg instanceof PingWebSocketFrame) {

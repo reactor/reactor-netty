@@ -36,8 +36,11 @@ import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -47,6 +50,8 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.PooledConnectionProvider.PooledConnection;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientTests;
@@ -322,6 +327,52 @@ public class PooledConnectionProviderTest {
 		assertThat(pool.get().activeConnections.get()).isEqualTo(0);
 		assertThat(pool.get().inactiveConnections.get()).isEqualTo(0);
 
+		server.disposeNow();
+	}
+
+	@Test
+	public void connectionReleasedOnRedirect() throws Exception {
+		String redirectedContent = StringUtils.repeat("a", 10000);
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .host("localhost")
+				          .route(r -> r.get("/1", (req, res) -> res.status(HttpResponseStatus.FOUND)
+				                                                   .header(HttpHeaderNames.LOCATION, "/2")
+				                                                   .sendString(Flux.just(redirectedContent, redirectedContent)))
+				                       .get("/2", (req, res) -> res.status(200)
+				                                                   .sendString(Mono.just("OK"))))
+				          .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(2);
+		PooledConnectionProvider provider =
+				(PooledConnectionProvider) ConnectionProvider.fixed("connectionReleasedOnRedirect", 1);
+		String response =
+				HttpClient.create(provider)
+				          .addressSupplier(server::address)
+				          .wiretap(true)
+				          .followRedirect(true)
+				          .observe((conn, state) -> {
+				              if (ConnectionObserver.State.RELEASED == state) {
+				                  latch.countDown();
+				              }
+				          })
+				          .get()
+				          .uri("/1")
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("OK");
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		provider.channelPools.forEach((k, v) -> {
+			assertThat(v.activeConnections.get()).isEqualTo(0);
+		});
+
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
 		server.disposeNow();
 	}
 }
