@@ -19,14 +19,22 @@ package reactor.netty.http.client;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -582,5 +590,58 @@ public class HttpRedirectTest {
 
 		initialServer.disposeNow();
 		redirectServer.disposeNow();
+	}
+
+	@Test
+	public void testBuffersForRedirectWithContentShouldBeReleased() {
+		doTestBuffersForRedirectWithContentShouldBeReleased("Redirect response content!");
+	}
+
+	@Test
+	public void testBuffersForRedirectWithLargeContentShouldBeReleased() {
+		doTestBuffersForRedirectWithContentShouldBeReleased(StringUtils.repeat("a", 10000));
+	}
+
+	private void doTestBuffersForRedirectWithContentShouldBeReleased(String redirectResponseContent) {
+		final String initialPath = "/initial";
+		final String redirectPath = "/redirect";
+
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .route(r -> r.get(initialPath,
+				                            (req, res) -> res.status(HttpResponseStatus.MOVED_PERMANENTLY)
+				                                             .header(HttpHeaderNames.LOCATION, redirectPath)
+				                                             .sendString(Mono.just(redirectResponseContent)))
+				                       .get(redirectPath, (req, res) -> res.send()))
+				          .wiretap(true)
+				          .bindNow();
+
+		final List<Integer> redirectBufferRefCounts = new ArrayList<>();
+		HttpClient.create()
+		          .doOnRequest((r, c) -> c.addHandler("test-buffer-released", new ChannelInboundHandlerAdapter() {
+
+		              @Override
+		              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		                  super.channelRead(ctx, msg);
+
+		                  if(initialPath.equals("/" + r.path()) && msg instanceof HttpContent) {
+		                      redirectBufferRefCounts.add(ReferenceCountUtil.refCnt(msg));
+		                  }
+		              }
+		          }))
+		          .wiretap(true)
+		          .followRedirect(true)
+		          .get()
+		          .uri("http://localhost:" + server.port() + initialPath)
+		          .response()
+		          .block(Duration.ofSeconds(30));
+
+		System.gc();
+
+		assertThat(redirectBufferRefCounts).as("The HttpContents belonging to the redirection response should all be released")
+		                                   .containsOnly(0);
+
+		server.disposeNow();
 	}
 }
