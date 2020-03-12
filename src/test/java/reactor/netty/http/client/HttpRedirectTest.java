@@ -453,39 +453,39 @@ public class HttpRedirectTest {
 
 		DisposableServer server =
 				HttpServer.create()
-						.port(0)
-						.route(r -> r
-								.get(initialPath, (req, res) -> res
-										.status(HttpResponseStatus.MOVED_PERMANENTLY)
-										.header(HttpHeaderNames.LOCATION, redirectPath)
-										.sendString(Mono.just(redirectResponseContent)))
-								.get(redirectPath, (req, res) -> res.send()))
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .route(r -> r.get(initialPath,
+				                            (req, res) -> res.status(HttpResponseStatus.MOVED_PERMANENTLY)
+				                                             .header(HttpHeaderNames.LOCATION, redirectPath)
+				                                             .sendString(Mono.just(redirectResponseContent)))
+				                       .get(redirectPath, (req, res) -> res.send()))
+				          .wiretap(true)
+				          .bindNow();
 
 		final List<Integer> redirectBufferRefCounts = new ArrayList<>();
 		HttpClient.create()
-				.doOnRequest((r, c) -> c.addHandler("test-buffer-released", new ChannelInboundHandlerAdapter() {
-					@Override public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-						super.channelRead(ctx, msg);
+		          .doOnRequest((r, c) -> c.addHandler("test-buffer-released", new ChannelInboundHandlerAdapter() {
 
-						if(initialPath.equals("/" + r.path()) && msg instanceof HttpContent) {
-							redirectBufferRefCounts.add(ReferenceCountUtil.refCnt(msg));
-						}
-					}
-				}))
-				.wiretap(true)
-				.followRedirect(true)
-				.get()
-				.uri("http://localhost:" + server.port() + initialPath)
-				.response()
-				.block();
+		              @Override
+		              public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+		                  super.channelRead(ctx, msg);
+
+		                  if(initialPath.equals("/" + r.path()) && msg instanceof HttpContent) {
+		                      redirectBufferRefCounts.add(ReferenceCountUtil.refCnt(msg));
+		                  }
+		              }
+		          }))
+		          .wiretap(true)
+		          .followRedirect(true)
+		          .get()
+		          .uri("http://localhost:" + server.port() + initialPath)
+		          .response()
+		          .block(Duration.ofSeconds(30));
 
 		System.gc();
 
-		assertThat(redirectBufferRefCounts)
-				.as("The HttpContents belonging to the redirection response should all be released")
-				.containsOnly(0);
+		assertThat(redirectBufferRefCounts).as("The HttpContents belonging to the redirection response should all be released")
+		                                   .containsOnly(0);
 
 		server.disposeNow();
 	}

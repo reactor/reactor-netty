@@ -553,7 +553,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					ReferenceCountUtil.release(msg);
 					return;
 				}
-			} else {
+			}
+			else {
 				redirected = true;
 			}
 
@@ -564,7 +565,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			return;
 		}
 
-		if(redirected) {
+		if (redirected) {
 			ReferenceCountUtil.release(msg);
 			return;
 		}
