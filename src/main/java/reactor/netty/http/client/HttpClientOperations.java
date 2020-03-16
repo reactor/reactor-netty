@@ -104,7 +104,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	volatile ResponseState responseState;
 
 	boolean started;
-	boolean redirected;
+	RedirectClientException redirecting;
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 	Consumer<HttpClientRequest> redirectRequestConsumer;
@@ -112,7 +112,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
 		this.started = replaced.started;
-		this.redirected = replaced.redirected;
+		this.redirecting = replaced.redirecting;
 		this.redirectedFrom = replaced.redirectedFrom;
 		this.isSecure = replaced.isSecure;
 		this.nettyRequest = replaced.nettyRequest;
@@ -562,18 +562,13 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				}
 			}
 			else {
-				redirected = true;
+				ctx.read();
 			}
 
 			if (msg instanceof FullHttpResponse) {
 				super.onInboundNext(ctx, msg);
 				terminate();
 			}
-			return;
-		}
-
-		if (redirected) {
-			ReferenceCountUtil.release(msg);
 			return;
 		}
 
@@ -590,14 +585,24 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				log.debug(format(channel(), "Received last HTTP packet"));
 			}
 			if (msg != LastHttpContent.EMPTY_LAST_CONTENT) {
-				super.onInboundNext(ctx, msg);
+				if (redirecting != null) {
+					ReferenceCountUtil.release(msg);
+				}
+				else {
+					super.onInboundNext(ctx, msg);
+				}
 			}
 			//force auto read to enable more accurate close selection now inbound is done
 			channel().config().setAutoRead(true);
 			if (markSentBody()) {
 				markPersistent(false);
 			}
-			listener().onStateChange(this, HttpClientState.RESPONSE_COMPLETED);
+			if (redirecting != null) {
+				listener().onUncaughtException(this, redirecting);
+			}
+			else {
+				listener().onStateChange(this, HttpClientState.RESPONSE_COMPLETED);
+			}
 			terminate();
 			return;
 		}
@@ -612,6 +617,12 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						msg);
 			}
 			ReferenceCountUtil.release(msg);
+			return;
+		}
+
+		if (redirecting != null) {
+			ReferenceCountUtil.release(msg);
+			ctx.read();
 			return;
 		}
 		super.onInboundNext(ctx, msg);
@@ -630,7 +641,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 						        .entries()
 						        .toString());
 			}
-			listener().onUncaughtException(this, new RedirectClientException(response.headers()));
+			redirecting = new RedirectClientException(response.headers());
 			return false;
 		}
 		return true;

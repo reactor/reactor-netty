@@ -37,6 +37,9 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
@@ -484,12 +487,54 @@ public class PooledConnectionProviderTest {
 
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
-		provider.channelPools.forEach((k, v) -> {
-			assertThat(v.metrics().acquiredSize()).isEqualTo(0);
-		});
+		provider.channelPools.forEach((k, v) -> assertThat(v.metrics().acquiredSize()).isEqualTo(0));
 
 		provider.disposeLater()
 				.block(Duration.ofSeconds(30));
+		server.disposeNow();
+	}
+
+	@Test
+	public void connectionReleasedOnRedirect() throws Exception {
+		String redirectedContent = StringUtils.repeat("a", 10000);
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .host("localhost")
+				          .route(r -> r.get("/1", (req, res) -> res.status(HttpResponseStatus.FOUND)
+				                                                   .header(HttpHeaderNames.LOCATION, "/2")
+				                                                   .sendString(Flux.just(redirectedContent, redirectedContent)))
+				                       .get("/2", (req, res) -> res.status(200)
+				                                                   .sendString(Mono.just("OK"))))
+				          .bindNow();
+
+		CountDownLatch latch = new CountDownLatch(2);
+		PooledConnectionProvider provider =
+				(PooledConnectionProvider) ConnectionProvider.create("connectionReleasedOnRedirect", 1);
+		String response =
+				HttpClient.create(provider)
+				          .addressSupplier(server::address)
+				          .wiretap(true)
+				          .followRedirect(true)
+				          .observe((conn, state) -> {
+				              if (ConnectionObserver.State.RELEASED == state) {
+				                  latch.countDown();
+				              }
+				          })
+				          .get()
+				          .uri("/1")
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("OK");
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+		provider.channelPools.forEach((k, v) -> assertThat(v.metrics().acquiredSize()).isEqualTo(0));
+
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(30));
 		server.disposeNow();
 	}
 
