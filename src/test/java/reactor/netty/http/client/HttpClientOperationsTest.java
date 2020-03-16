@@ -20,7 +20,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
@@ -143,13 +145,13 @@ public class HttpClientOperationsTest {
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT);
 		ops1.followRedirectPredicate((req, res) -> true);
 		ops1.started = true;
-		ops1.redirected = true;
+		ops1.redirecting = new RedirectClientException(new DefaultHttpHeaders().add(HttpHeaderNames.LOCATION, "/"));
 
 		HttpClientOperations ops2 = new HttpClientOperations(ops1);
 
 		assertSame(ops1.channel(), ops2.channel());
 		assertSame(ops1.started, ops2.started);
-		assertSame(ops1.redirected, ops2.redirected);
+		assertSame(ops1.redirecting, ops2.redirecting);
 		assertSame(ops1.redirectedFrom, ops2.redirectedFrom);
 		assertSame(ops1.isSecure, ops2.isSecure);
 		assertSame(ops1.nettyRequest, ops2.nettyRequest);
