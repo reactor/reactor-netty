@@ -44,6 +44,7 @@ import javax.net.ssl.SSLException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -862,6 +863,54 @@ public class TcpServerTests {
 
 		assertTrue(disconnected.await(30, TimeUnit.SECONDS));
 
+		server.disposeNow();
+	}
+
+	@Test
+	@SuppressWarnings("FutureReturnValueIgnored")
+	public void testHalfClosedConnection() throws Exception {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .option(ChannelOption.ALLOW_HALF_CLOSURE, true)
+				         .wiretap(true)
+				         .handle((in, out) -> in.receive()
+				                                .asString()
+				                                .doOnNext(s -> {
+				                                    if (s.endsWith("257\n")) {
+				                                        out.sendString(Mono.just("END")
+				                                                           .delayElement(Duration.ofMillis(100)))
+				                                           .then()
+				                                           .subscribe();
+				                                    }
+				                                })
+				                                .then())
+				         .bindNow();
+
+		Connection conn =
+				TcpClient.create()
+				         .addressSupplier(server::address)
+				         .wiretap(true)
+				         .connectNow();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		conn.inbound()
+		    .receive()
+		    .asString()
+		    .subscribe(s -> {
+		        if ("END".equals(s)) {
+		            latch.countDown();
+		        }
+		    });
+
+		conn.outbound()
+		    .sendString(Flux.range(1, 257).map(count -> count + "\n"))
+		    .then()
+		    .subscribe(null, null, () -> ((io.netty.channel.socket.SocketChannel) conn.channel()).shutdownOutput()); // FutureReturnValueIgnored
+
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
+
+		conn.disposeNow();
 		server.disposeNow();
 	}
 
