@@ -562,7 +562,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				}
 			}
 			else {
-				ctx.read();
+				// when redirecting no need of manual reading
+				channel().config().setAutoRead(true);
 			}
 
 			if (msg instanceof FullHttpResponse) {
@@ -622,7 +623,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 		if (redirecting != null) {
 			ReferenceCountUtil.release(msg);
-			ctx.read();
+			// when redirecting auto-read is set to true, no need of manual reading
 			return;
 		}
 		super.onInboundNext(ctx, msg);
