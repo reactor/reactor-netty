@@ -192,14 +192,34 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		}
 
 		@Override
-		public void onStateChange(Connection connection,
-				ConnectionObserver.State newState) {
+		public void onStateChange(Connection connection, ConnectionObserver.State newState) {
+			if (onResponseError != null && newState == HttpClientState.RESPONSE_INCOMPLETE) {
+				HttpClientOperations ops = connection.as(HttpClientOperations.class);
+				if (ops == null) {
+					return;
+				}
+				if (ops.responseState != null) {
+					onResponseError.accept(ops, new PrematureCloseException("Connection prematurely closed DURING response"));
+				}
+			}
+		}
+
+		@Override
+		public void onUncaughtException(Connection connection, Throwable error) {
 			HttpClientOperations ops = connection.as(HttpClientOperations.class);
 			if (ops == null) {
 				return;
 			}
-			if (onResponseError != null && newState == HttpClientState.RESPONSE_INCOMPLETE && ops.responseState != null) {
-				onResponseError.accept(ops, new PrematureCloseException("Connection prematurely closed DURING response"));
+			if (onRequestError != null) {
+				if (ops.retrying && ops.responseState == null) {
+					onRequestError.accept(connection.as(HttpClientOperations.class), error);
+				}
+				return;
+			}
+			if (onResponseError != null) {
+				if (ops.responseState != null) {
+					onResponseError.accept(connection.as(HttpClientOperations.class), error);
+				}
 			}
 		}
 

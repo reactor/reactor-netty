@@ -55,6 +55,7 @@ final class HttpClientConfiguration {
 	String                        websocketSubprotocols          = null;
 	int                           websocketMaxFramePayloadLength = 65536;
 	boolean                       websocketProxyPing             = false;
+	boolean                       retryDisabled                  = false;
 	int                           protocols                      = h11;
 	HttpResponseDecoderSpec       decoder                        = new HttpResponseDecoderSpec();
 
@@ -86,6 +87,7 @@ final class HttpClientConfiguration {
 		this.websocketSubprotocols = from.websocketSubprotocols;
 		this.websocketMaxFramePayloadLength = from.websocketMaxFramePayloadLength;
 		this.websocketProxyPing = from.websocketProxyPing;
+		this.retryDisabled = from.retryDisabled;
 		this.body = from.body;
 		this.protocols = from.protocols;
 		this.deferredConf = from.deferredConf;
@@ -148,6 +150,17 @@ final class HttpClientConfiguration {
 			c.headers = new DefaultHttpHeaders();
 		}
 		HttpUtil.setKeepAlive(c.headers, HttpVersion.HTTP_1_1, false);
+		return b;
+	};
+
+	static final Function<Bootstrap, Bootstrap> MAP_RETRY = b -> {
+		getOrCreate(b).retryDisabled = false;
+		return b;
+	};
+
+
+	static final Function<Bootstrap, Bootstrap> MAP_NO_RETRY = b -> {
+		getOrCreate(b).retryDisabled = true;
 		return b;
 	};
 

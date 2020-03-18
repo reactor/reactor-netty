@@ -104,6 +104,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	volatile ResponseState responseState;
 
 	boolean started;
+	boolean retrying;
 	RedirectClientException redirecting;
 
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
@@ -112,8 +113,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	HttpClientOperations(HttpClientOperations replaced) {
 		super(replaced);
 		this.started = replaced.started;
+		this.retrying = replaced.retrying;
 		this.redirecting = replaced.redirecting;
 		this.redirectedFrom = replaced.redirectedFrom;
+		this.redirectRequestConsumer = replaced.redirectRequestConsumer;
 		this.isSecure = replaced.isSecure;
 		this.nettyRequest = replaced.nettyRequest;
 		this.responseState = replaced.responseState;
@@ -121,6 +124,8 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.requestHeaders = replaced.requestHeaders;
 		this.cookieEncoder = replaced.cookieEncoder;
 		this.cookieDecoder = replaced.cookieDecoder;
+		this.resourceUrl = replaced.resourceUrl;
+		this.path = replaced.path;
 	}
 
 	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
