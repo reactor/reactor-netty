@@ -44,6 +44,8 @@ import static reactor.netty.ReactorNetty.format;
  */
 final class FluxReceive extends Flux<Object> implements Subscription, Disposable {
 
+	static final int QUEUE_LOW_LIMIT = 32;
+
 	final Channel           channel;
 	final ChannelOperations<?, ?> parent;
 	final EventLoop         eventLoop;
@@ -254,7 +256,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				receiverFastpath = true;
 			}
 
-			if ((receiverDemand -= e) > 0L || e > 0L) {
+			if ((receiverDemand -= e) > 0L || (e > 0L && q.size() < QUEUE_LOW_LIMIT)) {
 				if (needRead) {
 					needRead = false;
 					channel.config()
