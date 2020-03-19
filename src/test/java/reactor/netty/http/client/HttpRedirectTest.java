@@ -21,6 +21,9 @@ import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -168,6 +171,43 @@ public class HttpRedirectTest {
 		assertThat(onResponseCount.get()).isEqualTo(1);
 		assertThat(onRedirectCount.get()).isEqualTo(1);
 		assertThat(doOnResponseError.get()).isEqualTo(0);
+
+		server.disposeNow();
+	}
+
+
+	/**
+	 * This ensures metrics and tracing get reliable timing. {@link HttpClient#doOnResponse} should
+	 * return when headers are received. Blocking client usage should therefore finish after that
+	 * timestamp.
+	 */
+	@Test
+	public void redirect_onResponseBeforeBlockCompletes() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+						.port(0)
+						.host("localhost")
+						.wiretap(true)
+						.route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+								.get("/3", (req, res) -> res.status(200)
+										.sendString(Mono.just("OK"))))
+						.bindNow();
+
+		BlockingQueue<Long> doOnResponseNanos = new LinkedBlockingQueue<>();
+		Long responseNanos =
+				HttpClient.create()
+						.addressSupplier(server::address)
+						.wiretap(true)
+						.followRedirect(true)
+						.doOnResponse((r, c) -> doOnResponseNanos.add(System.nanoTime()))
+						.get()
+						.uri("/1")
+						.response().map(r -> System.nanoTime())
+						.block(Duration.ofSeconds(30));
+
+		assertThat(responseNanos)
+				.isGreaterThan(doOnResponseNanos.poll(5, TimeUnit.SECONDS))
+				.isGreaterThan(doOnResponseNanos.poll(5, TimeUnit.SECONDS));
 
 		server.disposeNow();
 	}
