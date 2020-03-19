@@ -146,6 +146,7 @@ public class HttpRedirectTest {
 		AtomicInteger onRequestCount = new AtomicInteger();
 		AtomicInteger onResponseCount = new AtomicInteger();
 		AtomicInteger onRedirectCount = new AtomicInteger();
+		AtomicInteger doOnResponseError = new AtomicInteger();
 		Tuple2<String, HttpResponseStatus> response =
 				HttpClient.create()
 				          .addressSupplier(server::address)
@@ -154,6 +155,7 @@ public class HttpRedirectTest {
 				          .doOnRequest((r, c) -> onRequestCount.incrementAndGet())
 				          .doOnResponse((r, c) -> onResponseCount.incrementAndGet())
 				          .doOnRedirect((r, c) -> onRedirectCount.incrementAndGet())
+				          .doOnResponseError((r, t) -> doOnResponseError.incrementAndGet())
 				          .get()
 				          .uri("/1")
 				          .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res.status())))
@@ -165,6 +167,7 @@ public class HttpRedirectTest {
 		assertThat(onRequestCount.get()).isEqualTo(2);
 		assertThat(onResponseCount.get()).isEqualTo(1);
 		assertThat(onRedirectCount.get()).isEqualTo(1);
+		assertThat(doOnResponseError.get()).isEqualTo(0);
 
 		server.disposeNow();
 	}

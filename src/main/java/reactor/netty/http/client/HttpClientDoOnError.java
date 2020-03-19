@@ -210,16 +210,12 @@ final class HttpClientDoOnError extends HttpClientOperator {
 			if (ops == null) {
 				return;
 			}
-			if (onRequestError != null) {
-				if (ops.retrying && ops.responseState == null) {
-					onRequestError.accept(connection.as(HttpClientOperations.class), error);
-				}
+			if (onRequestError != null && ops.retrying && ops.responseState == null) {
+				onRequestError.accept(connection.as(HttpClientOperations.class), error);
 				return;
 			}
-			if (onResponseError != null) {
-				if (ops.responseState != null) {
-					onResponseError.accept(connection.as(HttpClientOperations.class), error);
-				}
+			if (onResponseError != null && (ops.responseState != null) && !(error instanceof RedirectClientException)) {
+				onResponseError.accept(connection.as(HttpClientOperations.class), error);
 			}
 		}
 
