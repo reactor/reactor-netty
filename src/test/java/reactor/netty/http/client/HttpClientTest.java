@@ -676,7 +676,7 @@ public class HttpClientTest {
 
 	@Test
 	@SuppressWarnings("deprecation")
-	public void test() {
+	public void test() throws Exception {
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
@@ -689,15 +689,15 @@ public class HttpClientTest {
 				                                                     .sendHeaders()))
 				          .bindNow();
 
+		CountDownLatch latch = new CountDownLatch(3);
 		AtomicInteger onReq = new AtomicInteger();
 		AtomicInteger afterReq = new AtomicInteger();
 		AtomicInteger onResp = new AtomicInteger();
-		AtomicInteger afterResp = new AtomicInteger();
 		createHttpClientForContextWithAddress()
 		        .doOnRequest((r, c) -> onReq.getAndIncrement())
 		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
 		        .doOnResponse((r, c) -> onResp.getAndIncrement())
-		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> latch.countDown())
 		        .put()
 		        .uri("/201")
 		        .responseContent()
@@ -707,7 +707,7 @@ public class HttpClientTest {
 		        .doOnRequest((r, c) -> onReq.getAndIncrement())
 		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
 		        .doOnResponse((r, c) -> onResp.getAndIncrement())
-		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> latch.countDown())
 		        .put()
 		        .uri("/204")
 		        .responseContent()
@@ -717,16 +717,16 @@ public class HttpClientTest {
 		        .doOnRequest((r, c) -> onReq.getAndIncrement())
 		        .doAfterRequest((r, c) -> afterReq.getAndIncrement())
 		        .doOnResponse((r, c) -> onResp.getAndIncrement())
-		        .doAfterResponse((r, c) -> afterResp.getAndIncrement())
+		        .doAfterResponse((r, c) -> latch.countDown())
 		        .get()
 		        .uri("/200")
 		        .responseContent()
 		        .blockLast(Duration.ofSeconds(30));
 
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 		assertThat(onReq.get()).isEqualTo(3);
 		assertThat(afterReq.get()).isEqualTo(3);
 		assertThat(onResp.get()).isEqualTo(3);
-		assertThat(afterResp.get()).isEqualTo(3);
 	}
 
 	@Test
