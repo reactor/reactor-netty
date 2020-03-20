@@ -205,9 +205,7 @@ public class HttpRedirectTest {
 				          .response().map(r -> System.nanoTime())
 				          .block(Duration.ofSeconds(30));
 
-		assertThat(responseNanos)
-				.isGreaterThan(doOnResponseNanos.poll(5, TimeUnit.SECONDS))
-				.isGreaterThan(doOnResponseNanos.poll(5, TimeUnit.SECONDS));
+		assertThat(responseNanos).isGreaterThan(doOnResponseNanos.poll(5, TimeUnit.SECONDS));
 
 		server.disposeNow();
 	}
