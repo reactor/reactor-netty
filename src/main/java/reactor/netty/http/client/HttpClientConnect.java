@@ -398,10 +398,6 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			if (newState == HttpClientState.RESPONSE_RECEIVED) {
-				sink.success(connection);
-				return;
-			}
 			if (newState == State.CONFIGURED && HttpClientOperations.class == connection.getClass()) {
 				handler.channel((HttpClientOperations) connection);
 			}
@@ -425,6 +421,10 @@ final class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
+			if (newState == HttpClientState.RESPONSE_RECEIVED) {
+				sink.success(connection);
+				return;
+			}
 			if (newState == ConnectionObserver.State.CONFIGURED
 					&& HttpClientOperations.class == connection.getClass()) {
 				if (log.isDebugEnabled()) {
