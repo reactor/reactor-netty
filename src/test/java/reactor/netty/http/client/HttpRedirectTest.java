@@ -185,25 +185,25 @@ public class HttpRedirectTest {
 	public void redirect_onResponseBeforeBlockCompletes() throws Exception {
 		DisposableServer server =
 				HttpServer.create()
-						.port(0)
-						.host("localhost")
-						.wiretap(true)
-						.route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
-								.get("/3", (req, res) -> res.status(200)
-										.sendString(Mono.just("OK"))))
-						.bindNow();
+				          .port(0)
+				          .host("localhost")
+				          .wiretap(true)
+				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+				                       .get("/3", (req, res) -> res.status(200)
+				                                                   .sendString(Mono.just("OK"))))
+				          .bindNow();
 
 		BlockingQueue<Long> doOnResponseNanos = new LinkedBlockingQueue<>();
 		Long responseNanos =
 				HttpClient.create()
-						.addressSupplier(server::address)
-						.wiretap(true)
-						.followRedirect(true)
-						.doOnResponse((r, c) -> doOnResponseNanos.add(System.nanoTime()))
-						.get()
-						.uri("/1")
-						.response().map(r -> System.nanoTime())
-						.block(Duration.ofSeconds(30));
+				          .addressSupplier(server::address)
+				          .wiretap(true)
+				          .followRedirect(true)
+				          .doOnResponse((r, c) -> doOnResponseNanos.add(System.nanoTime()))
+				          .get()
+				          .uri("/1")
+				          .response().map(r -> System.nanoTime())
+				          .block(Duration.ofSeconds(30));
 
 		assertThat(responseNanos)
 				.isGreaterThan(doOnResponseNanos.poll(5, TimeUnit.SECONDS))
