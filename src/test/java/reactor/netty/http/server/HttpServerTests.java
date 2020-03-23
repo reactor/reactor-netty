@@ -43,6 +43,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -64,6 +65,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.After;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
@@ -84,6 +86,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.PrematureCloseException;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
@@ -1582,5 +1585,54 @@ public class HttpServerTests {
 		                  .response())
 		            .expectError(IllegalArgumentException.class)
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testGracefulShutdown() throws Exception {
+		CountDownLatch latch1 = new CountDownLatch(2);
+		CountDownLatch latch2 = new CountDownLatch(2);
+		LoopResources loop = LoopResources.create("testGracefulShutdown");
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .tcpConfiguration(tcpServer ->
+				              tcpServer.runOn(loop)
+				                       .doOnConnection(c -> {
+				                           c.onDispose().subscribe(null, null, latch2::countDown);
+				                           latch1.countDown();
+				                       }))
+				          // Register a channel group, when invoking disposeNow()
+				          // the implementation will wait for the active requests to finish
+				          .channelGroup(new DefaultChannelGroup(new DefaultEventExecutor()))
+				          .route(r -> r.get("/delay500", (req, res) -> res.sendString(Mono.just("delay500")
+				                                                          .delayElement(Duration.ofMillis(500))))
+				                       .get("/delay1000", (req, res) -> res.sendString(Mono.just("delay1000")
+				                                                           .delayElement(Duration.ofSeconds(1)))))
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(30));
+
+		HttpClient client = HttpClient.create()
+		                              .addressSupplier(disposableServer::address)
+		                              .wiretap(true);
+
+		Flux.just("/delay500", "/delay1000")
+		    .flatMap(s ->
+		            client.get()
+		                  .uri(s)
+		                  .responseContent()
+		                  .aggregate()
+		                  .asString())
+		    .subscribe();
+
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+
+		// Stop accepting incoming requests, wait at most 3s for the active requests to finish
+		disposableServer.disposeNow();
+
+		// Dispose the event loop
+		loop.disposeLater()
+		    .block(Duration.ofSeconds(30));
+
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 	}
 }

@@ -25,6 +25,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -498,6 +499,20 @@ public abstract class HttpServer {
 	 */
 	public final HttpServer tcpConfiguration(Function<? super TcpServer, ? extends TcpServer> tcpMapper) {
 		return new HttpServerTcpConfig(this, tcpMapper);
+	}
+
+	/**
+	 * Provide a {@link ChannelGroup} - every active connected channel will be held in the
+	 * provided group.
+	 * When a {@link ChannelGroup} is provided, {@link DisposableServer#disposeNow(Duration)}
+	 * will wait the active requests to finish for the specified timeout.
+	 *
+	 * @param channelGroup a {@link ChannelGroup}
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.6
+	 */
+	public final HttpServer channelGroup(ChannelGroup channelGroup) {
+		return new HttpServerChannelGroup(this, channelGroup);
 	}
 
 	/**
