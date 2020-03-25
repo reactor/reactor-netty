@@ -19,7 +19,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -381,7 +380,7 @@ public abstract class UdpClient {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, getOrCreateMetricsRecorder()));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, MicrometerUdpClientMetricsRecorder.INSTANCE));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);
@@ -470,17 +469,6 @@ public abstract class UdpClient {
 	 */
 	protected abstract Mono<? extends Connection> connect(Bootstrap b);
 
-	final AtomicReference<MicrometerChannelMetricsRecorder> channelMetricsRecorder = new AtomicReference<>();
-	final MicrometerChannelMetricsRecorder getOrCreateMetricsRecorder() {
-		MicrometerChannelMetricsRecorder recorder = channelMetricsRecorder.get();
-		if (recorder == null) {
-			channelMetricsRecorder.compareAndSet(null,
-					new MicrometerChannelMetricsRecorder(reactor.netty.Metrics.UDP_CLIENT_PREFIX, "udp"));
-			recorder = getOrCreateMetricsRecorder();
-		}
-		return recorder;
-	}
-
 
 	/**
 	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
@@ -517,5 +505,15 @@ public abstract class UdpClient {
 			                             .remoteAddress()).getPort();
 		}
 		return DEFAULT_PORT;
+	}
+
+	static final class MicrometerUdpClientMetricsRecorder extends MicrometerChannelMetricsRecorder {
+
+		static final MicrometerUdpClientMetricsRecorder INSTANCE =
+				new MicrometerUdpClientMetricsRecorder(reactor.netty.Metrics.UDP_CLIENT_PREFIX, "udp");
+
+		MicrometerUdpClientMetricsRecorder(String name, String protocol) {
+			super(name, protocol);
+		}
 	}
 }
