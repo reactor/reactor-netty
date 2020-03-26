@@ -21,7 +21,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
 
-import io.netty.bootstrap.AbstractBootstrap;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -30,32 +29,6 @@ import reactor.util.annotation.Nullable;
  * @author Stephane Maldini
  */
 public class ChannelBindException extends RuntimeException {
-
-	/**
-	 * Build a {@link ChannelBindException}
-	 *
-	 * @param bootstrap a netty bootstrap
-	 * @param cause a root cause
-	 * @return a new {@link ChannelBindException}
-	 * @deprecated as of 0.9.7. Use {@link #fail(SocketAddress, Throwable)}
-	 */
-	@Deprecated
-	public static ChannelBindException fail(AbstractBootstrap<?, ?> bootstrap, @Nullable Throwable cause) {
-		Objects.requireNonNull(bootstrap, "bootstrap");
-		if (cause instanceof java.net.BindException ||
-				// With epoll/kqueue transport it is
-				// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
-				(cause instanceof IOException && cause.getMessage() != null &&
-						cause.getMessage().contains("Address already in use"))) {
-			cause = null;
-		}
-		if (!(bootstrap.config().localAddress() instanceof InetSocketAddress)) {
-			return new ChannelBindException(bootstrap.config().localAddress().toString(), -1, cause);
-		}
-		InetSocketAddress address = (InetSocketAddress) bootstrap.config().localAddress();
-
-		return new ChannelBindException(address.getHostString(), address.getPort(), cause);
-	}
 
 	/**
 	 * Build a {@link ChannelBindException}
