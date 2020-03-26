@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpRequest;
-import reactor.netty.tcp.InetSocketAddressUtil;
+import reactor.netty.transport.AddressUtils;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
@@ -131,15 +131,15 @@ final class ConnectionInfo {
 			if (separatorIdx == address.indexOf(':') || ipV6HostSeparatorIdx > -1) {
 				String port = address.substring(separatorIdx + 1);
 				if (PORT_PATTERN.matcher(port).matches()) {
-					return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx),
+					return AddressUtils.createUnresolved(address.substring(0, separatorIdx),
 							Integer.parseInt(port));
 				}
 				else {
-					return InetSocketAddressUtil.createUnresolved(address.substring(0, separatorIdx), defaultPort);
+					return AddressUtils.createUnresolved(address.substring(0, separatorIdx), defaultPort);
 				}
 			}
 		}
-		return InetSocketAddressUtil.createUnresolved(address, defaultPort);
+		return AddressUtils.createUnresolved(address, defaultPort);
 	}
 
 	static ConnectionInfo parseXForwardedInfo(HttpRequest request, SocketChannel channel, boolean secured,
@@ -162,11 +162,11 @@ final class ConnectionInfo {
 					log.debug(format(channel, "Invalid value [" + portHeader + "] for the header [X-Forwarded-Port]"));
 					port = hostAddress.getPort();
 				}
-				hostAddress = InetSocketAddressUtil.createUnresolved(
+				hostAddress = AddressUtils.createUnresolved(
 						hostHeader.split(",", 2)[0].trim(), port);
 			}
 			else {
-				hostAddress = InetSocketAddressUtil.createUnresolved(
+				hostAddress = AddressUtils.createUnresolved(
 						hostHeader.split(",", 2)[0].trim(),
 						hostAddress.getPort());
 			}

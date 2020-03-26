@@ -48,6 +48,7 @@ import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.AddressUtils;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.Metrics;
@@ -606,7 +607,7 @@ public abstract class TcpClient {
 
 	static final Bootstrap DEFAULT_BOOTSTRAP =
 			new Bootstrap().option(ChannelOption.AUTO_READ, false)
-			               .remoteAddress(InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT));
+			               .remoteAddress(AddressUtils.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT));
 
 	static {
 		BootstrapHandlers.channelOperationFactory(DEFAULT_BOOTSTRAP, TcpUtils.TCP_OPS);

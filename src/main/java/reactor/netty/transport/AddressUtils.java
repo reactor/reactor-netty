@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.netty.tcp;
+package reactor.netty.transport;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -34,7 +34,7 @@ import io.netty.util.NetUtil;
  * initially. This removes the need to do unnecessary reverse DNS lookups.
  *
  */
-public class InetSocketAddressUtil {
+public class AddressUtils {
 
 	/**
 	 * Creates unresolved InetSocketAddress. Numeric IP addresses will be detected and

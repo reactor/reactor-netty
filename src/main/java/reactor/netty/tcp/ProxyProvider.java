@@ -39,6 +39,7 @@ import io.netty.handler.proxy.Socks5ProxyHandler;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
+import reactor.netty.transport.AddressUtils;
 
 /**
  * Proxy configuration
@@ -87,7 +88,7 @@ public final class ProxyProvider {
 		this.username = builder.username;
 		this.password = builder.password;
 		if (Objects.isNull(builder.address)) {
-			this.address = () -> InetSocketAddressUtil.createResolved(builder.host, builder.port);
+			this.address = () -> AddressUtils.createResolved(builder.host, builder.port);
 		}
 		else {
 			this.address = builder.address;
@@ -285,7 +286,7 @@ public final class ProxyProvider {
 		@Override
 		public final Builder address(InetSocketAddress address) {
 			Objects.requireNonNull(address, "address");
-			this.address = () -> InetSocketAddressUtil.replaceWithResolved(address);
+			this.address = () -> AddressUtils.replaceWithResolved(address);
 			return this;
 		}
 

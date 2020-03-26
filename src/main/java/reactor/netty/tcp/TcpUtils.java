@@ -30,6 +30,7 @@ import io.netty.util.NetUtil;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.transport.AddressUtils;
 
 /**
  * @author Stephane Maldini
@@ -61,12 +62,12 @@ final class TcpUtils {
 
 	static SocketAddress _updateHost(@Nullable SocketAddress address, String host) {
 		if(!(address instanceof InetSocketAddress)) {
-			return InetSocketAddressUtil.createUnresolved(host, 0);
+			return AddressUtils.createUnresolved(host, 0);
 		}
 
 		InetSocketAddress inet = (InetSocketAddress)address;
 
-		return InetSocketAddressUtil.createUnresolved(host, inet.getPort());
+		return AddressUtils.createUnresolved(host, inet.getPort());
 	}
 
 	static Bootstrap updatePort(Bootstrap b, int port) {
@@ -79,7 +80,7 @@ final class TcpUtils {
 
 	static SocketAddress _updatePort(@Nullable SocketAddress address, int port) {
 		if(!(address instanceof InetSocketAddress)) {
-			return InetSocketAddressUtil.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), port);
+			return AddressUtils.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), port);
 		}
 
 		InetSocketAddress inet = (InetSocketAddress)address;
@@ -88,7 +89,7 @@ final class TcpUtils {
 
 		String host = addr == null ? inet.getHostName() : addr.getHostAddress();
 
-		return InetSocketAddressUtil.createUnresolved(host, port);
+		return AddressUtils.createUnresolved(host, port);
 	}
 
 	static SocketAddressSupplier lazyAddress(Supplier<? extends SocketAddress> supplier) {

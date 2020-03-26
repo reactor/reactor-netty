@@ -43,6 +43,7 @@ import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.AddressUtils;
 
 import static reactor.netty.ReactorNetty.format;
 import static reactor.netty.tcp.TcpServerChannelGroup.CHANNEL_GROUP;
@@ -119,7 +120,7 @@ final class TcpServerBind extends TcpServer {
 			InetSocketAddress localInet = (InetSocketAddress) local;
 
 			if (localInet.isUnresolved()) {
-				b.localAddress(InetSocketAddressUtil.createResolved(localInet.getHostName(),
+				b.localAddress(AddressUtils.createResolved(localInet.getHostName(),
 						localInet.getPort()));
 			}
 
