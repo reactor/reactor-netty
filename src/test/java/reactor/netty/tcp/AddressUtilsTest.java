@@ -27,8 +27,7 @@ public class AddressUtilsTest {
 
 	@Test
 	public void shouldCreateResolvedNumericIPv4Address() {
-		InetSocketAddress socketAddress = AddressUtils
-				.createResolved("127.0.0.1", 8080);
+		InetSocketAddress socketAddress = AddressUtils.createResolved("127.0.0.1", 8080);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
 		assertThat(socketAddress.getPort()).isEqualTo(8080);
@@ -37,19 +36,16 @@ public class AddressUtilsTest {
 
 	@Test
 	public void shouldCreateResolvedNumericIPv6Address() {
-		InetSocketAddress socketAddress = AddressUtils.createResolved("::1",
-				8080);
+		InetSocketAddress socketAddress = AddressUtils.createResolved("::1", 8080);
 		assertThat(socketAddress.isUnresolved()).isFalse();
-		assertThat(socketAddress.getAddress().getHostAddress())
-				.isEqualTo("0:0:0:0:0:0:0:1");
+		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("0:0:0:0:0:0:0:1");
 		assertThat(socketAddress.getPort()).isEqualTo(8080);
 		assertThat(socketAddress.getHostString()).isEqualTo("0:0:0:0:0:0:0:1");
 	}
 
 	@Test
 	public void shouldCreateUnresolvedAddressByHostName() {
-		InetSocketAddress socketAddress = AddressUtils
-				.createUnresolved("example.com", 80);
+		InetSocketAddress socketAddress = AddressUtils.createUnresolved("example.com", 80);
 		assertThat(socketAddress.isUnresolved()).isTrue();
 		assertThat(socketAddress.getPort()).isEqualTo(80);
 		assertThat(socketAddress.getHostString()).isEqualTo("example.com");
@@ -57,8 +53,7 @@ public class AddressUtilsTest {
 
 	@Test
 	public void shouldAlwaysCreateResolvedNumberIPAddress() {
-		InetSocketAddress socketAddress = AddressUtils
-				.createUnresolved("127.0.0.1", 8080);
+		InetSocketAddress socketAddress = AddressUtils.createUnresolved("127.0.0.1", 8080);
 		assertThat(socketAddress.isUnresolved()).isFalse();
 		assertThat(socketAddress.getAddress().getHostAddress()).isEqualTo("127.0.0.1");
 		assertThat(socketAddress.getPort()).isEqualTo(8080);
@@ -67,10 +62,8 @@ public class AddressUtilsTest {
 
 	@Test
 	public void shouldReplaceNumericIPAddressWithResolvedInstance() {
-		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("127.0.0.1",
-				8080);
-		InetSocketAddress replacedAddress = AddressUtils
-				.replaceUnresolvedNumericIp(socketAddress);
+		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("127.0.0.1", 8080);
+		InetSocketAddress replacedAddress = AddressUtils.replaceUnresolvedNumericIp(socketAddress);
 		assertThat(replacedAddress).isNotSameAs(socketAddress);
 		assertThat(socketAddress.isUnresolved()).isTrue();
 		assertThat(replacedAddress.isUnresolved()).isFalse();
@@ -81,27 +74,22 @@ public class AddressUtilsTest {
 
 	@Test
 	public void shouldNotReplaceIfNonNumeric() {
-		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("example.com",
-				80);
-		InetSocketAddress processedAddress = AddressUtils
-				.replaceUnresolvedNumericIp(socketAddress);
+		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("example.com", 80);
+		InetSocketAddress processedAddress = AddressUtils.replaceUnresolvedNumericIp(socketAddress);
 		assertThat(processedAddress).isSameAs(socketAddress);
 	}
 
 	@Test
 	public void shouldNotReplaceIfAlreadyResolvedWhenCallingReplaceUnresolvedNumericIp() {
 		InetSocketAddress socketAddress = new InetSocketAddress("127.0.0.1", 80);
-		InetSocketAddress processedAddress = AddressUtils
-				.replaceUnresolvedNumericIp(socketAddress);
+		InetSocketAddress processedAddress = AddressUtils.replaceUnresolvedNumericIp(socketAddress);
 		assertThat(processedAddress).isSameAs(socketAddress);
 	}
 
 	@Test
 	public void shouldResolveUnresolvedAddress() {
-		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("example.com",
-				80);
-		InetSocketAddress processedAddress = AddressUtils
-				.replaceWithResolved(socketAddress);
+		InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("example.com", 80);
+		InetSocketAddress processedAddress = AddressUtils.replaceWithResolved(socketAddress);
 		assertThat(processedAddress).isNotSameAs(socketAddress);
 		assertThat(processedAddress.isUnresolved()).isFalse();
 	}
@@ -109,8 +97,7 @@ public class AddressUtilsTest {
 	@Test
 	public void shouldNotReplaceIfAlreadyResolved() {
 		InetSocketAddress socketAddress = new InetSocketAddress("example.com", 80);
-		InetSocketAddress processedAddress = AddressUtils
-				.replaceWithResolved(socketAddress);
+		InetSocketAddress processedAddress = AddressUtils.replaceWithResolved(socketAddress);
 		assertThat(processedAddress).isSameAs(socketAddress);
 	}
 }

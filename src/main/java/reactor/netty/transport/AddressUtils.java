@@ -32,32 +32,10 @@ import io.netty.util.NetUtil;
  * {@link NetUtil#createByteArrayFromIpAddressString} utility method and the
  * InetSocketAddress instances will created in a way that these instances are resolved
  * initially. This removes the need to do unnecessary reverse DNS lookups.
- *
  */
-public class AddressUtils {
+public final class AddressUtils {
 
-	/**
-	 * Creates unresolved InetSocketAddress. Numeric IP addresses will be detected and
-	 * resolved.
-	 * 
-	 * @param hostname ip-address or hostname
-	 * @param port port number
-	 * @return InetSocketAddress for given parameters
-	 */
-	public static InetSocketAddress createUnresolved(String hostname, int port) {
-		return createInetSocketAddress(hostname, port, false);
-	}
-
-	/**
-	 * Creates InetSocketAddress that is always resolved. Numeric IP addresses will be
-	 * detected and resolved without doing reverse DNS lookups.
-	 * 
-	 * @param hostname ip-address or hostname
-	 * @param port port number
-	 * @return InetSocketAddress for given parameters
-	 */
-	public static InetSocketAddress createResolved(String hostname, int port) {
-		return createInetSocketAddress(hostname, port, true);
+	private AddressUtils() {
 	}
 
 	/**
@@ -69,47 +47,38 @@ public class AddressUtils {
 	 * @param resolve when true, resolve given hostname at instance creation time
 	 * @return InetSocketAddress for given parameters
 	 */
-	public static InetSocketAddress createInetSocketAddress(String hostname, int port,
-			boolean resolve) {
+	public static InetSocketAddress createInetSocketAddress(String hostname, int port, boolean resolve) {
 		InetSocketAddress inetAddressForIpString = createForIpString(hostname, port);
 		if (inetAddressForIpString != null) {
 			return inetAddressForIpString;
 		}
 		else {
-			return resolve ? new InetSocketAddress(hostname, port)
-					: InetSocketAddress.createUnresolved(hostname, port);
+			return resolve ? new InetSocketAddress(hostname, port) : InetSocketAddress.createUnresolved(hostname, port);
 		}
-	}
-
-	@Nullable
-	private static InetSocketAddress createForIpString(String hostname, int port) {
-		InetAddress inetAddressForIpString = attemptParsingIpString(hostname);
-		if (inetAddressForIpString != null) {
-			return new InetSocketAddress(inetAddressForIpString, port);
-		}
-		return null;
 	}
 
 	/**
-	 * Replaces an unresolved InetSocketAddress with a resolved instance in the case that
-	 * the passed address is unresolved.
+	 * Creates InetSocketAddress that is always resolved. Numeric IP addresses will be
+	 * detected and resolved without doing reverse DNS lookups.
 	 *
-	 * @param inetSocketAddress socket address instance to process
-	 * @return resolved instance with same host string and port
+	 * @param hostname ip-address or hostname
+	 * @param port port number
+	 * @return InetSocketAddress for given parameters
 	 */
-	public static InetSocketAddress replaceWithResolved(
-			InetSocketAddress inetSocketAddress) {
-		if (!inetSocketAddress.isUnresolved()) {
-			return inetSocketAddress;
-		}
-		inetSocketAddress = replaceUnresolvedNumericIp(inetSocketAddress);
-		if (!inetSocketAddress.isUnresolved()) {
-			return inetSocketAddress;
-		}
-		else {
-			return new InetSocketAddress(inetSocketAddress.getHostString(),
-					inetSocketAddress.getPort());
-		}
+	public static InetSocketAddress createResolved(String hostname, int port) {
+		return createInetSocketAddress(hostname, port, true);
+	}
+
+	/**
+	 * Creates unresolved InetSocketAddress. Numeric IP addresses will be detected and
+	 * resolved.
+	 *
+	 * @param hostname ip-address or hostname
+	 * @param port port number
+	 * @return InetSocketAddress for given parameters
+	 */
+	public static InetSocketAddress createUnresolved(String hostname, int port) {
+		return createInetSocketAddress(hostname, port, false);
 	}
 
 	/**
@@ -119,8 +88,7 @@ public class AddressUtils {
 	 * @param inetSocketAddress socket address instance to process
 	 * @return processed socket address instance
 	 */
-	public static InetSocketAddress replaceUnresolvedNumericIp(
-			InetSocketAddress inetSocketAddress) {
+	public static InetSocketAddress replaceUnresolvedNumericIp(InetSocketAddress inetSocketAddress) {
 		if (!inetSocketAddress.isUnresolved()) {
 			return inetSocketAddress;
 		}
@@ -134,8 +102,28 @@ public class AddressUtils {
 		}
 	}
 
+	/**
+	 * Replaces an unresolved InetSocketAddress with a resolved instance in the case that
+	 * the passed address is unresolved.
+	 *
+	 * @param inetSocketAddress socket address instance to process
+	 * @return resolved instance with same host string and port
+	 */
+	public static InetSocketAddress replaceWithResolved(InetSocketAddress inetSocketAddress) {
+		if (!inetSocketAddress.isUnresolved()) {
+			return inetSocketAddress;
+		}
+		inetSocketAddress = replaceUnresolvedNumericIp(inetSocketAddress);
+		if (!inetSocketAddress.isUnresolved()) {
+			return inetSocketAddress;
+		}
+		else {
+			return new InetSocketAddress(inetSocketAddress.getHostString(), inetSocketAddress.getPort());
+		}
+	}
+
 	@Nullable
-	private static InetAddress attemptParsingIpString(String hostname) {
+	static InetAddress attemptParsingIpString(String hostname) {
 		byte[] ipAddressBytes = NetUtil.createByteArrayFromIpAddressString(hostname);
 
 		if (ipAddressBytes != null) {
@@ -155,4 +143,12 @@ public class AddressUtils {
 		return null;
 	}
 
+	@Nullable
+	static InetSocketAddress createForIpString(String hostname, int port) {
+		InetAddress inetAddressForIpString = attemptParsingIpString(hostname);
+		if (inetAddressForIpString != null) {
+			return new InetSocketAddress(inetAddressForIpString, port);
+		}
+		return null;
+	}
 }
