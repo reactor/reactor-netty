@@ -154,7 +154,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 							// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
 							(cause instanceof IOException && cause.getMessage() != null &&
 									cause.getMessage().contains("Address already in use"))) {
-						sink.error(ChannelBindException.fail(bootstrap, null));
+						sink.error(ChannelBindException.fail(bootstrap.config().localAddress(), null));
 					}
 					else {
 						sink.error(cause);
