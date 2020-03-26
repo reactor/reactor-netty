@@ -36,7 +36,6 @@ public class ChannelBindException extends RuntimeException {
 	 *
 	 * @param bootstrap a netty bootstrap
 	 * @param cause a root cause
-	 *
 	 * @return a new {@link ChannelBindException}
 	 * @deprecated as of 0.9.7. Use {@link #fail(SocketAddress, Throwable)}
 	 */
@@ -53,7 +52,7 @@ public class ChannelBindException extends RuntimeException {
 		if (!(bootstrap.config().localAddress() instanceof InetSocketAddress)) {
 			return new ChannelBindException(bootstrap.config().localAddress().toString(), -1, cause);
 		}
-		InetSocketAddress address = (InetSocketAddress)bootstrap.config().localAddress();
+		InetSocketAddress address = (InetSocketAddress) bootstrap.config().localAddress();
 
 		return new ChannelBindException(address.getHostString(), address.getPort(), cause);
 	}
@@ -63,16 +62,15 @@ public class ChannelBindException extends RuntimeException {
 	 *
 	 * @param localAddress the local address
 	 * @param cause the root cause
-	 *
 	 * @return a new {@link ChannelBindException}
 	 */
 	public static ChannelBindException fail(SocketAddress localAddress, @Nullable Throwable cause) {
 		Objects.requireNonNull(localAddress, "localAddress");
 		if (cause instanceof java.net.BindException ||
-				    // With epoll/kqueue transport it is
-				    // io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
-				    (cause instanceof IOException && cause.getMessage() != null &&
-						     cause.getMessage().contains("Address already in use"))) {
+				// With epoll/kqueue transport it is
+				// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
+				(cause instanceof IOException && cause.getMessage() != null &&
+						cause.getMessage().contains("Address already in use"))) {
 			cause = null;
 		}
 		if (!(localAddress instanceof InetSocketAddress)) {
@@ -87,7 +85,7 @@ public class ChannelBindException extends RuntimeException {
 	final int    localPort;
 
 	protected ChannelBindException(String localHost, int localPort, @Nullable Throwable cause) {
-		super("Failed to bind on ["+localHost+":"+localPort+"]", cause);
+		super("Failed to bind on [" + localHost + ":" + localPort + "]", cause);
 		this.localHost = localHost;
 		this.localPort = localPort;
 	}
