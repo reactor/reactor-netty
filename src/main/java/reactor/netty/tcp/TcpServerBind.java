@@ -182,7 +182,7 @@ final class TcpServerBind extends TcpServer {
 					}
 					return;
 				}
-				sink.error(ChannelBindException.fail(bootstrap, f.cause()));
+				sink.error(ChannelBindException.fail(bootstrap.config().localAddress(), f.cause()));
 			}
 			else {
 				if (log.isDebugEnabled()) {
