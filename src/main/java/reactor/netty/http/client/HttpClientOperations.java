@@ -414,9 +414,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			String url = uri();
 			if (url.startsWith(HttpClient.HTTP_SCHEME) || url.startsWith(HttpClient.WS_SCHEME)) {
 				uri = new URI(url);
-			}
-			else {
-				String host = getWebsocketHost();
+			} else if(resourceUrl != null && (resourceUrl.startsWith(HttpClient.HTTP_SCHEME) || url.startsWith(HttpClient.WS_SCHEME))) {
+				uri = new URI(resourceUrl);
+			} else {
+				String host = requestHeaders().get(HttpHeaderNames.HOST);
 				uri = new URI((isSecure ? HttpClient.WSS_SCHEME :
 				                          HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ? url : "/" + url));
 			}
@@ -426,14 +427,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		return uri;
 	}
-
-  private String getWebsocketHost() {
-    SocketAddress socketAddress = channel().remoteAddress();
-    if(socketAddress instanceof InetSocketAddress) {
-      return ((InetSocketAddress) socketAddress).getHostName();
-    }
-    return requestHeaders().get(HttpHeaderNames.HOST);
-  }
 
   @Override
 	public HttpResponseStatus status() {
