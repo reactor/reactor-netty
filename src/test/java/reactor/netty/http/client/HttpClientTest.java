@@ -2132,7 +2132,8 @@ public class HttpClientTest {
 		ConnectionProvider provider = ConnectionProvider.create("testIssue988", 1);
 		HttpClient client =
 				createHttpClientForContextWithAddress(provider)
-				        .tcpConfiguration(tcpClient -> tcpClient.wiretap("testIssue988", LogLevel.INFO));
+				        .tcpConfiguration(tcpClient -> tcpClient.wiretap("testIssue988", LogLevel.INFO)
+				                                                .metrics(true));
 
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
 		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch1.set(c.channel())))

@@ -19,7 +19,6 @@ package reactor.netty.tcp;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -569,7 +568,7 @@ public abstract class TcpServer {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, getOrCreateMetricsRecorder()));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, MicrometerTcpServerMetricsRecorder.INSTANCE));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);
@@ -606,17 +605,6 @@ public abstract class TcpServer {
 		return wiretap(category, LogLevel.DEBUG);
 	}
 
-	final AtomicReference<MicrometerChannelMetricsRecorder> channelMetricsRecorder = new AtomicReference<>();
-	final MicrometerChannelMetricsRecorder getOrCreateMetricsRecorder() {
-		MicrometerChannelMetricsRecorder recorder = channelMetricsRecorder.get();
-		if (recorder == null) {
-			channelMetricsRecorder.compareAndSet(null,
-					new MicrometerChannelMetricsRecorder(reactor.netty.Metrics.TCP_SERVER_PREFIX, "tcp"));
-			recorder = getOrCreateMetricsRecorder();
-		}
-		return recorder;
-	}
-
 	/**
 	 * Applies a wire logger configuration using the specified category
 	 * and logger level
@@ -636,4 +624,14 @@ public abstract class TcpServer {
 	static final int                   DEFAULT_PORT      = 0;
 	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpServer.class);
 	static final Logger                log               = Loggers.getLogger(TcpServer.class);
+
+	static final class MicrometerTcpServerMetricsRecorder extends MicrometerChannelMetricsRecorder {
+
+		static final MicrometerTcpServerMetricsRecorder INSTANCE =
+				new MicrometerTcpServerMetricsRecorder(reactor.netty.Metrics.TCP_SERVER_PREFIX, "tcp");
+
+		MicrometerTcpServerMetricsRecorder(String name, String protocol) {
+			super(name, protocol);
+		}
+	}
 }

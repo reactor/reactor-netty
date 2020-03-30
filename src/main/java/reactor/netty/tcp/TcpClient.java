@@ -19,7 +19,6 @@ package reactor.netty.tcp;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -544,7 +543,7 @@ public abstract class TcpClient {
 								" to the class path first");
 			}
 
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, getOrCreateMetricsRecorder()));
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, MicrometerTcpClientMetricsRecorder.INSTANCE));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);
@@ -613,17 +612,6 @@ public abstract class TcpClient {
 		return bootstrap(b -> BootstrapHandlers.updateLogSupport(b, category, level));
 	}
 
-	final AtomicReference<MicrometerChannelMetricsRecorder> channelMetricsRecorder = new AtomicReference<>();
-	final MicrometerChannelMetricsRecorder getOrCreateMetricsRecorder() {
-		MicrometerChannelMetricsRecorder recorder = channelMetricsRecorder.get();
-		if (recorder == null) {
-			channelMetricsRecorder.compareAndSet(null,
-					new MicrometerChannelMetricsRecorder(reactor.netty.Metrics.TCP_CLIENT_PREFIX, "tcp"));
-			recorder = getOrCreateMetricsRecorder();
-		}
-		return recorder;
-	}
-
 	/**
 	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
 	 * the {@code PORT} <b>environment variable</b>.
@@ -641,4 +629,14 @@ public abstract class TcpClient {
 	}
 	static final LoggingHandler        LOGGING_HANDLER   = new LoggingHandler(TcpClient.class);
 	static final Logger                log               = Loggers.getLogger(TcpClient.class);
+
+	static final class MicrometerTcpClientMetricsRecorder extends MicrometerChannelMetricsRecorder {
+
+		static final MicrometerTcpClientMetricsRecorder INSTANCE =
+				new MicrometerTcpClientMetricsRecorder(reactor.netty.Metrics.TCP_CLIENT_PREFIX, "tcp");
+
+		MicrometerTcpClientMetricsRecorder(String name, String protocol) {
+			super(name, protocol);
+		}
+	}
 }
