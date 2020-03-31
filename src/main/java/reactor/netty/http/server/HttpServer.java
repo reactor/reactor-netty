@@ -335,20 +335,6 @@ public abstract class HttpServer {
 
 	/**
 	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
-	 * All generated metrics are provided to the specified recorder.
-	 *
-	 * @param metricsEnabled if true enables the metrics on the server.
-	 * @param recorder the {@link HttpServerMetricsRecorder}
-	 * @return a new {@link HttpServer}
-	 * @deprecated  as of 0.9.7. Use {@link #metrics(boolean, Supplier)}
-	 */
-	@Deprecated
-	public final HttpServer metrics(boolean metricsEnabled, HttpServerMetricsRecorder recorder) {
-		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, recorder));
-	}
-
-	/**
-	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
 	 * All generated metrics are provided to the specified recorder
 	 * which is only instantiated if metrics are being enabled.
 	 *

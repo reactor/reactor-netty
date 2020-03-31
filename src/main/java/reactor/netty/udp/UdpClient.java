@@ -389,26 +389,6 @@ public abstract class UdpClient {
 
 	/**
 	 * Specifies whether the metrics are enabled on the {@link UdpClient}.
-	 * All generated metrics are provided to the specified recorder.
-	 *
-	 * @param metricsEnabled if true enables the metrics on the client.
-	 * @param recorder the {@link ChannelMetricsRecorder}
-	 * @return a new {@link UdpClient}
-	 * @deprecated  as of 0.9.7. Use {@link #metrics(boolean, Supplier)}
-	 */
-	@Deprecated
-	public final UdpClient metrics(boolean metricsEnabled, ChannelMetricsRecorder recorder) {
-		if (metricsEnabled) {
-			Objects.requireNonNull(recorder, "recorder");
-			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, recorder));
-		}
-		else {
-			return bootstrap(BootstrapHandlers::removeMetricsSupport);
-		}
-	}
-
-	/**
-	 * Specifies whether the metrics are enabled on the {@link UdpClient}.
 	 * All generated metrics are provided to the specified recorder
 	 * which is only instantiated if metrics are being enabled.
 	 *
