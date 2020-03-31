@@ -413,7 +413,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final URI websocketUri() {
 		URI uri;
 		try {
-				uri = new URI(resourceUrl);
+			uri = new URI(resourceUrl);
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException(e);

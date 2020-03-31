@@ -941,14 +941,13 @@ public class WebsocketTest {
 				          .handle((req, res) -> res.sendWebsocket((in, out) -> Mono.never()))
 				          .bindNow();
 
-		TcpClient client = TcpClient.create().addressSupplier(() ->
-				new InetSocketAddress("not a valid host name", 42));
+		TcpClient client = TcpClient.create()
+		                            .addressSupplier(() -> new InetSocketAddress("not a valid host name", 42));
 		HttpClient httpClient = HttpClient.from(client);
-		StepVerifier.create(httpClient
-				.websocket()
-				.connect())
-				.expectError(UnknownHostException.class)
-				.verify(Duration.ofSeconds(5));
+		StepVerifier.create(httpClient.websocket()
+		                              .connect())
+		            .expectError(UnknownHostException.class)
+		            .verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -1086,34 +1085,32 @@ public class WebsocketTest {
 		String incorrectHostName = "incorrect-host.io";
 		httpServer =
 				HttpServer.create()
-						.port(0)
-						.handle((req, res) -> {
-							if (req.requestHeaders().get(HttpHeaderNames.HOST).contains(incorrectHostName)) {
-								return res.status(418)
-										.sendString(Mono.just("I expected the correct Host Name!"));
-							}
-							return res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
-									.sendObject(new CloseWebSocketFrame()));
-						})
-						.wiretap(true)
-						.bindNow();
+				          .port(0)
+				          .handle((req, res) -> {
+				              if (req.requestHeaders().get(HttpHeaderNames.HOST).contains(incorrectHostName)) {
+				                  return res.status(418)
+				                            .sendString(Mono.just("Incorrect Host header"));
+				              }
+				              return res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
+				                                                       .sendObject(new CloseWebSocketFrame()));
+				          })
+				          .wiretap(true)
+				          .bindNow();
 
 		Mono<Void> response =
 				HttpClient.create()
-						.port(httpServer.address().getPort())
-						.headers(h ->
-								h.add(HttpHeaderNames.HOST, incorrectHostName)
-						)
-						.websocket()
-						.uri("/")
-						.handle((in, out) -> out.sendObject(in.receiveFrames()
-								.doOnNext(WebSocketFrame::retain)
-								.then()))
-						.next();
+				          .port(httpServer.address().getPort())
+				          .headers(h -> h.add(HttpHeaderNames.HOST, incorrectHostName))
+				          .websocket()
+				          .uri("/")
+				          .handle((in, out) -> out.sendObject(in.receiveFrames()
+				                                                .doOnNext(WebSocketFrame::retain)
+				                                                .then()))
+				          .next();
 
 		StepVerifier.create(response)
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
