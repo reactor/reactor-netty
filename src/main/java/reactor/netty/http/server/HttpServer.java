@@ -22,6 +22,7 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -339,8 +340,23 @@ public abstract class HttpServer {
 	 * @param metricsEnabled if true enables the metrics on the server.
 	 * @param recorder the {@link HttpServerMetricsRecorder}
 	 * @return a new {@link HttpServer}
+	 * @deprecated  as of 0.9.7. Use {@link #metrics(boolean, Supplier)}
 	 */
+	@Deprecated
 	public final HttpServer metrics(boolean metricsEnabled, HttpServerMetricsRecorder recorder) {
+		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, recorder));
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link HttpServer}.
+	 * All generated metrics are provided to the specified recorder
+	 * which is only instantiated if metrics are being enabled.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param recorder a supplier for the {@link HttpServerMetricsRecorder}
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer metrics(boolean metricsEnabled, Supplier<? extends HttpServerMetricsRecorder> recorder) {
 		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, recorder));
 	}
 
