@@ -395,11 +395,32 @@ public abstract class UdpServer {
 	 * @param metricsEnabled if true enables the metrics on the server.
 	 * @param recorder the {@link ChannelMetricsRecorder}
 	 * @return a new {@link UdpServer}
+	 * @deprecated  as of 0.9.7. Use {@link #metrics(boolean, Supplier)}
 	 */
+	@Deprecated
 	public final UdpServer metrics(boolean metricsEnabled, ChannelMetricsRecorder recorder) {
 		if (metricsEnabled) {
 			Objects.requireNonNull(recorder, "recorder");
 			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, recorder));
+		}
+		else {
+			return bootstrap(BootstrapHandlers::removeMetricsSupport);
+		}
+	}
+
+	/**
+	 * Specifies whether the metrics are enabled on the {@link UdpServer}.
+	 * All generated metrics are provided to the specified recorder
+	 * which is only instantiated if metrics are being enabled.
+	 *
+	 * @param metricsEnabled if true enables the metrics on the server.
+	 * @param recorder a supplier for the {@link ChannelMetricsRecorder}
+	 * @return a new {@link UdpServer}
+	 */
+	public final UdpServer metrics(boolean metricsEnabled, Supplier<? extends ChannelMetricsRecorder> recorder) {
+		if (metricsEnabled) {
+			Objects.requireNonNull(recorder, "recorder");
+			return bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b, recorder.get()));
 		}
 		else {
 			return bootstrap(BootstrapHandlers::removeMetricsSupport);
