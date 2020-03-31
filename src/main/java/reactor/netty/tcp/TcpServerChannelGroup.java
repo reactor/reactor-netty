@@ -13,35 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.http.server;
+package reactor.netty.tcp;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.group.ChannelGroup;
+import io.netty.util.AttributeKey;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.BootstrapHandlers;
-import reactor.netty.tcp.TcpServer;
 
 import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * @author Violeta Georgieva
  * @since 0.9.6
  */
-final class HttpServerChannelGroup extends HttpServerOperator implements ConnectionObserver,
-                                                                         Function<ServerBootstrap, ServerBootstrap> {
+final class TcpServerChannelGroup extends TcpServerOperator implements ConnectionObserver {
+
+	static final AttributeKey<ChannelGroup> CHANNEL_GROUP = AttributeKey.newInstance("channelGroup");
 
 	final ChannelGroup channelGroup;
 
-	HttpServerChannelGroup(HttpServer source, ChannelGroup channelGroup) {
+	TcpServerChannelGroup(TcpServer source, ChannelGroup channelGroup) {
 		super(source);
 		this.channelGroup = Objects.requireNonNull(channelGroup, "channelGroup");
 	}
 
 	@Override
-	protected TcpServer tcpConfiguration() {
-		return source.tcpConfiguration().bootstrap(this);
+	public ServerBootstrap configure() {
+		ServerBootstrap b = source.configure();
+		b.attr(CHANNEL_GROUP, channelGroup);
+		ConnectionObserver observer = BootstrapHandlers.childConnectionObserver(b);
+		BootstrapHandlers.childConnectionObserver(b, observer.then(this));
+		return b;
 	}
 
 	@Override
@@ -49,13 +53,5 @@ final class HttpServerChannelGroup extends HttpServerOperator implements Connect
 		if (newState == State.CONNECTED) {
 			channelGroup.add(connection.channel());
 		}
-	}
-
-	@Override
-	public ServerBootstrap apply(ServerBootstrap b) {
-		HttpServerConfiguration.channelGroup(b, channelGroup);
-		ConnectionObserver observer = BootstrapHandlers.childConnectionObserver(b);
-		BootstrapHandlers.childConnectionObserver(b, observer.then(this));
-		return b;
 	}
 }

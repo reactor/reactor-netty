@@ -1615,6 +1615,7 @@ public class HttpServerTests {
 		                              .addressSupplier(disposableServer::address)
 		                              .wiretap(true);
 
+		AtomicReference<List<String>> result = new AtomicReference<>();
 		Flux.just("/delay500", "/delay1000")
 		    .flatMap(s ->
 		            client.get()
@@ -1622,7 +1623,8 @@ public class HttpServerTests {
 		                  .responseContent()
 		                  .aggregate()
 		                  .asString())
-		    .subscribe();
+		    .collectList()
+		    .subscribe(result::set);
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
 
@@ -1634,5 +1636,6 @@ public class HttpServerTests {
 		    .block(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+		assertThat(result.get()).isNotNull().contains("delay500", "delay1000");
 	}
 }

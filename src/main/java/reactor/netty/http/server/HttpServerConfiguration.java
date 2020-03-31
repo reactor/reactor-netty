@@ -20,7 +20,6 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AttributeKey;
@@ -44,7 +43,6 @@ final class HttpServerConfiguration {
 	ServerCookieEncoder    cookieEncoder      = ServerCookieEncoder.STRICT;
 	ServerCookieDecoder    cookieDecoder      = ServerCookieDecoder.STRICT;
 	int                    protocols          = h11;
-	ChannelGroup           channelGroup;
 
 
 	static HttpServerConfiguration getAndClean(ServerBootstrap b) {
@@ -137,11 +135,6 @@ final class HttpServerConfiguration {
 		HttpServerConfiguration conf = getOrCreate(b);
 		conf.cookieEncoder = encoder;
 		conf.cookieDecoder = decoder;
-		return b;
-	}
-
-	static ServerBootstrap channelGroup(ServerBootstrap b, ChannelGroup channelGroup) {
-		getOrCreate(b).channelGroup = channelGroup;
 		return b;
 	}
 

@@ -514,7 +514,7 @@ public abstract class HttpServer {
 	 * @since 0.9.6
 	 */
 	public final HttpServer channelGroup(ChannelGroup channelGroup) {
-		return new HttpServerChannelGroup(this, channelGroup);
+		return tcpConfiguration(tcpServer -> tcpServer.channelGroup(channelGroup));
 	}
 
 	/**

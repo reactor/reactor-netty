@@ -29,6 +29,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
@@ -525,6 +526,20 @@ public abstract class TcpServer {
 	@Nullable
 	public SslProvider sslProvider() {
 		return null;
+	}
+
+	/**
+	 * Provide a {@link ChannelGroup} - every active connected channel will be held in the
+	 * provided group.
+	 * When a {@link ChannelGroup} is provided, {@link DisposableServer#disposeNow(Duration)}
+	 * will wait the active requests to finish for the specified timeout.
+	 *
+	 * @param channelGroup a {@link ChannelGroup}
+	 * @return a new {@link TcpServer}
+	 * @since 0.9.7
+	 */
+	public final TcpServer channelGroup(ChannelGroup channelGroup) {
+		return new TcpServerChannelGroup(this, channelGroup);
 	}
 
 	/**

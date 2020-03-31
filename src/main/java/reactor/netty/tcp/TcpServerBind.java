@@ -19,6 +19,9 @@ package reactor.netty.tcp;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -27,6 +30,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.group.ChannelGroup;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
@@ -41,6 +45,7 @@ import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.tcp.TcpServerChannelGroup.CHANNEL_GROUP;
 
 /**
  * @author Stephane Maldini
@@ -165,6 +170,35 @@ final class TcpServerBind extends TcpServer {
 			}
 			else if (!f.isDone()) {
 				f.cancel(true);
+			}
+		}
+
+		@Override
+		public void disposeNow(Duration timeout) {
+			if (isDisposed()) {
+				return;
+			}
+			dispose();
+
+			ChannelGroup channelGroup = (ChannelGroup) bootstrap.config()
+			                                                    .attrs()
+			                                                    .get(CHANNEL_GROUP);
+			Mono<Void> terminateSignals = Mono.empty();
+			if (channelGroup != null) {
+				List<Mono<Void>> channels = new ArrayList<>();
+				// Wait for the running requests to finish
+				channelGroup.forEach(channel -> channels.add(Connection.from(channel).onTerminate()));
+				if (!channels.isEmpty()) {
+					terminateSignals = Mono.when(channels);
+				}
+			}
+
+			try {
+				onDispose().then(terminateSignals)
+				           .block(timeout);
+			}
+			catch (Exception e) {
+				throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
 			}
 		}
 
