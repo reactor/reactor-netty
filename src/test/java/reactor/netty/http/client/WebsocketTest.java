@@ -16,6 +16,33 @@
 
 package reactor.netty.http.client;
 
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.CorruptedFrameException;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.websocketx.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.*;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
+import reactor.netty.DisposableServer;
+import reactor.netty.channel.AbortedException;
+import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.WebsocketServerSpec;
+import reactor.netty.http.websocket.WebsocketInbound;
+import reactor.netty.http.websocket.WebsocketOutbound;
+import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.TcpClient;
+import reactor.test.StepVerifier;
+import reactor.util.Logger;
+import reactor.util.Loggers;
+import reactor.util.function.Tuple2;
+
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
@@ -26,41 +53,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
-
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.CorruptedFrameException;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.DirectProcessor;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxProcessor;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.ReplayProcessor;
-import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
-import reactor.netty.DisposableServer;
-import reactor.netty.channel.AbortedException;
-import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.WebsocketServerSpec;
-import reactor.netty.http.websocket.WebsocketInbound;
-import reactor.netty.http.websocket.WebsocketOutbound;
-import reactor.netty.resources.ConnectionProvider;
-import reactor.test.StepVerifier;
-import reactor.util.Logger;
-import reactor.util.Loggers;
-import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
@@ -85,6 +77,7 @@ public class WebsocketTest {
 
 	@Test
 	public void simpleTest() {
+		// this
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
@@ -938,16 +931,14 @@ public class WebsocketTest {
 				          .handle((req, res) -> res.sendWebsocket((in, out) -> Mono.never()))
 				          .bindNow();
 
-		HttpClient httpClient =
-				HttpClient.create()
-				          .addressSupplier(httpServer::address)
-				          .wiretap(true)
-				          .headers(h -> h.add(HttpHeaderNames.HOST, "[::1"));
-
-		StepVerifier.create(httpClient.websocket()
-		                              .connect())
-		                              .expectError()
-		                              .verify(Duration.ofSeconds(30));
+		TcpClient client = TcpClient.create().addressSupplier(() ->
+				new InetSocketAddress("not a valid host name", 42));
+		HttpClient httpClient = HttpClient.from(client);
+		StepVerifier.create(httpClient
+				.websocket()
+				.connect())
+				.expectError(UnknownHostException.class)
+				.verify(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -1017,6 +1008,41 @@ public class WebsocketTest {
 				          .block();
 		Assert.assertNotNull(res);
 		Assert.assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+	}
+
+	@Test
+	public void testExternalConnections_PullRequest1047() {
+		String incorrectHostName = "incorrect-host.io";
+		httpServer =
+				HttpServer.create()
+						.port(0)
+						.handle((req, res) -> {
+							if (req.requestHeaders().get(HttpHeaderNames.HOST).contains(incorrectHostName)) {
+								return res.status(418)
+										.sendString(Mono.just("I expected the correct Host Name!"));
+							}
+							return res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
+									.sendObject(new CloseWebSocketFrame()));
+						})
+						.wiretap(true)
+						.bindNow();
+
+		Mono<Void> response =
+				HttpClient.create()
+						.port(httpServer.address().getPort())
+						.headers(h ->
+								h.add(HttpHeaderNames.HOST, incorrectHostName)
+						)
+						.websocket()
+						.uri("/")
+						.handle((in, out) -> out.sendObject(in.receiveFrames()
+								.doOnNext(WebSocketFrame::retain)
+								.then()))
+						.next();
+
+		StepVerifier.create(response)
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
 	}
 
 	@Test

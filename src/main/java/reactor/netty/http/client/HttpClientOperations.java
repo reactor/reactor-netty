@@ -414,7 +414,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			String url = uri();
 			if (url.startsWith(HttpClient.HTTP_SCHEME) || url.startsWith(HttpClient.WS_SCHEME)) {
 				uri = new URI(url);
-			} else if(resourceUrl != null && (resourceUrl.startsWith(HttpClient.HTTP_SCHEME) || url.startsWith(HttpClient.WS_SCHEME))) {
+			} else if(resourceUrl != null && (resourceUrl.startsWith(HttpClient.HTTP_SCHEME) || resourceUrl.startsWith(HttpClient.WS_SCHEME))) {
 				uri = new URI(resourceUrl);
 			} else {
 				String host = requestHeaders().get(HttpHeaderNames.HOST);
