@@ -685,7 +685,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				                WebSocketClientCompressionHandler.INSTANCE);
 			}
 
-			log.debug(String.format("Attempting to perform websocket handshake with %s", url));
+			if (log.isDebugEnabled()) {
+			    log.debug(format(channel(), "Attempting to perform websocket handshake with {}"), url);
+			}
 			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, maxFramePayloadLength, proxyPing, this);
 
 			if(!rebind(ops)) {
