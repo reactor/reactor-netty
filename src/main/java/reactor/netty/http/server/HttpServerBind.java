@@ -17,8 +17,6 @@
 package reactor.netty.http.server;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
@@ -32,7 +30,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
@@ -52,7 +49,6 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.util.AsciiString;
 import reactor.core.publisher.Mono;
-import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
@@ -77,12 +73,12 @@ final class HttpServerBind extends HttpServer
 
 	static final HttpServerBind INSTANCE = new HttpServerBind();
 
+	static final Function<DisposableServer, DisposableServer> CLEANUP_GLOBAL_RESOURCE = DisposableBind::new;
+
 	static final boolean ACCESS_LOG =
 			Boolean.parseBoolean(System.getProperty(ACCESS_LOG_ENABLED, "false"));
 
 	final TcpServer tcpServer;
-
-	ChannelGroup channelGroup;
 
 	HttpServerBind() {
 		this(DEFAULT_TCP_SERVER);
@@ -101,14 +97,12 @@ final class HttpServerBind extends HttpServer
 	public Mono<? extends DisposableServer> bind(TcpServer delegate) {
 		return delegate.bootstrap(this)
 		               .bind()
-		               .map(ds -> new DisposableBind(ds, channelGroup));
+		               .map(CLEANUP_GLOBAL_RESOURCE);
 	}
 
 	@Override
 	public ServerBootstrap apply(ServerBootstrap b) {
 		HttpServerConfiguration conf = HttpServerConfiguration.getAndClean(b);
-
-		channelGroup = conf.channelGroup;
 
 		SslProvider ssl = SslProvider.findSslSupport(b);
 		if (ssl != null && ssl.getDefaultConfigurationType() == null) {
@@ -289,11 +283,9 @@ final class HttpServerBind extends HttpServer
 	static final class DisposableBind implements DisposableServer {
 
 		final DisposableServer server;
-		final ChannelGroup channelGroup;
 
-		DisposableBind(DisposableServer server, @Nullable ChannelGroup channelGroup) {
+		DisposableBind(DisposableServer server) {
 			this.server = server;
-			this.channelGroup = channelGroup;
 		}
 
 		@Override
@@ -309,25 +301,7 @@ final class HttpServerBind extends HttpServer
 			if (isDisposed()) {
 				return;
 			}
-			dispose();
-
-			Mono<Void> terminateSignals = Mono.empty();
-			if (channelGroup != null) {
-				List<Mono<Void>> channels = new ArrayList<>();
-				// Wait for the running requests to finish
-				channelGroup.forEach(channel -> channels.add(Connection.from(channel).onTerminate()));
-				if (!channels.isEmpty()) {
-					terminateSignals = Mono.when(channels);
-				}
-			}
-
-			try {
-				onDispose().then(terminateSignals)
-				           .block(timeout);
-			}
-			catch (Exception e) {
-				throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
-			}
+			server.disposeNow();
 		}
 
 		@Override

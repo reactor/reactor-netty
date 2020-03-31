@@ -77,10 +77,12 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -885,6 +887,69 @@ public class TcpServerTests {
 		assertTrue(disconnected.await(30, TimeUnit.SECONDS));
 
 		server.disposeNow();
+	}
+
+	@Test
+	public void testGracefulShutdown() throws Exception {
+		CountDownLatch latch1 = new CountDownLatch(2);
+		CountDownLatch latch2 = new CountDownLatch(2);
+		LoopResources loop = LoopResources.create("testGracefulShutdown");
+		DisposableServer disposableServer =
+				TcpServer.create()
+				         .port(0)
+				         .runOn(loop)
+				         .doOnConnection(c -> {
+				             c.onDispose().subscribe(null, null, latch2::countDown);
+				             latch1.countDown();
+				         })
+				         // Register a channel group, when invoking disposeNow()
+				         // the implementation will wait for the active requests to finish
+				         .channelGroup(new DefaultChannelGroup(new DefaultEventExecutor()))
+				         .handle((in, out) -> out.sendString(Mono.just("delay1000")
+				                                                 .delayElement(Duration.ofSeconds(1))))
+				         .wiretap(true)
+				         .bindNow(Duration.ofSeconds(30));
+
+		TcpClient client = TcpClient.create()
+		                            .addressSupplier(disposableServer::address)
+		                            .wiretap(true);
+
+		Connection conn1 = client.connect()
+		                         .block(Duration.ofSeconds(30));
+		assertNotNull(conn1);
+
+		Connection conn2 = client.connect()
+		                         .block(Duration.ofSeconds(30));
+		assertNotNull(conn2);
+
+		AtomicReference<String> res1 = new AtomicReference<>();
+		conn1.inbound()
+		     .receive()
+		     .asString()
+		     .subscribe(res1::set);
+
+		AtomicReference<String> res2 = new AtomicReference<>();
+		conn2.inbound()
+		     .receive()
+		     .asString()
+		     .subscribe(res2::set);
+
+		assertTrue(latch1.await(30, TimeUnit.SECONDS));
+
+		// Stop accepting incoming requests, wait at most 3s for the active requests to finish
+		disposableServer.disposeNow();
+
+		// Dispose the event loop
+		loop.disposeLater()
+		    .block(Duration.ofSeconds(30));
+
+		assertTrue(latch2.await(30, TimeUnit.SECONDS));
+
+		assertNotNull(res1.get());
+		assertEquals("delay1000", res1.get());
+
+		assertNotNull(res2.get());
+		assertEquals("delay1000", res2.get());
 	}
 
 	private static class SimpleClient extends Thread {
