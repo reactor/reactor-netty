@@ -96,7 +96,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final ClientCookieDecoder   cookieDecoder;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
-	String                      resourceUrl;
+	URI                         resourceUrl;
 	String                      path;
 
 	volatile ResponseState responseState;
@@ -408,26 +408,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return super.send(source);
 	}
 
-	final URI websocketUri() {
-		URI uri;
-		try {
-			String url = uri();
-			if (url.startsWith(HttpClient.HTTP_SCHEME) || url.startsWith(HttpClient.WS_SCHEME)) {
-				uri = new URI(url);
-			} else if(resourceUrl != null && (resourceUrl.startsWith(HttpClient.HTTP_SCHEME) || resourceUrl.startsWith(HttpClient.WS_SCHEME))) {
-				uri = new URI(resourceUrl);
-			} else {
-				String host = requestHeaders().get(HttpHeaderNames.HOST);
-				uri = new URI((isSecure ? HttpClient.WSS_SCHEME :
-				                          HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ? url : "/" + url));
-			}
-		}
-		catch (URISyntaxException e) {
-			throw new IllegalArgumentException(e);
-		}
-		return uri;
-	}
-
   @Override
 	public HttpResponseStatus status() {
 		ResponseState responseState = this.responseState;
@@ -449,7 +429,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public String resourceUrl() {
-		return resourceUrl;
+		return resourceUrl.toString();
 	}
 
 	@Override
@@ -690,7 +670,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@SuppressWarnings("FutureReturnValueIgnored")
 	final void withWebsocketSupport(String protocols, int maxFramePayloadLength, boolean proxyPing, boolean compress) {
-		URI url = websocketUri();
+		URI url = resourceUrl;
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
 			// Returned value is deliberately ignored

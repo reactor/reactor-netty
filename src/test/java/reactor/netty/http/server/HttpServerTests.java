@@ -1583,7 +1583,7 @@ public class HttpServerTests {
 		                  .get()
 		                  .uri("/<")
 		                  .response())
-		            .expectError(IllegalArgumentException.class)
+		            .expectError(URISyntaxException.class)
 		            .verify(Duration.ofSeconds(30));
 	}
 
