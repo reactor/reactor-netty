@@ -77,7 +77,6 @@ public class WebsocketTest {
 
 	@Test
 	public void simpleTest() {
-		// this
 		httpServer = HttpServer.create()
 		                       .port(0)
 		                       .handle((in, out) -> out.sendWebsocket((i, o) -> o.sendString(Mono.just("test"))))
