@@ -16,7 +16,9 @@
 
 package reactor.netty.http.client;
 
-import java.net.*;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -96,7 +98,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final ClientCookieDecoder   cookieDecoder;
 
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
-	URI                         resourceUrl;
+	String                      resourceUrl;
 	String                      path;
 
 	volatile ResponseState responseState;
@@ -408,7 +410,18 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return super.send(source);
 	}
 
-  @Override
+	final URI websocketUri() {
+		URI uri;
+		try {
+				uri = new URI(resourceUrl);
+		}
+		catch (URISyntaxException e) {
+			throw new IllegalArgumentException(e);
+		}
+		return uri;
+	}
+
+	@Override
 	public HttpResponseStatus status() {
 		ResponseState responseState = this.responseState;
 		if (responseState != null) {
@@ -429,7 +442,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public String resourceUrl() {
-		return resourceUrl.toString();
+		return resourceUrl;
 	}
 
 	@Override
@@ -670,7 +683,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@SuppressWarnings("FutureReturnValueIgnored")
 	final void withWebsocketSupport(String protocols, int maxFramePayloadLength, boolean proxyPing, boolean compress) {
-		URI url = resourceUrl;
+		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
 			// Returned value is deliberately ignored

@@ -18,7 +18,6 @@ package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URI;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -535,7 +534,7 @@ final class HttpClientConnect extends HttpClient {
 
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
-				ch.resourceUrl = new URI(toURI.toExternalForm());
+				ch.resourceUrl = toURI.toExternalForm();
 
 				UriEndpoint uri = toURI;
 				HttpHeaders headers = ch.getNettyRequest()
