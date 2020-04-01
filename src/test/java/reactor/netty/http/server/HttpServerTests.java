@@ -1639,7 +1639,7 @@ public class HttpServerTests {
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 
 		StepVerifier.create(result)
-				.expectNext("delay500delay1000")
-				.verifyComplete();
+		            .expectNext("delay500delay1000")
+		            .verifyComplete();
 	}
 }

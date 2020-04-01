@@ -919,12 +919,12 @@ public class TcpServerTests {
 
 		MonoProcessor<String> result = MonoProcessor.create();
 		Flux.merge(client.connect(), client.connect())
-				.flatMap(conn ->
-						conn.inbound()
-								.receive()
-								.asString())
-				.collect(Collectors.joining())
-				.subscribe(result);
+		    .flatMap(conn ->
+		            conn.inbound()
+		                .receive()
+		                .asString())
+		    .collect(Collectors.joining())
+		    .subscribe(result);
 
 		assertTrue(latch1.await(30, TimeUnit.SECONDS));
 
@@ -938,8 +938,8 @@ public class TcpServerTests {
 		assertTrue(latch2.await(30, TimeUnit.SECONDS));
 
 		StepVerifier.create(result)
-				.expectNext("delay1000delay1000")
-				.verifyComplete();
+		            .expectNext("delay1000delay1000")
+		            .verifyComplete();
 	}
 
 	private static class SimpleClient extends Thread {
