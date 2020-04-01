@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import javax.net.ssl.SSLException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -74,11 +76,11 @@ import reactor.netty.SocketUtils;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.LoopResources;
+import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -941,25 +943,14 @@ public class TcpServerTests {
 		                            .addressSupplier(disposableServer::address)
 		                            .wiretap(true);
 
-		Connection conn1 = client.connect()
-		                         .block(Duration.ofSeconds(30));
-		assertNotNull(conn1);
-
-		Connection conn2 = client.connect()
-		                         .block(Duration.ofSeconds(30));
-		assertNotNull(conn2);
-
-		AtomicReference<String> res1 = new AtomicReference<>();
-		conn1.inbound()
-		     .receive()
-		     .asString()
-		     .subscribe(res1::set);
-
-		AtomicReference<String> res2 = new AtomicReference<>();
-		conn2.inbound()
-		     .receive()
-		     .asString()
-		     .subscribe(res2::set);
+		MonoProcessor<String> result = MonoProcessor.create();
+		Flux.merge(client.connect(), client.connect())
+		    .flatMap(conn ->
+		            conn.inbound()
+		                .receive()
+		                .asString())
+		    .collect(Collectors.joining())
+		    .subscribe(result);
 
 		assertTrue(latch1.await(30, TimeUnit.SECONDS));
 
@@ -972,11 +963,9 @@ public class TcpServerTests {
 
 		assertTrue(latch2.await(30, TimeUnit.SECONDS));
 
-		assertNotNull(res1.get());
-		assertEquals("delay1000", res1.get());
-
-		assertNotNull(res2.get());
-		assertEquals("delay1000", res2.get());
+		StepVerifier.create(result)
+		            .expectNext("delay1000delay1000")
+		            .verifyComplete();
 	}
 
 	private static class SimpleClient extends Thread {

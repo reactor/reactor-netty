@@ -35,6 +35,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 
 import io.netty.buffer.ByteBuf;
@@ -1615,7 +1616,7 @@ public class HttpServerTests {
 		                              .addressSupplier(disposableServer::address)
 		                              .wiretap(true);
 
-		AtomicReference<List<String>> result = new AtomicReference<>();
+		MonoProcessor<String> result = MonoProcessor.create();
 		Flux.just("/delay500", "/delay1000")
 		    .flatMap(s ->
 		            client.get()
@@ -1623,8 +1624,8 @@ public class HttpServerTests {
 		                  .responseContent()
 		                  .aggregate()
 		                  .asString())
-		    .collectList()
-		    .subscribe(result::set);
+		    .collect(Collectors.joining())
+		    .subscribe(result);
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
 
@@ -1636,6 +1637,9 @@ public class HttpServerTests {
 		    .block(Duration.ofSeconds(30));
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
-		assertThat(result.get()).isNotNull().contains("delay500", "delay1000");
+
+		StepVerifier.create(result)
+		            .expectNext("delay500delay1000")
+		            .verifyComplete();
 	}
 }

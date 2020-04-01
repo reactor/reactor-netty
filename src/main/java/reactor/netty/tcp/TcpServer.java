@@ -529,10 +529,13 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Provide a {@link ChannelGroup} - every active connected channel will be held in the
-	 * provided group.
-	 * When a {@link ChannelGroup} is provided, {@link DisposableServer#disposeNow(Duration)}
-	 * will wait the active requests to finish for the specified timeout.
+	 * Provide a {@link ChannelGroup} to hold all active connected channels.
+	 *
+	 * <p><strong>Graceful Shutdown:</strong>
+	 * <p>When a {@code ChannelGroup} is set, calls  to {@link DisposableServer#disposeNow()}
+	 * and {@link DisposableServer#disposeNow(Duration)} not only stop accepting new requests
+	 * but also additionally wait for all active requests, in the {@code ChannelGroup}, to
+	 * complete, within the given timeout.
 	 *
 	 * @param channelGroup a {@link ChannelGroup}
 	 * @return a new {@link TcpServer}
