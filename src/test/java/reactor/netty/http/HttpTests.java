@@ -636,10 +636,7 @@ public class HttpTests {
 
 	@Test
 	@Ignore
-	public void testHttp1or2() throws Exception {
-//		SelfSignedCertificate cert = new SelfSignedCertificate();
-//		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-
+	public void testHttp1or2_1() {
 		DisposableServer server =
 				HttpServer.create()
 				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
@@ -648,8 +645,26 @@ public class HttpTests {
 				          .wiretap(true)
 				          .bindNow();
 
-		new CountDownLatch(1).await();
-		server.disposeNow();
+		server.onDispose()
+		      .block();
+	}
+
+	@Test
+	@Ignore
+	public void testHttp1or2_2() {
+		DisposableServer server =
+				HttpServer.create()
+				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				          .port(8080)
+				          .handle((req, res) -> res.sendString(req.receive()
+				                                                  .aggregate()
+				                                                  .asString()
+				                                                  .subscribeOn(Schedulers.elastic())))
+				          .wiretap(true)
+				          .bindNow();
+
+		server.onDispose()
+		      .block();
 	}
 
 	@Test
