@@ -245,7 +245,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 
 			if (r == Long.MAX_VALUE) {
+				receiverFastpath = true;
 				if (needRead) {
+					needRead = false;
 					channel.config()
 					       .setAutoRead(true);
 				}
@@ -253,7 +255,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				if(missed == 0){
 					break;
 				}
-				receiverFastpath = true;
 			}
 
 			if ((receiverDemand -= e) > 0L || (e > 0L && q.size() < QUEUE_LOW_LIMIT)) {
