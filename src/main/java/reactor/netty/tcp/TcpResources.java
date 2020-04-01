@@ -322,14 +322,14 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		tcpResources  = new AtomicReference<>();
 	}
 
-	@SuppressWarnings("deprecation")
 	static <T extends TcpResources> T create(@Nullable T previous,
 			@Nullable LoopResources loops, @Nullable ConnectionProvider provider,
 			String name,
 			BiFunction<LoopResources, ConnectionProvider, T> onNew) {
 		if (previous == null) {
 			loops = loops == null ? LoopResources.create("reactor-" + name) : loops;
-			provider = provider == null ? ConnectionProvider.fixed(name, 500) : provider;
+			provider = provider == null ?
+					ConnectionProvider.builder(name).maxConnections(500).pendingAcquireMaxCount(-1).build() : provider;
 		}
 		else {
 			loops = loops == null ? previous.defaultLoops : loops;
