@@ -42,7 +42,6 @@ import io.netty.util.NetUtil;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
@@ -81,7 +80,6 @@ public class UdpServerTests {
 	}
 
 	@Test
-	@Ignore
 	public void supportsReceivingDatagrams() throws InterruptedException {
 		final Random rndm = new Random();
 		final int port = SocketUtils.findAvailableUdpPort();
@@ -106,9 +104,7 @@ public class UdpServerTests {
 				                                   DatagramChannel udp =
 						                                   DatagramChannel.open();
 				                                   udp.configureBlocking(true);
-				                                   udp.connect(new InetSocketAddress(
-						                                   InetAddress.getLocalHost(),
-						                                   port));
+				                                   udp.connect(v.address());
 
 				                                   byte[] data = new byte[1024];
 				                                   rndm.nextBytes(data);
