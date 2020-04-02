@@ -297,9 +297,11 @@ public abstract class TcpServer {
 	 * @param onBind a consumer observing server start event
 	 * @param onBound a consumer observing server started event
 	 * @param onUnbound a consumer observing server stop event
-	 *
 	 * @return a new {@link TcpServer}
+	 * @deprecated as of 0.9.7. Use {@link #doOnBind(Consumer)}, {@link #doOnBound(Consumer)}
+	 * or {@link #doOnUnbound(Consumer)}
 	 */
+	@Deprecated
 	public final TcpServer doOnLifecycle(Consumer<? super ServerBootstrap> onBind,
 			Consumer<? super DisposableServer> onBound,
 			Consumer<? super DisposableServer> onUnbound) {
