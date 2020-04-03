@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.channel;
+package reactor.netty.transport;
 
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import reactor.netty.channel.ChannelMetricsRecorder;
 
 import javax.annotation.Nullable;
 import java.net.SocketAddress;
@@ -34,6 +35,7 @@ import static reactor.netty.Metrics.SUCCESS;
  * @author Violeta Georgieva
  */
 final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddress> {
+
 	final AddressResolverGroup<SocketAddress> resolverGroup;
 
 	final ChannelMetricsRecorder recorder;

@@ -16,6 +16,7 @@
 
 package reactor.netty.channel;
 
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -72,6 +73,24 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public static void addReactiveBridge(Channel ch, OnSetup opsFactory, ConnectionObserver listener) {
 		ch.pipeline()
 		  .addLast(NettyPipeline.ReactiveBridge, new ChannelOperationsHandler(opsFactory, listener));
+	}
+
+	/**
+	 * Add {@link NettyPipeline#ChannelMetricsHandler} to the channel pipeline.
+	 *
+	 * @param ch the channel
+	 * @param recorder the configured metrics recorder
+	 * @param remoteAddress the remote address
+	 * @param onServer true if {@link ChannelMetricsRecorder} is for the server, false if it is for the client
+	 */
+	public static void addMetricsHandler(Channel ch, ChannelMetricsRecorder recorder,
+			@Nullable SocketAddress remoteAddress, boolean onServer) {
+		SocketAddress remote = remoteAddress;
+		if (remote == null) {
+			remote = ch.remoteAddress();
+		}
+		ch.pipeline()
+		  .addFirst(NettyPipeline.ChannelMetricsHandler, new ChannelMetricsHandler(recorder, remote, onServer));
 	}
 
 	/**

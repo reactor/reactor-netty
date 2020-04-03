@@ -43,6 +43,8 @@ import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
+import reactor.netty.transport.AddressResolverGroupMetrics;
+import reactor.netty.transport.ByteBufAllocatorMetrics;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 

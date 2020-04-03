@@ -33,13 +33,13 @@ public class ChannelBindException extends RuntimeException {
 	/**
 	 * Build a {@link ChannelBindException}
 	 *
-	 * @param localAddress the local address
+	 * @param bindAddress the local address
 	 * @param cause the root cause
 	 * @return a new {@link ChannelBindException}
 	 * @since 0.9.7
 	 */
-	public static ChannelBindException fail(SocketAddress localAddress, @Nullable Throwable cause) {
-		Objects.requireNonNull(localAddress, "localAddress");
+	public static ChannelBindException fail(SocketAddress bindAddress, @Nullable Throwable cause) {
+		Objects.requireNonNull(bindAddress, "bindAddress");
 		if (cause instanceof java.net.BindException ||
 				// With epoll/kqueue transport it is
 				// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
@@ -47,10 +47,10 @@ public class ChannelBindException extends RuntimeException {
 						cause.getMessage().contains("Address already in use"))) {
 			cause = null;
 		}
-		if (!(localAddress instanceof InetSocketAddress)) {
-			return new ChannelBindException(localAddress.toString(), -1, cause);
+		if (!(bindAddress instanceof InetSocketAddress)) {
+			return new ChannelBindException(bindAddress.toString(), -1, cause);
 		}
-		InetSocketAddress address = (InetSocketAddress) localAddress;
+		InetSocketAddress address = (InetSocketAddress) bindAddress;
 
 		return new ChannelBindException(address.getHostString(), address.getPort(), cause);
 	}

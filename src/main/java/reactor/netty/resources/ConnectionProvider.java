@@ -17,16 +17,20 @@
 package reactor.netty.resources;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.resolver.AddressResolverGroup;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
+import reactor.netty.transport.TransportConfig;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.Pool;
 import reactor.pool.PoolBuilder;
 import reactor.util.Metrics;
 import reactor.util.annotation.NonNull;
 
+import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.HashMap;
@@ -163,6 +167,13 @@ public interface ConnectionProvider extends Disposable {
 	 * @return an existing or new {@link Mono} of {@link Connection}
 	 */
 	Mono<? extends Connection> acquire(Bootstrap bootstrap);
+
+	default Mono<? extends Connection> acquire(TransportConfig config,
+			ConnectionObserver connectionObserver,
+			@Nullable Supplier<? extends SocketAddress> remoteAddress,
+			@Nullable AddressResolverGroup<?> resolverGroup) {
+		return Mono.empty();
+	}
 
 
 	default void disposeWhen(@NonNull SocketAddress address) {

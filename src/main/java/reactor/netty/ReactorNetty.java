@@ -15,6 +15,7 @@
  */
 package reactor.netty;
 
+import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -488,6 +489,76 @@ public final class ReactorNetty {
 		}
 	}
 
+	static final class CompositeChannelPipelineConfigurer implements ChannelPipelineConfigurer {
+
+		final ChannelPipelineConfigurer[] configurers;
+
+		CompositeChannelPipelineConfigurer(ChannelPipelineConfigurer[] configurers) {
+			this.configurers = configurers;
+		}
+
+		@Override
+		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, SocketAddress remoteAddress) {
+			for (ChannelPipelineConfigurer configurer : configurers) {
+				configurer.onChannelInit(connectionObserver, channel, remoteAddress);
+			}
+		}
+
+		static ChannelPipelineConfigurer compositeChannelPipelineConfigurer(
+				ChannelPipelineConfigurer configurer, ChannelPipelineConfigurer other) {
+
+			if (configurer == ChannelPipelineConfigurer.emptyConfigurer()) {
+				return other;
+			}
+
+			if (other == ChannelPipelineConfigurer.emptyConfigurer()) {
+				return configurer;
+			}
+
+			final ChannelPipelineConfigurer[] newConfigurers;
+			final ChannelPipelineConfigurer[] thizConfigurers;
+			final ChannelPipelineConfigurer[] otherConfigurers;
+			int length = 2;
+
+			if (configurer instanceof CompositeChannelPipelineConfigurer) {
+				thizConfigurers = ((CompositeChannelPipelineConfigurer) configurer).configurers;
+				length += thizConfigurers.length - 1;
+			}
+			else {
+				thizConfigurers = null;
+			}
+
+			if (other instanceof CompositeChannelPipelineConfigurer) {
+				otherConfigurers = ((CompositeChannelPipelineConfigurer)other).configurers;
+				length += otherConfigurers.length - 1;
+			}
+			else {
+				otherConfigurers = null;
+			}
+
+			newConfigurers = new ChannelPipelineConfigurer[length];
+
+			int pos;
+			if (thizConfigurers != null) {
+				pos = thizConfigurers.length;
+				System.arraycopy(thizConfigurers, 0, newConfigurers, 0, pos);
+			}
+			else {
+				pos = 1;
+				newConfigurers[0] = configurer;
+			}
+
+			if (otherConfigurers != null) {
+				System.arraycopy(otherConfigurers, 0, newConfigurers, pos, otherConfigurers.length);
+			}
+			else {
+				newConfigurers[pos] = other;
+			}
+
+			return new CompositeChannelPipelineConfigurer(newConfigurers);
+		}
+	}
+
 	static final class CompositeConnectionObserver implements ConnectionObserver {
 
 		final ConnectionObserver[] observers;
@@ -809,6 +880,8 @@ public final class ReactorNetty {
 			return this;
 		}
 	}
+
+	static final ChannelPipelineConfigurer NOOP_CONFIGURER = (observer, ch, address) -> {};
 
 	static final ConnectionObserver NOOP_LISTENER = (connection, newState) -> {};
 

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package reactor.netty.channel;
+package reactor.netty.transport;
 
 import io.micrometer.core.instrument.Gauge;
 import io.netty.buffer.ByteBufAllocatorMetric;
