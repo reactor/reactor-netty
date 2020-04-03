@@ -273,9 +273,11 @@ public abstract class TcpClient {
 	 * @param doOnConnect a consumer observing client start event
 	 * @param doOnConnected a consumer observing client started event
 	 * @param doOnDisconnected a consumer observing client stop event
-	 *
 	 * @return a new {@link TcpClient}
+	 * @deprecated as of 0.9.7. Use {@link #doOnConnect(Consumer)}, {@link #doOnConnected(Consumer)}
+	 * or {@link #doOnDisconnected(Consumer)}
 	 */
+	@Deprecated
 	public final TcpClient doOnLifecycle(Consumer<? super Bootstrap> doOnConnect,
 			Consumer<? super Connection> doOnConnected,
 			Consumer<? super Connection> doOnDisconnected) {
