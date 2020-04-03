@@ -1055,6 +1055,7 @@ public abstract class HttpClient {
 	 * @param metricsEnabled if true enables the metrics on the server.
 	 * @param recorder a supplier for the {@link HttpClientMetricsRecorder}
 	 * @return a new {@link HttpClient}
+	 * @since 0.9.7
 	 */
 	public final HttpClient metrics(boolean metricsEnabled, Supplier<? extends HttpClientMetricsRecorder> recorder) {
 		return tcpConfiguration(tcpClient -> tcpClient.metrics(metricsEnabled, recorder));

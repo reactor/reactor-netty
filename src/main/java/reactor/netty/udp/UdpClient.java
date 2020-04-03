@@ -417,6 +417,7 @@ public abstract class UdpClient {
 	 * @param metricsEnabled if true enables the metrics on the client.
 	 * @param recorder a supplier for the {@link ChannelMetricsRecorder}
 	 * @return a new {@link UdpClient}
+	 * @since 0.9.7
 	 */
 	public final UdpClient metrics(boolean metricsEnabled, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		if (metricsEnabled) {

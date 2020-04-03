@@ -418,6 +418,7 @@ public abstract class UdpServer {
 	 * @param metricsEnabled if true enables the metrics on the server.
 	 * @param recorder a supplier for the {@link ChannelMetricsRecorder}
 	 * @return a new {@link UdpServer}
+	 * @since 0.9.7
 	 */
 	public final UdpServer metrics(boolean metricsEnabled, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		if (metricsEnabled) {

@@ -623,6 +623,7 @@ public abstract class TcpServer {
 	 * @param metricsEnabled if true enables the metrics on the server.
 	 * @param recorder a supplier for the {@link ChannelMetricsRecorder}
 	 * @return a new {@link TcpServer}
+	 * @since 0.9.7
 	 */
 	public final TcpServer metrics(boolean metricsEnabled, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		if (metricsEnabled) {
