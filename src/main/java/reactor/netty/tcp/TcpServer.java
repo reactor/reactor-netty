@@ -291,27 +291,6 @@ public abstract class TcpServer {
 	}
 
 	/**
-	 * Setups all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
-	 * has been bound and after it has been unbound.
-	 *
-	 * @param onBind a consumer observing server start event
-	 * @param onBound a consumer observing server started event
-	 * @param onUnbound a consumer observing server stop event
-	 * @return a new {@link TcpServer}
-	 * @deprecated as of 0.9.7. Use {@link #doOnBind(Consumer)}, {@link #doOnBound(Consumer)}
-	 * or {@link #doOnUnbound(Consumer)}
-	 */
-	@Deprecated
-	public final TcpServer doOnLifecycle(Consumer<? super ServerBootstrap> onBind,
-			Consumer<? super DisposableServer> onBound,
-			Consumer<? super DisposableServer> onUnbound) {
-		Objects.requireNonNull(onBind, "onBind");
-		Objects.requireNonNull(onBound, "onBound");
-		Objects.requireNonNull(onUnbound, "onUnbound");
-		return new TcpServerDoOn(this, onBind, onBound, onUnbound);
-	}
-
-	/**
 	 * Attaches an I/O handler to react on a connected client
 	 *
 	 * @param handler an I/O handler that can dispose underlying connection when

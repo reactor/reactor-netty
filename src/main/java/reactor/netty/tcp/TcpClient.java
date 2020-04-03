@@ -267,27 +267,6 @@ public abstract class TcpClient {
 	}
 
 	/**
-	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
-	 * has been connected and after it has been disconnected.
-	 *
-	 * @param doOnConnect a consumer observing client start event
-	 * @param doOnConnected a consumer observing client started event
-	 * @param doOnDisconnected a consumer observing client stop event
-	 * @return a new {@link TcpClient}
-	 * @deprecated as of 0.9.7. Use {@link #doOnConnect(Consumer)}, {@link #doOnConnected(Consumer)}
-	 * or {@link #doOnDisconnected(Consumer)}
-	 */
-	@Deprecated
-	public final TcpClient doOnLifecycle(Consumer<? super Bootstrap> doOnConnect,
-			Consumer<? super Connection> doOnConnected,
-			Consumer<? super Connection> doOnDisconnected) {
-		Objects.requireNonNull(doOnConnect, "doOnConnect");
-		Objects.requireNonNull(doOnConnected, "doOnConnected");
-		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
-		return new TcpClientDoOn(this, doOnConnect, doOnConnected, doOnDisconnected);
-	}
-
-	/**
 	 * The host to which this client should connect.
 	 *
 	 * @param host The host to connect to.

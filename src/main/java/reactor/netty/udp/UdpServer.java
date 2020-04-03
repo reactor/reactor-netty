@@ -212,27 +212,6 @@ public abstract class UdpServer {
 	}
 
 	/**
-	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
-	 * has been bound and after it has been unbound.
-	 *
-	 * @param onBind a consumer observing server start event
-	 * @param onBound a consumer observing server started event
-	 * @param onUnbound a consumer observing server stop event
-	 * @return a new {@link UdpServer}
-	 * @deprecated as of 0.9.7. Use {@link #doOnBind(Consumer)}, {@link #doOnBound(Consumer)}
-	 * or {@link #doOnUnbound(Consumer)}
-	 */
-	@Deprecated
-	public final UdpServer doOnLifecycle(Consumer<? super Bootstrap> onBind,
-			Consumer<? super Connection> onBound,
-			Consumer<? super Connection> onUnbound) {
-		Objects.requireNonNull(onBind, "onBind");
-		Objects.requireNonNull(onBound, "onBound");
-		Objects.requireNonNull(onUnbound, "onUnbound");
-		return new UdpServerDoOn(this, onBind, onBound, onUnbound);
-	}
-
-	/**
 	 * Attach an IO handler to react on connected client
 	 *
 	 * @param handler an IO handler that can dispose underlying connection when {@link
