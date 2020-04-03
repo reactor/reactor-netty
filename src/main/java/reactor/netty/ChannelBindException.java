@@ -36,6 +36,7 @@ public class ChannelBindException extends RuntimeException {
 	 * @param localAddress the local address
 	 * @param cause the root cause
 	 * @return a new {@link ChannelBindException}
+	 * @since 0.9.7
 	 */
 	public static ChannelBindException fail(SocketAddress localAddress, @Nullable Throwable cause) {
 		Objects.requireNonNull(localAddress, "localAddress");

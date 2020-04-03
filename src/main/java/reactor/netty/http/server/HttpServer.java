@@ -341,6 +341,7 @@ public abstract class HttpServer {
 	 * @param metricsEnabled if true enables the metrics on the server.
 	 * @param recorder a supplier for the {@link HttpServerMetricsRecorder}
 	 * @return a new {@link HttpServer}
+	 * @since 0.9.7
 	 */
 	public final HttpServer metrics(boolean metricsEnabled, Supplier<? extends HttpServerMetricsRecorder> recorder) {
 		return tcpConfiguration(tcpServer -> tcpServer.metrics(metricsEnabled, recorder));
