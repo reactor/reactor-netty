@@ -422,24 +422,6 @@ public final class SslProvider {
 		}
 	}
 
-	/**
-	 * @deprecated as of 0.9.7. Use {@link #toString()}
-	 */
-	@Deprecated
-	public String asSimpleString() {
-		return toString();
-	}
-
-	/**
-	 * @deprecated as of 0.9.7. Use {@link #toString()}
-	 */
-	@Deprecated
-	public String asDetailedString() {
-		return "handshakeTimeoutMillis=" + this.handshakeTimeoutMillis +
-				", closeNotifyFlushTimeoutMillis=" + this.closeNotifyFlushTimeoutMillis +
-				", closeNotifyReadTimeoutMillis=" + this.closeNotifyReadTimeoutMillis;
-	}
-
 	@Override
 	public String toString() {
 		return "SslProvider {" +

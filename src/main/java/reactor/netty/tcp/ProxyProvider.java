@@ -200,26 +200,6 @@ public final class ProxyProvider {
 		HTTP, SOCKS4, SOCKS5
 	}
 
-
-	/**
-	 * @deprecated as of 0.9.7. Use {@link #toString()}
-	 */
-	@Deprecated
-	public String asSimpleString() {
-		return "proxy=" + this.type +
-				"(" + this.address.get() + ")";
-	}
-
-	/**
-	 * @deprecated as of 0.9.7. Use {@link #toString()}
-	 */
-	@Deprecated
-	public String asDetailedString() {
-		return "address=" + this.address.get() +
-				", nonProxyHosts=" + this.nonProxyHosts +
-				", type=" + this.type;
-	}
-
 	@Override
 	public String toString() {
 		return "ProxyProvider {" +
