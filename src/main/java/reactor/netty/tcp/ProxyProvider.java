@@ -201,11 +201,19 @@ public final class ProxyProvider {
 	}
 
 
+	/**
+	 * @deprecated as of 0.9.7. Use {@link #toString()}
+	 */
+	@Deprecated
 	public String asSimpleString() {
 		return "proxy=" + this.type +
 				"(" + this.address.get() + ")";
 	}
 
+	/**
+	 * @deprecated as of 0.9.7. Use {@link #toString()}
+	 */
+	@Deprecated
 	public String asDetailedString() {
 		return "address=" + this.address.get() +
 				", nonProxyHosts=" + this.nonProxyHosts +
@@ -214,7 +222,11 @@ public final class ProxyProvider {
 
 	@Override
 	public String toString() {
-		return "ProxyProvider{" + asDetailedString() + "}";
+		return "ProxyProvider {" +
+				"address=" + address.get() +
+				", nonProxyHosts=" + nonProxyHosts +
+				", type=" + type +
+				'}';
 	}
 
 	@Override
