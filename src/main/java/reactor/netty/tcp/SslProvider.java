@@ -422,10 +422,18 @@ public final class SslProvider {
 		}
 	}
 
+	/**
+	 * @deprecated as of 0.9.7. Use {@link #toString()}
+	 */
+	@Deprecated
 	public String asSimpleString() {
 		return toString();
 	}
 
+	/**
+	 * @deprecated as of 0.9.7. Use {@link #toString()}
+	 */
+	@Deprecated
 	public String asDetailedString() {
 		return "handshakeTimeoutMillis=" + this.handshakeTimeoutMillis +
 				", closeNotifyFlushTimeoutMillis=" + this.closeNotifyFlushTimeoutMillis +
@@ -434,7 +442,12 @@ public final class SslProvider {
 
 	@Override
 	public String toString() {
-		return "SslProvider{" + asDetailedString() + "}";
+		return "SslProvider {" +
+				"type=" + type +
+				", handshakeTimeoutMillis=" + handshakeTimeoutMillis +
+				", closeNotifyFlushTimeoutMillis=" + closeNotifyFlushTimeoutMillis +
+				", closeNotifyReadTimeoutMillis=" + closeNotifyReadTimeoutMillis +
+				'}';
 	}
 
 	@Override
