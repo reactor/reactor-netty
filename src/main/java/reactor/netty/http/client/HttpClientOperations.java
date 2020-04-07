@@ -278,6 +278,16 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	protected void afterInboundComplete() {
+		if (redirecting != null) {
+			listener().onUncaughtException(this, redirecting);
+		}
+		else {
+			listener().onStateChange(this, HttpClientState.RESPONSE_COMPLETED);
+		}
+	}
+
+	@Override
 	public HttpClientRequest header(CharSequence name, CharSequence value) {
 		if (!hasSentHeaders()) {
 			this.requestHeaders.set(name, value);
@@ -593,12 +603,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			channel().config().setAutoRead(true);
 			if (markSentBody()) {
 				markPersistent(false);
-			}
-			if (redirecting != null) {
-				listener().onUncaughtException(this, redirecting);
-			}
-			else {
-				listener().onStateChange(this, HttpClientState.RESPONSE_COMPLETED);
 			}
 			terminate();
 			return;

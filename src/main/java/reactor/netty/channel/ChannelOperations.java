@@ -368,6 +368,13 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	/**
+	 * React after inbound completion (last packet)
+	 */
+	protected void afterInboundComplete() {
+		// noop
+	}
+
+	/**
 	 * React on inbound close (channel closed prematurely)
 	 */
 	protected void onInboundClose() {
@@ -414,6 +421,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 			// HttpClientOperations need to notify with error
 			// when there is no response state
 			onInboundComplete();
+			afterInboundComplete();
 			onTerminate.onComplete();
 			listener.onStateChange(this, ConnectionObserver.State.DISCONNECTING);
 		}
