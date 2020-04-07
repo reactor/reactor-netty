@@ -795,13 +795,13 @@ public class TcpClientTests {
 		if (withLoop) {
 			client =
 					TcpClient.create(pool)
-					         .addressSupplier(server::address)
+					         .remoteAddress(server::address)
 					         .runOn(loop);
 		}
 		else {
 			client =
 					TcpClient.create(pool)
-					         .addressSupplier(server::address);
+					         .remoteAddress(server::address);
 		}
 
 		Set<String> threadNames = new ConcurrentSkipListSet<>();
@@ -846,7 +846,7 @@ public class TcpClientTests {
 
 		Connection  conn =
 				TcpClient.create()
-				         .addressSupplier(addressSupplier)
+				         .remoteAddress(addressSupplier)
 				         .doOnConnected(connection -> latch.countDown())
 				         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 100)
 				         .handle((in, out) -> Mono.never())
@@ -923,7 +923,7 @@ public class TcpClientTests {
 
 		Connection conn =
 				TcpClient.create()
-				         .addressSupplier(server::address)
+				         .remoteAddress(server::address)
 				         .wiretap(true)
 				         .connectNow();
 
@@ -981,7 +981,7 @@ public class TcpClientTests {
 
 		Connection conn =
 				TcpClient.create()
-				         .addressSupplier(server::address)
+				         .remoteAddress(server::address)
 				         .wiretap(true)
 				         .connectNow();
 

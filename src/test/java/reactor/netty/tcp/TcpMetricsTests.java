@@ -67,7 +67,7 @@ public class TcpMetricsTests {
 		provider = ConnectionProvider.create("TcpMetricsTests", 1);
 		tcpClient =
 				customizeClientOptions(TcpClient.create(provider)
-				                                .addressSupplier(() -> disposableServer.address())
+				                                .remoteAddress(() -> disposableServer.address())
 				                                .metrics(true));
 
 		registry = new SimpleMeterRegistry();

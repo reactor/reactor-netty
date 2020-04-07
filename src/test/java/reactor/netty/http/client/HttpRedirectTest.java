@@ -87,7 +87,7 @@ public class HttpRedirectTest {
 
 		HttpClient client =
 				HttpClient.create(pool)
-				          .addressSupplier(server::address);
+				          .remoteAddress(server::address);
 
 		try {
 			Flux.range(0, 1000)
@@ -119,7 +119,7 @@ public class HttpRedirectTest {
 
 		HttpClientResponse response =
 				HttpClient.create()
-				          .addressSupplier(server::address)
+				          .remoteAddress(server::address)
 				          .wiretap(true)
 				          .get()
 				          .uri("/1")
@@ -152,7 +152,7 @@ public class HttpRedirectTest {
 		AtomicInteger doOnResponseError = new AtomicInteger();
 		Tuple2<String, HttpResponseStatus> response =
 				HttpClient.create()
-				          .addressSupplier(server::address)
+				          .remoteAddress(server::address)
 				          .wiretap(true)
 				          .followRedirect(true)
 				          .doOnRequest((r, c) -> onRequestCount.incrementAndGet())
@@ -196,7 +196,7 @@ public class HttpRedirectTest {
 		BlockingQueue<Long> doOnResponseNanos = new LinkedBlockingQueue<>();
 		Long responseNanos =
 				HttpClient.create()
-				          .addressSupplier(server::address)
+				          .remoteAddress(server::address)
 				          .wiretap(true)
 				          .followRedirect(true)
 				          .doOnResponse((r, c) -> doOnResponseNanos.add(System.nanoTime()))
@@ -233,7 +233,7 @@ public class HttpRedirectTest {
 
 		HttpClient client =
 				HttpClient.create()
-				          .addressSupplier(server::address)
+				          .remoteAddress(server::address)
 				          .wiretap(true);
 
 		String value =
@@ -373,7 +373,7 @@ public class HttpRedirectTest {
 
 		HttpClient client =
 				HttpClient.create()
-				          .addressSupplier(server::address)
+				          .remoteAddress(server::address)
 				          .wiretap(true);
 
 		StepVerifier.create(client.followRedirect(true)
@@ -453,7 +453,7 @@ public class HttpRedirectTest {
 
 		AtomicInteger followRedirects = new AtomicInteger(0);
 		HttpClient.create()
-		          .addressSupplier(server::address)
+		          .remoteAddress(server::address)
 		          .wiretap(true)
 		          .followRedirect((req, res) -> {
 		              boolean result = req.redirectedFrom().length < 4;
@@ -486,7 +486,7 @@ public class HttpRedirectTest {
 
 		StepVerifier.create(
 		        HttpClient.create()
-		                  .addressSupplier(server::address)
+		                  .remoteAddress(server::address)
 		                  .wiretap(true)
 		                  .followRedirect((req, res) -> {
 		                      throw new RuntimeException("testFollowRedirectPredicateThrowsException");
@@ -525,7 +525,7 @@ public class HttpRedirectTest {
 
 		AtomicInteger peerPort = new AtomicInteger(0);
 		HttpClient.create()
-		          .addressSupplier(server1::address)
+		          .remoteAddress(server1::address)
 		          .wiretap(true)
 		          .followRedirect(true)
 		          .secure(spec -> spec.sslContext(SslContextBuilder.forClient()

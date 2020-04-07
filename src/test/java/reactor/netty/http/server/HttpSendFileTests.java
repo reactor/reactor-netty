@@ -259,12 +259,12 @@ public class HttpSendFileTests {
 		HttpClient client;
 		if (compression) {
 			client = HttpClient.create()
-			                   .addressSupplier(context::address)
+			                   .remoteAddress(context::address)
 			                   .compress(true);
 		}
 		else {
 			client = HttpClient.create()
-			                   .addressSupplier(context::address);
+			                   .remoteAddress(context::address);
 		}
 		Mono<String> response =
 				customizeClientOptions(client)
@@ -346,7 +346,7 @@ public class HttpSendFileTests {
 		try {
 			byte[] response =
 					customizeClientOptions(HttpClient.create()
-					                                 .addressSupplier(context::address))
+					                                 .remoteAddress(context::address))
 //							.tcpConfiguration(tcp -> tcp.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024, 1024)))
 //.wiretap(true)
 					    .request(HttpMethod.POST)

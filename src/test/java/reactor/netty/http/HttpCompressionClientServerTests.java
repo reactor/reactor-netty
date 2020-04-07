@@ -16,7 +16,6 @@
 package reactor.netty.http;
 
 import java.io.ByteArrayInputStream;
-import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -55,7 +54,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient.create()
-		          .addressSupplier(() -> address(runningServer))
+		          .remoteAddress(runningServer::address)
 		          .wiretap(true)
 		          .compress(true)
 		          .headers(h -> Assert.assertTrue(h.contains("Accept-Encoding", "gzip", true)))
@@ -80,7 +79,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create()
-				                      .addressSupplier(() -> address(runningServer))
+				                      .remoteAddress(runningServer::address)
 				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
@@ -113,7 +112,7 @@ public class HttpCompressionClientServerTests {
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
-				                      .addressSupplier(() -> address(runningServer))
+				                      .remoteAddress(runningServer::address)
 				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
@@ -147,7 +146,7 @@ public class HttpCompressionClientServerTests {
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
-				                      .addressSupplier(() -> address(runningServer))
+				                      .remoteAddress(runningServer::address)
 		                              .compress(false)
 				                      .wiretap(true);
 		Tuple2<byte[], HttpHeaders> resp =
@@ -195,7 +194,7 @@ public class HttpCompressionClientServerTests {
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
-		                              .addressSupplier(() -> address(connection));
+		                              .remoteAddress(connection::address);
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
@@ -232,7 +231,7 @@ public class HttpCompressionClientServerTests {
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
-		                              .addressSupplier(() -> address(connection));
+		                              .remoteAddress(connection::address);
 		Tuple2<HttpHeaders, byte[]> resp =
 				//edit the header manually to attempt to trigger compression on server side
 				client.headers(h -> h.add("Accept-Encoding", "gzip"))
@@ -281,7 +280,7 @@ public class HttpCompressionClientServerTests {
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
-				                      .addressSupplier(() -> address(runningServer))
+				                      .remoteAddress(runningServer::address)
 				                      .wiretap(true);
 		Tuple2<String, HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
@@ -319,7 +318,7 @@ public class HttpCompressionClientServerTests {
 
 		//don't activate compression on the client options to avoid auto-handling (which removes the header)
 		HttpClient client = HttpClient.create()
-				                      .addressSupplier(() -> address(runningServer))
+				                      .remoteAddress(runningServer::address)
 				                      .wiretap(true);
 		Tuple2<byte[], HttpHeaders> resp =
 				//edit the header manually to attempt to trigger compression on server side
@@ -364,7 +363,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create()
-				                      .addressSupplier(() -> address(runningServer))
+				                      .remoteAddress(runningServer::address)
 				                      .wiretap(true)
 				                      .compress(false);
 
@@ -396,7 +395,7 @@ public class HttpCompressionClientServerTests {
 				      .bindNow(Duration.ofSeconds(10));
 
 		HttpClient client = HttpClient.create()
-				                      .addressSupplier(() -> address(runningServer))
+				                      .remoteAddress(runningServer::address)
 				                      .wiretap(true);
 
 		Tuple2<String, HttpHeaders> resp =
@@ -427,7 +426,7 @@ public class HttpCompressionClientServerTests {
 				      .wiretap(true)
 				      .bindNow(Duration.ofSeconds(10));
 		HttpClient.create()
-		          .addressSupplier(() -> address(runningServer))
+		          .remoteAddress(runningServer::address)
 		          .wiretap(true)
 		          .compress(true)
 		          .headers(h -> zip.set(h.get("accept-encoding")))
@@ -440,10 +439,6 @@ public class HttpCompressionClientServerTests {
 		runningServer.dispose();
 		runningServer.onDispose()
 				.block();
-	}
-
-	private InetSocketAddress address(DisposableServer runningServer) {
-		return runningServer.address();
 	}
 
 	@Test

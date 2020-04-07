@@ -16,6 +16,7 @@
 
 package reactor.netty.http.server;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -304,6 +305,19 @@ public abstract class HttpServer {
 			//Will never be here
 			throw new IllegalArgumentException("Invalid proxyProtocolSupportType");
 		}
+	}
+
+	/**
+	 * The address to which this server should bind on subscribe.
+	 *
+	 * @param bindAddressSupplier A supplier of the address to bind to.
+	 *
+	 * @return a new {@link HttpServer}
+	 * @since 0.9.7
+	 */
+	public final HttpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
+		return tcpConfiguration(tcpServer -> tcpServer.bindAddress(bindAddressSupplier));
 	}
 
 	/**

@@ -143,7 +143,7 @@ public class UdpServerTests {
 			Connection server =
 					UdpServer.create()
 					         .option(ChannelOption.SO_REUSEADDR, true)
-					         .addressSupplier(() -> new InetSocketAddress(port))
+					         .bindAddress(() -> new InetSocketAddress(port))
 					         .runOn(resources, InternetProtocolFamily.IPv4)
 					         .handle((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
@@ -258,7 +258,7 @@ public class UdpServerTests {
 
 		try {
 			UdpServer.create()
-			         .addressSupplier(conn::address)
+			         .bindAddress(conn::address)
 			         .bindNow(Duration.ofSeconds(30));
 			fail("illegal-success");
 		}
