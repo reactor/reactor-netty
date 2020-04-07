@@ -81,6 +81,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
@@ -2176,5 +2177,36 @@ public class HttpClientTest {
 		assertThat(ch1.get()).isNotSameAs(ch3.get());
 
 		provider.dispose();
+	}
+
+	@Test
+	public void testDoAfterResponseSuccessDisposeConnection() {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.sendString(Flux.just("test", "test", "test")))
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(30));
+
+		MonoProcessor<Void> processor = MonoProcessor.create();
+		StepVerifier.create(
+		        createHttpClientForContextWithPort()
+		                .doAfterResponseSuccess((res, conn) -> {
+		                    conn.onDispose()
+		                        .subscribeWith(processor);
+		                    conn.dispose();
+		                })
+		                .get()
+		                .uri("/")
+		                .responseContent()
+		                .aggregate()
+		                .asString())
+		            .expectNext("testtesttest")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(processor)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 }
