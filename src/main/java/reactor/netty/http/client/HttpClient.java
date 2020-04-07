@@ -428,19 +428,6 @@ public abstract class HttpClient {
 	/**
 	 * The address to which this client should connect for each subscribe.
 	 *
-	 * @param connectAddressSupplier A supplier of the address to connect to.
-	 *
-	 * @return a new {@link HttpClient}
-	 * @deprecated as of 0.9.7. Use {@link #remoteAddress(Supplier)}
-	 */
-	@Deprecated
-	public final HttpClient addressSupplier(Supplier<? extends SocketAddress> connectAddressSupplier) {
-		return remoteAddress(connectAddressSupplier);
-	}
-
-	/**
-	 * The address to which this client should connect for each subscribe.
-	 *
 	 * @param remoteAddressSupplier A supplier of the address to connect to.
 	 *
 	 * @return a new {@link HttpClient}

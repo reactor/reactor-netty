@@ -90,19 +90,6 @@ public abstract class TcpServer {
 	/**
 	 * The address to which this server should bind on subscribe.
 	 *
-	 * @param bindingAddressSupplier A supplier of the address to bind to.
-	 *
-	 * @return a new {@link TcpServer}
-	 * @deprecated as of 0.9.7. Use {@link #bindAddress(Supplier)}
-	 */
-	@Deprecated
-	public final TcpServer addressSupplier(Supplier<? extends SocketAddress> bindingAddressSupplier) {
-		return bindAddress(bindingAddressSupplier);
-	}
-
-	/**
-	 * The address to which this server should bind on subscribe.
-	 *
 	 * @param bindAddressSupplier A supplier of the address to bind to.
 	 *
 	 * @return a new {@link TcpServer}

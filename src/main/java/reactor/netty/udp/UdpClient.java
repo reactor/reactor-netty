@@ -86,19 +86,6 @@ public abstract class UdpClient {
 	/**
 	 * The address to which this client should connect on subscribe.
 	 *
-	 * @param connectingAddressSupplier A supplier of the address to connect to.
-	 *
-	 * @return a new {@link UdpClient}
-	 * @deprecated as of 0.9.7. Use {@link #remoteAddress(Supplier)}
-	 */
-	@Deprecated
-	public final UdpClient addressSupplier(Supplier<? extends SocketAddress> connectingAddressSupplier) {
-		return remoteAddress(connectingAddressSupplier);
-	}
-
-	/**
-	 * The address to which this client should connect on subscribe.
-	 *
 	 * @param remoteAddressSupplier A supplier of the address to connect to.
 	 *
 	 * @return a new {@link UdpClient}
