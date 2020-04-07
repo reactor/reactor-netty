@@ -167,7 +167,7 @@ public class HttpServerTests {
 		HttpServer server2 =
 				HttpServer.create()
 				          // Any local address
-				          .tcpConfiguration(tcpServer -> tcpServer.addressSupplier(() -> new InetSocketAddress(8080)));
+				          .bindAddress(() -> new InetSocketAddress(8080));
 		HttpClient client1 = HttpClient.create()
 		                               .port(8080)
 		                               .tcpConfiguration(tcpClient -> tcpClient.host("localhost"));
@@ -508,7 +508,7 @@ public class HttpServerTests {
 	private void checkResponse(String url, InetSocketAddress address) {
 		Mono<Tuple3<Integer, HttpHeaders, String>> response =
 				HttpClient.create()
-				          .addressSupplier(() -> address)
+				          .remoteAddress(() -> address)
 				          .wiretap(true)
 				          .get()
 				          .uri(url)
@@ -595,7 +595,7 @@ public class HttpServerTests {
 			HttpMethod method, boolean chunk, boolean close) {
 		Mono<Tuple2<HttpHeaders, String>> response =
 				HttpClient.create()
-				          .addressSupplier(() -> address)
+				          .remoteAddress(() -> address)
 				          .wiretap(true)
 				          .request(method)
 				          .uri(url)
@@ -648,7 +648,7 @@ public class HttpServerTests {
 
 		HttpClient client =
 				HttpClient.create(ConnectionProvider.create("testIssue186", 1))
-				          .addressSupplier(disposableServer::address)
+				          .remoteAddress(disposableServer::address)
 				          .wiretap(true);
 
 		doTestIssue186(client);
@@ -713,7 +713,7 @@ public class HttpServerTests {
 
 		HttpClient client =
 				HttpClient.create(ConnectionProvider.create("contextShouldBeTransferredFromDownStreamToUpStream", 1))
-				          .addressSupplier(disposableServer::address);
+				          .remoteAddress(disposableServer::address);
 
 		Mono<String> content = client.post()
 		                             .uri("/")
@@ -810,7 +810,7 @@ public class HttpServerTests {
 		disposableServer = server.bindNow();
 
 		HttpClient.create()
-		          .addressSupplier(disposableServer::address)
+		          .remoteAddress(disposableServer::address)
 		          .post()
 		          .uri("/")
 		          .send(ByteBufFlux.fromString(Mono.just("bodysample")))
@@ -1014,7 +1014,7 @@ public class HttpServerTests {
 
 		StepVerifier.create(
 		        HttpClient.create()
-		                  .addressSupplier(disposableServer::address)
+		                  .remoteAddress(disposableServer::address)
 		                  .wiretap(true)
 		                  .get()
 		                  .uri("/")
@@ -1040,7 +1040,7 @@ public class HttpServerTests {
 		Flux.range(0, 70)
 		    .flatMap(i ->
 		        HttpClient.create()
-		                  .addressSupplier(disposableServer::address)
+		                  .remoteAddress(disposableServer::address)
 		                  .post()
 		                  .uri("/")
 		                  .send(ByteBufFlux.fromString(Mono.just("test")))
@@ -1079,7 +1079,7 @@ public class HttpServerTests {
 		                                        .build();
 		StepVerifier.create(
 				HttpClient.create()
-				          .addressSupplier(disposableServer::address)
+				          .remoteAddress(disposableServer::address)
 				          .secure(spec -> spec.sslContext(clientCtx))
 				          .get()
 				          .uri("/")
@@ -1551,7 +1551,7 @@ public class HttpServerTests {
 		int port = disposableServer.port();
 		Connection connection =
 				TcpClient.create()
-				         .addressSupplier(disposableServer::address)
+				         .remoteAddress(disposableServer::address)
 				         .wiretap(true)
 				         .connectNow();
 
@@ -1579,7 +1579,7 @@ public class HttpServerTests {
 
 		StepVerifier.create(
 		        HttpClient.create()
-		                  .addressSupplier(disposableServer::address)
+		                  .remoteAddress(disposableServer::address)
 		                  .wiretap(true)
 		                  .get()
 		                  .uri("/<")
@@ -1613,7 +1613,7 @@ public class HttpServerTests {
 				          .bindNow(Duration.ofSeconds(30));
 
 		HttpClient client = HttpClient.create()
-		                              .addressSupplier(disposableServer::address)
+		                              .remoteAddress(disposableServer::address)
 		                              .wiretap(true);
 
 		MonoProcessor<String> result = MonoProcessor.create();

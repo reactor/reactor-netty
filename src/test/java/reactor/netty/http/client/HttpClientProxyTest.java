@@ -180,7 +180,7 @@ public class HttpClientProxyTest {
 				          });
 
 		if (connectAddressSupplier != null) {
-			client = client.addressSupplier(server::address);
+			client = client.remoteAddress(server::address);
 		}
 
 		return client.wiretap(wiretap)

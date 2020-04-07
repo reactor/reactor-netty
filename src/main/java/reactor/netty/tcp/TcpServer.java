@@ -93,10 +93,24 @@ public abstract class TcpServer {
 	 * @param bindingAddressSupplier A supplier of the address to bind to.
 	 *
 	 * @return a new {@link TcpServer}
+	 * @deprecated as of 0.9.7. Use {@link #bindAddress(Supplier)}
 	 */
+	@Deprecated
 	public final TcpServer addressSupplier(Supplier<? extends SocketAddress> bindingAddressSupplier) {
-		Objects.requireNonNull(bindingAddressSupplier, "bindingAddressSupplier");
-		return bootstrap(b -> b.localAddress(bindingAddressSupplier.get()));
+		return bindAddress(bindingAddressSupplier);
+	}
+
+	/**
+	 * The address to which this server should bind on subscribe.
+	 *
+	 * @param bindAddressSupplier A supplier of the address to bind to.
+	 *
+	 * @return a new {@link TcpServer}
+	 * @since 0.9.7
+	 */
+	public final TcpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
+		return bootstrap(b -> b.localAddress(bindAddressSupplier.get()));
 	}
 
 	/**

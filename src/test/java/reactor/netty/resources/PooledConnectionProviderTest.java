@@ -513,7 +513,7 @@ public class PooledConnectionProviderTest {
 				(PooledConnectionProvider) ConnectionProvider.create("connectionReleasedOnRedirect", 1);
 		String response =
 				HttpClient.create(provider)
-				          .addressSupplier(server::address)
+				          .remoteAddress(server::address)
 				          .wiretap(true)
 				          .followRedirect(true)
 				          .observe((conn, state) -> {

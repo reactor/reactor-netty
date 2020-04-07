@@ -89,10 +89,24 @@ public abstract class UdpServer {
 	 * @param bindingAddressSupplier A supplier of the address to bind to.
 	 *
 	 * @return a new {@link UdpServer}
+	 * @deprecated as of 0.9.7. Use {@link #bindAddress(Supplier)}
 	 */
+	@Deprecated
 	public final UdpServer addressSupplier(Supplier<? extends SocketAddress> bindingAddressSupplier) {
-		Objects.requireNonNull(bindingAddressSupplier, "bindingAddressSupplier");
-		return bootstrap(b -> b.localAddress(bindingAddressSupplier.get()));
+		return bindAddress(bindingAddressSupplier);
+	}
+
+	/**
+	 * The address to which this server should bind on subscribe.
+	 *
+	 * @param bindAddressSupplier A supplier of the address to bind to.
+	 *
+	 * @return a new {@link UdpServer}
+	 * @since 0.9.7
+	 */
+	public final UdpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
+		return bootstrap(b -> b.localAddress(bindAddressSupplier.get()));
 	}
 
 	/**

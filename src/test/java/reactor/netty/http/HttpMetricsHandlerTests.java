@@ -74,7 +74,7 @@ public class HttpMetricsHandlerTests {
 		provider = ConnectionProvider.create("HttpMetricsHandlerTests", 1);
 		httpClient =
 				customizeClientOptions(HttpClient.create(provider)
-				                                 .addressSupplier(() -> disposableServer.address())
+				                                 .remoteAddress(() -> disposableServer.address())
 				                                 .metrics(true));
 
 		registry = new SimpleMeterRegistry();

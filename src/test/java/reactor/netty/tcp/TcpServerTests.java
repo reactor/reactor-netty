@@ -719,7 +719,7 @@ public class TcpServerTests {
 		assertNotNull(server);
 
 		Connection client = TcpClient.create()
-		                             .addressSupplier(server::address)
+		                             .remoteAddress(server::address)
 		                             .handle((in, out) -> {
 		                                 in.receive()
 		                                   .asString()
@@ -811,7 +811,7 @@ public class TcpServerTests {
 				         .bindNow();
 
 		TcpClient.create()
-		         .addressSupplier(boundServer::address)
+		         .remoteAddress(boundServer::address)
 		         .wiretap(true)
 		         .connect()
 		         .subscribe();
@@ -853,7 +853,7 @@ public class TcpServerTests {
 				         .bindNow();
 
 		TcpClient.create()
-		         .addressSupplier(server::address)
+		         .remoteAddress(server::address)
 		         .wiretap(true)
 		         .connect()
 		         .subscribe();
@@ -893,7 +893,7 @@ public class TcpServerTests {
 
 		Connection conn =
 				TcpClient.create()
-				         .addressSupplier(server::address)
+				         .remoteAddress(server::address)
 				         .wiretap(true)
 				         .connectNow();
 
@@ -940,7 +940,7 @@ public class TcpServerTests {
 				         .bindNow(Duration.ofSeconds(30));
 
 		TcpClient client = TcpClient.create()
-		                            .addressSupplier(disposableServer::address)
+		                            .remoteAddress(disposableServer::address)
 		                            .wiretap(true);
 
 		MonoProcessor<String> result = MonoProcessor.create();

@@ -116,9 +116,23 @@ public abstract class TcpClient {
 	 * @param connectAddressSupplier A supplier of the address to connect to.
 	 *
 	 * @return a new {@link TcpClient}
+	 * @deprecated as of 0.9.7. Use {@link #remoteAddress(Supplier)}
 	 */
+	@Deprecated
 	public final TcpClient addressSupplier(Supplier<? extends SocketAddress> connectAddressSupplier) {
-		SocketAddress lazy = TcpUtils.lazyAddress(connectAddressSupplier);
+		return remoteAddress(connectAddressSupplier);
+	}
+
+	/**
+	 * The address to which this client should connect for each subscribe.
+	 *
+	 * @param remoteAddressSupplier A supplier of the address to connect to.
+	 *
+	 * @return a new {@link TcpClient}
+	 * @since 0.9.7
+	 */
+	public final TcpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
+		SocketAddress lazy = TcpUtils.lazyAddress(remoteAddressSupplier);
 		return bootstrap(b -> b.remoteAddress(lazy));
 	}
 

@@ -70,7 +70,7 @@ public class UdpMetricsTests {
 
 		udpClient =
 				UdpClient.create()
-				         .addressSupplier(() -> serverConnection.address())
+				         .remoteAddress(() -> serverConnection.address())
 				         .metrics(true);
 
 		registry = new SimpleMeterRegistry();

@@ -942,7 +942,7 @@ public class WebsocketTest {
 				          .bindNow();
 
 		TcpClient client = TcpClient.create()
-		                            .addressSupplier(() -> new InetSocketAddress("not a valid host name", 42));
+		                            .remoteAddress(() -> new InetSocketAddress("not a valid host name", 42));
 		HttpClient httpClient = HttpClient.from(client);
 		StepVerifier.create(httpClient.websocket()
 		                              .connect())
@@ -983,7 +983,7 @@ public class WebsocketTest {
 
 		StepVerifier.create(
 				HttpClient.create()
-				          .addressSupplier(() -> httpServer.address())
+				          .remoteAddress(httpServer::address)
 				          .wiretap(true)
 				          .websocket()
 				          .uri("/")
@@ -1372,7 +1372,7 @@ public class WebsocketTest {
 		AtomicBoolean clientHandler = new AtomicBoolean();
 		HttpClient client =
 				HttpClient.create()
-				          .addressSupplier(httpServer::address)
+				          .remoteAddress(httpServer::address)
 				          .wiretap(true);
 
 		String perMessageDeflateEncoder = "io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateEncoder";

@@ -879,7 +879,7 @@ public class HttpClientTest {
 		else {
 			client = HttpClient.create(pool);
 		}
-		return client.addressSupplier(disposableServer::address)
+		return client.remoteAddress(disposableServer::address)
 		             .wiretap(true);
 	}
 
