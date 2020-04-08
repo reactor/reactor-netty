@@ -59,7 +59,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.Exceptions;
@@ -73,7 +72,6 @@ import reactor.netty.FutureMono;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
 import reactor.netty.SocketUtils;
-import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
@@ -307,39 +305,6 @@ public class TcpServerTests {
 
 		client.disposeNow();
 		server.disposeNow();
-	}
-
-	@Test
-	@Ignore
-	public void proxyTest() {
-		HttpServer server = HttpServer.create();
-		server.route(r -> r.get("/search/{search}",
-		                        (in, out) -> HttpClient.create()
-		                                               .wiretap(true)
-		                                               .get()
-		                                               .uri("foaas.herokuapp.com/life/" + in.param("search"))
-		                                               .response((repliesOut, buf) -> out.send(buf))))
-		      .wiretap(true)
-		      .bindNow()
-		      .onDispose()
-		      .block(Duration.ofSeconds(30));
-	}
-
-	@Test
-	@Ignore
-	public void wsTest() {
-		HttpServer server = HttpServer.create();
-		server.route(r -> r.get("/search/{search}",
-		                        (in, out) -> HttpClient.create()
-		                                               .wiretap(true)
-		                                               .post()
-		                                               .uri("ws://localhost:3000")
-		                                               .send((requestOut, o) -> o.sendString(Mono.just("ping")))
-		                                               .response((repliesOut, buf) ->  out.sendGroups(buf.window(100)))))
-		      .wiretap(true)
-		      .bindNow()
-		      .onDispose()
-		      .block(Duration.ofSeconds(30));
 	}
 
 	@Test
