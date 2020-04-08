@@ -46,7 +46,6 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -466,7 +465,7 @@ public class TcpClientTests {
 		c.disposeNow();
 	}
 
-	@Ignore
+	@Test
 	public void consumerSpecAssignsEventHandlers()
 			throws InterruptedException {
 		final CountDownLatch latch = new CountDownLatch(2);
@@ -479,29 +478,30 @@ public class TcpClientTests {
 				         .host("localhost")
 				         .port(timeoutServerPort);
 
-		Connection s = client.handle((in, out) -> {
-			in.withConnection(c -> c.onDispose(close::countDown));
+		Connection s =
+				client.handle((in, out) -> {
+				            in.withConnection(c -> c.onDispose(close::countDown));
 
-			out.withConnection(c -> c.onWriteIdle(500, () -> {
-				totalDelay.addAndGet(System.currentTimeMillis() - start);
-				latch.countDown();
-			}));
+				            out.withConnection(c -> c.onWriteIdle(200, () -> {
+				                totalDelay.addAndGet(System.currentTimeMillis() - start);
+				                latch.countDown();
+				            }));
 
-			return Mono.delay(Duration.ofSeconds(3))
-			           .then()
-			           .log();
-		})
-		                     .wiretap(true)
-		                     .connectNow();
+				            return Mono.delay(Duration.ofSeconds(1))
+				                       .then()
+				                       .log();
+				      })
+				      .wiretap(true)
+				      .connectNow();
 
 		assertTrue("latch was counted down", latch.await(5, TimeUnit.SECONDS));
 		assertTrue("close was counted down", close.await(30, TimeUnit.SECONDS));
-		assertThat("totalDelay was >500ms", totalDelay.get(), greaterThanOrEqualTo(500L));
+		assertThat("totalDelay was > 500ms", totalDelay.get(), greaterThanOrEqualTo(200L));
+
 		s.disposeNow();
 	}
 
 	@Test
-	@Ignore
 	public void readIdleDoesNotFireWhileDataIsBeingRead()
 			throws InterruptedException, IOException {
 		final CountDownLatch latch = new CountDownLatch(1);
@@ -510,19 +510,20 @@ public class TcpClientTests {
 		TcpClient client = TcpClient.create()
 		                            .port(heartbeatServerPort);
 
-		Connection s = client.handle((in, out) -> {
-			in.withConnection(c -> c.onReadIdle(500, latch::countDown));
-			return Flux.never();
-		})
-		                     .wiretap(true)
-		                     .connectNow();
+		Connection s =
+				client.handle((in, out) -> {
+				            in.withConnection(c -> c.onReadIdle(200, latch::countDown));
+				            return Flux.never();
+				      })
+				      .wiretap(true)
+				      .connectNow();
 
-		assertTrue(latch.await(15, TimeUnit.SECONDS));
+		assertTrue(latch.await(5, TimeUnit.SECONDS));
 		heartbeatServer.close();
 
 		long duration = System.currentTimeMillis() - start;
 
-		assertThat(duration, is(greaterThanOrEqualTo(500L)));
+		assertThat(duration, is(greaterThanOrEqualTo(200L)));
 		s.disposeNow();
 	}
 
