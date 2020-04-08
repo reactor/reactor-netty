@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -83,21 +82,6 @@ public class TcpResourcesTest {
 		};
 
 		tcpResources = new TcpResources(loopResources, poolResources);
-	}
-
-	@Test
-	@Ignore
-	public void disposeLaterDefers() {
-		assertThat(tcpResources.isDisposed()).isFalse();
-
-		tcpResources.disposeLater();
-		assertThat(tcpResources.isDisposed()).isFalse();
-
-		tcpResources.disposeLater()
-		            .doOnSuccess(c -> assertThat(tcpResources.isDisposed()).isTrue())
-		            .subscribe();
-		//not immediately disposed when subscribing
-		assertThat(tcpResources.isDisposed()).as("immediate status on disposeLater subscribe").isFalse();
 	}
 
 	@Test

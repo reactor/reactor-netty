@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -76,21 +75,6 @@ public class HttpResourcesTest {
 		};
 
 		testResources = new HttpResources(loopResources, poolResources);
-	}
-
-	@Test
-	@Ignore
-	public void disposeLaterDefers() {
-		assertThat(testResources.isDisposed()).isFalse();
-
-		testResources.disposeLater();
-		assertThat(testResources.isDisposed()).isFalse();
-
-		testResources.disposeLater()
-		             .doOnSuccess(c -> assertThat(testResources.isDisposed()).isTrue())
-		             .subscribe();
-		//not immediately disposed when subscribing
-		assertThat(testResources.isDisposed()).as("immediate status on disposeLater subscribe").isFalse();
 	}
 
 	@Test
