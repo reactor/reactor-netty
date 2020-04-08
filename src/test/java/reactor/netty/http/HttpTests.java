@@ -526,53 +526,6 @@ public class HttpTests {
 
 	@Test
 	@Ignore
-	public void testNettyOom() throws Exception {
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < 1000; i++) {
-			sb.append("test");
-		}
-
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-		DisposableServer server =
-				HttpServer.create()
-				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions))
-				          .handle((req, res) -> res.sendString(Mono.just("Hello "+Mono.just(sb.toString()))
-				                                                   .delayElement
-						                                                   (Duration.ofMillis(500))))
-				          .wiretap(true)
-				          .bindNow();
-
-		Mono<String> res =
-				HttpClient.create()
-				          .port(server.port())
-				          .secure(ssl -> ssl.sslContext(
-						          SslContextBuilder.forClient()
-						                           .trustManager
-								                           (InsecureTrustManagerFactory
-										                           .INSTANCE))
-				                            .defaultConfiguration(SslProvider
-						                            .DefaultConfigurationType.TCP)
-				                            .handshakeTimeoutMillis(30000))
-				          .wiretap(true)
-				          .post()
-				          .uri("/")
-				          .send(ByteBufFlux.fromString(Mono.just(sb.toString())))
-				          .responseContent()
-				          .aggregate()
-				          .asString();
-
-		Mono.just(1)
-		    .repeat()
-			.flatMap(i -> res.subscribeOn(Schedulers.elastic()))
-			.blockLast();
-
-		server.disposeNow();
-	}
-
-
-	@Test
-	@Ignore
 	public void testHttpSsl() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
 		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());

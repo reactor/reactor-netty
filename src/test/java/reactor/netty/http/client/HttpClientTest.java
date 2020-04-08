@@ -75,7 +75,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.DirectProcessor;
@@ -88,7 +87,6 @@ import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.SocketUtils;
-import reactor.netty.channel.AbortedException;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
@@ -240,44 +238,6 @@ public class HttpClientTest {
 		latch.await();
 		pool.dispose();
 		System.out.println("Local Addresses used: " + localAddresses);
-	}
-
-	@Test
-	@Ignore
-	public void pipelined() {
-		disposableServer =
-				TcpServer.create()
-				         .host("localhost")
-				         .port(0)
-				         .handle((in, out) ->
-				                 out.withConnection(c -> c.addHandlerFirst(new HttpResponseEncoder()))
-				                    .sendObject(Flux.just(response(), response()))
-				                    .neverComplete())
-				         .wiretap(true)
-				         .bindNow();
-
-		ConnectionProvider pool = ConnectionProvider.create("pipelined", 1);
-
-		HttpClient client = createHttpClientForContextWithAddress(pool);
-
-		client.get()
-		      .uri("/")
-		      .responseSingle((r, buf) -> buf.thenReturn(r.status().code()))
-		      .log()
-		      .block(Duration.ofSeconds(30));
-
-		try {
-			client.get()
-			      .uri("/")
-			      .responseContent()
-			      .blockLast(Duration.ofSeconds(30));
-		}
-		catch (AbortedException ae) {
-			return;
-		}
-
-		pool.dispose();
-		Assert.fail("Not aborted");
 	}
 
 	@Test
