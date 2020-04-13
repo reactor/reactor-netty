@@ -69,9 +69,7 @@ public class UdpClientTest {
 				         .runOn(resources)
 				         .handle((in, out) -> {
 				                                  in.receive()
-				                                    .subscribe(b -> {
-				                                        latch.countDown();
-				                                    });
+				                                    .subscribe(b -> latch.countDown());
 				                                  return out.sendString(Mono.just("ping1"))
 				                                            .then(out.sendString(Mono.just("ping2")))
 				                                            .neverComplete();
@@ -87,9 +85,7 @@ public class UdpClientTest {
 				         .runOn(resources)
 				         .handle((in, out) -> {
 				                                  in.receive()
-				                                    .subscribe(b -> {
-				                                        latch.countDown();
-				                                    });
+				                                    .subscribe(b -> latch.countDown());
 				                                  return out.sendString(Mono.just("ping3"))
 				                                            .then(out.sendString(Mono.just("ping4")))
 				                                            .neverComplete();
@@ -113,9 +109,16 @@ public class UdpClientTest {
 		UdpClient client = UdpClient.create()
 		                            .runOn(resources);
 		assertThat(Thread.getAllStackTraces().keySet().stream().noneMatch(t -> t.getName().startsWith("testIssue192"))).isTrue();
-		server.bind();
-		client.connect();
+
+		Connection conn1 = server.bindNow();
+		Connection conn2 = client.connectNow();
+
+		assertThat(conn1).isNotNull();
+		assertThat(conn2).isNotNull();
 		assertThat(Thread.getAllStackTraces().keySet().stream().anyMatch(t -> t.getName().startsWith("testIssue192"))).isTrue();
+
+		conn1.disposeNow();
+		conn2.disposeNow();
 		resources.dispose();
 	}
 }

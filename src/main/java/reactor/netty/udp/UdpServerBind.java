@@ -15,35 +15,65 @@
  */
 package reactor.netty.udp;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ChannelOption;
+import io.netty.util.NetUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.resources.ConnectionProvider;
-import reactor.netty.resources.LoopResources;
+
+import java.net.InetSocketAddress;
+import java.util.Collections;
 
 /**
+ * Provides the actual {@link UdpServer} instance.
+ *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 final class UdpServerBind extends UdpServer {
 
 	static final UdpServerBind INSTANCE = new UdpServerBind();
 
-	@Override
-	protected Mono<? extends Connection> bind(Bootstrap b) {
+	final UdpServerConfig config;
 
-		//Default group and channel
-		if (b.config()
-		     .group() == null) {
-
-			UdpResources loopResources = UdpResources.get();
-			EventLoopGroup elg = loopResources.onClient(LoopResources.DEFAULT_NATIVE);
-
-			b.group(elg)
-			 .channel(loopResources.onDatagramChannel(elg));
-		}
-
-		return ConnectionProvider.newConnection()
-		                         .acquire(b);
+	UdpServerBind() {
+		this.config = new UdpServerConfig(
+				Collections.singletonMap(ChannelOption.AUTO_READ, false),
+				() -> new InetSocketAddress(NetUtil.LOCALHOST, DEFAULT_PORT));
 	}
+
+	UdpServerBind(UdpServerConfig config) {
+		this.config = config;
+	}
+
+	@Override
+	public Mono<? extends Connection> bind() {
+		UdpServerConfig conf = configuration();
+
+		ConnectionObserver observer = config.defaultConnectionObserver().then(config.connectionObserver());
+
+		Mono<? extends Connection> mono = ConnectionProvider.newConnection()
+		                                                    .acquire(conf, observer, null, null);
+		if (conf.doOnBind() != null) {
+			mono = mono.doOnSubscribe(s -> conf.doOnBind().accept(conf));
+		}
+		return mono;
+	}
+
+	@Override
+	public UdpServerConfig configuration() {
+		return config;
+	}
+
+	@Override
+	protected UdpServer duplicate() {
+		return new UdpServerBind(new UdpServerConfig(config));
+	}
+
+	/**
+	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
+	 * the {@code PORT} <b>environment variable</b>.
+	 */
+	static final int DEFAULT_PORT = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 12012;
 }

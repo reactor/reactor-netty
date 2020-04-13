@@ -15,34 +15,49 @@
  */
 package reactor.netty.udp;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.EventLoopGroup;
-import reactor.core.publisher.Mono;
-import reactor.netty.Connection;
+import io.netty.channel.ChannelOption;
+import io.netty.util.NetUtil;
 import reactor.netty.resources.ConnectionProvider;
-import reactor.netty.resources.LoopResources;
+
+import java.net.InetSocketAddress;
+import java.util.Collections;
 
 /**
+ * Provides the actual {@link UdpClient} instance.
+ *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 final class UdpClientConnect extends UdpClient {
 
 	static final UdpClientConnect INSTANCE = new UdpClientConnect();
 
-	@Override
-	protected Mono<? extends Connection> connect(Bootstrap b) {
-		//Default group and channel
-		if (b.config()
-				.group() == null) {
+	final UdpClientConfig config;
 
-			UdpResources loopResources = UdpResources.get();
-			EventLoopGroup elg = loopResources.onClient(LoopResources.DEFAULT_NATIVE);
-
-			b.group(elg)
-			 .channel(loopResources.onDatagramChannel(elg));
-		}
-
-		return ConnectionProvider.newConnection()
-		                         .acquire(b);
+	UdpClientConnect() {
+		this.config = new UdpClientConfig(
+				ConnectionProvider.newConnection(),
+				Collections.singletonMap(ChannelOption.AUTO_READ, false),
+				() -> new InetSocketAddress(NetUtil.LOCALHOST, DEFAULT_PORT));
 	}
+
+	UdpClientConnect(UdpClientConfig config) {
+		this.config = config;
+	}
+
+	@Override
+	public UdpClientConfig configuration() {
+		return config;
+	}
+
+	@Override
+	protected UdpClient duplicate() {
+		return new UdpClientConnect(new UdpClientConfig(config));
+	}
+
+	/**
+	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
+	 * the {@code PORT} <b>environment variable</b>.
+	 */
+	static final int DEFAULT_PORT = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 12012;
 }
