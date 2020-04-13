@@ -36,7 +36,7 @@ import reactor.netty.transport.ProxyProvider;
 /**
  * @author Stephane Maldini
  */
-public final class TcpUtils {
+final class TcpUtils {
 
 	static Bootstrap updateProxySupport(Bootstrap b, ProxyProvider proxyOptions) {
 		BootstrapHandlers.updateConfiguration(b,
@@ -97,7 +97,7 @@ public final class TcpUtils {
 		return new SocketAddressSupplier(supplier);
 	}
 
-	public static final class SocketAddressSupplier extends SocketAddress implements Supplier<SocketAddress> {
+	static final class SocketAddressSupplier extends SocketAddress implements Supplier<SocketAddress> {
 		final Supplier<? extends SocketAddress> supplier;
 
 		SocketAddressSupplier(Supplier<? extends SocketAddress> supplier) {

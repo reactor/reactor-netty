@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.resolver.AddressResolverGroup;
@@ -82,6 +83,25 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
+	 * Return true if that {@link ClientTransportConfig} is configured with a proxy
+	 *
+	 * @return true if that {@link ClientTransportConfig} is configured with a proxy
+	 */
+	public final boolean hasProxy() {
+		return proxyProvider != null;
+	}
+
+	/**
+	 * Return the {@link ProxyProvider} if any or null
+	 *
+	 * @return the {@link ProxyProvider} if any or null
+	 */
+	@Nullable
+	public final ProxyProvider proxyProvider() {
+		return proxyProvider;
+	}
+
+	/**
 	 * Return the remote configured {@link SocketAddress}
 	 *
 	 * @return the remote configured {@link SocketAddress}
@@ -107,6 +127,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	Consumer<? super CONF>            doOnConnect;
 	Consumer<? super Connection>      doOnConnected;
 	Consumer<? super Connection>      doOnDisconnected;
+	ProxyProvider                     proxyProvider;
 	Supplier<? extends SocketAddress> remoteAddress;
 	AddressResolverGroup<?>           resolver;
 
@@ -124,6 +145,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.doOnConnect = parent.doOnConnect;
 		this.doOnConnected = parent.doOnConnected;
 		this.doOnDisconnected = parent.doOnDisconnected;
+		this.proxyProvider = parent.proxyProvider;
 		this.remoteAddress = parent.remoteAddress;
 		this.resolver = parent.resolver;
 	}
@@ -138,7 +160,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	@Override
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
-		return (connectionObserver, channel, remoteAddress) -> {};
+		return new ClientTransportChannelInitializer(proxyProvider);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -150,6 +172,22 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		}
 		else {
 			return resolver;
+		}
+	}
+
+	static final class ClientTransportChannelInitializer implements ChannelPipelineConfigurer {
+
+		final ProxyProvider proxyProvider;
+
+		ClientTransportChannelInitializer (ProxyProvider proxyProvider) {
+			this.proxyProvider = proxyProvider;
+		}
+
+		@Override
+		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, SocketAddress remoteAddress) {
+			if (proxyProvider != null && proxyProvider.shouldProxy(remoteAddress)) {
+				proxyProvider.addProxyHandler(channel);
+			}
 		}
 	}
 

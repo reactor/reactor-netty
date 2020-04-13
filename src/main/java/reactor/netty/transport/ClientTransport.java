@@ -150,6 +150,22 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	}
 
 	/**
+	 * Remove any previously applied Proxy configuration customization
+	 *
+	 * @return a new {@link ClientTransport} reference
+	 */
+	public final T noProxy() {
+		if (configuration().hasProxy()) {
+			T dup = duplicate();
+			dup.configuration().proxyProvider = null;
+			return dup;
+		}
+		@SuppressWarnings("unchecked")
+		T dup = (T) this;
+		return dup;
+	}
+
+	/**
 	 * The port to which this client should connect.
 	 *
 	 * @param port the port to connect to
@@ -157,6 +173,21 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 */
 	public final T port(int port) {
 		return remoteAddress(() -> AddressUtils.updatePort(configuration().remoteAddress(), port));
+	}
+
+	/**
+	 * Apply a proxy configuration
+	 *
+	 * @param proxyOptions the proxy configuration callback
+	 * @return a new {@link ClientTransport} reference
+	 */
+	public final T proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
+		Objects.requireNonNull(proxyOptions, "proxyOptions");
+		T dup = duplicate();
+		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
+		proxyOptions.accept(builder);
+		dup.configuration().proxyProvider = builder.build();
+		return dup;
 	}
 
 	/**
