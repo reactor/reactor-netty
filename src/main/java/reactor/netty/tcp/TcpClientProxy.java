@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import io.netty.bootstrap.Bootstrap;
+import reactor.netty.transport.ProxyProvider;
 
 /**
  * @author Stephane Maldini

@@ -19,6 +19,7 @@ package reactor.netty.tcp;
 import javax.annotation.Nullable;
 
 import io.netty.bootstrap.Bootstrap;
+import reactor.netty.transport.ProxyProvider;
 
 /**
  * @author Stephane Maldini

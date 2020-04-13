@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 import io.netty.bootstrap.Bootstrap;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.transport.ProxyProvider;
 
 /**
  * @author Stephane Maldini

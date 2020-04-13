@@ -49,6 +49,7 @@ import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.AddressUtils;
+import reactor.netty.transport.ProxyProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.Metrics;

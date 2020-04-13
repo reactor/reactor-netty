@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Test;
+import reactor.netty.transport.ProxyProvider;
 
 public class ProxyProviderTest {
 

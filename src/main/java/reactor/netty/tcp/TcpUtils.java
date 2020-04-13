@@ -31,11 +31,12 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.transport.AddressUtils;
+import reactor.netty.transport.ProxyProvider;
 
 /**
  * @author Stephane Maldini
  */
-final class TcpUtils {
+public final class TcpUtils {
 
 	static Bootstrap updateProxySupport(Bootstrap b, ProxyProvider proxyOptions) {
 		BootstrapHandlers.updateConfiguration(b,
@@ -96,7 +97,7 @@ final class TcpUtils {
 		return new SocketAddressSupplier(supplier);
 	}
 
-	static final class SocketAddressSupplier extends SocketAddress implements Supplier<SocketAddress> {
+	public static final class SocketAddressSupplier extends SocketAddress implements Supplier<SocketAddress> {
 		final Supplier<? extends SocketAddress> supplier;
 
 		SocketAddressSupplier(Supplier<? extends SocketAddress> supplier) {

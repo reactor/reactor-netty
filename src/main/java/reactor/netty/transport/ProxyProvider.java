@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.netty.tcp;
+package reactor.netty.transport;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -39,7 +39,7 @@ import io.netty.handler.proxy.Socks5ProxyHandler;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
 import reactor.netty.channel.BootstrapHandlers;
-import reactor.netty.transport.AddressUtils;
+import reactor.netty.tcp.TcpUtils;
 
 /**
  * Proxy configuration
@@ -414,12 +414,12 @@ public final class ProxyProvider {
 		ProxyProvider build();
 	}
 
-	static final class DeferredProxySupport
+	public static final class DeferredProxySupport
 			implements Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>> {
 
 		final ProxyProvider proxyProvider;
 
-		DeferredProxySupport(ProxyProvider proxyProvider) {
+		public DeferredProxySupport(ProxyProvider proxyProvider) {
 			this.proxyProvider = proxyProvider;
 		}
 
