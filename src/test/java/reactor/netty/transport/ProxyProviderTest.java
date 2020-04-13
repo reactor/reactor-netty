@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package reactor.netty.tcp;
+package reactor.netty.transport;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -24,7 +24,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Test;
-import reactor.netty.transport.ProxyProvider;
 
 public class ProxyProviderTest {
 

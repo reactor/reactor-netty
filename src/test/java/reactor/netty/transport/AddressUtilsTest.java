@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package reactor.netty.tcp;
+package reactor.netty.transport;
 
 import java.net.InetSocketAddress;
 
 import org.junit.Test;
-import reactor.netty.transport.AddressUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
