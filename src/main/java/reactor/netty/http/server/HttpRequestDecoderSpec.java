@@ -15,10 +15,9 @@
  */
 package reactor.netty.http.server;
 
-import java.util.function.Function;
-
 import reactor.netty.http.HttpDecoderSpec;
-import reactor.netty.tcp.TcpServer;
+
+import java.util.Objects;
 
 /**
  * A configuration builder to fine tune the {@link io.netty.handler.codec.http.HttpServerCodec}
@@ -63,11 +62,30 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 		return this;
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		if (!super.equals(o)) {
+			return false;
+		}
+		HttpRequestDecoderSpec that = (HttpRequestDecoderSpec) o;
+		return h2cMaxContentLength == that.h2cMaxContentLength;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(super.hashCode(), h2cMaxContentLength);
+	}
+
 	/**
-	 * Build a {@link Function} that applies the http request decoder configuration to a
-	 * {@link TcpServer} by enriching its attributes.
+	 * Build a {@link HttpRequestDecoderSpec}.
 	 */
-	Function<TcpServer, TcpServer> build() {
+	HttpRequestDecoderSpec build() {
 		HttpRequestDecoderSpec decoder = new HttpRequestDecoderSpec();
 		decoder.initialBufferSize = initialBufferSize;
 		decoder.maxChunkSize = maxChunkSize;
@@ -75,7 +93,6 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 		decoder.maxInitialLineLength = maxInitialLineLength;
 		decoder.validateHeaders = validateHeaders;
 		decoder.h2cMaxContentLength = h2cMaxContentLength;
-		return tcp -> tcp.bootstrap(b -> HttpServerConfiguration.decoder(b, decoder));
+		return decoder;
 	}
-
 }

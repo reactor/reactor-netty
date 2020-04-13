@@ -59,7 +59,7 @@ public interface NettyPipeline {
 	String HttpDecompressor   = LEFT + "decompressor";
 	String HttpAggregator     = LEFT + "httpAggregator";
 	String HttpTrafficHandler = LEFT + "httpTrafficHandler";
-	String HttpInitializer    = LEFT + "httpInitializer";
+	String H2CUpgradeHandler  = LEFT + "h2cUpgradeHandler";
 	String AccessLogHandler   = LEFT + "accessLogHandler";
 	String OnChannelWriteIdle = LEFT + "onChannelWriteIdle";
 	String OnChannelReadIdle  = LEFT + "onChannelReadIdle";
@@ -67,7 +67,6 @@ public interface NettyPipeline {
 	String LoggingHandler     = LEFT + "loggingHandler";
 	String CompressionHandler = LEFT + "compressionHandler";
 	String HttpMetricsHandler = LEFT + "httpMetricsHandler";
-	String SslMetricsHandler  = LEFT + "sslMetricsHandler";
 	String ChannelMetricsHandler = LEFT + "channelMetricsHandler";
 	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";
 	String WsCompressionHandler = LEFT + "wsCompressionHandler";
