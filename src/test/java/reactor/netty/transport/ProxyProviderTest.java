@@ -22,85 +22,83 @@ import static org.junit.Assert.assertNotEquals;
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Test;
 
 public class ProxyProviderTest {
 
-    private static final Function<String, String> PASSWORD_1 = username -> "123";
-    private static final Function<String, String> PASSWORD_2 = username -> "456";
+	private static final Function<String, String> PASSWORD_1 = username -> "123";
+	private static final Function<String, String> PASSWORD_2 = username -> "456";
 
-    private static final String NON_PROXY_HOSTS = "localhost";
+	private static final String NON_PROXY_HOSTS = "localhost";
 
-    private static final InetSocketAddress ADDRESS_1 = InetSocketAddress.createUnresolved("localhost", 80);
-    private static final InetSocketAddress ADDRESS_2 = InetSocketAddress.createUnresolved("example.com", 80);
+	private static final InetSocketAddress ADDRESS_1 = InetSocketAddress.createUnresolved("localhost", 80);
+	private static final InetSocketAddress ADDRESS_2 = InetSocketAddress.createUnresolved("example.com", 80);
 
-    private static final Consumer<HttpHeaders> HEADER_1 = list -> list.add("Authorization", "Bearer 123");
-    private static final Consumer<HttpHeaders> HEADER_2 = list -> list.add("Authorization", "Bearer 456");
+	private static final Consumer<HttpHeaders> HEADER_1 = list -> list.add("Authorization", "Bearer 123");
+	private static final Consumer<HttpHeaders> HEADER_2 = list -> list.add("Authorization", "Bearer 456");
 
-    @Test
-    public void equalProxyProviders() {
-        assertEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_1, PASSWORD_1));
-        assertEquals(createProxy(ADDRESS_1, PASSWORD_1).hashCode(), createProxy(ADDRESS_1, PASSWORD_1).hashCode());
-    }
+	@Test
+	public void equalProxyProviders() {
+		assertEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_1, PASSWORD_1));
+		assertEquals(createProxy(ADDRESS_1, PASSWORD_1).hashCode(), createProxy(ADDRESS_1, PASSWORD_1).hashCode());
+	}
 
-    @Test
-    public void equalProxyProvidersNoAuth() {
-        assertEquals(createNoAuthProxy(ADDRESS_1), createNoAuthProxy(ADDRESS_1));
-        assertEquals(createNoAuthProxy(ADDRESS_1).hashCode(), createNoAuthProxy(ADDRESS_1).hashCode());
-    }
+	@Test
+	public void equalProxyProvidersNoAuth() {
+		assertEquals(createNoAuthProxy(ADDRESS_1), createNoAuthProxy(ADDRESS_1));
+		assertEquals(createNoAuthProxy(ADDRESS_1).hashCode(), createNoAuthProxy(ADDRESS_1).hashCode());
+	}
 
-    @Test
-    public void equalProxyProvidersAuthHeader() {
-        assertEquals(createHeaderProxy(ADDRESS_1, HEADER_1), createHeaderProxy(ADDRESS_1, HEADER_1));
-        assertEquals(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode(), createHeaderProxy(ADDRESS_1, HEADER_1).hashCode());
-    }
+	@Test
+	public void equalProxyProvidersAuthHeader() {
+		assertEquals(createHeaderProxy(ADDRESS_1, HEADER_1), createHeaderProxy(ADDRESS_1, HEADER_1));
+		assertEquals(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode(), createHeaderProxy(ADDRESS_1, HEADER_1).hashCode());
+	}
 
-    @Test
-    public void differentAddresses() {
-        assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_2, PASSWORD_1));
-        assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1).hashCode(), createProxy(ADDRESS_2, PASSWORD_1).hashCode());
-    }
+	@Test
+	public void differentAddresses() {
+		assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_2, PASSWORD_1));
+		assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1).hashCode(), createProxy(ADDRESS_2, PASSWORD_1).hashCode());
+	}
 
-    @Test
-    public void differentPasswords() {
-        assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_1, PASSWORD_2));
-        assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1).hashCode(), createProxy(ADDRESS_1, PASSWORD_2).hashCode());
-    }
+	@Test
+	public void differentPasswords() {
+		assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_1, PASSWORD_2));
+		assertNotEquals(createProxy(ADDRESS_1, PASSWORD_1).hashCode(), createProxy(ADDRESS_1, PASSWORD_2).hashCode());
+	}
 
-    @Test
-    public void differentAuthHeaders() {
-        assertNotEquals(createHeaderProxy(ADDRESS_1, HEADER_1), createHeaderProxy(ADDRESS_1, HEADER_2));
-        assertNotEquals(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode(), createHeaderProxy(ADDRESS_1, HEADER_2).hashCode());
-    }
+	@Test
+	public void differentAuthHeaders() {
+		assertNotEquals(createHeaderProxy(ADDRESS_1, HEADER_1), createHeaderProxy(ADDRESS_1, HEADER_2));
+		assertNotEquals(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode(), createHeaderProxy(ADDRESS_1, HEADER_2).hashCode());
+	}
 
-    private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
-        return ProxyProvider
-                .builder()
-                .type(ProxyProvider.Proxy.SOCKS5)
-                .address(address)
-                .username("netty")
-                .password(passwordFunc)
-                .nonProxyHosts(NON_PROXY_HOSTS)
-                .build();
-    }
+	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
+		return ProxyProvider.builder()
+		                    .type(ProxyProvider.Proxy.SOCKS5)
+		                    .address(address)
+		                    .username("netty")
+		                    .password(passwordFunc)
+		                    .nonProxyHosts(NON_PROXY_HOSTS)
+		                    .build();
+	}
 
-    private ProxyProvider createNoAuthProxy(InetSocketAddress address) {
-        return ProxyProvider
-                .builder()
-                .type(ProxyProvider.Proxy.SOCKS5)
-                .address(address)
-                .nonProxyHosts("localhost")
-                .build();
-    }
+	private ProxyProvider createNoAuthProxy(InetSocketAddress address) {
+		return ProxyProvider.builder()
+		                    .type(ProxyProvider.Proxy.SOCKS5)
+		                    .address(address)
+		                    .nonProxyHosts("localhost")
+		                    .build();
+	}
 
-    private ProxyProvider createHeaderProxy(InetSocketAddress address, Consumer<HttpHeaders> authHeader) {
-        return ProxyProvider
-                .builder()
-                .type(ProxyProvider.Proxy.HTTP)
-                .address(address)
-                .httpHeaders(authHeader)
-                .build();
-    }
+	private ProxyProvider createHeaderProxy(InetSocketAddress address, Consumer<HttpHeaders> authHeader) {
+		return ProxyProvider.builder()
+		                    .type(ProxyProvider.Proxy.HTTP)
+		                    .address(address)
+		                    .httpHeaders(authHeader)
+		                    .build();
+	}
 
 }

@@ -61,7 +61,6 @@ public final class ProxyProvider {
 	 * Find Proxy support in the given client bootstrap
 	 *
 	 * @param b a bootstrap to search
-	 *
 	 * @return any {@link ProxyProvider} found or null
 	 */
 	@Nullable
@@ -171,7 +170,6 @@ public final class ProxyProvider {
 	 * Should proxy the given address
 	 *
 	 * @param address the address to test
-	 *
 	 * @return true if of type {@link InetSocketAddress} and hostname candidate to proxy
 	 */
 	public boolean shouldProxy(SocketAddress address) {
@@ -186,7 +184,6 @@ public final class ProxyProvider {
 	 * Should proxy the given hostname
 	 *
 	 * @param hostName the hostname to test
-	 *
 	 * @return true if candidate to proxy
 	 */
 	public boolean shouldProxy(@Nullable String hostName) {
@@ -463,8 +460,7 @@ public final class ProxyProvider {
 			                                       .remoteAddress())) {
 
 				ChannelPipeline pipeline = channel.pipeline();
-				pipeline.addFirst(NettyPipeline.ProxyHandler,
-								proxyProvider.newProxyHandler());
+				pipeline.addFirst(NettyPipeline.ProxyHandler, proxyProvider.newProxyHandler());
 
 				if (channel.pipeline()
 				           .get(NettyPipeline.LoggingHandler) != null) {

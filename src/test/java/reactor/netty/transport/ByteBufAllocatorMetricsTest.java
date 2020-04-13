@@ -95,7 +95,7 @@ public class ByteBufAllocatorMetricsTest {
 		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
 
 		String id = alloc.metric().hashCode() + "";
-		String[] tags = new String[] {ID, id, TYPE, "pooled"};
+		String[] tags = new String[]{ID, id, TYPE, "pooled"};
 		checkExpectations(BYTE_BUF_ALLOCATOR_PREFIX, tags);
 
 		server.disposeNow();
