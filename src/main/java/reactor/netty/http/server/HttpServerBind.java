@@ -301,7 +301,7 @@ final class HttpServerBind extends HttpServer
 			if (isDisposed()) {
 				return;
 			}
-			server.disposeNow();
+			server.disposeNow(timeout);
 		}
 
 		@Override
