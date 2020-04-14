@@ -22,7 +22,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
@@ -106,7 +108,7 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 			}
 		}
 		catch (Throwable err) {
-			ReferenceCountUtil.safeRelease(msg);
+			safeRelease(msg);
 			log.error(format(ctx.channel(), "Error was received while reading the incoming data." +
 					" The connection will be closed."), err);
 			//"FutureReturnValueIgnored" this is deliberate
@@ -124,6 +126,22 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 		}
 		else {
 			listener.onUncaughtException(connection, err);
+		}
+	}
+
+	static void safeRelease(Object msg) {
+		if (msg instanceof ReferenceCounted) {
+			ReferenceCounted referenceCounted = (ReferenceCounted) msg;
+			if (referenceCounted.refCnt() > 0) {
+				try {
+					referenceCounted.release();
+				}
+				catch (IllegalReferenceCountException e) {
+					if (log.isDebugEnabled()) {
+						log.debug("", e);
+					}
+				}
+			}
 		}
 	}
 
