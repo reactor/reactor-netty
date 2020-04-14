@@ -15,17 +15,27 @@
  */
 package reactor.netty.channel;
 
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.junit.Test;
+import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class FluxReceiveTest {
 
@@ -123,5 +133,62 @@ public class FluxReceiveTest {
 
 		server1.disposeNow();
 		server2.disposeNow();
+	}
+
+	@Test
+	public void testIssue1016() throws Exception {
+		EmbeddedChannel channel = new EmbeddedChannel();
+
+		Connection connection = Connection.from(channel);
+		ConnectionObserver observer = (conn, newState) -> {
+			if (newState == ConnectionObserver.State.DISCONNECTING) {
+				if (conn.channel().isActive() && !conn.isPersistent()) {
+					conn.dispose();
+				}
+			}
+		};
+		ChannelOperations<?, ?> ops = new ChannelOperations<>(connection, observer);
+		ops.bind();
+
+		ByteBuf buffer = channel.alloc().buffer();
+		buffer.writeCharSequence("testIssue1016", Charset.defaultCharset());
+		ops.inbound.onInboundNext(buffer);
+
+		CountDownLatch latch = new CountDownLatch(1);
+		// There is a subscriber, but there is no request for an item
+		ops.receive().subscribe(new TestSubscriber(latch));
+
+		ops.onInboundError(new OutOfMemoryError());
+
+		assertThat(latch.await(30, TimeUnit.SECONDS)).isTrue();
+
+		assertThat(buffer.refCnt()).isEqualTo(0);
+	}
+
+	static final class TestSubscriber implements CoreSubscriber<Object> {
+
+		final CountDownLatch latch;
+
+		TestSubscriber(CountDownLatch latch) {
+			this.latch = latch;
+		}
+
+		@Override
+		public void onSubscribe(Subscription s) {
+		}
+
+		@Override
+		public void onNext(Object o) {
+		}
+
+		@Override
+		public void onError(Throwable t) {
+			assertThat(t).hasCauseInstanceOf(OutOfMemoryError.class);
+			latch.countDown();
+		}
+
+		@Override
+		public void onComplete() {
+		}
 	}
 }

@@ -386,11 +386,18 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 
 		if (err instanceof OutOfMemoryError) {
-			if (log.isWarnEnabled()) {
-//				log.error(format(channel, "An attempt to allocate memory has failed"), err);
-			}
 			this.inboundError = ReactorNetty.wrapException(err);
-			parent.terminate(); //get rid of the resource
+			try {
+				if (receiver != null) {
+					// propagate java.lang.OutOfMemoryError: Direct buffer memory
+					receiver.onError(inboundError);
+				}
+			}
+			finally {
+				// close the connection
+				// release the buffers
+				parent.terminate();
+			}
 		}
 		else if (err instanceof ClosedChannelException) {
 			this.inboundError = ReactorNetty.wrapException(err);
@@ -400,7 +407,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 
 		if (receiverFastpath && receiver != null) {
-			//parent.listener.onReceiveError(channel, err);
 			receiver.onError(err);
 		}
 		else {
