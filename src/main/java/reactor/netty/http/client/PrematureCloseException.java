@@ -25,6 +25,9 @@ import java.io.IOException;
  */
 public final class PrematureCloseException extends IOException {
 
+	public static final PrematureCloseException TEST_EXCEPTION =
+			new PrematureCloseException("Simulated prematurely closed connection");
+
 	PrematureCloseException(String message) {
 		super(message);
 	}
