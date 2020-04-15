@@ -17,6 +17,7 @@ package reactor.netty.resources;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.List;
@@ -33,9 +34,15 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -49,6 +56,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
+import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.PooledConnectionProvider.PooledConnection;
@@ -59,6 +67,8 @@ import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolAcquirePendingLimitException;
 import reactor.pool.PooledRef;
 import reactor.test.StepVerifier;
+
+import javax.net.ssl.SSLException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNotNull;
@@ -536,6 +546,80 @@ public class PooledConnectionProviderTest {
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
 		server.disposeNow();
+	}
+
+	@Test
+	public void testSslEngineClosed() throws Exception {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) -> res.sendString(Mono.just("test")))
+				          .bindNow();
+		SslContext ctx = SslContextBuilder.forClient()
+		                                  .sslProvider(SslProvider.JDK)
+		                                  .build();
+		HttpClient client =
+				HttpClient.create()
+				          .port(server.port())
+				          .secure(spec -> spec.sslContext(ctx))
+				          .wiretap(true);
+
+		// Connection close happens after `Channel connected`
+		// Re-acquiring is not possible
+		// The SSLException will be propagated
+		doTestSslEngineClosed(client, new AtomicInteger(0), SSLException.class, "SSLEngine is closing/closed");
+
+		// Connection close happens between `Initialized pipeline` and `Channel connected`
+		// Re-acquiring
+		// Connection close happens after `Channel connected`
+		// The SSLException will be propagated, Reactor Netty re-acquire only once
+		doTestSslEngineClosed(client, new AtomicInteger(1), SSLException.class, "SSLEngine is closing/closed");
+
+		// Connection close happens between `Initialized pipeline` and `Channel connected`
+		// Re-acquiring
+		// Connection close happens between `Initialized pipeline` and `Channel connected`
+		// The IOException will be propagated, Reactor Netty re-acquire only once
+		doTestSslEngineClosed(client, new AtomicInteger(2), IOException.class, "Error while acquiring from");
+
+		server.disposeNow();
+	}
+
+	private void doTestSslEngineClosed(HttpClient client, AtomicInteger closeCount, Class<? extends Throwable> expectedExc, String expectedMsg) {
+		Mono<String> response =
+				client.tcpConfiguration(tcpClient ->
+				    tcpClient.bootstrap(
+				        b -> BootstrapHandlers.updateConfiguration(b, "test",
+				            ((o, c) -> {
+				                PooledConnectionProvider.PooledConnectionAllocator.PooledConnectionInitializer initializer =
+				                    c.pipeline().get(PooledConnectionProvider.PooledConnectionAllocator.PooledConnectionInitializer.class);
+				                c.pipeline()
+				                 .addFirst(new ChannelOutboundHandlerAdapter() {
+
+				                     @Override
+				                     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
+				                             SocketAddress localAddress, ChannelPromise promise) throws Exception {
+				                         if (closeCount.getAndDecrement() > 0) {
+				                             promise.removeListener(initializer)
+				                                    .addListener(ChannelFutureListener.CLOSE)
+				                                    .addListener(initializer);
+				                         }
+				                         else {
+				                             promise.addListener(ChannelFutureListener.CLOSE);
+				                         }
+				                         super.connect(ctx, remoteAddress, localAddress, promise);
+				                     }
+				                 });
+				            }))))
+				      .get()
+				      .uri("/")
+				      .responseContent()
+				      .aggregate()
+				      .asString();
+
+		StepVerifier.create(response)
+		            .expectErrorMatches(t -> t.getClass().isAssignableFrom(expectedExc) && t.getMessage().startsWith(expectedMsg))
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	static final class PoolImpl extends AtomicInteger implements InstrumentedPool<PooledConnection> {

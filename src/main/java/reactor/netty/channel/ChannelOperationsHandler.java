@@ -54,12 +54,16 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) {
-		Connection c = Connection.from(ctx.channel());
-		listener.onStateChange(c, ConnectionObserver.State.CONNECTED);
-		ChannelOperations<?, ?> ops = opsFactory.create(c, listener, null);
-		if (ops != null) {
-			ops.bind();
-			listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+		// When AbstractNioChannel.AbstractNioUnsafe.finishConnect/fulfillConnectPromise,
+		// fireChannelActive will be triggered regardless that the channel might be closed in the meantime
+		if (ctx.channel().isActive()) {
+			Connection c = Connection.from(ctx.channel());
+			listener.onStateChange(c, ConnectionObserver.State.CONNECTED);
+			ChannelOperations<?, ?> ops = opsFactory.create(c, listener, null);
+			if (ops != null) {
+				ops.bind();
+				listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
+			}
 		}
 	}
 

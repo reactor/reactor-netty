@@ -45,6 +45,7 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
 import reactor.core.publisher.MonoSink;
@@ -157,7 +158,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				return newPool;
 			});
 
-			disposableAcquire(sink, obs, pool, opsFactory, poolFactory.pendingAcquireTimeout, false);
+			disposableAcquire(new DisposableAcquire(sink, pool, obs, opsFactory, poolFactory.pendingAcquireTimeout, false));
 
 		});
 
@@ -190,12 +191,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		return defaultPoolFactory.maxConnections;
 	}
 
-	static void disposableAcquire(MonoSink<Connection> sink, ConnectionObserver obs, InstrumentedPool<PooledConnection> pool,
-			ChannelOperations.OnSetup opsFactory, long pendingAcquireTimeout, boolean retried) {
-		DisposableAcquire disposableAcquire =
-				new DisposableAcquire(sink, pool, obs, opsFactory, pendingAcquireTimeout, retried);
-
-		Mono<PooledRef<PooledConnection>> mono = pool.acquire(Duration.ofMillis(pendingAcquireTimeout));
+	static void disposableAcquire(DisposableAcquire disposableAcquire) {
+		Mono<PooledRef<PooledConnection>> mono =
+				disposableAcquire.pool.acquire(Duration.ofMillis(disposableAcquire.pendingAcquireTimeout));
 		mono.subscribe(disposableAcquire);
 	}
 
@@ -241,7 +239,6 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 			@Override
 			public void handlerAdded(ChannelHandlerContext ctx) {
-				ctx.pipeline().remove(this);
 				Channel ch = ctx.channel();
 
 				if (log.isDebugEnabled()) {
@@ -263,6 +260,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				ch.pipeline()
 				  .addFirst(b.config()
 				             .handler());
+				ctx.pipeline().remove(this);
 			}
 
 			@Override
@@ -438,6 +436,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	final static class DisposableAcquire
 			implements ConnectionObserver, Runnable, CoreSubscriber<PooledRef<PooledConnection>>, Disposable {
 
+		final Disposable.Composite               cancellations;
 		final MonoSink<Connection>               sink;
 		final InstrumentedPool<PooledConnection> pool;
 		final ConnectionObserver                 obs;
@@ -454,12 +453,23 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				ChannelOperations.OnSetup opsFactory,
 				long pendingAcquireTimeout,
 				boolean retried) {
+			this.cancellations = Disposables.composite();
 			this.pool = pool;
 			this.sink = sink;
 			this.obs = obs;
 			this.opsFactory = opsFactory;
 			this.pendingAcquireTimeout = pendingAcquireTimeout;
 			this.retried = retried;
+		}
+
+		DisposableAcquire(DisposableAcquire parent) {
+			this.cancellations = parent.cancellations;
+			this.sink = parent.sink;
+			this.pool = parent.pool;
+			this.obs = parent.obs;
+			this.opsFactory = parent.opsFactory;
+			this.pendingAcquireTimeout = parent.pendingAcquireTimeout;
+			this.retried = true;
 		}
 
 		@Override
@@ -494,7 +504,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		public void onSubscribe(Subscription s) {
 			if (Operators.validate(subscription, s)) {
 				this.subscription = s;
-				sink.onCancel(this);
+				cancellations.add(this);
+				if (!retried) {
+					sink.onCancel(cancellations);
+				}
 				s.request(Long.MAX_VALUE);
 			}
 		}
@@ -528,17 +541,22 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			PooledConnection pooledConnection = pooledRef.poolable();
 			Channel c = pooledConnection.channel;
 
-			ConnectionObserver current = c.attr(OWNER)
-			                              .getAndSet(this);
-
 			// The connection might be closed after checking the eviction predicate
 			if (!c.isActive()) {
-				registerClose(pooledRef, pool);
+				pooledRef.invalidate()
+				         .subscribe(null, null, () -> {
+				             if (log.isDebugEnabled()) {
+				                 log.debug(format(c, "Channel closed, now {} active connections and " +
+				                         "{} inactive connections"),
+				                     pool.metrics().acquiredSize(),
+				                     pool.metrics().idleSize());
+				             }
+				         });
 				if (!retried) {
 					if (log.isDebugEnabled()) {
 						log.debug(format(c, "Immediately aborted pooled channel, re-acquiring new channel"));
 					}
-					disposableAcquire(sink, obs, pool, opsFactory, pendingAcquireTimeout, true);
+					disposableAcquire(new DisposableAcquire(this));
 
 				}
 				else {
@@ -546,6 +564,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				}
 				return;
 			}
+
+			// Set the owner only if the channel is active
+			ConnectionObserver current = c.attr(OWNER)
+			                              .getAndSet(this);
 
 			if (current instanceof PendingConnectionObserver) {
 				PendingConnectionObserver pending = (PendingConnectionObserver)current;
