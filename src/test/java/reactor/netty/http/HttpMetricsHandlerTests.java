@@ -316,7 +316,7 @@ public class HttpMetricsHandlerTests {
 		Counter counter = registry.find(name).tags(tags).counter();
 		if (exists) {
 			assertNotNull(counter);
-			assertEquals(expectedCount, counter.count(), 0.0);
+			assertTrue(counter.count() >= expectedCount);
 		}
 		else {
 			assertNull(counter);
