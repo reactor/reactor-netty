@@ -25,6 +25,8 @@ import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.util.AttributeKey;
 import reactor.netty.http.HttpProtocol;
 
+import javax.annotation.Nullable;
+
 /**
  * @author Stephane Maldini
  */
@@ -43,6 +45,8 @@ final class HttpServerConfiguration {
 	ServerCookieEncoder    cookieEncoder      = ServerCookieEncoder.STRICT;
 	ServerCookieDecoder    cookieDecoder      = ServerCookieDecoder.STRICT;
 	int                    protocols          = h11;
+
+	Function<String, String> uriTagValue      = null;
 
 
 	static HttpServerConfiguration getAndClean(ServerBootstrap b) {
@@ -135,6 +139,11 @@ final class HttpServerConfiguration {
 		HttpServerConfiguration conf = getOrCreate(b);
 		conf.cookieEncoder = encoder;
 		conf.cookieDecoder = decoder;
+		return b;
+	}
+
+	static ServerBootstrap uriTagValue(ServerBootstrap b, @Nullable Function<String, String> uriTagValue) {
+		getOrCreate(b).uriTagValue = uriTagValue;
 		return b;
 	}
 

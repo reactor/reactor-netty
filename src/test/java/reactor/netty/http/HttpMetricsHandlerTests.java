@@ -60,6 +60,7 @@ public class HttpMetricsHandlerTests {
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
 	@Before
+	@SuppressWarnings("deprecation")
 	public void setUp() {
 		httpServer = customizeServerOptions(
 				HttpServer.create()
@@ -211,6 +212,43 @@ public class HttpMetricsHandlerTests {
 		Thread.sleep(1000);
 		checkExpectationsNonExisting(ca.getHostString() + ":" + ca.getPort(),
 				sa.getHostString() + ":" + sa.getPort(), 2);
+	}
+
+	@Test
+	public void testUriTagValueFunction() throws Exception {
+		disposableServer = httpServer.metrics(true, s -> "testUriTagValueResolver").bindNow();
+
+		AtomicReference<SocketAddress> clientAddress = new AtomicReference<>();
+		AtomicReference<SocketAddress> serverAddress = new AtomicReference<>();
+		httpClient = httpClient.doAfterRequest((req, conn) -> {
+			clientAddress.set(conn.channel().localAddress());
+			serverAddress.set(conn.channel().remoteAddress());
+		});
+
+		CountDownLatch latch1 = new CountDownLatch(1);
+		StepVerifier.create(httpClient.doOnResponse((res, conn) ->
+		                                  conn.channel()
+		                                      .closeFuture()
+		                                      .addListener(f -> latch1.countDown()))
+		                              .metrics(true, s -> "testUriTagValueResolver")
+		                              .post()
+		                              .uri("/1")
+		                              .send(body)
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("Hello World!")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
+
+		InetSocketAddress ca = (InetSocketAddress) clientAddress.get();
+		InetSocketAddress sa = (InetSocketAddress) serverAddress.get();
+
+		Thread.sleep(1000);
+		checkExpectationsExisting("testUriTagValueResolver", ca.getHostString() + ":" + ca.getPort(),
+				sa.getHostString() + ":" + sa.getPort(), 1);
 	}
 
 	private void checkExpectationsExisting(String uri, String clientAddress, String serverAddress, int index) {

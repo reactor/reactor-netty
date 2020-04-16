@@ -1017,20 +1017,51 @@ public abstract class HttpClient {
 	/**
 	 * Whether to enable metrics to be collected and registered in Micrometer's
 	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
-	 * under the name {@link reactor.netty.Metrics#HTTP_CLIENT_PREFIX}. Applications can
-	 * separately register their own
-	 * {@link io.micrometer.core.instrument.config.MeterFilter filters} associated with this name.
-	 * For example, to put an upper bound on the number of tags produced:
+	 * under the name {@link reactor.netty.Metrics#HTTP_CLIENT_PREFIX}.
+	 * <p><strong>Note:</strong>
+	 * It is strongly recommended applications to configure an upper limit for the number of the URI tags.
+	 * For example:
 	 * <pre class="code">
-	 * MeterFilter filter = ... ;
-	 * Metrics.globalRegistry.config().meterFilter(MeterFilter.maximumAllowableTags(HTTP_CLIENT_PREFIX, 100, filter));
+	 * Metrics.globalRegistry
+	 *        .config()
+	 *        .meterFilter(MeterFilter.maximumAllowableTags(HTTP_CLIENT_PREFIX, URI, 100, MeterFilter.deny()));
 	 * </pre>
-	 * <p>By default this is not enabled.
+	 * <p>By default metrics are not enabled.
 	 *
 	 * @param metricsEnabled true enables metrics collection; false disables it
 	 * @return a new {@link HttpClient}
+	 * @deprecated as of 0.9.7. Use {@link #metrics(boolean, Function)}
 	 */
+	@Deprecated
 	public final HttpClient metrics(boolean metricsEnabled) {
+		return metrics(metricsEnabled, (Function<String, String>) null);
+	}
+
+	/**
+	 * Whether to enable metrics to be collected and registered in Micrometer's
+	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
+	 * under the name {@link reactor.netty.Metrics#HTTP_CLIENT_PREFIX}.
+	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
+	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri
+	 * {@code "/users/{id}"} can be used.
+	 * <p><strong>Note:</strong>
+	 * It is strongly recommended applications to configure an upper limit for the number of the URI tags.
+	 * For example:
+	 * <pre class="code">
+	 * Metrics.globalRegistry
+	 *        .config()
+	 *        .meterFilter(MeterFilter.maximumAllowableTags(HTTP_CLIENT_PREFIX, URI, 100, MeterFilter.deny()));
+	 * </pre>
+	 * <p>By default metrics are not enabled.
+	 *
+	 * @param metricsEnabled true enables metrics collection; false disables it
+	 * @param uriTagValue a function that receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.7
+	 */
+	public final HttpClient metrics(boolean metricsEnabled, @Nullable Function<String, String> uriTagValue) {
 		if (metricsEnabled) {
 			if (!Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
@@ -1039,11 +1070,17 @@ public abstract class HttpClient {
 			}
 
 			return tcpConfiguration(tcpClient ->
-					tcpClient.bootstrap(b -> BootstrapHandlers.updateMetricsSupport(b,
-							MicrometerHttpClientMetricsRecorder.INSTANCE)));
+					tcpClient.bootstrap(b -> {
+						BootstrapHandlers.updateMetricsSupport(b, MicrometerHttpClientMetricsRecorder.INSTANCE);
+						return HttpClientConfiguration.uriTagValue(b, uriTagValue);
+					}));
 		}
 		else {
-			return tcpConfiguration(tcpClient -> tcpClient.bootstrap(BootstrapHandlers::removeMetricsSupport));
+			return tcpConfiguration(tcpClient ->
+					tcpClient.bootstrap(b -> {
+						BootstrapHandlers.removeMetricsSupport(b);
+						return HttpClientConfiguration.uriTagValue(b, null);
+					}));
 		}
 	}
 
@@ -1058,7 +1095,10 @@ public abstract class HttpClient {
 	 */
 	@Deprecated
 	public final HttpClient metrics(boolean metricsEnabled, HttpClientMetricsRecorder recorder) {
-		return tcpConfiguration(tcpClient -> tcpClient.metrics(metricsEnabled, recorder));
+		return tcpConfiguration(tcpClient -> {
+			tcpClient.metrics(metricsEnabled, recorder);
+			return tcpClient.bootstrap(b -> HttpClientConfiguration.uriTagValue(b, null));
+		});
 	}
 
 	/**
@@ -1072,7 +1112,10 @@ public abstract class HttpClient {
 	 * @since 0.9.7
 	 */
 	public final HttpClient metrics(boolean metricsEnabled, Supplier<? extends HttpClientMetricsRecorder> recorder) {
-		return tcpConfiguration(tcpClient -> tcpClient.metrics(metricsEnabled, recorder));
+		return tcpConfiguration(tcpClient -> {
+			tcpClient.metrics(metricsEnabled, recorder);
+			return tcpClient.bootstrap(b -> HttpClientConfiguration.uriTagValue(b, null));
+		});
 	}
 
 	/**

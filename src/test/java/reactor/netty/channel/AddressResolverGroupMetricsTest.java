@@ -71,7 +71,7 @@ public class AddressResolverGroupMetricsTest {
 		              conn.channel()
 		                  .closeFuture()
 		                  .addListener(f -> latch.countDown()))
-		          .metrics(true)
+		          .metrics(true, s -> s)
 		          .get()
 		          .uri("http://localhost:" + server.port())
 		          .responseContent()
