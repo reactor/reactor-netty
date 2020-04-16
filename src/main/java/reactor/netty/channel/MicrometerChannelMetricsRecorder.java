@@ -17,9 +17,12 @@ package reactor.netty.channel;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.noop.NoopMeter;
 import io.netty.util.internal.PlatformDependent;
 
+import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentMap;
@@ -95,53 +98,75 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary ds = dataReceivedCache.computeIfAbsent(address,
-				key -> dataReceivedBuilder.tag(REMOTE_ADDRESS, address)
-				                          .register(REGISTRY));
-		ds.record(bytes);
+				key -> filter(dataReceivedBuilder.tag(REMOTE_ADDRESS, address)
+				                                 .register(REGISTRY)));
+		if (ds != null) {
+			ds.record(bytes);
+		}
 	}
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, long bytes) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary ds = dataSentCache.computeIfAbsent(address,
-				key -> dataSentBuilder.tag(REMOTE_ADDRESS, address)
-				                      .register(REGISTRY));
-		ds.record(bytes);
+				key -> filter(dataSentBuilder.tag(REMOTE_ADDRESS, address)
+				                             .register(REGISTRY)));
+		if (ds != null) {
+			ds.record(bytes);
+		}
 	}
 
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Counter c = errorsCache.computeIfAbsent(address,
-				key -> errorCountBuilder.tag(REMOTE_ADDRESS, address)
-				                        .register(REGISTRY));
-		c.increment();
+				key -> filter(errorCountBuilder.tag(REMOTE_ADDRESS, address)
+				                               .register(REGISTRY)));
+		if (c != null) {
+			c.increment();
+		}
 	}
 
 	@Override
 	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Timer timer = tlsHandshakeTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
-				key -> tlsHandshakeTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
-				                              .register(REGISTRY));
-		timer.record(time);
+				key -> filter(tlsHandshakeTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
+				                                     .register(REGISTRY)));
+		if (timer != null) {
+			timer.record(time);
+		}
 	}
 
 	@Override
 	public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Timer timer = connectTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
-				key -> connectTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
-				                         .register(REGISTRY));
-		timer.record(time);
+				key -> filter(connectTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
+				                                .register(REGISTRY)));
+		if (timer != null) {
+			timer.record(time);
+		}
 	}
 
 	@Override
 	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
 		String address = reactor.netty.Metrics.formatSocketAddress(remoteAddress);
 		Timer timer = addressResolverTimeCache.computeIfAbsent(new MeterKey(null, address, null, status),
-				key -> addressResolverTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
-				                                 .register(REGISTRY));
-		timer.record(time);
+				key -> filter(addressResolverTimeBuilder.tags(REMOTE_ADDRESS, address, STATUS, status)
+				                                        .register(REGISTRY)));
+		if (timer != null) {
+			timer.record(time);
+		}
+	}
+
+	@Nullable
+	protected static <M extends Meter> M filter(M meter) {
+		if (meter instanceof NoopMeter) {
+			return null;
+		}
+		else {
+			return meter;
+		}
 	}
 }

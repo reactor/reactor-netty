@@ -46,26 +46,32 @@ final class MicrometerHttpClientMetricsRecorder extends MicrometerHttpMetricsRec
 	public void recordDataReceivedTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
-				key -> dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-				                              .register(REGISTRY));
-		dataReceivedTime.record(time);
+				key -> filter(dataReceivedTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+				                                     .register(REGISTRY)));
+		if (dataReceivedTime != null) {
+			dataReceivedTime.record(time);
+		}
 	}
 
 	@Override
 	public void recordDataSentTime(SocketAddress remoteAddress, String uri, String method, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, address, method, null),
-				key -> dataSentTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
-				                          .register(REGISTRY));
-		dataSentTime.record(time);
+				key -> filter(dataSentTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method)
+				                                 .register(REGISTRY)));
+		if (dataSentTime != null) {
+			dataSentTime.record(time);
+		}
 	}
 
 	@Override
 	public void recordResponseTime(SocketAddress remoteAddress, String uri, String method, String status, Duration time) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, address, method, status),
-				key -> responseTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
-				                          .register(REGISTRY));
-		responseTime.record(time);
+				key -> filter(responseTimeBuilder.tags(REMOTE_ADDRESS, address, URI, uri, METHOD, method, STATUS, status)
+				                                 .register(REGISTRY)));
+		if (responseTime != null) {
+			responseTime.record(time);
+		}
 	}
 }
