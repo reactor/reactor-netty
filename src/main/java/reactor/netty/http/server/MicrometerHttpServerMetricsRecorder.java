@@ -42,24 +42,30 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 	@Override
 	public void recordDataReceivedTime(String uri, String method, Duration time) {
 		Timer dataReceivedTime = dataReceivedTimeCache.computeIfAbsent(new MeterKey(uri, null, method, null),
-				key -> dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
-				                              .register(REGISTRY));
-		dataReceivedTime.record(time);
+				key -> filter(dataReceivedTimeBuilder.tags(URI, uri, METHOD, method)
+				                                     .register(REGISTRY)));
+		if (dataReceivedTime != null) {
+			dataReceivedTime.record(time);
+		}
 	}
 
 	@Override
 	public void recordDataSentTime(String uri, String method, String status, Duration time) {
 		Timer dataSentTime = dataSentTimeCache.computeIfAbsent(new MeterKey(uri, null, method, status),
-				key -> dataSentTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
-				                          .register(REGISTRY));
-		dataSentTime.record(time);
+				key -> filter(dataSentTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
+				                                 .register(REGISTRY)));
+		if (dataSentTime != null) {
+			dataSentTime.record(time);
+		}
 	}
 
 	@Override
 	public void recordResponseTime(String uri, String method, String status, Duration time) {
 		Timer responseTime = responseTimeCache.computeIfAbsent(new MeterKey(uri, null, method, status),
-				key -> responseTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
-				                          .register(REGISTRY));
-		responseTime.record(time);
+				key -> filter(responseTimeBuilder.tags(URI, uri, METHOD, method, STATUS, status)
+				                                 .register(REGISTRY)));
+		if (responseTime != null) {
+			responseTime.record(time);
+		}
 	}
 }

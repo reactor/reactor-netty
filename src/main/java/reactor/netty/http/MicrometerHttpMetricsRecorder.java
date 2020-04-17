@@ -93,26 +93,32 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary dataReceived = dataReceivedCache.computeIfAbsent(new MeterKey(uri, address, null, null),
-				key -> dataReceivedBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
-				                          .register(REGISTRY));
-		dataReceived.record(bytes);
+				key -> filter(dataReceivedBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
+				                                 .register(REGISTRY)));
+		if (dataReceived != null) {
+			dataReceived.record(bytes);
+		}
 	}
 
 	@Override
 	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		DistributionSummary dataSent = dataSentCache.computeIfAbsent(new MeterKey(uri, address, null, null),
-				key -> dataSentBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
-				                      .register(REGISTRY));
-		dataSent.record(bytes);
+				key -> filter(dataSentBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
+				                             .register(REGISTRY)));
+		if (dataSent != null) {
+			dataSent.record(bytes);
+		}
 	}
 
 	@Override
 	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
 		String address = Metrics.formatSocketAddress(remoteAddress);
 		Counter errors = errorsCache.computeIfAbsent(new MeterKey(uri, address, null, null),
-				key -> errorsBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
-				                    .register(REGISTRY));
-		errors.increment();
+				key -> filter(errorsBuilder.tags(REMOTE_ADDRESS, address, URI, uri)
+				                           .register(REGISTRY)));
+		if (errors != null) {
+			errors.increment();
+		}
 	}
 }
