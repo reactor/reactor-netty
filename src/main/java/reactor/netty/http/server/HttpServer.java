@@ -318,29 +318,6 @@ public abstract class HttpServer {
 	 * Whether to enable metrics to be collected and registered in Micrometer's
 	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
 	 * under the name {@link reactor.netty.Metrics#HTTP_SERVER_PREFIX}.
-	 * <p><strong>Note:</strong>
-	 * It is strongly recommended applications to configure an upper limit for the number of the URI tags.
-	 * For example:
-	 * <pre class="code">
-	 * Metrics.globalRegistry
-	 *        .config()
-	 *        .meterFilter(MeterFilter.maximumAllowableTags(HTTP_SERVER_PREFIX, URI, 100, MeterFilter.deny()));
-	 * </pre>
-	 * <p>By default metrics are not enabled.
-	 *
-	 * @param metricsEnabled true enables metrics collection; false disables it
-	 * @return a new {@link HttpServer}
-	 * @deprecated as of 0.9.7. Use {@link #metrics(boolean, Function)}
-	 */
-	@Deprecated
-	public final HttpServer metrics(boolean metricsEnabled) {
-		return metrics(metricsEnabled, (Function<String, String>) null);
-	}
-
-	/**
-	 * Whether to enable metrics to be collected and registered in Micrometer's
-	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
-	 * under the name {@link reactor.netty.Metrics#HTTP_SERVER_PREFIX}.
 	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
 	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
 	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri

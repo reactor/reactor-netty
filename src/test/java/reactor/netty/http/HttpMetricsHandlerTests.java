@@ -60,13 +60,12 @@ public class HttpMetricsHandlerTests {
 	final Flux<ByteBuf> body = ByteBufFlux.fromString(Flux.just("Hello", " ", "World", "!")).delayElements(Duration.ofMillis(10));
 
 	@Before
-	@SuppressWarnings("deprecation")
 	public void setUp() {
 		httpServer = customizeServerOptions(
 				HttpServer.create()
 				          .host("127.0.0.1")
 				          .port(0)
-				          .metrics(true)
+				          .metrics(true, s -> s)
 				          .route(r -> r.post("/1", (req, res) -> res.header("Connection", "close")
 				                                                    .send(req.receive().retain().delayElements(Duration.ofMillis(10))))
 				                       .post("/2", (req, res) -> res.header("Connection", "close")
@@ -76,7 +75,7 @@ public class HttpMetricsHandlerTests {
 		httpClient =
 				customizeClientOptions(HttpClient.create(provider)
 				                                 .remoteAddress(() -> disposableServer.address())
-				                                 .metrics(true));
+				                                 .metrics(true, s -> s));
 
 		registry = new SimpleMeterRegistry();
 		Metrics.addRegistry(registry);
