@@ -23,6 +23,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -227,7 +228,8 @@ final class HttpClientConnect extends HttpClient {
 				}
 				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
 					BootstrapHandlers.updateConfiguration(b, NettyPipeline.HttpInitializer,
-							new Http1Initializer(handler.decoder, handler.compress, configuration.protocols));
+							new Http1Initializer(handler.decoder, handler.compress, configuration.protocols,
+									configuration.uriTagValue));
 //					return;
 				}
 //				if ((configuration.protocols & HttpClientConfiguration.h2) == HttpClientConfiguration.h2) {
@@ -264,7 +266,8 @@ final class HttpClientConnect extends HttpClient {
 				if ((configuration.protocols & HttpClientConfiguration.h11) == HttpClientConfiguration.h11) {
 					BootstrapHandlers.updateConfiguration(b,
 							NettyPipeline.HttpInitializer,
-							new Http1Initializer(handler.decoder, handler.compress, configuration.protocols));
+							new Http1Initializer(handler.decoder, handler.compress, configuration.protocols,
+									configuration.uriTagValue));
 //					return;
 				}
 //				if ((configuration.protocols & HttpClientConfiguration.h2c) == HttpClientConfiguration.h2c) {
@@ -700,11 +703,14 @@ final class HttpClientConnect extends HttpClient {
 		final HttpResponseDecoderSpec decoder;
 		final boolean compress;
 		final int protocols;
+		final Function<String, String> uriTagValue;
 
-		Http1Initializer(HttpResponseDecoderSpec decoder, boolean compress, int protocols) {
+		Http1Initializer(HttpResponseDecoderSpec decoder, boolean compress, int protocols,
+				@Nullable Function<String, String> uriTagValue) {
 			this.decoder = decoder;
 			this.compress = compress;
 			this.protocols = protocols;
+			this.uriTagValue = uriTagValue;
 		}
 
 		@Override
@@ -730,7 +736,7 @@ final class HttpClientConnect extends HttpClient {
 				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
 				if (channelMetricsRecorder instanceof HttpClientMetricsRecorder) {
 					p.addLast(NettyPipeline.HttpMetricsHandler,
-							new HttpClientMetricsHandler((HttpClientMetricsRecorder) channelMetricsRecorder));
+							new HttpClientMetricsHandler((HttpClientMetricsRecorder) channelMetricsRecorder, uriTagValue));
 				}
 			}
 		}
@@ -787,9 +793,11 @@ final class HttpClientConnect extends HttpClient {
 			GenericFutureListener<Future<Http2StreamChannel>> {
 		final HttpClientHandler handler;
 		final DirectProcessor<Void> upgraded;
+		final Function<String, String> uriTagValue;
 
-		HttpClientInitializer(HttpClientHandler handler) {
+		HttpClientInitializer(HttpClientHandler handler, @Nullable Function<String, String> uriTagValue) {
 			this.handler = handler;
+			this.uriTagValue = uriTagValue;
 			this.upgraded = DirectProcessor.create();
 		}
 
@@ -948,7 +956,7 @@ final class HttpClientConnect extends HttpClient {
 					ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
 					if (channelMetricsRecorder instanceof HttpClientMetricsRecorder) {
 						p.addLast(NettyPipeline.HttpMetricsHandler,
-								new HttpClientMetricsHandler((HttpClientMetricsRecorder) channelMetricsRecorder));
+								new HttpClientMetricsHandler((HttpClientMetricsRecorder) channelMetricsRecorder, parent.uriTagValue));
 					}
 				}
 //				ChannelOperations<?, ?> ops = HTTP_OPS.create(Connection.from(ctx.channel()), listener,	null);

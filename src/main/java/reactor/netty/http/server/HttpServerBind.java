@@ -151,7 +151,8 @@ final class HttpServerBind extends HttpServer
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
 								conf.forwarded,
 								conf.cookieEncoder,
-								conf.cookieDecoder));
+								conf.cookieDecoder,
+								conf.uriTagValue));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -165,7 +166,8 @@ final class HttpServerBind extends HttpServer
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
 								conf.forwarded,
 								conf.cookieEncoder,
-								conf.cookieDecoder));
+								conf.cookieDecoder,
+								conf.uriTagValue));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h2) == HttpServerConfiguration.h2) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -198,7 +200,8 @@ final class HttpServerBind extends HttpServer
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
 								conf.forwarded,
 								conf.cookieEncoder,
-								conf.cookieDecoder));
+								conf.cookieDecoder,
+								conf.uriTagValue));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -212,7 +215,8 @@ final class HttpServerBind extends HttpServer
 								compressPredicate(conf.compressPredicate, conf.minCompressionSize),
 								conf.forwarded,
 								conf.cookieEncoder,
-								conf.cookieDecoder));
+								conf.cookieDecoder,
+								conf.uriTagValue));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h2c) == HttpServerConfiguration.h2c) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -323,6 +327,7 @@ final class HttpServerBind extends HttpServer
 		final boolean                                            forwarded;
 		final ServerCookieEncoder                                cookieEncoder;
 		final ServerCookieDecoder                                cookieDecoder;
+		final Function<String, String>                           uriTagValue;
 
 		Http1Initializer(int line,
 				int header,
@@ -333,7 +338,8 @@ final class HttpServerBind extends HttpServer
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				boolean forwarded,
 				ServerCookieEncoder encoder,
-				ServerCookieDecoder decoder) {
+				ServerCookieDecoder decoder,
+				@Nullable Function<String, String> uriTagValue) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -344,6 +350,7 @@ final class HttpServerBind extends HttpServer
 			this.forwarded = forwarded;
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
+			this.uriTagValue = uriTagValue;
 		}
 
 		@Override
@@ -371,7 +378,7 @@ final class HttpServerBind extends HttpServer
 				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
 				if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
 					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
-							new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder));
+							new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder, uriTagValue));
 				}
 			}
 
@@ -391,6 +398,7 @@ final class HttpServerBind extends HttpServer
 		final boolean                                            forwarded;
 		final ServerCookieEncoder                                cookieEncoder;
 		final ServerCookieDecoder                                cookieDecoder;
+		final Function<String, String>                           uriTagValue;
 
 		Http1OrH2CleartextInitializer(int line,
 				int header,
@@ -401,7 +409,8 @@ final class HttpServerBind extends HttpServer
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				boolean forwarded,
 				ServerCookieEncoder encoder,
-				ServerCookieDecoder decoder) {
+				ServerCookieDecoder decoder,
+				@Nullable Function<String, String> uriTagValue) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -412,6 +421,7 @@ final class HttpServerBind extends HttpServer
 			this.forwarded = forwarded;
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
+			this.uriTagValue = uriTagValue;
 		}
 
 		@Override
@@ -473,7 +483,7 @@ final class HttpServerBind extends HttpServer
 				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
 				if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
 					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
-							new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder));
+							new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder, uriTagValue));
 				}
 			}
 		}
@@ -591,6 +601,7 @@ final class HttpServerBind extends HttpServer
 		final boolean                                            forwarded;
 		final ServerCookieEncoder                                cookieEncoder;
 		final ServerCookieDecoder                                cookieDecoder;
+		final Function<String, String>                           uriTagValue;
 
 		Http1OrH2Initializer(
 				int line,
@@ -602,7 +613,8 @@ final class HttpServerBind extends HttpServer
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				boolean forwarded,
 				ServerCookieEncoder encoder,
-				ServerCookieDecoder decoder) {
+				ServerCookieDecoder decoder,
+				@Nullable Function<String, String> uriTagValue) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -613,6 +625,7 @@ final class HttpServerBind extends HttpServer
 			this.forwarded = forwarded;
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
+			this.uriTagValue = uriTagValue;
 		}
 
 		@Override
@@ -685,7 +698,7 @@ final class HttpServerBind extends HttpServer
 					ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
 					if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
 						p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
-								new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder));
+								new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder, parent.uriTagValue));
 					}
 				}
 				return;

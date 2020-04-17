@@ -84,7 +84,7 @@ public class ByteBufAllocatorMetricsTest {
 		          .doOnResponse((res, conn) -> conn.channel()
 		                                           .closeFuture()
 		                                           .addListener(f -> latch.countDown()))
-		          .metrics(true)
+		          .metrics(true, s -> s)
 		          .get()
 		          .uri("/")
 		          .responseContent()

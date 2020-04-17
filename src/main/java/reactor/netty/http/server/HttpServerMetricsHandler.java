@@ -26,7 +26,9 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.channel.ChannelOperations;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
+import java.util.function.Function;
 
 /**
  * @author Violeta Georgieva
@@ -44,9 +46,11 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 
 
 	final HttpServerMetricsRecorder recorder;
+	final Function<String, String> uriTagValue;
 
-	HttpServerMetricsHandler(HttpServerMetricsRecorder recorder) {
+	HttpServerMetricsHandler(HttpServerMetricsRecorder recorder, @Nullable Function<String, String> uriTagValue) {
 		this.recorder = recorder;
+		this.uriTagValue = uriTagValue;
 	}
 
 	@Override
@@ -74,7 +78,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 				ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
 				if (channelOps instanceof HttpServerOperations) {
 					HttpServerOperations ops = (HttpServerOperations) channelOps;
-					String path = ops.path;
+					String path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
 					String method = ops.method().name();
 					String status = ops.status().codeAsText().toString();
 					recorder.recordDataSentTime(
@@ -121,7 +125,7 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpServerOperations) {
 				HttpServerOperations ops = (HttpServerOperations) channelOps;
-				String path = ops.path;
+				String path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
 				String method = ops.method().name();
 				recorder.recordDataReceivedTime(path, method, Duration.ofNanos(System.nanoTime() - dataReceivedTime));
 
@@ -141,7 +145,8 @@ final class HttpServerMetricsHandler extends ChannelDuplexHandler {
 		if (channelOps instanceof HttpServerOperations) {
 			HttpServerOperations ops = (HttpServerOperations) channelOps;
 			// Always take the remote address from the operations in order to consider proxy information
-			recorder.incrementErrorsCount(ops.remoteAddress(), ops.path);
+			recorder.incrementErrorsCount(ops.remoteAddress(),
+					uriTagValue == null ? ops.path : uriTagValue.apply(ops.path));
 		}
 
 		ctx.fireExceptionCaught(cause);

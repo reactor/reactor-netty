@@ -113,7 +113,7 @@ public class PooledConnectionProviderMetricsTest {
 		                  metrics.set(true);
 		              }
 		          })
-		          .metrics(clientMetricsEnabled)
+		          .metrics(clientMetricsEnabled, s -> s)
 		          .get()
 		          .uri("/")
 		          .responseContent()

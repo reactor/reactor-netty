@@ -25,8 +25,10 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.channel.ChannelOperations;
 
+import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.function.Function;
 
 /**
  * @author Violeta Georgieva
@@ -51,9 +53,11 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 
 
 	final HttpClientMetricsRecorder recorder;
+	final Function<String, String> uriTagValue;
 
-	HttpClientMetricsHandler(HttpClientMetricsRecorder recorder) {
+	HttpClientMetricsHandler(HttpClientMetricsRecorder recorder, @Nullable Function<String, String> uriTagValue) {
 		this.recorder = recorder;
+		this.uriTagValue = uriTagValue;
 	}
 
 	@Override
@@ -63,7 +67,7 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 			ChannelOperations<?,?> channelOps = ChannelOperations.get(ctx.channel());
 			if (channelOps instanceof HttpClientOperations) {
 				HttpClientOperations ops = (HttpClientOperations) channelOps;
-				path = ops.path;
+				path = uriTagValue == null ? ops.path : uriTagValue.apply(ops.path);
 				method = ops.method().name();
 			}
 
@@ -136,7 +140,8 @@ final class HttpClientMetricsHandler extends ChannelDuplexHandler {
 	private String resolveUri(ChannelHandlerContext ctx) {
 		ChannelOperations<?, ?> channelOps = ChannelOperations.get(ctx.channel());
 		if (channelOps instanceof HttpClientOperations) {
-			return ((HttpClientOperations) channelOps).uri();
+			String path = ((HttpClientOperations) channelOps).uri();
+			return uriTagValue == null ? path : uriTagValue.apply(path);
 		}
 		else {
 			return "unknown";

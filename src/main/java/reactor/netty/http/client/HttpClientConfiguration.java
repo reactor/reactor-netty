@@ -65,6 +65,8 @@ final class HttpClientConfiguration {
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate = null;
 	Consumer<HttpClientRequest> redirectRequestConsumer = null;
 
+	Function<String, String> uriTagValue = null;
+
 	Function<Mono<HttpClientConfiguration>, Mono<HttpClientConfiguration>> deferredConf                   = null;
 
 	BiFunction<? super HttpClientRequest, ? super NettyOutbound, ? extends Publisher<Void>>
@@ -91,6 +93,7 @@ final class HttpClientConfiguration {
 		this.body = from.body;
 		this.protocols = from.protocols;
 		this.deferredConf = from.deferredConf;
+		this.uriTagValue = from.uriTagValue;
 	}
 
 	static HttpClientConfiguration getAndClean(Bootstrap b) {
@@ -299,6 +302,11 @@ final class HttpClientConfiguration {
 
 	static Bootstrap decoder(Bootstrap b, HttpResponseDecoderSpec decoder) {
 		getOrCreate(b).decoder = decoder;
+		return b;
+	}
+
+	static Bootstrap uriTagValue(Bootstrap b, @Nullable Function<String, String> uriTagValue) {
+		getOrCreate(b).uriTagValue = uriTagValue;
 		return b;
 	}
 
