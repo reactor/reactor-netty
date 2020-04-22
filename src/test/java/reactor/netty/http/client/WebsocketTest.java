@@ -327,7 +327,7 @@ public class WebsocketTest {
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .headers(h -> h.add("Authorization", auth))
-				          .websocket("SUBPROTOCOL,OTHER")
+				          .websocket(WebsocketClientSpec.builder().protocols("SUBPROTOCOL,OTHER").build())
 				          .uri("/test")
 				          .handle((i, o) -> i.receive().asString()))
 		            .verifyErrorMessage("Invalid subprotocol. Actual: null. Expected one of: SUBPROTOCOL,OTHER");
@@ -349,7 +349,7 @@ public class WebsocketTest {
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .headers(h -> h.add("Authorization", auth))
-				          .websocket("SUBPROTOCOL,OTHER")
+				          .websocket(WebsocketClientSpec.builder().protocols("SUBPROTOCOL,OTHER").build())
 				          .uri("/test")
 				          .handle((i, o) -> i.receive().asString()))
 		            //the SERVER returned null which means that it couldn't select a protocol
@@ -372,7 +372,7 @@ public class WebsocketTest {
 				                          .getPort())
 				          .wiretap(true)
 				          .headers(h -> h.add("Authorization", auth))
-				          .websocket("SUBPROTOCOL,OTHER")
+				          .websocket(WebsocketClientSpec.builder().protocols("SUBPROTOCOL,OTHER").build())
 				          .uri("/test")
 				          .handle((i, o) -> i.receive().asString())
 				          .log()
@@ -399,7 +399,7 @@ public class WebsocketTest {
 				          .port(httpServer.address().getPort())
 				          .wiretap(true)
 				          .headers(h -> h.add("Authorization", auth))
-				          .websocket("Common,OTHER")
+				          .websocket(WebsocketClientSpec.builder().protocols("Common,OTHER").build())
 				          .uri("/test")
 				          .handle((in, out) -> in.receive()
 				                                 .asString()
@@ -452,7 +452,7 @@ public class WebsocketTest {
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
 				          .headers(h -> h.add("Authorization", auth))
-				          .websocket("proto1, proto2")
+				          .websocket(WebsocketClientSpec.builder().protocols("proto1, proto2").build())
 				          .uri("/test")
 				          .handle((in, out) -> in.receive()
 				                                 .asString()
@@ -490,7 +490,7 @@ public class WebsocketTest {
 		HttpClient.create()
 		           .port(httpServer.address().getPort())
 		           .headers(h -> h.add("Authorization", auth))
-		           .websocket("proto1,proto2")
+		           .websocket(WebsocketClientSpec.builder().protocols("proto1,proto2").build())
 		           .uri("/test")
 		           .handle((in, out) -> {
 		              clientSelectedProtocolWhenSimplyUpgrading.set(in.selectedSubprotocol());
@@ -515,7 +515,7 @@ public class WebsocketTest {
 
 		Mono<Void> response = HttpClient.create()
 		                                .port(httpServer.address().getPort())
-		                                .websocket(10)
+		                                .websocket(WebsocketClientSpec.builder().maxFramePayloadLength(10).build())
 		                                .handle((in, out) -> in.receive()
 		                                                       .asString()
 		                                                       .map(srv -> srv))
@@ -537,7 +537,7 @@ public class WebsocketTest {
 
 		Mono<Void> response = HttpClient.create()
 		                                .port(httpServer.address().getPort())
-		                                .websocket(11)
+		                                .websocket(WebsocketClientSpec.builder().maxFramePayloadLength(11).build())
 		                                .handle((in, out) -> in.receive()
 		                                                       .asString()
 		                                                       .map(srv -> srv))
@@ -1293,7 +1293,7 @@ public class WebsocketTest {
 		HttpClient.create()
 		          .port(httpServer.address().getPort())
 		          .wiretap(true)
-		          .websocket(true)
+		          .websocket(WebsocketClientSpec.builder().handlePing(true).build())
 		          .uri("/")
 		          .handle((in, out) -> in.receiveFrames())
 		          .subscribe();
