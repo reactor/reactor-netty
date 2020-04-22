@@ -370,6 +370,43 @@ NOTE: When you expect a high load, be cautious with a connection pool with a ver
 `reactor.netty.http.client.PrematureCloseException` exception with a root cause "Connect Timeout" due
 to too many concurrent connections opened/acquired.
 
+=== Metrics
+The pooled `ConnectionProvider` supports built-in integration with https://micrometer.io/[`Micrometer`].
+It exposes all metrics with a prefix of `reactor.netty.connection.provider`.
+
+include::conn-provider-metrics.adoc[]
+
+The following example enables that integration:
+
+====
+[source,java]
+----
+import reactor.netty.Connection;
+import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.TcpClient;
+
+public class Application {
+
+    public static void main(String[] args) {
+        ConnectionProvider provider =
+                ConnectionProvider.builder("fixed")
+                                  .maxConnections(50)
+                                  .metrics(true) <1>
+                                  .build();
+        Connection connection =
+                TcpClient.create(provider)
+                         .host("example.com")
+                         .port(80)
+                         .connectNow();
+
+        connection.onDispose()
+                  .block();
+    }
+}
+----
+<1> Enables the built-in integration with Micrometer
+====
+
 == SSL and TLS
 
 When you need SSL or TLS, you can apply the following configuration.
@@ -438,4 +475,80 @@ public class Application {
     }
 }
 ----
+====
+
+== Metrics
+The TCP client supports built-in integration with https://micrometer.io/[`Micrometer`].
+It exposes all metrics with a prefix of `reactor.netty.tcp.client`.
+
+The following table provides information for the TCP client metrics:
+
+[width="100%",options="header"]
+|=======
+| metric name | type | description
+| reactor.netty.tcp.client.data.received | DistributionSummary | Amount of the data received, in bytes
+| reactor.netty.tcp.client.data.sent | DistributionSummary | Amount of the data sent, in bytes
+| reactor.netty.tcp.client.errors | Counter | Number of errors that occurred
+| reactor.netty.tcp.client.tls.handshake.time | Timer | Time spent for TLS handshake
+| reactor.netty.tcp.client.connect.time | Timer | Time spent for connecting to the remote address
+| reactor.netty.tcp.client.address.resolver | Timer | Time spent for resolving the address
+|=======
+
+These additional metrics are also available:
+
+include::conn-provider-metrics.adoc[]
+
+include::alloc-metrics.adoc[]
+
+The following example enables that integration:
+
+====
+[source,java]
+----
+import reactor.netty.Connection;
+import reactor.netty.tcp.TcpClient;
+
+public class Application {
+
+    public static void main(String[] args) {
+        Connection connection =
+                TcpClient.create()
+                         .host("example.com")
+                         .port(80)
+                         .metrics(true) <1>
+                         .connectNow();
+
+        connection.onDispose()
+                  .block();
+    }
+}
+----
+<1> Enables the built-in integration with Micrometer
+====
+
+When TCP client metrics are needed for an integration with a system other than `Micrometer` or you want
+to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
+
+====
+[source,java]
+----
+import reactor.netty.Connection;
+import reactor.netty.tcp.TcpClient;
+
+public class Application {
+
+    public static void main(String[] args) {
+        Connection connection =
+                TcpClient.create()
+                         .host("example.com")
+                         .port(80)
+                         .metrics(true, () -> new CustomChannelMetricsRecorder()) <1>
+                         .connectNow();
+
+        connection.onDispose()
+                  .block();
+    }
+}
+----
+<1> Enables TCP client metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 ====

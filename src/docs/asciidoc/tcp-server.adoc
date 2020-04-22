@@ -326,3 +326,71 @@ public class Application {
 }
 ----
 ====
+
+== Metrics
+The TCP server supports built-in integration with https://micrometer.io/[`Micrometer`].
+It exposes all metrics with a prefix of `reactor.netty.tcp.server`.
+
+The following table provides information for the TCP server metrics:
+
+[width="100%",options="header"]
+|=======
+| metric name | type | description
+| reactor.netty.tcp.server.data.received | DistributionSummary | Amount of the data received, in bytes
+| reactor.netty.tcp.server.data.sent | DistributionSummary | Amount of the data sent, in bytes
+| reactor.netty.tcp.server.errors | Counter | Number of errors that occurred
+| reactor.netty.tcp.server.tls.handshake.time | Timer | Time spent for TLS handshake
+|=======
+
+These additional metrics are also available:
+
+include::alloc-metrics.adoc[]
+
+The following example enables that integration:
+
+====
+[source,java]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.tcp.TcpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                TcpServer.create()
+                         .metrics(true) <1>
+                         .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Enables the built-in integration with Micrometer
+====
+
+When TCP server metrics are needed for an integration with a system other than `Micrometer` or you want
+to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
+
+====
+[source,java]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.tcp.TcpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                TcpServer.create()
+                         .metrics(true, () -> new CustomChannelMetricsRecorder()) <1>
+                         .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Enables TCP server metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
+====
