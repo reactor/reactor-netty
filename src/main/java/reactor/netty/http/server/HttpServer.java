@@ -401,10 +401,9 @@ public abstract class HttpServer {
 	 */
 	@Deprecated
 	public final HttpServer metrics(boolean metricsEnabled, HttpServerMetricsRecorder recorder) {
-		return tcpConfiguration(tcpServer -> {
-			tcpServer.metrics(metricsEnabled, recorder);
-			return tcpServer.bootstrap(b -> HttpServerConfiguration.uriTagValue(b, null));
-		});
+		return tcpConfiguration(tcpServer ->
+			tcpServer.metrics(metricsEnabled, recorder)
+			         .bootstrap(b -> HttpServerConfiguration.uriTagValue(b, null)));
 	}
 
 	/**
@@ -418,10 +417,9 @@ public abstract class HttpServer {
 	 * @since 0.9.7
 	 */
 	public final HttpServer metrics(boolean metricsEnabled, Supplier<? extends HttpServerMetricsRecorder> recorder) {
-		return tcpConfiguration(tcpServer -> {
-			tcpServer.metrics(metricsEnabled, recorder);
-			return tcpServer.bootstrap(b -> HttpServerConfiguration.uriTagValue(b, null));
-		});
+		return tcpConfiguration(tcpServer ->
+			tcpServer.metrics(metricsEnabled, recorder)
+			         .bootstrap(b -> HttpServerConfiguration.uriTagValue(b, null)));
 	}
 
 	/**
