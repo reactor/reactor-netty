@@ -88,7 +88,7 @@ public final class ReactorNetty {
 	 */
 	public static final String UDP_IO_THREAD_COUNT = "reactor.netty.udp.ioThreadCount";
 	/**
-	 * Default quite period that guarantees that the disposal of the underlying LoopResources
+	 * Default quiet period that guarantees that the disposal of the underlying LoopResources
 	 * will not happen, fallback to 2 seconds.
 	 */
 	public static final String SHUTDOWN_QUIET_PERIOD = "reactor.netty.ioShutdownQuietPeriod";

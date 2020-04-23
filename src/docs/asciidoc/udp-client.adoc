@@ -41,7 +41,7 @@ instance that is ready for configuring.
 ====
 
 The returned {javadoc}/reactor/netty/Connection.html[`Connection`]
-offers a simple connection API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+offers a simple connection API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the client down in a blocking fashion.
 
 === Host and Port
@@ -177,9 +177,9 @@ public class Application {
 <1> The Netty pipeline is extended with `LineBasedFrameDecoder` when the channel has been connected.
 ====
 
-== Connection Configurations
+== Connection Configuration
 
-This section describes three kinds of configuration that you can use at the TCP level:
+This section describes three kinds of configuration that you can use at the UDP level:
 
 * <<client-udp-connection-configurations-channel-options>>
 * <<client-udp-connection-configurations-wire-logger>>

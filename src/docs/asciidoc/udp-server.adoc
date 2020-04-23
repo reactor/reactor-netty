@@ -41,7 +41,7 @@ instance that is ready for configuring.
 ====
 
 The returned {javadoc}/reactor/netty/Connection.html[`Connection`]
-offers a simple server API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the server down in a blocking fashion.
 
 === Host and Port
@@ -201,9 +201,9 @@ public class Application {
 <1> `Netty` pipeline is extended with `LineBasedFrameDecoder` when the server channel is bound.
 ====
 
-== Connection Configurations
+== Connection Configuration
 
-This section describes three kinds of configuration that you can use at the TCP level:
+This section describes three kinds of configuration that you can use at the UDP level:
 
 * <<server-udp-connection-configurations-channel-options>>
 * <<server-udp-connection-configurations-wire-logger>>
@@ -247,7 +247,7 @@ public class Application {
 ----
 ====
 
-For more about Netty channel options, see the following links:
+For more information about Netty channel options, see the following links:
 
 * https://netty.io/4.1/api/io/netty/channel/ChannelOption.html[`ChannelOption`]
 * https://docs.oracle.com/javase/8/docs/technotes/guides/net/socketOpt.html[Socket Options]
@@ -301,7 +301,7 @@ include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=76..105]
 ----
 ====
 
-If you need changes to the these settings, you can apply the following configuration:
+If you need changes to these settings, you can apply the following configuration:
 
 ====
 [source,java]

@@ -187,7 +187,7 @@ include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=124..130]
 ----
 ====
 
-If additional options are necessary or changes to the current options, you can apply the following configuration:
+If additional options are necessary or changes to the current options are needed, you can apply the following configuration:
 
 ====
 [source,java]

@@ -41,7 +41,7 @@ instance ready for configuring.
 ====
 
 The returned {javadoc}/reactor/netty/DisposableServer.html[`DisposableServer`]
-offers a simple server API, including to {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
 which shuts the server down in a blocking fashion.
 
 === Host and Port
@@ -467,7 +467,7 @@ https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLo
 is raised.
 ====
 
-== TCP-level Configurations
+== TCP-level Configuration
 
 When you need to change configuration on the TCP level, you can use the following snippet
 to extend the default `TCP` server configuration:

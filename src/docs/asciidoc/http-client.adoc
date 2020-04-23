@@ -339,7 +339,7 @@ https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLo
 is raised.
 ====
 
-== TCP-level Configurations
+== TCP-level Configuration
 
 When you need configurations on a TCP level, you can use the following snippet
 to extend the default `TCP` client configuration:
