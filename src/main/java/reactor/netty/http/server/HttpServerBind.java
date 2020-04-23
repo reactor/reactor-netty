@@ -201,7 +201,8 @@ final class HttpServerBind extends HttpServer
 								conf.forwarded,
 								conf.cookieEncoder,
 								conf.cookieDecoder,
-								conf.uriTagValue));
+								conf.uriTagValue,
+								conf.decoder.h2cMaxContentLength));
 			}
 			if ((conf.protocols & HttpServerConfiguration.h11) == HttpServerConfiguration.h11) {
 				return BootstrapHandlers.updateConfiguration(b,
@@ -399,6 +400,7 @@ final class HttpServerBind extends HttpServer
 		final ServerCookieEncoder                                cookieEncoder;
 		final ServerCookieDecoder                                cookieDecoder;
 		final Function<String, String>                           uriTagValue;
+		final int                                                h2cMaxContentLength;
 
 		Http1OrH2CleartextInitializer(int line,
 				int header,
@@ -410,7 +412,8 @@ final class HttpServerBind extends HttpServer
 				boolean forwarded,
 				ServerCookieEncoder encoder,
 				ServerCookieDecoder decoder,
-				@Nullable Function<String, String> uriTagValue) {
+				@Nullable Function<String, String> uriTagValue,
+				int h2cMaxContentLength) {
 			this.line = line;
 			this.header = header;
 			this.chunk = chunk;
@@ -422,6 +425,7 @@ final class HttpServerBind extends HttpServer
 			this.cookieEncoder = encoder;
 			this.cookieDecoder = decoder;
 			this.uriTagValue = uriTagValue;
+			this.h2cMaxContentLength = h2cMaxContentLength;
 		}
 
 		@Override
@@ -459,7 +463,7 @@ final class HttpServerBind extends HttpServer
 			};
 			final CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
 					httpServerCodec,
-					new HttpServerUpgradeHandler(httpServerCodec, upgrader),
+					new HttpServerUpgradeHandler(httpServerCodec, upgrader, h2cMaxContentLength),
 					http2ServerHandler);
 
 			p.addLast(h2cUpgradeHandler);

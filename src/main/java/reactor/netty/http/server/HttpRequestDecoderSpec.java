@@ -22,17 +22,44 @@ import reactor.netty.tcp.TcpServer;
 
 /**
  * A configuration builder to fine tune the {@link io.netty.handler.codec.http.HttpServerCodec}
- * (or more precisely the {@link io.netty.handler.codec.http.HttpServerCodec.HttpServerRequestDecoder}).
+ * (or more precisely the {@link io.netty.handler.codec.http.HttpServerCodec.HttpServerRequestDecoder}) for HTTP/1.1
+ * or {@link io.netty.handler.codec.http.HttpServerUpgradeHandler} for H2C.
  * <p>
  * Defaults are accessible as constants {@link #DEFAULT_MAX_INITIAL_LINE_LENGTH}, {@link #DEFAULT_MAX_HEADER_SIZE},
- * {@link #DEFAULT_MAX_CHUNK_SIZE}, {@link #DEFAULT_INITIAL_BUFFER_SIZE} and {@link #DEFAULT_VALIDATE_HEADERS}.
+ * {@link #DEFAULT_MAX_CHUNK_SIZE}, {@link #DEFAULT_INITIAL_BUFFER_SIZE}, {@link #DEFAULT_VALIDATE_HEADERS} and
+ * {@link #DEFAULT_H2C_MAX_CONTENT_LENGTH}.
  *
  * @author Simon Baslé
+ * @author Violeta Georgieva
  */
 public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDecoderSpec> {
 
+	/**
+	 * The maximum length of the content of the H2C upgrade request.
+	 * By default the server will reject an upgrade request with non-empty content,
+	 * because the upgrade request is most likely a GET request.
+	 */
+	public static final int DEFAULT_H2C_MAX_CONTENT_LENGTH = 0;
+
+	int h2cMaxContentLength = DEFAULT_H2C_MAX_CONTENT_LENGTH;
+
 	@Override
 	public HttpRequestDecoderSpec get() {
+		return this;
+	}
+
+	/**
+	 * Configure the maximum length of the content of the H2C upgrade request.
+	 * By default the server will reject an upgrade request with non-empty content,
+	 * because the upgrade request is most likely a GET request. If the client sends
+	 * a non-GET upgrade request, {@code h2cMaxContentLength} specifies the maximum
+	 * length of the content of the upgrade request.
+	 *
+	 * @param h2cMaxContentLength the maximum length of the content of the upgrade request
+	 * @return this builder for further configuration
+	 */
+	public HttpRequestDecoderSpec h2cMaxContentLength(int h2cMaxContentLength) {
+		this.h2cMaxContentLength = h2cMaxContentLength;
 		return this;
 	}
 
@@ -47,6 +74,7 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 		decoder.maxHeaderSize = maxHeaderSize;
 		decoder.maxInitialLineLength = maxInitialLineLength;
 		decoder.validateHeaders = validateHeaders;
+		decoder.h2cMaxContentLength = h2cMaxContentLength;
 		return tcp -> tcp.bootstrap(b -> HttpServerConfiguration.decoder(b, decoder));
 	}
 
