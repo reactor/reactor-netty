@@ -1038,10 +1038,9 @@ public abstract class HttpClient {
 	 * @since 0.9.7
 	 */
 	public final HttpClient metrics(boolean metricsEnabled, Supplier<? extends HttpClientMetricsRecorder> recorder) {
-		return tcpConfiguration(tcpClient -> {
-			tcpClient.metrics(metricsEnabled, recorder);
-			return tcpClient.bootstrap(b -> HttpClientConfiguration.uriTagValue(b, null));
-		});
+		return tcpConfiguration(tcpClient ->
+			tcpClient.metrics(metricsEnabled, recorder)
+			         .bootstrap(b -> HttpClientConfiguration.uriTagValue(b, null)));
 	}
 
 	/**
