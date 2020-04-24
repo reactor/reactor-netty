@@ -433,3 +433,108 @@ public class Application {
 
 == Retry Strategies
 By default, the `HTTP` client retries the request once if it was aborted on the `TCP` level.
+
+== Metrics
+The HTTP client supports built-in integration with https://micrometer.io/[`Micrometer`].
+It exposes all metrics with a prefix of `reactor.netty.http.client`.
+
+The following table provides information for the HTTP client metrics:
+
+[width="100%",options="header"]
+|=======
+| metric name | type | description
+| reactor.netty.http.client.data.received | DistributionSummary | Amount of the data received, in bytes
+| reactor.netty.http.client.data.sent | DistributionSummary | Amount of the data sent, in bytes
+| reactor.netty.http.client.errors | Counter | Number of errors that occurred
+| reactor.netty.http.client.tls.handshake.time | Timer | Time spent for TLS handshake
+| reactor.netty.http.client.connect.time | Timer | Time spent for connecting to the remote address
+| reactor.netty.http.client.address.resolver | Timer | Time spent for resolving the address
+| reactor.netty.http.client.data.received.time | Timer | Time spent in consuming incoming data
+| reactor.netty.http.client.data.sent.time | Timer | Time spent in sending outgoing data
+| reactor.netty.http.client.response.time | Timer | Total time for the request/response
+|=======
+
+These additional metrics are also available:
+
+include::conn-provider-metrics.adoc[]
+
+include::alloc-metrics.adoc[]
+
+The following example enables that integration:
+
+====
+[source,java]
+----
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.config.MeterFilter;
+import reactor.netty.http.client.HttpClient;
+
+public class Application {
+
+    public static void main(String[] args) {
+        Metrics.globalRegistry <1>
+               .config()
+               .meterFilter(MeterFilter.maximumAllowableTags("reactor.netty.http.client", "URI", 100, MeterFilter.deny()));
+
+        HttpClient client =
+                HttpClient.create()
+                          .metrics(true, s -> {
+                              if (s.startsWith("/stream/")) { <2>
+                                  return "/stream/{n}";
+                              }
+                              else if (s.startsWith("/bytes/")) {
+                                  return "/bytes/{n}";
+                              }
+                              return s;
+                          }); <3>
+
+        client.get()
+              .uri("http://httpbin.org/stream/2")
+              .responseContent()
+              .blockLast();
+
+        client.get()
+              .uri("http://httpbin.org/bytes/1024")
+              .responseContent()
+              .blockLast();
+    }
+}
+----
+<1> Applies upper limit for the meters with `URI` tag
+<2> Templated URIs will be used as an URI tag value when possible
+<3> Enables the built-in integration with Micrometer
+====
+
+NOTE: In order to avoid a memory and CPU overhead of the enabled metrics, it is important to convert the real URIs to templated URIs when possible.
+Without a conversion to a template-like form, each distinct URI leads to the creation of a distinct tag, which takes a lot of memory for the metrics.
+
+NOTE: Always apply an upper limit for the meters with URI tags. Configuring an upper limit on the number of meters can help in cases when the real URIs cannot be templated.
+You can find more information at https://micrometer.io/docs/concepts#_denyaccept_meters[`maximumAllowableTags`].
+
+When HTTP client metrics are needed for an integration with a system other than `Micrometer` or you want
+to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
+
+====
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+import java.net.SocketAddress;
+import java.time.Duration;
+
+public class Application {
+
+    public static void main(String[] args) {
+        HttpClientResponse response =
+                HttpClient.create()
+                          .metrics(true, () -> new CustomHttpClientMetricsRecorder()) <1>
+                          .get()
+                          .uri("https://httpbin.org/stream/2")
+                          .response()
+                          .block();
+    }
+}
+----
+<1> Enables HTTP client metrics and provides {javadoc}/reactor/netty/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
+====

@@ -64,11 +64,11 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		super(name, protocol);
 		this.dataReceivedTimeBuilder =
 				Timer.builder(name + DATA_RECEIVED_TIME)
-				     .description("Time that is spent in consuming incoming data");
+				     .description("Time spent in consuming incoming data");
 
 		this.dataSentTimeBuilder =
 				Timer.builder(name + DATA_SENT_TIME)
-				     .description("Time that is spent in sending outgoing data");
+				     .description("Time spent in sending outgoing data");
 
 		this.responseTimeBuilder =
 				Timer.builder(name + RESPONSE_TIME)
@@ -77,16 +77,16 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 		this.dataReceivedBuilder =
 				DistributionSummary.builder(name + DATA_RECEIVED)
 				                   .baseUnit("bytes")
-				                   .description("Amount of the data that is received, in bytes");
+				                   .description("Amount of the data received, in bytes");
 
 		this.dataSentBuilder =
 				DistributionSummary.builder(name + DATA_SENT)
 				                   .baseUnit("bytes")
-				                   .description("Amount of the data that is sent, in bytes");
+				                   .description("Amount of the data sent, in bytes");
 
 		this.errorsBuilder =
 				Counter.builder(name + ERRORS)
-				       .description("Number of the errors that are occurred");
+				       .description("Number of errors that occurred");
 	}
 
 	@Override

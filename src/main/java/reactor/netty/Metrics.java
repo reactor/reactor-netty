@@ -81,37 +81,37 @@ public class Metrics {
 
 	// Metrics
 	/**
-	 * Amount of the data that is received, in bytes
+	 * Amount of the data received, in bytes
 	 */
 	public static final String DATA_RECEIVED = ".data.received";
 
 	/**
-	 * Amount of the data that is sent, in bytes
+	 * Amount of the data sent, in bytes
 	 */
 	public static final String DATA_SENT = ".data.sent";
 
 	/**
-	 * Number of the errors that are occurred
+	 * Number of errors that occurred
 	 */
 	public static final String ERRORS = ".errors";
 
 	/**
-	 * Time that is spent for TLS handshake
+	 * Time spent for TLS handshake
 	 */
 	public static final String TLS_HANDSHAKE_TIME = ".tls.handshake.time";
 
 	/**
-	 * Time that is spent for connecting to the remote address
+	 * Time spent for connecting to the remote address
 	 */
 	public static final String CONNECT_TIME = ".connect.time";
 
 	/**
-	 * Time that is spent in consuming incoming data
+	 * Time spent in consuming incoming data
 	 */
 	public static final String DATA_RECEIVED_TIME = ".data.received.time";
 
 	/**
-	 * Time that is spent in sending outgoing data
+	 * Time spent in sending outgoing data
 	 */
 	public static final String DATA_SENT_TIME = ".data.sent.time";
 
@@ -123,7 +123,7 @@ public class Metrics {
 
 	// AddressResolverGroup Metrics
 	/**
-	 * Time that is spent for resolving the address
+	 * Time spent for resolving the address
 	 */
 	public static final String ADDRESS_RESOLVER = ".address.resolver";
 
@@ -145,7 +145,7 @@ public class Metrics {
 	public static final String IDLE_CONNECTIONS = ".idle.connections";
 
 	/**
-	 * The number of the request, that are pending acquire a connection
+	 * The number of requests that are waiting for a connection
 	 */
 	public static final String PENDING_CONNECTIONS = ".pending.connections";
 

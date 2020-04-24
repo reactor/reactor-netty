@@ -67,31 +67,31 @@ public class MicrometerChannelMetricsRecorder implements ChannelMetricsRecorder 
 		this.dataReceivedBuilder =
 				DistributionSummary.builder(name + DATA_RECEIVED)
 				                   .baseUnit("bytes")
-				                   .description("Amount of the data that is received, in bytes")
+				                   .description("Amount of the data received, in bytes")
 				                   .tag(URI, protocol);
 
 		this.dataSentBuilder =
 				DistributionSummary.builder(name + DATA_SENT)
 				                   .baseUnit("bytes")
-				                   .description("Amount of the data that is sent, in bytes")
+				                   .description("Amount of the data sent, in bytes")
 				                   .tag(URI, protocol);
 
 		this.errorCountBuilder =
 				Counter.builder(name + ERRORS)
-				       .description("Number of the errors that are occurred")
+				       .description("Number of errors that occurred")
 				       .tag(URI, protocol);
 
 		this.connectTimeBuilder =
 				Timer.builder(name + CONNECT_TIME)
-				     .description("Time that is spent for connecting to the remote address");
+				     .description("Time spent for connecting to the remote address");
 
 		this.tlsHandshakeTimeBuilder =
 				Timer.builder(name + TLS_HANDSHAKE_TIME)
-				     .description("Time that is spent for TLS handshake");
+				     .description("Time spent for TLS handshake");
 
 		this.addressResolverTimeBuilder =
 				Timer.builder(name + ADDRESS_RESOLVER)
-				     .description("Time that is spent for resolving the address");
+				     .description("Time spent for resolving the address");
 	}
 
 	@Override
