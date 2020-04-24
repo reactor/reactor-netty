@@ -732,4 +732,20 @@ public class HttpTests {
 		          .secure(sslContextSpec -> System.out.println())
 		          .bindNow();
 	}
+
+	@Test
+	@Ignore
+	public void testIssue1071() {
+		DisposableServer server =
+				HttpServer.create()
+				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
+				          .route(routes ->
+				                  routes.post("/echo", (request, response) -> response.send(request.receive().retain())))
+				          .port(8080)
+				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(1024))
+				          .wiretap(true)
+				          .bindNow();
+
+		server.onDispose().block();
+	}
 }
