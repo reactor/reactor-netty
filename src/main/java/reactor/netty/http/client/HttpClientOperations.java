@@ -686,26 +686,25 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	final void withWebsocketSupport(String protocols, int maxFramePayloadLength, boolean proxyPing, boolean compress) {
+	final void withWebsocketSupport(WebsocketClientSpec websocketClientSpec, boolean compress) {
 		URI url = websocketUri();
 		//prevent further header to be sent for handshaking
 		if (markSentHeaders()) {
 			// Returned value is deliberately ignored
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-			if (compress) {
+			if (websocketClientSpec.compress() || compress) {
 				requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
 				// Returned value is deliberately ignored
 				removeHandler(NettyPipeline.HttpDecompressor);
 				// Returned value is deliberately ignored
-				addHandlerFirst(NettyPipeline.WsCompressionHandler,
-				                WebSocketClientCompressionHandler.INSTANCE);
+				addHandlerFirst(NettyPipeline.WsCompressionHandler, WebSocketClientCompressionHandler.INSTANCE);
 			}
 
 			if (log.isDebugEnabled()) {
 			    log.debug(format(channel(), "Attempting to perform websocket handshake with {}"), url);
 			}
-			WebsocketClientOperations ops = new WebsocketClientOperations(url, protocols, maxFramePayloadLength, proxyPing, this);
+			WebsocketClientOperations ops = new WebsocketClientOperations(url, websocketClientSpec, this);
 
 			if(!rebind(ops)) {
 				log.error(format(channel(), "Error while rebinding websocket in channel attribute: " +

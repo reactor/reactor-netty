@@ -62,22 +62,21 @@ final class WebsocketClientOperations extends HttpClientOperations
 	volatile int closeSent;
 
 	WebsocketClientOperations(URI currentURI,
-			String protocols,
-			int maxFramePayloadLength,
-			boolean proxyPing,
+			WebsocketClientSpec websocketClientSpec,
 			HttpClientOperations replaced) {
 		super(replaced);
-		this.proxyPing = proxyPing;
+		this.proxyPing = websocketClientSpec.handlePing();
 		Channel channel = channel();
 		onCloseState = MonoProcessor.create();
 
+		String subprotocols = websocketClientSpec.protocols();
 		handshaker = WebSocketClientHandshakerFactory.newHandshaker(currentURI,
 					WebSocketVersion.V13,
-					protocols.isEmpty() ? null : protocols,
+					subprotocols != null && !subprotocols.isEmpty() ? subprotocols : null,
 					true,
 					replaced.requestHeaders()
 					        .remove(HttpHeaderNames.HOST),
-					maxFramePayloadLength);
+					websocketClientSpec.maxFramePayloadLength());
 
 		handshaker.handshake(channel)
 		          .addListener(f -> {

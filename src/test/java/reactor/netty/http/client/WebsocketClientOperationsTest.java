@@ -67,7 +67,7 @@ public class WebsocketClientOperationsTest {
 				          .port(httpServer.port())
 				          .wiretap(true)
 				          .headersWhen(h -> login(httpServer.port()).map(token -> h.set("Authorization", token)))
-				          .websocket(clientSubprotocol)
+				          .websocket(WebsocketClientSpec.builder().protocols(clientSubprotocol).build())
 				          .uri("/ws")
 				          .handle((i, o) -> i.receive().asString())
 				          .log()

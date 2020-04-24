@@ -449,9 +449,7 @@ final class HttpClientConnect extends HttpClient {
 		                              handler;
 		final boolean                 compress;
 		final UriEndpointFactory      uriEndpointFactory;
-		final String                  websocketProtocols;
-		final int                     maxFramePayloadLength;
-		final boolean                 websocketProxyPing;
+		final WebsocketClientSpec     websocketClientSpec;
 		final ClientCookieEncoder     cookieEncoder;
 		final ClientCookieDecoder     cookieDecoder;
 		final BiPredicate<HttpClientRequest, HttpClientResponse>
@@ -516,12 +514,10 @@ final class HttpClientConnect extends HttpClient {
 			this.uriEndpointFactory =
 					new UriEndpointFactory(addressSupplier, sslProvider != null, URI_ADDRESS_MAPPER);
 
-			this.websocketProtocols = configuration.websocketSubprotocols;
-			this.maxFramePayloadLength = configuration.websocketMaxFramePayloadLength;
-			this.websocketProxyPing = configuration.websocketProxyPing;
+			this.websocketClientSpec = configuration.websocketClientSpec;
 			this.shouldRetry = !configuration.retryDisabled;
 			this.handler = configuration.body;
-			this.toURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketSubprotocols != null);
+			this.toURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketClientSpec != null);
 		}
 
 		@Override
@@ -576,9 +572,9 @@ final class HttpClientConnect extends HttpClient {
 				}
 
 				ch.listener().onStateChange(ch, HttpClientState.REQUEST_PREPARED);
-				if (websocketProtocols != null) {
+				if (websocketClientSpec != null) {
 					Mono<Void> result =
-							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketProtocols, maxFramePayloadLength, websocketProxyPing, compress));
+							Mono.fromRunnable(() -> ch.withWebsocketSupport(websocketClientSpec, compress));
 					if (handler != null) {
 						result = result.thenEmpty(Mono.fromRunnable(() -> Flux.concat(handler.apply(ch, ch))));
 					}

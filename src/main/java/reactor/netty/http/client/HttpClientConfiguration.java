@@ -52,9 +52,7 @@ final class HttpClientConfiguration {
 	String                        baseUrl                        = null;
 	HttpHeaders                   headers                        = null;
 	HttpMethod                    method                         = HttpMethod.GET;
-	String                        websocketSubprotocols          = null;
-	int                           websocketMaxFramePayloadLength = 65536;
-	boolean                       websocketProxyPing             = false;
+	WebsocketClientSpec           websocketClientSpec            = null;
 	boolean                       retryDisabled                  = false;
 	int                           protocols                      = h11;
 	HttpResponseDecoderSpec       decoder                        = new HttpResponseDecoderSpec();
@@ -86,9 +84,7 @@ final class HttpClientConfiguration {
 		this.baseUrl = from.baseUrl;
 		this.headers = from.headers;
 		this.method = from.method;
-		this.websocketSubprotocols = from.websocketSubprotocols;
-		this.websocketMaxFramePayloadLength = from.websocketMaxFramePayloadLength;
-		this.websocketProxyPing = from.websocketProxyPing;
+		this.websocketClientSpec = from.websocketClientSpec;
 		this.retryDisabled = from.retryDisabled;
 		this.body = from.body;
 		this.protocols = from.protocols;
@@ -270,18 +266,8 @@ final class HttpClientConfiguration {
 		return b;
 	}
 
-	static Bootstrap websocketSubprotocols(Bootstrap b, String websocketSubprotocols) {
-		getOrCreate(b).websocketSubprotocols = websocketSubprotocols;
-		return b;
-	}
-
-	static Bootstrap websocketMaxFramePayloadLength(Bootstrap b, int websocketMaxFramePayloadLength) {
-		getOrCreate(b).websocketMaxFramePayloadLength = websocketMaxFramePayloadLength;
-		return b;
-	}
-
-	static Bootstrap websocketProxyPing(Bootstrap b, boolean websocketProxyPing) {
-		getOrCreate(b).websocketProxyPing = websocketProxyPing;
+	static Bootstrap websocketClientSpec(Bootstrap b, WebsocketClientSpec websocketClientSpec) {
+		getOrCreate(b).websocketClientSpec = websocketClientSpec;
 		return b;
 	}
 
