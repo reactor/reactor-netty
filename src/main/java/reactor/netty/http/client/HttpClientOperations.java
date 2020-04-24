@@ -693,7 +693,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			// Returned value is deliberately ignored
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
 
-			if (websocketClientSpec.compress() || compress) {
+			if (websocketClientSpec.compress()) {
 				requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
 				// Returned value is deliberately ignored
 				removeHandler(NettyPipeline.HttpDecompressor);

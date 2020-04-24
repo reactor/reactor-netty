@@ -1404,8 +1404,7 @@ public class WebsocketTest {
 		if (compress) {
 			predicate = t -> "test".equals(t.getT1()) && !"null".equals(t.getT2());
 		}
-		StepVerifier.create(client.compress(true)
-		                          .websocket()
+		StepVerifier.create(client.websocket(WebsocketClientSpec.builder().compress(compress).build())
 		                          .uri("/")
 		                          .handle(receiver))
 		            .expectNextMatches(predicate)

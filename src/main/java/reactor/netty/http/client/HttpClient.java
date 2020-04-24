@@ -439,18 +439,9 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Specifies whether GZip compression/websocket compression
-	 * extension is enabled.
-	 * <p>
-	 * Note: Using this method for enabling websocket compression is strongly discouraged.
-	 * As of 0.9.7, use {@link WebsocketClientSpec#builder()} for providing websocket compression configuration.
-	 * <p>In 0.9.x enabling compression for HTTP, implicitly enables the compression also for Websocket.
-	 * In 1.0.x this behaviour will be changed and this method will enable the compression only for HTTP.
-	 * Using {@link WebsocketClientSpec#builder()}, one will be able explicitly to enable the compression for Websocket.
-	 * </p>
+	 * Specifies whether GZip compression is enabled.
 	 *
-	 * @param compressionEnabled if true GZip compression/websocket compression extension
-	 *                              is enabled otherwise disabled (default: false)
+	 * @param compressionEnabled if true GZip compression is enabled otherwise disabled (default: false)
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient compress(boolean compressionEnabled) {
@@ -1083,81 +1074,6 @@ public abstract class HttpClient {
 		TcpClient tcpConfiguration =
 				tcpConfiguration().bootstrap(b -> HttpClientConfiguration.websocketClientSpec(b, websocketClientSpec));
 		return new WebsocketFinalizer(tcpConfiguration);
-	}
-
-	/**
-	 * HTTP Websocket to connect the {@link HttpClient}.
-	 *
-	 * @param subprotocols a websocket subprotocol comma separated list
-	 *
-	 * @return a {@link WebsocketSender} ready to consume for response
-	 * @deprecated  as of 0.9.7. Use {@link #websocket(WebsocketClientSpec)}
-	 */
-	@Deprecated
-	public final WebsocketSender websocket(String subprotocols) {
-		return websocket(subprotocols, 65536);
-	}
-
-	/**
-	 * HTTP Websocket to connect the {@link HttpClient}.
-	 *
-	 * @param maxFramePayloadLength maximum allowable frame payload length
-	 *
-	 * @return a {@link WebsocketSender} ready to consume for response
-	 * @deprecated  as of 0.9.7. Use {@link #websocket(WebsocketClientSpec)}
-	 */
-	@Deprecated
-	public final WebsocketSender websocket(int maxFramePayloadLength) {
-		return websocket("", maxFramePayloadLength);
-	}
-
-	/**
-	 * HTTP Websocket to connect the {@link HttpClient}.
-	 *
-	 * @param proxyPing whether to proxy websocket ping frames or respond to them
-	 *
-	 * @return a {@link WebsocketSender} ready to consume for response
-	 * @since 0.9.3
-	 * @deprecated  as of 0.9.7. Use {@link #websocket(WebsocketClientSpec)}
-	 */
-	@Deprecated
-	public final WebsocketSender websocket(boolean proxyPing) {
-		return websocket("", 65536, proxyPing);
-	}
-
-	/**
-	 * HTTP Websocket to connect the {@link HttpClient}.
-	 *
-	 * @param subprotocols a websocket subprotocol comma separated list
-	 * @param maxFramePayloadLength maximum allowable frame payload length
-	 *
-	 * @return a {@link WebsocketSender} ready to consume for response
-	 * @deprecated  as of 0.9.7. Use {@link #websocket(WebsocketClientSpec)}
-	 */
-	@Deprecated
-	public final WebsocketSender websocket(String subprotocols, int maxFramePayloadLength) {
-		return websocket(subprotocols, maxFramePayloadLength, false);
-	}
-
-	/**
-	 * HTTP Websocket to connect the {@link HttpClient}.
-	 *
-	 * @param subprotocols a websocket subprotocol comma separated list
-	 * @param maxFramePayloadLength maximum allowable frame payload length
-	 * @param handlePing whether to proxy websocket ping frames or respond to them
-	 *
-	 * @return a {@link WebsocketSender} ready to consume for response
-	 * @since 0.9.3
-	 * @deprecated  as of 0.9.7. Use {@link #websocket(WebsocketClientSpec)}
-	 */
-	@Deprecated
-	public final WebsocketSender websocket(String subprotocols, int maxFramePayloadLength, boolean handlePing) {
-		Objects.requireNonNull(subprotocols, "subprotocols");
-		return websocket(WebsocketClientSpec.builder()
-		                                    .protocols(subprotocols)
-		                                    .maxFramePayloadLength(maxFramePayloadLength)
-		                                    .handlePing(handlePing)
-		                                    .build());
 	}
 
 	/**
