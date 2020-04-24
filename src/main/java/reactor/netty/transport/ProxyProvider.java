@@ -19,14 +19,12 @@ package reactor.netty.transport;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -36,9 +34,7 @@ import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
-import reactor.netty.channel.BootstrapHandlers;
 
 /**
  * Proxy configuration
@@ -55,25 +51,6 @@ public final class ProxyProvider {
 	public static ProxyProvider.TypeSpec builder() {
 		return new ProxyProvider.Build();
 	}
-
-	/**
-	 * Find Proxy support in the given client bootstrap
-	 *
-	 * @param b a bootstrap to search
-	 * @return any {@link ProxyProvider} found or null
-	 */
-	@Nullable
-	public static ProxyProvider findProxySupport(Bootstrap b) {
-		ProxyProvider.DeferredProxySupport proxy =
-				BootstrapHandlers.findConfiguration(ProxyProvider.DeferredProxySupport.class, b.config().handler());
-
-		if (proxy == null) {
-			return null;
-		}
-		return proxy.proxyProvider;
-	}
-
-	static final LoggingHandler DEFAULT_LOGGER = new LoggingHandler("reactor.netty.proxy");
 
 	static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
 
@@ -200,7 +177,9 @@ public final class ProxyProvider {
 		pipeline.addFirst(NettyPipeline.ProxyHandler, newProxyHandler());
 
 		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
-			pipeline.addBefore(NettyPipeline.ProxyHandler, NettyPipeline.ProxyLoggingHandler, DEFAULT_LOGGER);
+			pipeline.addBefore(NettyPipeline.ProxyHandler,
+					NettyPipeline.ProxyLoggingHandler,
+					new LoggingHandler("reactor.netty.proxy"));
 		}
 	}
 
@@ -415,66 +394,5 @@ public final class ProxyProvider {
 		 * @return builds new ProxyProvider
 		 */
 		ProxyProvider build();
-	}
-
-	public static final class DeferredProxySupport
-			implements Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>> {
-
-		final ProxyProvider proxyProvider;
-
-		public DeferredProxySupport(ProxyProvider proxyProvider) {
-			this.proxyProvider = proxyProvider;
-		}
-
-		@Override
-		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
-			return new ProxySupportConsumer(bootstrap, proxyProvider);
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) {
-				return true;
-			}
-			if (o == null || getClass() != o.getClass()) {
-				return false;
-			}
-			DeferredProxySupport that = (DeferredProxySupport) o;
-			return Objects.equals(proxyProvider, that.proxyProvider);
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(proxyProvider);
-		}
-	}
-
-	static final class ProxySupportConsumer
-			implements BiConsumer<ConnectionObserver, Channel> {
-
-		final Bootstrap bootstrap;
-		final ProxyProvider proxyProvider;
-
-		ProxySupportConsumer(Bootstrap bootstrap, ProxyProvider proxyProvider) {
-			this.bootstrap = bootstrap;
-			this.proxyProvider = proxyProvider;
-		}
-
-		@Override
-		public void accept(ConnectionObserver connectionObserver, Channel channel) {
-			if (proxyProvider.shouldProxy(bootstrap.config()
-			                                       .remoteAddress())) {
-
-				ChannelPipeline pipeline = channel.pipeline();
-				pipeline.addFirst(NettyPipeline.ProxyHandler, proxyProvider.newProxyHandler());
-
-				if (channel.pipeline()
-				           .get(NettyPipeline.LoggingHandler) != null) {
-					pipeline.addBefore(NettyPipeline.ProxyHandler,
-					                   NettyPipeline.ProxyLoggingHandler,
-					                   new LoggingHandler("reactor.netty.proxy"));
-				}
-			}
-		}
 	}
 }

@@ -16,50 +16,17 @@
 
 package reactor.netty.tcp;
 
-import java.util.Objects;
-import java.util.function.Consumer;
-import javax.annotation.Nullable;
-
-import io.netty.bootstrap.Bootstrap;
 import io.netty.handler.ssl.SslContextBuilder;
 
 /**
+ * Initializes the default {@link SslProvider} for the TCP client.
+ *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
-final class TcpClientSecure extends TcpClientOperator {
+final class TcpClientSecure {
 
-	final SslProvider sslProvider;
-
-	static TcpClient secure(TcpClient client, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
-
-		SslProvider.Build builder = (SslProvider.Build) SslProvider.builder();
-		sslProviderBuilder.accept(builder);
-		return new TcpClientSecure(client, builder.build());
-	}
-
-	TcpClientSecure(TcpClient client, @Nullable SslProvider provider) {
-		super(client);
-		if (provider == null) {
-			this.sslProvider = DEFAULT_CLIENT_PROVIDER;
-		}
-		else {
-			this.sslProvider = Objects.requireNonNull(provider, "provider");
-		}
-	}
-
-	@Override
-	public Bootstrap configure() {
-		return SslProvider.setBootstrap(source.configure(), sslProvider);
-	}
-
-	@Override
-	public SslProvider sslProvider(){
-		return this.sslProvider;
-	}
-
-
-	static final SslProvider DEFAULT_CLIENT_PROVIDER;
+	static final SslProvider DEFAULT_SSL_PROVIDER;
 
 	static {
 		SslProvider sslProvider;
@@ -73,6 +40,6 @@ final class TcpClientSecure extends TcpClientOperator {
 		catch (Exception e) {
 			sslProvider = null;
 		}
-		DEFAULT_CLIENT_PROVIDER = sslProvider;
+		DEFAULT_SSL_PROVIDER = sslProvider;
 	}
 }

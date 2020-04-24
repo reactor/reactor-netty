@@ -43,6 +43,11 @@ import javax.annotation.Nullable;
  */
 public abstract class ClientTransportConfig<CONF extends TransportConfig> extends TransportConfig {
 
+	@Override
+	public int channelHash() {
+		return Objects.hash(super.channelHash(), proxyProvider, resolver);
+	}
+
 	/**
 	 * Return the {@link ConnectionProvider}
 	 *
@@ -160,7 +165,12 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	@Override
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
-		return new ClientTransportChannelInitializer(proxyProvider);
+		if (proxyProvider != null) {
+			return new ClientTransportChannelInitializer(proxyProvider);
+		}
+		else {
+			return ChannelPipelineConfigurer.emptyConfigurer();
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -179,13 +189,13 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 		final ProxyProvider proxyProvider;
 
-		ClientTransportChannelInitializer (ProxyProvider proxyProvider) {
+		ClientTransportChannelInitializer(ProxyProvider proxyProvider) {
 			this.proxyProvider = proxyProvider;
 		}
 
 		@Override
 		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, SocketAddress remoteAddress) {
-			if (proxyProvider != null && proxyProvider.shouldProxy(remoteAddress)) {
+			if (proxyProvider.shouldProxy(remoteAddress)) {
 				proxyProvider.addProxyHandler(channel);
 			}
 		}

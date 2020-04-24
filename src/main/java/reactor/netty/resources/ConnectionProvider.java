@@ -16,7 +16,6 @@
 
 package reactor.netty.resources;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.resolver.AddressResolverGroup;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
@@ -162,18 +161,16 @@ public interface ConnectionProvider extends Disposable {
 	/**
 	 * Return an existing or new {@link Connection} on subscribe.
 	 *
-	 * @param bootstrap the client connection {@link Bootstrap}
-	 *
+	 * @param config the transport configuration
+	 * @param connectionObserver the {@link ConnectionObserver}
+	 * @param remoteAddress the {@link SocketAddress} to connect to
+	 * @param resolverGroup the resolver which will resolve the address of the unresolved named address
 	 * @return an existing or new {@link Mono} of {@link Connection}
 	 */
-	Mono<? extends Connection> acquire(Bootstrap bootstrap);
-
-	default Mono<? extends Connection> acquire(TransportConfig config,
+	Mono<? extends Connection> acquire(TransportConfig config,
 			ConnectionObserver connectionObserver,
 			@Nullable Supplier<? extends SocketAddress> remoteAddress,
-			@Nullable AddressResolverGroup<?> resolverGroup) {
-		return Mono.empty();
-	}
+			@Nullable AddressResolverGroup<?> resolverGroup);
 
 
 	default void disposeWhen(@NonNull SocketAddress address) {

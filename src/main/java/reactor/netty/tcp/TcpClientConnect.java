@@ -16,39 +16,49 @@
 
 package reactor.netty.tcp;
 
-import java.util.Objects;
+import java.util.Collections;
 
-import io.netty.bootstrap.Bootstrap;
-import reactor.core.publisher.Mono;
-import reactor.netty.Connection;
+import io.netty.channel.ChannelOption;
+import io.netty.util.NetUtil;
 import reactor.netty.resources.ConnectionProvider;
-import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.AddressUtils;
 
 /**
+ * Provides the actual {@link TcpClient} instance.
+ *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 final class TcpClientConnect extends TcpClient {
 
 	static final TcpClientConnect INSTANCE = new TcpClientConnect(ConnectionProvider.newConnection());
 
-	final ConnectionProvider provider;
+	final TcpClientConfig config;
 
 	TcpClientConnect(ConnectionProvider provider) {
-		this.provider = Objects.requireNonNull(provider, "connectionProvider");
+		this.config = new TcpClientConfig(
+				provider,
+				Collections.singletonMap(ChannelOption.AUTO_READ, false),
+				() -> AddressUtils.createUnresolved(NetUtil.LOCALHOST.getHostAddress(), DEFAULT_PORT));
+	}
+
+	TcpClientConnect(TcpClientConfig config) {
+		this.config = config;
 	}
 
 	@Override
-	public Mono<? extends Connection> connect(Bootstrap b) {
-
-		if (b.config()
-		     .group() == null) {
-
-			TcpClientRunOn.configure(b,
-					LoopResources.DEFAULT_NATIVE,
-					TcpResources.get());
-		}
-
-		return provider.acquire(b);
-
+	public TcpClientConfig configuration() {
+		return config;
 	}
+
+	@Override
+	protected TcpClient duplicate() {
+		return new TcpClientConnect(new TcpClientConfig(config));
+	}
+
+	/**
+	 * The default port for reactor-netty servers. Defaults to 12012 but can be tuned via
+	 * the {@code PORT} <b>environment variable</b>.
+	 */
+	static final int DEFAULT_PORT = System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 12012;
 }

@@ -23,10 +23,7 @@ import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.resolver.AddressResolverGroup;
 import org.reactivestreams.Subscription;
@@ -38,8 +35,6 @@ import reactor.core.publisher.Operators;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
-import reactor.netty.channel.BootstrapHandlers;
-import reactor.netty.channel.ChannelOperations;
 import reactor.netty.transport.AddressUtils;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.transport.TransportConnector;
@@ -53,45 +48,13 @@ import static reactor.netty.ReactorNetty.format;
 
 /**
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
 final class NewConnectionProvider implements ConnectionProvider {
 
 	final static Logger log = Loggers.getLogger(NewConnectionProvider.class);
 
 	final static NewConnectionProvider INSTANCE = new NewConnectionProvider();
-
-	@Override
-	public Mono<? extends Connection> acquire(Bootstrap b) {
-		return Mono.create(sink -> {
-			Bootstrap bootstrap = b.clone();
-
-			ChannelOperations.OnSetup factory =
-					BootstrapHandlers.channelOperationFactory(bootstrap);
-
-			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
-
-			if (bootstrap.config()
-			             .remoteAddress() != null) {
-				convertLazyRemoteAddress(bootstrap);
-			}
-
-			BootstrapHandlers.finalizeHandler(bootstrap,
-					factory,
-					new NewConnectionObserver(sink, obs));
-
-			ChannelFuture f;
-			if (bootstrap.config()
-			             .remoteAddress() != null) {
-				f = bootstrap.connect();
-			}
-			else {
-				f = bootstrap.bind();
-			}
-			DisposableConnectChannelFuture disposableConnectChannelFuture = new DisposableConnectChannelFuture(sink, f, bootstrap);
-			f.addListener(disposableConnectChannelFuture);
-			sink.onCancel(disposableConnectChannelFuture);
-		});
-	}
 
 	@Override
 	public Mono<? extends Connection> acquire(TransportConfig config,
@@ -132,23 +95,6 @@ final class NewConnectionProvider implements ConnectionProvider {
 	public boolean isDisposed() {
 		return false;
 	}
-
-	@SuppressWarnings("unchecked")
-	static void convertLazyRemoteAddress(Bootstrap b) {
-		SocketAddress remote = b.config()
-		                        .remoteAddress();
-
-		Objects.requireNonNull(remote, "Remote Address not configured");
-
-		if (remote instanceof Supplier) {
-			Supplier<? extends SocketAddress> lazyRemote =
-					(Supplier<? extends SocketAddress>) remote;
-
-			b.remoteAddress(Objects.requireNonNull(lazyRemote.get(),
-					"address supplier returned null"));
-		}
-	}
-
 
 	static final class DisposableConnect implements CoreSubscriber<Channel>, Disposable {
 		final MonoSink<Connection> sink;
@@ -206,77 +152,6 @@ final class NewConnectionProvider implements ConnectionProvider {
 		}
 	}
 
-
-	static final class DisposableConnectChannelFuture implements Disposable, ChannelFutureListener {
-
-		final MonoSink<Connection> sink;
-		final ChannelFuture f;
-		final Bootstrap bootstrap;
-
-
-		DisposableConnectChannelFuture(MonoSink<Connection> sink, ChannelFuture f, Bootstrap
-				bootstrap) {
-			this.sink = sink;
-			this.f = f;
-			this.bootstrap = bootstrap;
-		}
-
-		@Override
-		@SuppressWarnings("FutureReturnValueIgnored")
-		public final void dispose() {
-			if (isDisposed()) {
-				return;
-			}
-
-			// Returned value is deliberately ignored
-			f.removeListener(this);
-
-			if (!f.isDone()) {
-				f.cancel(true);
-			}
-		}
-
-		@Override
-		public boolean isDisposed() {
-			return f.isCancelled() || f.isDone();
-		}
-
-		@Override
-		public final void operationComplete(ChannelFuture f) {
-			if (!f.isSuccess()) {
-				if (f.isCancelled()) {
-					if (log.isDebugEnabled()) {
-						log.debug(format(f.channel(), "Channel cancelled"));
-					}
-					return;
-				}
-				Throwable cause = f.cause();
-				if (cause != null) {
-					if (cause instanceof BindException ||
-							// With epoll/kqueue transport it is
-							// io.netty.channel.unix.Errors$NativeIoException: bind(..) failed: Address already in use
-							(cause instanceof IOException && cause.getMessage() != null &&
-									cause.getMessage().contains("Address already in use"))) {
-						sink.error(ChannelBindException.fail(bootstrap.config().localAddress(), null));
-					}
-					else {
-						sink.error(cause);
-					}
-				}
-				else {
-					sink.error(new IOException("error while connecting to " + f.channel()));
-				}
-			}
-			else {
-//				new NewConnection(f.channel()).bind();
-				if (log.isDebugEnabled()) {
-					log.debug(format(f.channel(), "Connected new channel"));
-				}
-			}
-		}
-	}
-
-
 	static final class NewConnectionObserver implements ConnectionObserver {
 
 		final MonoSink<Connection> sink;
@@ -316,6 +191,5 @@ final class NewConnectionProvider implements ConnectionProvider {
 			obs.onUncaughtException(c, error);
 		}
 	}
-
 }
 

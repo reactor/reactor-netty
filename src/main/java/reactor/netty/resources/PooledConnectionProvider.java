@@ -30,15 +30,13 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.PlatformDependent;
 import org.reactivestreams.Publisher;
@@ -54,8 +52,9 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
 import reactor.netty.Metrics;
-import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.transport.TransportConfig;
+import reactor.netty.transport.TransportConnector;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolBuilder;
 import reactor.pool.PooledRef;
@@ -126,20 +125,15 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
-	public Mono<Connection> acquire(Bootstrap b) {
+	public Mono<? extends Connection> acquire(TransportConfig config,
+			ConnectionObserver observer,
+			@Nullable Supplier<? extends SocketAddress> remote,
+			@Nullable AddressResolverGroup<?> resolverGroup) {
+		Objects.requireNonNull(remote, "remoteAddress");
+		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		return Mono.create(sink -> {
-			Bootstrap bootstrap = b.clone();
-
-			ChannelOperations.OnSetup opsFactory =
-					BootstrapHandlers.channelOperationFactory(bootstrap);
-
-			ConnectionObserver obs = BootstrapHandlers.connectionObserver(bootstrap);
-
-			NewConnectionProvider.convertLazyRemoteAddress(bootstrap);
-			ChannelHandler handler = bootstrap.config().handler();
-			SocketAddress remoteAddress = bootstrap.config().remoteAddress();
-			PoolKey holder = new PoolKey(remoteAddress, handler != null ? handler.hashCode() : -1);
-
+			SocketAddress remoteAddress = Objects.requireNonNull(remote.get(), "Remote Address supplier returned null");
+			PoolKey holder = new PoolKey(remoteAddress, config.channelHash());
 			PoolFactory poolFactory = poolFactoryPerRemoteHost.getOrDefault(remoteAddress, defaultPoolFactory);
 			InstrumentedPool<PooledConnection> pool = channelPools.computeIfAbsent(holder, poolKey -> {
 				if (log.isDebugEnabled()) {
@@ -147,9 +141,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				}
 
 				InstrumentedPool<PooledConnection> newPool =
-						new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
+						new PooledConnectionAllocator(config, poolFactory, remoteAddress, resolverGroup).pool;
 
-				if (poolFactory.metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
+				if (poolFactory.metricsEnabled || config.metricsRecorder() != null) {
 					PooledConnectionProviderMetrics.registerMetrics(name,
 							poolKey.hashCode() + "",
 							Metrics.formatSocketAddress(remoteAddress),
@@ -158,10 +152,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				return newPool;
 			});
 
-			disposableAcquire(new DisposableAcquire(sink, pool, obs, opsFactory, poolFactory.pendingAcquireTimeout, false));
+			disposableAcquire(new DisposableAcquire(sink, pool, observer,
+					config.channelOperationsProvider(), poolFactory.pendingAcquireTimeout, false));
 
 		});
-
 	}
 
 	@Override
@@ -198,31 +192,28 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	final static class PooledConnectionAllocator {
 
+		final TransportConfig config;
 		final InstrumentedPool<PooledConnection> pool;
-		final Bootstrap                 bootstrap;
-		final ChannelOperations.OnSetup opsFactory;
+		final SocketAddress remoteAddress;
+		final AddressResolverGroup<?> resolver;
 
-		PooledConnectionAllocator(Bootstrap b, PoolFactory provider, ChannelOperations.OnSetup opsFactory) {
-			this.bootstrap = b.clone();
-			this.opsFactory = opsFactory;
+		PooledConnectionAllocator(TransportConfig config, PoolFactory provider, SocketAddress remoteAddress,
+				AddressResolverGroup<?> resolver) {
+			this.config = config;
+			this.remoteAddress = remoteAddress;
+			this.resolver = resolver;
 			this.pool = provider.newPool(connectChannel());
 		}
 
 		Publisher<PooledConnection> connectChannel() {
 			return Mono.create(sink -> {
-				Bootstrap b = bootstrap.clone();
 				PooledConnectionInitializer initializer = new PooledConnectionInitializer(sink);
-				b.handler(initializer);
-				ChannelFuture f = b.connect();
-				if (f.isDone()) {
-					initializer.operationComplete(f);
-				} else {
-					f.addListener(initializer);
-				}
+				TransportConnector.connect(config, remoteAddress, resolver, initializer)
+				                  .subscribe(initializer);
 			});
 		}
 
-		final class PooledConnectionInitializer implements ChannelHandler, ChannelFutureListener {
+		final class PooledConnectionInitializer extends ChannelInitializer<Channel> implements CoreSubscriber<Channel> {
 			final MonoSink<PooledConnection> sink;
 
 			PooledConnection pooledConnection;
@@ -232,9 +223,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			}
 
 			@Override
-			public void handlerAdded(ChannelHandlerContext ctx) {
-				Channel ch = ctx.channel();
-
+			protected void initChannel(Channel ch) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(ch, "Created a new pooled channel, now {} active connections and {} inactive connections"),
 							pool.metrics().acquiredSize(),
@@ -247,33 +236,29 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 				pooledConnection.bind();
 
-				Bootstrap b = bootstrap.clone();
-
-				BootstrapHandlers.finalizeHandler(b, opsFactory, pooledConnection);
-
 				ch.pipeline()
-				  .addFirst(b.config()
-				             .handler());
-				ctx.pipeline().remove(this);
+				  .addFirst(config.channelInitializer(pooledConnection, remoteAddress, false));
+				ch.pipeline().remove(this);
 			}
 
 			@Override
-			public void handlerRemoved(ChannelHandlerContext ctx) {
-			}
-
-			@SuppressWarnings("deprecation")
-			@Override
-			public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-				ctx.pipeline().remove(this);
+			public void onComplete() {
+				// noop
 			}
 
 			@Override
-			public void operationComplete(ChannelFuture future) {
-				if (future.isSuccess()) {
-					sink.success(pooledConnection);
-				} else {
-					sink.error(future.cause());
-				}
+			public void onError(Throwable t) {
+				sink.error(t);
+			}
+
+			@Override
+			public void onNext(Channel channel) {
+				sink.success(pooledConnection);
+			}
+
+			@Override
+			public void onSubscribe(Subscription s) {
+				s.request(Long.MAX_VALUE);
 			}
 		}
 	}

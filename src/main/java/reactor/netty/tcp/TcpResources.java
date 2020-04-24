@@ -20,17 +20,20 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.DatagramChannel;
+import io.netty.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.TransportConfig;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.NonNull;
@@ -192,8 +195,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	@Override
-	public Mono<? extends Connection> acquire(Bootstrap bootstrap) {
-		return defaultProvider.acquire(bootstrap);
+	public Mono<? extends Connection> acquire(TransportConfig config,
+			ConnectionObserver observer,
+			@Nullable Supplier<? extends SocketAddress> remoteAddress,
+			@Nullable AddressResolverGroup<?> resolverGroup) {
+		return defaultProvider.acquire(config, observer, remoteAddress, resolverGroup);
 	}
 
 	@Override

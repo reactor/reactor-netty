@@ -22,7 +22,6 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
@@ -32,7 +31,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.OpenSsl;
@@ -97,38 +98,7 @@ public final class SslProvider {
 	 * @return default client ssl provider
 	 */
 	public static SslProvider defaultClientProvider() {
-		return TcpClientSecure.DEFAULT_CLIENT_PROVIDER;
-	}
-
-	/**
-	 * Add Ssl support on the given client bootstrap
-	 * @param b a given bootstrap to enrich
-	 *
-	 * @return an enriched bootstrap
-	 */
-	public static Bootstrap setBootstrap(Bootstrap b, SslProvider sslProvider) {
-		BootstrapHandlers.updateConfiguration(b,
-				NettyPipeline.SslHandler,
-				new DeferredSslSupport(sslProvider));
-
-		return b;
-	}
-
-	/**
-	 * Find Ssl support in the given client bootstrap
-	 *
-	 * @param b a bootstrap to search
-	 *
-	 * @return any {@link SslProvider} found or null
-	 */
-	@Nullable
-	public static SslProvider findSslSupport(Bootstrap b) {
-		DeferredSslSupport ssl = BootstrapHandlers.findConfiguration(DeferredSslSupport.class, b.config().handler());
-
-		if (ssl == null) {
-			return null;
-		}
-		return ssl.sslProvider;
+		return TcpClientSecure.DEFAULT_SSL_PROVIDER;
 	}
 
 	/**
@@ -421,6 +391,51 @@ public final class SslProvider {
 			handlerConfigurator.accept(sslHandler);
 		}
 	}
+	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
+		SslHandler sslHandler;
+
+		if (remoteAddress instanceof InetSocketAddress) {
+			InetSocketAddress sniInfo = (InetSocketAddress) remoteAddress;
+			sslHandler = getSslContext()
+					.newHandler(channel.alloc(), sniInfo.getHostString(), sniInfo.getPort());
+
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "SSL enabled using engine {} and SNI {}"),
+						sslHandler.engine().getClass().getSimpleName(), sniInfo);
+			}
+		}
+		else {
+			sslHandler = getSslContext().newHandler(channel.alloc());
+
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "SSL enabled using engine {}"),
+						sslHandler.engine().getClass().getSimpleName());
+			}
+		}
+
+		configure(sslHandler);
+
+		ChannelPipeline pipeline = channel.pipeline();
+		if (pipeline.get(NettyPipeline.ProxyHandler) != null) {
+			pipeline.addAfter(NettyPipeline.ProxyHandler, NettyPipeline.SslHandler, sslHandler);
+		}
+		else {
+			pipeline.addFirst(NettyPipeline.SslHandler, sslHandler);
+		}
+
+		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
+			pipeline.addAfter(NettyPipeline.LoggingHandler, NettyPipeline.SslReader, new SslReadHandler());
+			if (sslDebug) {
+				pipeline.addBefore(NettyPipeline.SslHandler,
+						NettyPipeline.SslLoggingHandler,
+						new LoggingHandler("reactor.netty.tcp.ssl"));
+			}
+
+		}
+		else {
+			pipeline.addAfter(NettyPipeline.SslHandler, NettyPipeline.SslReader, new SslReadHandler());
+		}
+	}
 
 	@Override
 	public String toString() {
@@ -588,37 +603,6 @@ public final class SslProvider {
 				new SslSupportConsumer(sslProvider, null));
 
 		return b;
-	}
-
-	static final class DeferredSslSupport implements Function<Bootstrap, BiConsumer<ConnectionObserver, Channel>>
-	{
-		final SslProvider sslProvider;
-
-		DeferredSslSupport(SslProvider sslProvider) {
-			this.sslProvider = sslProvider;
-		}
-
-		@Override
-		public BiConsumer<ConnectionObserver, Channel> apply(Bootstrap bootstrap) {
-			return new SslSupportConsumer(sslProvider, bootstrap.config().remoteAddress());
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) {
-				return true;
-			}
-			if (o == null || getClass() != o.getClass()) {
-				return false;
-			}
-			DeferredSslSupport that = (DeferredSslSupport) o;
-			return Objects.equals(sslProvider, that.sslProvider);
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(sslProvider);
-		}
 	}
 
 	static final class SslSupportConsumer

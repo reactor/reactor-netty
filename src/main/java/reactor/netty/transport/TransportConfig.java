@@ -78,6 +78,11 @@ public abstract class TransportConfig {
 		return this.bindAddress;
 	}
 
+	public int channelHash() {
+		return Objects.hash(attrs, bindAddress != null ? bindAddress.get() : 0, channelGroup, doOnChannelInit,
+				loggingHandler, loopResources, metricsRecorder, observer, options, preferNative);
+	}
+
 	/**
 	 * Return the configured {@link ChannelGroup} or null
 	 *
