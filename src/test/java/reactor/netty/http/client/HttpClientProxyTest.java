@@ -172,7 +172,7 @@ public class HttpClientProxyTest {
 			boolean wiretap) {
 		HttpClient client =
 				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.proxy(proxyOptions))
+				          .proxy(proxyOptions)
 				          .doOnResponse((res, conn) -> {
 				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
 				              res.responseHeaders()

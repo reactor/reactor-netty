@@ -80,7 +80,7 @@ public class ByteBufAllocatorMetricsTest {
 		PooledByteBufAllocator alloc = new PooledByteBufAllocator(true);
 		HttpClient.create()
 		          .port(server.port())
-		          .tcpConfiguration(tcpClient -> tcpClient.option(ChannelOption.ALLOCATOR, alloc))
+		          .option(ChannelOption.ALLOCATOR, alloc)
 		          .doOnResponse((res, conn) -> conn.channel()
 		                                           .closeFuture()
 		                                           .addListener(f -> latch.countDown()))

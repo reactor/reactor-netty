@@ -489,14 +489,14 @@ public class HttpClientTest {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		HttpClient client = HttpClient.create()
-		                              .tcpConfiguration(tcpClient -> tcpClient.host("example.com"))
-		                              .wiretap(true)
-		                              .port(123)
-		                              .compress(true);
-		assertThat(client.tcpConfiguration())
-		        .isNotSameAs(HttpClient.DEFAULT_TCP_CLIENT)
-		        .isNotSameAs(client.tcpConfiguration());
+		HttpClient client1 = HttpClient.create();
+		HttpClient client2 = client1.host("example.com")
+		                            .wiretap(true)
+		                            .port(123)
+		                            .compress(true);
+		assertThat(client2)
+				.isNotSameAs(client1)
+				.isNotSameAs(((HttpClientConnect) client2).duplicate());
 	}
 
 	@Test
@@ -944,7 +944,7 @@ public class HttpClientTest {
 				                                 .trustManager(InsecureTrustManagerFactory.INSTANCE)));
 
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
-		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch1.set(c.channel())))
+		StepVerifier.create(client.doOnConnected(c -> ch1.set(c.channel()))
 				                  .get()
 				                  .uri("/1")
 				                  .responseContent()
@@ -955,7 +955,7 @@ public class HttpClientTest {
 				    .verify(Duration.ofSeconds(30));
 
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
-		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch2.set(c.channel())))
+		StepVerifier.create(client.doOnConnected(c -> ch2.set(c.channel()))
 				                  .post()
 				                  .uri("/2")
 				                  .send(ByteBufFlux.fromString(Mono.just("test")))
@@ -968,7 +968,7 @@ public class HttpClientTest {
 
 		AtomicReference<Channel> ch3 = new AtomicReference<>();
 		StepVerifier.create(
-				client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch3.set(c.channel())))
+				client.doOnConnected(c -> ch3.set(c.channel()))
 				      .secure(spec -> spec.sslContext(
 				              SslContextBuilder.forClient()
 				                               .trustManager(InsecureTrustManagerFactory.INSTANCE))
@@ -1007,10 +1007,10 @@ public class HttpClientTest {
 		ConnectionProvider provider = ConnectionProvider.create("testIssue407_2", 1);
 		HttpClient client =
 				createHttpClientForContextWithAddress(provider)
-				        .tcpConfiguration(tcpClient -> tcpClient.secure(spec -> spec.sslContext(clientSslContextBuilder)));
+				        .secure(spec -> spec.sslContext(clientSslContextBuilder));
 
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
-		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch1.set(c.channel())))
+		StepVerifier.create(client.doOnConnected(c -> ch1.set(c.channel()))
 				                  .get()
 				                  .uri("/1")
 				                  .responseContent()
@@ -1021,7 +1021,7 @@ public class HttpClientTest {
 				    .verify(Duration.ofSeconds(30));
 
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
-		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch2.set(c.channel())))
+		StepVerifier.create(client.doOnConnected(c -> ch2.set(c.channel()))
 				                  .post()
 				                  .uri("/2")
 				                  .send(ByteBufFlux.fromString(Mono.just("test")))
@@ -1034,10 +1034,9 @@ public class HttpClientTest {
 
 		AtomicReference<Channel> ch3 = new AtomicReference<>();
 		StepVerifier.create(
-				client.tcpConfiguration(tcpClient ->
-				          tcpClient.doOnConnected(c -> ch3.set(c.channel()))
-				                   .secure(spec -> spec.sslContext(clientSslContextBuilder)
-				                                       .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP)))
+				client.doOnConnected(c -> ch3.set(c.channel()))
+				      .secure(spec -> spec.sslContext(clientSslContextBuilder)
+				                          .defaultConfiguration(SslProvider.DefaultConfigurationType.TCP))
 				      .post()
 				      .uri("/3")
 				      .responseContent()
@@ -1131,7 +1130,7 @@ public class HttpClientTest {
 				            requestError1.set(req.currentContext().getOrDefault("test", "empty")))
 				        .doOnResponseError((res, err) ->
 				            responseError1.set(res.currentContext().getOrDefault("test", "empty")))
-				        .mapConnect((c, b) -> c.subscriberContext(Context.of("test", "success")))
+				        .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1154,7 +1153,7 @@ public class HttpClientTest {
 				            requestError2.set(req.currentContext().getOrDefault("test", "empty"))
 				            ,(res, err) ->
 				            responseError2.set(res.currentContext().getOrDefault("test", "empty")))
-				        .mapConnect((c, b) -> c.subscriberContext(Context.of("test", "success")))
+				        .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1178,7 +1177,7 @@ public class HttpClientTest {
 		                             .bindNow();
 
 		Mono<String> content = createHttpClientForContextWithPort()
-		                               .mapConnect((c, b) -> c.subscriberContext(Context.of("test", "success")))
+		                               .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
 		                               .post()
 		                               .uri("/")
 		                               .send((req, out) -> {
@@ -1425,7 +1424,7 @@ public class HttpClientTest {
 		HttpClient client;
 		if (withLoop) {
 			client = createHttpClientForContextWithAddress(pool)
-			            .tcpConfiguration(tcpClient -> tcpClient.runOn(loop));
+			            .runOn(loop);
 		}
 		else {
 			client = createHttpClientForContextWithAddress(pool);
@@ -1476,13 +1475,12 @@ public class HttpClientTest {
 
 		Flux.just("/never", "/delay10", "/delay1")
 		    .flatMap(s ->
-		            client.tcpConfiguration(
-		                      tcpClient -> tcpClient.doOnConnected(c -> {
+		            client.doOnConnected(c -> {
 		                          c.onDispose()
 		                           .subscribe(null, null, latch2::countDown);
 		                          group.add(c.channel());
 		                          latch1.countDown();
-		                      }))
+		                      })
 		                  .get()
 		                  .uri(s)
 		                  .responseContent()
@@ -1540,11 +1538,10 @@ public class HttpClientTest {
 
 		CountDownLatch latch = new CountDownLatch(1);
 		createHttpClientForContextWithPort()
-		        .tcpConfiguration(tcpClient ->
-		            tcpClient.doOnConnected(conn ->
+		        .doOnConnected(conn ->
 		                conn.channel()
 		                    .closeFuture()
-		                    .addListener(future -> latch.countDown())))
+		                    .addListener(future -> latch.countDown()))
 		        .get()
 		        .uri("/")
 		        .responseContent()
@@ -1648,8 +1645,7 @@ public class HttpClientTest {
 		                                       .initialBufferSize(10)
 		                                       .failOnMissingResponse(true)
 		                                       .parseHttpAfterConnectRequest(true))
-		        .tcpConfiguration(tcp ->
-		                tcp.doOnConnected(c -> {
+		        .doOnConnected(c -> {
 		                    channelRef.set(c.channel());
 		                    HttpClientCodec codec = c.channel()
 		                                             .pipeline()
@@ -1657,7 +1653,7 @@ public class HttpClientTest {
 		                    HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
 		                    chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 		                    validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
-		                }))
+		                })
 		        .post()
 		        .uri("/")
 		        .send(ByteBufFlux.fromString(Mono.just("bodysample")))
@@ -2093,11 +2089,11 @@ public class HttpClientTest {
 		ConnectionProvider provider = ConnectionProvider.create("testIssue988", 1);
 		HttpClient client =
 				createHttpClientForContextWithAddress(provider)
-				        .tcpConfiguration(tcpClient -> tcpClient.wiretap("testIssue988", LogLevel.INFO)
-				                                                .metrics(true));
+				        .wiretap("testIssue988", LogLevel.INFO)
+				        .metrics(true, s -> s);
 
 		AtomicReference<Channel> ch1 = new AtomicReference<>();
-		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch1.set(c.channel())))
+		StepVerifier.create(client.doOnConnected(c -> ch1.set(c.channel()))
 				                  .get()
 				                  .uri("/1")
 				                  .responseContent()
@@ -2108,7 +2104,7 @@ public class HttpClientTest {
 				    .verify(Duration.ofSeconds(30));
 
 		AtomicReference<Channel> ch2 = new AtomicReference<>();
-		StepVerifier.create(client.tcpConfiguration(tcpClient -> tcpClient.doOnConnected(c -> ch2.set(c.channel())))
+		StepVerifier.create(client.doOnConnected(c -> ch2.set(c.channel()))
 				                  .post()
 				                  .uri("/2")
 				                  .send(ByteBufFlux.fromString(Mono.just("test")))
@@ -2121,9 +2117,8 @@ public class HttpClientTest {
 
 		AtomicReference<Channel> ch3 = new AtomicReference<>();
 		StepVerifier.create(
-				client.tcpConfiguration(tcpClient ->
-				          tcpClient.doOnConnected(c -> ch3.set(c.channel()))
-				                   .wiretap("testIssue988", LogLevel.ERROR))
+				client.doOnConnected(c -> ch3.set(c.channel()))
+				      .wiretap("testIssue988", LogLevel.ERROR)
 				      .post()
 				      .uri("/3")
 				      .responseContent()

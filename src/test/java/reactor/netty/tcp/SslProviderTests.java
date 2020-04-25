@@ -49,13 +49,13 @@ public class SslProviderTests {
 		protocols = new ArrayList<>();
 		server = HttpServer.create()
 				           .port(0)
-				           .tcpConfiguration(tcpServer -> tcpServer.doOnBind(b -> {
-				               SslProvider ssl = reactor.netty.tcp.SslProvider.findSslSupport(b);
+				           .doOnBind(conf -> {
+				               SslProvider ssl = conf.sslProvider();
 				               if (ssl != null) {
 				                   protocols.addAll(ssl.sslContext.applicationProtocolNegotiator().protocols());
 				                   sslContext = ssl.sslContext;
 				               }
-				           }));
+				           });
 	}
 
 	@Test

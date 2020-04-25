@@ -147,7 +147,7 @@ public class HttpServerTests {
 		Flux.range(0, 100)
 		    .concatMap(n -> HttpClient.create()
 		                              .port(disposableServer.address().getPort())
-		                              .tcpConfiguration(TcpClient::noSSL)
+		                              .noSSL()
 		                              .wiretap(true)
 		                              .keepAlive(false)
 		                              .post()
@@ -170,7 +170,7 @@ public class HttpServerTests {
 				          .bindAddress(() -> new InetSocketAddress(8080));
 		HttpClient client1 = HttpClient.create()
 		                               .port(8080)
-		                               .tcpConfiguration(tcpClient -> tcpClient.host("localhost"));
+		                               .host("localhost");
 		HttpClient client2 = HttpClient.create()
 		                               .baseUrl("http://localhost:8080");
 		doTestRestart(server1, client1);
@@ -321,8 +321,8 @@ public class HttpServerTests {
 		Flux<String> client = HttpClient.create()
 		                                .port(disposableServer.address().getPort())
 		                                .wiretap(true)
-		                                .tcpConfiguration(tcp -> tcp.doOnConnected(res ->
-		                                        res.addHandler(new LineBasedFrameDecoder(10))))
+		                                .doOnConnected(res ->
+		                                        res.addHandler(new LineBasedFrameDecoder(10)))
 		                                .get()
 		                                .uri("/")
 		                                .responseContent()
@@ -410,13 +410,13 @@ public class HttpServerTests {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		HttpServer server = HttpServer.create()
-		                              .port(123)
-		                              .host(("example.com"))
-		                              .compress(true);
-		assertThat(server.tcpConfiguration().configure())
-		          .isNotSameAs(HttpServer.DEFAULT_TCP_SERVER)
-		          .isNotSameAs(server.tcpConfiguration().configure());
+		HttpServer server1 = HttpServer.create();
+		HttpServer server2 = server1.port(123)
+		                            .host(("example.com"))
+		                            .compress(true);
+		assertThat(server2)
+				.isNotSameAs(server1)
+				.isNotSameAs(((HttpServerBind) server2).duplicate());
 	}
 
 	@Test
@@ -795,8 +795,7 @@ public class HttpServerTests {
 				                                        .validateHeaders(false)
 				                                        .initialBufferSize(10))
 				          .handle((req, resp) -> req.receive().then(resp.sendNotFound()))
-				          .tcpConfiguration(tcp ->
-				                  tcp.doOnConnection(c -> {
+				          .doOnConnection(c -> {
 				                      channelRef.set(c.channel());
 				                      HttpServerCodec codec = c.channel()
 				                                               .pipeline()
@@ -804,7 +803,7 @@ public class HttpServerTests {
 				                      HttpObjectDecoder decoder = (HttpObjectDecoder) getValueReflection(codec, "inboundHandler", 1);
 				                      chunkSize.set((Integer) getValueReflection(decoder, "maxChunkSize", 2));
 				                      validate.set((Boolean) getValueReflection(decoder, "validateHeaders", 2));
-				                  }))
+				                  })
 				          .wiretap(true);
 
 		disposableServer = server.bindNow();
@@ -956,8 +955,7 @@ public class HttpServerTests {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
-				          .tcpConfiguration(tcpServer ->
-				                  tcpServer.doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor())))
+				          .doOnConnection(c -> c.addHandlerFirst("decompressor", new HttpContentDecompressor()))
 				          .handle((req, res) -> res.send(req.receive()
 				                                            .retain()))
 				          .wiretap(true)
@@ -997,8 +995,7 @@ public class HttpServerTests {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
-				          .tcpConfiguration(tcpServer ->
-				                  tcpServer.doOnConnection(c -> c.addHandlerFirst("custom", new ChannelInboundHandlerAdapter() {
+				          .doOnConnection(c -> c.addHandlerFirst("custom", new ChannelInboundHandlerAdapter() {
 				                      @Override
 				                      public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 				                          if (msg instanceof HttpRequest) {
@@ -1006,7 +1003,7 @@ public class HttpServerTests {
 				                          }
 				                          super.channelRead(ctx, msg);
 				                      }
-				                  })))
+				                  }))
 				          .handle((req, res) -> res.sendString(
 				                  Mono.just(req.requestHeaders().get("test", "not found"))))
 				          .wiretap(true)
@@ -1596,12 +1593,11 @@ public class HttpServerTests {
 		disposableServer =
 				HttpServer.create()
 				          .port(0)
-				          .tcpConfiguration(tcpServer ->
-				              tcpServer.runOn(loop)
+				          .runOn(loop)
 				                       .doOnConnection(c -> {
 				                           c.onDispose().subscribe(null, null, latch2::countDown);
 				                           latch1.countDown();
-				                       }))
+				                       })
 				          // Register a channel group, when invoking disposeNow()
 				          // the implementation will wait for the active requests to finish
 				          .channelGroup(new DefaultChannelGroup(new DefaultEventExecutor()))

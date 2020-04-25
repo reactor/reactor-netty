@@ -91,7 +91,7 @@ public class HttpClientWithTomcatTest {
 	public void postUpload() throws Exception {
 		HttpClient client =
 				HttpClient.create()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .host("localhost")
 				          .port(getPort())
 				          .wiretap(true);
 
@@ -125,7 +125,7 @@ public class HttpClientWithTomcatTest {
 		HttpClient client =
 				HttpClient.create(pool)
 				          .port(getPort())
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .host("localhost")
 				          .wiretap(true);
 		doSimpleTest404(client);
 		doSimpleTest404(client);
@@ -151,7 +151,7 @@ public class HttpClientWithTomcatTest {
 		AtomicReference<HttpHeaders> headers = new AtomicReference<>();
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .host("localhost")
 				          .port(getPort())
 				          .headers(h -> h.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED))
 				          .wiretap(true)
@@ -175,7 +175,7 @@ public class HttpClientWithTomcatTest {
 		AtomicReference<HttpHeaders> headers = new AtomicReference<>();
 		Tuple2<HttpResponseStatus, String> r =
 				HttpClient.newConnection()
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .host("localhost")
 				          .port(getPort())
 				          .wiretap(true)
 				          .doAfterRequest((req, connection) -> headers.set(req.requestHeaders()))
@@ -231,7 +231,7 @@ public class HttpClientWithTomcatTest {
 		ConnectionProvider p = ConnectionProvider.create("disableChunkImplicitDefault", 1);
 		HttpClient client =
 				HttpClient.create(p)
-				          .tcpConfiguration(tcpClient -> tcpClient.host("localhost"))
+				          .host("localhost")
 				          .port(getPort())
 				          .wiretap(true);
 

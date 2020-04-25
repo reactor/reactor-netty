@@ -46,7 +46,6 @@ import reactor.netty.http.server.WebsocketServerSpec;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
-import reactor.netty.tcp.TcpClient;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -941,11 +940,10 @@ public class WebsocketTest {
 				          .handle((req, res) -> res.sendWebsocket((in, out) -> Mono.never()))
 				          .bindNow();
 
-		TcpClient client = TcpClient.create()
-		                            .remoteAddress(() -> new InetSocketAddress("not a valid host name", 42));
-		HttpClient httpClient = HttpClient.from(client);
-		StepVerifier.create(httpClient.websocket()
-		                              .connect())
+		HttpClient client = HttpClient.create()
+		                              .remoteAddress(() -> new InetSocketAddress("not a valid host name", 42));
+		StepVerifier.create(client.websocket()
+		                          .connect())
 		            .expectError(UnknownHostException.class)
 		            .verify(Duration.ofSeconds(5));
 	}

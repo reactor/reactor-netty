@@ -707,7 +707,7 @@ public class HttpTests {
 			          .wiretap(true)
 			          .bind()
 		).verifyErrorMessage("Configured H2 protocol without TLS. Use" +
-				" a clear-text h2 protocol via HttpServer#protocol or configure TLS" +
+				" a Clear-Text H2 protocol via HttpServer#protocol or configure TLS" +
 				" via HttpServer#secure");
 	}
 
@@ -723,7 +723,9 @@ public class HttpTests {
 			          .handle((req, res) -> res.sendString(Mono.just("Hello")))
 			          .wiretap(true)
 			          .bind()
-		).verifyErrorMessage("Configured H2 Clear-Text protocol with TLS. Use the non clear-text h2 protocol via HttpServer#protocol or disable TLS via HttpServer#tcpConfiguration(tcp -> tcp.noSSL())");
+		).verifyErrorMessage("Configured H2 Clear-Text protocol with TLS. Use" +
+				" the non Clear-Text H2 protocol via HttpServer#protocol or disable TLS" +
+				" via HttpServer#noSSL())");
 	}
 
 	@Test(expected = IllegalArgumentException.class)

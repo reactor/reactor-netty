@@ -141,8 +141,8 @@ public class TcpClientTests {
 		TcpClient secureClient = TcpClient.create()
 		                                  .secure();
 
-		assertTrue(secureClient.isSecure());
-		assertFalse(secureClient.noSSL().isSecure());
+		assertTrue(secureClient.configuration().isSecure());
+		assertFalse(secureClient.noSSL().configuration().isSecure());
 	}
 
 	@Test
@@ -563,10 +563,11 @@ public class TcpClientTests {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		TcpClient client = TcpClient.create().host("example.com").port(123);
-		Assertions.assertThat(client.configure())
-		          .isNotSameAs(TcpClient.DEFAULT_BOOTSTRAP)
-		          .isNotSameAs(client.configure());
+		TcpClient client1 = TcpClient.create();
+		TcpClient client2 = client1.host("example.com").port(123);
+		Assertions.assertThat(client2)
+				.isNotSameAs(client1)
+				.isNotSameAs(((TcpClientConnect) client2).duplicate());
 	}
 
 	public static final class EchoServer

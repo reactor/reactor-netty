@@ -40,7 +40,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.NettyPipeline;
-import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
 
@@ -396,15 +395,10 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> {},
 				serverRequest -> Assertions.assertThat(serverRequest.scheme()).isEqualTo("https"),
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
-				httpServer -> httpServer.tcpConfiguration(tcpServer -> {
-					tcpServer = tcpServer.bootstrap(serverBootstrap ->
-							BootstrapHandlers.updateConfiguration(serverBootstrap, NettyPipeline.SslHandler, (connectionObserver, channel) -> {
+				httpServer -> httpServer.doOnChannelInit((observer, channel, address) -> {
 								SslHandler sslHandler = serverSslContext.newHandler(channel.alloc());
 								channel.pipeline().addFirst(NettyPipeline.SslHandler, sslHandler);
-							}));
-
-					return tcpServer;
-				}),
+							}),
 				true);
 	}
 

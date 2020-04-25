@@ -37,7 +37,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
-import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.resources.ConnectionProvider;
 
 import java.net.InetSocketAddress;
@@ -139,18 +138,16 @@ public class TcpMetricsTests {
 		try {
 			connection = tcpClient.host("127.0.0.1")
 			                      .port(port)
-			                      .doOnConnect(b ->
-			                          BootstrapHandlers.updateConfiguration(b, "testFailedConnect",
-			                              (o, c) ->
-			                                  c.pipeline()
-			                                   .addLast(new ChannelInboundHandlerAdapter() {
+			                      .doOnChannelInit((observer, channel, address) ->
+	                                  channel.pipeline()
+			                                 .addLast(new ChannelInboundHandlerAdapter() {
 
-			                                       @Override
-			                                       public void channelUnregistered(ChannelHandlerContext ctx) {
-			                                           latch.countDown();
-			                                           ctx.fireChannelUnregistered();
-			                                       }
-			                                   })))
+			                                     @Override
+			                                     public void channelUnregistered(ChannelHandlerContext ctx) {
+			                                         latch.countDown();
+			                                         ctx.fireChannelUnregistered();
+			                                     }
+			                                 }))
 			                      .connectNow();
 			fail("Connect should fail.");
 		}

@@ -91,7 +91,7 @@ public class TcpServerTests {
 	final Logger log     = Loggers.getLogger(TcpServerTests.class);
 
 	@Test
-		public void tcpServerHandlesJsonPojosOverSsl() throws Exception {
+	public void tcpServerHandlesJsonPojosOverSsl() throws Exception {
 		final CountDownLatch latch = new CountDownLatch(2);
 
 		SelfSignedCertificate cert = new SelfSignedCertificate();
@@ -309,10 +309,11 @@ public class TcpServerTests {
 
 	@Test
 	public void gettingOptionsDuplicates() {
-		TcpServer server = TcpServer.create().host("example.com").port(123);
-		Assertions.assertThat(server.configure())
-		          .isNotSameAs(TcpServerBind.INSTANCE.serverBootstrap)
-		          .isNotSameAs(server.configure());
+		TcpServer server1 = TcpServer.create();
+		TcpServer server2 = server1.host("example.com").port(123);
+		Assertions.assertThat(server2)
+				.isNotSameAs(server1)
+				.isNotSameAs(((TcpServerBind) server2).duplicate());
 	}
 
 	@Test
@@ -802,7 +803,7 @@ public class TcpServerTests {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
-				         .observe((connection, newState) -> {
+				         .childObserve((connection, newState) -> {
 				             if (newState == ConnectionObserver.State.CONNECTED) {
 				                 group.add(connection.channel());
 				                 connected.countDown();
@@ -841,7 +842,7 @@ public class TcpServerTests {
 		DisposableServer server =
 				TcpServer.create()
 				         .port(0)
-				         .option(ChannelOption.ALLOW_HALF_CLOSURE, true)
+				         .childOption(ChannelOption.ALLOW_HALF_CLOSURE, true)
 				         .wiretap(true)
 				         .handle((in, out) -> in.receive()
 				                                .asString()

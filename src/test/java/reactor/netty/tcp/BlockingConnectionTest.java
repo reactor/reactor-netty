@@ -21,15 +21,20 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.logging.LoggingHandler;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
+import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.ClientTransport;
+import reactor.netty.transport.ClientTransportConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -153,26 +158,16 @@ public class BlockingConnectionTest {
 
 	@Test
 	public void testTimeoutOnStart() {
-		TcpClient neverStart = new TcpClient(){
-			@Override
-			public Mono<? extends Connection> connect(Bootstrap b) {
-				return Mono.never();
-			}
-		};
+		TestClientTransport neverStart = new TestClientTransport(Mono.never());
 
 		assertThatExceptionOfType(IllegalStateException.class)
 				.isThrownBy(() -> neverStart.connectNow(Duration.ofMillis(100)))
-				.withMessage("TcpClient couldn't be started within 100ms");
+				.withMessage("TestClientTransport couldn't be started within 100ms");
 	}
 
 	@Test
 	public void testTimeoutOnStop() {
-		Connection c = new TcpClient(){
-			@Override
-			public Mono<? extends Connection> connect(Bootstrap b) {
-				return Mono.just(NEVER_STOP_CONTEXT);
-			}
-		}.connectNow();
+		Connection c = new TestClientTransport(Mono.just(NEVER_STOP_CONTEXT)).connectNow();
 
 		assertThatExceptionOfType(RuntimeException.class)
 				.isThrownBy(() -> c.disposeNow(Duration.ofMillis(100)))
@@ -181,20 +176,92 @@ public class BlockingConnectionTest {
 
 	@Test
 	public void getContextAddressAndHost() {
-		DisposableServer c = new TcpServer(){
+		DisposableServer c = new TcpServer() {
+
 			@Override
-			public Mono<? extends DisposableServer> bind(ServerBootstrap b) {
-				return Mono.just(NEVER_STOP_SERVER);
+			public TcpServerConfig configuration() {
+				return null;
 			}
 
 			@Override
-			public ServerBootstrap configure() {
-				return TcpServerBind.INSTANCE.createServerBootstrap();
+			protected TcpServer duplicate() {
+				return null;
+			}
+
+			@Override
+			public Mono<? extends DisposableServer> bind() {
+				return Mono.just(NEVER_STOP_SERVER);
 			}
 		}.bindNow();
 
 		assertThat(c).isSameAs(NEVER_STOP_SERVER);
 		assertThat(c.port()).isEqualTo(NEVER_STOP_CONTEXT.address().getPort());
 		assertThat(c.host()).isEqualTo(NEVER_STOP_CONTEXT.address().getHostString());
+	}
+
+	static final class TestClientTransport extends ClientTransport<TestClientTransport, TestClientTransportConfig> {
+
+		final Mono<? extends Connection> monoConnect;
+
+		TestClientTransport(Mono<? extends Connection> monoConnect) {
+			this.monoConnect = monoConnect;
+		}
+
+		@Override
+		public TestClientTransportConfig configuration() {
+			return null;
+		}
+
+		@Override
+		protected TestClientTransport duplicate() {
+			return null;
+		}
+
+		@Override
+		protected Mono<? extends Connection> connect() {
+			return monoConnect;
+		}
+
+		@Override
+		public Connection connectNow() {
+			return super.connectNow();
+		}
+
+		@Override
+		public Connection connectNow(Duration timeout) {
+			return super.connectNow(timeout);
+		}
+	}
+
+	static final class TestClientTransportConfig extends ClientTransportConfig<TestClientTransportConfig> {
+
+		protected TestClientTransportConfig(TestClientTransportConfig parent) {
+			super(parent);
+		}
+
+		@Override
+		protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
+			return null;
+		}
+
+		@Override
+		protected LoggingHandler defaultLoggingHandler() {
+			return null;
+		}
+
+		@Override
+		protected LoopResources defaultLoopResources() {
+			return null;
+		}
+
+		@Override
+		protected ChannelMetricsRecorder defaultMetricsRecorder() {
+			return null;
+		}
+
+		@Override
+		protected EventLoopGroup eventLoopGroup() {
+			return null;
+		}
 	}
 }

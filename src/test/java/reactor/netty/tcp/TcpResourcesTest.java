@@ -15,22 +15,26 @@
  */
 package reactor.netty.tcp;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.EventLoopGroup;
+import io.netty.resolver.AddressResolverGroup;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.transport.TransportConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -66,7 +70,10 @@ public class TcpResourcesTest {
 		ConnectionProvider poolResources = new ConnectionProvider() {
 
 			@Override
-			public Mono<? extends Connection> acquire(Bootstrap bootstrap) {
+			public Mono<? extends Connection> acquire(TransportConfig config,
+					ConnectionObserver observer,
+					Supplier<? extends SocketAddress> remoteAddress,
+					AddressResolverGroup<?> resolverGroup) {
 				return Mono.never();
 			}
 

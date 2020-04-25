@@ -26,7 +26,6 @@ import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.tcp.TcpServer;
 
 import javax.net.ssl.SSLException;
 import java.net.InetSocketAddress;
@@ -84,7 +83,7 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 
 	@Test
 	public void testIssue896() throws Exception {
-		disposableServer = httpServer.tcpConfiguration(TcpServer::noSSL)
+		disposableServer = httpServer.noSSL()
 		                             .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(1);
