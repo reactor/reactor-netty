@@ -15,7 +15,6 @@
  */
 package reactor.netty.http.client;
 
-import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -23,19 +22,19 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.http.cookie.Cookie;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.ssl.SslContext;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -44,29 +43,23 @@ import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
-import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
-import reactor.netty.NettyPipeline;
-import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
-import reactor.netty.tcp.TcpClient;
+import reactor.netty.transport.ClientTransport;
 import reactor.util.Metrics;
 
 /**
  * An HttpClient allows to build in a safe immutable way an http client that is
- * materialized and connecting when {@link TcpClient#connect()} is ultimately called.
- * <p> Internally, materialization happens in three phases, first {@link #tcpConfiguration()}
- * is called to retrieve a ready to use {@link TcpClient}, then {@link
- * TcpClient#configure()} retrieve a usable {@link Bootstrap} for the final {@link
- * TcpClient#connect()} is called.
+ * materialized and connecting when {@link HttpClient#connect()} is ultimately called.
  * {@code Transfer-Encoding: chunked} will be applied for those HTTP methods for which
  * a request body is expected. {@code Content-Length} provided via request headers
  * will disable {@code Transfer-Encoding: chunked}.
+ * <p>
  * <p> Examples:
  * <pre>
  * {@code
@@ -96,10 +89,9 @@ import reactor.util.Metrics;
  * @author Stephane Maldini
  * @author Violeta Georgieva
  */
-public abstract class HttpClient {
+public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientConfig> {
 
-	public static final String                         USER_AGENT =
-			String.format("ReactorNetty/%s", reactorNettyVersion());
+	public static final String USER_AGENT = String.format("ReactorNetty/%s", reactorNettyVersion());
 
 	/**
 	 * A URI configuration
@@ -388,8 +380,7 @@ public abstract class HttpClient {
 	 * @return a {@link HttpClient}
 	 */
 	public static HttpClient create(ConnectionProvider connectionProvider) {
-		return new HttpClientConnect(TcpClient.create(connectionProvider)
-		                                      .port(80));
+		return new HttpClientConnect(connectionProvider);
 	}
 
 	/**
@@ -404,15 +395,6 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Prepare a pooled {@link HttpClient}
-	 *
-	 * @return a {@link HttpClient}
-	 */
-	public static HttpClient from(TcpClient tcpClient) {
-		return new HttpClientConnect(tcpClient);
-	}
-
-	/**
 	 * Configure URI to use for this request/response
 	 *
 	 * @param baseUrl a default base url that can be fully sufficient for request or can
@@ -422,20 +404,9 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient baseUrl(String baseUrl) {
 		Objects.requireNonNull(baseUrl, "baseUrl");
-		return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpClientConfiguration.baseUrl(b, baseUrl)));
-	}
-
-	/**
-	 * The address to which this client should connect for each subscribe.
-	 *
-	 * @param remoteAddressSupplier A supplier of the address to connect to.
-	 *
-	 * @return a new {@link HttpClient}
-	 * @since 0.9.7
-	 */
-	public final HttpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
-		Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
-		return tcpConfiguration(tcpClient -> tcpClient.remoteAddress(remoteAddressSupplier));
+		HttpClient dup = duplicate();
+		dup.configuration().baseUrl = baseUrl;
+		return dup;
 	}
 
 	/**
@@ -446,24 +417,26 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient compress(boolean compressionEnabled) {
 		if (compressionEnabled) {
-			return tcpConfiguration(COMPRESS_ATTR_CONFIG).headers(COMPRESS_HEADERS);
+			if (!configuration().acceptGzip) {
+				HttpClient dup = duplicate();
+				HttpHeaders headers = configuration().headers.copy();
+				headers.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
+				dup.configuration().headers = headers;
+				dup.configuration().acceptGzip = true;
+				return dup;
+			}
 		}
-		else {
-			return tcpConfiguration(COMPRESS_ATTR_DISABLE).headers(COMPRESS_HEADERS_DISABLE);
+		else if (configuration().acceptGzip) {
+			HttpClient dup = duplicate();
+			if (isCompressing(configuration().headers)) {
+				HttpHeaders headers = configuration().headers.copy();
+				headers.remove(HttpHeaderNames.ACCEPT_ENCODING);
+				dup.configuration().headers = headers;
+			}
+			dup.configuration().acceptGzip = false;
+			return dup;
 		}
-	}
-
-	/**
-	 * Intercept the connection lifecycle and allows to delay, transform or inject a
-	 * context.
-	 *
-	 * @param connector A bi function mapping the default connection and configured
-	 * bootstrap to a target connection.
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient mapConnect(BiFunction<? super Mono<? extends Connection>, ? super Bootstrap, ? extends Mono<? extends Connection>> connector) {
-		return new HttpClientOnConnectMap(this, connector);
+		return this;
 	}
 
 	/**
@@ -474,7 +447,15 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient cookie(Cookie cookie) {
-		return new HttpClientCookie(this, cookie);
+		Objects.requireNonNull(cookie, "cookie");
+		if (!cookie.value().isEmpty()) {
+			HttpClient dup = duplicate();
+			HttpHeaders headers = configuration().headers.copy();
+			headers.add(HttpHeaderNames.COOKIE, dup.configuration().cookieEncoder.encode(cookie));
+			dup.configuration().headers = headers;
+			return dup;
+		}
+		return this;
 	}
 
 	/**
@@ -485,18 +466,11 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient cookie(String name, Consumer<? super Cookie> cookieBuilder) {
-		return new HttpClientCookie(this, name, cookieBuilder);
-	}
-
-	/**
-	 * Apply cookies configuration emitted by the returned Mono before requesting.
-	 *
-	 * @param cookieBuilder the cookies {@link Function} to invoke before sending
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient cookiesWhen(String name, Function<? super Cookie, Mono<? extends Cookie>> cookieBuilder) {
-		return new HttpClientCookieWhen(this, name, cookieBuilder);
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
+		Cookie cookie = new DefaultCookie(name, "");
+		cookieBuilder.accept(cookie);
+		return cookie(cookie);
 	}
 
 	/**
@@ -509,6 +483,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient cookieCodec(ClientCookieEncoder encoder) {
+		Objects.requireNonNull(encoder, "encoder");
 		ClientCookieDecoder decoder = encoder == ClientCookieEncoder.LAX ?
 				ClientCookieDecoder.LAX : ClientCookieDecoder.STRICT;
 		return cookieCodec(encoder, decoder);
@@ -524,8 +499,36 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient cookieCodec(ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
-		return tcpConfiguration(tcp -> tcp.bootstrap(
-				b -> HttpClientConfiguration.cookieCodec(b, encoder, decoder)));
+		Objects.requireNonNull(encoder, "encoder");
+		Objects.requireNonNull(decoder, "decoder");
+		HttpClient dup = duplicate();
+		dup.configuration().cookieEncoder = encoder;
+		dup.configuration().cookieDecoder = decoder;
+		return dup;
+	}
+
+	/**
+	 * Apply cookies configuration emitted by the returned Mono before requesting.
+	 *
+	 * @param cookieBuilder the cookies {@link Function} to invoke before sending
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient cookiesWhen(String name, Function<? super Cookie, Mono<? extends Cookie>> cookieBuilder) {
+		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(cookieBuilder, "cookieBuilder");
+		HttpClient dup = duplicate();
+		dup.configuration().deferredConf(config ->
+				cookieBuilder.apply(new DefaultCookie(name, ""))
+				             .map(c -> {
+				                 if (!c.value().isEmpty()) {
+				                     HttpHeaders headers = configuration().headers.copy();
+				                     headers.add(HttpHeaderNames.COOKIE, config.cookieEncoder.encode(c));
+				                     config.headers = headers;
+				                 }
+				                 return config;
+				             }));
+		return dup;
 	}
 
 	/**
@@ -538,52 +541,22 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * Setup a callback called when {@link HttpClientRequest} has not been sent and when {@link HttpClientResponse} has not been fully
-	 * received.
-	 * <p>
-	 * Note that some mutation of {@link HttpClientRequest} performed late in lifecycle
-	 * {@link #doOnRequest(BiConsumer)} or {@link RequestSender#send(BiFunction)} might
-	 * not be visible if the error results from a connection failure.
+	 * Option to disable {@code retry once} support for the outgoing requests that fail with
+	 * {@link reactor.netty.channel.AbortedException#isConnectionReset(Throwable)}.
+	 * <p>By default this is set to false in which case {@code retry once} is enabled.
 	 *
-	 * @param doOnRequest a consumer observing request failures
-	 * @param doOnResponse a consumer observing response failures
+	 * @param disableRetry true to disable {@code retry once}, false to enable it
 	 *
 	 * @return a new {@link HttpClient}
+	 * @since 0.9.6
 	 */
-	public final HttpClient doOnError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequest,
-			BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponse) {
-		Objects.requireNonNull(doOnRequest, "doOnRequest");
-		Objects.requireNonNull(doOnResponse, "doOnResponse");
-		return new HttpClientDoOnError(this, doOnRequest, doOnResponse);
-	}
-
-
-	/**
-	 * Setup a callback called when {@link HttpClientRequest} is about to be sent
-	 * and {@link HttpClientState#REQUEST_PREPARED} has been emitted.
-	 *
-	 * @param doOnRequest a callback called when {@link HttpClientRequest} is about to be sent
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient doOnRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest) {
-		Objects.requireNonNull(doOnRequest, "doOnRequest");
-		return new HttpClientDoOn(this, doOnRequest, null, null, null, null);
-	}
-
-	/**
-	 * Setup a callback called when {@link HttpClientRequest} has not been sent.
-	 * Note that some mutation of {@link HttpClientRequest} performed late in lifecycle
-	 * {@link #doOnRequest(BiConsumer)} or {@link RequestSender#send(BiFunction)} might
-	 * not be visible if the error results from a connection failure.
-	 *
-	 * @param doOnRequest a consumer observing request failures
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient doOnRequestError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequest) {
-		Objects.requireNonNull(doOnRequest, "doOnRequest");
-		return new HttpClientDoOnError(this, doOnRequest, null);
+	public final HttpClient disableRetry(boolean disableRetry) {
+		if (disableRetry == configuration().retryDisabled) {
+			return this;
+		}
+		HttpClient dup = duplicate();
+		dup.configuration().retryDisabled = disableRetry;
+		return dup;
 	}
 
 	/**
@@ -596,20 +569,63 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doAfterRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest) {
 		Objects.requireNonNull(doAfterRequest, "doAfterRequest");
-		return new HttpClientDoOn(this, null, doAfterRequest, null, null, null);
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientRequest, Connection> current =
+				(BiConsumer<HttpClientRequest, Connection>) configuration().doAfterRequest;
+		dup.configuration().doAfterRequest = current == null ? doAfterRequest : current.andThen(doAfterRequest);
+		return dup;
 	}
 
 	/**
-	 * Setup a callback called after {@link HttpClientResponse} headers have been
-	 * received and {@link HttpClientState#RESPONSE_RECEIVED} has been emitted.
+	 * Setup a callback called after {@link HttpClientResponse} has been fully received
+	 * and {@link HttpClientState#RESPONSE_COMPLETED} has been emitted.
 	 *
-	 * @param doOnResponse a callback called after {@link HttpClientResponse} headers have been received
+	 * @param doAfterResponseSuccess a callback called after {@link HttpClientResponse} has been fully received
+	 * and {@link HttpClientState#RESPONSE_COMPLETED} has been emitted.
+	 *
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.5
+	 */
+	public final HttpClient doAfterResponseSuccess(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess) {
+		Objects.requireNonNull(doAfterResponseSuccess, "doAfterResponseSuccess");
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientResponse, Connection> current =
+				(BiConsumer<HttpClientResponse, Connection>) configuration().doAfterResponseSuccess;
+		dup.configuration().doAfterResponseSuccess = current == null ? doAfterResponseSuccess : current.andThen(doAfterResponseSuccess);
+		return dup;
+	}
+
+	/**
+	 * Setup a callback called when {@link HttpClientRequest} has not been sent and when {@link HttpClientResponse} has not been fully
+	 * received.
+	 * <p>
+	 * Note that some mutation of {@link HttpClientRequest} performed late in lifecycle
+	 * {@link #doOnRequest(BiConsumer)} or {@link RequestSender#send(BiFunction)} might
+	 * not be visible if the error results from a connection failure.
+	 *
+	 * @param doOnRequestError a consumer observing request failures
+	 * @param doOnResponseError a consumer observing response failures
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient doOnResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse) {
-		Objects.requireNonNull(doOnResponse, "doOnResponse");
-		return new HttpClientDoOn(this, null, null, doOnResponse, null, null);
+	public final HttpClient doOnError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError,
+	                                  BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError) {
+		Objects.requireNonNull(doOnRequestError, "doOnRequestError");
+		Objects.requireNonNull(doOnResponseError, "doOnResponseError");
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientRequest, Throwable> currentRequestError =
+				(BiConsumer<HttpClientRequest, Throwable>) configuration().doOnRequestError;
+		dup.configuration().doOnRequestError =
+				currentRequestError == null ? doOnRequestError : currentRequestError.andThen(doOnRequestError);
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientResponse, Throwable> currentResponseError =
+				(BiConsumer<HttpClientResponse, Throwable>) configuration().doOnResponseError;
+		dup.configuration().doOnResponseError =
+				currentResponseError == null ? doOnResponseError : currentResponseError.andThen(doOnResponseError);
+		return dup;
 	}
 
 	/**
@@ -627,158 +643,86 @@ public abstract class HttpClient {
 	 */
 	public final HttpClient doOnRedirect(BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect) {
 		Objects.requireNonNull(doOnRedirect, "doOnRedirect");
-		return new HttpClientDoOn(this, null, null, null, null, doOnRedirect);
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientResponse, Connection> current =
+				(BiConsumer<HttpClientResponse, Connection>) configuration().doOnRedirect;
+		dup.configuration().doOnRedirect = current == null ? doOnRedirect : current.andThen(doOnRedirect);
+		return dup;
+	}
+
+	/**
+	 * Setup a callback called when {@link HttpClientRequest} is about to be sent
+	 * and {@link HttpClientState#REQUEST_PREPARED} has been emitted.
+	 *
+	 * @param doOnRequest a callback called when {@link HttpClientRequest} is about to be sent
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient doOnRequest(BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest) {
+		Objects.requireNonNull(doOnRequest, "doOnRequest");
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientRequest, Connection> current =
+				(BiConsumer<HttpClientRequest, Connection>) configuration().doOnRequest;
+		dup.configuration().doOnRequest = current == null ? doOnRequest : current.andThen(doOnRequest);
+		return dup;
+	}
+
+	/**
+	 * Setup a callback called when {@link HttpClientRequest} has not been sent.
+	 * Note that some mutation of {@link HttpClientRequest} performed late in lifecycle
+	 * {@link #doOnRequest(BiConsumer)} or {@link RequestSender#send(BiFunction)} might
+	 * not be visible if the error results from a connection failure.
+	 *
+	 * @param doOnRequestError a consumer observing request failures
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient doOnRequestError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError) {
+		Objects.requireNonNull(doOnRequestError, "doOnRequestError");
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientRequest, Throwable> current =
+				(BiConsumer<HttpClientRequest, Throwable>) configuration().doOnRequestError;
+		dup.configuration().doOnRequestError = current == null ? doOnRequestError : current.andThen(doOnRequestError);
+		return dup;
+	}
+
+	/**
+	 * Setup a callback called after {@link HttpClientResponse} headers have been
+	 * received and {@link HttpClientState#RESPONSE_RECEIVED} has been emitted.
+	 *
+	 * @param doOnResponse a callback called after {@link HttpClientResponse} headers have been received
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient doOnResponse(BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse) {
+		Objects.requireNonNull(doOnResponse, "doOnResponse");
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientResponse, Connection> current =
+				(BiConsumer<HttpClientResponse, Connection>) configuration().doOnResponse;
+		dup.configuration().doOnResponse = current == null ? doOnResponse : current.andThen(doOnResponse);
+		return dup;
 	}
 
 	/**
 	 * Setup a callback called when {@link HttpClientResponse} has not been fully
 	 * received, {@link HttpClientState#RESPONSE_INCOMPLETE} has been emitted.
 	 *
-	 * @param doOnResponse a consumer observing response failures
+	 * @param doOnResponseError a consumer observing response failures
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient doOnResponseError(BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponse) {
-		Objects.requireNonNull(doOnResponse, "doOnResponse");
-		return new HttpClientDoOnError(this, null, doOnResponse);
-	}
-
-	/**
-	 * Setup a callback called after {@link HttpClientResponse} has been fully received
-	 * and {@link HttpClientState#RESPONSE_COMPLETED} has been emitted.
-	 *
-	 * @param doAfterResponseSuccess a callback called after {@link HttpClientResponse} has been fully received
-	 * and {@link HttpClientState#RESPONSE_COMPLETED} has been emitted.
-	 *
-	 * @return a new {@link HttpClient}
-	 * @since 0.9.5
-	 */
-	public final HttpClient doAfterResponseSuccess(BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess) {
-		Objects.requireNonNull(doAfterResponseSuccess, "doAfterResponseSuccess");
-		return new HttpClientDoOn(this, null, null, null, doAfterResponseSuccess, null);
-	}
-
-	/**
-	 * HTTP GET to connect the {@link HttpClient}.
-	 *
-	 * @return a {@link RequestSender} ready to consume for response
-	 */
-	public final ResponseReceiver<?> get() {
-		return request(HttpMethod.GET);
-	}
-
-	/**
-	 * HTTP HEAD to connect the {@link HttpClient}.
-	 *
-	 * @return a {@link RequestSender} ready to consume for response
-	 */
-	public final ResponseReceiver<?> head() {
-		return request(HttpMethod.HEAD);
-	}
-
-	/**
-	 * Apply headers configuration.
-	 *
-	 * @param headerBuilder the header {@link Consumer} to invoke before requesting
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient headers(Consumer<? super HttpHeaders> headerBuilder) {
-		return new HttpClientHeaders(this, headerBuilder);
-	}
-
-	/**
-	 * Apply headers configuration emitted by the returned Mono before requesting.
-	 *
-	 * @param headerBuilder the header {@link Function} to invoke before sending
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient headersWhen(Function<? super HttpHeaders, Mono<? extends HttpHeaders>> headerBuilder) {
-		return new HttpClientHeadersWhen(this, headerBuilder);
-	}
-
-	/**
-	 * Enable or Disable Keep-Alive support for the outgoing request.
-	 *
-	 * @param keepAlive true if keepAlive should be enabled (default: true)
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient keepAlive(boolean keepAlive) {
-		if (keepAlive) {
-			return tcpConfiguration(KEEPALIVE_ATTR_CONFIG);
-		}
-		else {
-			return tcpConfiguration(KEEPALIVE_ATTR_DISABLE);
-		}
-	}
-
-	/**
-	 * Option to disable {@code retry once} support for the outgoing requests that fail with
-	 * {@link reactor.netty.channel.AbortedException#isConnectionReset(Throwable)}.
-	 * <p>By default this is set to false in which case {@code retry once} is enabled.
-	 *
-	 * @param disableRetry true to disable {@code retry once}, false to enable it
-	 *
-	 * @return a new {@link HttpClient}
-	 * @since 0.9.6
-	 */
-	public final HttpClient disableRetry(boolean disableRetry) {
-		if (disableRetry) {
-			return tcpConfiguration(RETRY_ATTR_DISABLE);
-		}
-		else {
-			return tcpConfiguration(RETRY_ATTR_CONFIG);
-		}
-	}
-
-	/**
-	 * Specifies whether HTTP status 301|302|307|308 auto-redirect support is enabled.
-	 *
-	 * <p><strong>Note:</strong> The sensitive headers {@link #followRedirect(boolean, Consumer) followRedirect}
-	 * are removed from the initialized request when redirecting to a different domain, they can be re-added
-	 * via {@link #followRedirect(boolean, Consumer)}.
-	 *
-	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
-	 *                       is enabled, otherwise disabled (default: false).
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient followRedirect(boolean followRedirect) {
-		return followRedirect(followRedirect, null);
-	}
-
-	/**
-	 * Variant of {@link #followRedirect(boolean)} that also accepts a redirect request
-	 * processor.
-	 *
-	 * <p><strong>Note:</strong> The sensitive headers:
-	 * <ul>
-	 *     <li>Expect</li>
-	 *     <li>Cookie</li>
-	 *     <li>Authorization</li>
-	 *     <li>Proxy-Authorization</li>
-	 * </ul>
-	 * are removed from the initialized request when redirecting to a different domain,
-	 * they can be re-added using {@code redirectRequestConsumer}.
-	 *
-	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
-	 *                       is enabled, otherwise disabled (default: false).
-	 * @param redirectRequestConsumer redirect request consumer, invoked on redirects, after
-	 * the redirect request has been initialized, in order to apply further changes such as
-	 * add/remove headers and cookies; use {@link HttpClientRequest#redirectedFrom()} to
-	 * check the original and any number of subsequent redirect(s), including the one that
-	 * is in progress.
-	 * @return a new {@link HttpClient}
-	 * @since 0.9.5
-	 */
-	public final HttpClient followRedirect(boolean followRedirect, @Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
-		if (followRedirect) {
-			return followRedirect(HttpClientConfiguration.FOLLOW_REDIRECT_PREDICATE, redirectRequestConsumer);
-		}
-		else {
-			return tcpConfiguration(FOLLOW_REDIRECT_ATTR_DISABLE);
-		}
+	public final HttpClient doOnResponseError(BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError) {
+		Objects.requireNonNull(doOnResponseError, "doOnResponseError");
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		BiConsumer<HttpClientResponse, Throwable> current =
+				(BiConsumer<HttpClientResponse, Throwable>) configuration().doOnResponseError;
+		dup.configuration().doOnResponseError = current == null ? doOnResponseError : current.andThen(doOnResponseError);
+		return dup;
 	}
 
 	/**
@@ -824,22 +768,233 @@ public abstract class HttpClient {
 	 * @since 0.9.5
 	 */
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
-			@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
+	                                       @Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		Objects.requireNonNull(predicate, "predicate");
-		return tcpConfiguration(tcp -> tcp.bootstrap(
-				b -> HttpClientConfiguration.followRedirectPredicate(b, predicate, redirectRequestConsumer)));
+		HttpClient dup = duplicate();
+		dup.configuration().followRedirectPredicate = predicate;
+		dup.configuration().redirectRequestConsumer = redirectRequestConsumer;
+		return dup;
 	}
 
 	/**
-	 * Setup all lifecycle callbacks called on or after {@link io.netty.channel.Channel}
-	 * has been connected and after it has been disconnected.
+	 * Specifies whether HTTP status 301|302|307|308 auto-redirect support is enabled.
 	 *
-	 * @param observer a consumer observing state changes
+	 * <p><strong>Note:</strong> The sensitive headers {@link #followRedirect(boolean, Consumer) followRedirect}
+	 * are removed from the initialized request when redirecting to a different domain, they can be re-added
+	 * via {@link #followRedirect(boolean, Consumer)}.
+	 *
+	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
+	 *                       is enabled, otherwise disabled (default: false).
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient followRedirect(boolean followRedirect) {
+		if (!followRedirect && configuration().followRedirectPredicate == null &&
+				configuration().redirectRequestConsumer == null) {
+			return this;
+		}
+		return followRedirect(followRedirect, null);
+	}
+
+	/**
+	 * Variant of {@link #followRedirect(boolean)} that also accepts a redirect request
+	 * processor.
+	 *
+	 * <p><strong>Note:</strong> The sensitive headers:
+	 * <ul>
+	 *     <li>Expect</li>
+	 *     <li>Cookie</li>
+	 *     <li>Authorization</li>
+	 *     <li>Proxy-Authorization</li>
+	 * </ul>
+	 * are removed from the initialized request when redirecting to a different domain,
+	 * they can be re-added using {@code redirectRequestConsumer}.
+	 *
+	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
+	 *                       is enabled, otherwise disabled (default: false).
+	 * @param redirectRequestConsumer redirect request consumer, invoked on redirects, after
+	 * the redirect request has been initialized, in order to apply further changes such as
+	 * add/remove headers and cookies; use {@link HttpClientRequest#redirectedFrom()} to
+	 * check the original and any number of subsequent redirect(s), including the one that
+	 * is in progress.
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.5
+	 */
+	public final HttpClient followRedirect(boolean followRedirect, @Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
+		if (followRedirect) {
+			return followRedirect(HttpClientConfig.FOLLOW_REDIRECT_PREDICATE, redirectRequestConsumer);
+		}
+		else {
+			HttpClient dup = duplicate();
+			dup.configuration().followRedirectPredicate = null;
+			dup.configuration().redirectRequestConsumer = null;
+			return dup;
+		}
+	}
+
+	/**
+	 * HTTP GET to connect the {@link HttpClient}.
+	 *
+	 * @return a {@link RequestSender} ready to consume for response
+	 */
+	public final ResponseReceiver<?> get() {
+		return request(HttpMethod.GET);
+	}
+
+	/**
+	 * HTTP HEAD to connect the {@link HttpClient}.
+	 *
+	 * @return a {@link RequestSender} ready to consume for response
+	 */
+	public final ResponseReceiver<?> head() {
+		return request(HttpMethod.HEAD);
+	}
+
+	/**
+	 * Apply headers configuration.
+	 *
+	 * @param headerBuilder the header {@link Consumer} to invoke before requesting
 	 *
 	 * @return a new {@link HttpClient}
 	 */
-	public final HttpClient observe(ConnectionObserver observer) {
-		return new HttpClientObserve(this, observer);
+	public final HttpClient headers(Consumer<? super HttpHeaders> headerBuilder) {
+		Objects.requireNonNull(headerBuilder, "headerBuilder");
+		HttpClient dup = duplicate();
+		HttpHeaders headers = configuration().headers.copy();
+		headerBuilder.accept(headers);
+		dup.configuration().headers = headers;
+		return dup;
+	}
+
+	/**
+	 * Apply headers configuration emitted by the returned Mono before requesting.
+	 *
+	 * @param headerBuilder the header {@link Function} to invoke before sending
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient headersWhen(Function<? super HttpHeaders, Mono<? extends HttpHeaders>> headerBuilder) {
+		Objects.requireNonNull(headerBuilder, "headerBuilder");
+		HttpClient dup = duplicate();
+		dup.configuration().deferredConf(config ->
+				headerBuilder.apply(config.headers.copy())
+				             .map(h -> {
+				                 config.headers = h;
+				                 return config;
+				             }));
+		return dup;
+	}
+
+	/**
+	 * Configure the {@link io.netty.handler.codec.http.HttpClientCodec}'s response decoding options.
+	 *
+	 * @param responseDecoderOptions a function to mutate the provided Http response decoder options
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient httpResponseDecoder(Function<HttpResponseDecoderSpec, HttpResponseDecoderSpec> responseDecoderOptions) {
+		Objects.requireNonNull(responseDecoderOptions, "responseDecoderOptions");
+		HttpResponseDecoderSpec decoder = responseDecoderOptions.apply(new HttpResponseDecoderSpec()).build();
+		if (decoder.equals(configuration().decoder)) {
+			return this;
+		}
+		HttpClient dup = duplicate();
+		dup.configuration().decoder = decoder;
+		return dup;
+	}
+
+	/**
+	 * Enable or Disable Keep-Alive support for the outgoing request.
+	 *
+	 * @param keepAlive true if keepAlive should be enabled (default: true)
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient keepAlive(boolean keepAlive) {
+		HttpClient dup = duplicate();
+		HttpHeaders headers = configuration().headers.copy();
+		HttpUtil.setKeepAlive(headers, HttpVersion.HTTP_1_1, keepAlive);
+		dup.configuration().headers = headers;
+		return dup;
+	}
+
+	/**
+	 * Intercept the connection lifecycle and allows to delay, transform or inject a
+	 * context.
+	 *
+	 * @param connector A bi function mapping the default connection and configured
+	 * bootstrap to a target connection.
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient mapConnect(
+			Function<? super Mono<? extends Connection>, ? extends Mono<? extends Connection>> connector) {
+		Objects.requireNonNull(connector, "mapConnect");
+		HttpClient dup = duplicate();
+		@SuppressWarnings("unchecked")
+		Function<Mono<? extends Connection>, Mono<? extends Connection>> current =
+				(Function<Mono<? extends Connection>, Mono<? extends Connection>>) configuration().connector;
+		dup.configuration().connector = current == null ? connector : current.andThen(connector);
+		return dup;
+	}
+
+	/**
+	 * Whether to enable metrics to be collected and registered in Micrometer's
+	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
+	 * under the name {@link reactor.netty.Metrics#HTTP_CLIENT_PREFIX}.
+	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
+	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri
+	 * {@code "/users/{id}"} can be used.
+	 * <p><strong>Note:</strong>
+	 * It is strongly recommended applications to configure an upper limit for the number of the URI tags.
+	 * For example:
+	 * <pre class="code">
+	 * Metrics.globalRegistry
+	 *        .config()
+	 *        .meterFilter(MeterFilter.maximumAllowableTags(HTTP_CLIENT_PREFIX, URI, 100, MeterFilter.deny()));
+	 * </pre>
+	 * <p>By default metrics are not enabled.
+	 *
+	 * @param enable true enables metrics collection; false disables it
+	 * @param uriTagValue a function that receives the actual uri and returns the uri tag value
+	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.7
+	 */
+	public final HttpClient metrics(boolean enable, Function<String, String> uriTagValue) {
+		if (enable) {
+			if (!Metrics.isInstrumentationAvailable()) {
+				throw new UnsupportedOperationException(
+						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+								" to the class path first");
+			}
+			HttpClient dup = duplicate();
+			dup.configuration().metricsRecorder(() -> configuration().defaultMetricsRecorder());
+			dup.configuration().uriTagValue = uriTagValue;
+			return dup;
+		}
+		else if (configuration().metricsRecorder() != null) {
+			HttpClient dup = duplicate();
+			dup.configuration().metricsRecorder(null);
+			dup.configuration().uriTagValue = null;
+			return dup;
+		}
+		else {
+			return this;
+		}
+	}
+
+	/**
+	 * Removes any previously applied SSL configuration customization
+	 *
+	 * @return a new {@link HttpClient}
+	 */
+	public final HttpClient noSSL() {
+		if (configuration().isSecure()) {
+			HttpClient dup = duplicate();
+			dup.configuration().sslProvider = null;
+			return dup;
+		}
+		return this;
 	}
 
 	/**
@@ -861,17 +1016,6 @@ public abstract class HttpClient {
 	}
 
 	/**
-	 * The port to which this client should connect.
-	 *
-	 * @param port The port to connect to.
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient port(int port) {
-		return tcpConfiguration(tcpClient -> tcpClient.port(port));
-	}
-
-	/**
 	 * HTTP POST to connect the {@link HttpClient}.
 	 *
 	 * @return a {@link RequestSender} ready to finalize request and consume for response
@@ -879,7 +1023,6 @@ public abstract class HttpClient {
 	public final RequestSender post() {
 		return request(HttpMethod.POST);
 	}
-
 
 	/**
 	 * The HTTP protocol to support. Default is {@link HttpProtocol#HTTP11}.
@@ -889,9 +1032,11 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient protocol(HttpProtocol... supportedProtocols) {
-		return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> HttpClientConfiguration.protocols(b, supportedProtocols)));
+		Objects.requireNonNull(supportedProtocols, "supportedProtocols");
+		HttpClient dup = duplicate();
+		dup.configuration().protocols = HttpClientConfig.protocols(supportedProtocols);
+		return dup;
 	}
-
 
 	/**
 	 * HTTP PUT to connect the {@link HttpClient}.
@@ -911,8 +1056,9 @@ public abstract class HttpClient {
 	 */
 	public RequestSender request(HttpMethod method) {
 		Objects.requireNonNull(method, "method");
-		TcpClient tcpConfiguration = tcpConfiguration().bootstrap(b -> HttpClientConfiguration.method(b, method));
-		return new HttpClientFinalizer(tcpConfiguration);
+		HttpClientFinalizer dup = new HttpClientFinalizer(new HttpClientConfig(configuration()));
+		dup.configuration().method = method;
+		return dup;
 	}
 
 	/**
@@ -924,7 +1070,13 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient secure() {
-		return new HttpClientSecure(this, null);
+		SslProvider sslProvider = HttpClientSecure.sslProvider(null);
+		if (sslProvider.equals(configuration().sslProvider)) {
+			return this;
+		}
+		HttpClient dup = duplicate();
+		dup.configuration().sslProvider = sslProvider;
+		return dup;
 	}
 
 	/**
@@ -938,119 +1090,16 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		return HttpClientSecure.secure(this, sslProviderBuilder);
-	}
-
-	/**
-	 * Apply {@link Bootstrap} configuration given mapper taking currently configured one
-	 * and returning a new one to be ultimately used for socket binding. <p> Configuration
-	 * will apply during {@link #tcpConfiguration()} phase.
-	 *
-	 * <p> Always prefer {@link HttpClient#secure} to
-	 * {@link #tcpConfiguration()} and {@link TcpClient#secure}. While configuration
-	 * with the later is possible, {@link HttpClient#secure} will inject extra information
-	 * for HTTPS support.
-	 *
-	 * @param tcpMapper A tcpClient mapping function to update tcp configuration and
-	 * return an enriched tcp client to use.
-	 *
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient tcpConfiguration(Function<? super TcpClient, ? extends TcpClient> tcpMapper) {
-		return new HttpClientTcpConfig(this, tcpMapper);
-	}
-
-	/**
-	 * Apply or remove a wire logger configuration using {@link HttpClient} category
-	 * and {@code DEBUG} logger level
-	 *
-	 * @param enable Specifies whether the wire logger configuration will be added to
-	 *               the pipeline
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient wiretap(boolean enable) {
-		if (enable) {
-			return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
+		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
+		SslProvider.SslContextSpec builder = SslProvider.builder();
+		sslProviderBuilder.accept(builder);
+		SslProvider sslProvider = HttpClientSecure.sslProvider(((SslProvider.Builder) builder).build());
+		if (sslProvider.equals(configuration().sslProvider)) {
+			return this;
 		}
-		else {
-			return tcpConfiguration(tcpClient -> tcpClient.bootstrap(
-			        b -> BootstrapHandlers.removeConfiguration(b, NettyPipeline.LoggingHandler)));
-		}
-	}
-
-	/**
-	 * Whether to enable metrics to be collected and registered in Micrometer's
-	 * {@link io.micrometer.core.instrument.Metrics#globalRegistry globalRegistry}
-	 * under the name {@link reactor.netty.Metrics#HTTP_CLIENT_PREFIX}.
-	 * <p>{@code uriTagValue} function receives the actual uri and returns the uri tag value
-	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag.
-	 * For example instead of using the actual uri {@code "/users/1"} as uri tag value, templated uri
-	 * {@code "/users/{id}"} can be used.
-	 * <p><strong>Note:</strong>
-	 * It is strongly recommended applications to configure an upper limit for the number of the URI tags.
-	 * For example:
-	 * <pre class="code">
-	 * Metrics.globalRegistry
-	 *        .config()
-	 *        .meterFilter(MeterFilter.maximumAllowableTags(HTTP_CLIENT_PREFIX, URI, 100, MeterFilter.deny()));
-	 * </pre>
-	 * <p>By default metrics are not enabled.
-	 *
-	 * @param metricsEnabled true enables metrics collection; false disables it
-	 * @param uriTagValue a function that receives the actual uri and returns the uri tag value
-	 * that will be used for the metrics with {@link reactor.netty.Metrics#URI} tag
-	 * @return a new {@link HttpClient}
-	 * @since 0.9.7
-	 */
-	public final HttpClient metrics(boolean metricsEnabled, @Nullable Function<String, String> uriTagValue) {
-		if (metricsEnabled) {
-			if (!Metrics.isInstrumentationAvailable()) {
-				throw new UnsupportedOperationException(
-						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
-								" to the class path first");
-			}
-
-			return tcpConfiguration(tcpClient ->
-					tcpClient.bootstrap(b -> {
-						BootstrapHandlers.updateMetricsSupport(b, MicrometerHttpClientMetricsRecorder.INSTANCE);
-						return HttpClientConfiguration.uriTagValue(b, uriTagValue);
-					}));
-		}
-		else {
-			return tcpConfiguration(tcpClient ->
-					tcpClient.bootstrap(b -> {
-						BootstrapHandlers.removeMetricsSupport(b);
-						return HttpClientConfiguration.uriTagValue(b, null);
-					}));
-		}
-	}
-
-	/**
-	 * Specifies whether the metrics are enabled on the {@link HttpClient}.
-	 * All generated metrics are provided to the specified recorder
-	 * which is only instantiated if metrics are being enabled.
-	 *
-	 * @param metricsEnabled if true enables the metrics on the server.
-	 * @param recorder a supplier for the {@link HttpClientMetricsRecorder}
-	 * @return a new {@link HttpClient}
-	 * @since 0.9.7
-	 */
-	public final HttpClient metrics(boolean metricsEnabled, Supplier<? extends HttpClientMetricsRecorder> recorder) {
-		return tcpConfiguration(tcpClient ->
-			tcpClient.metrics(metricsEnabled, recorder)
-			         .bootstrap(b -> HttpClientConfiguration.uriTagValue(b, null)));
-	}
-
-	/**
-	 * Configure the {@link io.netty.handler.codec.http.HttpClientCodec}'s response decoding options.
-	 *
-	 * @param responseDecoderOptions a function to mutate the provided Http response decoder options
-	 * @return a new {@link HttpClient}
-	 */
-	public final HttpClient httpResponseDecoder(Function<HttpResponseDecoderSpec, HttpResponseDecoderSpec> responseDecoderOptions) {
-		return tcpConfiguration(
-				responseDecoderOptions.apply(new HttpResponseDecoderSpec())
-				                      .build());
+		HttpClient dup = duplicate();
+		dup.configuration().sslProvider = sslProvider;
+		return dup;
 	}
 
 	/**
@@ -1071,19 +1120,14 @@ public abstract class HttpClient {
 	 */
 	public final WebsocketSender websocket(WebsocketClientSpec websocketClientSpec) {
 		Objects.requireNonNull(websocketClientSpec, "websocketClientSpec");
-		TcpClient tcpConfiguration =
-				tcpConfiguration().bootstrap(b -> HttpClientConfiguration.websocketClientSpec(b, websocketClientSpec));
-		return new WebsocketFinalizer(tcpConfiguration);
+		WebsocketFinalizer dup = new WebsocketFinalizer(new HttpClientConfig(configuration()));
+		HttpClientConfig config = dup.configuration();
+		config.websocketClientSpec = websocketClientSpec;
+		return dup;
 	}
 
-	/**
-	 * Get a TcpClient from the parent {@link HttpClient} chain to use with {@link
-	 * TcpClient#connect()}} or separately
-	 *
-	 * @return a configured {@link TcpClient}
-	 */
-	protected TcpClient tcpConfiguration() {
-		return DEFAULT_TCP_CLIENT;
+	static boolean isCompressing(HttpHeaders h){
+		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true);
 	}
 
 	static String reactorNettyVersion() {
@@ -1092,48 +1136,11 @@ public abstract class HttpClient {
 		               .orElse("dev");
 	}
 
-	final static String                    WS_SCHEME    = "ws";
-	final static String                    WSS_SCHEME   = "wss";
-	final static String                    HTTP_SCHEME  = "http";
-	final static String                    HTTPS_SCHEME = "https";
+	static final String HTTP_SCHEME  = "http";
 
-	static final TcpClient DEFAULT_TCP_CLIENT = TcpClient.newConnection()
-	                                                     .port(80);
+	static final String HTTPS_SCHEME = "https";
 
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);
+	static final String WS_SCHEME    = "ws";
 
-	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_COMPRESS);
-
-	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_COMPRESS);
-
-	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_CONFIG =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_KEEPALIVE);
-
-	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_DISABLE =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_KEEPALIVE);
-
-	static final Function<TcpClient, TcpClient> RETRY_ATTR_CONFIG =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_RETRY);
-
-	static final Function<TcpClient, TcpClient> RETRY_ATTR_DISABLE =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_RETRY);
-
-	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_DISABLE =
-			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_REDIRECT);
-
-	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS =
-			h -> h.add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
-
-	static final Consumer<? super HttpHeaders> COMPRESS_HEADERS_DISABLE = h -> {
-		if (isCompressing(h)) {
-			h.remove(HttpHeaderNames.ACCEPT_ENCODING);
-		}
-	};
-
-	static boolean isCompressing(HttpHeaders h){
-		return h.contains(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP, true);
-	}
-
+	static final String WSS_SCHEME   = "wss";
 }

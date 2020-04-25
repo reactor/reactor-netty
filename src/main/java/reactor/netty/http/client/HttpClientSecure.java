@@ -15,7 +15,6 @@
  */
 package reactor.netty.http.client;
 
-import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
@@ -29,36 +28,20 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.netty.tcp.SslProvider;
-import reactor.netty.tcp.TcpClient;
 
 /**
+ * Initializes the default {@link SslProvider} for the HTTP client.
+ *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
-final class HttpClientSecure extends HttpClientOperator {
+final class HttpClientSecure {
 
-	static HttpClient secure(HttpClient client, Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
-		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
-
-		SslProvider.SslContextSpec builder = SslProvider.builder();
-		sslProviderBuilder.accept(builder);
-		return new HttpClientSecure(client, ((SslProvider.Builder) builder).build());
-	}
-
-	final SslProvider sslProvider;
-
-	HttpClientSecure(HttpClient client, @Nullable SslProvider sslProvider) {
-		super(client);
-		this.sslProvider = sslProvider;
-	}
-
-	@Override
-	protected TcpClient tcpConfiguration() {
+	static SslProvider sslProvider(@Nullable SslProvider sslProvider) {
 		if (sslProvider == null) {
-			return source.tcpConfiguration()
-			             .secure(DEFAULT_HTTP_SSL_PROVIDER);
+			return DEFAULT_HTTP_SSL_PROVIDER;
 		}
-		return source.tcpConfiguration().secure(
-				SslProvider.addHandlerConfigurator(sslProvider, DEFAULT_HOSTNAME_VERIFICATION));
+		return SslProvider.addHandlerConfigurator(sslProvider, DEFAULT_HOSTNAME_VERIFICATION);
 	}
 
 	static final Consumer<? super SslHandler> DEFAULT_HOSTNAME_VERIFICATION = handler -> {
@@ -68,10 +51,7 @@ final class HttpClientSecure extends HttpClientOperator {
 		sslEngine.setSSLParameters(sslParameters);
 	};
 
-	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER =
-			SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), DEFAULT_HOSTNAME_VERIFICATION);
-
-	static final SslContext DEFAULT_CLIENT_HTTP2_CONTEXT;
+	static final SslContext DEFAULT_HTTP2_CONTEXT;
 	static {
 		SslContext sslCtx;
 		try {
@@ -84,20 +64,22 @@ final class HttpClientSecure extends HttpClientOperator {
 					                 .sslProvider(provider)
 					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
 					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
-							                 ApplicationProtocolConfig.Protocol.ALPN,
-							                 ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
-							                 ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
-							                 ApplicationProtocolNames.HTTP_2,
-							                 ApplicationProtocolNames.HTTP_1_1))
+					                         ApplicationProtocolConfig.Protocol.ALPN,
+					                         ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+					                         ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+					                         ApplicationProtocolNames.HTTP_2,
+					                         ApplicationProtocolNames.HTTP_1_1))
 					                 .build();
 		}
 		catch (Exception e) {
 			sslCtx = null;
 		}
-		DEFAULT_CLIENT_HTTP2_CONTEXT = sslCtx;
+		DEFAULT_HTTP2_CONTEXT = sslCtx;
 	}
 
+	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER =
+			SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), DEFAULT_HOSTNAME_VERIFICATION);
+
 	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC_HTTP2 =
-			sslProviderBuilder -> sslProviderBuilder.sslContext(
-					DEFAULT_CLIENT_HTTP2_CONTEXT);
+			sslProviderBuilder -> sslProviderBuilder.sslContext(DEFAULT_HTTP2_CONTEXT);
 }

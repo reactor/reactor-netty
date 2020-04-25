@@ -26,14 +26,14 @@ import java.util.regex.Pattern;
 import reactor.util.annotation.Nullable;
 
 final class UriEndpointFactory {
-	final Supplier<SocketAddress> connectAddress;
+	final Supplier<? extends SocketAddress> connectAddress;
 	final boolean defaultSecure;
 	final BiFunction<String, Integer, InetSocketAddress> inetSocketAddressFunction;
 
 	static final Pattern URL_PATTERN = Pattern.compile(
 			"(?:(\\w+)://)?((?:\\[.+?])|(?<!\\[)(?:[^/?]+?))(?::(\\d{2,5}))?([/?].*)?");
 
-	UriEndpointFactory(Supplier<SocketAddress> connectAddress, boolean defaultSecure,
+	UriEndpointFactory(Supplier<? extends SocketAddress> connectAddress, boolean defaultSecure,
 			BiFunction<String, Integer, InetSocketAddress> inetSocketAddressFunction) {
 		this.connectAddress = connectAddress;
 		this.defaultSecure = defaultSecure;
@@ -44,7 +44,7 @@ final class UriEndpointFactory {
 		return createUriEndpoint(url, isWs, connectAddress);
 	}
 
-	UriEndpoint createUriEndpoint(String url, boolean isWs, Supplier<SocketAddress> connectAddress) {
+	UriEndpoint createUriEndpoint(String url, boolean isWs, Supplier<? extends SocketAddress> connectAddress) {
 		if (url.startsWith("/")) {
 			return new UriEndpoint(resolveScheme(isWs), "localhost", 80, connectAddress, url);
 		}
@@ -70,7 +70,7 @@ final class UriEndpointFactory {
 		}
 	}
 
-	UriEndpoint createUriEndpoint(UriEndpoint from, String to, Supplier<SocketAddress> connectAddress) {
+	UriEndpoint createUriEndpoint(UriEndpoint from, String to, Supplier<? extends SocketAddress> connectAddress) {
 		if (to.startsWith("/")) {
 			return new UriEndpoint(from.scheme, from.host, from.port, connectAddress, to);
 		} else {

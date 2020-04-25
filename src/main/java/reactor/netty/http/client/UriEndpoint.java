@@ -27,10 +27,10 @@ final class UriEndpoint {
 	final String scheme;
 	final String host;
 	final int port;
-	final Supplier<SocketAddress> remoteAddress;
+	final Supplier<? extends SocketAddress> remoteAddress;
 	final String pathAndQuery;
 
-	UriEndpoint(String scheme, String host, int port, Supplier<SocketAddress> remoteAddress, String pathAndQuery) {
+	UriEndpoint(String scheme, String host, int port, Supplier<? extends SocketAddress> remoteAddress, String pathAndQuery) {
 		this.host = host;
 		this.port = port;
 		this.scheme = Objects.requireNonNull(scheme, "scheme");

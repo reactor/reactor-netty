@@ -20,59 +20,94 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
+import reactor.netty.Connection;
+import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
-import reactor.netty.tcp.TcpClient;
+
+import static reactor.netty.http.client.HttpClientFinalizer.contentReceiver;
 
 /**
+ * Configures the Websocket request before calling one of the terminal,
+ * {@link Publisher} based, {@link WebsocketReceiver} API.
+ *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  */
-final class WebsocketFinalizer extends HttpClient implements HttpClient.WebsocketSender {
+final class WebsocketFinalizer extends HttpClientConnect implements HttpClient.WebsocketSender {
 
-	final TcpClient cachedConfiguration;
-
-	WebsocketFinalizer(TcpClient parent) {
-		this.cachedConfiguration = parent;
+	WebsocketFinalizer(HttpClientConfig config) {
+		super(config);
 	}
 
 	// UriConfiguration methods
 
 	@Override
-	public WebsocketSender uri(String uri) {
-		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.uri(b, uri)));
+	public HttpClient.WebsocketSender uri(Mono<String> uri) {
+		Objects.requireNonNull(uri, "uri");
+		HttpClient dup = duplicate();
+		dup.configuration().deferredConf(config -> uri.map(s -> {
+			config.uri = s;
+			return config;
+		}));
+		return (WebsocketFinalizer) dup;
 	}
 
 	@Override
-	public WebsocketSender uri(Mono<String> uri) {
-		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredConf(b, conf -> uri.map(conf::uri))));
+	public HttpClient.WebsocketSender uri(String uri) {
+		Objects.requireNonNull(uri, "uri");
+		HttpClient dup = duplicate();
+		dup.configuration().uri = uri;
+		return (WebsocketFinalizer) dup;
 	}
 
 	// WebsocketSender methods
+
 	@Override
 	public WebsocketFinalizer send(Function<? super HttpClientRequest, ? extends Publisher<Void>> sender) {
 		Objects.requireNonNull(sender, "requestBody");
-		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.body(b, (req, out) -> sender.apply(req))));
+		HttpClient dup = duplicate();
+		dup.configuration().body = (req, out) -> sender.apply(req);
+		return (WebsocketFinalizer) dup;
 	}
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<WebsocketClientOperations> connect() {
-		return (Mono<WebsocketClientOperations>)cachedConfiguration.connect();
-	}
+	// WebsocketReceiver methods
 
 	@Override
-	public ByteBufFlux receive() {
-		return HttpClientFinalizer.content(cachedConfiguration, HttpClientFinalizer.contentReceiver);
+	public Mono<? extends Connection> connect() {
+		return super.connect();
 	}
 
 	@Override
 	public <V> Flux<V> handle(BiFunction<? super WebsocketInbound, ? super WebsocketOutbound, ? extends Publisher<V>> receiver) {
-		return connect().flatMapMany(c -> Flux.from(receiver.apply(c, c))
+		@SuppressWarnings("unchecked")
+		Mono<WebsocketClientOperations> connector = (Mono<WebsocketClientOperations>) connect();
+		return connector.flatMapMany(c -> Flux.from(receiver.apply(c, c))
 		                                      .doFinally(s -> HttpClientFinalizer.discard(c)));
+	}
+
+	@Override
+	public ByteBufFlux receive() {
+		ByteBufAllocator alloc = (ByteBufAllocator) configuration().options()
+		                                                           .get(ChannelOption.ALLOCATOR);
+		if (alloc == null) {
+			alloc = ByteBufAllocator.DEFAULT;
+		}
+
+		@SuppressWarnings("unchecked")
+		Mono<ChannelOperations<?, ?>> connector = (Mono<ChannelOperations<?, ?>>) connect();
+		return ByteBufFlux.fromInbound(connector.flatMapMany(contentReceiver), alloc);
+	}
+
+	@Override
+	protected HttpClient duplicate() {
+		return new WebsocketFinalizer(new HttpClientConfig(config));
 	}
 }
 

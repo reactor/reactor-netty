@@ -16,9 +16,9 @@
 package reactor.netty.http.client;
 
 import reactor.netty.http.HttpDecoderSpec;
-import reactor.netty.tcp.TcpClient;
+import reactor.netty.http.server.HttpRequestDecoderSpec;
 
-import java.util.function.Function;
+import java.util.Objects;
 
 /**
  * A configuration builder to fine tune the {@link io.netty.handler.codec.http.HttpClientCodec}
@@ -67,11 +67,31 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		return this;
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		if (!super.equals(o)) {
+			return false;
+		}
+		HttpResponseDecoderSpec that = (HttpResponseDecoderSpec) o;
+		return failOnMissingResponse == that.failOnMissingResponse &&
+				parseHttpAfterConnectRequest == that.parseHttpAfterConnectRequest;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(super.hashCode(), failOnMissingResponse, parseHttpAfterConnectRequest);
+	}
+
 	/**
-	 * Build a {@link Function} that applies the http response decoder configuration to a
-	 * {@link TcpClient} by enriching its attributes.
+	 * Build a {@link HttpRequestDecoderSpec}.
 	 */
-	Function<TcpClient, TcpClient> build() {
+	HttpResponseDecoderSpec build() {
 		HttpResponseDecoderSpec decoder = new HttpResponseDecoderSpec();
 		decoder.initialBufferSize = initialBufferSize;
 		decoder.maxChunkSize = maxChunkSize;
@@ -80,6 +100,6 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		decoder.validateHeaders = validateHeaders;
 		decoder.failOnMissingResponse = failOnMissingResponse;
 		decoder.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
-		return tcp -> tcp.bootstrap(b -> HttpClientConfiguration.decoder(b, decoder));
+		return decoder;
 	}
 }

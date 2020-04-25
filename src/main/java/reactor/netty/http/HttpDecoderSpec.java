@@ -15,6 +15,7 @@
  */
 package reactor.netty.http;
 
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -128,5 +129,26 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 
 	public int initialBufferSize() {
 		return initialBufferSize;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		HttpDecoderSpec<?> that = (HttpDecoderSpec<?>) o;
+		return maxInitialLineLength == that.maxInitialLineLength &&
+				maxHeaderSize == that.maxHeaderSize &&
+				maxChunkSize == that.maxChunkSize &&
+				validateHeaders == that.validateHeaders &&
+				initialBufferSize == that.initialBufferSize;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize);
 	}
 }
