@@ -22,8 +22,11 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.util.AttributeKey;
 import reactor.netty.ChannelPipelineConfigurer;
@@ -155,6 +158,11 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		this.doOnBound = parent.doOnBound;
 		this.doOnConnection = parent.doOnConnection;
 		this.doOnUnbound = parent.doOnUnbound;
+	}
+
+	@Override
+	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
+		return new ReflectiveChannelFactory<>(loopResources().onServerChannel(elg));
 	}
 
 	/**

@@ -304,11 +304,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-		return new ReflectiveChannelFactory<>(loopResources().onChannel(elg));
-	}
-
-	@Override
 	protected ConnectionObserver defaultConnectionObserver() {
 		if (doAfterRequest == null && doAfterResponseSuccess == null && doOnRedirect == null &&
 				doOnRequest == null && doOnRequestError == null && doOnResponse == null && doOnResponseError == null) {

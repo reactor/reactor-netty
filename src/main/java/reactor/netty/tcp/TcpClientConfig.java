@@ -92,11 +92,6 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 	}
 
 	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-		return new ReflectiveChannelFactory<>(loopResources().onChannel(elg));
-	}
-
-	@Override
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
 		ChannelPipelineConfigurer _default = super.defaultOnChannelInit();
 		if (sslProvider != null) {

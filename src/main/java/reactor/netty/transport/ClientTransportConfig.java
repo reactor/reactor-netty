@@ -22,8 +22,10 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
@@ -154,6 +156,11 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.proxyProvider = parent.proxyProvider;
 		this.remoteAddress = parent.remoteAddress;
 		this.resolver = parent.resolver;
+	}
+
+	@Override
+	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
+		return new ReflectiveChannelFactory<>(loopResources().onChannel(elg));
 	}
 
 	@Override

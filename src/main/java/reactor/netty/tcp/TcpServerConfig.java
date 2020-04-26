@@ -85,11 +85,6 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 	}
 
 	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-		return new ReflectiveChannelFactory<>(loopResources().onServerChannel(elg));
-	}
-
-	@Override
 	protected LoggingHandler defaultLoggingHandler() {
 		return LOGGING_HANDLER;
 	}

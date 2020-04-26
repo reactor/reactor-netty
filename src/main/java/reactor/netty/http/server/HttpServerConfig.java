@@ -227,11 +227,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-		return new ReflectiveChannelFactory<>(loopResources().onServerChannel(elg));
-	}
-
-	@Override
 	protected LoggingHandler defaultLoggingHandler() {
 		return LOGGING_HANDLER;
 	}
