@@ -85,11 +85,6 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 	}
 
 	@Override
-	protected EventLoopGroup childEventLoopGroup() {
-		return loopResources().onServer(isPreferNative());
-	}
-
-	@Override
 	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
 		return new ReflectiveChannelFactory<>(loopResources().onServerChannel(elg));
 	}
@@ -118,11 +113,6 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 		else {
 			return _default;
 		}
-	}
-
-	@Override
-	protected EventLoopGroup eventLoopGroup() {
-		return loopResources().onServerSelect(isPreferNative());
 	}
 
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new ChannelOperations<>(ch, c);

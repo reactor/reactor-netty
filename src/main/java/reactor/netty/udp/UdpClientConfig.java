@@ -101,11 +101,6 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 		return MicrometerUdpClientMetricsRecorder.INSTANCE;
 	}
 
-	@Override
-	protected EventLoopGroup eventLoopGroup() {
-		return loopResources().onClient(isPreferNative());
-	}
-
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new UdpOperations(ch, c);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(UdpClient.class);

@@ -227,11 +227,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	@Override
-	protected EventLoopGroup childEventLoopGroup() {
-		return loopResources().onServer(LoopResources.DEFAULT_NATIVE);
-	}
-
-	@Override
 	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
 		return new ReflectiveChannelFactory<>(loopResources().onServerChannel(elg));
 	}
@@ -249,11 +244,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	@Override
 	protected ChannelMetricsRecorder defaultMetricsRecorder() {
 		return MicrometerHttpServerMetricsRecorder.INSTANCE;
-	}
-
-	@Override
-	protected EventLoopGroup eventLoopGroup() {
-		return loopResources().onServerSelect(LoopResources.DEFAULT_NATIVE);
 	}
 
 	@Override

@@ -122,11 +122,6 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 		return MicrometerTcpClientMetricsRecorder.INSTANCE;
 	}
 
-	@Override
-	protected EventLoopGroup eventLoopGroup() {
-		return loopResources().onClient(isPreferNative());
-	}
-
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new ChannelOperations<>(ch, c);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpClient.class);

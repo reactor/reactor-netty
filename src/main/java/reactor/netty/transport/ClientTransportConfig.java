@@ -23,6 +23,7 @@ import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
@@ -171,6 +172,11 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		else {
 			return ChannelPipelineConfigurer.emptyConfigurer();
 		}
+	}
+
+	@Override
+	protected EventLoopGroup eventLoopGroup() {
+		return loopResources().onClient(isPreferNative());
 	}
 
 	@SuppressWarnings("unchecked")

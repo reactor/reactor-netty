@@ -344,11 +344,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
-	protected EventLoopGroup eventLoopGroup() {
-		return loopResources().onClient(isPreferNative());
-	}
-
-	@Override
 	protected AddressResolverGroup<?> resolverInternal() {
 		return super.resolverInternal();
 	}

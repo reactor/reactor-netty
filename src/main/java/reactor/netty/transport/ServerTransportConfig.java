@@ -158,13 +158,6 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the configured {@link EventLoopGroup} used for the remote connection.
-	 *
-	 * @return the configured {@link EventLoopGroup} used for the remote connection.
-	 */
-	protected abstract EventLoopGroup childEventLoopGroup();
-
-	/**
 	 * Return the configured child lifecycle {@link ConnectionObserver} if any or {@link ConnectionObserver#emptyListener()}.
 	 *
 	 * @return the configured child lifecycle {@link ConnectionObserver} if any or {@link ConnectionObserver#emptyListener()}
@@ -189,6 +182,20 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	@Override
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
 		return ChannelPipelineConfigurer.emptyConfigurer();
+	}
+
+	@Override
+	protected EventLoopGroup eventLoopGroup() {
+		return loopResources().onServerSelect(isPreferNative());
+	}
+
+	/**
+	 * Return the configured {@link EventLoopGroup} used for the remote connection.
+	 *
+	 * @return the configured {@link EventLoopGroup} used for the remote connection.
+	 */
+	EventLoopGroup childEventLoopGroup() {
+		return loopResources().onServer(isPreferNative());
 	}
 
 	static final class ServerTransportDoOn implements ConnectionObserver {
