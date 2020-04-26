@@ -29,11 +29,8 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
@@ -339,13 +336,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
-	protected AddressResolverGroup<?> resolverInternal() {
-		return super.resolverInternal();
+	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder) {
+		super.metricsRecorder(metricsRecorder);
 	}
 
 	@Override
-	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder) {
-		super.metricsRecorder(metricsRecorder);
+	protected AddressResolverGroup<?> resolverInternal() {
+		return super.resolverInternal();
 	}
 
 	void deferredConf(Function<HttpClientConfig, Mono<HttpClientConfig>> deferrer) {

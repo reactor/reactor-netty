@@ -16,15 +16,12 @@
 package reactor.netty.http.server;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -433,10 +430,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 	static final boolean ACCESS_LOG = Boolean.parseBoolean(System.getProperty(ACCESS_LOG_ENABLED, "false"));
 
-	static final Logger log = Loggers.getLogger(HttpServerConfig.class);
-
-	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpServer.class);
-
 	static final int h11 = 0b100;
 
 	static final int h2 = 0b010;
@@ -446,6 +439,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	static final int h11orH2c = h11 | h2c;
 
 	static final int h11orH2 = h11 | h2;
+
+	static final Logger log = Loggers.getLogger(HttpServerConfig.class);
+
+	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpServer.class);
 
 	/**
 	 * Default value whether the SSL debugging on the server side will be enabled/disabled,

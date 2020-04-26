@@ -16,10 +16,7 @@
 package reactor.netty.tcp;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.handler.logging.LoggingHandler;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
@@ -92,17 +89,6 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 	}
 
 	@Override
-	protected ChannelPipelineConfigurer defaultOnChannelInit() {
-		ChannelPipelineConfigurer _default = super.defaultOnChannelInit();
-		if (sslProvider != null) {
-			return _default.then(new TcpClientChannelInitializer(sslProvider));
-		}
-		else {
-			return _default;
-		}
-	}
-
-	@Override
 	protected LoggingHandler defaultLoggingHandler() {
 		return LOGGING_HANDLER;
 	}
@@ -115,6 +101,17 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 	@Override
 	protected ChannelMetricsRecorder defaultMetricsRecorder() {
 		return MicrometerTcpClientMetricsRecorder.INSTANCE;
+	}
+
+	@Override
+	protected ChannelPipelineConfigurer defaultOnChannelInit() {
+		ChannelPipelineConfigurer _default = super.defaultOnChannelInit();
+		if (sslProvider != null) {
+			return _default.then(new TcpClientChannelInitializer(sslProvider));
+		}
+		else {
+			return _default;
+		}
 	}
 
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new ChannelOperations<>(ch, c);

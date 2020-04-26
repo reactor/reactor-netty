@@ -142,7 +142,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 * @param bindAddress the local address
 	 */
 	protected ServerTransportConfig(Map<ChannelOption<?>, ?> options, Map<ChannelOption<?>, ?> childOptions,
-	                                Supplier<? extends SocketAddress> bindAddress) {
+				Supplier<? extends SocketAddress> bindAddress) {
 		super(options, bindAddress);
 		this.childAttrs = Collections.emptyMap();
 		this.childObserver = ConnectionObserver.emptyListener();
@@ -161,7 +161,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
+	protected final ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
 		return new ReflectiveChannelFactory<>(loopResources().onServerChannel(elg));
 	}
 
@@ -193,7 +193,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	@Override
-	protected EventLoopGroup eventLoopGroup() {
+	protected final EventLoopGroup eventLoopGroup() {
 		return loopResources().onServerSelect(isPreferNative());
 	}
 
@@ -202,7 +202,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the configured {@link EventLoopGroup} used for the remote connection.
 	 */
-	EventLoopGroup childEventLoopGroup() {
+	final EventLoopGroup childEventLoopGroup() {
 		return loopResources().onServer(isPreferNative());
 	}
 
@@ -212,7 +212,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		final Consumer<? super DisposableServer> doOnUnbound;
 
 		ServerTransportDoOn(@Nullable Consumer<? super DisposableServer> doOnBound,
-		                    @Nullable Consumer<? super DisposableServer> doOnUnbound) {
+				@Nullable Consumer<? super DisposableServer> doOnUnbound) {
 			this.doOnBound = doOnBound;
 			this.doOnUnbound = doOnUnbound;
 		}
@@ -221,7 +221,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONNECTED) {
 				if (doOnBound != null) {
-					doOnBound.accept((DisposableServer)connection);
+					doOnBound.accept((DisposableServer) connection);
 				}
 				if (doOnUnbound != null) {
 					connection.channel()

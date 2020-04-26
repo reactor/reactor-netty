@@ -45,8 +45,8 @@ public interface LoopResources extends Disposable {
 	 */
 	int DEFAULT_IO_WORKER_COUNT = Integer.parseInt(System.getProperty(
 			ReactorNetty.IO_WORKER_COUNT,
-			"" + Math.max(Runtime.getRuntime()
-			            .availableProcessors(), 4)));
+			"" + Math.max(Runtime.getRuntime().availableProcessors(), 4)));
+
 	/**
 	 * Default selector thread count, fallback to -1 (no selector thread)
 	 */
@@ -63,7 +63,7 @@ public interface LoopResources extends Disposable {
 			"true"));
 
 	/**
-	 * Default quite period that guarantees that the disposal of the underlying LoopResources
+	 * Default quiet period that guarantees that the disposal of the underlying LoopResources
 	 * will not happen, fallback to 2 seconds.
 	 */
 	long DEFAULT_SHUTDOWN_QUIET_PERIOD = Long.parseLong(System.getProperty(
@@ -84,7 +84,6 @@ public interface LoopResources extends Disposable {
 	 * inside one.
 	 *
 	 * @param group the {@link EventLoopGroup} to decorate
-	 *
 	 * @return a decorated {@link EventLoopGroup} that will colocate executions on the
 	 * same thread stack
 	 */
@@ -97,15 +96,26 @@ public interface LoopResources extends Disposable {
 	 * EventLoopGroup} and {@link Channel} factories
 	 *
 	 * @param prefix the event loop thread name prefix
+	 * @return a new {@link LoopResources} to provide automatically for {@link
+	 * EventLoopGroup} and {@link Channel} factories
+	 */
+	static LoopResources create(String prefix) {
+		return new DefaultLoopResources(prefix, DEFAULT_IO_SELECT_COUNT, DEFAULT_IO_WORKER_COUNT, true);
+	}
+
+	/**
+	 * Create a simple {@link LoopResources} to provide automatically for {@link
+	 * EventLoopGroup} and {@link Channel} factories
+	 *
+	 * @param prefix the event loop thread name prefix
 	 * @param workerCount number of worker threads
 	 * @param daemon should the thread be released on jvm shutdown
-	 *
 	 * @return a new {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
 	static LoopResources create(String prefix, int workerCount, boolean daemon) {
 		if (workerCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive " + "worker threads number, " + "was: " + workerCount);
+			throw new IllegalArgumentException("Must provide a strictly positive worker threads number, was: " + workerCount);
 		}
 		return new DefaultLoopResources(prefix, workerCount, daemon);
 	}
@@ -118,119 +128,20 @@ public interface LoopResources extends Disposable {
 	 * @param selectCount number of selector threads
 	 * @param workerCount number of worker threads
 	 * @param daemon should the thread be released on jvm shutdown
-	 *
 	 * @return a new {@link LoopResources} to provide automatically for {@link
 	 * EventLoopGroup} and {@link Channel} factories
 	 */
-	static LoopResources create(String prefix,
-			int selectCount,
-			int workerCount,
-			boolean daemon) {
-		if (Objects.requireNonNull(prefix, "prefix")
-		           .isEmpty()) {
+	static LoopResources create(String prefix, int selectCount, int workerCount, boolean daemon) {
+		if (Objects.requireNonNull(prefix, "prefix").isEmpty()) {
 			throw new IllegalArgumentException("Cannot use empty prefix");
 		}
 		if (workerCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive " + "worker threads number, " + "was: " + workerCount);
+			throw new IllegalArgumentException("Must provide a strictly positive worker threads number, was: " + workerCount);
 		}
 		if (selectCount < 1) {
-			throw new IllegalArgumentException("Must provide a strictly positive " + "selector threads number, " + "was: " + selectCount);
+			throw new IllegalArgumentException("Must provide a strictly positive selector threads number, was: " + selectCount);
 		}
 		return new DefaultLoopResources(prefix, selectCount, workerCount, daemon);
-	}
-
-	/**
-	 * Create a simple {@link LoopResources} to provide automatically for {@link
-	 * EventLoopGroup} and {@link Channel} factories
-	 *
-	 * @param prefix the event loop thread name prefix
-	 *
-	 * @return a new {@link LoopResources} to provide automatically for {@link
-	 * EventLoopGroup} and {@link Channel} factories
-	 */
-	static LoopResources create(String prefix) {
-		return new DefaultLoopResources(prefix, DEFAULT_IO_SELECT_COUNT,
-				DEFAULT_IO_WORKER_COUNT,
-				true);
-	}
-
-	/**
-	 * Callback for client or generic channel factory selection.
-	 *
-	 * @param group the source {@link EventLoopGroup} to assign a loop from
-	 *
-	 * @return a {@link Class} target for the underlying {@link Channel} factory
-	 */
-	default Class<? extends Channel> onChannel(EventLoopGroup group) {
-		return preferNative() ? DefaultLoopNativeDetector.getInstance().getChannel(group) :
-				NioSocketChannel.class;
-	}
-
-	/**
-	 * Callback for client {@link EventLoopGroup} creation.
-	 *
-	 * @param useNative should use native group if current {@link #preferNative()} is also
-	 * true
-	 *
-	 * @return a new {@link EventLoopGroup}
-	 */
-	default EventLoopGroup onClient(boolean useNative) {
-		return onServer(useNative);
-	}
-
-	/**
-	 * Callback for UDP channel factory selection.
-	 *
-	 * @param group the source {@link EventLoopGroup} to assign a loop from
-	 *
-	 * @return a {@link Class} target for the underlying {@link Channel} factory
-	 */
-	default Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
-		return preferNative() ? DefaultLoopNativeDetector.getInstance().getDatagramChannel(group) :
-				NioDatagramChannel.class;
-	}
-
-	/**
-	 * Callback for server {@link EventLoopGroup} creation.
-	 *
-	 * @param useNative should use native group if current {@link #preferNative()} is also
-	 * true
-	 *
-	 * @return a new {@link EventLoopGroup}
-	 */
-	EventLoopGroup onServer(boolean useNative);
-
-	/**
-	 * Callback for server channel factory selection.
-	 *
-	 * @param group the source {@link EventLoopGroup} to assign a loop from
-	 *
-	 * @return a {@link Class} target for the underlying {@link ServerChannel} factory
-	 */
-	default Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
-		return preferNative() ? DefaultLoopNativeDetector.getInstance().getServerChannel(group) :
-				NioServerSocketChannel.class;
-	}
-
-	/**
-	 * Create a server select {@link EventLoopGroup} for servers to be used
-	 *
-	 * @param useNative should use native group if current {@link #preferNative()} is also
-	 * true
-	 *
-	 * @return a new {@link EventLoopGroup}
-	 */
-	default EventLoopGroup onServerSelect(boolean useNative) {
-		return onServer(useNative);
-	}
-
-	/**
-	 * Return true if should default to native {@link EventLoopGroup} and {@link Channel}
-	 *
-	 * @return true if should default to native {@link EventLoopGroup} and {@link Channel}
-	 */
-	default boolean preferNative() {
-		return DefaultLoopEpoll.hasEpoll() || DefaultLoopKQueue.hasKQueue();
 	}
 
 	/**
@@ -274,12 +185,82 @@ public interface LoopResources extends Disposable {
 	 *
 	 * @param quietPeriod the quiet period as described above
 	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
-	 *                LoopResources regardless if a task was submitted during the quiet period
+	 * LoopResources regardless if a task was submitted during the quiet period
 	 * @return a Mono representing the completion of the LoopResources disposal.
 	 * @since 0.9.3
 	 **/
 	default Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
 		//noop default
 		return Mono.empty();
+	}
+
+	/**
+	 * Callback for client or generic channel factory selection.
+	 *
+	 * @param group the source {@link EventLoopGroup} to assign a loop from
+	 * @return a {@link Class} target for the underlying {@link Channel} factory
+	 */
+	default Class<? extends Channel> onChannel(EventLoopGroup group) {
+		return preferNative() ? DefaultLoopNativeDetector.getInstance().getChannel(group) : NioSocketChannel.class;
+	}
+
+	/**
+	 * Callback for client {@link EventLoopGroup} creation.
+	 *
+	 * @param useNative should use native group if current {@link #preferNative()} is also
+	 * true
+	 * @return a new {@link EventLoopGroup}
+	 */
+	default EventLoopGroup onClient(boolean useNative) {
+		return onServer(useNative);
+	}
+
+	/**
+	 * Callback for UDP channel factory selection.
+	 *
+	 * @param group the source {@link EventLoopGroup} to assign a loop from
+	 * @return a {@link Class} target for the underlying {@link Channel} factory
+	 */
+	default Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
+		return preferNative() ? DefaultLoopNativeDetector.getInstance().getDatagramChannel(group) : NioDatagramChannel.class;
+	}
+
+	/**
+	 * Callback for server {@link EventLoopGroup} creation.
+	 *
+	 * @param useNative should use native group if current {@link #preferNative()} is also
+	 * true
+	 * @return a new {@link EventLoopGroup}
+	 */
+	EventLoopGroup onServer(boolean useNative);
+
+	/**
+	 * Callback for server channel factory selection.
+	 *
+	 * @param group the source {@link EventLoopGroup} to assign a loop from
+	 * @return a {@link Class} target for the underlying {@link ServerChannel} factory
+	 */
+	default Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
+		return preferNative() ? DefaultLoopNativeDetector.getInstance().getServerChannel(group) : NioServerSocketChannel.class;
+	}
+
+	/**
+	 * Create a server select {@link EventLoopGroup} for servers to be used
+	 *
+	 * @param useNative should use native group if current {@link #preferNative()} is also
+	 * true
+	 * @return a new {@link EventLoopGroup}
+	 */
+	default EventLoopGroup onServerSelect(boolean useNative) {
+		return onServer(useNative);
+	}
+
+	/**
+	 * Return true if should default to native {@link EventLoopGroup} and {@link Channel}
+	 *
+	 * @return true if should default to native {@link EventLoopGroup} and {@link Channel}
+	 */
+	default boolean preferNative() {
+		return DefaultLoopEpoll.hasEpoll() || DefaultLoopKQueue.hasKQueue();
 	}
 }

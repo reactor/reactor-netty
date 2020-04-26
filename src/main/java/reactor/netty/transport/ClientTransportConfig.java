@@ -140,7 +140,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	AddressResolverGroup<?>           resolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
-	                                Supplier<? extends SocketAddress> remoteAddress) {
+			Supplier<? extends SocketAddress> remoteAddress) {
 		super(options);
 		this.connectionProvider = Objects.requireNonNull(connectionProvider, "connectionProvider");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddress");
@@ -221,8 +221,8 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		final Consumer<? super Connection> doOnDisconnected;
 
 		ClientTransportDoOn(@Nullable ChannelGroup channelGroup,
-		                    @Nullable Consumer<? super Connection> doOnConnected,
-		                    @Nullable Consumer<? super Connection> doOnDisconnected) {
+				@Nullable Consumer<? super Connection> doOnConnected,
+				@Nullable Consumer<? super Connection> doOnDisconnected) {
 			this.channelGroup = channelGroup;
 			this.doOnConnected = doOnConnected;
 			this.doOnDisconnected = doOnDisconnected;

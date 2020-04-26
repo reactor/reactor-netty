@@ -34,43 +34,6 @@ import reactor.netty.tcp.TcpResources;
 public final class HttpResources extends TcpResources {
 
 	/**
-	 * Return the global HTTP resources for event loops and pooling
-	 *
-	 * @return the global HTTP resources for event loops and pooling
-	 */
-	public static HttpResources get() {
-		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
-	}
-
-	/**
-	 * Update event loops resources and return the global HTTP resources
-	 *
-	 * @return the global HTTP resources
-	 */
-	public static HttpResources set(ConnectionProvider provider) {
-		return getOrCreate(httpResources, null, provider, ON_HTTP_NEW, "http");
-	}
-
-	/**
-	 * Update pooling resources and return the global HTTP resources
-	 *
-	 * @return the global HTTP resources
-	 */
-	public static HttpResources set(LoopResources loops) {
-		return getOrCreate(httpResources, loops, null, ON_HTTP_NEW, "http");
-	}
-
-	/**
-	 * Reset http resources to default and return its instance
-	 *
-	 * @return the global HTTP resources
-	 */
-	public static HttpResources reset() {
-		disposeLoopsAndConnections();
-		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
-	}
-
-	/**
 	 * Shutdown the global {@link HttpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones.
 	 * This method is NOT blocking. It is implemented as fire-and-forget.
@@ -108,7 +71,7 @@ public final class HttpResources extends TcpResources {
 	 *
 	 * @param quietPeriod the quiet period as described above
 	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
-	 *                LoopResources regardless if a task was submitted during the quiet period
+	 * LoopResources regardless if a task was submitted during the quiet period
 	 * @return a {@link Mono} triggering the {@link #disposeLoopsAndConnections()} when subscribed to.
 	 * @since 0.9.3
 	 */
@@ -122,12 +85,50 @@ public final class HttpResources extends TcpResources {
 		});
 	}
 
+	/**
+	 * Return the global HTTP resources for event loops and pooling
+	 *
+	 * @return the global HTTP resources for event loops and pooling
+	 */
+	public static HttpResources get() {
+		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
+	}
+
+	/**
+	 * Reset http resources to default and return its instance
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static HttpResources reset() {
+		disposeLoopsAndConnections();
+		return getOrCreate(httpResources, null, null, ON_HTTP_NEW, "http");
+	}
+
+	/**
+	 * Update event loops resources and return the global HTTP resources
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static HttpResources set(ConnectionProvider provider) {
+		return getOrCreate(httpResources, null, provider, ON_HTTP_NEW, "http");
+	}
+
+	/**
+	 * Update pooling resources and return the global HTTP resources
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static HttpResources set(LoopResources loops) {
+		return getOrCreate(httpResources, loops, null, ON_HTTP_NEW, "http");
+	}
+
 	HttpResources(LoopResources loops, ConnectionProvider provider) {
 		super(loops, provider);
 	}
 
-	static final AtomicReference<HttpResources>                          httpResources;
 	static final BiFunction<LoopResources, ConnectionProvider, HttpResources> ON_HTTP_NEW;
+
+	static final AtomicReference<HttpResources>                          httpResources;
 
 	static {
 		ON_HTTP_NEW = HttpResources::new;

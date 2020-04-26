@@ -50,20 +50,11 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	final AtomicReference<EventLoopGroup> cacheNativeSelectLoops;
 	final AtomicBoolean                   running;
 
-	static ThreadFactory threadFactory(DefaultLoopResources parent, String prefix) {
-		return new EventLoopFactory(parent.daemon,
-				parent.prefix + "-" + prefix,
-				parent);
-	}
-
 	DefaultLoopResources(String prefix, int workerCount, boolean daemon) {
 		this(prefix, -1, workerCount, daemon);
 	}
 
-	DefaultLoopResources(String prefix,
-			int selectCount,
-			int workerCount,
-			boolean daemon) {
+	DefaultLoopResources(String prefix, int selectCount, int workerCount, boolean daemon) {
 		this.running = new AtomicBoolean(true);
 		this.daemon = daemon;
 		this.workerCount = workerCount;
@@ -88,11 +79,6 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
-	public boolean isDisposed() {
-		return !running.get();
-	}
-
-	@Override
 	@SuppressWarnings("unchecked")
 	public Mono<Void> disposeLater(Duration quietPeriod, Duration timeout) {
 		return Mono.defer(() -> {
@@ -112,7 +98,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 			Mono<?> cnclMono = Mono.empty();
 			Mono<?> cnslMono = Mono.empty();
 			Mono<?> cnsrvlMono = Mono.empty();
-			if(running.compareAndSet(true, false)) {
+			if (running.compareAndSet(true, false)) {
 				if (clientLoopsGroup != null) {
 					clMono = FutureMono.from((Future) clientLoopsGroup.shutdownGracefully(
 							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
@@ -125,15 +111,15 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 					slMono = FutureMono.from((Future) serverLoopsGroup.shutdownGracefully(
 							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
-				if(cacheNativeClientGroup != null){
+				if (cacheNativeClientGroup != null) {
 					cnclMono = FutureMono.from((Future) cacheNativeClientGroup.shutdownGracefully(
 							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
-				if(cacheNativeSelectGroup != null){
+				if (cacheNativeSelectGroup != null) {
 					cnslMono = FutureMono.from((Future) cacheNativeSelectGroup.shutdownGracefully(
 							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
-				if(cacheNativeServerGroup != null){
+				if (cacheNativeServerGroup != null) {
 					cnsrvlMono = FutureMono.from((Future) cacheNativeServerGroup.shutdownGracefully(
 							quietPeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS));
 				}
@@ -144,11 +130,54 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
+	public boolean isDisposed() {
+		return !running.get();
+	}
+
+	@Override
+	public EventLoopGroup onClient(boolean useNative) {
+		if (useNative && preferNative()) {
+			return cacheNativeClientLoops();
+		}
+		return cacheNioClientLoops();
+	}
+
+	@Override
+	public EventLoopGroup onServer(boolean useNative) {
+		if (useNative && preferNative()) {
+			return cacheNativeServerLoops();
+		}
+		return cacheNioServerLoops();
+	}
+
+	@Override
 	public EventLoopGroup onServerSelect(boolean useNative) {
 		if (useNative && preferNative()) {
 			return cacheNativeSelectLoops();
 		}
 		return cacheNioSelectLoops();
+	}
+
+	@Override
+	public String toString() {
+		return "DefaultLoopResources {" +
+				"prefix=" + prefix +
+				", daemon=" + daemon +
+				", selectCount=" + selectCount +
+				", workerCount=" + workerCount +
+				'}';
+	}
+
+	EventLoopGroup cacheNioClientLoops() {
+		EventLoopGroup eventLoopGroup = clientLoops.get();
+		if (null == eventLoopGroup) {
+			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNioServerLoops());
+			if (!clientLoops.compareAndSet(null, newEventLoopGroup)) {
+				// Do not shutdown newEventLoopGroup as this will shutdown the server loops
+			}
+			eventLoopGroup = cacheNioClientLoops();
+		}
+		return eventLoopGroup;
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
@@ -170,14 +199,6 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return eventLoopGroup;
 	}
 
-	@Override
-	public EventLoopGroup onServer(boolean useNative) {
-		if (useNative && preferNative()) {
-			return cacheNativeServerLoops();
-		}
-		return cacheNioServerLoops();
-	}
-
 	@SuppressWarnings("FutureReturnValueIgnored")
 	EventLoopGroup cacheNioServerLoops() {
 		EventLoopGroup eventLoopGroup = serverLoops.get();
@@ -193,34 +214,16 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return eventLoopGroup;
 	}
 
-	@Override
-	public EventLoopGroup onClient(boolean useNative) {
-		if (useNative && preferNative()) {
-			return cacheNativeClientLoops();
-		}
-		return cacheNioClientLoops();
-	}
-
-	EventLoopGroup cacheNioClientLoops() {
-		EventLoopGroup eventLoopGroup = clientLoops.get();
+	EventLoopGroup cacheNativeClientLoops() {
+		EventLoopGroup eventLoopGroup = cacheNativeClientLoops.get();
 		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNioServerLoops());
-			if (!clientLoops.compareAndSet(null, newEventLoopGroup)) {
+			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNativeServerLoops());
+			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
 				// Do not shutdown newEventLoopGroup as this will shutdown the server loops
 			}
-			eventLoopGroup = cacheNioClientLoops();
+			eventLoopGroup = cacheNativeClientLoops();
 		}
 		return eventLoopGroup;
-	}
-
-	@Override
-	public String toString() {
-		return "DefaultLoopResources {" +
-				"prefix=" + prefix +
-				", daemon=" + daemon +
-				", selectCount=" + selectCount +
-				", workerCount=" + workerCount +
-				'}';
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
@@ -261,27 +264,24 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 		return eventLoopGroup;
 	}
 
-	EventLoopGroup cacheNativeClientLoops() {
-		EventLoopGroup eventLoopGroup = cacheNativeClientLoops.get();
-		if (null == eventLoopGroup) {
-			EventLoopGroup newEventLoopGroup = LoopResources.colocate(cacheNativeServerLoops());
-			if (!cacheNativeClientLoops.compareAndSet(null, newEventLoopGroup)) {
-				// Do not shutdown newEventLoopGroup as this will shutdown the server loops
-			}
-			eventLoopGroup = cacheNativeClientLoops();
-		}
-		return eventLoopGroup;
+	static ThreadFactory threadFactory(DefaultLoopResources parent, String prefix) {
+		return new EventLoopFactory(parent.daemon, parent.prefix + "-" + prefix, parent);
 	}
 
-	final static class EventLoopFactory implements ThreadFactory {
+	static final class EventLoop extends FastThreadLocalThread implements NonBlocking {
+
+		EventLoop(Runnable target) {
+			super(target);
+		}
+	}
+
+	static final class EventLoopFactory implements ThreadFactory {
 
 		final boolean    daemon;
 		final AtomicLong counter;
 		final String     prefix;
 
-		EventLoopFactory(boolean daemon,
-				String prefix,
-				AtomicLong counter) {
+		EventLoopFactory(boolean daemon, String prefix, AtomicLong counter) {
 			this.daemon = daemon;
 			this.counter = counter;
 			this.prefix = prefix;
@@ -293,13 +293,6 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 			t.setDaemon(daemon);
 			t.setName(prefix + "-" + counter.incrementAndGet());
 			return t;
-		}
-	}
-
-	final static class EventLoop extends FastThreadLocalThread implements NonBlocking {
-
-		EventLoop(Runnable target) {
-			super(target);
 		}
 	}
 }

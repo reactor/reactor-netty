@@ -49,16 +49,6 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * Update pooling resources and return the global UDP resources
-	 *
-	 * @param loops the eventual new {@link LoopResources}
-	 * @return the global UDP resources
-	 */
-	public static UdpResources set(LoopResources loops) {
-		return getOrCreate(loops, ON_UDP_NEW , "udp");
-	}
-
-	/**
 	 * Reset UDP resources to default and return its instance
 	 *
 	 * @return the global UDP resources
@@ -66,6 +56,16 @@ public class UdpResources implements LoopResources {
 	public static UdpResources reset() {
 		shutdown();
 		return getOrCreate(null, ON_UDP_NEW, "udp");
+	}
+
+	/**
+	 * Update pooling resources and return the global UDP resources
+	 *
+	 * @param loops the eventual new {@link LoopResources}
+	 * @return the global UDP resources
+	 */
+	public static UdpResources set(LoopResources loops) {
+		return getOrCreate(loops, ON_UDP_NEW, "udp");
 	}
 
 	/**
@@ -106,7 +106,7 @@ public class UdpResources implements LoopResources {
 	 *
 	 * @param quietPeriod the quiet period as described above
 	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
-	 *                LoopResources regardless if a task was submitted during the quiet period
+	 * LoopResources regardless if a task was submitted during the quiet period
 	 * @return a {@link Mono} triggering the {@link #shutdown()} when subscribed to.
 	 * @since 0.9.3
 	 */
@@ -126,26 +126,9 @@ public class UdpResources implements LoopResources {
 		this.defaultLoops = defaultLoops;
 	}
 
-	/**
-	 * Dispose underlying resources
-	 */
-	protected void _dispose(){
-		defaultLoops.dispose();
-	}
-
-	/**
-	 * Dispose underlying resources in a listenable fashion.
-	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
-	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
-	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
-	 *
-	 * @param quietPeriod the quiet period as described above
-	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
-	 *                LoopResources regardless if a task was submitted during the quiet period
-	 * @return the Mono that represents the end of disposal
-	 */
-	protected Mono<Void> _disposeLater(Duration quietPeriod, Duration timeout) {
-		return defaultLoops.disposeLater(quietPeriod, timeout);
+	@Override
+	public boolean daemon() {
+		return defaultLoops.daemon();
 	}
 
 	@Override
@@ -188,9 +171,26 @@ public class UdpResources implements LoopResources {
 		return defaultLoops.preferNative();
 	}
 
-	@Override
-	public boolean daemon() {
-		return defaultLoops.daemon();
+	/**
+	 * Dispose underlying resources
+	 */
+	protected void _dispose() {
+		defaultLoops.dispose();
+	}
+
+	/**
+	 * Dispose underlying resources in a listenable fashion.
+	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
+	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
+	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
+	 *
+	 * @param quietPeriod the quiet period as described above
+	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
+	 * LoopResources regardless if a task was submitted during the quiet period
+	 * @return the Mono that represents the end of disposal
+	 */
+	protected Mono<Void> _disposeLater(Duration quietPeriod, Duration timeout) {
+		return defaultLoops.disposeLater(quietPeriod, timeout);
 	}
 
 	/**
@@ -200,7 +200,6 @@ public class UdpResources implements LoopResources {
 	 * @param loops the eventual new {@link LoopResources}
 	 * @param onNew a {@link UdpResources} factory
 	 * @param name a name for resources
-	 *
 	 * @return an existing or new {@link UdpResources}
 	 */
 	protected static UdpResources getOrCreate(@Nullable LoopResources loops,
@@ -211,7 +210,7 @@ public class UdpResources implements LoopResources {
 			if (resources == null || loops != null) {
 				update = create(resources, loops, name, onNew);
 				if (udpResources.compareAndSet(resources, update)) {
-					if(resources != null) {
+					if (resources != null) {
 						if (log.isWarnEnabled()) {
 							log.warn("[{}] resources will use a new LoopResources: {}," +
 									"the previous LoopResources will be disposed", name, loops);
@@ -236,23 +235,6 @@ public class UdpResources implements LoopResources {
 		}
 	}
 
-	static final Logger                                log = Loggers.getLogger(UdpResources.class);
-	static final AtomicReference<UdpResources>         udpResources;
-	static final Function<LoopResources, UdpResources> ON_UDP_NEW;
-
-	/**
-	 * Default worker thread count, fallback to available processor
-	 * (but with a minimum value of 4)
-	 */
-	static final int DEFAULT_UDP_THREAD_COUNT = Integer.parseInt(System.getProperty(
-			ReactorNetty.UDP_IO_THREAD_COUNT,
-			"" + Schedulers.DEFAULT_POOL_SIZE));
-
-	static {
-		ON_UDP_NEW = UdpResources::new;
-		udpResources  = new AtomicReference<>();
-	}
-
 	static <T extends UdpResources> T create(@Nullable T previous,
 			@Nullable LoopResources loops,
 			String name,
@@ -264,5 +246,24 @@ public class UdpResources implements LoopResources {
 			loops = loops == null ? previous.defaultLoops : loops;
 		}
 		return onNew.apply(loops);
+	}
+
+	/**
+	 * Default worker thread count, fallback to available processor
+	 * (but with a minimum value of 4)
+	 */
+	static final int DEFAULT_UDP_THREAD_COUNT = Integer.parseInt(System.getProperty(
+			ReactorNetty.UDP_IO_THREAD_COUNT,
+			"" + Schedulers.DEFAULT_POOL_SIZE));
+
+	static final Logger                                log = Loggers.getLogger(UdpResources.class);
+
+	static final Function<LoopResources, UdpResources> ON_UDP_NEW;
+
+	static final AtomicReference<UdpResources>         udpResources;
+
+	static {
+		ON_UDP_NEW = UdpResources::new;
+		udpResources = new AtomicReference<>();
 	}
 }

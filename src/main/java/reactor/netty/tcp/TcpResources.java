@@ -47,43 +47,6 @@ import reactor.util.annotation.NonNull;
 public class TcpResources implements ConnectionProvider, LoopResources {
 
 	/**
-	 * Return the global HTTP resources for event loops and pooling
-	 *
-	 * @return the global HTTP resources for event loops and pooling
-	 */
-	public static TcpResources get() {
-		return getOrCreate(tcpResources, null, null, ON_TCP_NEW,  "tcp");
-	}
-
-	/**
-	 * Update provider resources and return the global HTTP resources
-	 *
-	 * @return the global HTTP resources
-	 */
-	public static TcpResources set(ConnectionProvider provider) {
-		return getOrCreate(tcpResources, null, provider, ON_TCP_NEW, "tcp");
-	}
-
-	/**
-	 * Update pooling resources and return the global HTTP resources
-	 *
-	 * @return the global HTTP resources
-	 */
-	public static TcpResources set(LoopResources loops) {
-		return getOrCreate(tcpResources, loops, null, ON_TCP_NEW ,"tcp");
-	}
-
-	/**
-	 * Reset http resources to default and return its instance
-	 *
-	 * @return the global HTTP resources
-	 */
-	public static TcpResources reset() {
-		disposeLoopsAndConnections();
-		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
-	}
-
-	/**
 	 * Shutdown the global {@link TcpResources} without resetting them,
 	 * effectively cleaning up associated resources without creating new ones.
 	 * This method is NOT blocking. It is implemented as fire-and-forget.
@@ -121,7 +84,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 *
 	 * @param quietPeriod the quiet period as described above
 	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
-	 *                LoopResources regardless if a task was submitted during the quiet period
+	 * LoopResources regardless if a task was submitted during the quiet period
 	 * @return a {@link Mono} triggering the {@link #disposeLoopsAndConnections()} when subscribed to.
 	 * @since 0.9.3
 	 */
@@ -135,13 +98,62 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		});
 	}
 
+	/**
+	 * Return the global HTTP resources for event loops and pooling
+	 *
+	 * @return the global HTTP resources for event loops and pooling
+	 */
+	public static TcpResources get() {
+		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
+	}
+
+	/**
+	 * Reset http resources to default and return its instance
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static TcpResources reset() {
+		disposeLoopsAndConnections();
+		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
+	}
+
+	/**
+	 * Update provider resources and return the global HTTP resources
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static TcpResources set(ConnectionProvider provider) {
+		return getOrCreate(tcpResources, null, provider, ON_TCP_NEW, "tcp");
+	}
+
+	/**
+	 * Update pooling resources and return the global HTTP resources
+	 *
+	 * @return the global HTTP resources
+	 */
+	public static TcpResources set(LoopResources loops) {
+		return getOrCreate(tcpResources, loops, null, ON_TCP_NEW, "tcp");
+	}
+
 	final ConnectionProvider defaultProvider;
 	final LoopResources      defaultLoops;
 
-	protected TcpResources(LoopResources defaultLoops,
-			ConnectionProvider defaultProvider) {
+	protected TcpResources(LoopResources defaultLoops, ConnectionProvider defaultProvider) {
 		this.defaultLoops = defaultLoops;
 		this.defaultProvider = defaultProvider;
+	}
+
+	@Override
+	public Mono<? extends Connection> acquire(TransportConfig config,
+			ConnectionObserver observer,
+			@Nullable Supplier<? extends SocketAddress> remoteAddress,
+			@Nullable AddressResolverGroup<?> resolverGroup) {
+		return defaultProvider.acquire(config, observer, remoteAddress, resolverGroup);
+	}
+
+	@Override
+	public boolean daemon() {
+		return defaultLoops.daemon();
 	}
 
 	/**
@@ -161,45 +173,14 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		return Mono.empty();
 	}
 
-	/**
-	 * Dispose underlying resources
-	 */
-	protected void _dispose(){
-		defaultProvider.dispose();
-		defaultLoops.dispose();
-	}
-
-	/**
-	 * Dispose underlying resources in a listenable fashion.
-	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
-	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
-	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
-	 *
-	 * @param quietPeriod the quiet period as described above
-	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
-	 *                LoopResources regardless if a task was submitted during the quiet period
-	 * @return the Mono that represents the end of disposal
-	 */
-	protected Mono<Void> _disposeLater(Duration quietPeriod, Duration timeout) {
-		return Mono.when(defaultLoops.disposeLater(quietPeriod, timeout), defaultProvider.disposeLater());
-	}
-
-	@Override
-	public boolean isDisposed() {
-		return defaultLoops.isDisposed() && defaultProvider.isDisposed();
-	}
-
 	@Override
 	public void disposeWhen(@NonNull SocketAddress address) {
 		defaultProvider.disposeWhen(address);
 	}
 
 	@Override
-	public Mono<? extends Connection> acquire(TransportConfig config,
-			ConnectionObserver observer,
-			@Nullable Supplier<? extends SocketAddress> remoteAddress,
-			@Nullable AddressResolverGroup<?> resolverGroup) {
-		return defaultProvider.acquire(config, observer, remoteAddress, resolverGroup);
+	public boolean isDisposed() {
+		return defaultLoops.isDisposed() && defaultProvider.isDisposed();
 	}
 
 	@Override
@@ -237,12 +218,28 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		return defaultLoops.preferNative();
 	}
 
-	@Override
-	public boolean daemon() {
-		return defaultLoops.daemon();
+	/**
+	 * Dispose underlying resources
+	 */
+	protected void _dispose() {
+		defaultProvider.dispose();
+		defaultLoops.dispose();
 	}
 
-
+	/**
+	 * Dispose underlying resources in a listenable fashion.
+	 * It is guaranteed that the disposal of the underlying LoopResources will not happen before
+	 * {@code quietPeriod} is over. If a task is submitted during the {@code quietPeriod},
+	 * it is guaranteed to be accepted and the {@code quietPeriod} will start over.
+	 *
+	 * @param quietPeriod the quiet period as described above
+	 * @param timeout the maximum amount of time to wait until the disposal of the underlying
+	 * LoopResources regardless if a task was submitted during the quiet period
+	 * @return the Mono that represents the end of disposal
+	 */
+	protected Mono<Void> _disposeLater(Duration quietPeriod, Duration timeout) {
+		return Mono.when(defaultLoops.disposeLater(quietPeriod, timeout), defaultProvider.disposeLater());
+	}
 
 	/**
 	 * Safely check if existing resource exist and proceed to update/cleanup if new
@@ -254,7 +251,6 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	 * @param onNew a {@link TcpResources} factory
 	 * @param name a name for resources
 	 * @param <T> the reified type of {@link TcpResources}
-	 *
 	 * @return an existing or new {@link TcpResources}
 	 */
 	protected static <T extends TcpResources> T getOrCreate(AtomicReference<T> ref,
@@ -268,15 +264,15 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 			if (resources == null || loops != null || provider != null) {
 				update = create(resources, loops, provider, name, onNew);
 				if (ref.compareAndSet(resources, update)) {
-					if(resources != null) {
-						if(loops != null) {
+					if (resources != null) {
+						if (loops != null) {
 							if (log.isWarnEnabled()) {
 								log.warn("[{}] resources will use a new LoopResources: {}," +
 										"the previous LoopResources will be disposed", name, loops);
 							}
 							resources.defaultLoops.dispose();
 						}
-						if(provider != null) {
+						if (provider != null) {
 							if (log.isWarnEnabled()) {
 								log.warn("[{}] resources will use a new ConnectionProvider: {}," +
 										"the previous ConnectionProvider will be disposed", name, provider);
@@ -306,15 +302,6 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 		}
 	}
 
-	static final Logger                                                      log = Loggers.getLogger(TcpResources.class);
-	static final AtomicReference<TcpResources>                               tcpResources;
-	static final BiFunction<LoopResources, ConnectionProvider, TcpResources> ON_TCP_NEW;
-
-	static {
-		ON_TCP_NEW = TcpResources::new;
-		tcpResources  = new AtomicReference<>();
-	}
-
 	static <T extends TcpResources> T create(@Nullable T previous,
 			@Nullable LoopResources loops, @Nullable ConnectionProvider provider,
 			String name,
@@ -328,5 +315,16 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 			provider = provider == null ? previous.defaultProvider : provider;
 		}
 		return onNew.apply(loops, provider);
+	}
+
+	static final Logger                                                      log = Loggers.getLogger(TcpResources.class);
+
+	static final BiFunction<LoopResources, ConnectionProvider, TcpResources> ON_TCP_NEW;
+
+	static final AtomicReference<TcpResources>                               tcpResources;
+
+	static {
+		ON_TCP_NEW = TcpResources::new;
+		tcpResources = new AtomicReference<>();
 	}
 }
