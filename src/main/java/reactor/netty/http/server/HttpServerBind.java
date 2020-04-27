@@ -374,12 +374,17 @@ final class HttpServerBind extends HttpServer
 			p.addLast(NettyPipeline.HttpTrafficHandler,
 					new HttpTrafficHandler(listener, forwarded, compressPredicate, cookieEncoder, cookieDecoder));
 
-			ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
-			if (handler != null) {
-				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
+			ChannelHandler channelMetricsHandler = p.get(NettyPipeline.ChannelMetricsHandler);
+			if (channelMetricsHandler != null) {
+				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) channelMetricsHandler).recorder();
 				if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
 					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
 							new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder, uriTagValue));
+					if (channelMetricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+						// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level
+						// ChannelMetricsHandler will be removed from the pipeline
+						p.remove(channelMetricsHandler);
+					}
 				}
 			}
 
@@ -482,12 +487,17 @@ final class HttpServerBind extends HttpServer
 			p.addLast(NettyPipeline.HttpTrafficHandler,
 					new HttpTrafficHandler(listener, forwarded, compressPredicate, cookieEncoder, cookieDecoder));
 
-			ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
-			if (handler != null) {
-				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
+			ChannelHandler channelMetricsHandler = p.get(NettyPipeline.ChannelMetricsHandler);
+			if (channelMetricsHandler != null) {
+				ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) channelMetricsHandler).recorder();
 				if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
 					p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
 							new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder, uriTagValue));
+					if (channelMetricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+						// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level
+						// ChannelMetricsHandler will be removed from the pipeline
+						p.remove(channelMetricsHandler);
+					}
 				}
 			}
 		}
@@ -697,12 +707,17 @@ final class HttpServerBind extends HttpServer
 							new SimpleCompressionHandler());
 				}
 
-				ChannelHandler handler = p.get(NettyPipeline.ChannelMetricsHandler);
-				if (handler != null) {
-					ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) handler).recorder();
+				ChannelHandler channelMetricsHandler = p.get(NettyPipeline.ChannelMetricsHandler);
+				if (channelMetricsHandler != null) {
+					ChannelMetricsRecorder channelMetricsRecorder = ((ChannelMetricsHandler) channelMetricsHandler).recorder();
 					if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
 						p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
 								new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder, parent.uriTagValue));
+						if (channelMetricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+							// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level
+							// ChannelMetricsHandler will be removed from the pipeline
+							p.remove(channelMetricsHandler);
+						}
 					}
 				}
 				return;

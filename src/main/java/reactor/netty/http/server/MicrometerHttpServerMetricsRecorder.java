@@ -15,10 +15,13 @@
  */
 package reactor.netty.http.server;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
 import reactor.netty.channel.MeterKey;
 import reactor.netty.http.MicrometerHttpMetricsRecorder;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 
 import static reactor.netty.Metrics.HTTP_SERVER_PREFIX;
@@ -67,5 +70,65 @@ final class MicrometerHttpServerMetricsRecorder extends MicrometerHttpMetricsRec
 		if (responseTime != null) {
 			responseTime.record(time);
 		}
+	}
+
+	@Override
+	public void recordDataReceived(SocketAddress remoteAddress, String uri, long bytes) {
+		DistributionSummary dataReceived = dataReceivedCache.computeIfAbsent(new MeterKey(uri, null, null, null),
+				key -> filter(dataReceivedBuilder.tags(URI, uri)
+				                                 .register(REGISTRY)));
+		if (dataReceived != null) {
+			dataReceived.record(bytes);
+		}
+	}
+
+	@Override
+	public void recordDataSent(SocketAddress remoteAddress, String uri, long bytes) {
+		DistributionSummary dataSent = dataSentCache.computeIfAbsent(new MeterKey(uri, null, null, null),
+				key -> filter(dataSentBuilder.tags(URI, uri)
+				                             .register(REGISTRY)));
+		if (dataSent != null) {
+			dataSent.record(bytes);
+		}
+	}
+
+	@Override
+	public void incrementErrorsCount(SocketAddress remoteAddress, String uri) {
+		Counter errors = errorsCache.computeIfAbsent(new MeterKey(uri, null, null, null),
+				key -> filter(errorsBuilder.tags(URI, uri)
+				                           .register(REGISTRY)));
+		if (errors != null) {
+			errors.increment();
+		}
+	}
+
+	@Override
+	public void recordDataReceived(SocketAddress remoteAddress, long bytes) {
+		// noop
+	}
+
+	@Override
+	public void recordDataSent(SocketAddress remoteAddress, long bytes) {
+		// noop
+	}
+
+	@Override
+	public void incrementErrorsCount(SocketAddress remoteAddress) {
+		// noop
+	}
+
+	@Override
+	public void recordTlsHandshakeTime(SocketAddress remoteAddress, Duration time, String status) {
+		// noop
+	}
+
+	@Override
+	public void recordConnectTime(SocketAddress remoteAddress, Duration time, String status) {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void recordResolveAddressTime(SocketAddress remoteAddress, Duration time, String status) {
+		throw new UnsupportedOperationException();
 	}
 }
