@@ -19,34 +19,19 @@ import java.util.concurrent.ThreadFactory;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
+ * An {@link EventLoopGroup} with associated {@link io.netty.channel.Channel} factory.
+ *
  * @author Violeta Georgieva
  */
 interface DefaultLoop {
 
-	default EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		throw new IllegalStateException("Missing Epoll/KQueue on current system");
-	}
+	<CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass);
 
-	default Class<? extends ServerChannel> getServerChannel(EventLoopGroup group) {
-		return NioServerSocketChannel.class;
-	}
+	String getName();
 
-	default Class<? extends Channel> getChannel(EventLoopGroup group) {
-		return NioSocketChannel.class;
-	}
+	EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory);
 
-	default Class<? extends DatagramChannel> getDatagramChannel(EventLoopGroup group) {
-		return NioDatagramChannel.class;
-	}
-
-	default String getName() {
-		return "nio";
-	}
+	boolean supportGroup(EventLoopGroup group);
 }

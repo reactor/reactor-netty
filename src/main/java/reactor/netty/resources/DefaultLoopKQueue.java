@@ -19,44 +19,42 @@ import java.util.concurrent.ThreadFactory;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
 import io.netty.channel.kqueue.KQueue;
 import io.netty.channel.kqueue.KQueueDatagramChannel;
 import io.netty.channel.kqueue.KQueueEventLoopGroup;
 import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 
 /**
+ * {@link DefaultLoop} that uses {@code KQueue} transport.
+ *
  * @author Violeta Georgieva
  */
 final class DefaultLoopKQueue implements DefaultLoop {
 
-	static final Logger log = Loggers.getLogger(DefaultLoopKQueue.class);
-
-	private static final boolean kqueue;
-
-	static {
-		boolean kqueueCheck = false;
-		try{
-			Class.forName("io.netty.channel.kqueue.KQueue");
-			kqueueCheck = KQueue.isAvailable();
+	@Override
+	@SuppressWarnings("unchecked")
+	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass) {
+		if (channelClass.equals(SocketChannel.class)) {
+			return (CHANNEL) new KQueueSocketChannel();
 		}
-		catch (ClassNotFoundException cnfe){
+		if (channelClass.equals(ServerSocketChannel.class)) {
+			return (CHANNEL) new KQueueServerSocketChannel();
 		}
-		kqueue = kqueueCheck;
-		if (log.isDebugEnabled()) {
-			log.debug("Default KQueue support : " + kqueue);
+		if (channelClass.equals(DatagramChannel.class)) {
+			return (CHANNEL) new KQueueDatagramChannel();
 		}
+		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
 
-	public static boolean hasKQueue() {
-		return kqueue;
+	@Override
+	public String getName() {
+		return "kqueue";
 	}
 
 	@Override
@@ -65,29 +63,28 @@ final class DefaultLoopKQueue implements DefaultLoop {
 	}
 
 	@Override
-	public Class<? extends ServerChannel> getServerChannel(EventLoopGroup group) {
-		return useKQueue(group) ? KQueueServerSocketChannel.class : NioServerSocketChannel.class;
-	}
-
-	@Override
-	public Class<? extends Channel> getChannel(EventLoopGroup group) {
-		return useKQueue(group) ? KQueueSocketChannel.class : NioSocketChannel.class;
-	}
-
-	@Override
-	public Class<? extends DatagramChannel> getDatagramChannel(EventLoopGroup group) {
-		return useKQueue(group) ? KQueueDatagramChannel.class : NioDatagramChannel.class;
-	}
-
-	@Override
-	public String getName() {
-		return "kqueue";
-	}
-
-	private boolean useKQueue(EventLoopGroup group) {
+	public boolean supportGroup(EventLoopGroup group) {
 		if (group instanceof ColocatedEventLoopGroup) {
 			group = ((ColocatedEventLoopGroup) group).get();
 		}
 		return group instanceof KQueueEventLoopGroup;
+	}
+
+	static final Logger log = Loggers.getLogger(DefaultLoopKQueue.class);
+
+	static final boolean kqueue;
+
+	static {
+		boolean kqueueCheck = false;
+		try {
+			Class.forName("io.netty.channel.kqueue.KQueue");
+			kqueueCheck = KQueue.isAvailable();
+		}
+		catch (ClassNotFoundException cnfe) {
+		}
+		kqueue = kqueueCheck;
+		if (log.isDebugEnabled()) {
+			log.debug("Default KQueue support : " + kqueue);
+		}
 	}
 }

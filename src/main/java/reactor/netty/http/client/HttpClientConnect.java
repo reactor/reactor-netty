@@ -125,6 +125,7 @@ final class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public Mono<? extends Connection> connect(Bootstrap b) {
 			SslProvider ssl = SslProvider.findSslSupport(b);
 

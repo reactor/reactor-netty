@@ -44,6 +44,7 @@ final class UdpServerRunOn extends UdpServerOperator {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	protected Bootstrap configure() {
 		Bootstrap b = source.configure();
 

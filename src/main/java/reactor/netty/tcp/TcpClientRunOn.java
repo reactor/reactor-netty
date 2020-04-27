@@ -45,6 +45,7 @@ final class TcpClientRunOn extends TcpClientOperator {
 		return b;
 	}
 
+	@SuppressWarnings("deprecation")
 	static void configure(Bootstrap b,
 			boolean preferNative,
 			LoopResources resources) {

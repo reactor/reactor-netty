@@ -45,6 +45,7 @@ final class TcpServerRunOn extends TcpServerOperator {
 		return b;
 	}
 
+	@SuppressWarnings("deprecation")
 	static void configure(ServerBootstrap b,
 			boolean preferNative,
 			LoopResources resources) {

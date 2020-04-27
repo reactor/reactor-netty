@@ -101,6 +101,7 @@ final class HttpServerBind extends HttpServer
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public ServerBootstrap apply(ServerBootstrap b) {
 		HttpServerConfiguration conf = HttpServerConfiguration.getAndClean(b);
 

@@ -40,6 +40,7 @@ public class DefaultLoopResourcesTest {
 	}
 
 	@Test
+	@SuppressWarnings("deprecation")
 	public void disposeLaterSubsequentIsQuick() {
 		DefaultLoopResources loopResources = new DefaultLoopResources(
 				"test", 0, false);
