@@ -48,7 +48,7 @@ public class ChannelBindException extends RuntimeException {
 			cause = null;
 		}
 		if (!(bindAddress instanceof InetSocketAddress)) {
-			return new ChannelBindException(bindAddress.toString(), -1, cause);
+			return new ChannelBindException(bindAddress.toString(), cause);
 		}
 		InetSocketAddress address = (InetSocketAddress) bindAddress;
 
@@ -62,6 +62,12 @@ public class ChannelBindException extends RuntimeException {
 		super("Failed to bind on [" + localHost + ":" + localPort + "]", cause);
 		this.localHost = localHost;
 		this.localPort = localPort;
+	}
+
+	protected ChannelBindException(String localHost, @Nullable Throwable cause) {
+		super("Failed to bind on [" + localHost + "]", cause);
+		this.localHost = localHost;
+		this.localPort = -1;
 	}
 
 	@Override
