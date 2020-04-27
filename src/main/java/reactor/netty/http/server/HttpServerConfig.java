@@ -370,6 +370,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
 				           new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder, uriTagValue));
+				if (channelMetricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+					// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level
+					// ChannelMetricsHandler will be removed from the pipeline
+					p.remove(NettyPipeline.ChannelMetricsHandler);
+				}
 			}
 		}
 	}
@@ -407,6 +412,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			if (channelMetricsRecorder instanceof HttpServerMetricsRecorder) {
 				p.addAfter(NettyPipeline.HttpTrafficHandler, NettyPipeline.HttpMetricsHandler,
 				           new HttpServerMetricsHandler((HttpServerMetricsRecorder) channelMetricsRecorder, uriTagValue));
+				if (channelMetricsRecorder instanceof MicrometerHttpServerMetricsRecorder) {
+					// MicrometerHttpServerMetricsRecorder does not implement metrics on protocol level
+					// ChannelMetricsHandler will be removed from the pipeline
+					p.remove(NettyPipeline.ChannelMetricsHandler);
+				}
 			}
 		}
 	}

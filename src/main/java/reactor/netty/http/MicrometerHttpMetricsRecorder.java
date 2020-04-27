@@ -51,14 +51,14 @@ public class MicrometerHttpMetricsRecorder extends MicrometerChannelMetricsRecor
 	protected final Timer.Builder responseTimeBuilder;
 	protected final ConcurrentMap<MeterKey, Timer> responseTimeCache = PlatformDependent.newConcurrentHashMap();
 
-	final DistributionSummary.Builder dataReceivedBuilder;
-	final ConcurrentMap<MeterKey, DistributionSummary> dataReceivedCache = PlatformDependent.newConcurrentHashMap();
+	protected final DistributionSummary.Builder dataReceivedBuilder;
+	protected final ConcurrentMap<MeterKey, DistributionSummary> dataReceivedCache = PlatformDependent.newConcurrentHashMap();
 
-	final DistributionSummary.Builder dataSentBuilder;
-	final ConcurrentMap<MeterKey, DistributionSummary> dataSentCache = PlatformDependent.newConcurrentHashMap();
+	protected final DistributionSummary.Builder dataSentBuilder;
+	protected final ConcurrentMap<MeterKey, DistributionSummary> dataSentCache = PlatformDependent.newConcurrentHashMap();
 
-	final Counter.Builder errorsBuilder;
-	final ConcurrentMap<MeterKey, Counter> errorsCache = PlatformDependent.newConcurrentHashMap();
+	protected final Counter.Builder errorsBuilder;
+	protected final ConcurrentMap<MeterKey, Counter> errorsCache = PlatformDependent.newConcurrentHashMap();
 
 	protected MicrometerHttpMetricsRecorder(String name, String protocol) {
 		super(name, protocol);
