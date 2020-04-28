@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import aQute.bnd.gradle.BundleTaskConvention
+import me.champeau.gradle.japicmp.JapicmpTask
 
 buildscript {
   repositories {
@@ -31,6 +32,8 @@ plugins {
   id 'org.asciidoctor.convert' version '1.5.11'
   id 'com.github.johnrengelman.shadow' version '5.0.0'
   id "com.jfrog.artifactory" version "4.9.8" apply false
+  id "de.undercouch.download" version "3.4.3"
+  id 'me.champeau.gradle.japicmp' version '0.2.8'
 }
 
 description = 'Reactive Streams Netty driver'
@@ -312,6 +315,38 @@ configure(rootProject) { project ->
 	}
 	bnd(bndOptions)
   }
+  task downloadBaseline {
+		if (project.gradle.startParameter.isOffline()) {
+			println "Offline: skipping downloading of baseline and JAPICMP"
+		}
+		else if ("$compatibleVersion" == "SKIP") {
+			println "SKIP: Instructed to skip the baseline comparison"
+		}
+		else {
+			println "Will download and perform baseline comparison with ${compatibleVersion}"
+			finalizedBy { doDownloadBaseline }
+		}
+  }
+  task doDownloadBaseline(type: Download) {
+		onlyIfNewer true
+		compress true
+
+		src "${repositories.jcenter().url}io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}.jar"
+		dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar"
+
+  }
+  task japicmp(type: JapicmpTask) {
+		oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar")
+		newClasspath = files(shadowJar.archiveFile)
+		onlyBinaryIncompatibleModified = true
+		failOnModification = true
+		failOnSourceIncompatibility = true
+		txtOutputFile = file("${project.buildDir}/reports/japi.txt")
+		ignoreMissingClasses = true
+		includeSynthetic = true
+  }
+  tasks.japicmp.dependsOn(downloadBaseline)
+  shadowJar.finalizedBy(japicmp)
 
   check.dependsOn jacocoTestReport
 
