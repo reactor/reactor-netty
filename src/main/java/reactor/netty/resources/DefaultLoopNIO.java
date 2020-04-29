@@ -19,73 +19,49 @@ import java.util.concurrent.ThreadFactory;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollDatagramChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import reactor.util.Logger;
-import reactor.util.Loggers;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 /**
- * {@link DefaultLoop} that uses {@code Epoll} transport.
+ * {@link DefaultLoop} that uses {@code NIO} transport.
  *
  * @author Stephane Maldini
  * @author Violeta Georgieva
+ * @since 0.9.8
  */
-final class DefaultLoopEpoll implements DefaultLoop {
+final class DefaultLoopNIO implements DefaultLoop {
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public <CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass) {
 		if (channelClass.equals(SocketChannel.class)) {
-			return (CHANNEL) new EpollSocketChannel();
+			return (CHANNEL) new NioSocketChannel();
 		}
 		if (channelClass.equals(ServerSocketChannel.class)) {
-			return (CHANNEL) new EpollServerSocketChannel();
+			return (CHANNEL) new NioServerSocketChannel();
 		}
 		if (channelClass.equals(DatagramChannel.class)) {
-			return (CHANNEL) new EpollDatagramChannel();
+			return (CHANNEL) new NioDatagramChannel();
 		}
 		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
 	}
 
 	@Override
 	public String getName() {
-		return "epoll";
+		return "nio";
 	}
 
 	@Override
 	public EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory) {
-		return new EpollEventLoopGroup(threads, factory);
+		throw new IllegalStateException("Missing Epoll/KQueue on current system");
 	}
 
 	@Override
 	public boolean supportGroup(EventLoopGroup group) {
-		if (group instanceof ColocatedEventLoopGroup) {
-			group = ((ColocatedEventLoopGroup) group).get();
-		}
-		return group instanceof EpollEventLoopGroup;
-	}
-
-	static final Logger log = Loggers.getLogger(DefaultLoopEpoll.class);
-
-	static final boolean epoll;
-
-	static {
-		boolean epollCheck = false;
-		try {
-			Class.forName("io.netty.channel.epoll.Epoll");
-			epollCheck = Epoll.isAvailable();
-		}
-		catch (ClassNotFoundException cnfe) {
-		}
-		epoll = epollCheck;
-		if (log.isDebugEnabled()) {
-			log.debug("Default Epoll support : " + epoll);
-		}
+		return false;
 	}
 }

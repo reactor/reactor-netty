@@ -135,6 +135,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public EventLoopGroup onClient(boolean useNative) {
 		if (useNative && preferNative()) {
 			return cacheNativeClientLoops();
@@ -143,6 +144,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public EventLoopGroup onServer(boolean useNative) {
 		if (useNative && preferNative()) {
 			return cacheNativeServerLoops();
@@ -151,6 +153,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public EventLoopGroup onServerSelect(boolean useNative) {
 		if (useNative && preferNative()) {
 			return cacheNativeSelectLoops();
@@ -234,7 +237,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 
 		EventLoopGroup eventLoopGroup = cacheNativeSelectLoops.get();
 		if (null == eventLoopGroup) {
-			DefaultLoop defaultLoop = DefaultLoopNativeDetector.getInstance();
+			DefaultLoop defaultLoop = DefaultLoopNativeDetector.INSTANCE;
 			EventLoopGroup newEventLoopGroup = defaultLoop.newEventLoopGroup(
 					selectCount,
 					threadFactory(this, "select-" + defaultLoop.getName()));
@@ -251,7 +254,7 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	EventLoopGroup cacheNativeServerLoops() {
 		EventLoopGroup eventLoopGroup = cacheNativeServerLoops.get();
 		if (null == eventLoopGroup) {
-			DefaultLoop defaultLoop = DefaultLoopNativeDetector.getInstance();
+			DefaultLoop defaultLoop = DefaultLoopNativeDetector.INSTANCE;
 			EventLoopGroup newEventLoopGroup = defaultLoop.newEventLoopGroup(
 					workerCount,
 					threadFactory(this, defaultLoop.getName()));

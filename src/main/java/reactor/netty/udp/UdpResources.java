@@ -137,6 +137,7 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public Class<? extends Channel> onChannel(EventLoopGroup group) {
 		return defaultLoops.onChannel(group);
 	}
@@ -147,6 +148,7 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
 		return defaultLoops.onDatagramChannel(group);
 	}
@@ -157,6 +159,7 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
 		return defaultLoops.onServerChannel(group);
 	}
@@ -167,6 +170,7 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public boolean preferNative() {
 		return defaultLoops.preferNative();
 	}

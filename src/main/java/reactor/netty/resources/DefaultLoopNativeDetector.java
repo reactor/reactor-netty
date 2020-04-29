@@ -16,25 +16,27 @@
 package reactor.netty.resources;
 
 /**
+ * Provides an {@link DefaultLoop} instance based on the available transport.
+ *
  * @author Violeta Georgieva
  */
 final class DefaultLoopNativeDetector {
 
-	private static final DefaultLoop INSTANCE;
+	static final DefaultLoop INSTANCE;
+
+	static final DefaultLoop NIO;
 
 	static {
-		if (DefaultLoopKQueue.hasKQueue()) {
+		NIO = new DefaultLoopNIO();
+
+		if (DefaultLoopKQueue.kqueue) {
 			INSTANCE = new DefaultLoopKQueue();
 		}
-		else if (DefaultLoopEpoll.hasEpoll()) {
+		else if (DefaultLoopEpoll.epoll) {
 			INSTANCE = new DefaultLoopEpoll();
 		}
 		else {
-			INSTANCE = new DefaultLoop() {};
+			INSTANCE = NIO;
 		}
-	}
-
-	public static DefaultLoop getInstance() {
-		return INSTANCE;
 	}
 }
