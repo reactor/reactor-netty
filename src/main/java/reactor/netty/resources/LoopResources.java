@@ -237,9 +237,9 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
-	 * Returns true if native transport is available.
+	 * Return true if environment supports native connections
 	 *
-	 * @return true if native transport is available
+	 * @return true if environment supports native connections
 	 */
 	static boolean hasNativeSupport() {
 		return DefaultLoopNativeDetector.INSTANCE != DefaultLoopNativeDetector.NIO;

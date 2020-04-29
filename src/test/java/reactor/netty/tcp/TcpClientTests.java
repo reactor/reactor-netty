@@ -42,6 +42,7 @@ import java.util.function.Supplier;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
@@ -1028,5 +1029,36 @@ public class TcpClientTests {
 		}
 
 		Assertions.assertThat(ref.get()).isNull();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testTcpClientWithDomainSocketsNIOTransport() {
+		LoopResources loop = LoopResources.create("testTcpClientWithDomainSocketsNIOTransport");
+		try {
+			TcpClient.create()
+			         .runOn(loop, false)
+			         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+			         .connectNow();
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(30));
+		}
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testTcpClientWithDomainSocketsWithHost() {
+		TcpClient.create()
+		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .host("localhost")
+		         .connectNow();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testTcpClientWithDomainSocketsWithPort() {
+		TcpClient.create()
+		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .port(1234)
+		         .connectNow();
 	}
 }

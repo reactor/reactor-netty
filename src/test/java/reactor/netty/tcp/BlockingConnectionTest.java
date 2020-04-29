@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.logging.LoggingHandler;
@@ -237,11 +236,6 @@ public class BlockingConnectionTest {
 
 		protected TestClientTransportConfig(TestClientTransportConfig parent) {
 			super(parent);
-		}
-
-		@Override
-		protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-			return null;
 		}
 
 		@Override

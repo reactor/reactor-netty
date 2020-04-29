@@ -25,6 +25,7 @@ import java.net.UnknownHostException;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.NetUtil;
 
 /**
@@ -132,11 +133,20 @@ public final class AddressUtils {
 	 * @return the updated address
 	 */
 	public static SocketAddress updateHost(@Nullable Supplier<? extends SocketAddress> address, String host) {
-		if (address == null || !(address.get() instanceof InetSocketAddress)) {
+		if (address == null) {
 			return createUnresolved(host, 0);
 		}
 
-		InetSocketAddress inet = (InetSocketAddress) address.get();
+		SocketAddress socketAddress = address.get();
+		if (socketAddress instanceof DomainSocketAddress) {
+			throw new IllegalArgumentException("Cannot update DomainSocketAddress with host name [" + host + "].");
+		}
+
+		if (!(socketAddress instanceof InetSocketAddress)) {
+			return createUnresolved(host, 0);
+		}
+
+		InetSocketAddress inet = (InetSocketAddress) socketAddress;
 
 		return createUnresolved(host, inet.getPort());
 	}
@@ -149,7 +159,16 @@ public final class AddressUtils {
 	 * @return the updated address
 	 */
 	public static SocketAddress updatePort(@Nullable Supplier<? extends SocketAddress> address, int port) {
-		if (address == null || !(address.get() instanceof InetSocketAddress)) {
+		if (address == null) {
+			return createUnresolved(NetUtil.LOCALHOST.getHostAddress(), port);
+		}
+
+		SocketAddress socketAddress = address.get();
+		if (socketAddress instanceof DomainSocketAddress) {
+			throw new IllegalArgumentException("Cannot update DomainSocketAddress with post number [" + port + "].");
+		}
+
+		if(!(address.get() instanceof InetSocketAddress)) {
 			return createUnresolved(NetUtil.LOCALHOST.getHostAddress(), port);
 		}
 

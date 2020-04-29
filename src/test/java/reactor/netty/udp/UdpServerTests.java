@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.NetUtil;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
@@ -268,5 +269,28 @@ public class UdpServerTests {
 		}
 
 		conn.disposeNow();
+	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	public void testUdpServerWithDomainSockets() {
+		UdpServer.create()
+		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .bindNow();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testUdpServerWithDomainSocketsWithHost() {
+		UdpServer.create()
+		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .host("localhost")
+		         .bindNow();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testUdpServerWithDomainSocketsWithPort() {
+		UdpServer.create()
+		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .port(1234)
+		         .bindNow();
 	}
 }

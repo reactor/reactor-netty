@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.CharsetUtil;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
@@ -120,5 +121,28 @@ public class UdpClientTest {
 		conn1.disposeNow();
 		conn2.disposeNow();
 		resources.dispose();
+	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	public void testUdpClientWithDomainSockets() {
+		UdpClient.create()
+		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .connectNow();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testUdpClientWithDomainSocketsWithHost() {
+		UdpClient.create()
+		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .host("localhost")
+		         .connectNow();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testUdpClientWithDomainSocketsWithPort() {
+		UdpClient.create()
+		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .port(1234)
+		         .connectNow();
 	}
 }

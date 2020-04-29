@@ -49,6 +49,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.ssl.SslContext;
@@ -65,6 +66,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
@@ -81,6 +83,7 @@ import reactor.util.Loggers;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * @author Jon Brisbin
@@ -932,6 +935,75 @@ public class TcpServerTests {
 		StepVerifier.create(result)
 		            .expectNext("delay1000delay1000")
 		            .verifyComplete();
+	}
+
+	@Test(expected = ChannelBindException.class)
+	public void testTcpServerWithDomainSocketsNIOTransport() {
+		LoopResources loop = LoopResources.create("testTcpServerWithDomainSocketsNIOTransport");
+		try {
+			TcpServer.create()
+			         .runOn(loop, false)
+			         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+			         .bindNow();
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(30));
+		}
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testTcpServerWithDomainSocketsWithHost() {
+		TcpServer.create()
+		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .host("localhost")
+		         .bindNow();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testTcpServerWithDomainSocketsWithPort() {
+		TcpServer.create()
+		         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		         .port(1234)
+		         .bindNow();
+	}
+
+	@Test
+	public void testTcpServerWithDomainSockets() throws Exception {
+		assumeTrue(LoopResources.hasNativeSupport());
+		DisposableServer disposableServer =
+				TcpServer.create()
+				         .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				         .wiretap(true)
+				         .handle((in, out) -> out.send(in.receive().retain()))
+				         .bindNow();
+
+		Connection conn =
+				TcpClient.create()
+				         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				         .wiretap(true)
+				         .connectNow();
+
+		conn.outbound()
+		    .sendString(Flux.just("1", "2", "3"))
+		    .then()
+		    .subscribe();
+
+		CountDownLatch latch = new CountDownLatch(1);
+		conn.inbound()
+		    .receive()
+		    .asString()
+		    .doOnNext(s -> {
+		        if (s.endsWith("3")) {
+		            latch.countDown();
+		        }
+		    })
+		    .subscribe();
+
+		assertTrue(latch.await(30, TimeUnit.SECONDS));
+
+		conn.disposeNow();
+		disposableServer.disposeNow();
 	}
 
 	private static class SimpleClient extends Thread {

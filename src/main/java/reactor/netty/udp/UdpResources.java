@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -131,6 +132,11 @@ public class UdpResources implements LoopResources {
 	@Override
 	public boolean isDisposed() {
 		return defaultLoops.isDisposed();
+	}
+
+	@Override
+	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoopGroup group) {
+		return defaultLoops.onChannel(channelType, group);
 	}
 
 	@Override

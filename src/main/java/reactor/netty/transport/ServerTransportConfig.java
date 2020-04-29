@@ -23,11 +23,11 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.util.AttributeKey;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
@@ -161,8 +161,8 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	@Override
-	protected final ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-		return () -> loopResources().onChannel(ServerSocketChannel.class, elg);
+	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
+		return isDomainSocket ? ServerDomainSocketChannel.class : ServerSocketChannel.class;
 	}
 
 	/**

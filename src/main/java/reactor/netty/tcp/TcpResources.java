@@ -23,6 +23,7 @@ import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
@@ -178,6 +179,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	@Override
 	public boolean isDisposed() {
 		return defaultLoops.isDisposed() && defaultProvider.isDisposed();
+	}
+
+	@Override
+	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoopGroup group) {
+		return defaultLoops.onChannel(channelType, group);
 	}
 
 	@Override

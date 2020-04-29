@@ -36,6 +36,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.AttributeKey;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -337,7 +338,8 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 			child.pipeline().addLast(childHandler);
 
-			TransportConnector.setChannelOptions(child, childOptions);
+			TransportConnector.setChannelOptions(child, childOptions,
+					ctx.channel().localAddress() instanceof DomainSocketAddress);
 			TransportConnector.setAttributes(child, childAttrs);
 
 			try {

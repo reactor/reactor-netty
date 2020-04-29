@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AttributeKey;
@@ -70,7 +71,7 @@ public final class TransportConnector {
 		Objects.requireNonNull(bindAddress, "bindAddress");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 
-		return doInitAndRegister(config, channelInitializer)
+		return doInitAndRegister(config, channelInitializer, bindAddress instanceof DomainSocketAddress)
 				.flatMap(channel -> {
 					MonoChannelPromise promise = new MonoChannelPromise(channel);
 					// "FutureReturnValueIgnored" this is deliberate
@@ -95,7 +96,7 @@ public final class TransportConnector {
 		Objects.requireNonNull(resolverGroup, "resolverGroup");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 
-		return doInitAndRegister(config, channelInitializer)
+		return doInitAndRegister(config, channelInitializer, remoteAddress instanceof DomainSocketAddress)
 				.flatMap(channel -> doResolveAndConnect(channel, config, remoteAddress, resolverGroup));
 	}
 
@@ -119,8 +120,12 @@ public final class TransportConnector {
 	 * @param options the options
 	 */
 	@SuppressWarnings("unchecked")
-	public static void setChannelOptions(Channel channel, Map<ChannelOption<?>, ?> options) {
+	public static void setChannelOptions(Channel channel, Map<ChannelOption<?>, ?> options, boolean isDomainSocket) {
 		for (Map.Entry<ChannelOption<?>, ?> e : options.entrySet()) {
+			if (isDomainSocket &&
+					(ChannelOption.SO_REUSEADDR.equals(e.getKey()) || ChannelOption.TCP_NODELAY.equals(e.getKey()))) {
+				continue;
+			}
 			try {
 				if (!channel.config().setOption((ChannelOption<Object>) e.getKey(), e.getValue())) {
 					log.warn(format(channel, "Unknown channel option '{}' for channel '{}'"), e.getKey(), channel);
@@ -150,10 +155,13 @@ public final class TransportConnector {
 	}
 
 	@SuppressWarnings("FutureReturnValueIgnored")
-	static Mono<Channel> doInitAndRegister(TransportConfig config, ChannelInitializer<Channel> channelInitializer) {
+	static Mono<Channel> doInitAndRegister(
+			TransportConfig config,
+			ChannelInitializer<Channel> channelInitializer,
+			boolean isDomainSocket) {
 		EventLoopGroup elg = config.eventLoopGroup();
 
-		ChannelFactory<? extends Channel> channelFactory = config.connectionFactory(elg);
+		ChannelFactory<? extends Channel> channelFactory = config.connectionFactory(elg, isDomainSocket);
 
 		Channel channel = null;
 		try {
@@ -162,7 +170,7 @@ public final class TransportConnector {
 				((ServerTransport.AcceptorInitializer) channelInitializer).acceptor.enableAutoReadTask(channel);
 			}
 			channel.pipeline().addLast(channelInitializer);
-			setChannelOptions(channel, config.options);
+			setChannelOptions(channel, config.options, isDomainSocket);
 			setAttributes(channel, config.attrs);
 		}
 		catch (Throwable t) {

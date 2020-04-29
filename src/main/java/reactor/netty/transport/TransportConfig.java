@@ -237,11 +237,32 @@ public abstract class TransportConfig {
 	}
 
 	/**
+	 * Return the channel type this configuration is associated with, it can be one of the following:
+	 * <ul>
+	 *   <li>{@link io.netty.channel.socket.SocketChannel}</li>
+	 *   <li>{@link io.netty.channel.socket.ServerSocketChannel}</li>
+	 *   <li>{@link io.netty.channel.unix.DomainSocketChannel}</li>
+	 *   <li>{@link io.netty.channel.unix.ServerDomainSocketChannel}</li>
+	 *   <li>{@link io.netty.channel.socket.DatagramChannel}</li>
+	 * </ul>
+	 *
+	 * @param isDomainSocket true if {@link io.netty.channel.unix.DomainSocketChannel} or
+	 * {@link io.netty.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
+	 * @return the channel type this configuration is associated with
+	 */
+	protected abstract Class<? extends Channel> channelType(boolean isDomainSocket);
+
+	/**
 	 * Return the {@link ChannelFactory} which is used to create {@link Channel} instances.
 	 *
+	 * @param elg the {@link EventLoopGroup}
+	 * @param isDomainSocket true if {@link io.netty.channel.unix.DomainSocketChannel} or
+	 * {@link io.netty.channel.unix.ServerDomainSocketChannel} is needed, false otherwise
 	 * @return the {@link ChannelFactory} which is used to create {@link Channel} instances.
 	 */
-	protected abstract ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg);
+	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg, boolean isDomainSocket) {
+		return () -> loopResources().onChannel(channelType(isDomainSocket), elg);
+	}
 
 	/**
 	 * Return the configured default {@link ConnectionObserver}.

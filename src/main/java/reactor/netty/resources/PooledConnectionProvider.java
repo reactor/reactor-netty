@@ -236,9 +236,9 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 				pooledConnection.bind();
 
+				ch.pipeline().remove(this);
 				ch.pipeline()
 				  .addFirst(config.channelInitializer(pooledConnection, remoteAddress, false));
-				ch.pipeline().remove(this);
 			}
 
 			@Override
@@ -634,7 +634,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 		PoolKey(SocketAddress holder, int pipelineKey) {
 			this.holder = holder;
-			this.fqdn = holder instanceof InetSocketAddress ? holder.toString() : "null";
+			this.fqdn = holder.toString();
 			this.pipelineKey = pipelineKey;
 		}
 

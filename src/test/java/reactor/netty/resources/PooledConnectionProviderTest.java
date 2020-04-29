@@ -37,7 +37,6 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -45,7 +44,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -660,11 +658,6 @@ public class PooledConnectionProviderTest {
 				Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> remoteAddress) {
 			super(connectionProvider, options, remoteAddress);
 			this.group = group;
-		}
-
-		@Override
-		protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-			return NioSocketChannel::new;
 		}
 
 		@Override

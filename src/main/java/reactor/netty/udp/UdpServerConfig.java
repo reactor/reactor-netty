@@ -113,15 +113,24 @@ public final class UdpServerConfig extends TransportConfig {
 	}
 
 	@Override
-	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-		ChannelFactory<DatagramChannel> channelFactory;
+	protected Class<? extends Channel> channelType(boolean isDomainSocket) {
+		if (isDomainSocket) {
+			throw new UnsupportedOperationException();
+		}
+		return DatagramChannel.class;
+	}
+
+	@Override
+	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg, boolean isDomainSocket) {
+		if (isDomainSocket) {
+			throw new UnsupportedOperationException();
+		}
 		if (isPreferNative()) {
-			channelFactory = () -> loopResources().onChannel(DatagramChannel.class, elg);
+			return () -> loopResources().onChannel(DatagramChannel.class, elg);
 		}
 		else {
-			channelFactory = () -> new NioDatagramChannel(family());
+			return () -> new NioDatagramChannel(family());
 		}
-		return channelFactory;
 	}
 
 	@Override
