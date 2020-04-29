@@ -40,7 +40,6 @@ public class DefaultLoopResourcesTest {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void disposeLaterSubsequentIsQuick() {
 		DefaultLoopResources loopResources = new DefaultLoopResources(
 				"test", 0, false);
@@ -51,7 +50,7 @@ public class DefaultLoopResourcesTest {
 		Duration firstInvocation = StepVerifier.create(loopResources.disposeLater())
 		                                       .verifyComplete();
 		assertThat(loopResources.isDisposed()).isTrue();
-		if (!loopResources.preferNative()) {
+		if (!LoopResources.hasNativeSupport()) {
 			assertThat(loopResources.serverLoops.get().isTerminated()).isTrue();
 		}
 		else {

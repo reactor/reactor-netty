@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -117,7 +116,7 @@ public final class UdpServerConfig extends TransportConfig {
 	protected ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
 		ChannelFactory<DatagramChannel> channelFactory;
 		if (isPreferNative()) {
-			channelFactory = new ReflectiveChannelFactory<>(loopResources().onDatagramChannel(elg));
+			channelFactory = () -> loopResources().onChannel(DatagramChannel.class, elg);
 		}
 		else {
 			channelFactory = () -> new NioDatagramChannel(family());

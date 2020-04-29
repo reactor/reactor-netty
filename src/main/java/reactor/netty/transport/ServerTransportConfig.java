@@ -26,8 +26,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.AttributeKey;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
@@ -162,7 +162,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 
 	@Override
 	protected final ChannelFactory<? extends Channel> connectionFactory(EventLoopGroup elg) {
-		return new ReflectiveChannelFactory<>(loopResources().onServerChannel(elg));
+		return () -> loopResources().onChannel(ServerSocketChannel.class, elg);
 	}
 
 	/**

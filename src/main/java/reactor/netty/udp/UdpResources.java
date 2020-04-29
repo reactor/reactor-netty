@@ -21,10 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
-import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.DatagramChannel;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.ReactorNetty;
@@ -137,20 +134,8 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
-	public Class<? extends Channel> onChannel(EventLoopGroup group) {
-		return defaultLoops.onChannel(group);
-	}
-
-	@Override
 	public EventLoopGroup onClient(boolean useNative) {
 		return defaultLoops.onClient(useNative);
-	}
-
-	@Override
-	@SuppressWarnings("deprecation")
-	public Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
-		return defaultLoops.onDatagramChannel(group);
 	}
 
 	@Override
@@ -159,20 +144,8 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
-	public Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
-		return defaultLoops.onServerChannel(group);
-	}
-
-	@Override
 	public EventLoopGroup onServerSelect(boolean useNative) {
 		return defaultLoops.onServerSelect(useNative);
-	}
-
-	@Override
-	@SuppressWarnings("deprecation")
-	public boolean preferNative() {
-		return defaultLoops.preferNative();
 	}
 
 	/**

@@ -20,13 +20,6 @@ import java.util.Objects;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.ReactorNetty;
@@ -197,18 +190,6 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
-	 * Callback for client or generic channel factory selection.
-	 *
-	 * @param group the source {@link EventLoopGroup} to assign a loop from
-	 * @return a {@link Class} target for the underlying {@link Channel} factory
-	 * @deprecated as of 0.9.8. See {@link #onChannel(Class, EventLoopGroup)}
-	 */
-	@Deprecated
-	default Class<? extends Channel> onChannel(EventLoopGroup group) {
-		return preferNative() ? onChannel(SocketChannel.class, group).getClass() : NioSocketChannel.class;
-	}
-
-	/**
 	 * Callback for a {@link Channel} selection.
 	 *
 	 * @param channelType the channel type
@@ -236,18 +217,6 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
-	 * Callback for UDP channel factory selection.
-	 *
-	 * @param group the source {@link EventLoopGroup} to assign a loop from
-	 * @return a {@link Class} target for the underlying {@link Channel} factory
-	 * @deprecated as of 0.9.8. See {@link #onChannel(Class, EventLoopGroup)}
-	 */
-	@Deprecated
-	default Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
-		return preferNative() ? onChannel(DatagramChannel.class, group).getClass() : NioDatagramChannel.class;
-	}
-
-	/**
 	 * Callback for server {@link EventLoopGroup} creation,
 	 * this is the {@link EventLoopGroup} for the child channel.
 	 *
@@ -255,18 +224,6 @@ public interface LoopResources extends Disposable {
 	 * @return a new {@link EventLoopGroup}
 	 */
 	EventLoopGroup onServer(boolean useNative);
-
-	/**
-	 * Callback for server channel factory selection.
-	 *
-	 * @param group the source {@link EventLoopGroup} to assign a loop from
-	 * @return a {@link Class} target for the underlying {@link ServerChannel} factory
-	 * @deprecated as of 0.9.8. See {@link #onChannel(Class, EventLoopGroup)}
-	 */
-	@Deprecated
-	default Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
-		return preferNative() ? onChannel(ServerSocketChannel.class, group).getClass() : NioServerSocketChannel.class;
-	}
 
 	/**
 	 * Callback for server select {@link EventLoopGroup} creation,
@@ -277,17 +234,6 @@ public interface LoopResources extends Disposable {
 	 */
 	default EventLoopGroup onServerSelect(boolean useNative) {
 		return onServer(useNative);
-	}
-
-	/**
-	 * Return true if should default to native {@link EventLoopGroup} and {@link Channel}
-	 *
-	 * @return true if should default to native {@link EventLoopGroup} and {@link Channel}
-	 * @deprecated as of 0.9.8. Use {@link #hasNativeSupport()}
-	 */
-	@Deprecated
-	default boolean preferNative() {
-		return hasNativeSupport();
 	}
 
 	/**

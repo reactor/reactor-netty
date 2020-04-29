@@ -135,27 +135,24 @@ final class DefaultLoopResources extends AtomicLong implements LoopResources {
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
 	public EventLoopGroup onClient(boolean useNative) {
-		if (useNative && preferNative()) {
+		if (useNative && LoopResources.hasNativeSupport()) {
 			return cacheNativeClientLoops();
 		}
 		return cacheNioClientLoops();
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
 	public EventLoopGroup onServer(boolean useNative) {
-		if (useNative && preferNative()) {
+		if (useNative && LoopResources.hasNativeSupport()) {
 			return cacheNativeServerLoops();
 		}
 		return cacheNioServerLoops();
 	}
 
 	@Override
-	@SuppressWarnings("deprecation")
 	public EventLoopGroup onServerSelect(boolean useNative) {
-		if (useNative && preferNative()) {
+		if (useNative && LoopResources.hasNativeSupport()) {
 			return cacheNativeSelectLoops();
 		}
 		return cacheNioSelectLoops();
