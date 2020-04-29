@@ -315,26 +315,29 @@ configure(rootProject) { project ->
 	}
 	bnd(bndOptions)
   }
-  task downloadBaseline {
-		if (project.gradle.startParameter.isOffline()) {
-			println "Offline: skipping downloading of baseline and JAPICMP"
+
+  task downloadBaseline(type: Download) {
+		onlyIf {
+			if (project.gradle.startParameter.isOffline()) {
+				println "Offline: skipping downloading of baseline and JAPICMP"
+				return false
+			}
+			else if ("$compatibleVersion" == "SKIP") {
+				println "SKIP: Instructed to skip the baseline comparison"
+				return false
+			}
+			else {
+				println "Will download and perform baseline comparison with ${compatibleVersion}"
+				return true
+			}
 		}
-		else if ("$compatibleVersion" == "SKIP") {
-			println "SKIP: Instructed to skip the baseline comparison"
-		}
-		else {
-			println "Will download and perform baseline comparison with ${compatibleVersion}"
-			finalizedBy { doDownloadBaseline }
-		}
-  }
-  task doDownloadBaseline(type: Download) {
+
 		onlyIfNewer true
 		compress true
-
 		src "${repositories.jcenter().url}io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}.jar"
 		dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar"
-
   }
+
   task japicmp(type: JapicmpTask) {
 		oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar")
 		newClasspath = files(shadowJar.archiveFile)
@@ -350,6 +353,7 @@ configure(rootProject) { project ->
 			  // this is a static method
 			  "reactor.netty.resources.LoopResources#hasNativeSupport()"
 	    ]
+	    onlyIf {"$compatibleVersion" != "SKIP"}
   }
   tasks.japicmp.dependsOn(downloadBaseline)
   shadowJar.finalizedBy(japicmp)
