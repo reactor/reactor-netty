@@ -427,6 +427,7 @@ By default, `Netty` configures some restrictions for the incoming requests, such
 * The maximum length of the content or each chunk.
 
 For more information, see https://netty.io/4.1/api/io/netty/handler/codec/http/HttpRequestDecoder.html[`HttpRequestDecoder`]
+and https://netty.io/4.1/api/io/netty/handler/codec/http/HttpServerUpgradeHandler.html[`HttpServerUpgradeHandler`]
 
 By default, the `HTTP` server is configured with the following settings:
 
@@ -435,6 +436,13 @@ By default, the `HTTP` server is configured with the following settings:
 ./../../main/java/reactor/netty/http/HttpDecoderSpec.java
 ----
 include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..32]
+----
+====
+====
+[source,java,indent=0]
+./../../main/java/reactor/netty/http/server/HttpRequestDecoderSpec.java
+----
+include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=42]
 ----
 ====
 

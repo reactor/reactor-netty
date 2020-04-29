@@ -183,7 +183,7 @@ By default, the `TCP` server is configured with the following options:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/tcp/TcpServerBind.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=124..130]
+include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=129..135]
 ----
 ====
 
