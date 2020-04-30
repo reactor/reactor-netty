@@ -92,6 +92,7 @@ import reactor.netty.channel.ChannelMetricsHandler;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
+import reactor.util.retry.Retry;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -323,7 +324,7 @@ final class HttpClientConnect extends HttpClient {
 				tcpClient.connect(finalBootstrap)
 				         .subscribe(new TcpClientSubscriber(sink));
 
-			}).retry(handler)
+			}).retryWhen(Retry.indefinitely().filter(handler))
 			  .subscribe(actual);
 		}
 
