@@ -17,6 +17,7 @@
 package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -56,7 +57,7 @@ final class HAProxyMessageReader extends ChannelInboundHandlerAdapter {
 	}
 
 	@Nullable
-	static InetSocketAddress resolveRemoteAddressFromProxyProtocol(Channel channel) {
+	static SocketAddress resolveRemoteAddressFromProxyProtocol(Channel channel) {
 		if (HAProxyMessageReader.hasProxyProtocol()) {
 			return channel.attr(REMOTE_ADDRESS_FROM_PROXY_PROTOCOL).getAndSet(null);
 		}

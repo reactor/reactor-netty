@@ -18,6 +18,7 @@ package reactor.netty.http.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -121,7 +122,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			ConnectionObserver listener,
 			@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressionPredicate,
 			HttpRequest nettyRequest,
-			ConnectionInfo connectionInfo,
+			@Nullable ConnectionInfo connectionInfo,
 			ServerCookieEncoder encoder,
 			ServerCookieDecoder decoder) {
 		super(c, listener);
@@ -305,13 +306,25 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@Nullable
 	public InetSocketAddress hostAddress() {
-		return this.connectionInfo.getHostAddress();
+		if (connectionInfo != null) {
+			return this.connectionInfo.getHostAddress();
+		}
+		else {
+			return null;
+		}
 	}
 
 	@Override
+	@Nullable
 	public InetSocketAddress remoteAddress() {
-		return this.connectionInfo.getRemoteAddress();
+		if (connectionInfo != null) {
+			return this.connectionInfo.getRemoteAddress();
+		}
+		else {
+			return null;
+		}
 	}
 
 	@Override

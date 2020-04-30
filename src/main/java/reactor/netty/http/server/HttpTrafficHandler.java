@@ -16,7 +16,7 @@
 
 package reactor.netty.http.server;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.function.BiPredicate;
@@ -27,7 +27,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -60,7 +59,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 
 	final ConnectionObserver                                 listener;
 	Boolean                                                  secure;
-	InetSocketAddress                                        remoteAddress;
+	SocketAddress                                            remoteAddress;
 	final boolean                                            readForwardHeaders;
 	final BiPredicate<HttpServerRequest, HttpServerResponse> compress;
 	final ServerCookieEncoder                                cookieEncoder;
@@ -105,7 +104,7 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		if (remoteAddress == null) {
 			remoteAddress =
 					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel()))
-					        .orElse(((SocketChannel) ctx.channel()).remoteAddress());
+					        .orElse(ctx.channel().remoteAddress());
 		}
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {

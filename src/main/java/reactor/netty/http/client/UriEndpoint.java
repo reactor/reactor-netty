@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.NetUtil;
 
 final class UriEndpoint {
@@ -60,13 +61,18 @@ final class UriEndpoint {
 
 	String toExternalForm() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(scheme);
-		sb.append("://");
 		SocketAddress address = remoteAddress.get();
-		sb.append(address != null
-				? toSocketAddressStringWithoutDefaultPort(address, isSecure())
-				: "localhost");
-		sb.append(pathAndQuery);
+		if (address instanceof DomainSocketAddress) {
+			sb.append(((DomainSocketAddress) address).path());
+		}
+		else {
+			sb.append(scheme);
+			sb.append("://");
+			sb.append(address != null
+							  ? toSocketAddressStringWithoutDefaultPort(address, isSecure())
+							  : "localhost");
+			sb.append(pathAndQuery);
+		}
 		return sb.toString();
 	}
 

@@ -76,17 +76,19 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	}
 
 	/**
-	 * Returns the address of the host peer.
+	 * Returns the address of the host peer or {@code null} in case of Unix Domain Sockets.
 	 *
 	 * @return the host's address
 	 */
+	@Nullable
 	InetSocketAddress hostAddress();
 
 	/**
-	 * Returns the address of the remote peer.
+	 * Returns the address of the remote peer or {@code null} in case of Unix Domain Sockets.
 	 *
 	 * @return the peer's address
 	 */
+	@Nullable
 	InetSocketAddress remoteAddress();
 
 	/**

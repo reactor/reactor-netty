@@ -45,6 +45,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -95,6 +96,8 @@ import reactor.util.function.Tuple2;
 import reactor.util.function.Tuple3;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * @author Stephane Maldini
@@ -1633,5 +1636,70 @@ public class HttpServerTests {
 		StepVerifier.create(result)
 		            .expectNext("delay500delay1000")
 		            .verifyComplete();
+	}
+
+	@Test(expected = ChannelBindException.class)
+	public void testHttpServerWithDomainSocketsNIOTransport() {
+		LoopResources loop = LoopResources.create("testHttpServerWithDomainSocketsNIOTransport");
+		try {
+			HttpServer.create()
+			          .runOn(loop, false)
+			          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+			          .bindNow();
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(30));
+		}
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testHttpServerWithDomainSocketsWithHost() {
+		HttpServer.create()
+		          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		          .host("localhost")
+		          .bindNow();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testHttpServerWithDomainSocketsWithPort() {
+		HttpServer.create()
+		          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		          .port(1234)
+		          .bindNow();
+	}
+
+	@Test
+	public void testHttpServerWithDomainSockets() {
+		assumeTrue(LoopResources.hasNativeSupport());
+		disposableServer =
+				HttpServer.create()
+				          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				          .wiretap(true)
+				          .handle((req, res) -> {
+				              req.withConnection(conn -> {
+				                  assertThat(conn.channel().localAddress()).isNull();
+				                  assertThat(conn.channel().remoteAddress()).isNull();
+				                  assertThat(req.hostAddress()).isNull();
+				                  assertThat(req.remoteAddress()).isNull();
+				              });
+				              assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
+				              return res.send(req.receive().retain());
+				          })
+				          .bindNow();
+
+		String response =
+				HttpClient.create()
+				          .remoteAddress(disposableServer::address)
+				          .wiretap(true)
+				          .post()
+				          .uri("/")
+				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3")))
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .block(Duration.ofSeconds(30));
+
+		assertEquals("123", response);
 	}
 }
