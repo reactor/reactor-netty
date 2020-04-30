@@ -39,10 +39,10 @@ plugins {
 description = 'Reactive Streams Netty driver'
 
 ext {
-  if (project.hasProperty('versionBranch') && version.toString().endsWith(".BUILD-SNAPSHOT")) {
+  if (project.hasProperty('versionBranch') && version.toString().endsWith("-SNAPSHOT")) {
 	versionBranch = versionBranch.replaceAll("\"", "").trim()
 	if (!versionBranch.isEmpty()) {
-	  realVersion = version.toString().replace("BUILD-SNAPSHOT", versionBranch + ".BUILD-SNAPSHOT")
+	  realVersion = version.toString() + "-" + versionBranch
 	  project.version = realVersion
 	  println "Building special snapshot ${project.version}"
 	}
@@ -215,7 +215,7 @@ configure(rootProject) { project ->
 
 	repositories {
 	mavenCentral()
-	if (version.endsWith('BUILD-SNAPSHOT')) {
+	if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
 	  if (System.getenv ()["bamboo_buildNumber"] == null) {
 		mavenLocal()
 	  } else {
