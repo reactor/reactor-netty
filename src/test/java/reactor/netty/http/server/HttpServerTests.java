@@ -1698,7 +1698,7 @@ public class HttpServerTests {
 				          .responseContent()
 				          .aggregate()
 				          .asString()
-				          .block(Duration.ofSeconds(300));
+				          .block(Duration.ofSeconds(30));
 
 		assertEquals("123", response);
 	}

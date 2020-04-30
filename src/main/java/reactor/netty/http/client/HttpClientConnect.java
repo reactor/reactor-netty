@@ -490,8 +490,7 @@ class HttpClientConnect extends HttpClient {
 							() -> URI_ADDRESS_MAPPER.apply(inetSocketAddress.getHostString(), inetSocketAddress.getPort()));
 				}
 				else {
-					toURI = uriEndpointFactory.createUriEndpoint(from, to,
-							() -> URI_ADDRESS_MAPPER.apply(from.host, from.port));
+					toURI = uriEndpointFactory.createUriEndpoint(from, to, () -> address);
 				}
 			}
 			else {

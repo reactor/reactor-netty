@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -44,10 +45,13 @@ import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
 public class HttpRedirectTest {
 
@@ -682,5 +686,33 @@ public class HttpRedirectTest {
 		provider.disposeLater()
 		        .block(Duration.ofSeconds(30));
 		server.disposeNow();
+	}
+
+	@Test
+	public void testHttpServerWithDomainSockets() {
+		assumeTrue(LoopResources.hasNativeSupport());
+		DisposableServer disposableServer =
+				HttpServer.create()
+				          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				          .wiretap(true)
+				          .route(r -> r.get("/redirect", (req, res) -> res.sendRedirect("/end"))
+				                       .get("/end", (req, res) -> res.sendString(Mono.just("END"))))
+				          .bindNow();
+
+		String response =
+				HttpClient.create()
+				          .remoteAddress(disposableServer::address)
+				          .wiretap(true)
+				          .followRedirect(true)
+				          .get()
+				          .uri("/redirect")
+				          .responseContent()
+				          .aggregate()
+				          .asString()
+				          .block(Duration.ofSeconds(30));
+
+		assertEquals("END", response);
+
+		disposableServer.disposeNow();
 	}
 }
