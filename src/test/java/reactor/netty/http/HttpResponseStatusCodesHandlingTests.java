@@ -42,7 +42,7 @@ public class HttpResponseStatusCodesHandlingTests {
 
 		HttpClient client =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .wiretap(true);
 
 		Mono<Integer> content = client.headers(h -> h.add("Content-Type", "text/plain"))

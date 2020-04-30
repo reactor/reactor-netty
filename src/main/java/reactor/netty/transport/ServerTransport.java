@@ -94,12 +94,21 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				}
 			}
 
+			boolean isDomainSocket = false;
+			DisposableBind disposableServer;
+			if (local instanceof DomainSocketAddress) {
+				isDomainSocket = true;
+				disposableServer = new UdsDisposableBind(sink, config, local);
+			}
+			else {
+				disposableServer = new InetDisposableBind(sink, config, local);
+			}
+
 			ConnectionObserver childObs =
 					new ChildObserver(config.defaultChildObserver().then(config.childObserver()));
-			DisposableBind disposableServer = new DisposableBind(sink, config, local);
 			Acceptor acceptor = new Acceptor(config.childEventLoopGroup(), config.channelInitializer(childObs, null, true),
-					config.childOptions, config.childAttrs);
-			TransportConnector.bind(config, new AcceptorInitializer(acceptor), local)
+					config.childOptions, config.childAttrs, isDomainSocket);
+			TransportConnector.bind(config, new AcceptorInitializer(acceptor), local, isDomainSocket)
 			                  .subscribe(disposableServer);
 		});
 
@@ -321,15 +330,18 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		final ChannelHandler childHandler;
 		final Map<ChannelOption<?>, ?> childOptions;
 		final Map<AttributeKey<?>, ?> childAttrs;
+		final boolean isDomainSocket;
 
 		Runnable enableAutoReadTask;
 
 		Acceptor(EventLoopGroup childGroup, ChannelHandler childHandler,
-				Map<ChannelOption<?>, ?> childOptions, Map<AttributeKey<?>, ?> childAttrs) {
+				Map<ChannelOption<?>, ?> childOptions, Map<AttributeKey<?>, ?> childAttrs,
+				boolean isDomainSocket) {
 			this.childGroup = childGroup;
 			this.childHandler = childHandler;
 			this.childOptions = childOptions;
 			this.childAttrs = childAttrs;
+			this.isDomainSocket = isDomainSocket;
 		}
 
 		@Override
@@ -338,8 +350,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 
 			child.pipeline().addLast(childHandler);
 
-			TransportConnector.setChannelOptions(child, childOptions,
-					ctx.channel().localAddress() instanceof DomainSocketAddress);
+			TransportConnector.setChannelOptions(child, childOptions, isDomainSocket);
 			TransportConnector.setAttributes(child, childAttrs);
 
 			try {
@@ -431,7 +442,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 	}
 
-	static final class DisposableBind implements CoreSubscriber<Channel>, DisposableServer, Connection {
+	static class DisposableBind implements CoreSubscriber<Channel>, DisposableServer, Connection {
 
 		final MonoSink<DisposableServer> sink;
 		final TransportConfig            config;
@@ -528,6 +539,45 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				sink.onCancel(this);
 				s.request(Long.MAX_VALUE);
 			}
+		}
+	}
+
+	static final class InetDisposableBind extends DisposableBind {
+
+		InetDisposableBind(MonoSink<DisposableServer> sink, TransportConfig config, SocketAddress bindAddress) {
+			super(sink, config, bindAddress);
+		}
+
+		@Override
+		public InetSocketAddress address() {
+			return (InetSocketAddress) channel().localAddress();
+		}
+
+		@Override
+		public String host() {
+			return address().getHostString();
+		}
+
+		@Override
+		public int port() {
+			return address().getPort();
+		}
+	}
+
+	static final class UdsDisposableBind extends DisposableBind {
+
+		UdsDisposableBind(MonoSink<DisposableServer> sink, TransportConfig config, SocketAddress bindAddress) {
+			super(sink, config, bindAddress);
+		}
+
+		@Override
+		public DomainSocketAddress address() {
+			return (DomainSocketAddress) channel().localAddress();
+		}
+
+		@Override
+		public String path() {
+			return address().path();
 		}
 	}
 }

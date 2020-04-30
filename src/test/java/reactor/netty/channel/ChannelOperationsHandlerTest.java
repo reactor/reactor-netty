@@ -97,7 +97,7 @@ public class ChannelOperationsHandlerTest {
 				                  conn.addHandlerLast(handler);
 				              }
 				          })
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .wiretap(true)
 				          .post()
 				          .uri("/")

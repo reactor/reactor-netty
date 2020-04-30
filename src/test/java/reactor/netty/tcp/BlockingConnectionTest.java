@@ -72,6 +72,16 @@ public class BlockingConnectionTest {
 		public Mono<Void> onDispose() {
 			return Mono.never();
 		}
+
+		@Override
+		public String host() {
+			return "localhost";
+		}
+
+		@Override
+		public int port() {
+			return 4321;
+		}
 	};
 
 	@Test
@@ -91,14 +101,13 @@ public class BlockingConnectionTest {
 				         .wiretap(true)
 				         .bindNow();
 
-		System.out.println(simpleServer.address().getHostString());
-		System.out.println(simpleServer.address().getPort());
+		InetSocketAddress address = (InetSocketAddress) simpleServer.address();
 
 		AtomicReference<List<String>> data1 = new AtomicReference<>();
 		AtomicReference<List<String>> data2 = new AtomicReference<>();
 
 		Connection simpleClient1 =
-				TcpClient.create().port(simpleServer.address().getPort())
+				TcpClient.create().port(address.getPort())
 				         .handle((in, out) -> out.sendString(Flux.just("Hello", "World", "CONTROL"))
 				                                 .then(in.receive()
 				                                        .asString()
@@ -114,7 +123,7 @@ public class BlockingConnectionTest {
 
 		Connection simpleClient2 =
 				TcpClient.create()
-				         .port(simpleServer.address().getPort())
+				         .port(address.getPort())
 				         .handle((in, out) -> out.sendString(Flux.just("How", "Are", "You?", "CONTROL"))
 				                                 .then(in.receive()
 				                                        .asString()
@@ -194,8 +203,8 @@ public class BlockingConnectionTest {
 		}.bindNow();
 
 		assertThat(c).isSameAs(NEVER_STOP_SERVER);
-		assertThat(c.port()).isEqualTo(NEVER_STOP_CONTEXT.address().getPort());
-		assertThat(c.host()).isEqualTo(NEVER_STOP_CONTEXT.address().getHostString());
+		assertThat(c.port()).isEqualTo(((InetSocketAddress) NEVER_STOP_CONTEXT.address()).getPort());
+		assertThat(c.host()).isEqualTo(((InetSocketAddress) NEVER_STOP_CONTEXT.address()).getHostString());
 	}
 
 	static final class TestClientTransport extends ClientTransport<TestClientTransport, TestClientTransportConfig> {

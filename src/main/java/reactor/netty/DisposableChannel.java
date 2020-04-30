@@ -16,13 +16,11 @@
 
 package reactor.netty;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Duration;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
@@ -38,23 +36,19 @@ import reactor.core.publisher.Mono;
 public interface DisposableChannel extends Disposable {
 
 	/**
-	 * Returns local server selector channel address.
+	 * When on the server, returns the bind address,
+	 * when on the client, returns the remote address.
 	 *
-	 * @return local {@link InetSocketAddress}
+	 * @return {@link SocketAddress}
 	 */
-	default InetSocketAddress address(){
+	default SocketAddress address(){
 		Channel c = channel();
-		if (c instanceof SocketChannel) {
-			return ((SocketChannel) c).remoteAddress();
-		}
-		if (c instanceof ServerSocketChannel) {
-			return ((ServerSocketChannel) c).localAddress();
-		}
 		if (c instanceof DatagramChannel) {
-			InetSocketAddress a = ((DatagramChannel) c).remoteAddress();
-			return a != null ? a : ((DatagramChannel)c ).localAddress();
+			SocketAddress a = c.remoteAddress();
+			return a != null ? a : c.localAddress();
 		}
-		throw new IllegalStateException("Does not have an InetSocketAddress");
+
+		return c.remoteAddress();
 	}
 
 	/**

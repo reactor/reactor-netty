@@ -69,7 +69,7 @@ public class ConnectionInfoTests {
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.address().getPort());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -79,7 +79,7 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.address().getPort());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -89,7 +89,7 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=[1abc:2abc:3abc::5ABC:6abc]"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.address().getPort());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -111,7 +111,7 @@ public class ConnectionInfoTests {
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.address().getPort());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -409,7 +409,7 @@ public class ConnectionInfoTests {
 						"host=a.example.com,host=b.example.com, host=c.example.com"),
 				serverRequest -> {
 					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.address().getPort());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -579,13 +579,13 @@ public class ConnectionInfoTests {
 
 		String uri = "/test";
 		if (useHttps) {
-			uri += ("https://localhost:" + this.connection.address().getPort());
+			uri += ("https://localhost:" + this.connection.port());
 		}
 
 		String response =
 				clientConfigFunction.apply(
 						HttpClient.create()
-						          .port(this.connection.address().getPort())
+						          .port(this.connection.port())
 						          .wiretap(true)
 						)
 				        .headers(clientRequestHeadersConsumer)

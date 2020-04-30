@@ -452,7 +452,7 @@ public class HttpCompressionClientServerTests {
 
 		Mono<String> response =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .get()
 				          .uri("/")
 				          .responseContent()
@@ -480,7 +480,7 @@ public class HttpCompressionClientServerTests {
 
 		Mono<String> response =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .compress(true)
 				          .wiretap(true)
 				          .get()
@@ -495,7 +495,7 @@ public class HttpCompressionClientServerTests {
 		            .verify();
 
 		response = HttpClient.create()
-		                     .port(server.address().getPort())
+		                     .port(server.port())
 		                     .wiretap(true)
 		                     .compress(true)
 		                     .get()

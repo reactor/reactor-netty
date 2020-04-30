@@ -264,7 +264,7 @@ public class UdpServerTests {
 			fail("illegal-success");
 		}
 		catch (ChannelBindException e) {
-			assertEquals(e.localPort(), conn.address().getPort());
+			assertEquals(e.localPort(), ((InetSocketAddress) conn.address()).getPort());
 			e.printStackTrace();
 		}
 

@@ -45,7 +45,7 @@ public class HttpErrorTests {
 		                                    .bindNow(Duration.ofSeconds(30));
 
 		HttpClient client = HttpClient.create()
-		                              .port(server.address().getPort());
+		                              .port(server.port());
 
 		StepVerifier.create(client.get()
 		                             .uri("/")

@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.resolver.AddressResolverGroup;
 import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
@@ -85,7 +86,7 @@ final class NewConnectionProvider implements ConnectionProvider {
 					}
 				}
 				ChannelInitializer<Channel> channelInitializer = config.channelInitializer(connectionObserver, null, true);
-				TransportConnector.bind(config, channelInitializer, local)
+				TransportConnector.bind(config, channelInitializer, local, local instanceof DomainSocketAddress)
 				                  .subscribe(disposableConnect);
 			}
 		});

@@ -66,12 +66,12 @@ public final class TransportConnector {
 	 */
 	@SuppressWarnings("FutureReturnValueIgnored")
 	public static Mono<Channel> bind(TransportConfig config, ChannelInitializer<Channel> channelInitializer,
-			SocketAddress bindAddress) {
+			SocketAddress bindAddress, boolean isDomainSocket) {
 		Objects.requireNonNull(config, "config");
 		Objects.requireNonNull(bindAddress, "bindAddress");
 		Objects.requireNonNull(channelInitializer, "channelInitializer");
 
-		return doInitAndRegister(config, channelInitializer, bindAddress instanceof DomainSocketAddress)
+		return doInitAndRegister(config, channelInitializer, isDomainSocket)
 				.flatMap(channel -> {
 					MonoChannelPromise promise = new MonoChannelPromise(channel);
 					// "FutureReturnValueIgnored" this is deliberate

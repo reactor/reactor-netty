@@ -17,14 +17,21 @@
 package reactor.netty;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * Holds contextual information for the underlying server
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  * @since 0.8
  */
 public interface DisposableServer extends DisposableChannel {
+
+	@Override
+	default SocketAddress address() {
+		return channel().localAddress();
+	}
 
 	/**
 	 * Returns the server's host string. That is, the hostname or in case the server was bound
@@ -32,18 +39,33 @@ public interface DisposableServer extends DisposableChannel {
 	 * lookup).
 	 *
 	 * @return the host string, without reverse DNS lookup
+	 * @throws UnsupportedOperationException when Unix Domain Sockets
 	 * @see DisposableChannel#address()
 	 * @see InetSocketAddress#getHostString()
 	 */
 	default String host() {
-		return address().getHostString();
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * Returns the server's path to the domain socket.
+	 * Returns {@code null} in case it is not Unix Domain Sockets.
+	 *
+	 * @return the path to the domain socket
+	 * @throws UnsupportedOperationException when it is not Unix Domain Sockets
+	 * @since 1.0.0
+	 */
+	default String path() {
+		throw new UnsupportedOperationException();
 	}
 
 	/**
 	 * Returns this server's port.
+	 *
 	 * @return The port the server is bound to.
+	 * @throws UnsupportedOperationException when Unix Domain Sockets
 	 */
 	default int port() {
-		return address().getPort();
+		throw new UnsupportedOperationException();
 	}
 }

@@ -61,7 +61,7 @@ public class FluxReceiveTest {
 				          .route(routes ->
 				                     routes.get("/forward", (req, res) ->
 				                           HttpClient.create()
-				                                     .port(server1.address().getPort())
+				                                     .port(server1.port())
 				                                     .get()
 				                                     .uri("/target")
 				                                     .responseContent()
@@ -74,7 +74,7 @@ public class FluxReceiveTest {
 
 		Flux.range(0, 50)
 		    .flatMap(i -> HttpClient.create()
-		                            .port(server2.address().getPort())
+		                            .port(server2.port())
 		                            .get()
 		                            .uri("/forward")
 		                            .responseContent()
@@ -108,7 +108,7 @@ public class FluxReceiveTest {
 				          .route(routes ->
 				                     routes.get("/forward", (req, res) ->
 				                           HttpClient.create()
-				                                     .port(server1.address().getPort())
+				                                     .port(server1.port())
 				                                     .doOnConnected(c ->
 				                                             c.addHandlerFirst(new ReadTimeoutHandler(50, TimeUnit.MILLISECONDS)))
 				                                     .get()
@@ -122,7 +122,7 @@ public class FluxReceiveTest {
 
 		Flux.range(0, 50)
 		    .flatMap(i -> HttpClient.create()
-		                            .port(server2.address().getPort())
+		                            .port(server2.port())
 		                            .get()
 		                            .uri("/forward")
 		                            .responseContent()

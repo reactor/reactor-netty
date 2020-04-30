@@ -142,7 +142,7 @@ public class TcpServerTests {
 
 		final TcpClient client = TcpClient.create()
 		                                  .host("localhost")
-		                                  .port(connectedServer.address().getPort())
+		                                  .port(connectedServer.port())
 		                                  .secure(spec -> spec.sslContext(clientOptions));
 
 		Connection connectedClient = client.handle((in, out) -> {
@@ -207,7 +207,7 @@ public class TcpServerTests {
 		                                   .handle((in, out) -> {
 
 		    in.withConnection(c -> {
-		        InetSocketAddress addr = c.address();
+		        InetSocketAddress addr = (InetSocketAddress) c.address();
 		        assertNotNull("remote address is not null", addr.getAddress());
 		        latch.countDown();
 		    });
@@ -292,12 +292,10 @@ public class TcpServerTests {
 
 		assertNotNull(server);
 
-		System.out.println("PORT +" + server.address()
-		                                    .getPort());
+		System.out.println("PORT +" + server.port());
 
 		Connection client = TcpClient.create()
-		                             .port(server.address()
-		                                         .getPort())
+		                             .port(server.port())
 		                             .handle((in, out) -> out.sendString(Flux.just("test")))
 		                             .wiretap(true)
 		                             .connectNow();
@@ -346,7 +344,7 @@ public class TcpServerTests {
 
 		Connection client1 =
 				TcpClient.create()
-				         .port(context.address().getPort())
+				         .port(context.port())
 				         .secure(spec -> spec.sslContext(sslClient))
 				         .handle((in, out) -> {
 				             in.receive()
@@ -362,7 +360,7 @@ public class TcpServerTests {
 
 		Connection client2 =
 				TcpClient.create()
-				         .port(context.address().getPort())
+				         .port(context.port())
 				         .secure(spec -> spec.sslContext(sslClient))
 				         .handle((in, out) -> {
 				             in.receive()
@@ -447,7 +445,7 @@ public class TcpServerTests {
 
 		Connection client1 =
 				TcpClient.create()
-				         .port(context.address().getPort())
+				         .port(context.port())
 				         .handle((in, out) -> {
 				             in.receive()
 				               .asString()
@@ -462,7 +460,7 @@ public class TcpServerTests {
 
 		Connection client2 =
 				TcpClient.create()
-				         .port(context.address().getPort())
+				         .port(context.port())
 				         .handle((in, out) -> {
 				             in.receive()
 				               .asString(StandardCharsets.UTF_8)
@@ -560,7 +558,7 @@ public class TcpServerTests {
 
 		assertNotNull(server);
 
-		SimpleClient client = new SimpleClient(server.address().getPort(), dataLatch, "{\"name\":\"John Doe\"}");
+		SimpleClient client = new SimpleClient(server.port(), dataLatch, "{\"name\":\"John Doe\"}");
 		client.start();
 
 		Assertions.assertThat(dataLatch.await(5, TimeUnit.SECONDS)).isTrue();
@@ -613,7 +611,7 @@ public class TcpServerTests {
 		assertNotNull(server);
 
 		Connection client = TcpClient.create()
-		                             .port(server.address().getPort())
+		                             .port(server.port())
 		                             .handle((in, out) -> {
 		                                 in.withConnection(c -> c.addHandler(new JsonObjectDecoder()))
 		                                   .receive()
@@ -739,7 +737,7 @@ public class TcpServerTests {
 
 		Connection client =
 				TcpClient.create()
-				         .port(server.address().getPort())
+				         .port(server.port())
 				         .doOnConnected(c -> c.addHandlerLast("codec",
 				                                              new LineBasedFrameDecoder(256)))
 				         .handle((in, out) ->
@@ -980,7 +978,7 @@ public class TcpServerTests {
 
 		Connection conn =
 				TcpClient.create()
-				         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				         .remoteAddress(disposableServer::address)
 				         .wiretap(true)
 				         .connectNow();
 

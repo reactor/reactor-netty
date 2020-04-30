@@ -16,6 +16,7 @@
 
 package reactor.netty.udp;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -64,9 +65,10 @@ public class UdpClientTest {
 				         .block(Duration.ofSeconds(30));
 		assertThat(server).isNotNull();
 
+		InetSocketAddress address = (InetSocketAddress) server.address();
 		Connection client1 =
 				UdpClient.create()
-				         .port(server.address().getPort())
+				         .port(address.getPort())
 				         .runOn(resources)
 				         .handle((in, out) -> {
 				                                  in.receive()
@@ -82,7 +84,7 @@ public class UdpClientTest {
 
 		Connection client2 =
 				UdpClient.create()
-				         .port(server.address().getPort())
+				         .port(address.getPort())
 				         .runOn(resources)
 				         .handle((in, out) -> {
 				                                  in.receive()

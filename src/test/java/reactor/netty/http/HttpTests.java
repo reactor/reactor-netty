@@ -59,7 +59,7 @@ public class HttpTests {
 
 		HttpClient client =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .wiretap(true);
 
 		Mono<ByteBuf> content =
@@ -97,7 +97,7 @@ public class HttpTests {
 
 		HttpClient client =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .wiretap(true);
 
 		Mono<String> content =
@@ -175,7 +175,7 @@ public class HttpTests {
 
 		HttpClient client =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .wiretap(true);
 
 		Mono<Integer> code =
@@ -334,7 +334,7 @@ public class HttpTests {
 
 		String content =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .headers(h -> h.add("Expect", "100-continue"))
 				          .post()
 				          .uri("/")
@@ -373,7 +373,7 @@ public class HttpTests {
 
 		String content =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .compress(true)
 				          .post()
 				          .uri("/hi")
@@ -385,7 +385,7 @@ public class HttpTests {
 				          .block();
 
 		Flux<String> f = HttpClient.create()
-		                           .port(server.address().getPort())
+		                           .port(server.port())
 		                           .compress(true)
 		                           .get()
 		                           .uri("/stream")
@@ -407,7 +407,7 @@ public class HttpTests {
 
 
 		HttpClient.create()
-		          .port(server.address().getPort())
+		          .port(server.port())
 		          .compress(true)
 		          .post()
 		          .uri("/hi")
@@ -446,7 +446,7 @@ public class HttpTests {
 
 		String content =
 				HttpClient.create()
-				          .port(server.address().getPort())
+				          .port(server.port())
 				          .compress(true)
 				          .post()
 				          .uri("/hi")
@@ -458,7 +458,7 @@ public class HttpTests {
 				          .block();
 
 		Flux<String> f = HttpClient.create()
-		                           .port(server.address().getPort())
+		                           .port(server.port())
 		                           .compress(true)
 		                           .get()
 		                           .uri("/stream")
@@ -480,7 +480,7 @@ public class HttpTests {
 
 
 		HttpClient.create()
-		          .port(server.address().getPort())
+		          .port(server.port())
 		          .compress(true)
 		          .post()
 		          .uri("/hi")

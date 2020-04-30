@@ -95,7 +95,7 @@ public class WebsocketTest {
 
 		List<String> res =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .wiretap(true)
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket()
@@ -126,8 +126,7 @@ public class WebsocketTest {
 
 		Mono<String> res =
 				HttpClient.create()
-				          .port(httpServer.address()
-				                          .getPort())
+				          .port(httpServer.port())
 				          .websocket()
 				          .uri("/test")
 				          .handle((in, out) -> in.receive().aggregate().asString())
@@ -152,7 +151,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		Flux<String> ws = HttpClient.create()
-		                            .port(httpServer.address().getPort())
+		                            .port(httpServer.port())
 		                            .wiretap(true)
 		                            .websocket()
 		                            .uri("/")
@@ -197,7 +196,7 @@ public class WebsocketTest {
 				          .bindNow(Duration.ofSeconds(5));
 
 		HttpClient client = HttpClient.create()
-		                              .port(httpServer.address().getPort())
+		                              .port(httpServer.port())
 		                              .wiretap(true);
 
 		Mono<List<String>> response =
@@ -247,7 +246,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		Flux<String> ws = HttpClient.create()
-		                            .port(httpServer.address().getPort())
+		                            .port(httpServer.port())
 		                            .websocket()
 		                            .uri("/test")
 		                            .handle((i, o) -> i.aggregateFrames()
@@ -300,7 +299,7 @@ public class WebsocketTest {
 		    .subscribe(client::onNext);
 
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/test")
@@ -324,7 +323,7 @@ public class WebsocketTest {
 
 		StepVerifier.create(
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket(WebsocketClientSpec.builder().protocols("SUBPROTOCOL,OTHER").build())
 				          .uri("/test")
@@ -346,7 +345,7 @@ public class WebsocketTest {
 
 		StepVerifier.create(
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket(WebsocketClientSpec.builder().protocols("SUBPROTOCOL,OTHER").build())
 				          .uri("/test")
@@ -367,8 +366,7 @@ public class WebsocketTest {
 
 		List<String> res =
 				HttpClient.create()
-				          .port(httpServer.address()
-				                          .getPort())
+				          .port(httpServer.port())
 				          .wiretap(true)
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket(WebsocketClientSpec.builder().protocols("SUBPROTOCOL,OTHER").build())
@@ -395,7 +393,7 @@ public class WebsocketTest {
 
 		List<String> res =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .wiretap(true)
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket(WebsocketClientSpec.builder().protocols("Common,OTHER").build())
@@ -422,7 +420,7 @@ public class WebsocketTest {
 
 		List<String> res =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket()
 				          .uri("/test")
@@ -449,7 +447,7 @@ public class WebsocketTest {
 
 		List<String> res =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .headers(h -> h.add("Authorization", auth))
 				          .websocket(WebsocketClientSpec.builder().protocols("proto1, proto2").build())
 				          .uri("/test")
@@ -487,7 +485,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		HttpClient.create()
-		           .port(httpServer.address().getPort())
+		           .port(httpServer.port())
 		           .headers(h -> h.add("Authorization", auth))
 		           .websocket(WebsocketClientSpec.builder().protocols("proto1,proto2").build())
 		           .uri("/test")
@@ -513,7 +511,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		Mono<Void> response = HttpClient.create()
-		                                .port(httpServer.address().getPort())
+		                                .port(httpServer.port())
 		                                .websocket(WebsocketClientSpec.builder().maxFramePayloadLength(10).build())
 		                                .handle((in, out) -> in.receive()
 		                                                       .asString()
@@ -535,7 +533,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		Mono<Void> response = HttpClient.create()
-		                                .port(httpServer.address().getPort())
+		                                .port(httpServer.port())
 		                                .websocket(WebsocketClientSpec.builder().maxFramePayloadLength(11).build())
 		                                .handle((in, out) -> in.receive()
 		                                                       .asString()
@@ -577,7 +575,7 @@ public class WebsocketTest {
 
 		ReplayProcessor<String> output = ReplayProcessor.create();
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> out.sendString(input)
@@ -610,8 +608,7 @@ public class WebsocketTest {
 		                       .bindNow();
 
 		Flux<String> ws = HttpClient.create(pr)
-		                            .port(httpServer.address()
-		                                            .getPort())
+		                            .port(httpServer.port())
 		                            .websocket()
 		                            .uri("/")
 		                            .receive()
@@ -648,7 +645,7 @@ public class WebsocketTest {
 
 		Flux<WebSocketFrame> response =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .websocket()
 				          .uri("/")
 				          .handle((in, out) -> out.sendString(Mono.just("echo"))
@@ -677,7 +674,7 @@ public class WebsocketTest {
 
 		Mono<Void> response =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .websocket()
 				          .uri("/")
 				          .handle((in, out) -> out.sendObject(in.receiveFrames()
@@ -734,7 +731,7 @@ public class WebsocketTest {
 
 		ReplayProcessor<String> output = ReplayProcessor.create();
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> out.sendString(Flux.just("1", "text", "2"))
@@ -767,7 +764,7 @@ public class WebsocketTest {
 		CountDownLatch latch = new CountDownLatch(3);
 		AtomicBoolean error = new AtomicBoolean();
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .websocket()
 		          .uri("/test")
 		          .handle((in, out)  -> {
@@ -828,7 +825,7 @@ public class WebsocketTest {
 		CountDownLatch latch = new CountDownLatch(3);
 		AtomicBoolean error = new AtomicBoolean();
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .websocket()
 		          .uri("/test")
 		          .handle((in, out)  -> {
@@ -890,7 +887,7 @@ public class WebsocketTest {
 		CountDownLatch latch = new CountDownLatch(2);
 		AtomicBoolean error = new AtomicBoolean();
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .websocket()
 		          .uri("/test")
 		          .handle((in, out) -> {
@@ -1002,7 +999,7 @@ public class WebsocketTest {
 
 		HttpClientResponse res =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .wiretap(true)
 				          .headers(h -> {
 				                  h.add(HttpHeaderNames.CONNECTION, "keep-alive, Upgrade");
@@ -1036,7 +1033,7 @@ public class WebsocketTest {
 
 		Mono<Void> response =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .headers(h -> h.add(HttpHeaderNames.HOST, incorrectHostName))
 				          .websocket()
 				          .uri("/")
@@ -1076,7 +1073,7 @@ public class WebsocketTest {
 
 		String res =
 				HttpClient.create()
-				          .port(httpServer.address().getPort())
+				          .port(httpServer.port())
 				          .wiretap(true)
 				          .websocket()
 				          .uri("/ws")
@@ -1197,7 +1194,7 @@ public class WebsocketTest {
 				          .bindNow();
 
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1228,7 +1225,7 @@ public class WebsocketTest {
 				          .bindNow();
 
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .wiretap(true)
 		          .websocket(WebsocketClientSpec.builder().handlePing(true).build())
 		          .uri("/")
@@ -1252,7 +1249,7 @@ public class WebsocketTest {
 				          .bindNow();
 
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1283,7 +1280,7 @@ public class WebsocketTest {
 				          .bindNow();
 
 		HttpClient.create()
-		          .port(httpServer.address().getPort())
+		          .port(httpServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")

@@ -117,7 +117,7 @@ public class HttpServerTests {
 		                             .wiretap(true)
 		                             .bindNow();
 
-		assertThat(disposableServer.address().getPort()).isEqualTo(8080);
+		assertThat(disposableServer.port()).isEqualTo(8080);
 	}
 
 	@Test
@@ -129,7 +129,7 @@ public class HttpServerTests {
 		                             .wiretap(true)
 		                             .bindNow();
 
-		assertThat(disposableServer.address().getPort()).isEqualTo(8080);
+		assertThat(disposableServer.port()).isEqualTo(8080);
 	}
 
 	@Test
@@ -146,7 +146,7 @@ public class HttpServerTests {
 
 		Flux.range(0, 100)
 		    .concatMap(n -> HttpClient.create()
-		                              .port(disposableServer.address().getPort())
+		                              .port(disposableServer.port())
 		                              .noSSL()
 		                              .wiretap(true)
 		                              .keepAlive(false)
@@ -239,7 +239,7 @@ public class HttpServerTests {
 
 		Integer code =
 				HttpClient.create()
-				          .port(disposableServer.address().getPort())
+				          .port(disposableServer.port())
 				          .wiretap(true)
 				          .get()
 				          .uri("/return")
@@ -273,7 +273,7 @@ public class HttpServerTests {
 
 		Connection client =
 				TcpClient.create()
-				         .port(disposableServer.address().getPort())
+				         .port(disposableServer.port())
 				         .handle((in, out) -> {
 				                 in.withConnection(x ->
 				                         x.addHandlerFirst(new HttpClientCodec()))
@@ -319,7 +319,7 @@ public class HttpServerTests {
 		                             .bindNow();
 
 		Flux<String> client = HttpClient.create()
-		                                .port(disposableServer.address().getPort())
+		                                .port(disposableServer.port())
 		                                .wiretap(true)
 		                                .doOnConnected(res ->
 		                                        res.addHandler(new LineBasedFrameDecoder(10)))
@@ -346,7 +346,7 @@ public class HttpServerTests {
 		ConnectionProvider p = ConnectionProvider.create("keepAlive", 1);
 
 		Channel response0 = HttpClient.create(p)
-		                              .port(disposableServer.address().getPort())
+		                              .port(disposableServer.port())
 		                              .wiretap(true)
 		                              .get()
 		                              .uri("/test/index.html")
@@ -355,7 +355,7 @@ public class HttpServerTests {
 		                              .blockLast(Duration.ofSeconds(3099));
 
 		Channel response1 = HttpClient.create(p)
-		                              .port(disposableServer.address().getPort())
+		                              .port(disposableServer.port())
 		                              .wiretap(true)
 		                              .get()
 		                              .uri("/test/test.css")
@@ -364,7 +364,7 @@ public class HttpServerTests {
 		                              .blockLast(Duration.ofSeconds(3099));
 
 		Channel response2 = HttpClient.create(p)
-		                              .port(disposableServer.address().getPort())
+		                              .port(disposableServer.port())
 		                              .wiretap(true)
 		                              .get()
 		                              .uri("/test/test1.css")
@@ -373,7 +373,7 @@ public class HttpServerTests {
 		                              .blockLast(Duration.ofSeconds(30));
 
 		Channel response3 = HttpClient.create(p)
-		                              .port(disposableServer.address().getPort())
+		                              .port(disposableServer.port())
 		                              .wiretap(true)
 		                              .get()
 		                              .uri("/test/test2.css")
@@ -382,7 +382,7 @@ public class HttpServerTests {
 		                              .blockLast(Duration.ofSeconds(30));
 
 		Channel response4 = HttpClient.create(p)
-		                              .port(disposableServer.address().getPort())
+		                              .port(disposableServer.port())
 		                              .wiretap(true)
 		                              .get()
 		                              .uri("/test/test3.css")
@@ -391,7 +391,7 @@ public class HttpServerTests {
 		                              .blockLast(Duration.ofSeconds(30));
 
 		Channel response5 = HttpClient.create(p)
-		                              .port(disposableServer.address().getPort())
+		                              .port(disposableServer.port())
 		                              .wiretap(true)
 		                              .get()
 		                              .uri("/test/test4.css")
@@ -431,7 +431,7 @@ public class HttpServerTests {
 
 		Integer code =
 				HttpClient.create()
-				          .port(disposableServer.address().getPort())
+				          .port(disposableServer.port())
 				          .wiretap(true)
 				          .get()
 				          .uri("/hello")
@@ -440,7 +440,7 @@ public class HttpServerTests {
 		assertThat(code).isEqualTo(200);
 
 		code = HttpClient.create()
-		                 .port(disposableServer.address().getPort())
+		                 .port(disposableServer.port())
 		                 .wiretap(true)
 		                 .get()
 		                 .uri("/helloMan")
@@ -496,13 +496,14 @@ public class HttpServerTests {
 				          .wiretap(true)
 				          .bindNow();
 
-		checkResponse("/204-1", disposableServer.address());
-		checkResponse("/204-2", disposableServer.address());
-		checkResponse("/205-1", disposableServer.address());
-		checkResponse("/205-2", disposableServer.address());
-		checkResponse("/304-1", disposableServer.address());
-		checkResponse("/304-2", disposableServer.address());
-		checkResponse("/304-3", disposableServer.address());
+		InetSocketAddress address = (InetSocketAddress) disposableServer.address();
+		checkResponse("/204-1", address);
+		checkResponse("/204-2", address);
+		checkResponse("/205-1", address);
+		checkResponse("/205-2", address);
+		checkResponse("/304-1", address);
+		checkResponse("/304-2", address);
+		checkResponse("/304-3", address);
 	}
 
 	private void checkResponse(String url, InetSocketAddress address) {
@@ -577,18 +578,19 @@ public class HttpServerTests {
 				          .wiretap(true)
 				          .bindNow();
 
-		doTestContentLengthHeadRequest("/1", disposableServer.address(), HttpMethod.GET, true, false);
-		doTestContentLengthHeadRequest("/1", disposableServer.address(), HttpMethod.HEAD, true, false);
-		doTestContentLengthHeadRequest("/2", disposableServer.address(), HttpMethod.GET, false, true);
-		doTestContentLengthHeadRequest("/2", disposableServer.address(), HttpMethod.HEAD, false, true);
-		doTestContentLengthHeadRequest("/3", disposableServer.address(), HttpMethod.GET, false, false);
-		doTestContentLengthHeadRequest("/3", disposableServer.address(), HttpMethod.HEAD, false, false);
-		doTestContentLengthHeadRequest("/4", disposableServer.address(), HttpMethod.HEAD, true, false);
-		doTestContentLengthHeadRequest("/5", disposableServer.address(), HttpMethod.HEAD, false, true);
-		doTestContentLengthHeadRequest("/6", disposableServer.address(), HttpMethod.HEAD, false, false);
-		doTestContentLengthHeadRequest("/7", disposableServer.address(), HttpMethod.HEAD, true, false);
-		doTestContentLengthHeadRequest("/8", disposableServer.address(), HttpMethod.HEAD, false, true);
-		doTestContentLengthHeadRequest("/9", disposableServer.address(), HttpMethod.HEAD, false, false);
+		InetSocketAddress address = (InetSocketAddress) disposableServer.address();
+		doTestContentLengthHeadRequest("/1", address, HttpMethod.GET, true, false);
+		doTestContentLengthHeadRequest("/1", address, HttpMethod.HEAD, true, false);
+		doTestContentLengthHeadRequest("/2", address, HttpMethod.GET, false, true);
+		doTestContentLengthHeadRequest("/2", address, HttpMethod.HEAD, false, true);
+		doTestContentLengthHeadRequest("/3", address, HttpMethod.GET, false, false);
+		doTestContentLengthHeadRequest("/3", address, HttpMethod.HEAD, false, false);
+		doTestContentLengthHeadRequest("/4", address, HttpMethod.HEAD, true, false);
+		doTestContentLengthHeadRequest("/5", address, HttpMethod.HEAD, false, true);
+		doTestContentLengthHeadRequest("/6", address, HttpMethod.HEAD, false, false);
+		doTestContentLengthHeadRequest("/7", address, HttpMethod.HEAD, true, false);
+		doTestContentLengthHeadRequest("/8", address, HttpMethod.HEAD, false, true);
+		doTestContentLengthHeadRequest("/9", address, HttpMethod.HEAD, false, false);
 	}
 
 	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
@@ -689,7 +691,7 @@ public class HttpServerTests {
 		Flux<ByteBuf> r =
 				HttpClient.create()
 				          .doOnResponse((res, c) -> ch.set(c.channel()))
-				          .port(disposableServer.address().getPort())
+				          .port(disposableServer.port())
 				          .get()
 				          .uri("/")
 				          .responseContent();
@@ -771,7 +773,7 @@ public class HttpServerTests {
 
 		Mono<HttpResponseStatus> status =
 				HttpClient.create()
-				          .port(disposableServer.address().getPort())
+				          .port(disposableServer.port())
 				          .get()
 				          .uri(path)
 				          .responseSingle((res, byteBufMono) -> Mono.just(res.status()));
@@ -1112,8 +1114,7 @@ public class HttpServerTests {
 		                               .bindNow();
 
 		HttpClient.create()
-		          .port(c.address()
-		                 .getPort())
+		          .port(c.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1164,8 +1165,7 @@ public class HttpServerTests {
 		                             .bindNow();
 
 		HttpClient.create()
-		          .port(disposableServer.address()
-		                                .getPort())
+		          .port(disposableServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1200,8 +1200,7 @@ public class HttpServerTests {
 		                             .bindNow();
 
 		HttpClient.create()
-		          .port(disposableServer.address()
-		                                .getPort())
+		          .port(disposableServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1245,8 +1244,7 @@ public class HttpServerTests {
 		                             .bindNow();
 
 		HttpClient.create()
-		          .port(disposableServer.address()
-		                                .getPort())
+		          .port(disposableServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1292,8 +1290,7 @@ public class HttpServerTests {
 		                             .bindNow();
 
 		HttpClient.create()
-		          .port(disposableServer.address()
-		                                .getPort())
+		          .port(disposableServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1337,8 +1334,7 @@ public class HttpServerTests {
 		                             .bindNow();
 
 		HttpClient.create()
-		          .port(disposableServer.address()
-		                                .getPort())
+		          .port(disposableServer.port())
 		          .wiretap(true)
 		          .websocket()
 		          .uri("/")
@@ -1378,7 +1374,7 @@ public class HttpServerTests {
 
 		Connection client =
 				TcpClient.create()
-				         .port(disposableServer.address().getPort())
+				         .port(disposableServer.port())
 				         .handle((in, out) -> {
 				             in.withConnection(x -> x.addHandlerFirst(new HttpClientCodec()))
 				               .receiveObject()
@@ -1458,7 +1454,7 @@ public class HttpServerTests {
 				          .bindNow();
 
 		int port = disposableServer.port();
-		String address = HttpUtil.formatHostnameForHttp(disposableServer.address()) + ":" + port;
+		String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
 		doTest(port, "GET http://" + address + "/ HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 		doTest(port, "GET http://" + address + " HTTP/1.1\r\nHost: " + address + "\r\n\r\n");
 	}
@@ -1564,7 +1560,7 @@ public class HttpServerTests {
 		          .doOnNext(result::set)
 		          .subscribe();
 
-		String address = HttpUtil.formatHostnameForHttp(disposableServer.address()) + ":" + port;
+		String address = HttpUtil.formatHostnameForHttp((InetSocketAddress) disposableServer.address()) + ":" + port;
 		connection.outbound()
 		          .sendString(Mono.just("GET http://" + address + "/< HTTP/1.1\r\nHost: " + address + "\r\n\r\n"))
 		          .then()
