@@ -55,6 +55,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
@@ -2163,5 +2164,48 @@ public class HttpClientTest {
 		StepVerifier.create(processor)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testHttpClientWithDomainSocketsNIOTransport() {
+		LoopResources loop = LoopResources.create("testHttpClientWithDomainSocketsNIOTransport");
+		try {
+			HttpClient.create()
+			          .runOn(loop, false)
+			          .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+			          .get()
+			          .uri("/")
+			          .responseContent()
+			          .aggregate()
+			          .block(Duration.ofSeconds(30));
+		}
+		finally {
+			loop.disposeLater()
+			    .block(Duration.ofSeconds(30));
+		}
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testHttpClientWithDomainSocketsWithHost() {
+		HttpClient.create()
+		          .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		          .host("localhost")
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .aggregate()
+		          .block(Duration.ofSeconds(30));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testHttpClientWithDomainSocketsWithPort() {
+		HttpClient.create()
+		          .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+		          .port(1234)
+		          .get()
+		          .uri("/")
+		          .responseContent()
+		          .aggregate()
+		          .block(Duration.ofSeconds(30));
 	}
 }

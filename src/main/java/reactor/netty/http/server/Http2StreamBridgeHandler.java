@@ -15,14 +15,13 @@
  */
 package reactor.netty.http.server;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Optional;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
@@ -37,7 +36,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 
 	final boolean             readForwardHeaders;
 	Boolean                   secured;
-	InetSocketAddress         remoteAddress;
+	SocketAddress             remoteAddress;
 	final ConnectionObserver  listener;
 	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
@@ -68,7 +67,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 		if (remoteAddress == null) {
 			remoteAddress =
 					Optional.ofNullable(HAProxyMessageReader.resolveRemoteAddressFromProxyProtocol(ctx.channel().parent()))
-					        .orElse(((SocketChannel) ctx.channel().parent()).remoteAddress());
+					        .orElse(ctx.channel().parent().remoteAddress());
 		}
 		if (msg instanceof HttpRequest) {
 			HttpRequest request = (HttpRequest) msg;

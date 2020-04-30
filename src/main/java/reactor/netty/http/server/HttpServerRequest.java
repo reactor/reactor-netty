@@ -16,7 +16,7 @@
 
 package reactor.netty.http.server;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -80,14 +80,14 @@ public interface HttpServerRequest extends NettyInbound, HttpInfos {
 	 *
 	 * @return the host's address
 	 */
-	InetSocketAddress hostAddress();
+	SocketAddress hostAddress();
 
 	/**
 	 * Returns the address of the remote peer.
 	 *
 	 * @return the peer's address
 	 */
-	InetSocketAddress remoteAddress();
+	SocketAddress remoteAddress();
 
 	/**
 	 * Returns inbound {@link HttpHeaders}

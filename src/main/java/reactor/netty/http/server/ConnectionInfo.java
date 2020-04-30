@@ -16,6 +16,7 @@
 package reactor.netty.http.server;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,6 +26,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import reactor.netty.transport.AddressUtils;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+
+import javax.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -61,13 +64,19 @@ final class ConnectionInfo {
 
 	final String scheme;
 
+	@Nullable
 	static ConnectionInfo from(Channel channel, boolean headers, HttpRequest request, boolean secured,
-			InetSocketAddress remoteAddress) {
-		if (headers) {
-			return ConnectionInfo.newForwardedConnectionInfo(request, channel, secured, remoteAddress);
+			SocketAddress remoteAddress) {
+		if (!(remoteAddress instanceof InetSocketAddress)) {
+			return null;
 		}
 		else {
-			return ConnectionInfo.newConnectionInfo(channel, secured, remoteAddress);
+			if (headers) {
+				return ConnectionInfo.newForwardedConnectionInfo(request, channel, secured, (InetSocketAddress) remoteAddress);
+			}
+			else {
+				return ConnectionInfo.newConnectionInfo(channel, secured, (InetSocketAddress) remoteAddress);
+			}
 		}
 	}
 

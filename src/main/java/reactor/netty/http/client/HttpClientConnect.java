@@ -407,9 +407,9 @@ class HttpClientConnect extends HttpClient {
 				}
 
 				SocketAddress remoteAddress = uri.getRemoteAddress();
-				if (!headers.contains(HttpHeaderNames.HOST) && remoteAddress instanceof InetSocketAddress) {
+				if (!headers.contains(HttpHeaderNames.HOST)) {
 					headers.set(HttpHeaderNames.HOST,
-					            resolveHostHeaderValue((InetSocketAddress) remoteAddress));
+					            resolveHostHeaderValue(remoteAddress));
 				}
 
 				if (!headers.contains(HttpHeaderNames.ACCEPT)) {
@@ -464,10 +464,11 @@ class HttpClientConnect extends HttpClient {
 			}
 		}
 
-		static String resolveHostHeaderValue(@Nullable InetSocketAddress remoteAddress) {
-			if (remoteAddress != null) {
-				String host = HttpUtil.formatHostnameForHttp(remoteAddress);
-				int port = remoteAddress.getPort();
+		static String resolveHostHeaderValue(@Nullable SocketAddress remoteAddress) {
+			if (remoteAddress instanceof InetSocketAddress) {
+				InetSocketAddress address = (InetSocketAddress) remoteAddress;
+				String host = HttpUtil.formatHostnameForHttp(address);
+				int port = address.getPort();
 				if (port != 80 && port != 443) {
 					host = host + ':' + port;
 				}
