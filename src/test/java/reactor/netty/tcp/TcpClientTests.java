@@ -63,6 +63,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.retry.Retry;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -339,18 +340,18 @@ public class TcpClientTests {
 		client.handle((in, out) -> Mono.never())
 		         .wiretap(true)
 		         .connect()
-		         .retryWhen(errors -> errors.zipWith(Flux.range(1, 4), (a, b) -> b)
+		         .retryWhen(Retry.from(errors -> errors
 		                                    .flatMap(attempt -> {
-			                                    switch (attempt) {
-				                                    case 1:
+			                                    switch ((int) attempt.totalRetries()) {
+				                                    case 0:
 					                                    totalDelay.addAndGet(100);
 					                                    return Mono.delay(Duration
 							                                    .ofMillis(100));
-				                                    case 2:
+				                                    case 1:
 					                                    totalDelay.addAndGet(500);
 					                                    return Mono.delay(Duration
 							                                    .ofMillis(500));
-				                                    case 3:
+				                                    case 2:
 					                                    totalDelay.addAndGet(1000);
 					                                    return Mono.delay(Duration
 							                                    .ofSeconds(1));
@@ -358,7 +359,7 @@ public class TcpClientTests {
 					                                    latch.countDown();
 					                                    return Mono.<Long>empty();
 			                                    }
-		                                    }))
+		                                    })))
 		         .subscribe(System.out::println);
 
 		assertTrue(latch.await(5, TimeUnit.SECONDS));
