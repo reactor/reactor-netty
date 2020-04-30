@@ -306,22 +306,24 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
+	@Nullable
 	public InetSocketAddress hostAddress() {
 		if (connectionInfo != null) {
 			return this.connectionInfo.getHostAddress();
 		}
 		else {
-			throw new UnsupportedOperationException();
+			return null;
 		}
 	}
 
 	@Override
+	@Nullable
 	public InetSocketAddress remoteAddress() {
 		if (connectionInfo != null) {
 			return this.connectionInfo.getRemoteAddress();
 		}
 		else {
-			throw new UnsupportedOperationException();
+			return null;
 		}
 	}
 

@@ -1680,7 +1680,10 @@ public class HttpServerTests {
 				              req.withConnection(conn -> {
 				                  assertThat(conn.channel().localAddress()).isNull();
 				                  assertThat(conn.channel().remoteAddress()).isNull();
+				                  assertThat(req.hostAddress()).isNull();
+				                  assertThat(req.remoteAddress()).isNull();
 				              });
+				              assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
 				              return res.send(req.receive().retain());
 				          })
 				          .bindNow();
