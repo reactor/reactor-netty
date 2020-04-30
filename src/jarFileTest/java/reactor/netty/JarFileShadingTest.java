@@ -72,11 +72,6 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 				.replace("reactor-netty-", "")
 				.replace("-original.jar", "")
 				.replace(".jar", "");
-		//for the case where there is a customVersion. OSGI only want 4 components to the version,
-		//so BND would simply remove the 4th dot between customVersion and RELEASE/BUILD-SNAPSHOT.
-		String osgiVersion = Arrays.stream(version.split("\\.", 4))
-		                           .map(comp -> comp.replace(".", ""))
-		                           .collect(Collectors.joining("."));
 
 		try (InputStream inputStream = jar.getInputStream(manifest);
 		     BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))) {
@@ -91,16 +86,6 @@ public class JarFileShadingTest extends AbstractJarFileTest {
 							"Implementation-Title: reactor-netty",
 							"Implementation-Version: " + version,
 							"Automatic-Module-Name: reactor.netty"
-					);
-			assertThat(lines)
-					.as("OSGI content")
-					.contains(
-							"Bundle-Name: reactor-netty",
-							"Bundle-SymbolicName: io.projectreactor.netty.reactor-netty",
-							"Import-Package: ", //only assert the section is there
-							"Require-Capability:",
-							"Export-Package:", //only assert the section is there
-							"Bundle-Version: " + osgiVersion
 					);
 		}
 		catch (IOException ioe) {
