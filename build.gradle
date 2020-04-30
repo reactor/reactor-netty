@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import aQute.bnd.gradle.BundleTaskConvention
 import me.champeau.gradle.japicmp.JapicmpTask
 
 buildscript {
@@ -22,8 +21,7 @@ buildscript {
   }
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
-			'com.google.gradle:osdetector-gradle-plugin:1.4.0',
-			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0'
+			'com.google.gradle:osdetector-gradle-plugin:1.4.0'
   }
 }
 
@@ -86,13 +84,6 @@ ext {
 				  "https://projectreactor.io/docs/core/release/api/",
 				  "https://netty.io/4.1/api/",
 				  "https://projectreactor.io/docs/netty/release/api/",] as String[]
-
-	bndOptions = [
-			"Export-Package": "!reactor.netty.internal*,reactor.netty.*;-noimport:=true",
-			"Import-Package": '!javax.annotation,io.netty.channel.kqueue;resolution:=optional;version="[4.1,5)",io.netty.handler.codec.haproxy;resolution:=optional;version="[4.1,5)",io.micrometer.*;resolution:=optional,*',
-			"Bundle-Name" : "reactor-netty",
-			"Bundle-SymbolicName" : "io.projectreactor.netty.reactor-netty"
-	]
 }
 
 
@@ -104,7 +95,6 @@ configure(rootProject) { project ->
   apply from: "$gradleScriptDir/releaser.gradle"
   apply from: "$gradleScriptDir/setup.gradle"
   apply plugin: 'propdeps'
-  apply plugin: "biz.aQute.bnd.builder"
   apply from: "${gradleScriptDir}/errorprone.gradle"
   apply plugin: 'com.google.osdetector'
   apply plugin: 'idea'
@@ -323,7 +313,6 @@ configure(rootProject) { project ->
 			  "Implementation-Version": project.version,
 			  "Automatic-Module-Name": "reactor.netty")
 	}
-	bnd(bndOptions)
   }
 
   task downloadBaseline(type: Download) {
@@ -371,14 +360,6 @@ configure(rootProject) { project ->
   check.dependsOn jacocoTestReport
 
   shadowJar {
-	  configure {
-		  it.convention.plugins.bundle = new BundleTaskConvention(it)
-		  doLast {
-			  buildBundle()
-		  }
-	  }
-	  bnd(bndOptions)
-
 	  classifier = null
 
 	  dependsOn(project.tasks.jar)
