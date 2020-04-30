@@ -17,6 +17,7 @@
 package reactor.netty.http.server;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -305,22 +306,22 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public SocketAddress hostAddress() {
+	public InetSocketAddress hostAddress() {
 		if (connectionInfo != null) {
 			return this.connectionInfo.getHostAddress();
 		}
 		else {
-			return channel().localAddress();
+			throw new UnsupportedOperationException();
 		}
 	}
 
 	@Override
-	public SocketAddress remoteAddress() {
+	public InetSocketAddress remoteAddress() {
 		if (connectionInfo != null) {
 			return this.connectionInfo.getRemoteAddress();
 		}
 		else {
-			return channel().remoteAddress();
+			throw new UnsupportedOperationException();
 		}
 	}
 

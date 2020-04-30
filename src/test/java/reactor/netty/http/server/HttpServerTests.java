@@ -1676,7 +1676,13 @@ public class HttpServerTests {
 				HttpServer.create()
 				          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
 				          .wiretap(true)
-				          .handle((in, out) -> out.send(in.receive().retain()))
+				          .handle((req, res) -> {
+				              req.withConnection(conn -> {
+				                  assertThat(conn.channel().localAddress()).isNull();
+				                  assertThat(conn.channel().remoteAddress()).isNull();
+				              });
+				              return res.send(req.receive().retain());
+				          })
 				          .bindNow();
 
 		String response =

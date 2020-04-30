@@ -67,9 +67,9 @@ public class ConnectionInfoTests {
 		testClientRequest(
 				clientRequestHeaders -> {},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString())
+					Assertions.assertThat(serverRequest.hostAddress().getHostString())
 					          .containsPattern("^0:0:0:0:0:0:0:1(%\\w*)?|127.0.0.1$");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -78,8 +78,8 @@ public class ConnectionInfoTests {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=192.168.0.1"),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -88,8 +88,8 @@ public class ConnectionInfoTests {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=[1abc:2abc:3abc::5ABC:6abc]"),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -99,8 +99,8 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-For",
 						"[1abc:2abc:3abc::5ABC:6abc]:8080, 192.168.0.1"),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isEqualTo(8080);
 				});
 	}
 
@@ -110,8 +110,8 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("X-Forwarded-Host",
 						"[1abc:2abc:3abc::5ABC:6abc], 192.168.0.1"),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("1abc:2abc:3abc:0:0:0:5abc:6abc");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -123,8 +123,8 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Port", "8080");
 				},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 				});
 	}
 
@@ -140,8 +140,8 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Proto", "https");
 				},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
 	}
@@ -154,8 +154,8 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Port", "");
 				},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 				},
 				httpClient -> httpClient,
 				httpServer -> httpServer.port(8080),
@@ -170,8 +170,8 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Port", "test");
 				},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 				},
 				httpClient -> httpClient,
 				httpServer -> httpServer.port(8080),
@@ -187,9 +187,9 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Port", "8080");
 				},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getHostString()).isEqualTo("192.168.0.1") ;
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1") ;
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 				});
 	}
 
@@ -203,9 +203,9 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Proto", "http");
 				},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
 	}
@@ -220,9 +220,9 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("X-Forwarded-Proto", "http,https");
 				},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getHostString()).isEqualTo("192.168.0.1");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(8080);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.168.0.1");
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(8080);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
 	}
@@ -233,7 +233,7 @@ public class ConnectionInfoTests {
 		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
 
 		Consumer<HttpServerRequest> requestConsumer = serverRequest -> {
-			String remoteAddrFromRequest = ((InetSocketAddress) serverRequest.remoteAddress()).getHostString();
+			String remoteAddrFromRequest = serverRequest.remoteAddress().getHostString();
 			resultQueue.add(remoteAddrFromRequest);
 		};
 
@@ -300,7 +300,7 @@ public class ConnectionInfoTests {
 		ArrayBlockingQueue<String> resultQueue = new ArrayBlockingQueue<>(1);
 
 		Consumer<HttpServerRequest> requestConsumer = serverRequest -> {
-			String remoteAddrFromRequest = ((InetSocketAddress) serverRequest.remoteAddress()).getHostString();
+			String remoteAddrFromRequest = serverRequest.remoteAddress().getHostString();
 			resultQueue.add(remoteAddrFromRequest);
 		};
 
@@ -408,8 +408,8 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"host=a.example.com,host=b.example.com, host=c.example.com"),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(this.connection.port());
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(this.connection.port());
 				});
 	}
 
@@ -418,8 +418,8 @@ public class ConnectionInfoTests {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "host=a.example.com:443;proto=https"),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(443);
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(443);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
 				});
 	}
@@ -430,8 +430,8 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"host=\"a.example.com:443\";proto=\"https\""),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(443);
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(443);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
 				});
 	}
@@ -444,8 +444,8 @@ public class ConnectionInfoTests {
 					clientRequestHeaders.add("Forwarded", "host=b.example.com");
 				},
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getHostString()).isEqualTo("a.example.com");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.hostAddress()).getPort()).isEqualTo(443);
+					Assertions.assertThat(serverRequest.hostAddress().getHostString()).isEqualTo("a.example.com");
+					Assertions.assertThat(serverRequest.hostAddress().getPort()).isEqualTo(443);
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("https");
 				});
 	}
@@ -455,8 +455,8 @@ public class ConnectionInfoTests {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "for=\"_gazonk\""),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getHostString()).isEqualTo("_gazonk");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getPort()).isPositive();
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("_gazonk");
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isPositive();
 				});
 	}
 
@@ -466,8 +466,8 @@ public class ConnectionInfoTests {
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded",
 						"for=192.0.2.60;proto=http;by=203.0.113.43"),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getHostString()).isEqualTo("192.0.2.60");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getPort()).isPositive();
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("192.0.2.60");
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isPositive();
 					Assertions.assertThat(serverRequest.scheme()).isEqualTo("http");
 				});
 	}
@@ -477,8 +477,8 @@ public class ConnectionInfoTests {
 		testClientRequest(
 				clientRequestHeaders -> clientRequestHeaders.add("Forwarded", "for=\"[2001:db8:cafe::17]:4711\""),
 				serverRequest -> {
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getHostString()).isEqualTo("2001:db8:cafe:0:0:0:0:17");
-					Assertions.assertThat(((InetSocketAddress) serverRequest.remoteAddress()).getPort()).isEqualTo(4711);
+					Assertions.assertThat(serverRequest.remoteAddress().getHostString()).isEqualTo("2001:db8:cafe:0:0:0:0:17");
+					Assertions.assertThat(serverRequest.remoteAddress().getPort()).isEqualTo(4711);
 				});
 	}
 
