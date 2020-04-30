@@ -56,6 +56,7 @@ import reactor.netty.tcp.SslProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.context.Context;
+import reactor.util.retry.Retry;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -190,7 +191,7 @@ class HttpClientConnect extends HttpClient {
 						.acquire(_config, observer, handler, resolver)
 						.subscribe(new ClientTransportSubscriber(sink));
 
-			}).retry(handler)
+			}).retryWhen(Retry.indefinitely().filter(handler))
 			  .subscribe(actual);
 		}
 
