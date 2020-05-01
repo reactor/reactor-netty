@@ -13,7 +13,7 @@ jobs:
         transport: [native, nio]
         exclude:
           # excludes native on Windows (there's none)
-          - os: windows-latest
+          - os: windows-2019
             transport: native
 
     steps:
