@@ -27,7 +27,6 @@ import reactor.pool.InstrumentedPool;
 import reactor.pool.Pool;
 import reactor.pool.PoolBuilder;
 import reactor.util.Metrics;
-import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
@@ -173,7 +172,7 @@ public interface ConnectionProvider extends Disposable {
 			@Nullable AddressResolverGroup<?> resolverGroup);
 
 
-	default void disposeWhen(@NonNull SocketAddress address) {
+	default void disposeWhen(SocketAddress address) {
 	}
 
 	/**

@@ -33,7 +33,6 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.TransportConfig;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -172,7 +171,7 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	@Override
-	public void disposeWhen(@NonNull SocketAddress address) {
+	public void disposeWhen(SocketAddress address) {
 		defaultProvider.disposeWhen(address);
 	}
 

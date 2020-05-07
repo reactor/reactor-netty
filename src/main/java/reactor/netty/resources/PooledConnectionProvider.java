@@ -60,7 +60,6 @@ import reactor.pool.PooledRef;
 import reactor.pool.PooledRefMetadata;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
@@ -89,7 +88,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 	}
 
 	@Override
-	public void disposeWhen(@NonNull SocketAddress address) {
+	public void disposeWhen(SocketAddress address) {
 		List<Map.Entry<PoolKey, InstrumentedPool<PooledConnection>>> toDispose;
 
 		toDispose = channelPools.entrySet()
