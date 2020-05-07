@@ -25,8 +25,8 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
 import reactor.netty.channel.ChannelOperations;
+import reactor.util.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.function.Function;
 

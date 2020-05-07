@@ -25,8 +25,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.util.AttributeKey;
 import reactor.netty.transport.AddressUtils;
-
-import javax.annotation.Nullable;
+import reactor.util.annotation.Nullable;
 
 /**
  * Consumes {@link io.netty.handler.codec.haproxy.HAProxyMessage}

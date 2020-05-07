@@ -33,8 +33,7 @@ import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableServer;
-
-import javax.annotation.Nullable;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 

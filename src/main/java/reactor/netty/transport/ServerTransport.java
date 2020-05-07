@@ -53,9 +53,8 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
-
-import javax.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 

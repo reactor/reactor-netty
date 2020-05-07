@@ -18,10 +18,10 @@ package reactor.netty.http.client;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import javax.annotation.Nullable;
 
 import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
+import reactor.util.annotation.Nullable;
 
 /**
  * An HTTP Form builder

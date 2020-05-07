@@ -20,7 +20,6 @@ import java.net.SocketAddress;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.function.BiPredicate;
-import javax.annotation.Nullable;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
@@ -42,6 +41,7 @@ import io.netty.util.ReferenceCountUtil;
 import reactor.core.Exceptions;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
 import static io.netty.handler.codec.http.HttpUtil.*;

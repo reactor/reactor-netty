@@ -22,8 +22,8 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import reactor.netty.NettyPipeline;
+import reactor.util.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 

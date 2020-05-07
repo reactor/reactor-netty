@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
@@ -35,6 +34,7 @@ import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.proxy.Socks4ProxyHandler;
 import io.netty.handler.proxy.Socks5ProxyHandler;
 import reactor.netty.NettyPipeline;
+import reactor.util.annotation.Nullable;
 
 /**
  * Proxy configuration

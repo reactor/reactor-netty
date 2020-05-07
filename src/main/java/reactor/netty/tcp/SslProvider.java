@@ -21,7 +21,6 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Consumer;
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import io.netty.channel.Channel;
@@ -46,6 +45,7 @@ import reactor.netty.channel.ChannelMetricsHandler;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.Metrics.ERROR;
 import static reactor.netty.Metrics.SUCCESS;

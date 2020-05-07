@@ -15,13 +15,13 @@
  */
 package reactor.netty;
 
-import javax.annotation.Nullable;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
+
 /**
  * Hold contextual information for the underlying {@link Channel}
  *

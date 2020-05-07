@@ -17,9 +17,8 @@
 package reactor.netty.http.client;
 
 import reactor.netty.http.HttpInfos;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
-
-import javax.annotation.Nullable;
 
 /**
  * @since 0.9.3

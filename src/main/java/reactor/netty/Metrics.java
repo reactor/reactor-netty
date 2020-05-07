@@ -16,8 +16,8 @@
 package reactor.netty;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import reactor.util.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 

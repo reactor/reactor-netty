@@ -25,7 +25,6 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import javax.annotation.Nullable;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -55,6 +54,7 @@ import reactor.netty.transport.ProxyProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 import reactor.util.retry.Retry;
 

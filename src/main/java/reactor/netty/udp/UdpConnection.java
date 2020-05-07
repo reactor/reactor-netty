@@ -17,10 +17,10 @@ package reactor.netty.udp;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 /**
  * @author Stephane Maldini

@@ -34,8 +34,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.Metrics;
-
-import javax.annotation.Nullable;
+import reactor.util.annotation.Nullable;
 
 /**
  * An immutable transport builder for clients and servers.

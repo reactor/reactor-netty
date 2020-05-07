@@ -28,8 +28,8 @@ import reactor.pool.Pool;
 import reactor.pool.PoolBuilder;
 import reactor.util.Metrics;
 import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.HashMap;

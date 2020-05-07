@@ -18,7 +18,6 @@ package reactor.netty.http.server;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -30,7 +29,6 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -78,6 +76,7 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;

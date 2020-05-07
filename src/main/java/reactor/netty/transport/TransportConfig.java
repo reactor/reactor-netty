@@ -42,8 +42,7 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import javax.annotation.Nullable;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 

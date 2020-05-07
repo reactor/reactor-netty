@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
-import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http.HttpContent;
@@ -38,6 +37,7 @@ import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.handler.stream.ChunkedInput;
 import reactor.core.Exceptions;
 import reactor.core.publisher.DirectProcessor;
+import reactor.util.annotation.Nullable;
 
 /**
  * Modified {@link io.netty.handler.codec.http.multipart.HttpPostRequestEncoder} for

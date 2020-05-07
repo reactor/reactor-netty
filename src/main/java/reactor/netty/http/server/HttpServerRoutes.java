@@ -24,7 +24,6 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import javax.annotation.Nullable;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -33,6 +32,7 @@ import org.reactivestreams.Publisher;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
+import reactor.util.annotation.Nullable;
 
 /**
  * Server routes are unique and only the first matching in order of declaration will be

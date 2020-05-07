@@ -33,8 +33,7 @@ import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.resources.ConnectionProvider;
-
-import javax.annotation.Nullable;
+import reactor.util.annotation.Nullable;
 
 /**
  * Encapsulate all necessary configuration for client transport. The public API is read-only.

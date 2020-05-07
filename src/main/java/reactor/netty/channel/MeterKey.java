@@ -15,7 +15,8 @@
  */
 package reactor.netty.channel;
 
-import javax.annotation.Nullable;
+import reactor.util.annotation.Nullable;
+
 import java.util.Objects;
 
 /**

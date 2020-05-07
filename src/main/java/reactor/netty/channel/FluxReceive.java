@@ -20,7 +20,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -35,6 +34,7 @@ import reactor.core.publisher.Operators;
 import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 
 import static reactor.netty.ReactorNetty.format;

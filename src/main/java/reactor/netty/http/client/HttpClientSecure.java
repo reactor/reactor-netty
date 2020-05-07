@@ -16,7 +16,6 @@
 package reactor.netty.http.client;
 
 import java.util.function.Consumer;
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
@@ -28,6 +27,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.netty.tcp.SslProvider;
+import reactor.util.annotation.Nullable;
 
 /**
  * Initializes the default {@link SslProvider} for the HTTP client.

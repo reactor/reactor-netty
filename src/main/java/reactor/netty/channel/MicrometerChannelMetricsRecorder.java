@@ -21,8 +21,8 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.noop.NoopMeter;
 import io.netty.util.internal.PlatformDependent;
+import reactor.util.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.ConcurrentMap;

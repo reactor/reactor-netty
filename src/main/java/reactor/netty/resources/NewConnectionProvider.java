@@ -41,9 +41,8 @@ import reactor.netty.transport.TransportConfig;
 import reactor.netty.transport.TransportConnector;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
-
-import javax.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 

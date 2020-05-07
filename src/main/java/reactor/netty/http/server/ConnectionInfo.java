@@ -26,8 +26,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import reactor.netty.transport.AddressUtils;
 import reactor.util.Logger;
 import reactor.util.Loggers;
-
-import javax.annotation.Nullable;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 

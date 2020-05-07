@@ -32,8 +32,8 @@ import reactor.netty.channel.ChannelOperations;
 import reactor.netty.channel.MicrometerChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.TransportConfig;
+import reactor.util.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.function.Consumer;

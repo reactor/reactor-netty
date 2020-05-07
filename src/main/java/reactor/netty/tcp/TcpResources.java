@@ -21,7 +21,6 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
-import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
@@ -35,6 +34,7 @@ import reactor.netty.transport.TransportConfig;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 
 /**
  * Hold the default Tcp resources

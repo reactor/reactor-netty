@@ -23,10 +23,10 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.function.Supplier;
-import javax.annotation.Nullable;
 
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.NetUtil;
+import reactor.util.annotation.Nullable;
 
 /**
  * Internal class that creates unresolved or resolved InetSocketAddress instances

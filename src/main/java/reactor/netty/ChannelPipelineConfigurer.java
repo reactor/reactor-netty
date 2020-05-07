@@ -16,8 +16,8 @@
 package reactor.netty;
 
 import io.netty.channel.Channel;
+import reactor.util.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 
 import static reactor.netty.ReactorNetty.CompositeChannelPipelineConfigurer.compositeChannelPipelineConfigurer;

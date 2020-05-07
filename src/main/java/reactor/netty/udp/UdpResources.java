@@ -19,7 +19,6 @@ package reactor.netty.udp;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
@@ -29,6 +28,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 /**
  * Hold the default UDP resources

@@ -20,7 +20,6 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -28,6 +27,7 @@ import reactor.core.publisher.Flux;
 import reactor.netty.Connection;
 import reactor.netty.NettyInbound;
 import reactor.netty.http.HttpInfos;
+import reactor.util.annotation.Nullable;
 
 /**
  * An Http Reactive Channel with several accessors related to HTTP flow: headers, params,

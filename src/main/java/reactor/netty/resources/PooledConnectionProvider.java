@@ -32,7 +32,6 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -62,6 +61,7 @@ import reactor.pool.PooledRefMetadata;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.NonNull;
+import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 

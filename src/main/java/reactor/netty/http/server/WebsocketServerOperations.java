@@ -17,7 +17,6 @@
 package reactor.netty.http.server;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -47,6 +46,7 @@ import reactor.netty.ReactorNetty;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 

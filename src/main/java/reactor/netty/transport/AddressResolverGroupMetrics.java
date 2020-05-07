@@ -21,8 +21,8 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.util.annotation.Nullable;
 
-import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.List;

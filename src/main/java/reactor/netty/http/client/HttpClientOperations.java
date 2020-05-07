@@ -27,7 +27,6 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -81,6 +80,7 @@ import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 

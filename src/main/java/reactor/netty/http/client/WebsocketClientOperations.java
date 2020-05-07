@@ -200,12 +200,12 @@ final class WebsocketClientOperations extends HttpClientOperations
 	}
 
 	@Override
-	public Mono<Void> sendClose(int statusCode, @javax.annotation.Nullable String reasonText) {
+	public Mono<Void> sendClose(int statusCode, @Nullable String reasonText) {
 		return sendClose(new CloseWebSocketFrame(statusCode, reasonText));
 	}
 
 	@Override
-	public Mono<Void> sendClose(int rsv, int statusCode, @javax.annotation.Nullable String reasonText) {
+	public Mono<Void> sendClose(int rsv, int statusCode, @Nullable String reasonText) {
 		return sendClose(new CloseWebSocketFrame(true, rsv, statusCode, reasonText));
 	}
 

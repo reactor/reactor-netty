@@ -22,7 +22,6 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -52,6 +51,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.transport.ClientTransport;
 import reactor.util.Metrics;
+import reactor.util.annotation.Nullable;
 
 /**
  * An HttpClient allows to build in a safe immutable way an http client that is

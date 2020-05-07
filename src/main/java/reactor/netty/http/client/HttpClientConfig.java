@@ -26,7 +26,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import javax.annotation.Nullable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
@@ -58,6 +57,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ClientTransportConfig;
+import reactor.util.annotation.Nullable;
 
 /**
  * Encapsulate all necessary configuration for HTTP client transport. The public API is read-only.
