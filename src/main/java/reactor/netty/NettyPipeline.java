@@ -27,51 +27,86 @@ import io.netty.channel.ChannelInboundHandler;
  * Order of placement :
  * <p>
  * {@code
- * -> proxy ? [ProxyHandler]
- * -> ssl ? [SslHandler]
- * -> ssl & trace log ? [SslLoggingHandler]
- * -> ssl ? [SslReader]
+ * Clients:
+ * -> proxy log ? [ProxyLoggingHandler]
+ * -> proxy handler ? [ProxyHandler]
+ * -> ssl log ? [SslLoggingHandler]
+ * -> ssl handler ? [SslHandler]
  * -> log ? [LoggingHandler]
- * -> http ? [HttpCodecHandler]
- * -> http ws ? [HttpAggregator]
- * -> http server  ? [HttpTrafficHandler]
+ * -> ssl reader ? [SslReader]
+ * -> channel metrics ? [ChannelMetricsHandler]
+ * -> connect metrics ? [ConnectMetricsHandler]
+ * -> http/1.1 codec ? [HttpCodec]
+ * -> http/1.1 decompressor ? [HttpDecompressor]
+ * -> http metrics ? [HttpMetricsHandler]
+ * -> http form/multipart/send file ? [ChunkedWriter]
+ * -> http aggregator (websocket) ? [HttpAggregator]
+ * -> websocket compression ? [WsCompressionHandler]
+ * -> websocket frame aggregator ? [WsFrameAggregator]
  * -> onWriteIdle ? [OnChannelWriteIdle]
  * -> onReadIdle ? [OnChannelReadIdle]
- * -> http form/multipart ? [ChunkedWriter]
+ * => [ReactiveBridge]
+ *
+ * Servers:
+ * -> proxy protocol decoder ? [ProxyProtocolDecoder]
+ * -> proxy protocol reader ? [ProxyProtocolReader]
+ * -> ssl log ? [SslLoggingHandler]
+ * -> ssl handler ? [SslHandler]
+ * -> log ? [LoggingHandler]
+ * -> ssl reader ? [SslReader]
+ * -> channel metrics ? [ChannelMetricsHandler]
+ * -> h2c upgrade handler ? [H2CUpgradeHandler]
+ * -> http codec ? [HttpCodec]
+ * -> h2 multiplex handler ? [H2MultiplexHandler]
+ * -> http access log ? [AccessLogHandler]
+ * -> http/1.1 compression ? [CompressionHandler]
+ * -> h2 to http/1.1 codec ? [H2ToHttp11Codec]
+ * -> http traffic handler ? [HttpTrafficHandler]
+ * -> http metrics ? [HttpMetricsHandler]
+ * -> http send file ? [ChunkedWriter]
+ * -> websocket compression ? [WsCompressionHandler]
+ * -> websocket frame aggregator ? [WsFrameAggregator]
+ * -> onWriteIdle ? [OnChannelWriteIdle]
+ * -> onReadIdle ? [OnChannelReadIdle]
  * => [ReactiveBridge]
  * }
  *
  * @author Stephane Maldini
+ * @author Violeta Georgieva
  * @since 0.6
  */
 public interface NettyPipeline {
 
-	String LEFT = "reactor.left.";
-	String RIGHT = "reactor.right.";
+	String LEFT                  = "reactor.left.";
+	String RIGHT                 = "reactor.right.";
 
-	String SslHandler         = LEFT + "sslHandler";
-	String SslReader          = LEFT + "sslReader";
-	String SslLoggingHandler  = LEFT + "sslLoggingHandler";
-	String ProxyHandler       = LEFT + "proxyHandler";
-	String ProxyLoggingHandler= LEFT + "proxyLoggingHandler";
-	String ReactiveBridge     = RIGHT + "reactiveBridge";
-	String HttpCodec          = LEFT + "httpCodec";
-	String HttpDecompressor   = LEFT + "decompressor";
-	String HttpAggregator     = LEFT + "httpAggregator";
-	String HttpTrafficHandler = LEFT + "httpTrafficHandler";
-	String H2CUpgradeHandler  = LEFT + "h2cUpgradeHandler";
-	String AccessLogHandler   = LEFT + "accessLogHandler";
-	String OnChannelWriteIdle = LEFT + "onChannelWriteIdle";
-	String OnChannelReadIdle  = LEFT + "onChannelReadIdle";
-	String ChunkedWriter      = LEFT + "chunkedWriter";
-	String LoggingHandler     = LEFT + "loggingHandler";
-	String CompressionHandler = LEFT + "compressionHandler";
-	String HttpMetricsHandler = LEFT + "httpMetricsHandler";
+	String AccessLogHandler      = LEFT + "accessLogHandler";
 	String ChannelMetricsHandler = LEFT + "channelMetricsHandler";
+	String ChunkedWriter         = LEFT + "chunkedWriter";
+	String CompressionHandler    = LEFT + "compressionHandler";
 	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";
-	String WsCompressionHandler = LEFT + "wsCompressionHandler";
-	String ProxyProtocolDecoder = LEFT + "proxyProtocolDecoder";
-	String ProxyProtocolReader  = LEFT + "proxyProtocolReader";
+	String H2CUpgradeHandler     = LEFT + "h2cUpgradeHandler";
+	String H2MultiplexHandler    = LEFT + "h2MultiplexHandler";
+	String H2ToHttp11Codec       = LEFT + "h2ToHttp11Codec";
+	String HttpAggregator        = LEFT + "httpAggregator";
+	String HttpCodec             = LEFT + "httpCodec";
+	String HttpDecompressor      = LEFT + "httpDecompressor";
+	String HttpMetricsHandler    = LEFT + "httpMetricsHandler";
+	String HttpTrafficHandler    = LEFT + "httpTrafficHandler";
+	String LoggingHandler        = LEFT + "loggingHandler";
+	String OnChannelReadIdle     = LEFT + "onChannelReadIdle";
+	String OnChannelWriteIdle    = LEFT + "onChannelWriteIdle";
+	String ProxyHandler          = LEFT + "proxyHandler";
+	String ProxyLoggingHandler   = LEFT + "proxyLoggingHandler";
+	String ProxyProtocolDecoder  = LEFT + "proxyProtocolDecoder";
+	String ProxyProtocolReader   = LEFT + "proxyProtocolReader";
+	String SslHandler            = LEFT + "sslHandler";
+	String SslLoggingHandler     = LEFT + "sslLoggingHandler";
+	String SslReader             = LEFT + "sslReader";
+	String WsCompressionHandler  = LEFT + "wsCompressionHandler";
+	String WsFrameAggregator     = LEFT + "wsFrameAggregator";
+
+	String ReactiveBridge        = RIGHT + "reactiveBridge";
 
 	/**
 	 * Create a new {@link ChannelInboundHandler} that will invoke
@@ -79,7 +114,6 @@ public interface NettyPipeline {
 	 * {@link ChannelInboundHandler#channelRead(ChannelHandlerContext, Object)}.
 	 *
 	 * @param handler the channel-read callback
-	 *
 	 * @return a marking event used when a netty connector handler terminates
 	 */
 	static ChannelInboundHandler inboundHandler(BiConsumer<? super ChannelHandlerContext, Object> handler) {

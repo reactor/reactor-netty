@@ -259,8 +259,9 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			  .addLast(NettyPipeline.AccessLogHandler, new AccessLogHandlerH2());
 		}
 		ch.pipeline()
-		  .addLast(new Http2StreamFrameToHttpObjectCodec(true))
-		  .addLast(new Http2StreamBridgeHandler(listener, readForwardHeaders, encoder, decoder));
+		  .addLast(NettyPipeline.H2ToHttp11Codec, new Http2StreamFrameToHttpObjectCodec(true))
+		  .addLast(NettyPipeline.HttpTrafficHandler,
+		           new Http2StreamBridgeHandler(listener, readForwardHeaders, encoder, decoder));
 
 		ChannelOperations.addReactiveBridge(ch, opsFactory, listener);
 
@@ -321,7 +322,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 
 		p.addLast(NettyPipeline.HttpCodec, http2FrameCodecBuilder.build())
-		 .addLast(new Http2MultiplexHandler(new H2Codec(opsFactory, listener, forwarded, cookieEncoder, cookieDecoder)));
+		 .addLast(NettyPipeline.H2MultiplexHandler,
+		          new Http2MultiplexHandler(new H2Codec(opsFactory, listener, forwarded, cookieEncoder, cookieDecoder)));
 	}
 
 	static void configureHttp11OrH2CleartextPipeline(ChannelPipeline p,
@@ -472,7 +474,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		public void handlerAdded(ChannelHandlerContext ctx) {
 			ChannelPipeline pipeline = ctx.pipeline();
 			pipeline.addAfter(ctx.name(), NettyPipeline.HttpCodec, upgrader.http2FrameCodec)
-			        .addAfter(NettyPipeline.HttpCodec, null, new Http2MultiplexHandler(upgrader))
+			        .addAfter(NettyPipeline.HttpCodec, NettyPipeline.H2MultiplexHandler, new Http2MultiplexHandler(upgrader))
 			        .remove(this);
 			if (pipeline.get(NettyPipeline.AccessLogHandler) != null){
 				pipeline.remove(NettyPipeline.AccessLogHandler);
@@ -504,6 +506,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		@Override
 		protected void initChannel(Channel ch) {
+			ch.pipeline().remove(this);
 			addStreamHandlers(ch, opsFactory, listener, forwarded, cookieEncoder, cookieDecoder);
 		}
 	}
@@ -550,6 +553,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		 */
 		@Override
 		protected void initChannel(Channel ch) {
+			ch.pipeline().remove(this);
 			addStreamHandlers(ch, opsFactory, listener, forwarded, cookieEncoder, cookieDecoder);
 		}
 

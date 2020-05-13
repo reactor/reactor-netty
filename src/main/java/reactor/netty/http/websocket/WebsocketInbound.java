@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.NettyInbound;
+import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -77,7 +78,7 @@ public interface WebsocketInbound extends NettyInbound {
 	 * @return this inbound
 	 */
 	default WebsocketInbound aggregateFrames(int maxContentLength) {
-		withConnection(c -> c.addHandlerLast(new WebSocketFrameAggregator(maxContentLength)));
+		withConnection(c -> c.addHandlerLast(NettyPipeline.WsFrameAggregator, new WebSocketFrameAggregator(maxContentLength)));
 		return this;
 	}
 

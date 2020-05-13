@@ -692,6 +692,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		if (markSentHeaders()) {
 			// Returned value is deliberately ignored
 			addHandlerFirst(NettyPipeline.HttpAggregator, new HttpObjectAggregator(8192));
+			removeHandler(NettyPipeline.HttpMetricsHandler);
 
 			if (websocketClientSpec.compress()) {
 				requestHeaders().remove(HttpHeaderNames.ACCEPT_ENCODING);
