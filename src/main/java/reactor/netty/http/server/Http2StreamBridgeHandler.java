@@ -63,7 +63,7 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) {
 		if (secured == null) {
-			secured = ctx.channel().pipeline().get(SslHandler.class) != null;
+			secured = ctx.channel().parent().pipeline().get(SslHandler.class) != null;
 		}
 		if (remoteAddress == null) {
 			remoteAddress =
