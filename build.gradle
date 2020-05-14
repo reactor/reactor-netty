@@ -58,7 +58,7 @@ ext {
   logbackVersion = '1.2.3'
 
   // Netty
-  nettyDefaultVersion = '4.1.49.Final'
+  nettyDefaultVersion = '4.1.50.Final'
   if (!project.hasProperty("forceNettyVersion")) {
 	nettyVersion = nettyDefaultVersion
   }
@@ -74,7 +74,7 @@ ext {
   assertJVersion = '3.15.0'
   hoverflyJavaVersion = '0.12.3'
   tomcatVersion = '9.0.31'
-  boringSslVersion = '2.0.29.Final'
+  boringSslVersion = '2.0.30.Final'
   junitVersion = '4.12'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
