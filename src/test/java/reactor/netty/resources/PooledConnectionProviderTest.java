@@ -48,6 +48,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -549,6 +550,7 @@ public class PooledConnectionProviderTest {
 	}
 
 	@Test
+	@Ignore
 	public void testSslEngineClosed() throws Exception {
 		DisposableServer server =
 				HttpServer.create()
