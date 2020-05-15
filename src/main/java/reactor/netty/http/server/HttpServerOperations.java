@@ -637,15 +637,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			WebsocketServerOperations
 					ops = new WebsocketServerOperations(url, protocols, maxFramePayloadLength, this);
 
-			if (rebind(ops)) {
-				return FutureMono.from(ops.handshakerResult)
-				                 .doOnEach(signal -> {
-				                 	if(!signal.hasError() && (protocols == null || ops.selectedSubprotocol() != null)) {
-					                    websocketHandler.apply(ops, ops)
-					                                    .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
-				                    }
-				                 });
-			}
+			return FutureMono.from(ops.handshakerResult)
+			                 .doOnEach(signal -> {
+			                     if(!signal.hasError() && (protocols == null || ops.selectedSubprotocol() != null)) {
+			                         websocketHandler.apply(ops, ops)
+			                                         .subscribe(new WebsocketSubscriber(ops, signal.getContext()));
+			                     }
+			                 });
 		}
 		else {
 			log.error(format(channel(), "Cannot enable websocket if headers have already been sent"));
