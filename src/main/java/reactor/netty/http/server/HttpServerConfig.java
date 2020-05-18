@@ -511,7 +511,6 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 	}
 
-	@ChannelHandler.Sharable
 	static final class Http11OrH2CleartextCodec extends ChannelInitializer<Channel>
 			implements HttpServerUpgradeHandler.UpgradeCodecFactory {
 
