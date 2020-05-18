@@ -244,7 +244,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		return get(channel()) instanceof WebsocketServerOperations;
 	}
 
-	boolean isHttp2() {
+	final boolean isHttp2() {
 		return requestHeaders().contains(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text());
 	}
 
