@@ -470,7 +470,13 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 				return;
 			}
 			if (msg instanceof FullHttpRequest) {
-				super.onInboundNext(ctx, msg);
+				FullHttpRequest request = (FullHttpRequest) msg;
+				if (request.content().readableBytes() > 0) {
+					super.onInboundNext(ctx, msg);
+				}
+				else {
+					request.release();
+				}
 				if (isHttp2()) {
 					//force auto read to enable more accurate close selection now inbound is done
 					channel().config().setAutoRead(true);

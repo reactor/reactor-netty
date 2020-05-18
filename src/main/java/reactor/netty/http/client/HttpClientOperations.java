@@ -548,7 +548,6 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				return;
 			}
 
-
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Received response (auto-read:{}) : {}"),
 						channel().config()
@@ -573,7 +572,13 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 
 			if (msg instanceof FullHttpResponse) {
-				super.onInboundNext(ctx, msg);
+				FullHttpResponse request = (FullHttpResponse) msg;
+				if (request.content().readableBytes() > 0) {
+					super.onInboundNext(ctx, msg);
+				}
+				else {
+					request.release();
+				}
 				terminate();
 			}
 			return;
