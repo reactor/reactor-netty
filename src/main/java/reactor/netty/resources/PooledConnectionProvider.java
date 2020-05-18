@@ -99,7 +99,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		toDispose.forEach(e -> {
 			if (channelPools.remove(e.getKey(), e.getValue())) {
 				if(log.isDebugEnabled()){
-					log.debug("Disposing pool for {}", e.getKey().fqdn);
+					log.debug("ConnectionProvider[name={}]: Disposing pool for [{}]", name, e.getKey().fqdn);
 				}
 				e.getValue().dispose();
 			}
