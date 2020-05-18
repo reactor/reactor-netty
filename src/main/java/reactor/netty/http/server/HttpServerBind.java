@@ -56,14 +56,17 @@ final class HttpServerBind extends HttpServer {
 	public Mono<? extends DisposableServer> bind() {
 		if (config.sslProvider != null) {
 			if (config.sslProvider.getDefaultConfigurationType() == null) {
+				HttpServer dup = duplicate();
+				HttpServerConfig _config = dup.configuration();
 				if ((config.protocols & HttpServerConfig.h2) == HttpServerConfig.h2) {
-					config.sslProvider = SslProvider.updateDefaultConfiguration(config.sslProvider,
+					_config.sslProvider = SslProvider.updateDefaultConfiguration(config.sslProvider,
 							SslProvider.DefaultConfigurationType.H2);
 				}
 				else {
-					config.sslProvider = SslProvider.updateDefaultConfiguration(config.sslProvider,
+					_config.sslProvider = SslProvider.updateDefaultConfiguration(config.sslProvider,
 							SslProvider.DefaultConfigurationType.TCP);
 				}
+				return dup.bind();
 			}
 			if ((configuration().protocols & HttpServerConfig.h2c) == HttpServerConfig.h2c) {
 				return Mono.error(new IllegalArgumentException(
