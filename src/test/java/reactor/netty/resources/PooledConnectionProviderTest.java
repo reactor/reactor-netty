@@ -693,14 +693,17 @@ public class PooledConnectionProviderTest {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public boolean trySuccess(Void result) {
 			boolean r;
 			if (closeCount.getAndDecrement() > 0) {
+				//"FutureReturnValueIgnored" this is deliberate
 				channel().close();
 				r = parent.trySuccess(result);
 			}
 			else {
 				r = parent.trySuccess(result);
+				//"FutureReturnValueIgnored" this is deliberate
 				channel().close();
 			}
 			return r;
