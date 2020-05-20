@@ -495,7 +495,12 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 			if (config.channelGroup != null) {
 				List<Mono<Void>> channels = new ArrayList<>();
 				// Wait for the running requests to finish
-				config.channelGroup.forEach(channel -> channels.add(Connection.from(channel).onTerminate()));
+				config.channelGroup.forEach(channel -> {
+					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+					if (ops != null) {
+						channels.add(ops.onTerminate());
+					}
+				});
 				if (!channels.isEmpty()) {
 					terminateSignals = Mono.when(channels);
 				}
