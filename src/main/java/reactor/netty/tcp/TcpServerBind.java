@@ -187,7 +187,12 @@ final class TcpServerBind extends TcpServer {
 			if (channelGroup != null) {
 				List<Mono<Void>> channels = new ArrayList<>();
 				// Wait for the running requests to finish
-				channelGroup.forEach(channel -> channels.add(Connection.from(channel).onTerminate()));
+				channelGroup.forEach(channel -> {
+					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
+					if (ops != null) {
+						channels.add(ops.onTerminate());
+					}
+				});
 				if (!channels.isEmpty()) {
 					terminateSignals = Mono.when(channels);
 				}
