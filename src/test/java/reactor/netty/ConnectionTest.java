@@ -16,6 +16,7 @@
 
 package reactor.netty;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
@@ -32,11 +33,15 @@ import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.Disposable;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoProcessor;
+import reactor.test.StepVerifier;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Simon Baslé
@@ -487,4 +492,27 @@ public class ConnectionTest {
 		                  .get("foo"), is(instanceOf(Utf8FrameValidator.class)));
 	}
 
+	@Test
+	public void testSenderUnavailable() {
+		doTestUnavailable(testContext.outbound().sendObject("test").then(), "Sender Unavailable");
+	}
+
+	@Test
+	public void testReceiverUnavailable() {
+		doTestUnavailable(testContext.inbound().receive().then(), "Receiver Unavailable");
+
+		doTestUnavailable(testContext.inbound().receiveObject().then(), "Receiver Unavailable");
+	}
+
+	private void doTestUnavailable(Mono<Void> publisher, String expectation) {
+		MonoProcessor<Throwable> throwable = MonoProcessor.create();
+
+		publisher.subscribe(null, throwable::onError);
+
+		StepVerifier.create(throwable)
+		            .expectErrorMatches(t -> t instanceof IllegalStateException && expectation.equals(t.getMessage()))
+		            .verify(Duration.ofSeconds(30));
+
+		assertTrue(channel.isActive());
+	}
 }
