@@ -739,8 +739,7 @@ public final class ReactorNetty {
 		return new NettyInbound() {
 			@Override
 			public ByteBufFlux receive() {
-				return ByteBufFlux.fromInbound(Mono.error(
-						new IllegalStateException("Receiver Unavailable. The Connection")));
+				return ByteBufFlux.fromInbound(Mono.error(new IllegalStateException("Receiver Unavailable")));
 			}
 
 			@Override
