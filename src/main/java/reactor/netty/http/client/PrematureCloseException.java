@@ -16,10 +16,16 @@
 
 package reactor.netty.http.client;
 
+import io.netty.channel.ChannelInboundHandler;
+import reactor.netty.channel.ChannelOperations;
+
 import java.io.IOException;
 
 /**
  * An error for signalling that the connection was closed prematurely
+ * {@link ChannelInboundHandler#channelInactive(io.netty.channel.ChannelHandlerContext)},
+ * {@link ChannelOperations#onInboundClose()},
+ * {@link ChannelOperations#onInboundError()}
  *
  * @author Violeta Georgieva
  */
@@ -48,6 +54,10 @@ public final class PrematureCloseException extends IOException {
 
 	PrematureCloseException(String message) {
 		super(message);
+	}
+
+	PrematureCloseException(Throwable throwable) {
+		super(throwable);
 	}
 
 	@Override

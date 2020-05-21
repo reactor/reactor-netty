@@ -19,6 +19,7 @@ package reactor.netty.http.client;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -352,7 +353,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
 		if (!channel().isActive()) {
-			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (source instanceof Mono) {
 			return super.send(source);
@@ -650,13 +651,21 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		return request;
 	}
 
+	@Override
+	protected Throwable wrapInboundError(Throwable err) {
+		if (err instanceof ClosedChannelException) {
+			return new PrematureCloseException(err);
+		}
+		return super.wrapInboundError(err);
+	}
+
 	final HttpRequest getNettyRequest() {
 		return nettyRequest;
 	}
 
 	final Mono<Void> send() {
 		if (!channel().isActive()) {
-			return Mono.error(new AbortedException("Connection has been closed BEFORE send operation"));
+			return Mono.error(AbortedException.beforeSend());
 		}
 		if (markSentHeaderAndBody()) {
 			HttpMessage request = newFullBodyMessage(Unpooled.EMPTY_BUFFER);
