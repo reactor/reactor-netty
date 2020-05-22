@@ -17,6 +17,7 @@ package reactor.netty;
 
 import io.netty.util.concurrent.*;
 import org.junit.Test;
+import reactor.netty.channel.AbortedException;
 import reactor.test.StepVerifier;
 
 import java.nio.channels.ClosedChannelException;
@@ -31,7 +32,7 @@ public class FutureMonoTest {
 		Future<Void> promise = eventExecutor.newFailedFuture(new ClosedChannelException());
 
 		StepVerifier.create(FutureMono.from(promise))
-		            .expectError(ReactorNetty.InternalNettyException.class)
+		            .expectError(AbortedException.class)
 		            .verify(Duration.ofSeconds(30));
 	}
 
@@ -45,7 +46,7 @@ public class FutureMonoTest {
 		StepVerifier.create(FutureMono.from(promise))
 		            .expectSubscription()
 		            .then(() -> promise.setFailure(new ClosedChannelException()))
-		            .expectError(ReactorNetty.InternalNettyException.class)
+		            .expectError(AbortedException.class)
 		            .verify(Duration.ofSeconds(30));
 	}
 
@@ -55,7 +56,7 @@ public class FutureMonoTest {
 		Supplier<Future<Void>> promiseSupplier = () -> eventExecutor.newFailedFuture(new ClosedChannelException());
 
 		StepVerifier.create(FutureMono.deferFuture(promiseSupplier))
-		            .expectError(ReactorNetty.InternalNettyException.class)
+		            .expectError(AbortedException.class)
 		            .verify(Duration.ofSeconds(30));
 	}
 
@@ -70,7 +71,7 @@ public class FutureMonoTest {
 		StepVerifier.create(FutureMono.deferFuture(promiseSupplier))
 		            .expectSubscription()
 		            .then(() -> promise.setFailure(new ClosedChannelException()))
-		            .expectError(ReactorNetty.InternalNettyException.class)
+		            .expectError(AbortedException.class)
 		            .verify(Duration.ofSeconds(30));
 	}
 }

@@ -101,7 +101,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> source) {
 		if (!channel().isActive()) {
-			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (source instanceof Mono) {
 			return new PostHeadersNettyOutbound(((Mono<ByteBuf>)source)
@@ -133,7 +133,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	public NettyOutbound sendObject(Object message) {
 		if (!channel().isActive()) {
 			ReactorNetty.safeRelease(message);
-			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (!(message instanceof ByteBuf)) {
 			return super.sendObject(message);
@@ -163,7 +163,7 @@ public abstract class HttpOperations<INBOUND extends NettyInbound, OUTBOUND exte
 	@Override
 	public Mono<Void> then() {
 		if (!channel().isActive()) {
-			return Mono.error(new AbortedException("Connection has been closed BEFORE send operation"));
+			return Mono.error(AbortedException.beforeSend());
 		}
 
 		if (hasSentHeaders()) {

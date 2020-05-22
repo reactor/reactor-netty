@@ -163,7 +163,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 
 			if (t instanceof ClosedChannelException) {
-				t = ReactorNetty.wrapException(t);
+				t = new AbortedException(t);
 			}
 
 			terminalSignal = t;
