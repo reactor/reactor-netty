@@ -21,7 +21,7 @@ buildscript {
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
 			'com.github.jengelman.gradle.plugins:shadow:1.2.0',
-			'com.google.gradle:osdetector-gradle-plugin:1.4.0',
+			'com.google.gradle:osdetector-gradle-plugin:1.6.2',
 			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0'
   }
 }
@@ -62,7 +62,7 @@ ext {
   hamcrestVersion = '2.2'
   assertJVersion = '3.15.0'
   hoverflyJavaVersion = '0.12.3'
-  tomcatVersion = '9.0.31'
+  tomcatVersion = '9.0.35'
   boringSslVersion = '2.0.30.Final'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
