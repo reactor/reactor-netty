@@ -33,7 +33,7 @@ plugins {
   id 'com.github.johnrengelman.shadow' version '5.0.0'
   id "com.jfrog.artifactory" version "4.9.8" apply false
   id "de.undercouch.download" version "4.0.4"
-  id 'me.champeau.gradle.japicmp' version '0.2.8'
+  id 'me.champeau.gradle.japicmp' version '0.2.9'
 }
 
 description = 'Reactive Streams Netty driver'
@@ -70,10 +70,10 @@ ext {
   }
 
   // Testing
-  jacksonDatabindVersion = '2.9.10.3'
+  jacksonDatabindVersion = '2.11.0'
   testAddonVersion = reactorCoreVersion
   hamcrestVersion = '2.2'
-  assertJVersion = '3.15.0'
+  assertJVersion = '3.16.1'
   hoverflyJavaVersion = '0.12.3'
   tomcatVersion = '9.0.35'
   boringSslVersion = '2.0.30.Final'
