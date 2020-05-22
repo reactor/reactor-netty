@@ -26,9 +26,14 @@ import java.net.SocketException;
  * @since 0.6
  */
 public class AbortedException extends RuntimeException {
+	static final String CONNECTION_CLOSED_BEFORE_SEND = "Connection has been closed BEFORE send operation";
 
 	public AbortedException(String message) {
 		super(message);
+	}
+
+	public AbortedException(Throwable throwable) {
+		super(throwable);
 	}
 
 	/**
@@ -40,7 +45,7 @@ public class AbortedException extends RuntimeException {
 	 * @return true if connection has been simply aborted on a tcp level
 	 */
 	public static boolean isConnectionReset(Throwable err) {
-		return err instanceof AbortedException ||
+		return (err instanceof AbortedException && CONNECTION_CLOSED_BEFORE_SEND.equals(err.getMessage())) ||
 		       (err instanceof IOException && (err.getMessage() == null ||
 		                                       err.getMessage()
 		                                          .contains("Broken pipe") ||
@@ -49,5 +54,9 @@ public class AbortedException extends RuntimeException {
 		       (err instanceof SocketException && err.getMessage() != null &&
 		                                          err.getMessage()
 		                                             .contains("Connection reset by peer"));
+	}
+
+	public static AbortedException beforeSend() {
+		return new AbortedException(CONNECTION_CLOSED_BEFORE_SEND);
 	}
 }

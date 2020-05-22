@@ -26,6 +26,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
+import reactor.netty.channel.AbortedException;
 import reactor.util.context.Context;
 
 /**
@@ -172,7 +173,7 @@ public abstract class FutureMono extends Mono<Void> {
 		@Override
 		@SuppressWarnings("unchecked")
 		public void operationComplete(F future) {
-			if (!future.isSuccess()) {//Avoid singleton
+			if (!future.isSuccess()) {
 				s.onError(wrapError(future.cause()));
 			}
 			else {
@@ -181,10 +182,10 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		private static Throwable wrapError(Throwable error) {
-			if(error instanceof ClosedChannelException) {
-				//Update with a common aborted exception?
-				return ReactorNetty.wrapException(error);
-			} else {
+			if (error instanceof ClosedChannelException) {
+				return new AbortedException(error);
+			}
+			else {
 				return error;
 			}
 		}

@@ -31,7 +31,6 @@ import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Operators;
-import reactor.netty.ReactorNetty;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -386,7 +385,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		}
 
 		if (err instanceof OutOfMemoryError) {
-			this.inboundError = ReactorNetty.wrapException(err);
+			this.inboundError = parent.wrapInboundError(err);
 			try {
 				if (receiver != null) {
 					// propagate java.lang.OutOfMemoryError: Direct buffer memory
@@ -400,14 +399,14 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 			}
 		}
 		else if (err instanceof ClosedChannelException) {
-			this.inboundError = ReactorNetty.wrapException(err);
+			this.inboundError = parent.wrapInboundError(err);
 		}
 		else {
 			this.inboundError = err;
 		}
 
 		if (receiverFastpath && receiver != null) {
-			receiver.onError(err);
+			receiver.onError(inboundError);
 		}
 		else {
 			drainReceiver();

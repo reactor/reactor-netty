@@ -17,6 +17,7 @@
 package reactor.netty.channel;
 
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -258,7 +259,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
 		if (!channel().isActive()) {
-			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
@@ -271,7 +272,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	@SuppressWarnings("unchecked")
 	public NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate) {
 		if (!channel().isActive()) {
-			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		if (dataStream instanceof Mono) {
 			return then(((Mono<?>)dataStream).flatMap(m -> FutureMono.from(channel().writeAndFlush(m)))
@@ -284,7 +285,7 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	public NettyOutbound sendObject(Object message) {
 		if (!channel().isActive()) {
 			ReactorNetty.safeRelease(message);
-			return then(Mono.error(new AbortedException("Connection has been closed BEFORE send operation")));
+			return then(Mono.error(AbortedException.beforeSend()));
 		}
 		return then(FutureMono.deferFuture(() -> connection.channel()
 		                                                   .writeAndFlush(message)),
@@ -472,6 +473,23 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	protected final String formatName() {
 		return getClass().getSimpleName()
 		                 .replace("Operations", "");
+	}
+
+	/**
+	 * Wrap an inbound error
+	 *
+	 * @param err the {@link Throwable} cause
+	 */
+	protected Throwable wrapInboundError(Throwable err) {
+		if (err instanceof ClosedChannelException) {
+			return new AbortedException(err);
+		}
+		else if (err instanceof OutOfMemoryError) {
+			return ReactorNetty.wrapException(err);
+		}
+		else {
+			return err;
+		}
 	}
 
 	@Override
