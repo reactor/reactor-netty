@@ -22,7 +22,7 @@ buildscript {
   }
   dependencies {
 	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
-			'com.google.gradle:osdetector-gradle-plugin:1.4.0',
+			'com.google.gradle:osdetector-gradle-plugin:1.6.2',
 			'biz.aQute.bnd:biz.aQute.bnd.gradle:4.2.0'
   }
 }
@@ -32,7 +32,7 @@ plugins {
   id 'org.asciidoctor.convert' version '1.5.11'
   id 'com.github.johnrengelman.shadow' version '5.0.0'
   id "com.jfrog.artifactory" version "4.9.8" apply false
-  id "de.undercouch.download" version "3.4.3"
+  id "de.undercouch.download" version "4.0.4"
   id 'me.champeau.gradle.japicmp' version '0.2.8'
 }
 
@@ -75,9 +75,9 @@ ext {
   hamcrestVersion = '2.2'
   assertJVersion = '3.15.0'
   hoverflyJavaVersion = '0.12.3'
-  tomcatVersion = '9.0.31'
+  tomcatVersion = '9.0.35'
   boringSslVersion = '2.0.30.Final'
-  junitVersion = '4.12'
+  junitVersion = '4.13'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
 				  "https://docs.oracle.com/javaee/6/api/",
