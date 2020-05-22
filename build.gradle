@@ -49,7 +49,7 @@ ext {
   gradleScriptDir = "${rootProject.projectDir}/gradle"
 
   //Metrics
-  micrometerVersion = '1.3.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
+  micrometerVersion = '1.4.2' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
 
   jsr305Version = '3.0.2'
 
