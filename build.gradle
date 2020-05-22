@@ -75,7 +75,7 @@ ext {
   hoverflyJavaVersion = '0.12.3'
   tomcatVersion = '9.0.31'
   boringSslVersion = '2.0.30.Final'
-  junitVersion = '4.12'
+  junitVersion = '4.13'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
 				  "https://docs.oracle.com/javaee/6/api/",
