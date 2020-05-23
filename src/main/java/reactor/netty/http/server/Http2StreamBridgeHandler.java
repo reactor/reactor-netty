@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -88,9 +87,6 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 						cookieDecoder);
 			}
 			catch (RuntimeException e) {
-				if (request instanceof FullHttpRequest) {
-					((FullHttpRequest) request).release();
-				}
 				HttpServerOperations.sendDecodingFailures(ctx, e, msg);
 				return;
 			}
