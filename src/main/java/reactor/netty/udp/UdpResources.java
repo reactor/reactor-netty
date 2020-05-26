@@ -173,6 +173,11 @@ public class UdpResources implements LoopResources {
 	}
 
 	@Override
+	public <CHANNEL extends Channel> CHANNEL onChannel(Class<CHANNEL> channelType, EventLoopGroup group) {
+		return defaultLoops.onChannel(channelType, group);
+	}
+
+	@Override
 	public EventLoopGroup onClient(boolean useNative) {
 		return defaultLoops.onClient(useNative);
 	}
