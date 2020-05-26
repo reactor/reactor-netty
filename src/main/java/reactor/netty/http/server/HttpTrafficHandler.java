@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -56,6 +57,8 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		implements Runnable, ChannelFutureListener {
 
 	static final String MULTIPART_PREFIX = "multipart";
+
+	static final HttpVersion H2 = HttpVersion.valueOf("HTTP/2.0");
 
 	final ConnectionObserver                                 listener;
 	Boolean                                                  secure;
@@ -109,6 +112,12 @@ final class HttpTrafficHandler extends ChannelDuplexHandler
 		// read message and track if it was keepAlive
 		if (msg instanceof HttpRequest) {
 			final HttpRequest request = (HttpRequest) msg;
+
+			if (H2.equals(request.protocolVersion())) {
+				sendDecodingFailures(new IllegalStateException(
+						"Unexpected request [" + request.method() + " " + request.uri() + " HTTP/2.0]"), msg);
+				return;
+			}
 
 			if (persistentConnection) {
 				pendingResponses += 1;
