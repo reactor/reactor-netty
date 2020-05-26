@@ -60,17 +60,17 @@ final class HttpServerBind extends HttpServer {
 			if (config.sslProvider.getDefaultConfigurationType() == null) {
 				HttpServer dup = duplicate();
 				HttpServerConfig _config = dup.configuration();
-				if ((config.protocols & HttpServerConfig.h2) == HttpServerConfig.h2) {
-					_config.sslProvider = SslProvider.updateDefaultConfiguration(config.sslProvider,
+				if ((_config._protocols & HttpServerConfig.h2) == HttpServerConfig.h2) {
+					_config.sslProvider = SslProvider.updateDefaultConfiguration(_config.sslProvider,
 							SslProvider.DefaultConfigurationType.H2);
 				}
 				else {
-					_config.sslProvider = SslProvider.updateDefaultConfiguration(config.sslProvider,
+					_config.sslProvider = SslProvider.updateDefaultConfiguration(_config.sslProvider,
 							SslProvider.DefaultConfigurationType.TCP);
 				}
 				return dup.bind();
 			}
-			if ((configuration().protocols & HttpServerConfig.h2c) == HttpServerConfig.h2c) {
+			if ((config._protocols & HttpServerConfig.h2c) == HttpServerConfig.h2c) {
 				return Mono.error(new IllegalArgumentException(
 						"Configured H2 Clear-Text protocol with TLS. " +
 								"Use the non Clear-Text H2 protocol via " +
@@ -78,7 +78,7 @@ final class HttpServerBind extends HttpServer {
 			}
 		}
 		else {
-			if ((config.protocols & HttpServerConfig.h2) == HttpServerConfig.h2) {
+			if ((config._protocols & HttpServerConfig.h2) == HttpServerConfig.h2) {
 				return Mono.error(new IllegalArgumentException(
 						"Configured H2 protocol without TLS. " +
 								"Use a Clear-Text H2 protocol via HttpServer#protocol or configure TLS " +

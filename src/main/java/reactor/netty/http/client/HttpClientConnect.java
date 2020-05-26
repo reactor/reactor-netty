@@ -190,34 +190,36 @@ class HttpClientConnect extends HttpClient {
 		public void subscribe(CoreSubscriber<? super Connection> actual) {
 			HttpClientHandler handler = new HttpClientHandler(config);
 
-			if (config.sslProvider != null && config.sslProvider.getDefaultConfigurationType() == null) {
-				switch (config.protocols) {
-					case HttpClientConfig.h11:
-						config.sslProvider =
-								SslProvider.updateDefaultConfiguration(config.sslProvider, SslProvider.DefaultConfigurationType.TCP);
-						break;
-					case HttpClientConfig.h2:
-						config.sslProvider =
-								SslProvider.updateDefaultConfiguration(config.sslProvider, SslProvider.DefaultConfigurationType.H2);
-				}
-			}
-
 			Mono.<Connection>create(sink -> {
-				HttpClientConfig _config = new HttpClientConfig(config);
+				HttpClientConfig _config = config;
+
 				//append secure handler if needed
 				if (handler.toURI.isSecure()) {
 					if (_config.sslProvider == null) {
+						_config = new HttpClientConfig(config);
 						_config.sslProvider = HttpClientSecure.DEFAULT_HTTP_SSL_PROVIDER;
 					}
 				}
 				else {
 					if (_config.sslProvider != null) {
+						_config = new HttpClientConfig(config);
 						_config.sslProvider = null;
 					}
 				}
 
 				if (_config.sslProvider != null) {
-					if ((_config.protocols & HttpClientConfig.h2c) == HttpClientConfig.h2c) {
+					if (_config.sslProvider.getDefaultConfigurationType() == null) {
+						if ((_config._protocols & HttpClientConfig.h2) == HttpClientConfig.h2) {
+							_config.sslProvider = SslProvider.updateDefaultConfiguration(_config.sslProvider,
+									SslProvider.DefaultConfigurationType.H2);
+						}
+						else {
+							_config.sslProvider = SslProvider.updateDefaultConfiguration(_config.sslProvider,
+									SslProvider.DefaultConfigurationType.TCP);
+						}
+					}
+
+					if ((_config._protocols & HttpClientConfig.h2c) == HttpClientConfig.h2c) {
 						sink.error(new IllegalArgumentException(
 								"Configured H2 Clear-Text protocol with TLS. " +
 										"Use the non Clear-Text H2 protocol via HttpClient#protocol or disable TLS " +
@@ -226,7 +228,7 @@ class HttpClientConnect extends HttpClient {
 					}
 				}
 				else {
-					if ((_config.protocols & HttpClientConfig.h2) == HttpClientConfig.h2) {
+					if ((_config._protocols & HttpClientConfig.h2) == HttpClientConfig.h2) {
 						sink.error(new IllegalArgumentException(
 								"Configured H2 protocol without TLS. Use H2 Clear-Text " +
 										"protocol via HttpClient#protocol or configure TLS via HttpClient#secure"));

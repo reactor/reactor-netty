@@ -1076,7 +1076,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	public final HttpClient protocol(HttpProtocol... supportedProtocols) {
 		Objects.requireNonNull(supportedProtocols, "supportedProtocols");
 		HttpClient dup = duplicate();
-		dup.configuration().protocols = HttpClientConfig.protocols(supportedProtocols);
+		dup.configuration().protocols(supportedProtocols);
 		return dup;
 	}
 

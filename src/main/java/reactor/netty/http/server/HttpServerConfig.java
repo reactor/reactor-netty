@@ -146,7 +146,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 *
 	 * @return the HTTP protocol to support
 	 */
-	public int protocols() {
+	public HttpProtocol[] protocols() {
 		return protocols;
 	}
 
@@ -193,7 +193,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	HttpRequestDecoderSpec                             decoder;
 	boolean                                            forwarded;
 	int                                                minCompressionSize;
-	int                                                protocols;
+	HttpProtocol[]                                     protocols;
+	int                                                _protocols;
 	ProxyProtocolSupportType                           proxyProtocolSupportType;
 	SslProvider                                        sslProvider;
 	Function<String, String>                           uriTagValue;
@@ -205,7 +206,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.decoder = new HttpRequestDecoderSpec();
 		this.forwarded = false;
 		this.minCompressionSize = -1;
-		this.protocols = h11;
+		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
+		this._protocols = h11;
 		this.proxyProtocolSupportType = ProxyProtocolSupportType.OFF;
 	}
 
@@ -218,6 +220,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.forwarded = parent.forwarded;
 		this.minCompressionSize = parent.minCompressionSize;
 		this.protocols = parent.protocols;
+		this._protocols = parent._protocols;
 		this.proxyProtocolSupportType = parent.proxyProtocolSupportType;
 		this.sslProvider = parent.sslProvider;
 		this.uriTagValue = parent.uriTagValue;
@@ -243,7 +246,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		return super.defaultOnChannelInit()
 		            .then(new HttpServerChannelInitializer(compressPredicate, cookieDecoder, cookieEncoder,
 		                decoder, forwarded, metricsRecorder(), minCompressionSize, channelOperationsProvider(),
-		                    protocols, proxyProtocolSupportType, sslProvider, uriTagValue));
+		                    _protocols, proxyProtocolSupportType, sslProvider, uriTagValue));
 	}
 
 	@Override
@@ -254,6 +257,24 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	@Override
 	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder) {
 		super.metricsRecorder(metricsRecorder);
+	}
+
+	void protocols(HttpProtocol... protocols) {
+		this.protocols = protocols;
+		int _protocols = 0;
+
+		for (HttpProtocol p : protocols) {
+			if (p == HttpProtocol.HTTP11) {
+				_protocols |= h11;
+			}
+			else if (p == HttpProtocol.H2) {
+				_protocols |= h2;
+			}
+			else if (p == HttpProtocol.H2C) {
+				_protocols |= h2c;
+			}
+		}
+		this._protocols = _protocols;
 	}
 
 	static void addStreamHandlers(Channel ch, ChannelOperations.OnSetup opsFactory,
@@ -428,34 +449,17 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 	}
 
-	static int protocols(HttpProtocol... protocols) {
-		int _protocols = 0;
-
-		for (HttpProtocol p : protocols) {
-			if (p == HttpProtocol.HTTP11) {
-				_protocols |= h11;
-			}
-			else if (p == HttpProtocol.H2) {
-				_protocols |= h2;
-			}
-			else if (p == HttpProtocol.H2C) {
-				_protocols |= h2c;
-			}
-		}
-		return _protocols;
-	}
-
 	static final boolean ACCESS_LOG = Boolean.parseBoolean(System.getProperty(ACCESS_LOG_ENABLED, "false"));
-
-	static final int h11 = 0b100;
 
 	static final int h2 = 0b010;
 
 	static final int h2c = 0b001;
 
-	static final int h11orH2c = h11 | h2c;
+	static final int h11 = 0b100;
 
 	static final int h11orH2 = h11 | h2;
+
+	static final int h11orH2C = h11 | h2c;
 
 	static final Logger log = Loggers.getLogger(HttpServerConfig.class);
 
@@ -721,7 +725,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				}
 			}
 			else {
-				if ((protocols & h11orH2c) == h11orH2c) {
+				if ((protocols & h11orH2C) == h11orH2C) {
 					configureHttp11OrH2CleartextPipeline(
 							channel.pipeline(),
 							compressPredicate(compressPredicate, minCompressionSize),

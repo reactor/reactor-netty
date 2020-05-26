@@ -79,7 +79,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	@Override
 	public int channelHash() {
-		return Objects.hash(super.channelHash(), acceptGzip, decoder, protocols, sslProvider);
+		return Objects.hash(super.channelHash(), acceptGzip, decoder, _protocols, sslProvider);
 	}
 
 	@Override
@@ -173,7 +173,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return the HTTP protocol to support
 	 */
-	public int protocols() {
+	public HttpProtocol[] protocols() {
 		return protocols;
 	}
 
@@ -250,7 +250,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
 	HttpHeaders headers;
 	HttpMethod method;
-	int protocols;
+	HttpProtocol[] protocols;
+	int _protocols;
 	Consumer<HttpClientRequest> redirectRequestConsumer;
 	boolean retryDisabled;
 	SslProvider sslProvider;
@@ -268,7 +269,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.decoder = new HttpResponseDecoderSpec();
 		this.headers = new DefaultHttpHeaders();
 		this.method = HttpMethod.GET;
-		this.protocols = h11;
+		this.protocols = new HttpProtocol[]{HttpProtocol.HTTP11};
+		this._protocols = h11;
 		this.retryDisabled = false;
 	}
 
@@ -293,6 +295,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.headers = parent.headers;
 		this.method = parent.method;
 		this.protocols = parent.protocols;
+		this._protocols = parent._protocols;
 		this.redirectRequestConsumer = parent.redirectRequestConsumer;
 		this.retryDisabled = parent.retryDisabled;
 		this.sslProvider = parent.sslProvider;
@@ -333,7 +336,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Override
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
 		return super.defaultOnChannelInit()
-		            .then(new HttpClientChannelInitializer(acceptGzip, decoder, metricsRecorder(), protocols, sslProvider, uriTagValue));
+		            .then(new HttpClientChannelInitializer(acceptGzip, decoder, metricsRecorder(), _protocols, sslProvider, uriTagValue));
 	}
 
 	@Override
@@ -363,6 +366,25 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		else {
 			deferredConf = deferredConf -> deferredConf.flatMap(deferrer);
 		}
+	}
+
+	void protocols(HttpProtocol... protocols) {
+		this.protocols = protocols;
+		int _protocols = 0;
+
+		for (HttpProtocol p : protocols) {
+			if (p == HttpProtocol.HTTP11) {
+				_protocols |= h11;
+			}
+			else if (p == HttpProtocol.H2) {
+				_protocols |= h2;
+			}
+			else if (p == HttpProtocol.H2C) {
+				_protocols |= h2c;
+			}
+		}
+
+		this._protocols = _protocols;
 	}
 
 	static void configureHttp11Pipeline(ChannelPipeline p,
@@ -397,24 +419,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		}
 	}
 
-	static int protocols(HttpProtocol... protocols) {
-		int _protocols = 0;
-
-		for (HttpProtocol p : protocols) {
-			if (p == HttpProtocol.HTTP11) {
-				_protocols |= h11;
-			}
-			else if (p == HttpProtocol.H2) {
-				_protocols |= h2;
-			}
-			else if (p == HttpProtocol.H2C) {
-				_protocols |= h2c;
-			}
-		}
-
-		return _protocols;
-	}
-
 	static final Pattern FOLLOW_REDIRECT_CODES = Pattern.compile("30[1278]");
 
 	static final BiPredicate<HttpClientRequest, HttpClientResponse> FOLLOW_REDIRECT_PREDICATE =
@@ -422,13 +426,15 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 			                                               .codeAsText())
 			                                   .matches();
 
-	static final int h11 = 0b100;
-
 	static final int h2 = 0b010;
 
 	static final int h2c = 0b001;
 
-	static final int h11orH2c = h11 | h2c;
+	static final int h11 = 0b100;
+
+	static final int h11orH2 = h11 | h2;
+
+	static final int h11orH2C = h11 | h2c;
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);
 

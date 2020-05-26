@@ -327,7 +327,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	public final HttpServer protocol(HttpProtocol... supportedProtocols) {
 		Objects.requireNonNull(supportedProtocols, "supportedProtocols");
 		HttpServer dup = duplicate();
-		dup.configuration().protocols = HttpServerConfig.protocols(supportedProtocols);
+		dup.configuration().protocols(supportedProtocols);
 		return dup;
 	}
 
