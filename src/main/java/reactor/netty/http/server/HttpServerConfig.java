@@ -607,6 +607,10 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		@Override
 		protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(ctx.channel(), "Negotiated application-level protocol [" + protocol + "]"));
+			}
+
 			ChannelPipeline p = ctx.pipeline();
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
