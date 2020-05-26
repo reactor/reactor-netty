@@ -51,11 +51,9 @@ import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
-import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
-import reactor.netty.tcp.TcpServer;
 import reactor.netty.transport.ClientTransportConfig;
 import reactor.util.annotation.Nullable;
 
@@ -151,9 +149,9 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	/**
-	 * Returns true if that {@link HttpServer} secured via SSL transport
+	 * Returns true if that {@link HttpClient} secured via SSL transport
 	 *
-	 * @return true if that {@link HttpServer} secured via SSL transport
+	 * @return true if that {@link HttpClient} secured via SSL transport
 	 */
 	public boolean isSecure(){
 		return sslProvider != null;
@@ -188,10 +186,10 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	/**
-	 * Returns the current {@link SslProvider} if that {@link TcpServer} secured via SSL
+	 * Returns the current {@link SslProvider} if that {@link HttpClient} secured via SSL
 	 * transport or null
 	 *
-	 * @return the current {@link SslProvider} if that {@link TcpServer} secured via SSL
+	 * @return the current {@link SslProvider} if that {@link HttpClient} secured via SSL
 	 * transport or null
 	 */
 	@Nullable

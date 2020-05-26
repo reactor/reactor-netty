@@ -1027,7 +1027,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	/**
 	 * The HTTP protocol to support. Default is {@link HttpProtocol#HTTP11}.
 	 *
-	 * @param supportedProtocols The various {@link HttpProtocol} this server will support
+	 * @param supportedProtocols The various {@link HttpProtocol} this client will support
 	 *
 	 * @return a new {@link HttpClient}
 	 */
