@@ -16,8 +16,8 @@
 package reactor.netty.http;
 
 /**
- * An enum defining various Http negotiations between H2, H2c-upgrade,
- * H2c-prior-knowledge and Http1.1
+ * An enum defining various HTTP negotiations between H2, H2C-upgrade,
+ * H2C-prior-knowledge and HTTP/1.1
  *
  * @author Stephane Maldini
  */
@@ -29,20 +29,24 @@ public enum HttpProtocol {
 	HTTP11,
 
 	/**
-	 * HTTP 2.0 support with TLS
+	 * HTTP/2.0 support with TLS
+	 * <p>If used along with HTTP/1.1 protocol, HTTP/2.0 will be the preferred protocol.
+	 * While negotiating the application level protocol, HTTP/2.0 or HTTP/1.1 can be chosen.
+	 * <p>If used without HTTP/1.1 protocol, HTTP/2.0 will always be offered as a protocol
+	 * for communication with no fallback to HTTP/1.1.
 	 */
 	H2,
 
 	/**
-	 * HTTP 2.0 support with clear-text.
-	 * <p>If used along with HTTP1 protocol, will support H2c "upgrade":
-	 * Request or consume requests as HTTP 1.1 first, looking for HTTP 2.0 headers
+	 * HTTP/2.0 support with clear-text.
+	 * <p>If used along with HTTP/1.1 protocol, will support H2C "upgrade":
+	 * Request or consume requests as HTTP/1.1 first, looking for HTTP/2.0 headers
 	 * and {@literal Connection: Upgrade}. A server will typically reply a successful
-	 * 101 status if upgrade is successful or a fallback http 1.1 response. When
-	 * successful the client will start sending HTTP 2.0 traffic.
-	 * <p>If used without HTTP1 protocol, will support H2c "prior-knowledge": Doesn't
+	 * 101 status if upgrade is successful or a fallback HTTP/1.1 response. When
+	 * successful the client will start sending HTTP/2.0 traffic.
+	 * <p>If used without HTTP/1.1 protocol, will support H2C "prior-knowledge": Doesn't
 	 * require {@literal Connection: Upgrade} handshake between a client and server but
-	 * fallback to HTTP 1.1 will not be supported.
+	 * fallback to HTTP/1.1 will not be supported.
 	 */
 	H2C
 }
