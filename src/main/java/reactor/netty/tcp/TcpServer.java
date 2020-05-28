@@ -16,17 +16,24 @@
 
 package reactor.netty.tcp;
 
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.DisposableServer;
 import reactor.netty.NettyInbound;
 import reactor.netty.NettyOutbound;
+import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.ServerTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -65,6 +72,31 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 		return TcpServerBind.INSTANCE;
 	}
 
+	@Override
+	public final TcpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		return super.bindAddress(bindAddressSupplier);
+	}
+
+	@Override
+	public final TcpServer doOnBind(Consumer<? super TcpServerConfig> doOnBind) {
+		return super.doOnBind(doOnBind);
+	}
+
+	@Override
+	public final TcpServer doOnBound(Consumer<? super DisposableServer> doOnBound) {
+		return super.doOnBound(doOnBound);
+	}
+
+	@Override
+	public final TcpServer doOnConnection(Consumer<? super Connection> doOnConnection) {
+		return super.doOnConnection(doOnConnection);
+	}
+
+	@Override
+	public final TcpServer doOnUnbound(Consumer<? super DisposableServer> doOnUnbound) {
+		return super.doOnUnbound(doOnUnbound);
+	}
+
 	/**
 	 * Attaches an I/O handler to react on a connected client
 	 *
@@ -79,8 +111,18 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	}
 
 	@Override
+	public final TcpServer host(String host) {
+		return super.host(host);
+	}
+
+	@Override
 	public final TcpServer metrics(boolean enable) {
 		return super.metrics(enable);
+	}
+
+	@Override
+	public final TcpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
+		return super.metrics(enable, recorder);
 	}
 
 	/**
@@ -95,6 +137,26 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 			return dup;
 		}
 		return this;
+	}
+
+	@Override
+	public final TcpServer port(int port) {
+		return super.port(port);
+	}
+
+	@Override
+	public final TcpServer runOn(EventLoopGroup eventLoopGroup) {
+		return super.runOn(eventLoopGroup);
+	}
+
+	@Override
+	public final TcpServer runOn(LoopResources channelResources) {
+		return super.runOn(channelResources);
+	}
+
+	@Override
+	public final TcpServer runOn(LoopResources loopResources, boolean preferNative) {
+		return super.runOn(loopResources, preferNative);
 	}
 
 	/**
@@ -149,6 +211,21 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 		TcpServer dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
 		return dup;
+	}
+
+	@Override
+	public final TcpServer wiretap(boolean enable) {
+		return super.wiretap(enable);
+	}
+
+	@Override
+	public final TcpServer wiretap(String category) {
+		return super.wiretap(category);
+	}
+
+	@Override
+	public final TcpServer wiretap(String category, LogLevel level) {
+		return super.wiretap(category, level);
 	}
 
 	static final Logger log = Loggers.getLogger(TcpServer.class);

@@ -55,7 +55,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param <A> the attribute type
 	 * @return a new {@link Transport} reference
 	 */
-	public final <A> T attr(AttributeKey<A> key, @Nullable A value) {
+	public <A> T attr(AttributeKey<A> key, @Nullable A value) {
 		Objects.requireNonNull(key, "key");
 		T dup = duplicate();
 		dup.configuration().attrs = TransportConfig.updateMap(configuration().attrs, key, value);
@@ -69,7 +69,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 *
 	 * @return a new {@link Transport}
 	 */
-	public final T bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+	public T bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
 		T dup = duplicate();
 		dup.configuration().bindAddress = bindAddressSupplier;
@@ -163,7 +163,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param recorder a supplier for the {@link ChannelMetricsRecorder}
 	 * @return a new {@link Transport} reference
 	 */
-	public final T metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
+	public T metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		if (enable) {
 			T dup = duplicate();
 			dup.configuration().metricsRecorder = recorder;
@@ -187,7 +187,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param observer the {@link ConnectionObserver} to be set or add
 	 * @return a new {@link Transport} reference
 	 */
-	public final T observe(ConnectionObserver observer) {
+	public T observe(ConnectionObserver observer) {
 		Objects.requireNonNull(observer, "observer");
 		T dup = duplicate();
 		ConnectionObserver current = configuration().observer;
@@ -205,7 +205,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @return a new {@link Transport} reference
 	 */
 	@SuppressWarnings("ReferenceEquality")
-	public final <O> T option(ChannelOption<O> key, @Nullable O value) {
+	public <O> T option(ChannelOption<O> key, @Nullable O value) {
 		Objects.requireNonNull(key, "key");
 		// Reference comparison is deliberate
 		if (ChannelOption.AUTO_READ == key) {
@@ -225,7 +225,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param eventLoopGroup an eventLoopGroup to share
 	 * @return a new {@link Transport} reference
 	 */
-	public final T runOn(EventLoopGroup eventLoopGroup) {
+	public T runOn(EventLoopGroup eventLoopGroup) {
 		Objects.requireNonNull(eventLoopGroup, "eventLoopGroup");
 		return runOn(preferNative -> eventLoopGroup);
 	}
@@ -239,7 +239,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * returning an eventLoopGroup
 	 * @return a new {@link Transport} reference
 	 */
-	public final T runOn(LoopResources channelResources) {
+	public T runOn(LoopResources channelResources) {
 		Objects.requireNonNull(channelResources, "channelResources");
 		return runOn(channelResources, LoopResources.DEFAULT_NATIVE);
 	}
@@ -267,7 +267,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param enable specifies whether the wire logger configuration will be added to the pipeline
 	 * @return a new {@link Transport} reference
 	 */
-	public final T wiretap(boolean enable) {
+	public T wiretap(boolean enable) {
 		if (enable) {
 			T dup = duplicate();
 			dup.configuration().loggingHandler = configuration().defaultLoggingHandler();
@@ -292,7 +292,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param category the logger category
 	 * @return a new {@link Transport} reference
 	 */
-	public final T wiretap(String category) {
+	public T wiretap(String category) {
 		Objects.requireNonNull(category, "category");
 		return wiretap(category, LogLevel.DEBUG);
 	}
@@ -305,7 +305,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param level the logger level
 	 * @return a new {@link Transport} reference
 	 */
-	public final T wiretap(String category, LogLevel level) {
+	public T wiretap(String category, LogLevel level) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
 		T dup = duplicate();

@@ -15,21 +15,29 @@
  */
 package reactor.netty.udp;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.handler.logging.LogLevel;
+import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.AddressUtils;
 import reactor.netty.transport.Transport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -64,6 +72,11 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 		return UdpServerBind.INSTANCE;
 	}
 
+	@Override
+	public final <A> UdpServer attr(AttributeKey<A> key, @Nullable A value) {
+		return super.attr(key, value);
+	}
+
 	/**
 	 * Binds the {@link UdpServer} and returns a {@link Mono} of {@link Connection}. If
 	 * {@link Mono} is cancelled, the underlying binding will be aborted. Once the {@link
@@ -74,14 +87,19 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 	 */
 	public abstract Mono<? extends Connection> bind();
 
-		/**
-		 * Starts the server in a blocking fashion, and waits for it to finish initializing
-		 * or the startup timeout expires (the startup timeout is {@code 45} seconds). The
-		 * returned {@link Connection} offers simple server API, including to {@link
-		 * Connection#disposeNow()} shut it down in a blocking fashion.
-		 *
-		 * @return a {@link Connection}
-		 */
+	@Override
+	public final UdpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		return super.bindAddress(bindAddressSupplier);
+	}
+
+	/**
+	 * Starts the server in a blocking fashion, and waits for it to finish initializing
+	 * or the startup timeout expires (the startup timeout is {@code 45} seconds). The
+	 * returned {@link Connection} offers simple server API, including to {@link
+	 * Connection#disposeNow()} shut it down in a blocking fashion.
+	 *
+	 * @return a {@link Connection}
+	 */
 	public final Connection bindNow() {
 		return bindNow(Duration.ofSeconds(45));
 	}
@@ -181,6 +199,21 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 		return super.metrics(enable);
 	}
 
+	@Override
+	public final UdpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
+		return super.metrics(enable, recorder);
+	}
+
+	@Override
+	public final UdpServer observe(ConnectionObserver observer) {
+		return super.observe(observer);
+	}
+
+	@Override
+	public final <O> UdpServer option(ChannelOption<O> key, @Nullable O value) {
+		return super.option(key, value);
+	}
+
 	/**
 	 * The port to which this server should bind.
 	 *
@@ -189,6 +222,16 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 	 */
 	public final UdpServer port(int port) {
 		return bindAddress(() -> AddressUtils.updatePort(configuration().bindAddress(), port));
+	}
+
+	@Override
+	public final UdpServer runOn(EventLoopGroup eventLoopGroup) {
+		return super.runOn(eventLoopGroup);
+	}
+
+	@Override
+	public final UdpServer runOn(LoopResources channelResources) {
+		return super.runOn(channelResources);
 	}
 
 	/**
@@ -219,6 +262,21 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 		UdpServer dup = super.runOn(loopResources, false);
 		dup.configuration().family = family;
 		return dup;
+	}
+
+	@Override
+	public final UdpServer wiretap(boolean enable) {
+		return super.wiretap(enable);
+	}
+
+	@Override
+	public final UdpServer wiretap(String category) {
+		return super.wiretap(category);
+	}
+
+	@Override
+	public final UdpServer wiretap(String category, LogLevel level) {
+		return super.wiretap(category, level);
 	}
 
 	static final Logger log = Loggers.getLogger(UdpServer.class);

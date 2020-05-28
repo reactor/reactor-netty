@@ -99,7 +99,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doOnConnect a consumer observing connect events
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public final T doOnConnect(Consumer<? super CONF> doOnConnect) {
+	public T doOnConnect(Consumer<? super CONF> doOnConnect) {
 		Objects.requireNonNull(doOnConnect, "doOnConnect");
 		T dup = duplicate();
 		@SuppressWarnings("unchecked")
@@ -114,7 +114,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doOnConnected a consumer observing connected events
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public final T doOnConnected(Consumer<? super Connection> doOnConnected) {
+	public T doOnConnected(Consumer<? super Connection> doOnConnected) {
 		Objects.requireNonNull(doOnConnected, "doOnConnected");
 		T dup = duplicate();
 		@SuppressWarnings("unchecked")
@@ -129,7 +129,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param doOnDisconnected a consumer observing disconnected events
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public final T doOnDisconnected(Consumer<? super Connection> doOnDisconnected) {
+	public T doOnDisconnected(Consumer<? super Connection> doOnDisconnected) {
 		Objects.requireNonNull(doOnDisconnected, "doOnDisconnected");
 		T dup = duplicate();
 		@SuppressWarnings("unchecked")
@@ -144,7 +144,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param host the host to connect to
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public final T host(String host) {
+	public T host(String host) {
 		Objects.requireNonNull(host, "host");
 		return remoteAddress(() -> AddressUtils.updateHost(configuration().remoteAddress(), host));
 	}
@@ -154,7 +154,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 *
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public final T noProxy() {
+	public T noProxy() {
 		if (configuration().hasProxy()) {
 			T dup = duplicate();
 			dup.configuration().proxyProvider = null;
@@ -171,7 +171,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param port the port to connect to
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public final T port(int port) {
+	public T port(int port) {
 		return remoteAddress(() -> AddressUtils.updatePort(configuration().remoteAddress(), port));
 	}
 
@@ -181,7 +181,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param proxyOptions the proxy configuration callback
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public final T proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
+	public T proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
 		Objects.requireNonNull(proxyOptions, "proxyOptions");
 		T dup = duplicate();
 		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
@@ -196,7 +196,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param remoteAddressSupplier A supplier of the address to connect to.
 	 * @return a new {@link ClientTransport}
 	 */
-	public final T remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
+	public T remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
 		Objects.requireNonNull(remoteAddressSupplier, "remoteAddressSupplier");
 		T dup = duplicate();
 		dup.configuration().remoteAddress = remoteAddressSupplier;
@@ -209,7 +209,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * @param resolver the new {@link AddressResolverGroup}
 	 * @return a new {@link ClientTransport} reference
 	 */
-	public final T resolver(AddressResolverGroup<?> resolver) {
+	public T resolver(AddressResolverGroup<?> resolver) {
 		Objects.requireNonNull(resolver, "resolver");
 		T dup = duplicate();
 		dup.configuration().resolver = resolver;

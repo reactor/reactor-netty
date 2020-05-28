@@ -246,7 +246,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @param doOnBind a consumer observing connected events
 	 * @return a new {@link ServerTransport} reference
 	 */
-	public final T doOnBind(Consumer<? super CONF> doOnBind) {
+	public T doOnBind(Consumer<? super CONF> doOnBind) {
 		Objects.requireNonNull(doOnBind, "doOnBind");
 		T dup = duplicate();
 		@SuppressWarnings("unchecked")
@@ -261,7 +261,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @param doOnBound a consumer observing connected events
 	 * @return a new {@link ServerTransport} reference
 	 */
-	public final T doOnBound(Consumer<? super DisposableServer> doOnBound) {
+	public T doOnBound(Consumer<? super DisposableServer> doOnBound) {
 		Objects.requireNonNull(doOnBound, "doOnBound");
 		T dup = duplicate();
 		@SuppressWarnings("unchecked")
@@ -276,7 +276,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @param doOnConnection a consumer observing remote connections
 	 * @return a new {@link ServerTransport} reference
 	 */
-	public final T doOnConnection(Consumer<? super Connection> doOnConnection) {
+	public T doOnConnection(Consumer<? super Connection> doOnConnection) {
 		Objects.requireNonNull(doOnConnection, "doOnConnected");
 		T dup = duplicate();
 		@SuppressWarnings("unchecked")
@@ -291,7 +291,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @param doOnUnbound a consumer observing unbound events
 	 * @return a new {@link ServerTransport} reference
 	 */
-	public final T doOnUnbound(Consumer<? super DisposableServer> doOnUnbound) {
+	public T doOnUnbound(Consumer<? super DisposableServer> doOnUnbound) {
 		Objects.requireNonNull(doOnUnbound, "doOnUnbound");
 		T dup = duplicate();
 		@SuppressWarnings("unchecked")
@@ -306,7 +306,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @param host the host to bind to.
 	 * @return a new {@link ServerTransport} reference
 	 */
-	public final T host(String host) {
+	public T host(String host) {
 		Objects.requireNonNull(host, "host");
 		return bindAddress(() -> AddressUtils.updateHost(configuration().bindAddress(), host));
 	}
@@ -317,7 +317,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @param port The port to bind to.
 	 * @return a new {@link ServerTransport} reference
 	 */
-	public final T port(int port) {
+	public T port(int port) {
 		return bindAddress(() -> AddressUtils.updatePort(configuration().bindAddress(), port));
 	}
 

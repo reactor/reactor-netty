@@ -16,11 +16,13 @@
 
 package reactor.netty.http.server;
 
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
@@ -30,6 +32,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.transport.ServerTransport;
@@ -66,6 +69,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 */
 	public static HttpServer create() {
 		return HttpServerBind.INSTANCE;
+	}
+
+	@Override
+	public final HttpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		return super.bindAddress(bindAddressSupplier);
 	}
 
 	/**
@@ -198,6 +206,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		return childObserve(new HttpServerHandle(handler));
 	}
 
+	@Override
+	public final HttpServer host(String host) {
+		return super.host(host);
+	}
+
 	/**
 	 * Configure the {@link io.netty.handler.codec.http.HttpServerCodec}'s request decoding options.
 	 *
@@ -262,6 +275,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		}
 	}
 
+	@Override
+	public final HttpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
+		return super.metrics(enable, recorder);
+	}
+
 	/**
 	 * Removes any previously applied SSL configuration customization
 	 *
@@ -274,6 +292,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 			return dup;
 		}
 		return this;
+	}
+
+	@Override
+	public final HttpServer port(int port) {
+		return super.port(port);
 	}
 
 	/**
@@ -394,6 +417,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		HttpServer dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
 		return dup;
+	}
+
+	@Override
+	public final HttpServer wiretap(boolean enable) {
+		return super.wiretap(enable);
 	}
 
 	static final Logger log = Loggers.getLogger(HttpServer.class);

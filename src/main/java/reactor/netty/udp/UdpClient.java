@@ -15,20 +15,28 @@
  */
 package reactor.netty.udp;
 
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.handler.logging.LogLevel;
+import io.netty.util.AttributeKey;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.transport.ClientTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -64,6 +72,11 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	}
 
 	@Override
+	public final <A> UdpClient attr(AttributeKey<A> key, @Nullable A value) {
+		return super.attr(key, value);
+	}
+
+	@Override
 	public final Mono<? extends Connection> connect() {
 		return super.connect();
 	}
@@ -76,6 +89,21 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	@Override
 	public final Connection connectNow(Duration timeout) {
 		return super.connectNow(timeout);
+	}
+
+	@Override
+	public final UdpClient doOnConnect(Consumer<? super UdpClientConfig> doOnConnect) {
+		return super.doOnConnect(doOnConnect);
+	}
+
+	@Override
+	public final UdpClient doOnConnected(Consumer<? super Connection> doOnConnected) {
+		return super.doOnConnected(doOnConnected);
+	}
+
+	@Override
+	public final UdpClient doOnDisconnected(Consumer<? super Connection> doOnDisconnected) {
+		return super.doOnDisconnected(doOnDisconnected);
 	}
 
 	/**
@@ -92,8 +120,48 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	}
 
 	@Override
+	public final UdpClient host(String host) {
+		return super.host(host);
+	}
+
+	@Override
 	public final UdpClient metrics(boolean enable) {
 		return super.metrics(enable);
+	}
+
+	@Override
+	public final UdpClient metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
+		return super.metrics(enable, recorder);
+	}
+
+	@Override
+	public final UdpClient observe(ConnectionObserver observer) {
+		return super.observe(observer);
+	}
+
+	@Override
+	public final <O> UdpClient option(ChannelOption<O> key, @Nullable O value) {
+		return super.option(key, value);
+	}
+
+	@Override
+	public final UdpClient port(int port) {
+		return super.port(port);
+	}
+
+	@Override
+	public final UdpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
+		return super.remoteAddress(remoteAddressSupplier);
+	}
+
+	@Override
+	public final UdpClient runOn(EventLoopGroup eventLoopGroup) {
+		return super.runOn(eventLoopGroup);
+	}
+
+	@Override
+	public final UdpClient runOn(LoopResources channelResources) {
+		return super.runOn(channelResources);
 	}
 
 	/**
@@ -124,6 +192,21 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 		UdpClient dup = super.runOn(loopResources, false);
 		dup.configuration().family = family;
 		return dup;
+	}
+
+	@Override
+	public final UdpClient wiretap(boolean enable) {
+		return super.wiretap(enable);
+	}
+
+	@Override
+	public final UdpClient wiretap(String category) {
+		return super.wiretap(category);
+	}
+
+	@Override
+	public final UdpClient wiretap(String category, LogLevel level) {
+		return super.wiretap(category, level);
 	}
 
 	static final Logger log = Loggers.getLogger(UdpClient.class);

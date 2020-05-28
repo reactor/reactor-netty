@@ -15,6 +15,7 @@
  */
 package reactor.netty.http.client;
 
+import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -22,6 +23,7 @@ import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -42,7 +44,9 @@ import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyOutbound;
+import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.http.websocket.WebsocketInbound;
@@ -983,6 +987,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		}
 	}
 
+	@Override
+	public final HttpClient metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
+		return super.metrics(enable, recorder);
+	}
+
 	/**
 	 * Removes any previously applied SSL configuration customization
 	 *
@@ -995,6 +1004,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 			return dup;
 		}
 		return this;
+	}
+
+	@Override
+	public final HttpClient observe(ConnectionObserver observer) {
+		return super.observe(observer);
 	}
 
 	/**
@@ -1013,6 +1027,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 */
 	public final RequestSender patch() {
 		return request(HttpMethod.PATCH);
+	}
+
+	@Override
+	public final HttpClient port(int port) {
+		return super.port(port);
 	}
 
 	/**
@@ -1045,6 +1064,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 */
 	public final RequestSender put() {
 		return request(HttpMethod.PUT);
+	}
+
+	@Override
+	public final HttpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
+		return super.remoteAddress(remoteAddressSupplier);
 	}
 
 	/**
@@ -1124,6 +1148,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		HttpClientConfig config = dup.configuration();
 		config.websocketClientSpec = websocketClientSpec;
 		return dup;
+	}
+
+	@Override
+	public final HttpClient wiretap(boolean enable) {
+		return super.wiretap(enable);
 	}
 
 	static boolean isCompressing(HttpHeaders h){
