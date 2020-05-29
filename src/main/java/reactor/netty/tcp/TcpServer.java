@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -75,6 +76,11 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	@Override
 	public final TcpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		return super.bindAddress(bindAddressSupplier);
+	}
+
+	@Override
+	public final TcpServer channelGroup(ChannelGroup channelGroup) {
+		return super.channelGroup(channelGroup);
 	}
 
 	@Override

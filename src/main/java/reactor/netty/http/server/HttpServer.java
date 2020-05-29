@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslContext;
@@ -74,6 +75,11 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	@Override
 	public final HttpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		return super.bindAddress(bindAddressSupplier);
+	}
+
+	@Override
+	public final HttpServer channelGroup(ChannelGroup channelGroup) {
+		return super.channelGroup(channelGroup);
 	}
 
 	/**

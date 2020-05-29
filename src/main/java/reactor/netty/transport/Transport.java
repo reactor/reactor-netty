@@ -88,7 +88,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param channelGroup a {@link ChannelGroup}
 	 * @return a new {@link Transport} reference
 	 */
-	public final T channelGroup(ChannelGroup channelGroup) {
+	public T channelGroup(ChannelGroup channelGroup) {
 		Objects.requireNonNull(channelGroup, "channelGroup");
 		T dup = duplicate();
 		dup.configuration().channelGroup = channelGroup;
