@@ -59,6 +59,10 @@ public interface NettyPipeline {
 	String HttpDecompressor   = LEFT + "decompressor";
 	String HttpAggregator     = LEFT + "httpAggregator";
 	String HttpTrafficHandler = LEFT + "httpTrafficHandler";
+	/**
+	 * @deprecated as of 0.9.8. Not used in 1.0.0 version.
+	 */
+	@Deprecated
 	String HttpInitializer    = LEFT + "httpInitializer";
 	String AccessLogHandler   = LEFT + "accessLogHandler";
 	String OnChannelWriteIdle = LEFT + "onChannelWriteIdle";
@@ -67,6 +71,10 @@ public interface NettyPipeline {
 	String LoggingHandler     = LEFT + "loggingHandler";
 	String CompressionHandler = LEFT + "compressionHandler";
 	String HttpMetricsHandler = LEFT + "httpMetricsHandler";
+	/**
+	 * @deprecated as of 0.9.8. Not used.
+	 */
+	@Deprecated
 	String SslMetricsHandler  = LEFT + "sslMetricsHandler";
 	String ChannelMetricsHandler = LEFT + "channelMetricsHandler";
 	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";

@@ -211,6 +211,7 @@ final class HttpClientConnect extends HttpClient {
 		}
 
 		@Override
+		@SuppressWarnings("deprecation")
 		public void subscribe(CoreSubscriber<? super Connection> actual) {
 			final Bootstrap b = bootstrap.clone();
 
