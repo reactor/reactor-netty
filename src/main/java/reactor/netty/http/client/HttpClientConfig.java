@@ -55,6 +55,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.transport.ClientTransportConfig;
+import reactor.netty.transport.ProxyProvider;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -334,8 +335,18 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
+	protected void loggingHandler(LoggingHandler loggingHandler) {
+		super.loggingHandler(loggingHandler);
+	}
+
+	@Override
 	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder) {
 		super.metricsRecorder(metricsRecorder);
+	}
+
+	@Override
+	protected void proxyProvider(ProxyProvider proxyProvider) {
+		super.proxyProvider(proxyProvider);
 	}
 
 	@Override

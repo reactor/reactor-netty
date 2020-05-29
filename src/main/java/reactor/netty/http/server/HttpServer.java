@@ -36,6 +36,8 @@ import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.tcp.SslProvider;
+import reactor.netty.tcp.TcpServer;
+import reactor.netty.tcp.TcpServerConfig;
 import reactor.netty.transport.ServerTransport;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -70,6 +72,17 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 */
 	public static HttpServer create() {
 		return HttpServerBind.INSTANCE;
+	}
+
+	/**
+	 * Prepare an {@link HttpServer}
+	 *
+	 * @return a new {@link HttpServer}
+	 * @deprecated Use {@link HttpServer} methods for TCP level configurations.
+	 */
+	@Deprecated
+	public static HttpServer from(TcpServer tcpServer) {
+		return HttpServerBind.applyTcpServerConfig(tcpServer.configuration());
 	}
 
 	@Override
@@ -423,6 +436,25 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 		HttpServer dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
 		return dup;
+	}
+
+	/**
+	 * Apply a {@link TcpServer} mapping function to update TCP configuration and
+	 * return an enriched {@link HttpServer} to use.
+	 *
+	 * @param tcpMapper A {@link TcpServer} mapping function to update TCP configuration and
+	 * return an enriched {@link HttpServer} to use.
+	 * @return a new {@link HttpServer}
+	 * @deprecated Use {@link HttpServer} methods for TCP level configurations.
+	 */
+	@Deprecated
+	@SuppressWarnings("ReturnValueIgnored")
+	public final HttpServer tcpConfiguration(Function<? super TcpServer, ? extends TcpServer> tcpMapper) {
+		Objects.requireNonNull(tcpMapper, "tcpMapper");
+		HttpServerTcpConfig tcpServer = new HttpServerTcpConfig(this);
+		// ReturnValueIgnored is deliberate
+		tcpMapper.apply(tcpServer);
+		return tcpServer.httpServer;
 	}
 
 	@Override

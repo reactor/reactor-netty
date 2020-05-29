@@ -100,12 +100,12 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	}
 
 	@Override
-	public final <A> TcpClient attr(AttributeKey<A> key, @Nullable A value) {
+	public <A> TcpClient attr(AttributeKey<A> key, @Nullable A value) {
 		return super.attr(key, value);
 	}
 
 	@Override
-	public final Mono<? extends Connection> connect() {
+	public Mono<? extends Connection> connect() {
 		return super.connect();
 	}
 
@@ -120,17 +120,17 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	}
 
 	@Override
-	public final TcpClient doOnConnect(Consumer<? super TcpClientConfig> doOnConnect) {
+	public TcpClient doOnConnect(Consumer<? super TcpClientConfig> doOnConnect) {
 		return super.doOnConnect(doOnConnect);
 	}
 
 	@Override
-	public final TcpClient doOnConnected(Consumer<? super Connection> doOnConnected) {
+	public TcpClient doOnConnected(Consumer<? super Connection> doOnConnected) {
 		return super.doOnConnected(doOnConnected);
 	}
 
 	@Override
-	public final TcpClient doOnDisconnected(Consumer<? super Connection> doOnDisconnected) {
+	public TcpClient doOnDisconnected(Consumer<? super Connection> doOnDisconnected) {
 		return super.doOnDisconnected(doOnDisconnected);
 	}
 
@@ -142,74 +142,29 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 *
 	 * @return a new {@link TcpClient}
 	 */
-	public final TcpClient handle(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+	public TcpClient handle(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnected(new OnConnectedHandle(handler));
 	}
 
 	@Override
-	public final TcpClient host(String host) {
+	public TcpClient host(String host) {
 		return super.host(host);
 	}
 
 	@Override
-	public final TcpClient metrics(boolean enable) {
+	public TcpClient metrics(boolean enable) {
 		return super.metrics(enable);
 	}
 
 	@Override
-	public final TcpClient metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
+	public TcpClient metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		return super.metrics(enable, recorder);
 	}
 
 	@Override
-	public final TcpClient noProxy() {
+	public TcpClient noProxy() {
 		return super.noProxy();
-	}
-
-	@Override
-	public final TcpClient observe(ConnectionObserver observer) {
-		return super.observe(observer);
-	}
-
-	@Override
-	public final <O> TcpClient option(ChannelOption<O> key, @Nullable O value) {
-		return super.option(key, value);
-	}
-
-	@Override
-	public final TcpClient port(int port) {
-		return super.port(port);
-	}
-
-	@Override
-	public final TcpClient proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
-		return super.proxy(proxyOptions);
-	}
-
-	@Override
-	public final TcpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
-		return super.remoteAddress(remoteAddressSupplier);
-	}
-
-	@Override
-	public final TcpClient resolver(AddressResolverGroup<?> resolver) {
-		return super.resolver(resolver);
-	}
-
-	@Override
-	public final TcpClient runOn(EventLoopGroup eventLoopGroup) {
-		return super.runOn(eventLoopGroup);
-	}
-
-	@Override
-	public final TcpClient runOn(LoopResources channelResources) {
-		return super.runOn(channelResources);
-	}
-
-	@Override
-	public final TcpClient runOn(LoopResources loopResources, boolean preferNative) {
-		return super.runOn(loopResources, preferNative);
 	}
 
 	/**
@@ -217,13 +172,58 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 *
 	 * @return a new {@link TcpClient}
 	 */
-	public final TcpClient noSSL() {
+	public TcpClient noSSL() {
 		if (configuration().isSecure()) {
 			TcpClient dup = duplicate();
 			dup.configuration().sslProvider = null;
 			return dup;
 		}
 		return this;
+	}
+
+	@Override
+	public TcpClient observe(ConnectionObserver observer) {
+		return super.observe(observer);
+	}
+
+	@Override
+	public <O> TcpClient option(ChannelOption<O> key, @Nullable O value) {
+		return super.option(key, value);
+	}
+
+	@Override
+	public TcpClient port(int port) {
+		return super.port(port);
+	}
+
+	@Override
+	public TcpClient proxy(Consumer<? super ProxyProvider.TypeSpec> proxyOptions) {
+		return super.proxy(proxyOptions);
+	}
+
+	@Override
+	public TcpClient remoteAddress(Supplier<? extends SocketAddress> remoteAddressSupplier) {
+		return super.remoteAddress(remoteAddressSupplier);
+	}
+
+	@Override
+	public TcpClient resolver(AddressResolverGroup<?> resolver) {
+		return super.resolver(resolver);
+	}
+
+	@Override
+	public TcpClient runOn(EventLoopGroup eventLoopGroup) {
+		return super.runOn(eventLoopGroup);
+	}
+
+	@Override
+	public TcpClient runOn(LoopResources channelResources) {
+		return super.runOn(channelResources);
+	}
+
+	@Override
+	public TcpClient runOn(LoopResources loopResources, boolean preferNative) {
+		return super.runOn(loopResources, preferNative);
 	}
 
 	/**
@@ -234,7 +234,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 *
 	 * @return a new {@link TcpClient}
 	 */
-	public final TcpClient secure() {
+	public TcpClient secure() {
 		TcpClient dup = duplicate();
 		dup.configuration().sslProvider = SslProvider.defaultClientProvider();
 		return dup;
@@ -250,7 +250,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 *
 	 * @return a new {@link TcpClient}
 	 */
-	public final TcpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+	public TcpClient secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
 		TcpClient dup = duplicate();
 		SslProvider.SslContextSpec builder = SslProvider.builder();
@@ -266,7 +266,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 *
 	 * @return a new {@link TcpClient}
 	 */
-	public final TcpClient secure(SslProvider sslProvider) {
+	public TcpClient secure(SslProvider sslProvider) {
 		Objects.requireNonNull(sslProvider, "sslProvider");
 		TcpClient dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
@@ -274,17 +274,17 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	}
 
 	@Override
-	public final TcpClient wiretap(boolean enable) {
+	public TcpClient wiretap(boolean enable) {
 		return super.wiretap(enable);
 	}
 
 	@Override
-	public final TcpClient wiretap(String category) {
+	public TcpClient wiretap(String category) {
 		return super.wiretap(category);
 	}
 
 	@Override
-	public final TcpClient wiretap(String category, LogLevel level) {
+	public TcpClient wiretap(String category, LogLevel level) {
 		return super.wiretap(category, level);
 	}
 

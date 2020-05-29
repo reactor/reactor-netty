@@ -74,32 +74,32 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	}
 
 	@Override
-	public final TcpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+	public TcpServer bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
 		return super.bindAddress(bindAddressSupplier);
 	}
 
 	@Override
-	public final TcpServer channelGroup(ChannelGroup channelGroup) {
+	public TcpServer channelGroup(ChannelGroup channelGroup) {
 		return super.channelGroup(channelGroup);
 	}
 
 	@Override
-	public final TcpServer doOnBind(Consumer<? super TcpServerConfig> doOnBind) {
+	public TcpServer doOnBind(Consumer<? super TcpServerConfig> doOnBind) {
 		return super.doOnBind(doOnBind);
 	}
 
 	@Override
-	public final TcpServer doOnBound(Consumer<? super DisposableServer> doOnBound) {
+	public TcpServer doOnBound(Consumer<? super DisposableServer> doOnBound) {
 		return super.doOnBound(doOnBound);
 	}
 
 	@Override
-	public final TcpServer doOnConnection(Consumer<? super Connection> doOnConnection) {
+	public TcpServer doOnConnection(Consumer<? super Connection> doOnConnection) {
 		return super.doOnConnection(doOnConnection);
 	}
 
 	@Override
-	public final TcpServer doOnUnbound(Consumer<? super DisposableServer> doOnUnbound) {
+	public TcpServer doOnUnbound(Consumer<? super DisposableServer> doOnUnbound) {
 		return super.doOnUnbound(doOnUnbound);
 	}
 
@@ -111,23 +111,23 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 *
 	 * @return a new {@link TcpServer}
 	 */
-	public final TcpServer handle(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
+	public TcpServer handle(BiFunction<? super NettyInbound, ? super NettyOutbound, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return doOnConnection(new OnConnectionHandle(handler));
 	}
 
 	@Override
-	public final TcpServer host(String host) {
+	public TcpServer host(String host) {
 		return super.host(host);
 	}
 
 	@Override
-	public final TcpServer metrics(boolean enable) {
+	public TcpServer metrics(boolean enable) {
 		return super.metrics(enable);
 	}
 
 	@Override
-	public final TcpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
+	public TcpServer metrics(boolean enable, Supplier<? extends ChannelMetricsRecorder> recorder) {
 		return super.metrics(enable, recorder);
 	}
 
@@ -136,7 +136,7 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 *
 	 * @return a new {@link TcpServer}
 	 */
-	public final TcpServer noSSL() {
+	public TcpServer noSSL() {
 		if (configuration().isSecure()) {
 			TcpServer dup = duplicate();
 			dup.configuration().sslProvider = null;
@@ -146,22 +146,22 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	}
 
 	@Override
-	public final TcpServer port(int port) {
+	public TcpServer port(int port) {
 		return super.port(port);
 	}
 
 	@Override
-	public final TcpServer runOn(EventLoopGroup eventLoopGroup) {
+	public TcpServer runOn(EventLoopGroup eventLoopGroup) {
 		return super.runOn(eventLoopGroup);
 	}
 
 	@Override
-	public final TcpServer runOn(LoopResources channelResources) {
+	public TcpServer runOn(LoopResources channelResources) {
 		return super.runOn(channelResources);
 	}
 
 	@Override
-	public final TcpServer runOn(LoopResources loopResources, boolean preferNative) {
+	public TcpServer runOn(LoopResources loopResources, boolean preferNative) {
 		return super.runOn(loopResources, preferNative);
 	}
 
@@ -185,7 +185,7 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 * @param sslProviderBuilder builder callback for further customization of SslContext.
 	 * @return a new {@link TcpServer}
 	 */
-	public final TcpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
+	public TcpServer secure(Consumer<? super SslProvider.SslContextSpec> sslProviderBuilder) {
 		Objects.requireNonNull(sslProviderBuilder, "sslProviderBuilder");
 		TcpServer dup = duplicate();
 		SslProvider.SslContextSpec builder = SslProvider.builder();
@@ -212,7 +212,7 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	 *
 	 * @return a new {@link TcpServer}
 	 */
-	public final TcpServer secure(SslProvider sslProvider) {
+	public TcpServer secure(SslProvider sslProvider) {
 		Objects.requireNonNull(sslProvider, "sslProvider");
 		TcpServer dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
@@ -220,17 +220,17 @@ public abstract class TcpServer extends ServerTransport<TcpServer, TcpServerConf
 	}
 
 	@Override
-	public final TcpServer wiretap(boolean enable) {
+	public TcpServer wiretap(boolean enable) {
 		return super.wiretap(enable);
 	}
 
 	@Override
-	public final TcpServer wiretap(String category) {
+	public TcpServer wiretap(String category) {
 		return super.wiretap(category);
 	}
 
 	@Override
-	public final TcpServer wiretap(String category, LogLevel level) {
+	public TcpServer wiretap(String category, LogLevel level) {
 		return super.wiretap(category, level);
 	}
 

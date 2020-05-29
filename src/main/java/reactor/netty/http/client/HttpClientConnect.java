@@ -19,6 +19,7 @@ package reactor.netty.http.client;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -36,6 +37,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.AsciiString;
+import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
@@ -49,6 +51,7 @@ import reactor.netty.NettyOutbound;
 import reactor.netty.channel.AbortedException;
 import reactor.netty.http.HttpOperations;
 import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.TcpClientConfig;
 import reactor.netty.transport.AddressUtils;
 import reactor.netty.transport.ProxyProvider;
 import reactor.netty.tcp.SslProvider;
@@ -121,6 +124,58 @@ class HttpClientConnect extends HttpClient {
 	@Override
 	protected HttpClient duplicate() {
 		return new HttpClientConnect(new HttpClientConfig(config));
+	}
+
+	@SuppressWarnings("unchecked")
+	static HttpClient applyTcpClientConfig(TcpClientConfig config) {
+		HttpClient httpClient =
+				create(config.connectionProvider()).doOnChannelInit(config.doOnChannelInit())
+				                                   .observe(config.connectionObserver())
+				                                   .remoteAddress(config.remoteAddress())
+				                                   .resolver(config.resolver())
+				                                   .runOn(config.loopResources(), config.isPreferNative());
+
+		for (Map.Entry<AttributeKey<?>, ?> entry : config.attributes().entrySet()) {
+			httpClient = httpClient.attr((AttributeKey<Object>) entry.getKey(), entry.getValue());
+		}
+
+		if (config.bindAddress() != null) {
+			httpClient = httpClient.bindAddress(config.bindAddress());
+		}
+
+		if (config.channelGroup() != null) {
+			httpClient = httpClient.channelGroup(config.channelGroup());
+		}
+
+		if (config.doOnConnected() != null) {
+			httpClient = httpClient.doOnConnected(config.doOnConnected());
+		}
+
+		if (config.doOnDisconnected() != null) {
+			httpClient = httpClient.doOnDisconnected(config.doOnDisconnected());
+		}
+
+		if (config.loggingHandler() != null) {
+			httpClient.configuration().loggingHandler(config.loggingHandler());
+		}
+
+		if (config.metricsRecorder() != null) {
+			httpClient = httpClient.metrics(true, config.metricsRecorder());
+		}
+
+		for (Map.Entry<ChannelOption<?>, ?> entry : config.options().entrySet()) {
+			httpClient = httpClient.option((ChannelOption<Object>) entry.getKey(), entry.getValue());
+		}
+
+		if (config.proxyProvider() != null) {
+			httpClient.configuration().proxyProvider(config.proxyProvider());
+		}
+
+		if (config.sslProvider() != null) {
+			httpClient.secure(config.sslProvider());
+		}
+
+		return httpClient;
 	}
 
 	static final class MonoHttpConnect extends Mono<Connection> {

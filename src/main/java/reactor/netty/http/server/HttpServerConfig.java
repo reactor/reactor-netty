@@ -247,6 +247,11 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	}
 
 	@Override
+	protected void loggingHandler(LoggingHandler loggingHandler) {
+		super.loggingHandler(loggingHandler);
+	}
+
+	@Override
 	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder) {
 		super.metricsRecorder(metricsRecorder);
 	}

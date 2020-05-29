@@ -53,6 +53,7 @@ import reactor.netty.http.websocket.WebsocketInbound;
 import reactor.netty.http.websocket.WebsocketOutbound;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
+import reactor.netty.tcp.TcpClient;
 import reactor.netty.transport.ClientTransport;
 import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
@@ -385,6 +386,16 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 */
 	public static HttpClient create(ConnectionProvider connectionProvider) {
 		return new HttpClientConnect(connectionProvider);
+	}
+	/**
+	 * Prepare an {@link HttpClient}
+	 *
+	 * @return a new {@link HttpClient}
+	 * @deprecated Use {@link HttpClient} methods for TCP level configurations.
+	 */
+	@Deprecated
+	public static HttpClient from(TcpClient tcpClient) {
+		return HttpClientConnect.applyTcpClientConfig(tcpClient.configuration());
 	}
 
 	/**
@@ -1124,6 +1135,38 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		HttpClient dup = duplicate();
 		dup.configuration().sslProvider = sslProvider;
 		return dup;
+	}
+
+	/**
+	 * Apply an SSL configuration via the passed {@link SslProvider}.
+	 *
+	 * @param sslProvider The provider to set when configuring SSL
+	 * @return a new {@link HttpClient}
+	 */
+	public HttpClient secure(SslProvider sslProvider) {
+		Objects.requireNonNull(sslProvider, "sslProvider");
+		HttpClient dup = duplicate();
+		dup.configuration().sslProvider = sslProvider;
+		return dup;
+	}
+
+	/**
+	 * Apply a {@link TcpClient} mapping function to update TCP configuration and
+	 * return an enriched {@link HttpClient} to use.
+	 *
+	 * @param tcpMapper A {@link TcpClient} mapping function to update TCP configuration and
+	 * return an enriched {@link HttpClient} to use.
+	 * @return a new {@link HttpClient}
+	 * @deprecated Use {@link HttpClient} methods for TCP level configurations.
+	 */
+	@Deprecated
+	@SuppressWarnings("ReturnValueIgnored")
+	public final HttpClient tcpConfiguration(Function<? super TcpClient, ? extends TcpClient> tcpMapper) {
+		Objects.requireNonNull(tcpMapper, "tcpMapper");
+		HttpClientTcpConfig tcpClient = new HttpClientTcpConfig(this);
+		// ReturnValueIgnored is deliberate
+		tcpMapper.apply(tcpClient);
+		return tcpClient.httpClient;
 	}
 
 	/**

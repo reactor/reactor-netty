@@ -108,7 +108,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param doOnChannelInit configure the channel pipeline while initializing the channel
 	 * @return a new {@link Transport} reference
 	 */
-	public final T doOnChannelInit(ChannelPipelineConfigurer doOnChannelInit) {
+	public T doOnChannelInit(ChannelPipelineConfigurer doOnChannelInit) {
 		Objects.requireNonNull(doOnChannelInit, "doOnChannelInit");
 		T dup = duplicate();
 		ChannelPipelineConfigurer current = configuration().doOnChannelInit;

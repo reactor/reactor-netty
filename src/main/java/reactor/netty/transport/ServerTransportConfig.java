@@ -52,7 +52,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the read-only default channel attributes for each remote connection
 	 */
-	public final Map<AttributeKey<?>, Object> childAttributes() {
+	public final Map<AttributeKey<?>, ?> childAttributes() {
 		if (childAttrs == null) {
 			return Collections.emptyMap();
 		}
@@ -75,7 +75,7 @@ public abstract class ServerTransportConfig<CONF extends TransportConfig> extend
 	 *
 	 * @return the read-only {@link ChannelOption} map for each remote connection
 	 */
-	public final Map<ChannelOption<?>, Object> childOptions() {
+	public final Map<ChannelOption<?>, ?> childOptions() {
 		if (childOptions == null) {
 			return Collections.emptyMap();
 		}

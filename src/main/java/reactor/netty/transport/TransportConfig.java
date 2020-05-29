@@ -167,7 +167,7 @@ public abstract class TransportConfig {
 	 */
 	@Nullable
 	public final Supplier<? extends ChannelMetricsRecorder> metricsRecorder() {
-		return  this.metricsRecorder;
+		return this.metricsRecorder;
 	}
 
 	/**
@@ -304,6 +304,10 @@ public abstract class TransportConfig {
 	 * @return the configured {@link EventLoopGroup}
 	 */
 	protected abstract EventLoopGroup eventLoopGroup();
+
+	protected void loggingHandler(LoggingHandler loggingHandler) {
+		this.loggingHandler = loggingHandler;
+	}
 
 	protected void metricsRecorder(@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder) {
 		this.metricsRecorder = metricsRecorder;

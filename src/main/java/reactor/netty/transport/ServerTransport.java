@@ -192,7 +192,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @return a new {@link ServerTransport} reference
 	 * @see ServerBootstrap#childAttr(AttributeKey, Object)
 	 */
-	public final <A> T childAttr(AttributeKey<A> key, @Nullable A value) {
+	public <A> T childAttr(AttributeKey<A> key, @Nullable A value) {
 		Objects.requireNonNull(key, "key");
 		T dup = duplicate();
 		dup.configuration().childAttrs = TransportConfig.updateMap(configuration().childAttrs, key, value);
@@ -205,7 +205,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @param observer the {@link ConnectionObserver} addition
 	 * @return a new {@link ServerTransport} reference
 	 */
-	public final T childObserve(ConnectionObserver observer) {
+	public T childObserve(ConnectionObserver observer) {
 		Objects.requireNonNull(observer, "observer");
 		T dup = duplicate();
 		ConnectionObserver current = configuration().childObserver;
@@ -226,7 +226,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * @see ServerBootstrap#childOption(ChannelOption, Object)
 	 */
 	@SuppressWarnings("ReferenceEquality")
-	public final <A> T childOption(ChannelOption<A> key, @Nullable A value) {
+	public <A> T childOption(ChannelOption<A> key, @Nullable A value) {
 		Objects.requireNonNull(key, "key");
 		// Reference comparison is deliberate
 		if (ChannelOption.AUTO_READ == key) {

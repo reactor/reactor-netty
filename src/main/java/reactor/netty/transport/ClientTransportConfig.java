@@ -185,6 +185,10 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		return loopResources().onClient(isPreferNative());
 	}
 
+	protected void proxyProvider(ProxyProvider proxyProvider) {
+		this.proxyProvider = proxyProvider;
+	}
+
 	@SuppressWarnings("unchecked")
 	protected AddressResolverGroup<?> resolverInternal() {
 		if (metricsRecorder != null) {

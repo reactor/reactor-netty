@@ -93,6 +93,7 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
+import reactor.netty.transport.TransportConfig;
 import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -2207,5 +2208,39 @@ public class HttpClientTest {
 		          .responseContent()
 		          .aggregate()
 		          .block(Duration.ofSeconds(30));
+	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	@SuppressWarnings("deprecation")
+	public void testTcpConfigurationUnsupported_1() {
+		HttpClient.create()
+		          .tcpConfiguration(tcp -> tcp.doOnConnect(TransportConfig::attributes));
+	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	@SuppressWarnings("deprecation")
+	public void testTcpConfigurationUnsupported_2() {
+		HttpClient.create()
+		          .tcpConfiguration(tcp -> tcp.handle((req, res) -> res.sendString(Mono.just("test"))));
+	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	@SuppressWarnings("deprecation")
+	public void testTcpConfigurationUnsupported_3() {
+		HttpClient.create()
+		          .tcpConfiguration(tcp -> {
+		              tcp.connect();
+		              return tcp;
+		          });
+	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	@SuppressWarnings("deprecation")
+	public void testTcpConfigurationUnsupported_4() {
+		HttpClient.create()
+		          .tcpConfiguration(tcp -> {
+		              tcp.configuration();
+		              return tcp;
+		          });
 	}
 }
