@@ -96,18 +96,18 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Return the global HTTP resources for event loops and pooling
+	 * Return the global TCP resources for event loops and pooling
 	 *
-	 * @return the global HTTP resources for event loops and pooling
+	 * @return the global TCP resources for event loops and pooling
 	 */
 	public static TcpResources get() {
 		return getOrCreate(tcpResources, null, null, ON_TCP_NEW, "tcp");
 	}
 
 	/**
-	 * Reset http resources to default and return its instance
+	 * Reset TCP resources to default and return its instance
 	 *
-	 * @return the global HTTP resources
+	 * @return the global TCP resources
 	 */
 	public static TcpResources reset() {
 		disposeLoopsAndConnections();
@@ -115,18 +115,18 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Update provider resources and return the global HTTP resources
+	 * Update provider resources and return the global TCP resources
 	 *
-	 * @return the global HTTP resources
+	 * @return the global TCP resources
 	 */
 	public static TcpResources set(ConnectionProvider provider) {
 		return getOrCreate(tcpResources, null, provider, ON_TCP_NEW, "tcp");
 	}
 
 	/**
-	 * Update pooling resources and return the global HTTP resources
+	 * Update pooling resources and return the global TCP resources
 	 *
-	 * @return the global HTTP resources
+	 * @return the global TCP resources
 	 */
 	public static TcpResources set(LoopResources loops) {
 		return getOrCreate(tcpResources, loops, null, ON_TCP_NEW, "tcp");
