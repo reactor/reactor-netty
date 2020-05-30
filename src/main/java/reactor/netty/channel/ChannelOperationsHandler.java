@@ -18,6 +18,7 @@ package reactor.netty.channel;
 
 import io.netty.buffer.EmptyByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.DecoderResult;
@@ -40,6 +41,7 @@ import static reactor.netty.ReactorNetty.toPrettyHexDump;
  *
  * @author Stephane Maldini
  */
+@ChannelHandler.Sharable
 final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 
 	final ConnectionObserver        listener;
