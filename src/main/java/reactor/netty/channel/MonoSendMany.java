@@ -648,5 +648,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		public synchronized Throwable fillInStackTrace() {
 			return this;
 		}
+
+		private static final long serialVersionUID = 8284666103614054915L;
 	}
 }

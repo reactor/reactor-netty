@@ -878,6 +878,8 @@ public final class ReactorNetty {
 		public synchronized Throwable fillInStackTrace() {
 			return this;
 		}
+
+		private static final long serialVersionUID = 6643227207055930902L;
 	}
 
 	static final ChannelPipelineConfigurer NOOP_CONFIGURER = (observer, ch, address) -> {};
