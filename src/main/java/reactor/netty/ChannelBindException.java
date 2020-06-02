@@ -113,4 +113,6 @@ public class ChannelBindException extends RuntimeException {
 	public int localPort() {
 		return localPort;
 	}
+
+	private static final long serialVersionUID = -2053867901772588008L;
 }

@@ -59,4 +59,6 @@ public class AbortedException extends RuntimeException {
 	public static AbortedException beforeSend() {
 		return new AbortedException(CONNECTION_CLOSED_BEFORE_SEND);
 	}
+
+	private static final long serialVersionUID = 6091789064032301718L;
 }

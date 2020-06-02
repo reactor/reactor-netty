@@ -38,4 +38,6 @@ final class RedirectClientException extends RuntimeException {
 		// omit stacktrace for this exception
 		return this;
 	}
+
+	private static final long serialVersionUID = -8887076761196723045L;
 }

@@ -65,4 +65,6 @@ public final class PrematureCloseException extends IOException {
 		// omit stacktrace for this exception
 		return this;
 	}
+
+	private static final long serialVersionUID = -8551235699066818521L;
 }
