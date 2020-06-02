@@ -333,7 +333,7 @@ configure(rootProject) { project ->
 
 		onlyIfNewer true
 		compress true
-		src "${repositories.jcenter().url}io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}.jar"
+		src "https://repo.spring.io/libs-snapshot/io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}.jar"
 		dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar"
   }
 
@@ -346,13 +346,138 @@ configure(rootProject) { project ->
 		txtOutputFile = file("${project.buildDir}/reports/japi.txt")
 		ignoreMissingClasses = true
 		includeSynthetic = true
-	    methodExcludes = [
-			  // this is a method with a default impl
-			  "reactor.netty.resources.LoopResources#onChannel(java.lang.Class,io.netty.channel.EventLoopGroup)",
-			  // this is a static method
-			  "reactor.netty.resources.LoopResources#hasNativeSupport()"
-	    ]
-	    onlyIf {"$compatibleVersion" != "SKIP"}
+		methodExcludes = [
+			// Deprecated methods in 0.9.x that are removed in 1.0.0
+			// reactor.netty.http.client package
+			"reactor.netty.http.client.HttpClient#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.http.client.HttpClient#doAfterResponse(java.util.function.BiConsumer)",
+			"reactor.netty.http.client.HttpClient#metrics(boolean)",
+			"reactor.netty.http.client.HttpClient#metrics(boolean, reactor.netty.http.client.HttpClientMetricsRecorder)",
+			"reactor.netty.http.client.HttpClient#websocket(java.lang.String)",
+			"reactor.netty.http.client.HttpClient#websocket(int)",
+			"reactor.netty.http.client.HttpClient#websocket(boolean)",
+			"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int)",
+			"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int, boolean)",
+			// reactor.netty.http.server package
+			"reactor.netty.http.server.HttpServer#metrics(boolean)",
+			"reactor.netty.http.server.HttpServer#metrics(boolean, reactor.netty.http.server.HttpServerMetricsRecorder)",
+			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(boolean, java.util.function.BiFunction)",
+			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, java.util.function.BiFunction)",
+			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, java.util.function.BiFunction)",
+			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, boolean, java.util.function.BiFunction)",
+			"reactor.netty.http.server.HttpServerRoutes#ws(java.lang.String, java.util.function.BiFunction, java.lang.String)",
+			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String)",
+			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int)",
+			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int, boolean)",
+			// reactor.netty.resources package
+			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String)",
+			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration)",
+			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration, java.time.Duration)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration, java.time.Duration)",
+			"reactor.netty.resources.ConnectionProvider#maxConnections()",
+			"reactor.netty.resources.LoopResources#onChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.resources.LoopResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.resources.LoopResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.resources.LoopResources#preferNative()",
+			// reactor.netty.tcp package
+			"reactor.netty.tcp.SslProvider#asDetailedString()",
+			"reactor.netty.tcp.SslProvider#asSimpleString()",
+			"reactor.netty.tcp.TcpClient#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.tcp.TcpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+			"reactor.netty.tcp.TcpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+			"reactor.netty.tcp.TcpResources#onChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.tcp.TcpResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.tcp.TcpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.tcp.TcpResources#preferNative()",
+			"reactor.netty.tcp.TcpServer#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.tcp.TcpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+			"reactor.netty.tcp.TcpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+			// reactor.netty.udp package
+			"reactor.netty.udp.UdpClient#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.udp.UdpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+			"reactor.netty.udp.UdpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+			"reactor.netty.udp.UdpResources#onChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.udp.UdpResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.udp.UdpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.udp.UdpResources#preferNative()",
+			"reactor.netty.udp.UdpServer#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.udp.UdpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+			"reactor.netty.udp.UdpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+			// reactor.netty package
+			"reactor.netty.ChannelBindException#fail(io.netty.bootstrap.AbstractBootstrap, java.lang.Throwable)",
+
+			// New methods added in 1.0.0 with default implementation
+			// reactor.netty package
+			"reactor.netty.DisposableServer#address()",
+			"reactor.netty.DisposableServer#path()",
+
+			// !!!Backwards incompatible changes!!!
+			// reactor.netty.http.client package
+			"reactor.netty.http.client.HttpClient#mapConnect(java.util.function.BiFunction)",
+			// reactor.netty.http.server package
+			"reactor.netty.http.server.HttpServer#observe(reactor.netty.ConnectionObserver)", // Renamed to `childObserve`
+			// reactor.netty.resources package
+			"reactor.netty.resources.ConnectionProvider#acquire(io.netty.bootstrap.Bootstrap)",
+			// reactor.netty.tcp package
+			"reactor.netty.tcp.SslProvider#findSslSupport(io.netty.bootstrap.Bootstrap)",
+			"reactor.netty.tcp.SslProvider#findSslSupport(io.netty.bootstrap.ServerBootstrap)",
+			"reactor.netty.tcp.SslProvider#removeSslSupport(io.netty.bootstrap.Bootstrap)",
+			"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.Bootstrap, reactor.netty.tcp.SslProvider)",
+			"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.ServerBootstrap, reactor.netty.tcp.SslProvider)",
+			"reactor.netty.tcp.TcpClient#bootstrap(java.util.function.Function)",
+			"reactor.netty.tcp.TcpClient#configure()",
+			"reactor.netty.tcp.TcpClient#connect(io.netty.bootstrap.Bootstrap)",
+			"reactor.netty.tcp.TcpClient#hasProxy()", // Moved to TcpClientConfig
+			"reactor.netty.tcp.TcpClient#isSecure()", // Moved to TcpClientConfig
+			"reactor.netty.tcp.TcpClient#proxyProvider()", // Moved to TcpClientConfig
+			"reactor.netty.tcp.TcpClient#sslProvider()", // Moved to TcpClientConfig
+			"reactor.netty.tcp.TcpResources#acquire(io.netty.bootstrap.Bootstrap)",
+			"reactor.netty.tcp.TcpServer#attr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `childAttr`
+			"reactor.netty.tcp.TcpServer#bind(io.netty.bootstrap.ServerBootstrap)",
+			"reactor.netty.tcp.TcpServer#bootstrap(java.util.function.Function)",
+			"reactor.netty.tcp.TcpServer#configure()",
+			"reactor.netty.tcp.TcpServer#isSecure()",// Moved to TcpServerConfig
+			"reactor.netty.tcp.TcpServer#observe(reactor.netty.ConnectionObserver)", // Renamed to `childObserve`
+			"reactor.netty.tcp.TcpServer#option(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `childOption`
+			"reactor.netty.tcp.TcpServer#selectorAttr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `attr`
+			"reactor.netty.tcp.TcpServer#selectorOption(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `option`
+			"reactor.netty.tcp.TcpServer#sslProvider()", // Moved to TcpServerConfig
+			//reactor.netty.udp package
+			"reactor.netty.udp.UdpClient#bootstrap(java.util.function.Function)",
+			"reactor.netty.udp.UdpServer#bind()",
+			"reactor.netty.udp.UdpServer#bootstrap(java.util.function.Function)",
+			// reactor.netty package
+			"reactor.netty.DisposableChannel#address()" // Returns SocketAddress instead of InetSocketAddress
+		]
+		fieldExcludes = [
+			// Deprecated fields in 0.9.x that are removed in 1.0.0
+			// reactor.netty.http.client package
+			"reactor.netty.http.client.PrematureCloseException#DURING_RESPONSE",
+			"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE_SENDING_REQUEST",
+			"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE",
+			// reactor.netty package
+			"reactor.netty.NettyPipeline#HttpInitializer",
+			"reactor.netty.NettyPipeline#SslMetricsHandler"
+		]
+		classExcludes = [
+			// !!!Backwards incompatible changes!!!
+			// reactor.netty.channel package
+			"reactor.netty.channel.BootstrapHandlers", // Removed
+			// reactor.netty.http.client package
+			"reactor.netty.http.client.PrematureCloseException", // Serializable
+			// reactor.netty.http package
+			"reactor.netty.http.HttpResources", // Method changed in super class
+			// reactor.netty.tcp package
+			"reactor.netty.tcp.InetSocketAddressUtil", // Moved and renamed
+			"reactor.netty.tcp.ProxyProvider", // Moved and renamed
+			// reactor.netty package
+			"reactor.netty.ChannelBindException" // Serializable
+		]
+		onlyIf {"$compatibleVersion" != "SKIP"}
   }
   tasks.japicmp.dependsOn(downloadBaseline)
   shadowJar.finalizedBy(japicmp)
