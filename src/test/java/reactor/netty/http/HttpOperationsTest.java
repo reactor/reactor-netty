@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.CharsetUtil;
+import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 import reactor.netty.Connection;
 
@@ -69,29 +70,29 @@ public class HttpOperationsTest {
 		channel.writeInbound(content);
 
 		Object t = channel.readInbound();
-		assertThat(t, instanceOf(HttpResponse.class));
-		assertThat(t, not(instanceOf(HttpContent.class)));
+		MatcherAssert.assertThat(t, instanceOf(HttpResponse.class));
+		MatcherAssert.assertThat(t, not(instanceOf(HttpContent.class)));
 
 		t = channel.readInbound();
-		assertThat(t, instanceOf(ByteBuf.class));
+		MatcherAssert.assertThat(t, instanceOf(ByteBuf.class));
 		ByteBuf b = (ByteBuf) t;
-		assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8),
+		MatcherAssert.assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8),
 				is("{\"some\": 1}"));
 		b.release();
 
 		t = channel.readInbound();
-		assertThat(t, instanceOf(ByteBuf.class));
+		MatcherAssert.assertThat(t, instanceOf(ByteBuf.class));
 		b = (ByteBuf) t;
-		assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8),
+		MatcherAssert.assertThat(b.readCharSequence(b.readableBytes(), CharsetUtil.UTF_8),
 				is("{\"value\": true, \"test\": 1}"));
 		b.release();
 
 		t = channel.readInbound();
-		assertThat(t, is(LastHttpContent.EMPTY_LAST_CONTENT));
+		MatcherAssert.assertThat(t, is(LastHttpContent.EMPTY_LAST_CONTENT));
 		((LastHttpContent) t).release();
 
 		t = channel.readInbound();
-		assertThat(t, nullValue());
+		MatcherAssert.assertThat(t, nullValue());
 	}
 
 	@Test
