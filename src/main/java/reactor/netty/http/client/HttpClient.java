@@ -126,6 +126,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 
 		/**
 		 * Configure URI to use for this request/response.
+		 * <p>Note: {@link #baseUrl(String)} will have no effect when this method is used for configuring an URI.
 		 *
 		 * @param uri target URI which is an absolute, fully constructed {@link URI}
 		 * @return the appropriate sending or receiving contract
@@ -419,7 +420,9 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	}
 
 	/**
-	 * Configure URI to use for this request/response
+	 * Configure URI to use for this request/response.
+	 * <p>Note: Configured {@code baseUrl} only applies when used with {@link UriConfiguration#uri(String)}
+	 * or {@link UriConfiguration#uri(Mono)}.
 	 *
 	 * @param baseUrl a default base url that can be fully sufficient for request or can
 	 * be used to prepend future {@link UriConfiguration#uri} calls.
