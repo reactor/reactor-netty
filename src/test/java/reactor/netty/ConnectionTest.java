@@ -30,6 +30,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.Utf8FrameValidator;
+import org.hamcrest.MatcherAssert;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.core.Disposable;
@@ -430,8 +431,8 @@ public class ConnectionTest {
 		 .addHandlerFirst("encoder", new ChannelHandlerAdapter() {
 		 });
 
-		assertThat(c.isPersistent(), is(false));
-		assertThat(closeCount.intValue(), is(0));
+		MatcherAssert.assertThat(c.isPersistent(), is(false));
+		MatcherAssert.assertThat(closeCount.intValue(), is(0));
 	}
 
 	@Test
@@ -460,8 +461,8 @@ public class ConnectionTest {
 		 .addHandlerLast("decoder", new ChannelHandlerAdapter() {
 		 });
 
-		assertThat(c.isPersistent(), is(false));
-		assertThat(closeCount.intValue(), is(0));
+		MatcherAssert.assertThat(c.isPersistent(), is(false));
+		MatcherAssert.assertThat(closeCount.intValue(), is(0));
 	}
 
 	@Test
@@ -474,7 +475,7 @@ public class ConnectionTest {
 		assertEquals(channel.pipeline()
 		                    .names(),
 				Arrays.asList("foo", "DefaultChannelPipeline$TailContext#0"));
-		assertThat(channel.pipeline()
+		MatcherAssert.assertThat(channel.pipeline()
 		                  .get("foo"), is(instanceOf(Utf8FrameValidator.class)));
 	}
 
@@ -488,7 +489,7 @@ public class ConnectionTest {
 		assertEquals(channel.pipeline()
 		                    .names(),
 				Arrays.asList("foo", "DefaultChannelPipeline$TailContext#0"));
-		assertThat(channel.pipeline()
+		MatcherAssert.assertThat(channel.pipeline()
 		                  .get("foo"), is(instanceOf(Utf8FrameValidator.class)));
 	}
 

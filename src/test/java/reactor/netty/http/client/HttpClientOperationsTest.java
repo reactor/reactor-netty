@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.util.CharsetUtil;
+import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
@@ -55,17 +56,17 @@ public class HttpClientOperationsTest {
 				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extractor"));
+		MatcherAssert.assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extractor"));
 
 		Object content = channel.readInbound();
-		assertThat(content, instanceOf(ByteBuf.class));
+		MatcherAssert.assertThat(content, instanceOf(ByteBuf.class));
 		((ByteBuf) content).release();
 
 		content = channel.readInbound();
-		assertThat(content, instanceOf(LastHttpContent.class));
+		MatcherAssert.assertThat(content, instanceOf(LastHttpContent.class));
 		((LastHttpContent) content).release();
 
-		assertThat(channel.readInbound(), nullValue());
+		MatcherAssert.assertThat(channel.readInbound(), nullValue());
 	}
 
 	@Test
@@ -77,17 +78,17 @@ public class HttpClientOperationsTest {
 				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
+		MatcherAssert.assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
 
 		Object content = channel.readInbound();
-		assertThat(content, instanceOf(ByteBuf.class));
+		MatcherAssert.assertThat(content, instanceOf(ByteBuf.class));
 		((ByteBuf) content).release();
 
 		content = channel.readInbound();
-		assertThat(content, instanceOf(LastHttpContent.class));
+		MatcherAssert.assertThat(content, instanceOf(LastHttpContent.class));
 		((LastHttpContent) content).release();
 
-		assertThat(channel.readInbound(), nullValue());
+		MatcherAssert.assertThat(channel.readInbound(), nullValue());
 	}
 
 	@Test
@@ -99,17 +100,17 @@ public class HttpClientOperationsTest {
 				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extractor"));
+		MatcherAssert.assertThat(channel.pipeline().names().iterator().next(), is("JsonObjectDecoder$extractor"));
 
 		Object content = channel.readInbound();
-		assertThat(content, instanceOf(ByteBuf.class));
+		MatcherAssert.assertThat(content, instanceOf(ByteBuf.class));
 		((ByteBuf) content).release();
 
 		content = channel.readInbound();
-		assertThat(content, instanceOf(LastHttpContent.class));
+		MatcherAssert.assertThat(content, instanceOf(LastHttpContent.class));
 		((LastHttpContent) content).release();
 
-		assertThat(channel.readInbound(), nullValue());
+		MatcherAssert.assertThat(channel.readInbound(), nullValue());
 	}
 
 	@Test
@@ -121,17 +122,17 @@ public class HttpClientOperationsTest {
 				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
 
-		assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
+		MatcherAssert.assertThat(channel.pipeline().names().iterator().next(), is("json$extractor"));
 
 		Object content = channel.readInbound();
-		assertThat(content, instanceOf(ByteBuf.class));
+		MatcherAssert.assertThat(content, instanceOf(ByteBuf.class));
 		((ByteBuf) content).release();
 
 		content = channel.readInbound();
-		assertThat(content, instanceOf(LastHttpContent.class));
+		MatcherAssert.assertThat(content, instanceOf(LastHttpContent.class));
 		((LastHttpContent) content).release();
 
-		assertThat(channel.readInbound(), nullValue());
+		MatcherAssert.assertThat(channel.readInbound(), nullValue());
 	}
 
 	@Test
