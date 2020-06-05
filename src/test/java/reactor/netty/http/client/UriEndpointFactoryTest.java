@@ -17,13 +17,17 @@
 package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 
 import org.junit.Test;
+import reactor.netty.transport.AddressUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -31,7 +35,7 @@ public class UriEndpointFactoryTest {
 	private final UriEndpointFactoryBuilder builder = new UriEndpointFactoryBuilder();
 
 	@Test
-	public void shouldParseUrls() {
+	public void shouldParseUrls_1() {
 		List<String[]> inputs = Arrays.asList(
 				new String[]{"http://localhost:80/path", "http", "localhost", "80", "/path"},
 				new String[]{"http://localhost:80/path?key=val", "http", "localhost", "80", "/path?key=val"},
@@ -75,6 +79,45 @@ public class UriEndpointFactoryTest {
 			assertEquals(input[2], matcher.group(2));
 			assertEquals(input[3], matcher.group(3));
 			assertEquals(input[4], matcher.group(4));
+		}
+	}
+
+	@Test
+	public void shouldParseUrls_2() throws Exception {
+		List<String[]> inputs = Arrays.asList(
+				new String[]{"http://localhost:80/path", "http://localhost/path"},
+				new String[]{"http://localhost:80/path?key=val", "http://localhost/path?key=val"},
+				new String[]{"http://localhost/path", "http://localhost/path"},
+				new String[]{"http://localhost/path%20", "http://localhost/path%20"},
+				new String[]{"http://localhost/path?key=val", "http://localhost/path?key=val"},
+				new String[]{"http://localhost/", "http://localhost/"},
+				new String[]{"http://localhost/?key=val", "http://localhost/?key=val"},
+				new String[]{"http://localhost", "http://localhost/"},
+				new String[]{"http://localhost?key=val", "http://localhost/?key=val"},
+				new String[]{"http://localhost:80", "http://localhost/"},
+				new String[]{"http://localhost:80?key=val", "http://localhost/?key=val"},
+				new String[]{"http://localhost:80/?key=val#fragment", "http://localhost/?key=val"},
+				new String[]{"http://localhost:80/?key=%223", "http://localhost/?key=%223"},
+				new String[]{"http://localhost/:1234", "http://localhost/:1234"},
+				new String[]{"http://localhost:1234", "http://localhost:1234/"},
+				new String[]{"http://[::1]:80/path", "http://[::1]/path"},
+				new String[]{"http://[::1]:80/path?key=val", "http://[::1]/path?key=val"},
+				new String[]{"http://[::1]/path", "http://[::1]/path"},
+				new String[]{"http://[::1]/path%20", "http://[::1]/path%20"},
+				new String[]{"http://[::1]/path?key=val", "http://[::1]/path?key=val"},
+				new String[]{"http://[::1]/", "http://[::1]/"},
+				new String[]{"http://[::1]/?key=val", "http://[::1]/?key=val"},
+				new String[]{"http://[::1]", "http://[::1]/"},
+				new String[]{"http://[::1]?key=val", "http://[::1]/?key=val"},
+				new String[]{"http://[::1]:80", "http://[::1]/"},
+				new String[]{"http://[::1]:80?key=val", "http://[::1]/?key=val"},
+				new String[]{"http://[::1]:80/?key=val#fragment", "http://[::1]/?key=val"},
+				new String[]{"http://[::1]:80/?key=%223", "http://[::1]/?key=%223"},
+				new String[]{"http://[::1]:1234", "http://[::1]:1234/"}
+		);
+
+		for(String[] input : inputs) {
+			assertThat(externalForm(this.builder.build(), input[0], false, true)).isEqualTo(input[1]);
 		}
 	}
 
@@ -185,22 +228,17 @@ public class UriEndpointFactoryTest {
 	}
 
 	@Test
-	public void createUriEndpointAbsoluteHttp() {
-		String test1 = this.builder.build()
-				.createUriEndpoint("https://localhost/foo", false)
-				.toExternalForm();
-		String test2 = this.builder.build()
-				.createUriEndpoint("http://localhost/foo", true)
-				.toExternalForm();
+	public void createUriEndpointAbsoluteHttp() throws Exception {
+		testCreateUriEndpointAbsoluteHttp(false);
+		testCreateUriEndpointAbsoluteHttp(true);
+	}
 
-		String test3 = this.builder.sslSupport()
-				.build()
-				.createUriEndpoint("http://localhost/foo", false)
-				.toExternalForm();
-		String test4 = this.builder.sslSupport()
-				.build()
-				.createUriEndpoint("https://localhost/foo", true)
-				.toExternalForm();
+	private void testCreateUriEndpointAbsoluteHttp(boolean useUri) throws Exception {
+		String test1 = externalForm(this.builder.build(), "https://localhost/foo", false, useUri);
+		String test2 = externalForm(this.builder.build(), "http://localhost/foo", true, useUri);
+
+		String test3 = externalForm(this.builder.sslSupport().build(), "http://localhost/foo", false, useUri);
+		String test4 = externalForm(this.builder.sslSupport().build(), "https://localhost/foo", true, useUri);
 
 		assertThat(test1).isEqualTo("https://localhost/foo");
 		assertThat(test2).isEqualTo("http://localhost/foo");
@@ -209,67 +247,83 @@ public class UriEndpointFactoryTest {
 	}
 
 	@Test
-	public void createUriEndpointWithQuery() {
-		assertThat(this.builder.build()
-				.createUriEndpoint("http://localhost/foo?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/foo?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("http://localhost/?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("http://localhost?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("http://localhost:80/foo?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/foo?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("http://localhost:80/?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("http://localhost:80?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("localhost/foo?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/foo?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("localhost/?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("localhost?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("localhost:80/foo?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/foo?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("localhost:80/?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/?key=val");
-		assertThat(this.builder.build()
-				.createUriEndpoint("localhost:80?key=val", false)
-				.toExternalForm()).isEqualTo("http://localhost/?key=val");
+	public void createUriEndpointWithQuery() throws Exception {
+		testCreateUriEndpointWithQuery(false);
+		testCreateUriEndpointWithQuery(true);
+	}
+
+	private void testCreateUriEndpointWithQuery(boolean useUri) throws Exception {
+		assertThat(externalForm(this.builder.build(), "http://localhost/foo?key=val", false, useUri))
+				.isEqualTo("http://localhost/foo?key=val");
+		assertThat(externalForm(this.builder.build(), "http://localhost/?key=val", false, useUri))
+				.isEqualTo("http://localhost/?key=val");
+		assertThat(externalForm(this.builder.build(), "http://localhost?key=val", false, useUri))
+				.isEqualTo("http://localhost/?key=val");
+		assertThat(externalForm(this.builder.build(), "http://localhost:80/foo?key=val", false, useUri))
+				.isEqualTo("http://localhost/foo?key=val");
+		assertThat(externalForm(this.builder.build(), "http://localhost:80/?key=val", false, useUri))
+				.isEqualTo("http://localhost/?key=val");
+		assertThat(externalForm(this.builder.build(), "http://localhost:80?key=val", false, useUri))
+				.isEqualTo("http://localhost/?key=val");
+
+		if (useUri) {
+			assertThatExceptionOfType(IllegalArgumentException.class)
+					.isThrownBy(() -> externalForm(this.builder.build(), "localhost/foo?key=val", false, useUri));
+			assertThatExceptionOfType(IllegalArgumentException.class)
+					.isThrownBy(() -> externalForm(this.builder.build(), "localhost/?key=val", false, useUri));
+			assertThatExceptionOfType(IllegalArgumentException.class)
+					.isThrownBy(() -> externalForm(this.builder.build(), "localhost?key=val", false, useUri));
+			assertThatExceptionOfType(IllegalArgumentException.class)
+					.isThrownBy(() -> externalForm(this.builder.build(), "localhost:80/foo?key=val", false, useUri));
+			assertThatExceptionOfType(IllegalArgumentException.class)
+					.isThrownBy(() -> externalForm(this.builder.build(), "localhost:80/?key=val", false, useUri));
+			assertThatExceptionOfType(IllegalArgumentException.class)
+					.isThrownBy(() -> externalForm(this.builder.build(), "localhost:80?key=val", false, useUri));
+		}
+		else {
+			assertThat(externalForm(this.builder.build(), "localhost/foo?key=val", false, useUri))
+					.isEqualTo("http://localhost/foo?key=val");
+			assertThat(externalForm(this.builder.build(), "localhost/?key=val", false, useUri))
+					.isEqualTo("http://localhost/?key=val");
+			assertThat(externalForm(this.builder.build(), "localhost?key=val", false, useUri))
+					.isEqualTo("http://localhost/?key=val");
+			assertThat(externalForm(this.builder.build(), "localhost:80/foo?key=val", false, useUri))
+					.isEqualTo("http://localhost/foo?key=val");
+			assertThat(externalForm(this.builder.build(), "localhost:80/?key=val", false, useUri))
+					.isEqualTo("http://localhost/?key=val");
+			assertThat(externalForm(this.builder.build(), "localhost:80?key=val", false, useUri))
+					.isEqualTo("http://localhost/?key=val");
+		}
 	}
 
 	@Test
-	public void createUriEndpointAbsoluteWs() {
-		String test1 = this.builder.build()
-				.createUriEndpoint("wss://localhost/foo", false)
-				.toExternalForm();
-		String test2 = this.builder.build()
-				.createUriEndpoint("ws://localhost/foo", true)
-				.toExternalForm();
+	public void createUriEndpointAbsoluteWs() throws Exception {
+		testCreateUriEndpointAbsoluteWs(false);
+		testCreateUriEndpointAbsoluteWs(true);
+	}
 
-		String test3 = this.builder.sslSupport()
-				.build()
-				.createUriEndpoint("ws://localhost/foo", false)
-				.toExternalForm();
-		String test4 = this.builder.sslSupport()
-				.build()
-				.createUriEndpoint("wss://localhost/foo", true)
-				.toExternalForm();
+	private void testCreateUriEndpointAbsoluteWs(boolean useUri) throws Exception {
+		String test1 = externalForm(this.builder.build(), "wss://localhost/foo", false, useUri);
+		String test2 = externalForm(this.builder.build(), "ws://localhost/foo", true, useUri);
+
+		String test3 = externalForm(this.builder.sslSupport().build(), "ws://localhost/foo", false, useUri);
+		String test4 = externalForm(this.builder.sslSupport().build(), "wss://localhost/foo", true, useUri);
 
 		assertThat(test1).isEqualTo("wss://localhost/foo");
 		assertThat(test2).isEqualTo("ws://localhost/foo");
 		assertThat(test3).isEqualTo("ws://localhost/foo");
 		assertThat(test4).isEqualTo("wss://localhost/foo");
+	}
+
+	private static String externalForm(UriEndpointFactory factory, String url, boolean isWs, boolean useUri) throws Exception {
+		if (useUri) {
+			return factory.createUriEndpoint(new URI(url), isWs)
+			              .toExternalForm();
+		}
+		else {
+			return factory.createUriEndpoint(url, isWs)
+			              .toExternalForm();
+		}
 	}
 
 	private static final class UriEndpointFactoryBuilder {
@@ -280,7 +334,7 @@ public class UriEndpointFactoryTest {
 		public UriEndpointFactory build() {
 			return new UriEndpointFactory(
 					() -> InetSocketAddress.createUnresolved(host, port != -1 ? port : (secure ? 443 : 80)), secure,
-					InetSocketAddress::createUnresolved);
+					URI_ADDRESS_MAPPER);
 		}
 
 		public UriEndpointFactoryBuilder sslSupport() {
@@ -297,5 +351,8 @@ public class UriEndpointFactoryTest {
 			this.port = port;
 			return this;
 		}
+
+		static final BiFunction<String, Integer, InetSocketAddress> URI_ADDRESS_MAPPER =
+				AddressUtils::createUnresolved;
 	}
 }

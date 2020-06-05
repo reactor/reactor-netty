@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -68,6 +69,23 @@ final class UriEndpointFactory {
 				throw new IllegalArgumentException("Unable to parse url [" + url + "]");
 			}
 		}
+	}
+
+	UriEndpoint createUriEndpoint(URI url, boolean isWs) {
+		if (!url.isAbsolute()) {
+			throw new IllegalArgumentException("URI is not absolute: " + url);
+		}
+		if (url.getHost() == null) {
+			throw new IllegalArgumentException("Host is not specified");
+		}
+		String scheme = url.getScheme() != null ? url.getScheme().toLowerCase() : resolveScheme(isWs);
+		String host = cleanHostString(url.getHost());
+		int port = url.getPort() != -1 ? url.getPort() : (UriEndpoint.isSecureScheme(scheme) ? 443 : 80);
+		String path = url.getRawPath() != null ? url.getRawPath() : "";
+		String query = url.getRawQuery() != null ? '?' + url.getRawQuery() : "";
+		return new UriEndpoint(scheme, host, port,
+				() -> inetSocketAddressFunction.apply(host, port),
+				cleanPathAndQuery(path + query));
 	}
 
 	UriEndpoint createUriEndpoint(UriEndpoint from, String to, Supplier<? extends SocketAddress> connectAddress) {

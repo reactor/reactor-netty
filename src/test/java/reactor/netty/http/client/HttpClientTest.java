@@ -19,6 +19,7 @@ package reactor.netty.http.client;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
@@ -2236,5 +2237,88 @@ public class HttpClientTest {
 		              tcp.configuration();
 		              return tcp;
 		          });
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testUriNotAbsolute_1() throws Exception {
+		HttpClient.create()
+		          .get()
+		          .uri(new URI("/"));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testUriNotAbsolute_2() throws Exception {
+		HttpClient.create()
+		          .websocket()
+		          .uri(new URI("/"));
+	}
+
+	@Test
+	public void testUriWhenFailedRequest_1() throws Exception {
+		doTestUriWhenFailedRequest(false);
+	}
+
+	@Test
+	public void testUriWhenFailedRequest_2() throws Exception {
+		doTestUriWhenFailedRequest(true);
+	}
+
+	private void doTestUriWhenFailedRequest(boolean useUri) throws Exception {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> {
+				              throw new RuntimeException("doTestUriWhenFailedRequest");
+				          })
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(30));
+
+		AtomicReference<String> uriFailedRequest = new AtomicReference<>();
+		HttpClient client =
+				HttpClient.create()
+				          .port(disposableServer.port())
+				          .wiretap(true)
+				          .doOnRequestError((req, t) -> uriFailedRequest.set(req.uri()));
+
+		String uri = "http://localhost:" + disposableServer.port() + "/";
+		if (useUri) {
+			StepVerifier.create(client.get()
+			                          .uri(new URI(uri))
+			                          .responseContent())
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
+		}
+		else {
+			StepVerifier.create(client.get()
+			                          .uri(uri)
+			                          .responseContent())
+			            .expectError()
+			            .verify(Duration.ofSeconds(30));
+		}
+
+		assertThat(uriFailedRequest.get()).isNotNull();
+		assertThat(uriFailedRequest.get()).isEqualTo(uri);
+	}
+
+	@Test
+	public void testIssue1133() throws Exception {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .handle((req, res) -> res.sendString(Mono.just("testIssue1133")))
+				          .wiretap(true)
+				          .bindNow(Duration.ofSeconds(30));
+
+		StepVerifier.create(HttpClient.create()
+		                              .port(disposableServer.port())
+		                              .wiretap(true)
+		                              .get()
+		                              .uri(new URI("http://localhost:" + disposableServer.port() + "/"))
+		                              .responseContent()
+		                              .aggregate()
+		                              .asString())
+		            .expectNext("testIssue1133")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
 	}
 }

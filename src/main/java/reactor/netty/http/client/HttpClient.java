@@ -16,6 +16,7 @@
 package reactor.netty.http.client;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -122,6 +123,14 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		 * @return the appropriate sending or receiving contract
 		 */
 		S uri(Mono<String> uri);
+
+		/**
+		 * Configure URI to use for this request/response.
+		 *
+		 * @param uri target URI which is an absolute, fully constructed {@link URI}
+		 * @return the appropriate sending or receiving contract
+		 */
+		S uri(URI uri);
 	}
 
 	/**

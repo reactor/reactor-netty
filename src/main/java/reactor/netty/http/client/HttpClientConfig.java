@@ -17,6 +17,7 @@
 package reactor.netty.http.client;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
@@ -204,7 +205,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 * @return the configured request uri
 	 */
 	public String uri() {
-		return uri;
+		return uri == null ? uriStr : uri.toString();
 	}
 
 	/**
@@ -253,7 +254,8 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	Consumer<HttpClientRequest> redirectRequestConsumer;
 	boolean retryDisabled;
 	SslProvider sslProvider;
-	String uri;
+	URI uri;
+	String uriStr;
 	Function<String, String> uriTagValue;
 	WebsocketClientSpec websocketClientSpec;
 
@@ -295,6 +297,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.retryDisabled = parent.retryDisabled;
 		this.sslProvider = parent.sslProvider;
 		this.uri = parent.uri;
+		this.uriStr = parent.uriStr;
 		this.uriTagValue = parent.uriTagValue;
 		this.websocketClientSpec = parent.websocketClientSpec;
 	}

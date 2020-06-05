@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.net.URI;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -53,7 +54,8 @@ final class WebsocketFinalizer extends HttpClientConnect implements HttpClient.W
 		Objects.requireNonNull(uri, "uri");
 		HttpClient dup = duplicate();
 		dup.configuration().deferredConf(config -> uri.map(s -> {
-			config.uri = s;
+			config.uriStr = s;
+			config.uri = null;
 			return config;
 		}));
 		return (WebsocketFinalizer) dup;
@@ -63,6 +65,19 @@ final class WebsocketFinalizer extends HttpClientConnect implements HttpClient.W
 	public HttpClient.WebsocketSender uri(String uri) {
 		Objects.requireNonNull(uri, "uri");
 		HttpClient dup = duplicate();
+		dup.configuration().uriStr = uri;
+		dup.configuration().uri = null;
+		return (WebsocketFinalizer) dup;
+	}
+
+	@Override
+	public WebsocketSender uri(URI uri) {
+		Objects.requireNonNull(uri, "uri");
+		if (!uri.isAbsolute()) {
+			throw new IllegalArgumentException("URI is not absolute: " + uri);
+		}
+		HttpClient dup = duplicate();
+		dup.configuration().uriStr = null;
 		dup.configuration().uri = uri;
 		return (WebsocketFinalizer) dup;
 	}

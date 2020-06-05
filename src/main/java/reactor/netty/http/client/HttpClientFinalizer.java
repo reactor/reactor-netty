@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.net.URI;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -55,7 +56,8 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 		Objects.requireNonNull(uri, "uri");
 		HttpClient dup = duplicate();
 		dup.configuration().deferredConf(config -> uri.map(s -> {
-			config.uri = s;
+			config.uriStr = s;
+			config.uri = null;
 			return config;
 		}));
 		return (HttpClientFinalizer) dup;
@@ -65,6 +67,19 @@ final class HttpClientFinalizer extends HttpClientConnect implements HttpClient.
 	public HttpClient.RequestSender uri(String uri) {
 		Objects.requireNonNull(uri, "uri");
 		HttpClient dup = duplicate();
+		dup.configuration().uriStr = uri;
+		dup.configuration().uri = null;
+		return (HttpClientFinalizer) dup;
+	}
+
+	@Override
+	public RequestSender uri(URI uri) {
+		Objects.requireNonNull(uri, "uri");
+		if (!uri.isAbsolute()) {
+			throw new IllegalArgumentException("URI is not absolute: " + uri);
+		}
+		HttpClient dup = duplicate();
+		dup.configuration().uriStr = null;
 		dup.configuration().uri = uri;
 		return (HttpClientFinalizer) dup;
 	}
