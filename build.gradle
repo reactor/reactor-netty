@@ -77,7 +77,7 @@ ext {
   hoverflyJavaVersion = '0.12.3'
   tomcatVersion = '9.0.35'
   boringSslVersion = '2.0.30.Final'
-  junitVersion = '4.13'
+  junitVersion = '4.12'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
 				  "https://docs.oracle.com/javaee/6/api/",
@@ -290,6 +290,7 @@ configure(rootProject) { project ->
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
 	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
+	testCompile "junit:junit:$junitVersion"
 
 	testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
 	testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
