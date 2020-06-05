@@ -100,7 +100,7 @@ configure(rootProject) { project ->
   apply plugin: 'idea'
 
   jacoco {
-	toolVersion = '0.7.7.201606060606'
+	toolVersion = '0.8.5'
   }
 
   jacocoTestReport {
