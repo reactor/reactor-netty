@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.net.URI;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -59,6 +60,14 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	@Override
 	public HttpClient.RequestSender uri(Mono<String> uri) {
 		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredConf(b, conf -> uri.map(conf::uri))));
+	}
+
+	@Override
+	public RequestSender uri(URI uri) {
+		if (!uri.isAbsolute()) {
+			throw new IllegalArgumentException("URI is not absolute: " + uri);
+		}
+		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.uri(b, uri)));
 	}
 
 	// ResponseReceiver methods

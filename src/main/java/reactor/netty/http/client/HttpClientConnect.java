@@ -495,17 +495,6 @@ final class HttpClientConnect extends HttpClient {
 
 			String baseUrl = configuration.baseUrl;
 
-			String uri = configuration.uri;
-
-			uri = uri == null ? "/" : uri;
-
-			if (baseUrl != null && uri.startsWith("/")) {
-				if (baseUrl.endsWith("/")) {
-					baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-				}
-				uri = baseUrl + uri;
-			}
-
 			Supplier<SocketAddress> addressSupplier;
 			if (address instanceof Supplier) {
 				addressSupplier = (Supplier<SocketAddress>) address;
@@ -520,7 +509,23 @@ final class HttpClientConnect extends HttpClient {
 			this.websocketClientSpec = configuration.websocketClientSpec;
 			this.shouldRetry = !configuration.retryDisabled;
 			this.handler = configuration.body;
-			this.toURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketClientSpec != null);
+
+			if (configuration.uri == null) {
+				String uri = configuration.uriStr;
+
+				uri = uri == null ? "/" : uri;
+
+				if (baseUrl != null && uri.startsWith("/")) {
+					if (baseUrl.endsWith("/")) {
+						baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+					}
+					uri = baseUrl + uri;
+				}
+				this.toURI = uriEndpointFactory.createUriEndpoint(uri, configuration.websocketClientSpec != null);
+			}
+			else {
+				this.toURI = uriEndpointFactory.createUriEndpoint(configuration.uri, configuration.websocketClientSpec != null);
+			}
 		}
 
 		@Override

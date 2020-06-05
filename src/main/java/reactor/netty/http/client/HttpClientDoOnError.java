@@ -79,7 +79,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 			this.context = context;
 			this.headers = c.headers;
 			this.cookieDecoder = c.cookieDecoder;
-			this.uri = c.uri;
+			this.uri = c.uri == null ? c.uriStr : c.uri.toString();
 			this.path = HttpOperations.resolvePath(this.uri);
 			this.method = c.method;
 			this.isWebsocket = c.websocketClientSpec != null;

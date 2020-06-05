@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.net.URI;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -48,7 +49,8 @@ final class HttpClientConfiguration {
 			AttributeKey.newInstance("httpClientConf");
 
 	boolean                       acceptGzip                     = false;
-	String                        uri                            = null;
+	String                        uriStr                         = null;
+	URI                           uri                            = null;
 	String                        baseUrl                        = null;
 	HttpHeaders                   headers                        = null;
 	HttpMethod                    method                         = HttpMethod.GET;
@@ -74,6 +76,7 @@ final class HttpClientConfiguration {
 	}
 
 	HttpClientConfiguration(HttpClientConfiguration from) {
+		this.uriStr = from.uriStr;
 		this.uri = from.uri;
 		this.acceptGzip = from.acceptGzip;
 		this.cookieEncoder = from.cookieEncoder;
@@ -189,12 +192,22 @@ final class HttpClientConfiguration {
 	};
 
 	static Bootstrap uri(Bootstrap b, String uri) {
-		getOrCreate(b).uri = uri;
+		HttpClientConfiguration conf = getOrCreate(b);
+		conf.uriStr = uri;
+		conf.uri = null;
+		return b;
+	}
+
+	static Bootstrap uri(Bootstrap b, URI uri) {
+		HttpClientConfiguration conf = getOrCreate(b);
+		conf.uriStr = null;
+		conf.uri = uri;
 		return b;
 	}
 
 	HttpClientConfiguration uri(String uri) {
-		this.uri = uri;
+		this.uriStr = uri;
+		this.uri = null;
 		return this;
 	}
 

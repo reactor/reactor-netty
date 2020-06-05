@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.net.URI;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -49,6 +50,14 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 	@Override
 	public WebsocketSender uri(Mono<String> uri) {
 		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredConf(b, conf -> uri.map(conf::uri))));
+	}
+
+	@Override
+	public WebsocketSender uri(URI uri) {
+		if (!uri.isAbsolute()) {
+			throw new IllegalArgumentException("URI is not absolute: " + uri);
+		}
+		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.uri(b, uri)));
 	}
 
 	// WebsocketSender methods
