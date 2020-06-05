@@ -22,6 +22,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 /**
+ * Constants and utilities around metrics.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */

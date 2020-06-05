@@ -412,7 +412,7 @@ public class HttpServerTests {
 	public void gettingOptionsDuplicates() {
 		HttpServer server = HttpServer.create()
 		                              .port(123)
-		                              .host(("example.com"))
+		                              .host("example.com")
 		                              .compress(true);
 		assertThat(server.tcpConfiguration().configure())
 		          .isNotSameAs(HttpServer.DEFAULT_TCP_SERVER)

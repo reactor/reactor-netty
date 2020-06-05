@@ -592,7 +592,7 @@ public class PooledConnectionProviderTest {
 				client.tcpConfiguration(tcpClient ->
 				    tcpClient.bootstrap(
 				        b -> BootstrapHandlers.updateConfiguration(b, "test",
-				            ((o, c) -> {
+				            (o, c) -> {
 				                PooledConnectionProvider.PooledConnectionAllocator.PooledConnectionInitializer initializer =
 				                    c.pipeline().get(PooledConnectionProvider.PooledConnectionAllocator.PooledConnectionInitializer.class);
 				                c.pipeline()
@@ -612,7 +612,7 @@ public class PooledConnectionProviderTest {
 				                         super.connect(ctx, remoteAddress, localAddress, promise);
 				                     }
 				                 });
-				            }))))
+				            })))
 				      .get()
 				      .uri("/")
 				      .responseContent()

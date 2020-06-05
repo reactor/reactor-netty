@@ -74,6 +74,7 @@ public final class ProxyProvider {
 		return proxy.proxyProvider;
 	}
 
+	@SuppressWarnings("UnnecessaryLambda")
 	private static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
 
 	final String username;

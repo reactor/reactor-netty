@@ -583,8 +583,10 @@ public abstract class HttpServer {
 	 * Provide a {@link ChannelGroup} to hold all active connected channels. Effectively,
 	 * a shortcut for setting the same property on the underlying {@code TcpServer}:
 	 * <pre>
+	 * {@code
 	 * HttpServer.create()
 	 *         .tcpConfiguration(server -> server.channelGroup(channelGroup))
+	 * }
 	 * </pre>
 	 *
 	 * <p><strong>Graceful Shutdown:</strong>

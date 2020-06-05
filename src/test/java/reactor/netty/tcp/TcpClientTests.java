@@ -707,6 +707,7 @@ public class TcpClientTests {
 				}
 			}
 			catch (IOException e) {
+				// noop
 			}
 		}
 
@@ -757,7 +758,7 @@ public class TcpClientTests {
 				// Server closed
 			}
 			catch (InterruptedException ie) {
-
+				// noop
 			}
 		}
 

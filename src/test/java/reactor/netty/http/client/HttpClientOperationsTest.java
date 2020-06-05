@@ -50,7 +50,7 @@ public class HttpClientOperationsTest {
 	public void addDecoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
 				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -72,7 +72,7 @@ public class HttpClientOperationsTest {
 	public void addNamedDecoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
 				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -94,7 +94,7 @@ public class HttpClientOperationsTest {
 	public void addEncoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
 				.addHandler(new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));
@@ -116,7 +116,7 @@ public class HttpClientOperationsTest {
 	public void addNamedEncoderReplaysLastHttp() {
 		ByteBuf buf = Unpooled.copiedBuffer("{\"foo\":1}", CharsetUtil.UTF_8);
 		EmbeddedChannel channel = new EmbeddedChannel();
-		HttpClientOperations ops = new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
+		new HttpClientOperations(() -> channel, ConnectionObserver.emptyListener(),
 				ClientCookieEncoder.STRICT, ClientCookieDecoder.STRICT)
 				.addHandler("json", new JsonObjectDecoder());
 		channel.writeInbound(new DefaultLastHttpContent(buf));

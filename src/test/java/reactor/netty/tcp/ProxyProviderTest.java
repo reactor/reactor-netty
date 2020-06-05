@@ -27,7 +27,9 @@ import org.junit.Test;
 
 public class ProxyProviderTest {
 
+    @SuppressWarnings("UnnecessaryLambda")
     private static final Function<String, String> PASSWORD_1 = username -> "123";
+    @SuppressWarnings("UnnecessaryLambda")
     private static final Function<String, String> PASSWORD_2 = username -> "456";
 
     private static final String NON_PROXY_HOSTS = "localhost";
@@ -35,7 +37,9 @@ public class ProxyProviderTest {
     private static final InetSocketAddress ADDRESS_1 = InetSocketAddress.createUnresolved("localhost", 80);
     private static final InetSocketAddress ADDRESS_2 = InetSocketAddress.createUnresolved("example.com", 80);
 
+    @SuppressWarnings("UnnecessaryLambda")
     private static final Consumer<HttpHeaders> HEADER_1 = list -> list.add("Authorization", "Bearer 123");
+    @SuppressWarnings("UnnecessaryLambda")
     private static final Consumer<HttpHeaders> HEADER_2 = list -> list.add("Authorization", "Bearer 456");
 
     @Test

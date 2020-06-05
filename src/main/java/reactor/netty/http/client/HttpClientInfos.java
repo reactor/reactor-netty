@@ -22,6 +22,9 @@ import reactor.util.context.Context;
 import javax.annotation.Nullable;
 
 /**
+ * An Http Reactive Channel with several accessors related to HTTP flow: resource URL,
+ * information for redirections etc...
+ *
  * @since 0.9.3
  */
 public interface HttpClientInfos extends HttpInfos {

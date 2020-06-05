@@ -126,6 +126,7 @@ public class UdpServerTests {
 	}
 
 	@Test
+	@SuppressWarnings("JdkObsolete")
 	public void supportsUdpMulticast() throws Exception {
 		final Random rndm = new Random();
 		final int port = SocketUtils.findAvailableUdpPort();
@@ -147,6 +148,7 @@ public class UdpServerTests {
 					         .runOn(resources, InternetProtocolFamily.IPv4)
 					         .handle((in, out) -> {
 						         Flux.<NetworkInterface>generate(s -> {
+					                             // Suppressed "JdkObsolete", usage of Enumeration is deliberate
 					                             if (ifaces.hasMoreElements()) {
 						                             s.next(ifaces.nextElement());
 					                             }
@@ -211,6 +213,7 @@ public class UdpServerTests {
 		}
 	}
 
+	@SuppressWarnings("JdkObsolete")
 	private boolean isMulticastEnabledIPv4Interface(NetworkInterface iface) {
 		try {
 			if (!iface.supportsMulticast() || !iface.isUp()) {
@@ -221,8 +224,8 @@ public class UdpServerTests {
 			return false;
 		}
 
-		for (Enumeration<InetAddress> i = iface.getInetAddresses();
-		     i.hasMoreElements(); ) {
+		// Suppressed "JdkObsolete", usage of Enumeration is deliberate
+		for (Enumeration<InetAddress> i = iface.getInetAddresses(); i.hasMoreElements(); ) {
 			InetAddress address = i.nextElement();
 			if (address.getClass() == Inet4Address.class) {
 				return true;
@@ -232,13 +235,14 @@ public class UdpServerTests {
 		return false;
 	}
 
+	@SuppressWarnings("JdkObsolete")
 	private NetworkInterface findMulticastEnabledIPv4Interface() throws SocketException {
 		if (isMulticastEnabledIPv4Interface(NetUtil.LOOPBACK_IF)) {
 			return NetUtil.LOOPBACK_IF;
 		}
 
-		for (Enumeration<NetworkInterface> ifaces =
-		     NetworkInterface.getNetworkInterfaces(); ifaces.hasMoreElements(); ) {
+		// Suppressed "JdkObsolete", usage of Enumeration is deliberate
+		for (Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces(); ifaces.hasMoreElements();) {
 			NetworkInterface iface = ifaces.nextElement();
 			if (isMulticastEnabledIPv4Interface(iface)) {
 				return iface;

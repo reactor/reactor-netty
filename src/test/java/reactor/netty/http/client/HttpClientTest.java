@@ -785,6 +785,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@SuppressWarnings("CollectionUndefinedEquality")
 	public void testCookie() {
 		disposableServer =
 				HttpServer.create()
@@ -792,6 +793,7 @@ public class HttpClientTest {
 				          .route(r -> r.get("/201",
 				                  (req, res) -> res.addHeader("test",
 				                                              req.cookies()
+				                                                 // Suppressed "CollectionUndefinedEquality", the CharSequence is String
 				                                                 .get("test")
 				                                                 .stream()
 				                                                 .findFirst()
@@ -1657,6 +1659,7 @@ public class HttpClientTest {
 
 		System.gc();
 		for(int i = 0; i < 100000; ++i) {
+			@SuppressWarnings("UnusedVariable")
 			int[] arr = new int[100000];
 		}
 		System.gc();

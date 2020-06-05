@@ -99,6 +99,7 @@ public class TomcatServer {
 	static final class DefaultServlet extends HttpServlet {
 
 		@Override
+		@SuppressWarnings("JdkObsolete")
 		protected void service(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 			String contentLength = req.getHeader("Content-Length");
 			if ("GET".equals(req.getMethod()) && contentLength != null
@@ -112,6 +113,7 @@ public class TomcatServer {
 
 				String query = req.getQueryString();
 				if (query != null && !query.isEmpty()) {
+					// StringBuilder cannot be used as req.getRequestURL() returns StringBuffer
 					url.append('?').append(query);
 				}
 

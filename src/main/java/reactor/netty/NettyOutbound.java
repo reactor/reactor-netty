@@ -43,6 +43,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
+ * An outbound-traffic API delegating to an underlying {@link Channel}.
+ *
  * @author Stephane Maldini
  */
 public interface NettyOutbound extends Publisher<Void> {

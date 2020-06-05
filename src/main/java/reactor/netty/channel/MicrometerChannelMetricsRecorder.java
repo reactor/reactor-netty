@@ -39,6 +39,8 @@ import static reactor.netty.Metrics.TLS_HANDSHAKE_TIME;
 import static reactor.netty.Metrics.URI;
 
 /**
+ * A {@link ChannelMetricsRecorder} implementation for integration with Micrometer.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */

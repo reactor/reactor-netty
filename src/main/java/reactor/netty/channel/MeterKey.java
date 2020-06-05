@@ -19,6 +19,8 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
+ * Contains meters' tags values. Used as a key when caching meters.
+ *
  * @author Violeta Georgieva
  * @since 0.9.3
  */

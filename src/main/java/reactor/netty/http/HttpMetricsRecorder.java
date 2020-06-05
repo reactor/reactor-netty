@@ -20,6 +20,8 @@ import reactor.netty.channel.ChannelMetricsRecorder;
 import java.net.SocketAddress;
 
 /**
+ * Interface for recording metrics for HTTP protocol.
+ *
  * @author Violeta Georgieva
  */
 public interface HttpMetricsRecorder extends ChannelMetricsRecorder {
