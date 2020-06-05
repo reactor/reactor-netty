@@ -5,20 +5,22 @@ buildscript {
 		}
 	}
 	dependencies {
-		classpath "net.ltgt.gradle:gradle-errorprone-plugin:0.8.1"
+		classpath "net.ltgt.gradle:gradle-errorprone-plugin:1.2.1"
 	}
 }
 
 apply plugin: net.ltgt.gradle.errorprone.ErrorPronePlugin
 
 ext {
+	errorproneCoreVersion = "2.4.0"
 	errorproneJavacVersion = "9+181-r4173-1"
+	guavaVersion = "27.1-jre"
 }
 
 dependencies {
-	errorprone 'com.google.errorprone:error_prone_core:2.3.1'
-	errorprone 'com.google.guava:guava:23.5-jre' // prevents conflicts with guava versions of other gradle plugins
-	errorproneJavac("com.google.errorprone:javac:$errorproneJavacVersion")
+	errorprone "com.google.errorprone:error_prone_core:$errorproneCoreVersion"
+	errorprone "com.google.guava:guava:$guavaVersion" // prevents conflicts with guava versions of other gradle plugins
+	errorproneJavac "com.google.errorprone:javac:$errorproneJavacVersion"
 }
 
 // Change all errorprone errors to warnings

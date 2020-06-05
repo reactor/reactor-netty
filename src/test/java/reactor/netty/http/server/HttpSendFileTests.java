@@ -371,6 +371,7 @@ public class HttpSendFileTests {
 				channel.close();
 			}
 			catch (IOException ignored) {
+				// noop
 			}
 		}
 	}

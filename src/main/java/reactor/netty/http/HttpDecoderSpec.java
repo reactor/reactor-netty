@@ -136,7 +136,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		if (this == o) {
 			return true;
 		}
-		if (o == null || getClass() != o.getClass()) {
+		if (!(o instanceof HttpDecoderSpec)) {
 			return false;
 		}
 		HttpDecoderSpec<?> that = (HttpDecoderSpec<?>) o;

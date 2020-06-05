@@ -39,6 +39,8 @@ public interface HttpClientResponse extends HttpClientInfos {
 	HttpHeaders responseHeaders();
 
 	/**
+	 * Return the resolved HTTP Response Status.
+	 *
 	 * @return the resolved HTTP Response Status
 	 */
 	HttpResponseStatus status();

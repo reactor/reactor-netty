@@ -372,7 +372,7 @@ public final class SocketUtils {
 				throw new IllegalArgumentException("'numRequested' must not be greater than 'maxPort' - 'minPort'");
 			}
 
-			final SortedSet<Integer> availablePorts = new TreeSet<>();
+			final TreeSet<Integer> availablePorts = new TreeSet<>();
 			int attemptCount = 0;
 			while((++attemptCount <= numRequested + 100) && (availablePorts.size() < numRequested)) {
 				availablePorts.add(findAvailablePort(minPort, maxPort));

@@ -38,6 +38,7 @@ import reactor.test.StepVerifier;
 public class HttpCookieHandlingTests {
 
 	@Test
+	@SuppressWarnings("CollectionUndefinedEquality")
 	public void clientWillIgnoreMalformedCookies() {
 		DisposableServer server =
 				HttpServer.create()
@@ -60,6 +61,7 @@ public class HttpCookieHandlingTests {
 				          .doOnError(t -> System.err.println("Failed requesting server: " + t.getMessage()));
 
 		StepVerifier.create(cookieResponse)
+		            // Suppressed "CollectionUndefinedEquality", the CharSequence is String
 		            .expectNextMatches(l -> !l.containsKey("name:with_colon"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -68,6 +70,7 @@ public class HttpCookieHandlingTests {
 	}
 
 	@Test
+	@SuppressWarnings("CollectionUndefinedEquality")
 	public void clientWithoutCookieGetsANewOneFromServer() {
 		DisposableServer server =
 				HttpServer.create()
@@ -91,6 +94,7 @@ public class HttpCookieHandlingTests {
 
 		StepVerifier.create(cookieResponse)
 				    .expectNextMatches(l -> {
+				        // Suppressed "CollectionUndefinedEquality", the CharSequence is String
 				        Set<Cookie> cookies = l.get("cookie1");
 				        return cookies.stream().anyMatch(e -> e.value().equals("test_value"));
 				    })
@@ -101,6 +105,7 @@ public class HttpCookieHandlingTests {
 	}
 
 	@Test
+	@SuppressWarnings("CollectionUndefinedEquality")
 	public void customCookieEncoderDecoder() {
 		DisposableServer server =
 				HttpServer.create()
@@ -124,6 +129,7 @@ public class HttpCookieHandlingTests {
 
 		StepVerifier.create(response)
 		            .expectNextMatches(map -> {
+		                // Suppressed "CollectionUndefinedEquality", the CharSequence is String
 		                Set<Cookie> cookies = map.get("cookie1");
 		                return cookies.stream().anyMatch(e -> e.value().equals("test_value"));
 		            })

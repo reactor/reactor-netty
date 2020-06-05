@@ -243,7 +243,7 @@ public class BlockingConnectionTest {
 
 	static final class TestClientTransportConfig extends ClientTransportConfig<TestClientTransportConfig> {
 
-		protected TestClientTransportConfig(TestClientTransportConfig parent) {
+		TestClientTransportConfig(TestClientTransportConfig parent) {
 			super(parent);
 		}
 

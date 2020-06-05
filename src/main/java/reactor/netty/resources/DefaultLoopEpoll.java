@@ -92,6 +92,7 @@ final class DefaultLoopEpoll implements DefaultLoop {
 			epollCheck = Epoll.isAvailable();
 		}
 		catch (ClassNotFoundException cnfe) {
+			// noop
 		}
 		epoll = epollCheck;
 		if (log.isDebugEnabled()) {

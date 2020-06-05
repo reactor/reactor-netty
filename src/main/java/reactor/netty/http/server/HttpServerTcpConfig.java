@@ -45,7 +45,7 @@ import java.util.function.Supplier;
  * This class provides a migration for the {@link HttpServer#tcpConfiguration(Function)} in 0.9.x
  *
  * @author Violeta Georgieva
- * @deprecated
+ * @deprecated Use {@link HttpServer} methods for TCP level configurations.
  */
 @Deprecated
 final class HttpServerTcpConfig extends TcpServer {

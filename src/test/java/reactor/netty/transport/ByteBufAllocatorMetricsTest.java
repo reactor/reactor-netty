@@ -122,6 +122,4 @@ public class ByteBufAllocatorMetricsTest {
 		assertThat(getGaugeValue(name + NORMAL_CACHE_SIZE, tags)).isGreaterThan(0);
 		assertThat(getGaugeValue(name + CHUNK_SIZE, tags)).isGreaterThan(0);
 	}
-
-	private static final String NAME = "reactor.netty.pooled.bytebuf.allocator";
 }

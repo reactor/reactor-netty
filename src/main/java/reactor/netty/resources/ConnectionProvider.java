@@ -262,6 +262,8 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
+	 * Configuration for a connection pool.
+	 *
 	 * @since 0.9.5
 	 */
 	class ConnectionPoolSpec<SPEC extends ConnectionPoolSpec<SPEC>> implements Supplier<SPEC> {
@@ -427,7 +429,8 @@ public interface ConnectionProvider extends Disposable {
 	}
 
 	/**
-	 * Configuration for a connection pool per remote host
+	 * Configuration for a connection pool per remote host.
+	 *
 	 * @since 0.9.5
 	 */
 	final class HostSpecificSpec extends ConnectionPoolSpec<HostSpecificSpec> {

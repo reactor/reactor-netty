@@ -19,7 +19,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 
 /**
- * Interface for collecting metrics on protocol level
+ * Interface for recording metrics on protocol level.
  *
  * @author Violeta Georgieva
  */

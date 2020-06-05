@@ -421,7 +421,7 @@ public class HttpServerTests {
 	public void gettingOptionsDuplicates() {
 		HttpServer server1 = HttpServer.create();
 		HttpServer server2 = server1.port(123)
-		                            .host(("example.com"))
+		                            .host("example.com")
 		                            .compress(true);
 		assertThat(server2)
 				.isNotSameAs(server1)

@@ -16,9 +16,12 @@
 
 package reactor.netty.udp;
 
+import io.netty.channel.Channel;
 import reactor.netty.NettyOutbound;
 
 /**
+ * An outbound-traffic API delegating to an underlying {@link Channel}.
+ *
  * @author Stephane Maldini
  */
 public interface UdpOutbound extends UdpConnection, NettyOutbound {

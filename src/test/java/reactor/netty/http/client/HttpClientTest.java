@@ -163,15 +163,6 @@ public class HttpClientTest {
 		pool.dispose();
 	}
 
-	private DefaultFullHttpResponse response() {
-		DefaultFullHttpResponse r =
-				new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-				                            HttpResponseStatus.ACCEPTED);
-		r.headers()
-		 .set(HttpHeaderNames.CONTENT_LENGTH, 0);
-		return r;
-	}
-
 	/** This ensures that non-default values for the HTTP request line are visible for parsing. */
 	@Test
 	public void postVisibleToOnRequest() {
@@ -746,6 +737,7 @@ public class HttpClientTest {
 	}
 
 	@Test
+	@SuppressWarnings("CollectionUndefinedEquality")
 	public void testCookie() {
 		disposableServer =
 				HttpServer.create()
@@ -753,6 +745,7 @@ public class HttpClientTest {
 				          .route(r -> r.get("/201",
 				                  (req, res) -> res.addHeader("test",
 				                                              req.cookies()
+				                                                 // Suppressed "CollectionUndefinedEquality", the CharSequence is String
 				                                                 .get("test")
 				                                                 .stream()
 				                                                 .findFirst()
@@ -1621,6 +1614,7 @@ public class HttpClientTest {
 
 		System.gc();
 		for(int i = 0; i < 100000; ++i) {
+			@SuppressWarnings("UnusedVariable")
 			int[] arr = new int[100000];
 		}
 		System.gc();

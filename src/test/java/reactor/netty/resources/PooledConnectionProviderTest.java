@@ -595,7 +595,7 @@ public class PooledConnectionProviderTest {
 	private void doTestSslEngineClosed(HttpClient client, AtomicInteger closeCount, Class<? extends Throwable> expectedExc, String expectedMsg) {
 		Mono<String> response =
 				client.doOnChannelInit(
-				            ((o, c, address) ->
+				            (o, c, address) ->
 				                c.pipeline()
 				                 .addFirst(new ChannelOutboundHandlerAdapter() {
 
@@ -605,7 +605,7 @@ public class PooledConnectionProviderTest {
 				                         super.connect(ctx, remoteAddress, localAddress,
 						                         new TestPromise(ctx.channel(), promise, closeCount));
 				                     }
-				                 })))
+				                 }))
 				      .get()
 				      .uri("/")
 				      .responseContent()
@@ -654,7 +654,7 @@ public class PooledConnectionProviderTest {
 
 		final EventLoopGroup group;
 
-		protected ClientTransportConfigImpl(EventLoopGroup group, ConnectionProvider connectionProvider,
+		ClientTransportConfigImpl(EventLoopGroup group, ConnectionProvider connectionProvider,
 				Map<ChannelOption<?>, ?> options, Supplier<? extends SocketAddress> remoteAddress) {
 			super(connectionProvider, options, remoteAddress);
 			this.group = group;

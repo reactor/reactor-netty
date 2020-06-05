@@ -52,6 +52,7 @@ public final class ProxyProvider {
 		return new ProxyProvider.Build();
 	}
 
+	@SuppressWarnings("UnnecessaryLambda")
 	static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
 
 	final String username;

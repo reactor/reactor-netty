@@ -17,6 +17,7 @@ package reactor.netty.channel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -31,6 +32,8 @@ import static reactor.netty.Metrics.ERROR;
 import static reactor.netty.Metrics.SUCCESS;
 
 /**
+ * {@link ChannelHandler} for collecting metrics on protocol level.
+ *
  * @author Violeta Georgieva
  */
 public class ChannelMetricsHandler extends ChannelDuplexHandler {

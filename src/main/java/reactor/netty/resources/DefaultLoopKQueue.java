@@ -91,6 +91,7 @@ final class DefaultLoopKQueue implements DefaultLoop {
 			kqueueCheck = KQueue.isAvailable();
 		}
 		catch (ClassNotFoundException cnfe) {
+			// noop
 		}
 		kqueue = kqueueCheck;
 		if (log.isDebugEnabled()) {

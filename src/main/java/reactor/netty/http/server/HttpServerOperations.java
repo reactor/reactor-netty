@@ -267,7 +267,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 		if (paramsResolver != null) {
 			params = this.paramsResolver.apply(uri());
 		}
-		return null != params ? params.get(key) : null;
+		return null != params ? params.get(key.toString()) : null;
 	}
 
 	@Override
@@ -277,8 +277,8 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 	}
 
 	@Override
-	public HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> headerResolver) {
-		this.paramsResolver = headerResolver;
+	public HttpServerRequest paramsResolver(Function<? super String, Map<String, String>> paramsResolver) {
+		this.paramsResolver = paramsResolver;
 		return this;
 	}
 

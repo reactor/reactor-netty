@@ -37,6 +37,8 @@ import static reactor.netty.Metrics.RESPONSE_TIME;
 import static reactor.netty.Metrics.URI;
 
 /**
+ * An {@link HttpMetricsRecorder} implementation for integration with Micrometer.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */

@@ -83,6 +83,8 @@ public interface WebsocketInbound extends NettyInbound {
 	}
 
 	/**
+	 * Receive a {@link Flux} of {@link WebSocketFrame} formed frame content.
+	 *
 	 * @return a {@link Flux} of {@link WebSocketFrame} formed frame content
 	 */
 	default Flux<WebSocketFrame> receiveFrames() {
