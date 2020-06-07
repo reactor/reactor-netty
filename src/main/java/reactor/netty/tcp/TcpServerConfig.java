@@ -119,11 +119,10 @@ public final class TcpServerConfig extends ServerTransportConfig<TcpServerConfig
 
 	static final class MicrometerTcpServerMetricsRecorder extends MicrometerChannelMetricsRecorder {
 
-		static final MicrometerTcpServerMetricsRecorder INSTANCE =
-				new MicrometerTcpServerMetricsRecorder(reactor.netty.Metrics.TCP_SERVER_PREFIX, "tcp");
+		static final MicrometerTcpServerMetricsRecorder INSTANCE = new MicrometerTcpServerMetricsRecorder();
 
-		MicrometerTcpServerMetricsRecorder(String name, String protocol) {
-			super(name, protocol);
+		MicrometerTcpServerMetricsRecorder() {
+			super(reactor.netty.Metrics.TCP_SERVER_PREFIX, "tcp");
 		}
 	}
 

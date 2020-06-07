@@ -172,11 +172,10 @@ public final class UdpServerConfig extends TransportConfig {
 
 	static final class MicrometerUdpServerMetricsRecorder extends MicrometerChannelMetricsRecorder {
 
-		static final MicrometerUdpServerMetricsRecorder INSTANCE =
-				new MicrometerUdpServerMetricsRecorder(reactor.netty.Metrics.UDP_SERVER_PREFIX, "udp");
+		static final MicrometerUdpServerMetricsRecorder INSTANCE = new MicrometerUdpServerMetricsRecorder();
 
-		MicrometerUdpServerMetricsRecorder(String name, String protocol) {
-			super(name, protocol);
+		MicrometerUdpServerMetricsRecorder() {
+			super(reactor.netty.Metrics.UDP_SERVER_PREFIX, "udp");
 		}
 	}
 

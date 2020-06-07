@@ -115,11 +115,10 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 
 	static final class MicrometerUdpClientMetricsRecorder extends MicrometerChannelMetricsRecorder {
 
-		static final MicrometerUdpClientMetricsRecorder INSTANCE =
-				new MicrometerUdpClientMetricsRecorder(reactor.netty.Metrics.UDP_CLIENT_PREFIX, "udp");
+		static final MicrometerUdpClientMetricsRecorder INSTANCE = new MicrometerUdpClientMetricsRecorder();
 
-		MicrometerUdpClientMetricsRecorder(String name, String protocol) {
-			super(name, protocol);
+		MicrometerUdpClientMetricsRecorder() {
+			super(reactor.netty.Metrics.UDP_CLIENT_PREFIX, "udp");
 		}
 	}
 }
