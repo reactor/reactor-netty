@@ -62,7 +62,7 @@ ext {
   hamcrestVersion = '2.2'
   assertJVersion = '3.16.1'
   hoverflyJavaVersion = '0.13.0'
-  tomcatVersion = '9.0.35'
+  tomcatVersion = '9.0.36'
   boringSslVersion = '2.0.30.Final'
   junitVersion = '4.12'
 
