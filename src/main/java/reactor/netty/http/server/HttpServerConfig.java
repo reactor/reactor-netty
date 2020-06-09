@@ -128,7 +128,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 *
 	 * @return true if that {@link HttpServer} secured via SSL transport
 	 */
-	public boolean isSecure(){
+	public boolean isSecure() {
 		return sslProvider != null;
 	}
 
@@ -504,7 +504,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ServerCookieDecoder       cookieDecoder;
 		final ChannelOperations.OnSetup opsFactory;
 
-		H2Codec(ChannelOperations.OnSetup opsFactory,ConnectionObserver listener, boolean forwarded,
+		H2Codec(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener, boolean forwarded,
 				ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 			this.forwarded = forwarded;
 			this.listener = listener;
@@ -623,7 +623,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ChannelPipeline p = ctx.pipeline();
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-				configureH2Pipeline(p, cookieDecoder, cookieEncoder,forwarded, listener, opsFactory, decoder.validateHeaders());
+				configureH2Pipeline(p, cookieDecoder, cookieEncoder, forwarded, listener, opsFactory, decoder.validateHeaders());
 				return;
 			}
 

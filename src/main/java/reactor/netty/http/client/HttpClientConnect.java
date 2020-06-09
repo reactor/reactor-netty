@@ -353,8 +353,7 @@ class HttpClientConnect extends HttpClient {
 				sink.success(connection);
 				return;
 			}
-			if (newState == ConnectionObserver.State.CONFIGURED
-					&& HttpClientOperations.class == connection.getClass()) {
+			if (newState == ConnectionObserver.State.CONFIGURED && HttpClientOperations.class == connection.getClass()) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "Handler is being applied: {}"), handler);
 				}
@@ -440,8 +439,7 @@ class HttpClientConnect extends HttpClient {
 		@Override
 		public SocketAddress get() {
 			SocketAddress address = toURI.getRemoteAddress();
-			if (proxyProvider != null && !proxyProvider.shouldProxy(address) &&
-					address instanceof InetSocketAddress) {
+			if (proxyProvider != null && !proxyProvider.shouldProxy(address) && address instanceof InetSocketAddress) {
 				address = AddressUtils.replaceWithResolved((InetSocketAddress) address);
 			}
 
@@ -471,8 +469,7 @@ class HttpClientConnect extends HttpClient {
 
 				SocketAddress remoteAddress = uri.getRemoteAddress();
 				if (!headers.contains(HttpHeaderNames.HOST)) {
-					headers.set(HttpHeaderNames.HOST,
-					            resolveHostHeaderValue(remoteAddress));
+					headers.set(HttpHeaderNames.HOST, resolveHostHeaderValue(remoteAddress));
 				}
 
 				if (!headers.contains(HttpHeaderNames.ACCEPT)) {
@@ -482,9 +479,9 @@ class HttpClientConnect extends HttpClient {
 				ch.followRedirectPredicate(followRedirectPredicate);
 
 				if (!Objects.equals(method, HttpMethod.GET) &&
-						!Objects.equals(method, HttpMethod.HEAD) &&
-						!Objects.equals(method, HttpMethod.DELETE) &&
-						!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+							!Objects.equals(method, HttpMethod.HEAD) &&
+							!Objects.equals(method, HttpMethod.DELETE) &&
+							!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
 					ch.chunkedTransfer(true);
 				}
 
@@ -516,8 +513,7 @@ class HttpClientConnect extends HttpClient {
 					}
 				}
 				if (this.redirectRequestConsumer != null) {
-					consumer = consumer != null ? consumer.andThen(this.redirectRequestConsumer) :
-					                              this.redirectRequestConsumer;
+					consumer = consumer != null ? consumer.andThen(this.redirectRequestConsumer) : this.redirectRequestConsumer;
 				}
 				ch.redirectRequestConsumer(consumer);
 				return handler != null ? handler.apply(ch, ch) : ch.send();
@@ -563,9 +559,8 @@ class HttpClientConnect extends HttpClient {
 			this.redirectedFrom = addToRedirectedFromArray(redirectedFrom, from);
 		}
 
-		@SuppressWarnings({"unchecked","rawtypes"})
-		static Supplier<String>[] addToRedirectedFromArray(@Nullable Supplier<String>[] redirectedFrom,
-				UriEndpoint from) {
+		@SuppressWarnings({"unchecked", "rawtypes"})
+		static Supplier<String>[] addToRedirectedFromArray(@Nullable Supplier<String>[] redirectedFrom, UriEndpoint from) {
 			Supplier<String> fromUrlSupplier = from::toExternalForm;
 			if (redirectedFrom == null) {
 				return new Supplier[]{fromUrlSupplier};

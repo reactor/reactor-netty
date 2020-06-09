@@ -316,7 +316,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * {@link Flux} or {@link Mono}, requesting is always deferred to
 	 * {@link Publisher#subscribe(Subscriber)}.
 	 */
-	public interface WebsocketReceiver<S extends WebsocketReceiver<?>> extends UriConfiguration<S>  {
+	public interface WebsocketReceiver<S extends WebsocketReceiver<?>> extends UriConfiguration<S> {
 		/**
 		 * Negotiate a websocket upgrade and return a {@link Mono} of {@link Connection}. If
 		 * {@link Mono} is cancelled, the underlying connection will be aborted. Once the
@@ -638,7 +638,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient doOnError(BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError,
-	                                  BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError) {
+			BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError) {
 		Objects.requireNonNull(doOnRequestError, "doOnRequestError");
 		Objects.requireNonNull(doOnResponseError, "doOnResponseError");
 		HttpClient dup = duplicate();
@@ -795,7 +795,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @since 0.9.5
 	 */
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
-	                                       @Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
+			@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		Objects.requireNonNull(predicate, "predicate");
 		HttpClient dup = duplicate();
 		dup.configuration().followRedirectPredicate = predicate;
@@ -811,12 +811,12 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * via {@link #followRedirect(boolean, Consumer)}.
 	 *
 	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
-	 *                       is enabled, otherwise disabled (default: false).
+	 * is enabled, otherwise disabled (default: false).
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient followRedirect(boolean followRedirect) {
 		if (!followRedirect && configuration().followRedirectPredicate == null &&
-				configuration().redirectRequestConsumer == null) {
+					configuration().redirectRequestConsumer == null) {
 			return this;
 		}
 		return followRedirect(followRedirect, null);
@@ -837,7 +837,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * they can be re-added using {@code redirectRequestConsumer}.
 	 *
 	 * @param followRedirect if true HTTP status 301|302|307|308 auto-redirect support
-	 *                       is enabled, otherwise disabled (default: false).
+	 * is enabled, otherwise disabled (default: false).
 	 * @param redirectRequestConsumer redirect request consumer, invoked on redirects, after
 	 * the redirect request has been initialized, in order to apply further changes such as
 	 * add/remove headers and cookies; use {@link HttpClientRequest#redirectedFrom()} to
@@ -1220,11 +1220,11 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 		               .orElse("dev");
 	}
 
-	static final String HTTP_SCHEME  = "http";
+	static final String HTTP_SCHEME = "http";
 
 	static final String HTTPS_SCHEME = "https";
 
-	static final String WS_SCHEME    = "ws";
+	static final String WS_SCHEME = "ws";
 
-	static final String WSS_SCHEME   = "wss";
+	static final String WSS_SCHEME = "wss";
 }

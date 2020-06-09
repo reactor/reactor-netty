@@ -194,8 +194,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * HTTP request headers for deriving information about the connection is enabled.
 	 *
 	 * @param forwardedEnabled if true support for the {@code "Forwarded"} and {@code "X-Forwarded-*"}
-	 *                         HTTP request headers for deriving information about the connection is enabled,
-	 *                         otherwise disabled.
+	 * HTTP request headers for deriving information about the connection is enabled,
+	 * otherwise disabled.
 	 * @return a new {@link HttpServer}
 	 * @since 0.9.7
 	 */
@@ -218,8 +218,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 *
 	 * @return a new {@link HttpServer}
 	 */
-	public final HttpServer handle(BiFunction<? super HttpServerRequest, ? super
-			HttpServerResponse, ? extends Publisher<Void>> handler) {
+	public final HttpServer handle(
+			BiFunction<? super HttpServerRequest, ? super HttpServerResponse, ? extends Publisher<Void>> handler) {
 		Objects.requireNonNull(handler, "handler");
 		return childObserve(new HttpServerHandle(handler));
 	}
@@ -358,7 +358,7 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 			return this;
 		}
 		if (proxyProtocolSupportType == ProxyProtocolSupportType.ON ||
-				proxyProtocolSupportType == ProxyProtocolSupportType.AUTO) {
+					proxyProtocolSupportType == ProxyProtocolSupportType.AUTO) {
 			if (!HAProxyMessageReader.hasProxyProtocol()) {
 				throw new UnsupportedOperationException(
 						"To enable proxyProtocol, you must add the dependency `io.netty:netty-codec-haproxy`" +

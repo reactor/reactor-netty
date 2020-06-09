@@ -95,6 +95,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	public ClientCookieDecoder cookieDecoder() {
 		return cookieDecoder;
 	}
+
 	/**
 	 * Return the configured {@link ClientCookieEncoder} or the default {@link ClientCookieEncoder#STRICT}.
 	 *
@@ -155,7 +156,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	 *
 	 * @return true if that {@link HttpClient} secured via SSL transport
 	 */
-	public boolean isSecure(){
+	public boolean isSecure() {
 		return sslProvider != null;
 	}
 
@@ -240,11 +241,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	ClientCookieEncoder cookieEncoder;
 	HttpResponseDecoderSpec decoder;
 	Function<Mono<HttpClientConfig>, Mono<HttpClientConfig>> deferredConf;
-	BiConsumer<? super HttpClientRequest, ? super Connection>  doAfterRequest;
+	BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest;
 	BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess;
 	BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect;
 	BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest;
-	BiConsumer<? super HttpClientRequest, ? super Throwable>  doOnRequestError;
+	BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError;
 	BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse;
 	BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError;
 	BiPredicate<HttpClientRequest, HttpClientResponse> followRedirectPredicate;
@@ -308,13 +309,13 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	@Override
 	protected ConnectionObserver defaultConnectionObserver() {
 		if (doAfterRequest == null && doAfterResponseSuccess == null && doOnRedirect == null &&
-				doOnRequest == null && doOnRequestError == null && doOnResponse == null && doOnResponseError == null) {
+					doOnRequest == null && doOnRequestError == null && doOnResponse == null && doOnResponseError == null) {
 			return super.defaultConnectionObserver();
 		}
 		else {
 			return super.defaultConnectionObserver()
-					.then(new HttpClientDoOn(doAfterRequest, doAfterResponseSuccess, doOnRedirect, doOnRequest,
-							doOnRequestError, doOnResponse, doOnResponseError));
+			            .then(new HttpClientDoOn(doAfterRequest, doAfterResponseSuccess, doOnRedirect, doOnRequest,
+			                doOnRequestError, doOnResponse, doOnResponseError));
 		}
 	}
 
@@ -360,7 +361,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	void deferredConf(Function<HttpClientConfig, Mono<HttpClientConfig>> deferrer) {
-		if (deferredConf != null){
+		if (deferredConf != null) {
 			deferredConf = deferredConf.andThen(deferredConf -> deferredConf.flatMap(deferrer));
 		}
 		else {
@@ -482,11 +483,11 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 
 	static final class HttpClientDoOn implements ConnectionObserver {
 
-		final BiConsumer<? super HttpClientRequest, ? super Connection>  doAfterRequest;
+		final BiConsumer<? super HttpClientRequest, ? super Connection> doAfterRequest;
 		final BiConsumer<? super HttpClientResponse, ? super Connection> doAfterResponseSuccess;
 		final BiConsumer<? super HttpClientResponse, ? super Connection> doOnRedirect;
 		final BiConsumer<? super HttpClientRequest, ? super Connection> doOnRequest;
-		final BiConsumer<? super HttpClientRequest, ? super Throwable>  doOnRequestError;
+		final BiConsumer<? super HttpClientRequest, ? super Throwable> doOnRequestError;
 		final BiConsumer<? super HttpClientResponse, ? super Connection> doOnResponse;
 		final BiConsumer<? super HttpClientResponse, ? super Throwable> doOnResponseError;
 
