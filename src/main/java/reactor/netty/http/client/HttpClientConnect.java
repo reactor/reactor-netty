@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -89,6 +90,14 @@ class HttpClientConnect extends HttpClient {
 	@Override
 	public HttpClientConfig configuration() {
 		return config;
+	}
+
+	@Override
+	public String toString() {
+		return "HttpClient{" +
+				"protocols=" + Arrays.asList(configuration().protocols) +
+				", secure=" + configuration().isSecure() +
+				'}';
 	}
 
 	@Override
