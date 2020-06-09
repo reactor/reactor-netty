@@ -23,9 +23,7 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.ReactorNetty;
 import reactor.netty.transport.TransportConfig;
-import reactor.pool.InstrumentedPool;
 import reactor.pool.Pool;
-import reactor.pool.PoolBuilder;
 import reactor.util.Metrics;
 import reactor.util.annotation.Nullable;
 
@@ -37,7 +35,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -84,12 +81,12 @@ public interface ConnectionProvider extends Disposable {
 	String LEASING_STRATEGY_LIFO = "lifo";
 
 	/**
-	* Default leasing strategy (fifo, lifo), fallback to fifo.
-	* <ul>
-	*     <li>fifo - The connection selection is first in, first out</li>
-	*     <li>lifo - The connection selection is last in, first out</li>
-	* </ul>
-	*/
+	 * Default leasing strategy (fifo, lifo), fallback to fifo.
+	 * <ul>
+	 *     <li>fifo - The connection selection is first in, first out</li>
+	 *     <li>lifo - The connection selection is last in, first out</li>
+	 * </ul>
+	 */
 	String DEFAULT_POOL_LEASING_STRATEGY = System.getProperty(ReactorNetty.POOL_LEASING_STRATEGY, LEASING_STRATEGY_FIFO)
 					.toLowerCase(Locale.ENGLISH);
 
@@ -257,7 +254,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @return builds new ConnectionProvider
 		 */
 		public ConnectionProvider build() {
-			return new PooledConnectionProvider(this);
+			return new DefaultPooledConnectionProvider(this);
 		}
 	}
 
@@ -276,8 +273,7 @@ public interface ConnectionProvider extends Disposable {
 		Duration maxIdleTime;
 		Duration maxLifeTime;
 		boolean  metricsEnabled;
-		Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
-				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
+		String   leasingStrategy        = DEFAULT_POOL_LEASING_STRATEGY;
 
 		/**
 		 * Returns {@link ConnectionPoolSpec} new instance with default properties.
@@ -285,12 +281,6 @@ public interface ConnectionProvider extends Disposable {
 		private ConnectionPoolSpec() {
 			if (DEFAULT_POOL_MAX_IDLE_TIME > -1) {
 				maxIdleTime(Duration.ofMillis(DEFAULT_POOL_MAX_IDLE_TIME));
-			}
-			if(LEASING_STRATEGY_LIFO.equals(DEFAULT_POOL_LEASING_STRATEGY)) {
-				lifo();
-			}
-			else {
-				fifo();
 			}
 		}
 
@@ -405,7 +395,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @return a builder of {@link Pool} with LIFO pending acquire ordering
 		 */
 		public final SPEC lifo() {
-			this.leasingStrategy = PoolBuilder::lifo;
+			this.leasingStrategy = LEASING_STRATEGY_LIFO;
 			return get();
 		}
 
@@ -417,7 +407,7 @@ public interface ConnectionProvider extends Disposable {
 		 * @return a builder of {@link Pool} with FIFO pending acquire ordering
 		 */
 		public final SPEC fifo() {
-			this.leasingStrategy = PoolBuilder::fifo;
+			this.leasingStrategy = LEASING_STRATEGY_FIFO;
 			return get();
 		}
 

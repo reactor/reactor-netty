@@ -64,7 +64,7 @@ import reactor.netty.SocketUtils;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.resources.PooledConnectionProvider.PooledConnection;
+import reactor.netty.resources.DefaultPooledConnectionProvider.PooledConnection;
 import reactor.netty.tcp.TcpClient;
 import reactor.netty.tcp.TcpClientTests;
 import reactor.netty.tcp.TcpServer;
@@ -79,7 +79,7 @@ import javax.net.ssl.SSLException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNotNull;
 
-public class PooledConnectionProviderTest {
+public class DefaultPooledConnectionProviderTest {
 
 	private InstrumentedPool<PooledConnection> channelPool;
 
@@ -93,7 +93,7 @@ public class PooledConnectionProviderTest {
 		ConnectionProvider.Builder connectionProviderBuilder =
 				ConnectionProvider.builder("disposeLaterDefers")
 				                  .maxConnections(Integer.MAX_VALUE);
-		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
+		DefaultPooledConnectionProvider poolResources = new DefaultPooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
@@ -115,7 +115,7 @@ public class PooledConnectionProviderTest {
 		ConnectionProvider.Builder connectionProviderBuilder =
 				ConnectionProvider.builder("disposeOnlyOnce")
 				                  .maxConnections(Integer.MAX_VALUE);
-		PooledConnectionProvider poolResources = new PooledConnectionProvider(connectionProviderBuilder);
+		DefaultPooledConnectionProvider poolResources = new DefaultPooledConnectionProvider(connectionProviderBuilder);
 		//"register" our fake Pool
 		poolResources.channelPools.put(
 				new PooledConnectionProvider.PoolKey(
@@ -184,8 +184,7 @@ public class PooledConnectionProviderTest {
 
 			//next one will block until a previous one is released
 			long start = System.currentTimeMillis();
-			sf = service.schedule(() -> c1.onStateChange(c1, ConnectionObserver.State.DISCONNECTING), 500, TimeUnit
-					.MILLISECONDS);
+			sf = service.schedule(() -> c1.onStateChange(c1, ConnectionObserver.State.DISCONNECTING), 500, TimeUnit.MILLISECONDS);
 
 
 			final PooledConnection c4 = (PooledConnection) pool.acquire(config, observer, remoteAddress, config.resolver())
@@ -212,7 +211,7 @@ public class PooledConnectionProviderTest {
 
 			CountDownLatch latch = new CountDownLatch(1);
 			f2 = service.submit(() -> {
-				while(defaultPool.metrics().acquiredSize() > 0) {
+				while (defaultPool.metrics().acquiredSize() > 0) {
 					LockSupport.parkNanos(100);
 				}
 				latch.countDown();
@@ -244,8 +243,8 @@ public class PooledConnectionProviderTest {
 				                                                 .delayElement(Duration.ofMillis(100))))
 				         .wiretap(true)
 				         .bindNow();
-		PooledConnectionProvider provider =
-				(PooledConnectionProvider) ConnectionProvider.builder("testIssue673_TimeoutException")
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.builder("testIssue673_TimeoutException")
 				                                             .maxConnections(1)
 				                                             .pendingAcquireMaxCount(4)
 				                                             .pendingAcquireTimeout(Duration.ofMillis(10))
@@ -288,7 +287,7 @@ public class PooledConnectionProviderTest {
 					onNext++;
 				}
 				else if (signal.getThrowable() instanceof TimeoutException &&
-						msg.equals(signal.getThrowable().getMessage())) {
+								 msg.equals(signal.getThrowable().getMessage())) {
 					onError++;
 				}
 			}
@@ -316,7 +315,7 @@ public class PooledConnectionProviderTest {
 				          .handle((req, resp) -> resp.sendHeaders())
 				          .bindNow();
 
-		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.create("testIssue903", 1);
+		DefaultPooledConnectionProvider provider = (DefaultPooledConnectionProvider) ConnectionProvider.create("testIssue903", 1);
 		HttpClient.create(provider)
 		          .port(server.port())
 		          .get()
@@ -341,8 +340,8 @@ public class PooledConnectionProviderTest {
 				                                                 .delayElement(Duration.ofMillis(100))))
 				         .wiretap(true)
 				         .bindNow();
-		PooledConnectionProvider provider =
-				(PooledConnectionProvider) ConnectionProvider.builder("testIssue951_MaxPendingAcquire")
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.builder("testIssue951_MaxPendingAcquire")
 				                                             .maxConnections(1)
 				                                             .pendingAcquireTimeout(Duration.ofMillis(20))
 				                                             .pendingAcquireMaxCount(1)
@@ -387,11 +386,11 @@ public class PooledConnectionProviderTest {
 					onNext++;
 				}
 				else if (signal.getThrowable() instanceof TimeoutException &&
-						msg1.equals(signal.getThrowable().getMessage())) {
+								 msg1.equals(signal.getThrowable().getMessage())) {
 					onErrorTimeout++;
 				}
 				else if (signal.getThrowable() instanceof PoolAcquirePendingLimitException &&
-						msg2.equals(signal.getThrowable().getMessage())) {
+								 msg2.equals(signal.getThrowable().getMessage())) {
 					onErrorPendingAcquire++;
 				}
 			}
@@ -417,8 +416,8 @@ public class PooledConnectionProviderTest {
 				          .handle((req, resp) -> resp.sendHeaders())
 				          .bindNow();
 
-		PooledConnectionProvider provider =
-				(PooledConnectionProvider) ConnectionProvider.builder("testIssue973")
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.builder("testIssue973")
 				                                             .maxConnections(2)
 				                                             .forRemoteHost(InetSocketAddress.createUnresolved("localhost", server.port()),
 				                                                            spec -> spec.maxConnections(1))
@@ -481,7 +480,7 @@ public class PooledConnectionProviderTest {
 				                       .get("/2", (req, res) -> Mono.error(new RuntimeException("testIssue1012"))))
 				          .bindNow();
 
-		PooledConnectionProvider provider = (PooledConnectionProvider) ConnectionProvider.create("testIssue1012", 1);
+		DefaultPooledConnectionProvider provider = (DefaultPooledConnectionProvider) ConnectionProvider.create("testIssue1012", 1);
 		CountDownLatch latch = new CountDownLatch(1);
 		HttpClient client =
 				HttpClient.create(provider)
@@ -526,8 +525,8 @@ public class PooledConnectionProviderTest {
 				          .bindNow();
 
 		CountDownLatch latch = new CountDownLatch(2);
-		PooledConnectionProvider provider =
-				(PooledConnectionProvider) ConnectionProvider.create("connectionReleasedOnRedirect", 1);
+		DefaultPooledConnectionProvider provider =
+				(DefaultPooledConnectionProvider) ConnectionProvider.create("connectionReleasedOnRedirect", 1);
 		String response =
 				HttpClient.create(provider)
 				          .remoteAddress(server::address)

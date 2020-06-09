@@ -472,9 +472,11 @@ configure(rootProject) { project ->
 			"reactor.netty.http.client.PrematureCloseException", // Serializable
 			// reactor.netty.http package
 			"reactor.netty.http.HttpResources", // Method changed in super class
+			// reactor.netty.resources package
+			"reactor.netty.resources.PooledConnectionProvider", // Renamed to DefaultPooledConnectionProvider
 			// reactor.netty.tcp package
 			"reactor.netty.tcp.InetSocketAddressUtil", // Moved and renamed
-			"reactor.netty.tcp.ProxyProvider", // Moved and renamed
+			"reactor.netty.tcp.ProxyProvider", // Moved
 			// reactor.netty package
 			"reactor.netty.ChannelBindException" // Serializable
 		]
