@@ -287,7 +287,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		ch.pipeline()
 		  .addLast(NettyPipeline.H2ToHttp11Codec, new Http2StreamFrameToHttpObjectCodec(true))
 		  .addLast(NettyPipeline.HttpTrafficHandler,
-		           new Http2StreamBridgeHandler(listener, readForwardHeaders, encoder, decoder));
+		           new Http2StreamBridgeServerHandler(listener, readForwardHeaders, encoder, decoder));
 
 		ChannelOperations.addReactiveBridge(ch, opsFactory, listener);
 

@@ -18,44 +18,36 @@ package reactor.netty.http.server;
 import java.net.SocketAddress;
 import java.util.Optional;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.ssl.SslHandler;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.http.Http2StreamBridgeHandler;
 
-import static reactor.netty.ReactorNetty.format;
+final class Http2StreamBridgeServerHandler extends Http2StreamBridgeHandler {
 
-final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
-
-	final boolean             readForwardHeaders;
-	Boolean                   secured;
-	SocketAddress             remoteAddress;
-	final ConnectionObserver  listener;
-	final ServerCookieEncoder cookieEncoder;
 	final ServerCookieDecoder cookieDecoder;
+	final ServerCookieEncoder cookieEncoder;
+	final ConnectionObserver  listener;
+	final boolean             readForwardHeaders;
 
-	Http2StreamBridgeHandler(ConnectionObserver listener, boolean readForwardHeaders,
-			ServerCookieEncoder encoder,
-			ServerCookieDecoder decoder) {
-		this.readForwardHeaders = readForwardHeaders;
-		this.listener = listener;
-		this.cookieEncoder = encoder;
+	SocketAddress             remoteAddress;
+	Boolean                   secured;
+
+	Http2StreamBridgeServerHandler(ConnectionObserver listener, boolean readForwardHeaders,
+			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		this.cookieDecoder = decoder;
+		this.cookieEncoder = encoder;
+		this.listener = listener;
+		this.readForwardHeaders = readForwardHeaders;
 	}
 
 	@Override
-	public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+	public void handlerAdded(ChannelHandlerContext ctx) {
 		super.handlerAdded(ctx);
-		if (HttpServerOperations.log.isDebugEnabled()) {
-			HttpServerOperations.log.debug(format(ctx.channel(), "New http2 connection, requesting read"));
-		}
 		ctx.read();
 	}
 
@@ -93,19 +85,5 @@ final class Http2StreamBridgeHandler extends ChannelDuplexHandler {
 			listener.onStateChange(ops, ConnectionObserver.State.CONFIGURED);
 		}
 		ctx.fireChannelRead(msg);
-	}
-
-
-	@Override
-	@SuppressWarnings("FutureReturnValueIgnored")
-	public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-		if (msg instanceof ByteBuf) {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(new DefaultHttpContent((ByteBuf) msg), promise);
-		}
-		else {
-			//"FutureReturnValueIgnored" this is deliberate
-			ctx.write(msg, promise);
-		}
 	}
 }
