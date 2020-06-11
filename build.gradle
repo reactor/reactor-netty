@@ -74,7 +74,7 @@ ext {
   assertJVersion = '3.16.1'
   hoverflyJavaVersion = '0.13.0'
   tomcatVersion = '9.0.36'
-  boringSslVersion = '2.0.30.Final'
+  boringSslVersion = '2.0.31.Final'
   junitVersion = '4.12'
 
   javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
@@ -298,7 +298,7 @@ configure(rootProject) { project ->
 	jarFileTestCompile "junit:junit:$junitVersion"
 
 	examplesRuntime "ch.qos.logback:logback-classic:$logbackVersion"
-	examplesRuntime "io.netty:netty-tcnative-boringssl-static:2.0.28.Final" + os_suffix
+	examplesRuntime "io.netty:netty-tcnative-boringssl-static:2.0.31.Final" + os_suffix
 
 	for (dependency in project.configurations.shaded.dependencies) {
 	    compileOnly(dependency)
