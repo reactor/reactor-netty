@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.net.ssl.SSLException;
 
 import io.netty.buffer.ByteBuf;
@@ -262,6 +263,33 @@ public class HttpClientTest {
 		            .verify(Duration.ofSeconds(20));
 
 		pool.dispose();
+	}
+
+	@Test
+	//https://github.com/reactor/reactor-pool/issues/82
+	public void testConnectionRefusedConcurrentRequests(){
+		ConnectionProvider provider = ConnectionProvider.create("testConnectionRefusedConcurrentRequests", 1);
+
+		HttpClient httpClient = HttpClient.create(provider)
+		                                  .port(8282);
+
+		Mono<String> mono1 =
+				httpClient.get()
+				          .responseSingle((r, buf) -> buf.asString())
+				          .log("mono1");
+
+		Mono<String> mono2 =
+				httpClient.get()
+				          .responseSingle((r, buf) -> buf.asString())
+				          .log("mono2");
+
+		StepVerifier.create(Flux.just(mono1.onErrorResume(e -> Mono.empty()), mono2)
+		                        .flatMap(Function.identity()))
+		            .expectError()
+		            .verify(Duration.ofSeconds(5));
+
+		provider.disposeLater()
+		        .block(Duration.ofSeconds(5));
 	}
 
 	@Test
