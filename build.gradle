@@ -298,7 +298,7 @@ configure(rootProject) { project ->
 	jarFileTestCompile "junit:junit:$junitVersion"
 
 	examplesRuntime "ch.qos.logback:logback-classic:$logbackVersion"
-	examplesRuntime "io.netty:netty-tcnative-boringssl-static:2.0.31.Final" + os_suffix
+	examplesRuntime "io.netty:netty-tcnative-boringssl-static:$boringSslVersion" + os_suffix
 
 	for (dependency in project.configurations.shaded.dependencies) {
 	    compileOnly(dependency)
