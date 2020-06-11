@@ -63,6 +63,7 @@ import reactor.util.context.Context;
 import reactor.util.retry.Retry;
 
 import static reactor.netty.ReactorNetty.format;
+import static reactor.netty.http.client.HttpClientState.STREAM_CONFIGURED;
 
 /**
  * Provides the actual {@link HttpClient} instance.
@@ -71,8 +72,6 @@ import static reactor.netty.ReactorNetty.format;
  * @author Violeta Georgieva
  */
 class HttpClientConnect extends HttpClient {
-
-	static final HttpClientConnect INSTANCE = new HttpClientConnect(ConnectionProvider.newConnection());
 
 	final HttpClientConfig config;
 
@@ -335,7 +334,8 @@ class HttpClientConnect extends HttpClient {
 
 		@Override
 		public void onStateChange(Connection connection, State newState) {
-			if (newState == State.CONFIGURED && HttpClientOperations.class == connection.getClass()) {
+			if ((newState == State.CONFIGURED || newState == STREAM_CONFIGURED) &&
+						HttpClientOperations.class == connection.getClass()) {
 				handler.channel((HttpClientOperations) connection);
 			}
 		}
@@ -362,7 +362,8 @@ class HttpClientConnect extends HttpClient {
 				sink.success(connection);
 				return;
 			}
-			if (newState == ConnectionObserver.State.CONFIGURED && HttpClientOperations.class == connection.getClass()) {
+			if ((newState == State.CONFIGURED || newState == STREAM_CONFIGURED) &&
+						HttpClientOperations.class == connection.getClass()) {
 				if (log.isDebugEnabled()) {
 					log.debug(format(connection.channel(), "Handler is being applied: {}"), handler);
 				}

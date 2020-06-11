@@ -41,6 +41,7 @@ import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
+import reactor.netty.NettyPipeline;
 import reactor.netty.channel.ChannelOperations;
 import reactor.netty.transport.TransportConfig;
 import reactor.netty.transport.TransportConnector;
@@ -262,8 +263,13 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 
 				ChannelOperations<?, ?> ops = opsFactory.create(pooledConnection, pooledConnection, null);
 				if (ops != null) {
-					ops.bind();
-					obs.onStateChange(ops, State.CONFIGURED);
+					if (c.pipeline().get(NettyPipeline.H2MultiplexHandler) == null) {
+						ops.bind();
+						obs.onStateChange(ops, State.CONFIGURED);
+					}
+					else {
+						obs.onStateChange(pooledConnection, State.CONFIGURED);
+					}
 					sink.success(ops);
 				}
 				else {

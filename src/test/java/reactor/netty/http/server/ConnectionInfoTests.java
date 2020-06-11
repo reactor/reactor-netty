@@ -57,6 +57,14 @@ public class ConnectionInfoTests {
 
 	private DisposableServer connection;
 
+	protected HttpClient customizeClientOptions(HttpClient httpClient) {
+		return httpClient;
+	}
+
+	protected HttpServer customizeServerOptions(HttpServer httpServer) {
+		return httpServer;
+	}
+
 	@BeforeClass
 	public static void createSelfSignedCertificate() throws CertificateException {
 		ssc = new SelfSignedCertificate();
@@ -397,7 +405,9 @@ public class ConnectionInfoTests {
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
 				httpServer -> httpServer.doOnChannelInit((observer, channel, address) -> {
 								SslHandler sslHandler = serverSslContext.newHandler(channel.alloc());
-								channel.pipeline().addFirst(NettyPipeline.SslHandler, sslHandler);
+								if (channel.pipeline().get(NettyPipeline.SslHandler) == null) {
+									channel.pipeline().addFirst(NettyPipeline.SslHandler, sslHandler);
+								}
 							}),
 				true);
 	}
@@ -558,11 +568,12 @@ public class ConnectionInfoTests {
 			boolean useHttps) {
 
 		this.connection =
-				serverConfigFunction.apply(
-						HttpServer.create()
-						          .forwarded(true)
-						          .port(0)
-						)
+				customizeServerOptions(
+						serverConfigFunction.apply(
+						    HttpServer.create()
+						              .forwarded(true)
+						              .port(0)
+						))
 				        .handle((req, res) -> {
 				            try {
 				                serverRequestConsumer.accept(req);
@@ -583,11 +594,12 @@ public class ConnectionInfoTests {
 		}
 
 		String response =
-				clientConfigFunction.apply(
-						HttpClient.create()
-						          .port(this.connection.port())
-						          .wiretap(true)
-						)
+				customizeClientOptions(
+						clientConfigFunction.apply(
+						    HttpClient.create()
+						              .port(this.connection.port())
+						              .wiretap(true)
+						))
 				        .headers(clientRequestHeadersConsumer)
 				        .get()
 				        .uri(uri)

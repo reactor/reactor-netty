@@ -19,27 +19,18 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
-import reactor.netty.http.server.HttpServerRequest;
-import reactor.netty.http.server.HttpServerResponse;
-import reactor.netty.tcp.SslProvider;
 import reactor.test.StepVerifier;
 
 /**
@@ -495,259 +486,10 @@ public class HttpTests {
 		server.disposeNow();
 	}
 
-	@Test
-//	@Ignore
-	public void testHttpToHttp2Ssl() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-		DisposableServer server =
-				HttpServer.create()
-				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions)
-				                                                  .defaultConfiguration(SslProvider.DefaultConfigurationType.H2))
-				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap(true)
-				          .bindNow();
-
-		HttpClient.create()
-		          .port(server.port())
-		          .secure(ssl -> ssl.sslContext(
-		                  SslContextBuilder.forClient()
-		                                   .trustManager(InsecureTrustManagerFactory.INSTANCE)))
-		          .wiretap(true)
-		          .get()
-		          .uri("/")
-		          .responseContent()
-		          .aggregate()
-		          .asString()
-		          .block(Duration.ofSeconds(30));
-
-		server.disposeNow();
-	}
-
-	@Test
-	@Ignore
-	public void testHttpSsl() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-		DisposableServer server =
-				HttpServer.create()
-				          .port(8080)
-				          .secure(sslContextSpec -> sslContextSpec.sslContext(serverOptions))
-				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap(true)
-				          .bindNow();
-
-		new CountDownLatch(1).await();
-		server.disposeNow();
-	}
-
-//	@Test
-//	public void testHttpToHttp2ClearText() {
-//		DisposableServer server =
-//				HttpServer.create()
-//				          .protocol(HttpProtocol.H2C)
-//				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-//				          .wiretap(true)
-//				          .bindNow();
-//
-//		StepVerifier.create(
-//				HttpClient.create()
-//				          .port(server.port())
-//				          .protocol(HttpProtocol.H2C)
-//				          .wiretap(true)
-//				          .post()
-//				          .uri("/")
-////				          .send((req, out) -> out.sendString(Mono.just("World")))
-//				          .responseContent()
-//				          .aggregate()
-//				          .asString()
-//		)
-//		            .expectNext("Hello")
-//		            .verifyComplete();
-//
-//
-//		server.disposeNow();
-//	}
-
-	@Test
-	@Ignore
-	public void testH2PriorKnowledge() throws Exception {
-//		SelfSignedCertificate cert = new SelfSignedCertificate();
-//		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-
-		DisposableServer server =
-				HttpServer.create()
-				          .protocol(HttpProtocol.H2C)
-				          .port(8080)
-				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap(true)
-				          .bindNow();
-
-		new CountDownLatch(1).await();
-		server.disposeNow();
-	}
-
-	@Test
-	@Ignore
-	public void testHttp1or2_1() {
-		DisposableServer server =
-				HttpServer.create()
-				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
-				          .port(8080)
-				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap(true)
-				          .bindNow();
-
-		server.onDispose()
-		      .block();
-	}
-
-	@Test
-	@Ignore
-	public void testHttp1or2_2() {
-		DisposableServer server =
-				HttpServer.create()
-				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
-				          .port(8080)
-				          .handle((req, res) -> res.sendString(req.receive()
-				                                                  .aggregate()
-				                                                  .asString()
-				                                                  .subscribeOn(Schedulers.elastic())))
-				          .wiretap(true)
-				          .bindNow();
-
-		server.onDispose()
-		      .block();
-	}
-
-	@Test
-	@Ignore
-	public void testH2Secure() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-
-		DisposableServer server =
-				HttpServer.create()
-				          .protocol(HttpProtocol.H2)
-				          .secure(ssl -> ssl.sslContext(serverOptions))
-				          .port(8080)
-				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap(true)
-				          .bindNow();
-
-		new CountDownLatch(1).await();
-		server.disposeNow();
-	}
-
-	@Test
-	@Ignore
-	public void testH2OrH1Secure() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-
-		DisposableServer server =
-				HttpServer.create()
-				          .protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
-				          .secure(ssl -> ssl.sslContext(serverOptions))
-				          .port(8080)
-				          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-				          .wiretap(true)
-				          .bindNow();
-
-		new CountDownLatch(1).await();
-		server.disposeNow();
-	}
-
-	@Test
-	@Ignore
-	public void testIssue395() throws Exception {
-		BiFunction<HttpServerRequest, HttpServerResponse, Mono<Void>> echoHandler =
-				(req, res) -> res.send(req.receive().map(ByteBuf::retain)).then();
-
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-		DisposableServer server =
-				HttpServer.create()
-				          .secure(ssl -> ssl.sslContext(serverOptions))
-				          .protocol(HttpProtocol.H2)
-				          .handle(echoHandler)
-				          .port(8080)
-				          .wiretap(true)
-				          .bindNow();
-
-		new CountDownLatch(1).await();
-		server.disposeNow();
-	}
-
-	@Test
-	@Ignore
-	public void testHttp1or2Secure() throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-
-		DisposableServer server =
-				HttpServer.create()
-				          .protocol(HttpProtocol.H2, HttpProtocol.HTTP11)
-				          .secure(ssl -> ssl.sslContext(serverOptions))
-				          .port(8080)
-				          .handle((req, res) -> res.sendString(req.receive().aggregate().retain().asString()))
-				          .wiretap(true)
-				          .bindNow();
-
-		new CountDownLatch(1).await();
-		server.disposeNow();
-	}
-
-	@Test
-	public void testHttpNoSslH2Fails()  {
-		StepVerifier.create(
-			HttpServer.create()
-			          .protocol(HttpProtocol.H2)
-			          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-			          .wiretap(true)
-			          .bind()
-		).verifyErrorMessage("Configured H2 protocol without TLS. Use" +
-				" a Clear-Text H2 protocol via HttpServer#protocol or configure TLS" +
-				" via HttpServer#secure");
-	}
-
-	@Test
-	public void testHttpSslH2CFails()  throws Exception {
-		SelfSignedCertificate cert = new SelfSignedCertificate();
-		SslContextBuilder serverOptions = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
-
-		StepVerifier.create(
-			HttpServer.create()
-			          .protocol(HttpProtocol.H2C)
-			          .secure(ssl -> ssl.sslContext(serverOptions))
-			          .handle((req, res) -> res.sendString(Mono.just("Hello")))
-			          .wiretap(true)
-			          .bind()
-		).verifyErrorMessage("Configured H2 Clear-Text protocol with TLS. Use" +
-				" the non Clear-Text H2 protocol via HttpServer#protocol or disable TLS" +
-				" via HttpServer#noSSL())");
-	}
-
 	@Test(expected = IllegalArgumentException.class)
 	public void testIssue387() {
 		HttpServer.create()
 		          .secure(sslContextSpec -> System.out.println())
 		          .bindNow();
-	}
-
-	@Test
-	@Ignore
-	public void testIssue1071() {
-		DisposableServer server =
-				HttpServer.create()
-				          .protocol(HttpProtocol.H2C, HttpProtocol.HTTP11)
-				          .route(routes ->
-				                  routes.post("/echo", (request, response) -> response.send(request.receive().retain())))
-				          .port(8080)
-				          .httpRequestDecoder(spec -> spec.h2cMaxContentLength(1024))
-				          .wiretap(true)
-				          .bindNow();
-
-		server.onDispose().block();
 	}
 }

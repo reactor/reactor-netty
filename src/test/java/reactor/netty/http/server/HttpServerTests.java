@@ -89,6 +89,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
 import reactor.netty.NettyOutbound;
 import reactor.netty.channel.AbortedException;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.client.HttpClientRequest;
 import reactor.netty.http.client.PrematureCloseException;
@@ -1749,37 +1750,56 @@ public class HttpServerTests {
 	}
 
 	@Test
-	public void testHttpServerWithDomainSockets() {
+	public void testHttpServerWithDomainSockets() throws Exception {
+		HttpServer server = HttpServer.create();
+		HttpClient client = HttpClient.create();
+
+		doTestHttpServerWithDomainSockets(server, client);
+
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		SslContextBuilder clientCtx = SslContextBuilder.forClient()
+		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		doTestHttpServerWithDomainSockets(
+				server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client) {
 		assumeTrue(LoopResources.hasNativeSupport());
-		disposableServer =
-				HttpServer.create()
-				          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
-				          .wiretap(true)
-				          .handle((req, res) -> {
-				              req.withConnection(conn -> {
-				                  assertThat(conn.channel().localAddress()).isNull();
-				                  assertThat(conn.channel().remoteAddress()).isNull();
-				                  assertThat(req.hostAddress()).isNull();
-				                  assertThat(req.remoteAddress()).isNull();
-				              });
-				              assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
-				              return res.send(req.receive().retain());
-				          })
-				          .bindNow();
+		try {
+			disposableServer =
+					server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+					      .wiretap(true)
+					      .handle((req, res) -> {
+					          req.withConnection(conn -> {
+					              assertThat(conn.channel().localAddress()).isNull();
+					              assertThat(conn.channel().remoteAddress()).isNull();
+					              assertThat(req.hostAddress()).isNull();
+					              assertThat(req.remoteAddress()).isNull();
+					          });
+					          assertThat(req.requestHeaders().get(HttpHeaderNames.HOST)).isEqualTo("localhost");
+					          return res.send(req.receive().retain());
+					      })
+					      .bindNow();
 
-		String response =
-				HttpClient.create()
-				          .remoteAddress(disposableServer::address)
-				          .wiretap(true)
-				          .post()
-				          .uri("/")
-				          .send(ByteBufFlux.fromString(Flux.just("1", "2", "3")))
-				          .responseContent()
-				          .aggregate()
-				          .asString()
-				          .block(Duration.ofSeconds(30));
+			String response =
+					client.remoteAddress(disposableServer::address)
+					      .wiretap(true)
+					      .post()
+					      .uri("/")
+					      .send(ByteBufFlux.fromString(Flux.just("1", "2", "3")))
+					      .responseContent()
+					      .aggregate()
+					      .asString()
+					      .block(Duration.ofSeconds(30));
 
-		assertEquals("123", response);
+			assertEquals("123", response);
+		}
+		finally {
+			assertThat(disposableServer).isNotNull();
+			disposableServer.disposeNow();
+		}
 	}
 
 	@Test

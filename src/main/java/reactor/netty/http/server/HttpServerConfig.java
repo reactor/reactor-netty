@@ -48,6 +48,7 @@ import reactor.netty.NettyPipeline;
 import reactor.netty.ReactorNetty;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.channel.ChannelOperations;
+import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.HttpResources;
 import reactor.netty.resources.LoopResources;
@@ -110,6 +111,15 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	 */
 	public HttpRequestDecoderSpec decoder() {
 		return decoder;
+	}
+
+	/**
+	 * Return the HTTP/2 configuration
+	 *
+	 * @return the HTTP/2 configuration
+	 */
+	public Http2SettingsSpec http2SettingsSpec() {
+		return http2Settings;
 	}
 
 	/**
@@ -192,6 +202,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	ServerCookieEncoder                                cookieEncoder;
 	HttpRequestDecoderSpec                             decoder;
 	boolean                                            forwarded;
+	Http2SettingsSpec                                  http2Settings;
 	int                                                minCompressionSize;
 	HttpProtocol[]                                     protocols;
 	int                                                _protocols;
@@ -218,6 +229,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this.cookieEncoder = parent.cookieEncoder;
 		this.decoder = parent.decoder;
 		this.forwarded = parent.forwarded;
+		this.http2Settings = parent.http2Settings;
 		this.minCompressionSize = parent.minCompressionSize;
 		this.protocols = parent.protocols;
 		this._protocols = parent._protocols;
@@ -245,7 +257,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
 		return super.defaultOnChannelInit()
 		            .then(new HttpServerChannelInitializer(compressPredicate, cookieDecoder, cookieEncoder,
-		                decoder, forwarded, metricsRecorder(), minCompressionSize, channelOperationsProvider(),
+		                decoder, forwarded, http2Settings(), metricsRecorder(), minCompressionSize, channelOperationsProvider(),
 		                    _protocols, proxyProtocolSupportType, sslProvider, uriTagValue));
 	}
 
@@ -277,6 +289,41 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		this._protocols = _protocols;
 	}
 
+	Http2Settings http2Settings() {
+		Http2Settings settings = Http2Settings.defaultSettings();
+
+		if (http2Settings != null) {
+			Long headerTableSize = http2Settings.headerTableSize();
+			if (headerTableSize != null) {
+				settings.headerTableSize(headerTableSize);
+			}
+
+			Integer initialWindowSize = http2Settings.initialWindowSize();
+			if (initialWindowSize != null) {
+				settings.initialWindowSize(initialWindowSize);
+			}
+
+			Long maxConcurrentStreams = http2Settings.maxConcurrentStreams();
+			if (maxConcurrentStreams != null) {
+				settings.maxConcurrentStreams(maxConcurrentStreams);
+			}
+
+			Integer maxFrameSize = http2Settings.maxFrameSize();
+			if (maxFrameSize != null) {
+				settings.maxFrameSize(maxFrameSize);
+			}
+
+			settings.maxHeaderListSize(http2Settings.maxHeaderListSize());
+
+			Boolean pushEnabled = http2Settings.pushEnabled();
+			if (pushEnabled != null) {
+				settings.pushEnabled(pushEnabled);
+			}
+		}
+
+		return settings;
+	}
+
 	static void addStreamHandlers(Channel ch, ChannelOperations.OnSetup opsFactory,
 			ConnectionObserver listener, boolean readForwardHeaders,
 			ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
@@ -292,7 +339,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		ChannelOperations.addReactiveBridge(ch, opsFactory, listener);
 
 		if (log.isDebugEnabled()) {
-			log.debug(format(ch, "Initialized HTTP/2 pipeline {}"), ch.pipeline());
+			log.debug(format(ch, "Initialized HTTP/2 stream pipeline {}"), ch.pipeline());
 		}
 	}
 
@@ -332,6 +379,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ServerCookieDecoder cookieDecoder,
 			ServerCookieEncoder cookieEncoder,
 			boolean forwarded,
+			Http2Settings http2Settings,
 			ConnectionObserver listener,
 			ChannelOperations.OnSetup opsFactory,
 			boolean validate) {
@@ -340,7 +388,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		Http2FrameCodecBuilder http2FrameCodecBuilder =
 				Http2FrameCodecBuilder.forServer()
 				                      .validateHeaders(validate)
-				                      .initialSettings(Http2Settings.defaultSettings());
+				                      .initialSettings(http2Settings);
 
 		if (p.get(NettyPipeline.LoggingHandler) != null) {
 			http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(LogLevel.DEBUG,
@@ -358,6 +406,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ServerCookieEncoder cookieEncoder,
 			HttpRequestDecoderSpec decoder,
 			boolean forwarded,
+			Http2Settings http2Settings,
 			ConnectionObserver listener,
 			@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 			int minCompressionSize,
@@ -369,12 +418,12 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 		Http11OrH2CleartextCodec
 				upgrader = new Http11OrH2CleartextCodec(cookieDecoder, cookieEncoder, p.get(NettyPipeline.LoggingHandler) != null,
-						forwarded, listener, opsFactory, decoder.validateHeaders());
+						forwarded, http2Settings, listener, opsFactory, decoder.validateHeaders());
 
 		ChannelHandler http2ServerHandler = new H2CleartextCodec(upgrader);
 		CleartextHttp2ServerUpgradeHandler h2cUpgradeHandler = new CleartextHttp2ServerUpgradeHandler(
 				httpServerCodec,
-				new HttpServerUpgradeHandler(httpServerCodec, upgrader, decoder.h2cMaxContentLength),
+				new HttpServerUpgradeHandler(httpServerCodec, upgrader, decoder.h2cMaxContentLength()),
 				http2ServerHandler);
 
 		p.addBefore(NettyPipeline.ReactiveBridge,
@@ -535,6 +584,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				ServerCookieEncoder cookieEncoder,
 				boolean debug,
 				boolean forwarded,
+				Http2Settings http2Settings,
 				ConnectionObserver listener,
 				ChannelOperations.OnSetup opsFactory,
 				boolean validate) {
@@ -544,7 +594,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			Http2FrameCodecBuilder http2FrameCodecBuilder =
 					Http2FrameCodecBuilder.forServer()
 					                      .validateHeaders(validate)
-					                      .initialSettings(Http2Settings.defaultSettings());
+					                      .initialSettings(http2Settings);
 
 			if (debug) {
 				http2FrameCodecBuilder.frameLogger(new Http2FrameLogger(
@@ -577,25 +627,27 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		}
 	}
 
-	static final class Http11OrH2Codec extends ApplicationProtocolNegotiationHandler {
+	static final class H2OrHttp11Codec extends ApplicationProtocolNegotiationHandler {
 
 		final BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate;
 		final ServerCookieDecoder                                cookieDecoder;
 		final ServerCookieEncoder                                cookieEncoder;
 		final HttpRequestDecoderSpec                             decoder;
 		final boolean                                            forwarded;
+		final Http2Settings                                      http2Settings;
 		final ConnectionObserver                                 listener;
 		final Supplier<? extends ChannelMetricsRecorder>         metricsRecorder;
 		final int                                                minCompressionSize;
 		final ChannelOperations.OnSetup                          opsFactory;
 		final Function<String, String>                           uriTagValue;
 
-		Http11OrH2Codec(
+		H2OrHttp11Codec(
 				@Nullable BiPredicate<HttpServerRequest, HttpServerResponse> compressPredicate,
 				ServerCookieDecoder cookieDecoder,
 				ServerCookieEncoder cookieEncoder,
 				HttpRequestDecoderSpec decoder,
 				boolean forwarded,
+				Http2Settings http2Settings,
 				ConnectionObserver listener,
 				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 				int minCompressionSize,
@@ -607,6 +659,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.cookieEncoder = cookieEncoder;
 			this.decoder = decoder;
 			this.forwarded = forwarded;
+			this.http2Settings = http2Settings;
 			this.listener = listener;
 			this.metricsRecorder = metricsRecorder;
 			this.minCompressionSize = minCompressionSize;
@@ -623,7 +676,8 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			ChannelPipeline p = ctx.pipeline();
 
 			if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
-				configureH2Pipeline(p, cookieDecoder, cookieEncoder, forwarded, listener, opsFactory, decoder.validateHeaders());
+				configureH2Pipeline(p, cookieDecoder, cookieEncoder, forwarded, http2Settings,
+						listener, opsFactory, decoder.validateHeaders());
 				return;
 			}
 
@@ -644,6 +698,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 		final ServerCookieEncoder                                cookieEncoder;
 		final HttpRequestDecoderSpec                             decoder;
 		final boolean                                            forwarded;
+		final Http2Settings                                      http2Settings;
 		final Supplier<? extends ChannelMetricsRecorder>         metricsRecorder;
 		final int                                                minCompressionSize;
 		final ChannelOperations.OnSetup                          opsFactory;
@@ -658,6 +713,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 				ServerCookieEncoder cookieEncoder,
 				HttpRequestDecoderSpec decoder,
 				boolean forwarded,
+				Http2Settings http2Settings,
 				@Nullable Supplier<? extends ChannelMetricsRecorder> metricsRecorder,
 				int minCompressionSize,
 				ChannelOperations.OnSetup opsFactory,
@@ -670,6 +726,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 			this.cookieEncoder = cookieEncoder;
 			this.decoder = decoder;
 			this.forwarded = forwarded;
+			this.http2Settings = http2Settings;
 			this.metricsRecorder = metricsRecorder;
 			this.minCompressionSize = minCompressionSize;
 			this.opsFactory = opsFactory;
@@ -688,12 +745,13 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 
 				if ((protocols & h11orH2) == h11orH2) {
 					channel.pipeline()
-					       .addLast(new Http11OrH2Codec(
+					       .addBefore(NettyPipeline.ReactiveBridge, NettyPipeline.H2OrHttp11Codec, new H2OrHttp11Codec(
 					               compressPredicate(compressPredicate, minCompressionSize),
 					               cookieDecoder,
 					               cookieEncoder,
 					               decoder,
 					               forwarded,
+					               http2Settings,
 					               observer,
 					               metricsRecorder,
 					               minCompressionSize,
@@ -719,6 +777,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							cookieDecoder,
 							cookieEncoder,
 							forwarded,
+							http2Settings,
 							observer,
 							opsFactory,
 							decoder.validateHeaders());
@@ -733,6 +792,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							cookieEncoder,
 							decoder,
 							forwarded,
+							http2Settings,
 							observer,
 							metricsRecorder,
 							minCompressionSize,
@@ -758,6 +818,7 @@ public final class HttpServerConfig extends ServerTransportConfig<HttpServerConf
 							cookieDecoder,
 							cookieEncoder,
 							forwarded,
+							http2Settings,
 							observer,
 							opsFactory,
 							decoder.validateHeaders());

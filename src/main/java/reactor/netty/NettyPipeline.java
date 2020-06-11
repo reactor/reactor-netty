@@ -36,8 +36,12 @@ import io.netty.channel.ChannelInboundHandler;
  * -> ssl reader ? [SslReader]
  * -> channel metrics ? [ChannelMetricsHandler]
  * -> connect metrics ? [ConnectMetricsHandler]
+ * -> h2 or http/1.1 codec? [H2OrHttp11Codec]
  * -> http/1.1 codec ? [HttpCodec]
+ * -> h2 multiplex handler ? [H2MultiplexHandler]
  * -> http/1.1 decompressor ? [HttpDecompressor]
+ * -> h2 to http/1.1 codec ? [H2ToHttp11Codec]
+ * -> http traffic handler ? [HttpTrafficHandler]
  * -> http metrics ? [HttpMetricsHandler]
  * -> http form/multipart/send file ? [ChunkedWriter]
  * -> http aggregator (websocket) ? [HttpAggregator]
@@ -56,6 +60,7 @@ import io.netty.channel.ChannelInboundHandler;
  * -> ssl reader ? [SslReader]
  * -> channel metrics ? [ChannelMetricsHandler]
  * -> h2c upgrade handler ? [H2CUpgradeHandler]
+ * -> h2 or http/1.1 codec? [H2OrHttp11Codec]
  * -> http codec ? [HttpCodec]
  * -> h2 multiplex handler ? [H2MultiplexHandler]
  * -> http access log ? [AccessLogHandler]
@@ -87,6 +92,7 @@ public interface NettyPipeline {
 	String ConnectMetricsHandler = LEFT + "connectMetricsHandler";
 	String H2CUpgradeHandler     = LEFT + "h2cUpgradeHandler";
 	String H2MultiplexHandler    = LEFT + "h2MultiplexHandler";
+	String H2OrHttp11Codec       = LEFT + "h2OrHttp11Codec";
 	String H2ToHttp11Codec       = LEFT + "h2ToHttp11Codec";
 	String HttpAggregator        = LEFT + "httpAggregator";
 	String HttpCodec             = LEFT + "httpCodec";

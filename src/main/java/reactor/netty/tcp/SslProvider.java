@@ -32,6 +32,7 @@ import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -210,7 +211,6 @@ public final class SslProvider {
 		 * {@link Http2SecurityUtil#CIPHERS},
 		 * ALPN support,
 		 * HTTP/1.1 and HTTP/2 support
-		 *
 		 */
 		H2
 	}
@@ -246,7 +246,8 @@ public final class SslProvider {
 				}
 				try {
 					this.sslContext = sslContextBuilder.build();
-				} catch (SSLException e) {
+				}
+				catch (SSLException e) {
 					throw Exceptions.propagate(e);
 				}
 			}
@@ -290,12 +291,13 @@ public final class SslProvider {
 			updateDefaultConfiguration();
 			try {
 				this.sslContext = sslContextBuilder.build();
-			} catch (SSLException e) {
+			}
+			catch (SSLException e) {
 				throw Exceptions.propagate(e);
 			}
 		}
 		else {
-			this.sslContext= from.sslContext;
+			this.sslContext = from.sslContext;
 		}
 		this.handlerConfigurator = from.handlerConfigurator;
 		this.handshakeTimeoutMillis = from.handshakeTimeoutMillis;
@@ -323,7 +325,9 @@ public final class SslProvider {
 				sslContextBuilder.sslProvider(
 				                     OpenSsl.isAvailable() ?
 				                             io.netty.handler.ssl.SslProvider.OPENSSL :
-				                             io.netty.handler.ssl.SslProvider.JDK);
+				                             io.netty.handler.ssl.SslProvider.JDK)
+				                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+				                 .applicationProtocolConfig(null);
 				break;
 			case NONE:
 				break; //no default configuration
@@ -332,7 +336,7 @@ public final class SslProvider {
 
 	/**
 	 * Returns {@code SslContext} instance with configured settings.
-	 * 
+	 *
 	 * @return {@code SslContext} instance with configured settings.
 	 */
 	public SslContext getSslContext() {
@@ -357,6 +361,7 @@ public final class SslProvider {
 			handlerConfigurator.accept(sslHandler);
 		}
 	}
+
 	public void addSslHandler(Channel channel, @Nullable SocketAddress remoteAddress, boolean sslDebug) {
 		SslHandler sslHandler;
 
@@ -451,7 +456,7 @@ public final class SslProvider {
 		// SslContextSpec
 
 		@Override
-		public final Builder sslContext(SslContext sslContext){
+		public final Builder sslContext(SslContext sslContext) {
 			this.sslContext = Objects.requireNonNull(sslContext, "sslContext");
 			return this;
 		}

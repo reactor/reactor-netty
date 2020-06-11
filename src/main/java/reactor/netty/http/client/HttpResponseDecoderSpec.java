@@ -35,8 +35,19 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 	public static final boolean DEFAULT_FAIL_ON_MISSING_RESPONSE         = false;
 	public static final boolean DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST = false;
 
+	/**
+	 * The maximum length of the content of the H2C upgrade request.
+	 * By default the client will allow an upgrade request with up to 65536 as
+	 * the maximum length of the aggregated content.
+	 */
+	public static final int DEFAULT_H2C_MAX_CONTENT_LENGTH = 65536;
+
 	boolean failOnMissingResponse        = DEFAULT_FAIL_ON_MISSING_RESPONSE;
 	boolean parseHttpAfterConnectRequest = DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST;
+
+	HttpResponseDecoderSpec() {
+		this.h2cMaxContentLength = DEFAULT_H2C_MAX_CONTENT_LENGTH;
+	}
 
 	@Override
 	public HttpResponseDecoderSpec get() {
@@ -100,6 +111,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 		decoder.validateHeaders = validateHeaders;
 		decoder.failOnMissingResponse = failOnMissingResponse;
 		decoder.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
+		decoder.h2cMaxContentLength = h2cMaxContentLength;
 		return decoder;
 	}
 }

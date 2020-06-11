@@ -215,7 +215,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 
 	@Override
 	public InetSocketAddress address() {
-		return (InetSocketAddress)channel().remoteAddress();
+		return (InetSocketAddress) channel().remoteAddress();
 	}
 
 	public void chunkedTransfer(boolean chunked) {
@@ -252,7 +252,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	@Override
 	@SuppressWarnings("FutureReturnValueIgnored")
 	protected void onInboundCancel() {
-		if (isInboundDisposed()){
+		if (isInboundDisposed()) {
 			return;
 		}
 		//"FutureReturnValueIgnored" this is deliberate
@@ -408,7 +408,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 					                output.release();
 					                return FutureMono.from(channel().writeAndFlush(newFullBodyMessage(Unpooled.EMPTY_BUFFER)));
 				                }
-				                for(ByteBuf bb : list) {
+				                for (ByteBuf bb : list) {
 				                	if (log.isDebugEnabled()) {
 				                		log.debug(format(channel(), "Ignoring accumulated bytebuf on http GET {}"), ByteBufUtil.prettyHexDump(bb));
 					                }
@@ -500,11 +500,14 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
 		channel().read();
+		if (channel().parent() != null) {
+			channel().parent().read();
+		}
 	}
 
 	@Override
 	protected void onOutboundError(Throwable err) {
-		if(isPersistent() && responseState == null){
+		if (isPersistent() && responseState == null) {
 			if (log.isDebugEnabled()) {
 				log.debug(format(channel(), "Outbound error happened"), err);
 			}
@@ -544,7 +547,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			if (!isKeepAlive()) {
 				markPersistent(false);
 			}
-			if(isInboundCancelled()){
+			if (isInboundCancelled()) {
 				ReferenceCountUtil.release(msg);
 				return;
 			}
@@ -717,11 +720,11 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			}
 
 			if (log.isDebugEnabled()) {
-			    log.debug(format(channel(), "Attempting to perform websocket handshake with {}"), url);
+				log.debug(format(channel(), "Attempting to perform websocket handshake with {}"), url);
 			}
 			WebsocketClientOperations ops = new WebsocketClientOperations(url, websocketClientSpec, this);
 
-			if(!rebind(ops)) {
+			if (!rebind(ops)) {
 				log.error(format(channel(), "Error while rebinding websocket in channel attribute: " +
 						get(channel()) + " to " + ops));
 			}

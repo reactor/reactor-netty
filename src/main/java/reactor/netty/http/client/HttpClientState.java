@@ -69,5 +69,36 @@ public enum HttpClientState implements ConnectionObserver.State {
 		public String toString() {
 			return "[response_completed]";
 		}
+	},
+	/**
+	 * Propagated when a stream is bound to a channelOperation and ready for
+	 * user interaction
+	 */
+	STREAM_CONFIGURED() {
+		@Override
+		public String toString() {
+			return "[stream_configured]";
+		}
+	},
+	/**
+	 * The H2C upgrade was was unsuccessful due to the server not issuing
+	 * with a 101 Switching Protocols response. This may indicate that the server
+	 * does not support H2C.
+	 */
+	UPGRADE_REJECTED() {
+		@Override
+		public String toString() {
+			return "[upgrade_rejected]";
+		}
+	}
+	,
+	/**
+	 * The H2C upgrade was successful.
+	 */
+	UPGRADE_SUCCESSFUL() {
+		@Override
+		public String toString() {
+			return "[upgrade_successful]";
+		}
 	}
 }

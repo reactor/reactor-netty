@@ -43,6 +43,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.SocketUtils;
+import reactor.netty.http.HttpProtocol;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.resources.LoopResources;
@@ -689,30 +690,87 @@ public class HttpRedirectTest {
 	}
 
 	@Test
-	public void testHttpServerWithDomainSockets() {
+	public void testHttpServerWithDomainSockets() throws Exception {
+		HttpServer server = HttpServer.create();
+		HttpClient client = HttpClient.create();
+
+		doTestHttpServerWithDomainSockets(server, client);
+
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		SslContextBuilder clientCtx = SslContextBuilder.forClient()
+		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		doTestHttpServerWithDomainSockets(
+				server.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(serverCtx)),
+				client.protocol(HttpProtocol.H2).secure(spec -> spec.sslContext(clientCtx)));
+	}
+
+	private void doTestHttpServerWithDomainSockets(HttpServer server, HttpClient client) {
 		assumeTrue(LoopResources.hasNativeSupport());
-		DisposableServer disposableServer =
+		DisposableServer disposableServer = null;
+		try {
+			disposableServer =
+					server.bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+					      .wiretap(true)
+					      .route(r -> r.get("/redirect", (req, res) -> res.sendRedirect("/end"))
+					                   .get("/end", (req, res) -> res.sendString(Mono.just("END"))))
+					      .bindNow();
+
+			String response =
+					client.remoteAddress(disposableServer::address)
+					      .wiretap(true)
+					      .followRedirect(true)
+					      .get()
+					      .uri("/redirect")
+					      .responseContent()
+					      .aggregate()
+					      .asString()
+					      .block(Duration.ofSeconds(30));
+
+			assertEquals("END", response);
+		}
+		finally {
+			assertThat(disposableServer).isNotNull();
+			disposableServer.disposeNow();
+		}
+	}
+
+	@Test
+	public void testHttp2Redirect() throws Exception {
+		SelfSignedCertificate cert = new SelfSignedCertificate();
+		SslContextBuilder serverCtx = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		SslContextBuilder clientCtx = SslContextBuilder.forClient()
+		                                               .trustManager(InsecureTrustManagerFactory.INSTANCE);
+		DisposableServer server =
 				HttpServer.create()
-				          .bindAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
+				          .port(0)
+				          .host("localhost")
 				          .wiretap(true)
-				          .route(r -> r.get("/redirect", (req, res) -> res.sendRedirect("/end"))
-				                       .get("/end", (req, res) -> res.sendString(Mono.just("END"))))
+				          .protocol(HttpProtocol.H2)
+				          .secure(spec -> spec.sslContext(serverCtx))
+				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/3"))
+				                       .get("/3", (req, res) -> res.status(200)
+				                                                   .sendString(Mono.just("OK"))))
+				          .wiretap(true)
 				          .bindNow();
 
-		String response =
+		Tuple2<String, Integer> response =
 				HttpClient.create()
-				          .remoteAddress(disposableServer::address)
+				          .remoteAddress(server::address)
 				          .wiretap(true)
 				          .followRedirect(true)
+				          .protocol(HttpProtocol.H2)
+				          .secure(spec -> spec.sslContext(clientCtx))
 				          .get()
-				          .uri("/redirect")
-				          .responseContent()
-				          .aggregate()
-				          .asString()
+				          .uri("/1")
+				          .responseSingle((res, bytes) -> bytes.asString()
+				                                               .zipWith(Mono.just(res.status().code())))
 				          .block(Duration.ofSeconds(30));
 
-		assertEquals("END", response);
+		assertThat(response).isNotNull();
+		assertThat(response.getT2()).isEqualTo(200);
+		assertThat(response.getT1()).isEqualTo("OK");
 
-		disposableServer.disposeNow();
+		server.disposeNow();
 	}
 }

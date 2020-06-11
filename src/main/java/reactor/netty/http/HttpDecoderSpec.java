@@ -15,6 +15,8 @@
  */
 package reactor.netty.http;
 
+import reactor.netty.http.server.HttpRequestDecoderSpec;
+
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -37,6 +39,7 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 	protected int maxChunkSize         = DEFAULT_MAX_CHUNK_SIZE;
 	protected boolean validateHeaders  = DEFAULT_VALIDATE_HEADERS;
 	protected int initialBufferSize    = DEFAULT_INITIAL_BUFFER_SIZE;
+	protected int h2cMaxContentLength;
 
 	/**
 	 * Configure the maximum length that can be decoded for the HTTP request's initial
@@ -131,6 +134,32 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 		return initialBufferSize;
 	}
 
+	/**
+	 * Configure the maximum length of the content of the HTTP/2.0 clear-text upgrade request.
+	 * <ul>
+	 * <li>By default the server will reject an upgrade request with non-empty content,
+	 * because the upgrade request is most likely a GET request. If the client sends
+	 * a non-GET upgrade request, {@link #h2cMaxContentLength} specifies the maximum
+	 * length of the content of the upgrade request.</li>
+	 * <li>By default the client will allow an upgrade request with up to 65536 as
+	 * the maximum length of the aggregated content.</li>
+	 * </ul>
+	 *
+	 * @param h2cMaxContentLength the maximum length of the content of the upgrade request
+	 * @return this builder for further configuration
+	 */
+	public T h2cMaxContentLength(int h2cMaxContentLength) {
+		if (h2cMaxContentLength < 0) {
+			throw new IllegalArgumentException("h2cMaxContentLength must be non negative");
+		}
+		this.h2cMaxContentLength = h2cMaxContentLength;
+		return get();
+	}
+
+	public int h2cMaxContentLength() {
+		return h2cMaxContentLength;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -144,11 +173,12 @@ public abstract class HttpDecoderSpec<T extends HttpDecoderSpec<T>> implements S
 				maxHeaderSize == that.maxHeaderSize &&
 				maxChunkSize == that.maxChunkSize &&
 				validateHeaders == that.validateHeaders &&
-				initialBufferSize == that.initialBufferSize;
+				initialBufferSize == that.initialBufferSize &&
+				h2cMaxContentLength == that.h2cMaxContentLength;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize);
+		return Objects.hash(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize, h2cMaxContentLength);
 	}
 }

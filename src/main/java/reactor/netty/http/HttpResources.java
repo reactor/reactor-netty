@@ -26,7 +26,7 @@ import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpResources;
 
 /**
- * Hold the default Http resources
+ * Hold the default HTTP/1.x resources
  *
  * @author Stephane Maldini
  * @since 0.6
@@ -105,18 +105,18 @@ public final class HttpResources extends TcpResources {
 	}
 
 	/**
-	 * Update event loops resources and return the global HTTP resources
+	 * Update pooling resources and return the global HTTP/1.x resources
 	 *
-	 * @return the global HTTP resources
+	 * @return the global HTTP/1.x resources
 	 */
 	public static HttpResources set(ConnectionProvider provider) {
 		return getOrCreate(httpResources, null, provider, ON_HTTP_NEW, "http");
 	}
 
 	/**
-	 * Update pooling resources and return the global HTTP resources
+	 * Update event loops resources and return the global HTTP/1.x resources
 	 *
-	 * @return the global HTTP resources
+	 * @return the global HTTP/1.x resources
 	 */
 	public static HttpResources set(LoopResources loops) {
 		return getOrCreate(httpResources, loops, null, ON_HTTP_NEW, "http");

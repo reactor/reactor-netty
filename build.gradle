@@ -469,7 +469,10 @@ configure(rootProject) { project ->
 			// reactor.netty.channel package
 			"reactor.netty.channel.BootstrapHandlers", // Removed
 			// reactor.netty.http.client package
+			"reactor.netty.http.client.HttpResponseDecoderSpec",
 			"reactor.netty.http.client.PrematureCloseException", // Serializable
+			// reactor.netty.http.server package
+			"reactor.netty.http.server.HttpRequestDecoderSpec",
 			// reactor.netty.http package
 			"reactor.netty.http.HttpResources", // Method changed in super class
 			// reactor.netty.resources package

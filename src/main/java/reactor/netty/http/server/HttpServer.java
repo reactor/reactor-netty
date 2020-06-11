@@ -34,6 +34,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.http.Http2SettingsSpec;
 import reactor.netty.http.HttpProtocol;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
@@ -227,6 +228,25 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	@Override
 	public final HttpServer host(String host) {
 		return super.host(host);
+	}
+
+	/**
+	 * Apply HTTP/2 configuration
+	 *
+	 * @param http2Settings configures {@link Http2SettingsSpec} before requesting
+	 * @return a new {@link HttpServer}
+	 */
+	public final HttpServer http2Settings(Consumer<Http2SettingsSpec.Builder> http2Settings) {
+		Objects.requireNonNull(http2Settings, "http2Settings");
+		Http2SettingsSpec.Builder builder = Http2SettingsSpec.builder();
+		http2Settings.accept(builder);
+		Http2SettingsSpec settings = builder.build();
+		if (settings.equals(configuration().http2Settings)) {
+			return this;
+		}
+		HttpServer dup = duplicate();
+		dup.configuration().http2Settings = settings;
+		return dup;
 	}
 
 	/**

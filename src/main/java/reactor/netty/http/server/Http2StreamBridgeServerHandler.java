@@ -27,6 +27,11 @@ import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.http.Http2StreamBridgeHandler;
 
+/**
+ * Server specific {@link Http2StreamBridgeHandler}.
+ *
+ * @author Violeta Georgieva
+ */
 final class Http2StreamBridgeServerHandler extends Http2StreamBridgeHandler {
 
 	final ServerCookieDecoder cookieDecoder;

@@ -40,46 +40,13 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 	 */
 	public static final int DEFAULT_H2C_MAX_CONTENT_LENGTH = 0;
 
-	int h2cMaxContentLength = DEFAULT_H2C_MAX_CONTENT_LENGTH;
+	HttpRequestDecoderSpec() {
+		this.h2cMaxContentLength = DEFAULT_H2C_MAX_CONTENT_LENGTH;
+	}
 
 	@Override
 	public HttpRequestDecoderSpec get() {
 		return this;
-	}
-
-	/**
-	 * Configure the maximum length of the content of the H2C upgrade request.
-	 * By default the server will reject an upgrade request with non-empty content,
-	 * because the upgrade request is most likely a GET request. If the client sends
-	 * a non-GET upgrade request, {@code h2cMaxContentLength} specifies the maximum
-	 * length of the content of the upgrade request.
-	 *
-	 * @param h2cMaxContentLength the maximum length of the content of the upgrade request
-	 * @return this builder for further configuration
-	 */
-	public HttpRequestDecoderSpec h2cMaxContentLength(int h2cMaxContentLength) {
-		this.h2cMaxContentLength = h2cMaxContentLength;
-		return this;
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-		if (!super.equals(o)) {
-			return false;
-		}
-		HttpRequestDecoderSpec that = (HttpRequestDecoderSpec) o;
-		return h2cMaxContentLength == that.h2cMaxContentLength;
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(super.hashCode(), h2cMaxContentLength);
 	}
 
 	/**
