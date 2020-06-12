@@ -55,6 +55,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
 
 /**
@@ -498,7 +499,7 @@ public final class ReactorNetty {
 		}
 
 		@Override
-		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, SocketAddress remoteAddress) {
+		public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, @Nullable SocketAddress remoteAddress) {
 			for (ChannelPipelineConfigurer configurer : configurers) {
 				configurer.onChannelInit(connectionObserver, channel, remoteAddress);
 			}

@@ -21,7 +21,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import reactor.netty.channel.ChannelMetricsRecorder;
-import reactor.util.annotation.Nullable;
 
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -41,7 +40,7 @@ final class AddressResolverGroupMetrics extends AddressResolverGroup<SocketAddre
 	final ChannelMetricsRecorder recorder;
 
 	AddressResolverGroupMetrics(AddressResolverGroup<SocketAddress> resolverGroup,
-			@Nullable ChannelMetricsRecorder recorder) {
+			ChannelMetricsRecorder recorder) {
 		this.resolverGroup = resolverGroup;
 		this.recorder = recorder;
 	}

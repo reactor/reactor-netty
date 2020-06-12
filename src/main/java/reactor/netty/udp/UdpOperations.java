@@ -30,6 +30,7 @@ import reactor.netty.FutureMono;
 import reactor.netty.channel.ChannelOperations;
 import reactor.util.Logger;
 import reactor.util.Loggers;
+import reactor.util.annotation.Nullable;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -54,7 +55,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 	 * @return a {@link Publisher} that will be complete when the group has been joined
 	 */
 	@Override
-	public Mono<Void> join(final InetAddress multicastAddress, NetworkInterface iface) {
+	public Mono<Void> join(final InetAddress multicastAddress, @Nullable NetworkInterface iface) {
 		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
 			iface = datagramChannel.config().getNetworkInterface();
 		}
@@ -85,7 +86,7 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 	 * @return a {@link Publisher} that will be complete when the group has been left
 	 */
 	@Override
-	public Mono<Void> leave(final InetAddress multicastAddress, NetworkInterface iface) {
+	public Mono<Void> leave(final InetAddress multicastAddress, @Nullable NetworkInterface iface) {
 		if (null == iface && null != datagramChannel.config().getNetworkInterface()) {
 			iface = datagramChannel.config().getNetworkInterface();
 		}

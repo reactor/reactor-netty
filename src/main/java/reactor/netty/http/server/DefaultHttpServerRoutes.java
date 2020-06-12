@@ -43,7 +43,7 @@ final class DefaultHttpServerRoutes implements HttpServerRoutes {
 
 	@Override
 	public HttpServerRoutes directory(String uri, Path directory,
-			Function<HttpServerResponse, HttpServerResponse> interceptor) {
+			@Nullable Function<HttpServerResponse, HttpServerResponse> interceptor) {
 		Objects.requireNonNull(directory, "directory");
 		return route(HttpPredicate.prefix(uri), (req, resp) -> {
 
