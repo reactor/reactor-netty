@@ -102,7 +102,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	 * @return the current {@link Channel} bound {@link ChannelOperations} or null if none
 	 */
 	@Nullable
-	@SuppressWarnings("unchecked")
 	public static ChannelOperations<?, ?> get(Channel ch) {
 		return Connection.from(ch)
 		                 .as(ChannelOperations.class);
@@ -113,7 +112,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	final ConnectionObserver  listener;
 	final MonoProcessor<Void> onTerminate;
 
-	@SuppressWarnings("unchecked")
 	volatile Subscription outboundSubscription;
 
 	protected ChannelOperations(ChannelOperations<INBOUND, OUTBOUND> replaced) {
@@ -256,7 +254,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public NettyOutbound send(Publisher<? extends ByteBuf> dataStream, Predicate<ByteBuf> predicate) {
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));
@@ -269,7 +266,6 @@ public class ChannelOperations<INBOUND extends NettyInbound, OUTBOUND extends Ne
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public NettyOutbound sendObject(Publisher<?> dataStream, Predicate<Object> predicate) {
 		if (!channel().isActive()) {
 			return then(Mono.error(AbortedException.beforeSend()));

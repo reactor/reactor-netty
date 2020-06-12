@@ -331,7 +331,6 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	protected ChannelPipelineConfigurer defaultOnChannelInit() {
 		return super.defaultOnChannelInit()
 		            .then(new HttpClientChannelInitializer(acceptGzip, decoder, metricsRecorder(), protocols, sslProvider, uriTagValue));

@@ -443,7 +443,6 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				+ ",inboundError=" + inboundError + '}';
 	}
 
-	@SuppressWarnings("rawtypes")
 	static final AtomicReferenceFieldUpdater<FluxReceive, Disposable> CANCEL =
 			AtomicReferenceFieldUpdater.newUpdater(FluxReceive.class,
 					Disposable.class,

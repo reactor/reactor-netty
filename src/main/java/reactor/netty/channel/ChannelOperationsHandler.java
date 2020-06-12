@@ -45,8 +45,6 @@ final class ChannelOperationsHandler extends ChannelInboundHandlerAdapter {
 	final ConnectionObserver        listener;
 	final ChannelOperations.OnSetup opsFactory;
 
-
-	@SuppressWarnings("unchecked")
 	ChannelOperationsHandler(ChannelOperations.OnSetup opsFactory, ConnectionObserver listener) {
 		this.listener = listener;
 		this.opsFactory = opsFactory;

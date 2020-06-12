@@ -171,7 +171,6 @@ public abstract class FutureMono extends Mono<Void> {
 		}
 
 		@Override
-		@SuppressWarnings("unchecked")
 		public void operationComplete(F future) {
 			if (!future.isSuccess()) {
 				s.onError(wrapError(future.cause()));

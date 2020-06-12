@@ -41,7 +41,6 @@ final class UdpOperations extends ChannelOperations<UdpInbound, UdpOutbound>
 
 	final DatagramChannel  datagramChannel;
 
-	@SuppressWarnings("unchecked")
 	UdpOperations(Connection c, ConnectionObserver listener) {
 		super(c, listener);
 		this.datagramChannel = (DatagramChannel)c.channel();
