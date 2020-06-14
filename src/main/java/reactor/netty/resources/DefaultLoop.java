@@ -29,6 +29,8 @@ interface DefaultLoop {
 
 	<CHANNEL extends Channel> CHANNEL getChannel(Class<CHANNEL> channelClass);
 
+	<CHANNEL extends Channel> Class<? extends CHANNEL> getChannelClass(Class<CHANNEL> channelClass);
+
 	String getName();
 
 	EventLoopGroup newEventLoopGroup(int threads, ThreadFactory factory);

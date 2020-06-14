@@ -166,7 +166,7 @@ public interface LoopResources extends Disposable {
 	 */
 	@Deprecated
 	default Class<? extends Channel> onChannel(EventLoopGroup group) {
-		return preferNative() ? onChannel(SocketChannel.class, group).getClass() :
+		return preferNative() ? onChannelClass(SocketChannel.class, group) :
 				NioSocketChannel.class;
 	}
 
@@ -185,6 +185,23 @@ public interface LoopResources extends Disposable {
 						DefaultLoopNativeDetector.NIO;
 
 		return channelFactory.getChannel(channelType);
+	}
+
+	/**
+	 * Callback for a {@link Channel} class selection.
+	 *
+	 * @param channelType the channel type
+	 * @param group the source {@link EventLoopGroup} to assign a loop from
+	 * @param <CHANNEL> the {@link Channel} implementation
+	 * @return a {@link Channel} class
+	 */
+	default <CHANNEL extends Channel> Class<? extends CHANNEL> onChannelClass(Class<CHANNEL> channelType, EventLoopGroup group) {
+		DefaultLoop channelFactory =
+				DefaultLoopNativeDetector.INSTANCE.supportGroup(group) ?
+						DefaultLoopNativeDetector.INSTANCE :
+						DefaultLoopNativeDetector.NIO;
+
+		return channelFactory.getChannelClass(channelType);
 	}
 
 	/**
@@ -207,7 +224,7 @@ public interface LoopResources extends Disposable {
 	 */
 	@Deprecated
 	default Class<? extends DatagramChannel> onDatagramChannel(EventLoopGroup group) {
-		return preferNative() ? onChannel(DatagramChannel.class, group).getClass() :
+		return preferNative() ? onChannelClass(DatagramChannel.class, group) :
 				NioDatagramChannel.class;
 	}
 
@@ -230,7 +247,7 @@ public interface LoopResources extends Disposable {
 	 */
 	@Deprecated
 	default Class<? extends ServerChannel> onServerChannel(EventLoopGroup group) {
-		return preferNative() ? onChannel(ServerSocketChannel.class, group).getClass() :
+		return preferNative() ? onChannelClass(ServerSocketChannel.class, group) :
 				NioServerSocketChannel.class;
 	}
 
