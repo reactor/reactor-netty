@@ -186,6 +186,11 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	@Override
+	public <CHANNEL extends Channel> Class<? extends CHANNEL> onChannelClass(Class<CHANNEL> channelType, EventLoopGroup group) {
+		return defaultLoops.onChannelClass(channelType, group);
+	}
+
+	@Override
 	public EventLoopGroup onClient(boolean useNative) {
 		return defaultLoops.onClient(useNative);
 	}

@@ -64,6 +64,21 @@ final class DefaultLoopEpoll implements DefaultLoop {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	public <CHANNEL extends Channel> Class<? extends CHANNEL> getChannelClass(Class<CHANNEL> channelClass) {
+		if (channelClass.equals(SocketChannel.class)) {
+			return (Class<? extends CHANNEL>) EpollSocketChannel.class;
+		}
+		if (channelClass.equals(ServerSocketChannel.class)) {
+			return (Class<? extends CHANNEL>) EpollServerSocketChannel.class;
+		}
+		if (channelClass.equals(DatagramChannel.class)) {
+			return (Class<? extends CHANNEL>) EpollDatagramChannel.class;
+		}
+		throw new IllegalArgumentException("Unsupported channel type: " + channelClass.getSimpleName());
+	}
+
+	@Override
 	public String getName() {
 		return "epoll";
 	}

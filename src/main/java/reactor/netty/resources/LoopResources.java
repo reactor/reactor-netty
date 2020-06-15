@@ -207,6 +207,23 @@ public interface LoopResources extends Disposable {
 	}
 
 	/**
+	 * Callback for a {@link Channel} class selection.
+	 *
+	 * @param channelType the channel type
+	 * @param group the source {@link EventLoopGroup} to assign a loop from
+	 * @param <CHANNEL> the {@link Channel} implementation
+	 * @return a {@link Channel} class
+	 */
+	default <CHANNEL extends Channel> Class<? extends CHANNEL> onChannelClass(Class<CHANNEL> channelType, EventLoopGroup group) {
+		DefaultLoop channelFactory =
+				DefaultLoopNativeDetector.INSTANCE.supportGroup(group) ?
+						DefaultLoopNativeDetector.INSTANCE :
+						DefaultLoopNativeDetector.NIO;
+
+		return channelFactory.getChannelClass(channelType);
+	}
+
+	/**
 	 * Callback for client {@link EventLoopGroup} creation.
 	 *
 	 * @param useNative should use native group if current environment supports it
