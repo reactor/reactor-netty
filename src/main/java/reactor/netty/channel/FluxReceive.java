@@ -178,8 +178,11 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					cleanQueue(q);
 					return;
 				}
+				Throwable ex = inboundError;
+				if (ex != null) {
+					cleanQueue(q);
+				}
 				if (d && getPending() == 0) {
-					Throwable ex = inboundError;
 					if (ex != null) {
 						parent.listener.onUncaughtException(parent, ex);
 					}
@@ -369,15 +372,20 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	}
 
 	final void onInboundError(Throwable err) {
+		CoreSubscriber<?> receiver = this.receiver;
 		if (isCancelled() || inboundDone) {
 			if (log.isDebugEnabled()) {
 				log.warn(format(channel, "An exception has been observed post termination"), err);
 			} else if (log.isWarnEnabled()) {
 				log.warn(format(channel, "An exception has been observed post termination, use DEBUG level to see the full stack: {}"), err.toString());
 			}
+			if (receiver == null) {
+				// When onInboundComplete is invoked, the queue is not cleaned as there is no receiver
+				Queue<Object> q = receiverQueue;
+				cleanQueue(q);
+			}
 			return;
 		}
-		CoreSubscriber<?> receiver = this.receiver;
 		this.inboundDone = true;
 		if(channel.isActive()){
 			parent.markPersistent(false);
