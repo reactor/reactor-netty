@@ -73,6 +73,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -551,18 +552,21 @@ public class HttpServerTests {
 
 	@Test
 	public void testContentLengthHeadRequest() {
+		AtomicReference<HttpHeaders> sentHeaders = new AtomicReference<>();
 		disposableServer =
 				HttpServer.create()
 				          .host("localhost")
-				          .route(r -> r.route(req -> req.uri().startsWith("/1"),
+				          .route(r -> r.route(req -> req.uri().equals("/1"),
 				                                  (req, res) -> res.sendString(Flux.just("OK").hide()))
 				                       .route(req -> req.uri().startsWith("/2"),
 				                                  (req, res) -> res.chunkedTransfer(false)
 				                                                   .sendString(Flux.just("OK").hide()))
 				                       .route(req -> req.uri().startsWith("/3"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set("Content-Length", 2);
-				                                                return res.sendString(Mono.just("OK"));
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                return res.sendString(Mono.just("OK"))
+				                                                          .then()
+				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/4"),
 				                                  (req, res) -> res.sendHeaders())
@@ -571,39 +575,97 @@ public class HttpServerTests {
 				                                                   .sendHeaders())
 				                       .route(req -> req.uri().startsWith("/6"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set("Content-Length", 2);
-				                                                return res.sendHeaders();
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                return res.sendHeaders()
+				                                                          .then()
+				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                })
 				                       .route(req -> req.uri().startsWith("/7"),
-				                                  (req, res) -> res.send())
+				                                  (req, res) -> res.send()
+				                                                   .then()
+				                                                   .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders())))
 				                       .route(req -> req.uri().startsWith("/8"),
 				                                  (req, res) -> res.chunkedTransfer(false)
-				                                                   .send())
+				                                                   .send()
+				                                                   .then()
+				                                                   .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders())))
 				                       .route(req -> req.uri().startsWith("/9"),
 				                                  (req, res) -> {
-				                                                res.responseHeaders().set("Content-Length", 2);
-				                                                return res.send();
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                return res.send()
+				                                                          .then()
+				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
+				                                                })
+				                       .route(req -> req.uri().startsWith("/10"),
+				                                  (req, res) -> {
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                return res.sendString(Mono.just("OK"))
+				                                                          .then()
+				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
+				                                                })
+				                       .route(req -> req.uri().startsWith("/11"),
+				                                  (req, res) -> {
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                return res.sendString(Flux.just("OK").hide())
+				                                                          .then()
+				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
+				                                                })
+				                       .route(req -> req.uri().startsWith("/12"),
+				                                  (req, res) -> {
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				                                                return res.sendObject(Unpooled.wrappedBuffer("OK".getBytes(Charset.defaultCharset())))
+				                                                          .then()
+				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
+				                                                })
+				                       .route(req -> req.uri().startsWith("/13"),
+				                                  (req, res) -> {
+				                                                res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+				                                                return res.sendObject(Unpooled.wrappedBuffer("OK".getBytes(Charset.defaultCharset())))
+				                                                          .then()
+				                                                          .doOnSuccess(aVoid -> sentHeaders.set(res.responseHeaders()));
 				                                                }))
 				          .wiretap(true)
 				          .bindNow();
 
 		InetSocketAddress address = (InetSocketAddress) disposableServer.address();
-		doTestContentLengthHeadRequest("/1", address, HttpMethod.GET, true, false);
-		doTestContentLengthHeadRequest("/1", address, HttpMethod.HEAD, true, false);
-		doTestContentLengthHeadRequest("/2", address, HttpMethod.GET, false, true);
-		doTestContentLengthHeadRequest("/2", address, HttpMethod.HEAD, false, true);
-		doTestContentLengthHeadRequest("/3", address, HttpMethod.GET, false, false);
-		doTestContentLengthHeadRequest("/3", address, HttpMethod.HEAD, false, false);
-		doTestContentLengthHeadRequest("/4", address, HttpMethod.HEAD, true, false);
-		doTestContentLengthHeadRequest("/5", address, HttpMethod.HEAD, false, true);
-		doTestContentLengthHeadRequest("/6", address, HttpMethod.HEAD, false, false);
-		doTestContentLengthHeadRequest("/7", address, HttpMethod.HEAD, true, false);
-		doTestContentLengthHeadRequest("/8", address, HttpMethod.HEAD, false, true);
-		doTestContentLengthHeadRequest("/9", address, HttpMethod.HEAD, false, false);
+		doTestContentLengthHeadRequest("/1", address, HttpMethod.GET, sentHeaders, true, false);
+		doTestContentLengthHeadRequest("/1", address, HttpMethod.HEAD, sentHeaders, true, false);
+		doTestContentLengthHeadRequest("/2", address, HttpMethod.GET, sentHeaders, false, true);
+		doTestContentLengthHeadRequest("/2", address, HttpMethod.HEAD, sentHeaders, false, true);
+		doTestContentLengthHeadRequest("/3", address, HttpMethod.GET, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/3", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/4", address, HttpMethod.HEAD, sentHeaders, true, false);
+		doTestContentLengthHeadRequest("/5", address, HttpMethod.HEAD, sentHeaders, false, true);
+		doTestContentLengthHeadRequest("/6", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/7", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/8", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/9", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/10", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/11", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/12", address, HttpMethod.HEAD, sentHeaders, false, false);
+		doTestContentLengthHeadRequest("/13", address, HttpMethod.HEAD, sentHeaders, false, false);
+	}
+
+	@Test
+	public void testIssue1153() {
+		AtomicReference<HttpHeaders> sentHeaders = new AtomicReference<>();
+		disposableServer =
+				HttpServer.create()
+				          .host("localhost")
+				          .handle((req, res) -> {
+				              res.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, 2);
+				              return Mono.empty()
+				                         .then()
+				                         .doFinally(s -> sentHeaders.set(res.responseHeaders()));
+				          })
+				          .wiretap(true)
+				          .bindNow();
+		InetSocketAddress address = (InetSocketAddress) disposableServer.address();
+		doTestContentLengthHeadRequest("/", address, HttpMethod.HEAD, sentHeaders, false, false);
 	}
 
 	private void doTestContentLengthHeadRequest(String url, InetSocketAddress address,
-			HttpMethod method, boolean chunk, boolean close) {
+			HttpMethod method, AtomicReference<HttpHeaders> sentHeaders, boolean chunk, boolean close) {
 		Mono<Tuple2<HttpHeaders, String>> response =
 				HttpClient.create()
 				          .remoteAddress(() -> address)
@@ -612,35 +674,46 @@ public class HttpServerTests {
 				          .uri(url)
 				          .responseSingle((res, buf) -> Mono.zip(Mono.just(res.responseHeaders()),
 				                                                 buf.asString()
-				                                                    .defaultIfEmpty("NO BODY")));
+				                                                    .defaultIfEmpty("NO BODY")))
+				          .delayElement(Duration.ofMillis(100));
 
 		StepVerifier.create(response)
 				    .expectNextMatches(t -> {
 				        if (chunk) {
-				            String chunked = t.getT1().get("Transfer-Encoding");
+				            String chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
+				            String cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
-				                return chunked != null && "OK".equals(t.getT2());
+				                return chunked != null && cl == null && "OK".equals(t.getT2());
 				            }
 				            else {
-				                return chunked == null && "NO BODY".equals(t.getT2());
+				                return chunked == null && cl == null && "NO BODY".equals(t.getT2());
 				            }
 				        }
 				        else if (close) {
-				            String connClosed = t.getT1().get("Connection");
+				            String connClosed = t.getT1().get(HttpHeaderNames.CONNECTION);
+				            String chunked = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
+				            String cl = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
-				                return "close".equals(connClosed) && "OK".equals(t.getT2());
+				                return "close".equals(connClosed) && chunked == null && cl == null && "OK".equals(t.getT2());
 				            }
 				            else {
-				                return "close".equals(connClosed) && "NO BODY".equals(t.getT2());
+				                return "close".equals(connClosed) && chunked == null && cl == null && "NO BODY".equals(t.getT2());
 				            }
 				        }
 				        else {
-				            String length = t.getT1().get("Content-Length");
+				            String chunkedReceived = t.getT1().get(HttpHeaderNames.TRANSFER_ENCODING);
+				            String clReceived = t.getT1().get(HttpHeaderNames.CONTENT_LENGTH);
+				            String chunkedSent = sentHeaders.get().get(HttpHeaderNames.TRANSFER_ENCODING);
+				            String clSent =sentHeaders.get().get(HttpHeaderNames.CONTENT_LENGTH);
 				            if (HttpMethod.GET.equals(method)) {
-				                return Integer.parseInt(length) == 2 && "OK".equals(t.getT2());
+				                return chunkedReceived == null && chunkedSent == null &&
+				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
+				                       "OK".equals(t.getT2());
 				            }
 				            else {
-				                return Integer.parseInt(length) == 2 && "NO BODY".equals(t.getT2());
+				                return chunkedReceived == null && chunkedSent == null &&
+				                       Integer.parseInt(clReceived) == Integer.parseInt(clSent) &&
+				                       "NO BODY".equals(t.getT2());
 				            }
 				        }
 				    })
