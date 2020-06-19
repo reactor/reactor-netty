@@ -21,8 +21,10 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.LogLevel;
@@ -102,6 +104,25 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	@Override
 	public <A> TcpClient attr(AttributeKey<A> key, @Nullable A value) {
 		return super.attr(key, value);
+	}
+
+	/**
+	 * Apply a {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
+	 * return an enriched {@link TcpClient} to use.
+	 *
+	 * @param bootstrapMapper A {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
+	 * return an enriched {@link TcpClient} to use.
+	 * @return a new {@link TcpClient}
+	 * @deprecated Use {@link TcpClient} methods for configurations.
+	 */
+	@Deprecated
+	@SuppressWarnings("ReturnValueIgnored")
+	public final TcpClient bootstrap(Function<? super Bootstrap, ? extends Bootstrap> bootstrapMapper) {
+		Objects.requireNonNull(bootstrapMapper, "bootstrapMapper");
+		TcpClientBootstrap tcpClientBootstrap = new TcpClientBootstrap(this);
+		// ReturnValueIgnored is deliberate
+		bootstrapMapper.apply(tcpClientBootstrap);
+		return tcpClientBootstrap.tcpClient;
 	}
 
 	@Override

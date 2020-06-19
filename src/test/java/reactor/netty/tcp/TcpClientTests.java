@@ -35,15 +35,23 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.resolver.DefaultAddressResolverGroup;
+import io.netty.util.AttributeKey;
+import io.netty.util.NetUtil;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -65,6 +73,7 @@ import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.retry.Retry;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -1061,5 +1070,160 @@ public class TcpClientTests {
 		         .remoteAddress(() -> new DomainSocketAddress("/tmp/test.sock"))
 		         .port(1234)
 		         .connectNow();
+	}
+
+	@Test
+	@SuppressWarnings({"deprecation", "FutureReturnValueIgnored"})
+	public void testBootstrapUnsupported() {
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.bind();
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.bind(NetUtil.LOCALHOST, 8000);
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.bind(8000);
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.bind(new InetSocketAddress("localhost", 8000));
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.bind("localhost", 8000);
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> b.channel(io.netty.channel.socket.SocketChannel.class)));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(Bootstrap::clone));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.connect();
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.connect(NetUtil.LOCALHOST, 8000);
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.connect(new InetSocketAddress("localhost", 8000));
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.connect(new InetSocketAddress("localhost", 8001), new InetSocketAddress("localhost", 8002));
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.connect("localhost", 8000);
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					b.equals(new Bootstrap());
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					b.hashCode();
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					// FutureReturnValueIgnored is deliberate
+					b.register();
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(b -> {
+					b.toString();
+					return b;
+				}));
+
+		assertThatExceptionOfType(UnsupportedOperationException.class)
+				.isThrownBy(() -> TcpClient.create().bootstrap(Bootstrap::validate));
+	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	public void testBootstrap() {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive()
+				                                           .retain()))
+				         .wiretap(true)
+				         .bindNow();
+
+		AtomicInteger invoked = new AtomicInteger();
+		Connection conn =
+				TcpClient.create()
+				         .bootstrap(b ->
+				             b.attr(AttributeKey.valueOf("testBootstrap"), "testBootstrap")
+				              .group(new NioEventLoopGroup())
+				              .option(ChannelOption.valueOf("testBootstrap"), "testBootstrap")
+				              .remoteAddress(server.address())
+				              .resolver(DefaultAddressResolverGroup.INSTANCE)
+				              .handler(new ChannelInboundHandlerAdapter() {
+				                  @Override
+				                  public void channelActive(ChannelHandlerContext ctx) throws Exception {
+				                      invoked.set(1);
+				                      super.channelActive(ctx);
+				                  }
+				              }))
+				         .connectNow();
+
+		conn.outbound()
+		    .sendString(Mono.just("testBootstrap"))
+		    .then()
+		    .subscribe();
+
+		String result =
+				conn.inbound()
+				    .receive()
+				    .asString()
+				    .blockFirst();
+
+		assertEquals("testBootstrap", result);
+		assertEquals(1, invoked.get());
+
+		conn.disposeNow();
+		server.disposeNow();
 	}
 }
