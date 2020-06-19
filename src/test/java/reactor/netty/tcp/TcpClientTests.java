@@ -1226,4 +1226,37 @@ public class TcpClientTests {
 		conn.disposeNow();
 		server.disposeNow();
 	}
+
+	@Test
+	@SuppressWarnings("deprecation")
+	public void testAddressSupplier() {
+		DisposableServer server =
+				TcpServer.create()
+				         .port(0)
+				         .handle((req, res) -> res.send(req.receive()
+				                                           .retain()))
+				         .wiretap(true)
+				         .bindNow();
+
+		Connection conn =
+				TcpClient.create()
+				         .addressSupplier(server::address)
+				         .connectNow();
+
+		conn.outbound()
+				.sendString(Mono.just("testAddressSupplier"))
+				.then()
+				.subscribe();
+
+		String result =
+				conn.inbound()
+				    .receive()
+				    .asString()
+				    .blockFirst();
+
+		assertEquals("testAddressSupplier", result);
+
+		conn.disposeNow();
+		server.disposeNow();
+	}
 }
