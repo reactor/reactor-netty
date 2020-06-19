@@ -34,7 +34,7 @@ import java.util.Objects;
 public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDecoderSpec> {
 
 	/**
-	 * The maximum length of the content of the H2C upgrade request.
+	 * The maximum length of the content of the HTTP/2.0 clear-text upgrade request.
 	 * By default the server will reject an upgrade request with non-empty content,
 	 * because the upgrade request is most likely a GET request.
 	 */

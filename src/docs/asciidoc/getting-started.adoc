@@ -33,7 +33,7 @@ It has transitive dependencies on:
 This curated list groups artifacts that are meant to work well together, providing
 the relevant versions despite potentially divergent versioning schemes in these artifacts.
 
-Note the versioning scheme has changed between 0.9.x and 1.0.x (Dysprosium and Europium).
+NOTE: The versioning scheme has changed between 0.9.x and 1.0.x (Dysprosium and Europium).
 
 Artifacts follow a versioning scheme of `MAJOR.MINOR.PATCH-QUALIFIER` while the BOM is versioned using a CalVer inspired scheme of `YYYY.MINOR.PATCH-QUALIFIER`, where:
 
@@ -53,7 +53,7 @@ The scheme uses the following qualifiers (note the use of dash separator), in or
  * `-SNAPSHOT`: snapshots
  * _no qualifier_ for GA releases
 
-NOTE: snapshots appear higher in the order above because, conceptually, they're always "the freshest pre-release" of any given PATCH.
+NOTE: Snapshots appear higher in the order above because, conceptually, they're always "the freshest pre-release" of any given PATCH.
 Even though the first deployed artifact of a PATCH cycle will always be a -SNAPSHOT, a similarly named but more up-to-date snapshot
 would also get released after eg. a milestone or between release candidates.
 

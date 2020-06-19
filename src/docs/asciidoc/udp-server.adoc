@@ -173,7 +173,6 @@ The following lifecycle callbacks are provided to let you extend the `UDP` serve
 * `doOnBind`: Invoked when the server channel is about to bind.
 * `doOnBound`: Invoked when the server channel is bound.
 * `doOnUnbound`: Invoked when the server channel is unbound.
-* `doOnLifecycle`: Sets up all lifecycle callbacks.
 
 The following example uses the `doOnBound` method:
 
@@ -216,9 +215,9 @@ By default, the `UDP` server is configured with the following options:
 
 ====
 [source,java,indent=0]
-./../../main/java/reactor/netty/udp/UdpServer.java
+./../../main/java/reactor/netty/udp/UdpServerBind.java
 ----
-include::{sourcedir}/reactor/netty/udp/UdpServer.java[lines=519..521]
+include::{sourcedir}/reactor/netty/udp/UdpServerBind.java[lines=40..44]
 ----
 ====
 
@@ -297,7 +296,7 @@ The default configuration for the "`Event Loop Group`" is the following:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=76..105]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=78..107]
 ----
 ====
 

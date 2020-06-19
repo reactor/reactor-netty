@@ -147,7 +147,6 @@ The following lifecycle callbacks are provided to let you extend the `UDP` clien
 * `doOnConnect`: Invoked when the channel is about to connect.
 * `doOnConnected`: Invoked after the channel has been connected.
 * `doOnDisconnected`: Invoked after the channel has been disconnected.
-* `doOnLifecycle`: Sets up all lifecycle callbacks.
 
 The following example uses the `doOnConnected` method:
 
@@ -192,9 +191,9 @@ By default, the `UDP` client is configured with the following options:
 
 ====
 [source,java,indent=0]
-./../../main/java/reactor/netty/udp/UdpClient.java
+./../../main/java/reactor/netty/udp/UdpClientConnect.java
 ----
-include::{sourcedir}/reactor/netty/udp/UdpClient.java[lines=519..521]
+include::{sourcedir}/reactor/netty/udp/UdpClientConnect.java[lines=37..42]
 ----
 ====
 
@@ -277,7 +276,7 @@ The following listing shows the default configuration for the "`Event Loop Group
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=76..105]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=78..107]
 ----
 ====
 

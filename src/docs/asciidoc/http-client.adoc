@@ -88,8 +88,8 @@ public class Application {
     public static void main(String[] args) {
         HttpClientResponse response =
                 HttpClient.create()
-                          .tcpConfiguration(tcpClient -> tcpClient.host("example.com")) <1>
-                          .port(80)                                                     <2>
+                          .host("example.com") <1>
+                          .port(80)            <2>
                           .get()
                           .uri("/")
                           .response()
@@ -167,8 +167,7 @@ public class Application {
 ==== Compression
 
 You can enable compression on the `HTTP` client, which means the request header
-`Accept-Encoding` (or, in the case of WebSocket, the `Sec-Websocket-Extensions` header) is added
-to the request headers. The following example shows how to do so:
+`Accept-Encoding` is added to the request headers. The following example shows how to do so:
 
 ====
 [source,java]
@@ -300,14 +299,14 @@ By default, the `HTTP` client is configured with the following settings:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/http/HttpDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..32]
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=31..35]
 ----
 ====
 ====
 [source,java,indent=0]
 ./../../main/java/reactor/netty/http/client/HttpResponseDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[lines=34..36]
+include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[lines=35..43]
 ----
 ====
 
@@ -327,9 +326,9 @@ public class Application {
                         .get()
                         .uri("http://example.com/")
                         .responseContent()
-                          .aggregate()
-                          .asString()
-                          .block();
+                        .aggregate()
+                        .asString()
+                        .block();
     }
 }
 ----
@@ -356,8 +355,7 @@ public class Application {
     public static void main(String[] args) {
         HttpClientResponse response =
                 HttpClient.create()
-                          .tcpConfiguration(tcpClient ->
-                                  tcpClient.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000))
+                          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                           .get()
                           .uri("http://example.com/")
                           .response()

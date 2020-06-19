@@ -137,7 +137,6 @@ The following lifecycle callbacks are provided to let you extend the `TCP` serve
 * `doOnBound`: Invoked when the server channel is bound.
 * `doOnConnection`: Invoked when a remote client is connected
 * `doOnUnbound`: Invoked when the server channel is unbound.
-* `doOnLifecycle`: Sets up all lifecycle callbacks.
 
 The following example uses the `doOnConnection` callback:
 
@@ -183,7 +182,7 @@ By default, the `TCP` server is configured with the following options:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/tcp/TcpServerBind.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=129..135]
+include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=40..48]
 ----
 ====
 
@@ -260,7 +259,7 @@ The default configuration for the `Event Loop Group` is the following:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=76..105]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=78..107]
 ----
 ====
 

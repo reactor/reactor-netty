@@ -279,7 +279,7 @@ public class Application {
 === Compression
 
 You can configure the `HTTP` server to send a compressed response, depending on the request header
-`Accept-Encoding` or (in the case of websocket) the `Sec-Websocket-Extensions` header.
+`Accept-Encoding`.
 
 `Reactor Netty` provides three different strategies for compressing the outgoing data:
 
@@ -435,14 +435,14 @@ By default, the `HTTP` server is configured with the following settings:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/http/HttpDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=28..32]
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=31..35]
 ----
 ====
 ====
 [source,java,indent=0]
 ./../../main/java/reactor/netty/http/server/HttpRequestDecoderSpec.java
 ----
-include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=42]
+include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=41]
 ----
 ====
 
@@ -492,8 +492,7 @@ public class Application {
     public static void main(String[] args) {
         DisposableServer server =
                 HttpServer.create()
-                          .tcpConfiguration(tcpServer ->
-                                  tcpServer.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000))
+                          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                           .bindNow();
 
         server.onDispose()

@@ -36,7 +36,7 @@ public final class HttpResponseDecoderSpec extends HttpDecoderSpec<HttpResponseD
 	public static final boolean DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST = false;
 
 	/**
-	 * The maximum length of the content of the H2C upgrade request.
+	 * The maximum length of the content of the HTTP/2.0 clear-text upgrade request.
 	 * By default the client will allow an upgrade request with up to 65536 as
 	 * the maximum length of the aggregated content.
 	 */

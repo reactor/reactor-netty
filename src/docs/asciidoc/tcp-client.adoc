@@ -68,8 +68,8 @@ public class Application {
     }
 }
 ----
-<1> Configures the `HTTP` host
-<2> Configures the `HTTP` port
+<1> Configures the `TCP` host
+<2> Configures the `TCP` port
 ====
 
 == Writing Data
@@ -140,7 +140,6 @@ The following lifecycle callbacks are provided to let you extend the `TCP` clien
 * `doOnConnect`: Invoked when the channel is about to connect.
 * `doOnConnected`: Invoked after the channel has been connected.
 * `doOnDisconnected`: Invoked after the channel has been disconnected.
-* `doOnLifecycle`: Sets up all lifecycle callbacks.
 
 The following example uses the `doOnConnected` callback:
 
@@ -186,9 +185,9 @@ By default, the `TCP` client is configured with the following options:
 
 ====
 [source,java,indent=0]
-./../../main/java/reactor/netty/tcp/TcpClient.java
+./../../main/java/reactor/netty/tcp/TcpClientConnect.java
 ----
-include::{sourcedir}/reactor/netty/tcp/TcpClient.java[lines=661..663]
+include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=38..43]
 ----
 ====
 
@@ -269,7 +268,7 @@ The following listing shows the default configuration for the Event Loop Group:
 [source,java,indent=0]
 ./../../main/java/reactor/netty/ReactorNetty.java
 ----
-include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=76..105]
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=78..107]
 ----
 ====
 
