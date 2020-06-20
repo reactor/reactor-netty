@@ -68,8 +68,8 @@ public class Application {
     }
 }
 ----
-<1> Configures the `HTTP` host
-<2> Configures the `HTTP` port
+<1> Configures the `TCP` host
+<2> Configures the `TCP` port
 ====
 
 == Writing Data

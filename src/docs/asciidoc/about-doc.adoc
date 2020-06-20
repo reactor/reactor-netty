@@ -37,7 +37,7 @@ endif::[]
 == Getting Help
 There are several ways to reach out for help with `Reactor Netty`. You can:
 
-* Get in touch with the community on https://gitter.im/reactor/reactor[Gitter].
+* Get in touch with the community on https://gitter.im/reactor/reactor-netty[Gitter].
 * Ask a question on stackoverflow.com at
 https://stackoverflow.com/tags/reactor-netty[`reactor-netty`].
 * Report bugs in `Github` issues. The repository is the following:
