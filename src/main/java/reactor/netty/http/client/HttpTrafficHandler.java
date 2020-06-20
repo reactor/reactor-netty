@@ -96,7 +96,7 @@ final class HttpTrafficHandler extends ChannelInboundHandlerAdapter {
 		}
 		else if (evt == UPGRADE_REJECTED) {
 			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "The upgrade to H2C protocol was rejected continue using HTTP/1.x protocol."));
+				log.debug(format(channel, "The upgrade to H2C protocol was rejected, continue using HTTP/1.x protocol."));
 			}
 			sendNewState(Connection.from(channel), HttpClientState.UPGRADE_REJECTED);
 		}
