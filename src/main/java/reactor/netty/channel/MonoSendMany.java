@@ -17,6 +17,7 @@
 package reactor.netty.channel;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
+import java.util.stream.Stream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -51,6 +53,8 @@ import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
+
+	static final String KEY_ON_DISCARD = "reactor.onDiscard.local";
 
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
 			Channel channel,
@@ -83,14 +87,14 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 	@Override
 	@Nullable
-	@SuppressWarnings("rawtypes")
 	public Object scanUnsafe(Attr key) {
 		if (key == Attr.PREFETCH) return MAX_SIZE;
 		if (key == Attr.PARENT) return source;
 		return null;
 	}
 
-	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription, Fuseable,
+	static final class SendManyInner<I, O> implements CoreSubscriber<I>, Subscription,
+	                                                  Fuseable, Context, Consumer<I>,
 	                                                  ChannelFutureListener, Runnable, Scannable, ChannelPromise {
 
 		final ChannelHandlerContext        ctx;
@@ -132,7 +136,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public Context currentContext() {
-			return actual.currentContext();
+			return this;
 		}
 
 		@Override
@@ -176,14 +180,13 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return;
 			}
 
-			if (terminalSignal != null) {
+			if (terminalSignal != null || this.s == Operators.cancelledSubscription()) {
 				parent.sourceCleanup.accept(t);
 				Operators.onDiscard(t, actual.currentContext());
 				return;
 			}
 
 //			ReferenceCountUtil.touch(t);
-			//FIXME check cancel race
 			if (!queue.offer(t)) {
 				onError(Operators.onOperatorError(s,
 						Exceptions.failWithOverflow(Exceptions.BACKPRESSURE_ERROR_QUEUE_FULL),
@@ -201,7 +204,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 					@SuppressWarnings("unchecked") QueueSubscription<I> f =
 							(QueueSubscription<I>) s;
 
-					int m = f.requestFusion(Fuseable.ANY/* | Fuseable.THREAD_BARRIER*/);
+					int m = f.requestFusion(Fuseable.ANY | Fuseable.THREAD_BARRIER);
 
 					if (m == Fuseable.SYNC) {
 						sourceMode = Fuseable.SYNC;
@@ -358,15 +361,23 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			if (queue == null) {
 				return;
 			}
-			Context context = null;
-			while (!queue.isEmpty()) {
-				I sourceMessage = queue.poll();
-				if (sourceMessage != null) {
-					parent.sourceCleanup.accept(sourceMessage);
-					if (context == null) {
-						context = actual.currentContext();
+
+			if (sourceMode == ASYNC) {
+				// delegates discarding to the queue holder to ensure there is no racing on draining from the SpScQueue
+				// fused queue should discard elements on clear
+				queue.clear();
+			}
+			else {
+				Context context = null;
+				while (!queue.isEmpty()) {
+					I sourceMessage = queue.poll();
+					if (sourceMessage != null) {
+						parent.sourceCleanup.accept(sourceMessage);
+						if (context == null) {
+							context = actual.currentContext();
+						}
+						Operators.onDiscard(sourceMessage, context);
 					}
-					Operators.onDiscard(sourceMessage, context);
 				}
 			}
 		}
@@ -375,7 +386,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			return pending == 0 && terminalSignal != null;
 		}
 
-		void trySchedule(@Nullable Object data) {
+		void trySchedule(@Nullable I data) {
 			if (WIP.getAndIncrement(this) == 0) {
 				try {
 					if (eventLoop.inEventLoop()) {
@@ -391,10 +402,24 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 					}
 				}
 			}
+			else {
+				if (this.s == Operators.cancelledSubscription()) {
+					if (sourceMode == ASYNC) {
+						// delegates discarding to the queue holder to ensure there is no racing on draining from the SpScQueue
+						queue.clear();
+					}
+					else {
+						// discard given dataSignal since no more is enqueued (spec guarantees serialised onXXX calls)
+						if (data != null) {
+							parent.sourceCleanup.accept(data);
+							Operators.onDiscard(data, actual.currentContext());
+						}
+					}
+				}
+			}
 		}
 
 		@Override
-		@SuppressWarnings("rawtypes")
 		public Object scanUnsafe(Attr key) {
 			if (key == Attr.PARENT) return s;
 			if (key == Attr.ACTUAL) return actual;
@@ -616,6 +641,64 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		@Override
 		public Void get(long timeout, TimeUnit unit) {
 			throw new UnsupportedOperationException();
+		}
+
+		// this as discard hook
+		@Override
+		public void accept(I i) {
+			parent.sourceCleanup.accept(i);
+			// propagates discard to the downstream
+			Operators.onDiscard(i, actual.currentContext());
+		}
+
+		// Context interface impl
+		@Override
+		@SuppressWarnings("unchecked")
+		public <T> T get(Object key) {
+			if (KEY_ON_DISCARD.equals(key)) {
+				return (T) this;
+			}
+
+			return actual.currentContext().get(key);
+		}
+
+		@Override
+		public boolean hasKey(Object key) {
+			if (KEY_ON_DISCARD.equals(key)) {
+				return true;
+			}
+
+			return actual.currentContext().hasKey(key);
+		}
+
+		@Override
+		public Context put(Object key, Object value) {
+			return actual
+					.currentContext()
+					.put(KEY_ON_DISCARD, this)
+					.put(key, value);
+		}
+
+		@Override
+		public Context delete(Object key) {
+			return actual
+					.currentContext()
+					.put(KEY_ON_DISCARD, this)
+					.delete(key);
+		}
+
+		@Override
+		public int size() {
+			return actual.currentContext()
+			             .put(KEY_ON_DISCARD, this)
+			             .size();
+		}
+
+		@Override
+		public Stream<Map.Entry<Object, Object>> stream() {
+			return actual.currentContext()
+			             .put(KEY_ON_DISCARD, this)
+			             .stream();
 		}
 
 		@SuppressWarnings("rawtypes")

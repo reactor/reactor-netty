@@ -25,6 +25,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import reactor.core.publisher.Mono;
 import reactor.netty.ReactorNetty;
@@ -70,9 +71,24 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 
 	static final Function<Object, Object>   TRANSFORMATION_FUNCTION    = Function.identity();
 
-	static final Consumer<ByteBuf> CONSUMER_BB_NOCHECK_CLEANUP = ByteBuf::release;
+	static final Consumer<ByteBuf> CONSUMER_BB_NOCHECK_CLEANUP = buf -> {
+		try {
+			buf.release();
+		}
+		catch (IllegalReferenceCountException e) {
+			// ignored
+		}
+	};
 
-	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    = ReferenceCountUtil::release;
+	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    =
+			msg -> {
+				try {
+					ReferenceCountUtil.release(msg);
+				}
+				catch (IllegalReferenceCountException e) {
+					// ignored
+				}
+			};
 
 	static final ToIntFunction<ByteBuf> SIZE_OF_BB  = ByteBuf::readableBytes;
 
