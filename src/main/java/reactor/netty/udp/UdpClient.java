@@ -77,6 +77,11 @@ public abstract class UdpClient extends ClientTransport<UdpClient, UdpClientConf
 	}
 
 	@Override
+	public final UdpClient bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		return super.bindAddress(bindAddressSupplier);
+	}
+
+	@Override
 	public final Mono<? extends Connection> connect() {
 		return super.connect();
 	}

@@ -119,6 +119,11 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 		return super.attr(key, value);
 	}
 
+	@Override
+	public TcpClient bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		return super.bindAddress(bindAddressSupplier);
+	}
+
 	/**
 	 * Apply a {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
 	 * return an enriched {@link TcpClient} to use.
