@@ -430,7 +430,7 @@ public class Application {
 ====
 
 
-== Boostrap Configuration 
+== Bootstrap Configuration 
 
 Use `HttpClient.from` and create a `TcpClient` when you need more control of your client configuration, i.e., when you 
 want to specify the local address.
@@ -440,13 +440,13 @@ want to specify the local address.
 [source,java]
 ----
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
+import reactor.netty.tcp.TcpClient;
+import java.net.InetSocketAddress;
 
 public class Application {
 
     public static void main(String[] args) {
-	    ConnectionProvider provider = ConnectionProvider.newConnection();
-	    TcpClient tcpClient = TcpClient.create(provider)
+	    TcpClient tcpClient = TcpClient.create()
 					.bootstrap(b -> b.localAddress(new InetSocketAddress("host", port)));
 	    String response =
 			HttpClient.from(tcpClient)
