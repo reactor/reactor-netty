@@ -78,7 +78,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * Prepare an {@link HttpServer}
 	 *
 	 * @return a new {@link HttpServer}
-	 * @deprecated Use {@link HttpServer} methods for TCP level configurations.
+	 * @deprecated Use {@link HttpServer} methods for TCP level configurations. This method
+	 * will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	public static HttpServer from(TcpServer tcpServer) {
@@ -464,7 +465,8 @@ public abstract class HttpServer extends ServerTransport<HttpServer, HttpServerC
 	 * @param tcpMapper A {@link TcpServer} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpServer} to use.
 	 * @return a new {@link HttpServer}
-	 * @deprecated Use {@link HttpServer} methods for TCP level configurations.
+	 * @deprecated Use {@link HttpServer} methods for TCP level configurations. This method
+	 * will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")

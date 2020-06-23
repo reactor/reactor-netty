@@ -46,7 +46,7 @@ import java.util.function.Supplier;
  * This class provides a migration for the {@link HttpClient#tcpConfiguration(Function)} in 0.9.x
  *
  * @author Violeta Georgieva
- * @deprecated Use {@link HttpClient} methods for TCP level configurations.
+ * @deprecated Use {@link HttpClient} methods for TCP level configurations. This class will be removed in version 1.1.0.
  */
 @Deprecated
 final class HttpClientTcpConfig extends TcpClient {

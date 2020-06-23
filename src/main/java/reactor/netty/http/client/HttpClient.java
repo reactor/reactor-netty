@@ -421,7 +421,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * Prepare an {@link HttpClient}
 	 *
 	 * @return a new {@link HttpClient}
-	 * @deprecated Use {@link HttpClient} methods for TCP level configurations.
+	 * @deprecated Use {@link HttpClient} methods for TCP level configurations. This method
+	 * will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	public static HttpClient from(TcpClient tcpClient) {
@@ -1208,7 +1209,8 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @param tcpMapper A {@link TcpClient} mapping function to update TCP configuration and
 	 * return an enriched {@link HttpClient} to use.
 	 * @return a new {@link HttpClient}
-	 * @deprecated Use {@link HttpClient} methods for TCP level configurations.
+	 * @deprecated Use {@link HttpClient} methods for TCP level configurations. This method
+	 * will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")

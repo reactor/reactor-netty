@@ -36,7 +36,7 @@ import java.util.function.Function;
  * This class provides a migration for the {@link TcpClient#bootstrap(Function)} in 0.9.x
  *
  * @author Violeta Georgieva
- * @deprecated Use {@link TcpClient} methods for configurations.
+ * @deprecated Use {@link TcpClient} methods for configurations. This class will be removed in version 1.1.0.
  */
 @Deprecated
 final class TcpClientBootstrap extends Bootstrap {

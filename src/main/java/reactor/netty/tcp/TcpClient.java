@@ -107,7 +107,7 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 * @param connectAddressSupplier A supplier of the address to connect to.
 	 *
 	 * @return a new {@link TcpClient}
-	 * @deprecated Use {@link #remoteAddress(Supplier)}
+	 * @deprecated Use {@link #remoteAddress(Supplier)}. This method will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	public final TcpClient addressSupplier(Supplier<? extends SocketAddress> connectAddressSupplier) {
