@@ -37,11 +37,6 @@ configure(rootProject) {
 	  }
 	}
 
-	excludes = [
-			// Must be public due to the ServiceLoader's requirements
-			"reactor/netty/resources/NettyBlockHoundIntegration.java",
-	]
-
 	options.addStringOption('charSet', 'UTF-8')
 
 	options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
