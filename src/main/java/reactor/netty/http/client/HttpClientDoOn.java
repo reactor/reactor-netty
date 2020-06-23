@@ -98,6 +98,7 @@ final class HttpClientDoOn extends HttpClientOperator implements ConnectionObser
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	protected TcpClient tcpConfiguration() {
 		return source.tcpConfiguration().bootstrap(this);
 	}

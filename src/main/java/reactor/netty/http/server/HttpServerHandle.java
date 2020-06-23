@@ -47,6 +47,7 @@ final class HttpServerHandle extends HttpServerOperator implements ConnectionObs
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	protected TcpServer tcpConfiguration() {
 		return source.tcpConfiguration().bootstrap(this);
 	}

@@ -67,6 +67,7 @@ public final class HttpRequestDecoderSpec extends HttpDecoderSpec<HttpRequestDec
 	 * Build a {@link Function} that applies the http request decoder configuration to a
 	 * {@link TcpServer} by enriching its attributes.
 	 */
+	@SuppressWarnings("deprecation")
 	Function<TcpServer, TcpServer> build() {
 		HttpRequestDecoderSpec decoder = new HttpRequestDecoderSpec();
 		decoder.initialBufferSize = initialBufferSize;

@@ -432,6 +432,7 @@ public abstract class HttpClient {
 	 *
 	 * @return the appropriate sending or receiving contract
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpClient baseUrl(String baseUrl) {
 		Objects.requireNonNull(baseUrl, "baseUrl");
 		return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpClientConfiguration.baseUrl(b, baseUrl)));
@@ -557,6 +558,7 @@ public abstract class HttpClient {
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpClient cookieCodec(ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
 		return tcpConfiguration(tcp -> tcp.bootstrap(
 				b -> HttpClientConfiguration.cookieCodec(b, encoder, decoder)));
@@ -878,6 +880,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.5
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpClient followRedirect(BiPredicate<HttpClientRequest, HttpClientResponse> predicate,
 			@Nullable Consumer<HttpClientRequest> redirectRequestConsumer) {
 		Objects.requireNonNull(predicate, "predicate");
@@ -943,6 +946,7 @@ public abstract class HttpClient {
 	 *
 	 * @return a new {@link HttpClient}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpClient protocol(HttpProtocol... supportedProtocols) {
 		return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> HttpClientConfiguration.protocols(b, supportedProtocols)));
 	}
@@ -964,6 +968,7 @@ public abstract class HttpClient {
 	 *
 	 * @return a {@link RequestSender} ready to finalize request and consume for response
 	 */
+	@SuppressWarnings("deprecation")
 	public RequestSender request(HttpMethod method) {
 		Objects.requireNonNull(method, "method");
 		TcpClient tcpConfiguration = tcpConfiguration().bootstrap(b -> HttpClientConfiguration.method(b, method));
@@ -1023,6 +1028,7 @@ public abstract class HttpClient {
 	 *               the pipeline
 	 * @return a new {@link HttpClient}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpClient wiretap(boolean enable) {
 		if (enable) {
 			return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> BootstrapHandlers.updateLogSupport(b, LOGGING_HANDLER)));
@@ -1080,6 +1086,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.7
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpClient metrics(boolean metricsEnabled, @Nullable Function<String, String> uriTagValue) {
 		if (metricsEnabled) {
 			if (!Metrics.isInstrumentationAvailable()) {
@@ -1129,6 +1136,7 @@ public abstract class HttpClient {
 	 * @return a new {@link HttpClient}
 	 * @since 0.9.7
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpClient metrics(boolean metricsEnabled, Supplier<? extends HttpClientMetricsRecorder> recorder) {
 		return tcpConfiguration(tcpClient ->
 			tcpClient.metrics(metricsEnabled, recorder)
@@ -1163,6 +1171,7 @@ public abstract class HttpClient {
 	 * @return a {@link WebsocketSender} ready to consume for response
 	 * @since 0.9.7
 	 */
+	@SuppressWarnings("deprecation")
 	public final WebsocketSender websocket(WebsocketClientSpec websocketClientSpec) {
 		Objects.requireNonNull(websocketClientSpec, "websocketClientSpec");
 		TcpClient tcpConfiguration =
@@ -1271,24 +1280,31 @@ public abstract class HttpClient {
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpClient.class);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_COMPRESS);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> COMPRESS_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_COMPRESS);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_KEEPALIVE);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> KEEPALIVE_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_KEEPALIVE);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> RETRY_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_RETRY);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> RETRY_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_RETRY);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpClient, TcpClient> FOLLOW_REDIRECT_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpClientConfiguration.MAP_NO_REDIRECT);
 

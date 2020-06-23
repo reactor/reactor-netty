@@ -136,7 +136,10 @@ public abstract class UdpServer {
 	 * enriched bootstrap.
 	 *
 	 * @return a new {@link UdpServer}
+	 * @deprecated  as of 0.9.10. Use the methods exposed on {@link UdpServer} level. The method
+	 * will be removed in version 1.0.0.
 	 */
+	@Deprecated
 	public final UdpServer bootstrap(Function<? super Bootstrap, ? extends Bootstrap> bootstrapMapper) {
 		return new UdpServerBootstrap(this, bootstrapMapper);
 	}

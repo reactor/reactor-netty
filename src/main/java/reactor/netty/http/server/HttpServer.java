@@ -204,6 +204,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a new {@link HttpServer}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer compress(int minResponseSize) {
 		if (minResponseSize < 0) {
 			throw new IllegalArgumentException("minResponseSize must be positive");
@@ -224,6 +225,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a new {@link HttpServer}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer compress(BiPredicate<HttpServerRequest, HttpServerResponse> predicate) {
 		Objects.requireNonNull(predicate, "compressionPredicate");
 		return tcpConfiguration(tcp -> tcp.bootstrap(b -> HttpServerConfiguration.compressPredicate(b, predicate)));
@@ -268,6 +270,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a new {@link HttpServer}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer proxyProtocol(ProxyProtocolSupportType proxyProtocolSupportType) {
 		if (proxyProtocolSupportType == null) {
 			throw new NullPointerException("The parameter: proxyProtocolSupportType must not be null.");
@@ -367,6 +370,7 @@ public abstract class HttpServer {
 	 * @return a new {@link HttpServer}
 	 * @since 0.9.7
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer metrics(boolean metricsEnabled, @Nullable Function<String, String> uriTagValue) {
 		if (metricsEnabled) {
 			if (!Metrics.isInstrumentationAvailable()) {
@@ -416,6 +420,7 @@ public abstract class HttpServer {
 	 * @return a new {@link HttpServer}
 	 * @since 0.9.7
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer metrics(boolean metricsEnabled, Supplier<? extends HttpServerMetricsRecorder> recorder) {
 		return tcpConfiguration(tcpServer ->
 			tcpServer.metrics(metricsEnabled, recorder)
@@ -470,6 +475,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a new {@link HttpServer}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer cookieCodec(ServerCookieEncoder encoder) {
 		ServerCookieDecoder decoder = encoder == ServerCookieEncoder.LAX ?
 				ServerCookieDecoder.LAX : ServerCookieDecoder.STRICT;
@@ -486,6 +492,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a new {@link HttpServer}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer cookieCodec(ServerCookieEncoder encoder, ServerCookieDecoder decoder) {
 		return tcpConfiguration(tcp -> tcp.bootstrap(
 				b -> HttpServerConfiguration.cookieCodec(b, encoder, decoder)));
@@ -511,6 +518,7 @@ public abstract class HttpServer {
 	 *
 	 * @return a new {@link HttpServer}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer protocol(HttpProtocol... supportedProtocols) {
 		return tcpConfiguration(tcpServer -> tcpServer.bootstrap(b -> HttpServerConfiguration.protocols(b, supportedProtocols)));
 	}
@@ -612,6 +620,7 @@ public abstract class HttpServer {
 	 *               the pipeline
 	 * @return a new {@link HttpServer}
 	 */
+	@SuppressWarnings("deprecation")
 	public final HttpServer wiretap(boolean enable) {
 		if (enable) {
 			return tcpConfiguration(tcpServer ->
@@ -647,15 +656,19 @@ public abstract class HttpServer {
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(HttpServer.class);
 	static final Logger         log             = Loggers.getLogger(HttpServer.class);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_COMPRESS);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpServer, TcpServer> COMPRESS_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_NO_COMPRESS);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpServer, TcpServer> FORWARD_ATTR_CONFIG =
 			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_FORWARDED);
 
+	@SuppressWarnings("deprecation")
 	static final Function<TcpServer, TcpServer> FORWARD_ATTR_DISABLE =
 			tcp -> tcp.bootstrap(HttpServerConfiguration.MAP_NO_FORWARDED);
 }

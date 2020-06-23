@@ -590,7 +590,7 @@ public class PooledConnectionProviderTest {
 	private void doTestSslEngineClosed(HttpClient client, AtomicInteger closeCount, Class<? extends Throwable> expectedExc, String expectedMsg) {
 		Mono<String> response =
 				client.tcpConfiguration(tcpClient ->
-				    tcpClient.bootstrap(
+				    tcpClient.doOnConnect(
 				        b -> BootstrapHandlers.updateConfiguration(b, "test",
 				            (o, c) -> {
 				                PooledConnectionProvider.PooledConnectionAllocator.PooledConnectionInitializer initializer =

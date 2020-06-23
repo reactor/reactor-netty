@@ -141,7 +141,10 @@ public abstract class TcpServer {
 	 * enriched bootstrap.
 	 *
 	 * @return a new {@link TcpServer}
+	 * @deprecated  as of 0.9.10. Use the methods exposed on {@link TcpServer} level. The method
+	 * will be removed in version 1.0.0.
 	 */
+	@Deprecated
 	public final TcpServer bootstrap(Function<? super ServerBootstrap, ? extends ServerBootstrap> bootstrapMapper) {
 		return new TcpServerBootstrap(this, bootstrapMapper);
 	}

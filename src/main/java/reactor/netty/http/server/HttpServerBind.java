@@ -94,6 +94,7 @@ final class HttpServerBind extends HttpServer
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public Mono<? extends DisposableServer> bind(TcpServer delegate) {
 		return delegate.bootstrap(this)
 		               .bind()

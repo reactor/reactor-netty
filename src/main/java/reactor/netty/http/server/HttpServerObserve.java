@@ -37,6 +37,7 @@ final class HttpServerObserve extends HttpServerOperator
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	protected TcpServer tcpConfiguration() {
 		return source.tcpConfiguration().bootstrap(this);
 	}

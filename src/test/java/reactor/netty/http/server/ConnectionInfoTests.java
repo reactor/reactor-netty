@@ -397,7 +397,7 @@ public class ConnectionInfoTests {
 				serverRequest -> Assertions.assertThat(serverRequest.scheme()).isEqualTo("https"),
 				httpClient -> httpClient.secure(ssl -> ssl.sslContext(clientSslContext)),
 				httpServer -> httpServer.tcpConfiguration(tcpServer -> {
-					tcpServer = tcpServer.bootstrap(serverBootstrap ->
+					tcpServer = tcpServer.doOnBind(serverBootstrap ->
 							BootstrapHandlers.updateConfiguration(serverBootstrap, NettyPipeline.SslHandler, (connectionObserver, channel) -> {
 								SslHandler sslHandler = serverSslContext.newHandler(channel.alloc());
 								channel.pipeline().addFirst(NettyPipeline.SslHandler, sslHandler);

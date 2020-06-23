@@ -43,16 +43,19 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 	// UriConfiguration methods
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public WebsocketSender uri(String uri) {
 		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.uri(b, uri)));
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public WebsocketSender uri(Mono<String> uri) {
 		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredConf(b, conf -> uri.map(conf::uri))));
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public WebsocketSender uri(URI uri) {
 		if (!uri.isAbsolute()) {
 			throw new IllegalArgumentException("URI is not absolute: " + uri);
@@ -62,6 +65,7 @@ final class WebsocketFinalizer extends HttpClient implements HttpClient.Websocke
 
 	// WebsocketSender methods
 	@Override
+	@SuppressWarnings("deprecation")
 	public WebsocketFinalizer send(Function<? super HttpClientRequest, ? extends Publisher<Void>> sender) {
 		Objects.requireNonNull(sender, "requestBody");
 		return new WebsocketFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.body(b, (req, out) -> sender.apply(req))));

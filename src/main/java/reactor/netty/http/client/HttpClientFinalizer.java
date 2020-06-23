@@ -53,16 +53,19 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 	// UriConfiguration methods
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public HttpClient.RequestSender uri(String uri) {
 		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.uri(b, uri)));
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public HttpClient.RequestSender uri(Mono<String> uri) {
 		return new HttpClientFinalizer(cachedConfiguration.bootstrap(b -> HttpClientConfiguration.deferredConf(b, conf -> uri.map(conf::uri))));
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public RequestSender uri(URI uri) {
 		if (!uri.isAbsolute()) {
 			throw new IllegalArgumentException("URI is not absolute: " + uri);
@@ -115,7 +118,9 @@ final class HttpClientFinalizer extends HttpClient implements HttpClient.Request
 		Objects.requireNonNull(requestBody, "requestBody");
 		return send((req, out) -> out.send(requestBody));
 	}
+
 	@Override
+	@SuppressWarnings("deprecation")
 	public HttpClientFinalizer send(BiFunction<? super HttpClientRequest, ?
 			super NettyOutbound, ? extends Publisher<Void>> sender) {
 		Objects.requireNonNull(sender, "requestBody");

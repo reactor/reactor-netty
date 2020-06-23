@@ -156,6 +156,19 @@ public abstract class TcpClient {
 	}
 
 	/**
+	 * The address to which this client should bind on subscribe.
+	 *
+	 * @param bindAddressSupplier A supplier of the address to bind to.
+	 *
+	 * @return a new {@link TcpClient}
+	 * @since 0.9.10
+	 */
+	public final TcpClient bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
+		return bootstrap(b -> b.localAddress(bindAddressSupplier.get()));
+	}
+
+	/**
 	 * Apply {@link Bootstrap} configuration given mapper taking currently configured one
 	 * and returning a new one to be ultimately used for socket binding.
 	 * <p> Configuration will apply during {@link #configure()} phase.
@@ -165,7 +178,10 @@ public abstract class TcpClient {
 	 * enriched bootstrap.
 	 *
 	 * @return a new {@link TcpClient}
+	 * @deprecated  as of 0.9.10. Use the methods exposed on {@link TcpClient} level. The method
+	 * will be removed in version 1.1.0.
 	 */
+	@Deprecated
 	public final TcpClient bootstrap(Function<? super Bootstrap, ? extends Bootstrap> bootstrapMapper) {
 		return new TcpClientBootstrap(this, bootstrapMapper);
 	}

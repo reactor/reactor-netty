@@ -41,6 +41,7 @@ final class HttpClientHeadersWhen extends HttpClientOperator
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	protected TcpClient tcpConfiguration() {
 		return source.tcpConfiguration()
 		             .bootstrap(this);

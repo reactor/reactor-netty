@@ -128,6 +128,19 @@ public abstract class UdpClient {
 	}
 
 	/**
+	 * The address to which this client should bind on subscribe.
+	 *
+	 * @param bindAddressSupplier A supplier of the address to bind to.
+	 *
+	 * @return a new {@link UdpClient}
+	 * @since 0.9.10
+	 */
+	public final UdpClient bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
+		Objects.requireNonNull(bindAddressSupplier, "bindAddressSupplier");
+		return bootstrap(b -> b.localAddress(bindAddressSupplier.get()));
+	}
+
+	/**
 	 * Apply {@link Bootstrap} configuration given mapper taking currently configured one
 	 * and returning a new one to be ultimately used for socket binding. <p> Configuration
 	 * will apply during {@link #configure()} phase.
@@ -136,7 +149,10 @@ public abstract class UdpClient {
 	 * enriched bootstrap.
 	 *
 	 * @return a new {@link UdpClient}
+	 * @deprecated  as of 0.9.10. Use the methods exposed on {@link UdpClient} level. The method
+	 * will be removed in version 1.0.0.
 	 */
+	@Deprecated
 	public final UdpClient bootstrap(Function<? super Bootstrap, ? extends Bootstrap> bootstrapMapper) {
 		return new UdpClientBootstrap(this, bootstrapMapper);
 	}
