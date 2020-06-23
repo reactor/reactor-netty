@@ -36,7 +36,8 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.handler.stream.ChunkedInput;
 import reactor.core.Exceptions;
-import reactor.core.publisher.DirectProcessor;
+import reactor.core.publisher.FluxIdentityProcessor;
+import reactor.core.publisher.Processors;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -48,7 +49,7 @@ import reactor.util.annotation.Nullable;
 final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
 
-	final DirectProcessor<Long> progressFlux;
+	final FluxIdentityProcessor<Long> progressFlux;
 	final HttpRequest request;
 
 	boolean         needNewEncoder;
@@ -78,7 +79,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		this.newCharset = charset;
 		this.request = request;
 		this.cleanOnTerminate = true;
-		this.progressFlux = DirectProcessor.create();
+		this.progressFlux = Processors.more().multicastNoBackpressure();
 		this.newMode = encoderMode;
 		this.newFactory = factory;
 		this.newMultipart = multipart;

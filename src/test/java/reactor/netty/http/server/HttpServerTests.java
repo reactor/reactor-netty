@@ -73,13 +73,13 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxIdentityProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.UnicastProcessor;
+import reactor.core.publisher.Processors;
 import reactor.core.publisher.SignalType;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
@@ -1176,7 +1176,7 @@ public class HttpServerTests {
 	public void testNormalConnectionCloseForWebSocketClient() {
 		Flux<String> flux = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
-		UnicastProcessor<String> receiver = UnicastProcessor.create();
+		FluxIdentityProcessor<String> receiver = Processors.unicast();
 		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
 		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
 		List<String> test =

@@ -31,12 +31,12 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxIdentityProcessor;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.ReplayProcessor;
+import reactor.core.publisher.Processors;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
@@ -275,9 +275,9 @@ public class WebsocketTest {
 		CountDownLatch serverLatch = new CountDownLatch(c);
 
 		FluxProcessor<String, String> server =
-				ReplayProcessor.<String>create().serialize();
+				Processors.<String>replayAll().serialize();
 		FluxProcessor<String, String> client =
-				ReplayProcessor.<String>create().serialize();
+				Processors.<String>replayAll().serialize();
 
 		server.log("server")
 		      .subscribe(v -> serverLatch.countDown());
@@ -573,7 +573,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		ReplayProcessor<String> output = ReplayProcessor.create();
+		FluxIdentityProcessor<String> output = Processors.replayAll();
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .websocket()
@@ -729,7 +729,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		ReplayProcessor<String> output = ReplayProcessor.create();
+		FluxIdentityProcessor<String> output = Processors.replayAll();
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .websocket()
@@ -1136,7 +1136,7 @@ public class WebsocketTest {
 	@Test
 	public void testIssue900_2() {
 		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
 
 		httpServer =
 				HttpServer.create()
@@ -1178,7 +1178,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue663_1() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
 
 		httpServer =
 				HttpServer.create()
@@ -1209,7 +1209,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue663_2() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
 
 		httpServer =
 				HttpServer.create()
@@ -1239,7 +1239,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue663_3() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
 
 		httpServer =
 				HttpServer.create()
@@ -1269,7 +1269,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue663_4() {
-		DirectProcessor<WebSocketFrame> incomingData = DirectProcessor.create();
+		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
 
 		httpServer =
 				HttpServer.create()
@@ -1304,7 +1304,7 @@ public class WebsocketTest {
 		                                 .map(i -> Integer.toString(i))
 		                                 .delayElements(Duration.ofMillis(50));
 
-		ReplayProcessor<String> someConsumer = ReplayProcessor.create();
+		FluxIdentityProcessor<String> someConsumer = Processors.replayAll();
 
 		httpServer =
 				HttpServer.create()
@@ -1323,7 +1323,7 @@ public class WebsocketTest {
 				                              .then())))
 				          .bindNow();
 
-		ReplayProcessor<String> clientFlux = ReplayProcessor.create();
+		FluxIdentityProcessor<String> clientFlux = Processors.replayAll();
 
 		Flux<String> toSend = Flux.range(1, 10)
 		                          .map(i -> Integer.toString(i));

@@ -80,10 +80,11 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxIdentityProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.Processors;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
@@ -368,7 +369,7 @@ public class HttpClientTest {
 
 	@Test
 	public void prematureCancel() {
-		DirectProcessor<Void> signal = DirectProcessor.create();
+		FluxIdentityProcessor<Void> signal = Processors.more().multicastNoBackpressure();
 		disposableServer =
 				TcpServer.create()
 				         .host("localhost")

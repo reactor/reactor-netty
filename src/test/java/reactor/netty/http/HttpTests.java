@@ -24,9 +24,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxIdentityProcessor;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Processors;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
@@ -344,7 +345,7 @@ public class HttpTests {
 
 	@Test
 	public void streamAndPoolExplicitCompression() {
-		EmitterProcessor<String> ep = EmitterProcessor.create();
+		FluxIdentityProcessor<String> ep = Processors.multicast();
 
 		DisposableServer server =
 				HttpServer.create()
@@ -416,7 +417,7 @@ public class HttpTests {
 
 	@Test
 	public void streamAndPoolDefaultCompression() {
-		EmitterProcessor<String> ep = EmitterProcessor.create();
+		FluxIdentityProcessor<String> ep = Processors.multicast();
 
 		DisposableServer server =
 				HttpServer.create()
