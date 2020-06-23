@@ -429,6 +429,40 @@ public class Application {
 ----
 ====
 
+
+== Boostrap Configuration 
+
+Use `HttpClient.from` and create a `TcpClient` when you need more control of your client configuration, i.e., when you 
+want to specify the local address.
+
+
+====
+[source,java]
+----
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.http.client.HttpClientResponse;
+
+public class Application {
+
+    public static void main(String[] args) {
+	    ConnectionProvider provider = ConnectionProvider.newConnection();
+	    TcpClient tcpClient = TcpClient.create(provider)
+					.bootstrap(b -> b.localAddress(new InetSocketAddress("host", port)));
+	    String response =
+			HttpClient.from(tcpClient)
+					.get()
+					.uri("https://example.com")
+					.responseContent()
+					.aggregate()
+					.asString()
+					.block();
+	    System.out.println("Response " + response);
+    }
+}
+----
+====
+
+
 == Retry Strategies
 By default, the `HTTP` client retries the request once if it was aborted on the `TCP` level.
 
