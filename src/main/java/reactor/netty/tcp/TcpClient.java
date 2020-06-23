@@ -126,7 +126,8 @@ public abstract class TcpClient extends ClientTransport<TcpClient, TcpClientConf
 	 * @param bootstrapMapper A {@link Bootstrap} mapping function to update {@link TcpClient} configuration and
 	 * return an enriched {@link TcpClient} to use.
 	 * @return a new {@link TcpClient}
-	 * @deprecated Use {@link TcpClient} methods for configurations.
+	 * @deprecated as of 0.9.10. Use the methods exposed on {@link TcpClient} level. The method
+	 * will be removed in version 1.1.0.
 	 */
 	@Deprecated
 	@SuppressWarnings("ReturnValueIgnored")
