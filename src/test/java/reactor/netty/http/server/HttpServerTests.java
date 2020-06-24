@@ -44,14 +44,18 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpRequest;
@@ -59,6 +63,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
 import io.netty.handler.codec.http.websocketx.WebSocketCloseStatus;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -68,7 +74,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -79,6 +84,7 @@ import reactor.core.publisher.SignalType;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
+import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableChannel;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
@@ -1713,5 +1719,29 @@ public class HttpServerTests {
 		StepVerifier.create(result)
 		            .expectNext("delay500delay1000")
 		            .verifyComplete();
+	}
+
+	@Test
+	public void testStatus() {
+		doTestStatus(HttpResponseStatus.OK);
+		doTestStatus(new HttpResponseStatus(200, "Some custom reason phrase for 200 status code"));
+	}
+
+	@SuppressWarnings("FutureReturnValueIgnored")
+	private void doTestStatus(HttpResponseStatus status) {
+		EmbeddedChannel channel = new EmbeddedChannel();
+		HttpServerOperations ops = new HttpServerOperations(
+				Connection.from(channel),
+				ConnectionObserver.emptyListener(),
+				null,
+				new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"),
+				null,
+				ServerCookieEncoder.STRICT,
+				ServerCookieDecoder.STRICT);
+		ops.status(status);
+		HttpMessage response = ops.newFullBodyMessage(Unpooled.EMPTY_BUFFER);
+		assertThat(((FullHttpResponse) response).status().reasonPhrase()).isEqualTo(status.reasonPhrase());
+		// "FutureReturnValueIgnored" is suppressed deliberately
+		channel.close();
 	}
 }

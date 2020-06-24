@@ -379,8 +379,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 
 	@Override
 	public HttpResponseStatus status() {
-		return HttpResponseStatus.valueOf(this.nettyResponse.status()
-		                                                    .code());
+		return this.nettyResponse.status();
 	}
 
 	@Override
