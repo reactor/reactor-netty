@@ -446,19 +446,19 @@ import java.net.InetSocketAddress;
 public class Application {
 
     public static void main(String[] args) {
-    
-    	    TcpClient tcpClient = TcpClient.create()
-  			.bindAddress(new InetSocketAddress("host", port));
 
-	    String response =
-			HttpClient.from(tcpClient)
-					.get()
-					.uri("https://example.com")
-					.responseContent()
-					.aggregate()
-					.asString()
-					.block();
-	    System.out.println("Response " + response);
+        TcpClient tcpClient = TcpClient.create()
+                .bindAddress(new InetSocketAddress("host", port));
+
+        String response =
+        HttpClient.from(tcpClient)
+                .get()
+                .uri("https://example.com")
+                .responseContent()
+                .aggregate()
+                .asString()
+                .block();
+        System.out.println("Response " + response);
     }
 }
 ----
