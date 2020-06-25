@@ -15,9 +15,6 @@ jobs:
           # excludes native on Windows (there's none)
           - os: windows-2019
             transport: native
-          # https://github.com/reactor/reactor-netty/issues/1171
-          - os: macos-10.15
-            transport: nio
 
     steps:
       - uses: actions/checkout@v2
