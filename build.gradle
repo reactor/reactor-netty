@@ -57,7 +57,7 @@ ext {
   nettyVersion = '4.1.50.Final'
 
   // Testing
-  jacksonDatabindVersion = '2.11.0'
+  jacksonDatabindVersion = '2.11.1'
   testAddonVersion = reactorCoreVersion
   hamcrestVersion = '2.2'
   assertJVersion = '3.16.1'
