@@ -267,7 +267,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		}
 		listener().onStateChange(this, HttpClientState.RESPONSE_INCOMPLETE);
 		if (responseState == null) {
-			if (markSentBody()) {
+			if (markSentHeaderAndBody()) {
+				listener().onUncaughtException(this, AbortedException.beforeSend());
+			}
+			else if (markSentBody()) {
 				listener().onUncaughtException(this, new PrematureCloseException("Connection has been closed BEFORE response, while sending request body"));
 			}
 			else {
