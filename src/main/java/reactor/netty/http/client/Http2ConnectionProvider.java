@@ -308,7 +308,7 @@ final class Http2ConnectionProvider extends PooledConnectionProvider<Connection>
 				if (!frameCodec.connection().local().canOpenStream()) {
 					if (!retried) {
 						if (log.isDebugEnabled()) {
-							log.debug(format(ch, "Immediately aborted pooled channel max active streams is reached," +
+							log.debug(format(ch, "Immediately aborted pooled channel max active streams is reached, " +
 								"re-acquiring a new channel"));
 						}
 						pool.acquire(Duration.ofMillis(pendingAcquireTimeout))
