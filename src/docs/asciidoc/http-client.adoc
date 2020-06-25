@@ -341,25 +341,29 @@ is raised.
 == TCP-level Configuration
 
 When you need configurations on a TCP level, you can use the following snippet
-to extend the default `TCP` client configuration:
+to extend the default `TCP` client configuration (add an option, bind address etc.):
 
 ====
 [source,java]
 ----
 import io.netty.channel.ChannelOption;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
+import java.net.InetSocketAddress;
 
 public class Application {
 
     public static void main(String[] args) {
-        HttpClientResponse response =
+        String response =
                 HttpClient.create()
+                          .bindAddress(() -> new InetSocketAddress("host", port))
                           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                           .get()
                           .uri("http://example.com/")
-                          .response()
+                          .responseContent()
+                          .aggregate()
+                          .asString()
                           .block();
+        System.out.println("Response " + response);
     }
 }
 ----
