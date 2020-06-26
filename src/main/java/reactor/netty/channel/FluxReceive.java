@@ -17,6 +17,7 @@
 package reactor.netty.channel;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -34,7 +35,6 @@ import reactor.core.publisher.Operators;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
-import reactor.util.concurrent.Queues;
 
 import static reactor.netty.ReactorNetty.format;
 
@@ -60,10 +60,13 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	Throwable inboundError;
 
 	volatile Disposable receiverCancel;
-	volatile int wip;
 
-	final static AtomicIntegerFieldUpdater<FluxReceive> WIP = AtomicIntegerFieldUpdater.newUpdater
-			(FluxReceive.class, "wip");
+	volatile int once;
+	static final AtomicIntegerFieldUpdater<FluxReceive> ONCE =
+		AtomicIntegerFieldUpdater.newUpdater(FluxReceive.class, "once");
+
+	int wip;
+
 
 	FluxReceive(ChannelOperations<?, ?> parent) {
 
@@ -131,11 +134,42 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 
 	@Override
 	public void subscribe(CoreSubscriber<? super Object> s) {
-		if (eventLoop.inEventLoop()){
-			startReceiver(s);
+		if (once == 0 && ONCE.compareAndSet(this, 0, 1)) {
+			if (log.isDebugEnabled()) {
+				log.debug(format(channel, "Subscribing inbound receiver [pending: {}, cancelled:{}, " +
+								"inboundDone: {}]"),
+						getPending(),
+						isCancelled(),
+						inboundDone);
+			}
+			if (inboundDone && getPending() == 0) {
+				if (inboundError != null) {
+					Operators.error(s, inboundError);
+					return;
+				}
+
+				Operators.complete(s);
+				return;
+			}
+
+			receiver = s;
+
+			s.onSubscribe(this);
 		}
 		else {
-			eventLoop.execute(() -> startReceiver(s));
+			if (inboundDone && getPending() == 0) {
+				if (inboundError != null) {
+					Operators.error(s, inboundError);
+					return;
+				}
+
+				Operators.complete(s);
+			}
+			else {
+				Operators.error(s,
+						new IllegalStateException(
+								"Only one connection receive subscriber allowed."));
+			}
 		}
 	}
 
@@ -164,7 +198,8 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	}
 
 	final void drainReceiver() {
-		if(WIP.getAndIncrement(this) != 0){
+		// general protect against stackoverflow onNext -> request -> onNext
+		if (wip++ != 0) {
 			return;
 		}
 		int missed = 1;
@@ -185,7 +220,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					}
 					return;
 				}
-				missed = WIP.addAndGet(this, -missed);
+				missed = (wip -= missed);
 				if(missed == 0){
 					break;
 				}
@@ -250,7 +285,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 					channel.config()
 					       .setAutoRead(true);
 				}
-				missed = WIP.addAndGet(this, -missed);
+				missed = (wip -= missed);
 				if(missed == 0){
 					break;
 				}
@@ -269,40 +304,10 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 				       .setAutoRead(false);
 			}
 
-			missed = WIP.addAndGet(this, -missed);
+			missed = (wip -= missed);
 			if(missed == 0){
 				break;
 			}
-		}
-	}
-
-	final void startReceiver(CoreSubscriber<? super Object> s) {
-		if (receiver == null) {
-			if (log.isDebugEnabled()) {
-				log.debug(format(channel, "Subscribing inbound receiver [pending: {}, cancelled:{}, " +
-								"inboundDone: {}]"),
-						getPending(),
-						isCancelled(),
-						inboundDone);
-			}
-			if (inboundDone && getPending() == 0) {
-				if (inboundError != null) {
-					Operators.error(s, inboundError);
-					return;
-				}
-
-				Operators.complete(s);
-				return;
-			}
-
-			receiver = s;
-
-			s.onSubscribe(this);
-		}
-		else {
-			Operators.error(s,
-					new IllegalStateException(
-							"Only one connection receive subscriber allowed."));
 		}
 	}
 
@@ -336,8 +341,7 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		else {
 			Queue<Object> q = receiverQueue;
 			if (q == null) {
-				q = Queues.unbounded()
-				          .get();
+				q = new ArrayDeque<>();
 				receiverQueue = q;
 			}
 			if (log.isDebugEnabled()){
