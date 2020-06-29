@@ -83,6 +83,7 @@ public final class ProxyProvider {
 	final Pattern nonProxyHosts;
 	final Supplier<? extends HttpHeaders> httpHeaders;
 	final Proxy type;
+	final long connectTimeoutMillis;
 
 	ProxyProvider(ProxyProvider.Build builder) {
 		this.username = builder.username;
@@ -106,6 +107,7 @@ public final class ProxyProvider {
 			this.httpHeaders = builder.httpHeaders;
 		}
 		this.type = builder.type;
+		this.connectTimeoutMillis = builder.connectTimeoutMillis;
 	}
 
 	/**
@@ -151,20 +153,27 @@ public final class ProxyProvider {
 				this.password.apply(username) : null;
 
 		final boolean b = Objects.nonNull(username) && Objects.nonNull(password);
+		final ProxyHandler proxyHandler;
 		switch (this.type) {
 			case HTTP:
-				return b ?
+				proxyHandler = b ?
 						new HttpProxyHandler(proxyAddr, username, password, this.httpHeaders.get()) :
 						new HttpProxyHandler(proxyAddr, this.httpHeaders.get());
+				break;
 			case SOCKS4:
-				return Objects.nonNull(username) ? new Socks4ProxyHandler(proxyAddr, username) :
+				proxyHandler = Objects.nonNull(username) ? new Socks4ProxyHandler(proxyAddr, username) :
 						new Socks4ProxyHandler(proxyAddr);
+				break;
 			case SOCKS5:
-				return b ?
+				proxyHandler = b ?
 						new Socks5ProxyHandler(proxyAddr, username, password) :
 						new Socks5ProxyHandler(proxyAddr);
+				break;
+			default:
+				throw new IllegalArgumentException("Proxy type unsupported : " + this.type);
 		}
-		throw new IllegalArgumentException("Proxy type unsupported : " + this.type);
+		proxyHandler.setConnectTimeoutMillis(connectTimeoutMillis);
+		return proxyHandler;
 	}
 
 	/**
@@ -244,13 +253,14 @@ public final class ProxyProvider {
 				Objects.equals(getAddress().get(), that.getAddress().get()) &&
 				Objects.equals(getNonProxyHostsValue(), that.getNonProxyHostsValue()) &&
 				Objects.equals(httpHeaders.get(), that.httpHeaders.get()) &&
-				getType() == that.getType();
+				getType() == that.getType() &&
+				connectTimeoutMillis == that.connectTimeoutMillis;
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(
-				username, getPasswordValue(), getAddress().get(), getNonProxyHostsValue(), httpHeaders.get(), getType());
+				username, getPasswordValue(), getAddress().get(), getNonProxyHostsValue(), httpHeaders.get(), getType(), connectTimeoutMillis);
 	}
 
 	@Nullable
@@ -275,6 +285,7 @@ public final class ProxyProvider {
 		String nonProxyHosts;
 		Supplier<? extends HttpHeaders> httpHeaders;
 		Proxy type;
+		long connectTimeoutMillis = 10000;
 
 		Build() {
 		}
@@ -335,6 +346,12 @@ public final class ProxyProvider {
 		@Override
 		public final AddressSpec type(Proxy type) {
 			this.type = Objects.requireNonNull(type, "type");
+			return this;
+		}
+
+		@Override
+		public Builder connectTimeoutMillis(long connectTimeoutMillis) {
+			this.connectTimeoutMillis = connectTimeoutMillis;
 			return this;
 		}
 
@@ -425,6 +442,15 @@ public final class ProxyProvider {
 		 * @return {@code this}
 		 */
 		Builder httpHeaders(Consumer<HttpHeaders> headers);
+
+		/**
+		 * The proxy connect timeout in millis. Default to 10000 ms.
+		 * If this value set as non positive value, there is no connect timeout.
+		 *
+		 * @param connectTimeoutMillis The proxy connect timeout in millis.
+		 * @return {@code this}
+		 */
+		Builder connectTimeoutMillis(long connectTimeoutMillis);
 
 		/**
 		 * Builds new ProxyProvider
