@@ -43,6 +43,9 @@ public class ProxyProviderTest {
 	@SuppressWarnings("UnnecessaryLambda")
 	private static final Consumer<HttpHeaders> HEADER_2 = list -> list.add("Authorization", "Bearer 456");
 
+	private static final long CONNECT_TIMEOUT_1 = 100;
+	private static final long CONNECT_TIMEOUT_2 = 200;
+
 	@Test
 	public void equalProxyProviders() {
 		assertEquals(createProxy(ADDRESS_1, PASSWORD_1), createProxy(ADDRESS_1, PASSWORD_1));
@@ -79,6 +82,12 @@ public class ProxyProviderTest {
 		assertNotEquals(createHeaderProxy(ADDRESS_1, HEADER_1).hashCode(), createHeaderProxy(ADDRESS_1, HEADER_2).hashCode());
 	}
 
+	@Test
+	public void differentConnectTimeout() {
+		assertNotEquals(createConnectTimeoutProxy(CONNECT_TIMEOUT_1), createConnectTimeoutProxy(CONNECT_TIMEOUT_2));
+		assertNotEquals(createConnectTimeoutProxy(CONNECT_TIMEOUT_1).hashCode(), createConnectTimeoutProxy(CONNECT_TIMEOUT_2).hashCode());
+	}
+
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
@@ -103,6 +112,14 @@ public class ProxyProviderTest {
 		                    .address(address)
 		                    .httpHeaders(authHeader)
 		                    .build();
+	}
+
+	private ProxyProvider createConnectTimeoutProxy(long connectTimeoutMillis) {
+		return ProxyProvider.builder()
+												.type(ProxyProvider.Proxy.SOCKS5)
+												.address(ADDRESS_1)
+												.connectTimeoutMillis(connectTimeoutMillis)
+												.build();
 	}
 
 }
