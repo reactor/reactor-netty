@@ -88,6 +88,21 @@ public class ProxyProviderTest {
 		assertNotEquals(createConnectTimeoutProxy(CONNECT_TIMEOUT_1).hashCode(), createConnectTimeoutProxy(CONNECT_TIMEOUT_2).hashCode());
 	}
 
+	@Test
+	public void connectTimeoutWithNonPositiveValue() {
+		assertEquals(0, createConnectTimeoutProxy(0).newProxyHandler().connectTimeoutMillis());
+		assertEquals(0, createConnectTimeoutProxy(-1).newProxyHandler().connectTimeoutMillis());
+	}
+
+	@Test
+	public void connectTimeoutWithDefault() {
+		ProxyProvider provider = ProxyProvider.builder()
+		                                      .type(ProxyProvider.Proxy.SOCKS5)
+		                                      .address(ADDRESS_1)
+		                                      .build();
+		assertEquals(10000, provider.connectTimeoutMillis);
+	}
+
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
@@ -116,10 +131,10 @@ public class ProxyProviderTest {
 
 	private ProxyProvider createConnectTimeoutProxy(long connectTimeoutMillis) {
 		return ProxyProvider.builder()
-												.type(ProxyProvider.Proxy.SOCKS5)
-												.address(ADDRESS_1)
-												.connectTimeoutMillis(connectTimeoutMillis)
-												.build();
+		                    .type(ProxyProvider.Proxy.SOCKS5)
+		                    .address(ADDRESS_1)
+		                    .connectTimeoutMillis(connectTimeoutMillis)
+		                    .build();
 	}
 
 }
