@@ -248,7 +248,7 @@ public final class ProxyProvider {
 		String nonProxyHosts;
 		Supplier<? extends HttpHeaders> httpHeaders;
 		Proxy type;
-		long connectTimeoutMillis;
+		long connectTimeoutMillis = 10000;
 
 		Build() {
 		}
@@ -407,9 +407,11 @@ public final class ProxyProvider {
 		Builder httpHeaders(Consumer<HttpHeaders> headers);
 
 		/**
-		 * The proxy connect timeout in millis.
-		 * @param connectTimeoutMillis
-		 * @return
+		 * The proxy connect timeout in millis. Default to 10000 ms.
+		 * If this value set as non positive value, 0 ms will be applied.
+		 *
+		 * @param connectTimeoutMillis The proxy connect timeout in millis.
+		 * @return {@code this}
 		 */
 		Builder connectTimeoutMillis(long connectTimeoutMillis);
 
