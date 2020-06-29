@@ -17,6 +17,8 @@
 package reactor.netty.channel;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.AbstractMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
@@ -38,6 +40,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -54,7 +57,22 @@ import reactor.util.context.Context;
 
 final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
-	static final String KEY_ON_DISCARD = "reactor.onDiscard.local";
+	static final Object KEY_ON_DISCARD;
+
+	static {
+		Context context = Operators.enableOnDiscard(null, (__) -> { });
+
+		Map.Entry<Object, Object> entry = context.stream()
+		                                         .findAny()
+		                                         .orElse(null);
+
+		if (entry != null) {
+			KEY_ON_DISCARD = entry.getKey();
+		}
+		else {
+			KEY_ON_DISCARD = null;
+		}
+	}
 
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
 			Channel channel,
@@ -87,6 +105,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 	@Override
 	@Nullable
+	@SuppressWarnings("rawtypes")
 	public Object scanUnsafe(Attr key) {
 		if (key == Attr.PREFETCH) return MAX_SIZE;
 		if (key == Attr.PARENT) return source;
@@ -144,7 +163,9 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			if (!Operators.terminate(SUBSCRIPTION, this)) {
 				return;
 			}
-			if (WIP.getAndIncrement(this) == 0) {
+
+			int wip = wipIncrement(WIP, this);
+			if (wip == 0) {
 				onInterruptionCleanup();
 			}
 		}
@@ -155,7 +176,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return;
 			}
 			terminalSignal = Completion.INSTANCE;
-			trySchedule(null);
+			trySchedule();
 		}
 
 		@Override
@@ -170,17 +191,17 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			}
 
 			terminalSignal = t;
-			trySchedule(null);
+			trySchedule();
 		}
 
 		@Override
 		public void onNext(I t) {
 			if (sourceMode == ASYNC) {
-				trySchedule(null);
+				trySchedule();
 				return;
 			}
 
-			if (terminalSignal != null || this.s == Operators.cancelledSubscription()) {
+			if (terminalSignal != null) {
 				parent.sourceCleanup.accept(t);
 				Operators.onDiscard(t, actual.currentContext());
 				return;
@@ -194,7 +215,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						actual.currentContext()));
 				return;
 			}
-			trySchedule(t);
+			trySchedule();
 		}
 
 		@Override
@@ -211,7 +232,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 						queue = f;
 						terminalSignal = Completion.INSTANCE;
 						actual.onSubscribe(this);
-						trySchedule(null);
+						trySchedule();
 						return;
 					}
 					if (m == Fuseable.ASYNC) {
@@ -240,7 +261,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		@Override
 		public void operationComplete(ChannelFuture future) {
 			if (Operators.terminate(SUBSCRIPTION, this)) {
-				if (WIP.getAndIncrement(this) == 0) {
+				int wip = wipIncrement(WIP, this);
+				if (wip == 0) {
 					onInterruptionCleanup();
 				}
 				//actual.onError(new AbortedException("Closed channel ["+ctx.channel().id().asShortText()+"] while sending operation active"));
@@ -365,20 +387,11 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			if (sourceMode == ASYNC) {
 				// delegates discarding to the queue holder to ensure there is no racing on draining from the SpScQueue
 				// fused queue should discard elements on clear
-				queue.clear();
+				discardAsyncWithTermination(WIP, this, queue);
 			}
 			else {
-				Context context = null;
-				while (!queue.isEmpty()) {
-					I sourceMessage = queue.poll();
-					if (sourceMessage != null) {
-						parent.sourceCleanup.accept(sourceMessage);
-						if (context == null) {
-							context = actual.currentContext();
-						}
-						Operators.onDiscard(sourceMessage, context);
-					}
-				}
+				Context context = currentContext();
+				discardWithTermination(WIP, this, queue, context);
 			}
 		}
 
@@ -386,40 +399,37 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			return pending == 0 && terminalSignal != null;
 		}
 
-		void trySchedule(@Nullable I data) {
-			if (WIP.getAndIncrement(this) == 0) {
-				try {
-					if (eventLoop.inEventLoop()) {
-						run();
-						return;
-					}
-					eventLoop.execute(this);
-				}
-				catch (Throwable t) {
-					if(Operators.terminate(SUBSCRIPTION, this)) {
-						onInterruptionCleanup();
-						actual.onError(Operators.onRejectedExecution(t, null, null, data, actual.currentContext()));
-					}
-				}
-			}
-			else {
-				if (this.s == Operators.cancelledSubscription()) {
+		void trySchedule() {
+			int wip = wipIncrement(WIP, this);
+			if (wip != 0) {
+				if (wip == Integer.MIN_VALUE) {
 					if (sourceMode == ASYNC) {
-						// delegates discarding to the queue holder to ensure there is no racing on draining from the SpScQueue
 						queue.clear();
 					}
 					else {
-						// discard given dataSignal since no more is enqueued (spec guarantees serialised onXXX calls)
-						if (data != null) {
-							parent.sourceCleanup.accept(data);
-							Operators.onDiscard(data, actual.currentContext());
-						}
+						Operators.onDiscardQueueWithClear(queue, currentContext(), null);
 					}
+				}
+				return;
+			}
+
+			try {
+				if (eventLoop.inEventLoop()) {
+					run();
+					return;
+				}
+				eventLoop.execute(this);
+			}
+			catch (Throwable t) {
+				if (Operators.terminate(SUBSCRIPTION, this)) {
+					onInterruptionCleanup();
+					actual.onError(Operators.onRejectedExecution(t, null, null, null, actual.currentContext()));
 				}
 			}
 		}
 
 		@Override
+		@SuppressWarnings("rawtypes")
 		public Object scanUnsafe(Attr key) {
 			if (key == Attr.PARENT) return s;
 			if (key == Attr.ACTUAL) return actual;
@@ -548,7 +558,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			pending--;
 
 			if (checkTerminated()) {
-				trySchedule(null);
+				trySchedule();
 				return true;
 			}
 
@@ -556,7 +566,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				int u = MAX_SIZE - requested;
 				requested += u;
 				nextRequest += u;
-				trySchedule(null);
+				trySchedule();
 			}
 			return true;
 		}
@@ -564,7 +574,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		@Override
 		public boolean tryFailure(Throwable cause) {
 			if (Operators.terminate(SUBSCRIPTION, this)) {
-				if (WIP.getAndIncrement(this) == 0) {
+				int wip = wipIncrement(WIP, this);
+				if (wip == 0) {
 					onInterruptionCleanup();
 				}
 				actual.onError(cause);
@@ -646,16 +657,22 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		// this as discard hook
 		@Override
 		public void accept(I i) {
-			parent.sourceCleanup.accept(i);
+			try {
+				parent.sourceCleanup.accept(i);
+			}
+			catch (IllegalReferenceCountException e) {
+				// FIXME: should be removed once fusion is fixed in reactor-core
+				//        for now we have double releasing issue
+			}
 			// propagates discard to the downstream
 			Operators.onDiscard(i, actual.currentContext());
 		}
 
 		// Context interface impl
 		@Override
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({"unchecked", "rawtypes"})
 		public <T> T get(Object key) {
-			if (KEY_ON_DISCARD.equals(key)) {
+			if (KEY_ON_DISCARD == key) {
 				return (T) this;
 			}
 
@@ -664,7 +681,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public boolean hasKey(Object key) {
-			if (KEY_ON_DISCARD.equals(key)) {
+			if (KEY_ON_DISCARD == key) {
 				return true;
 			}
 
@@ -673,29 +690,57 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public Context put(Object key, Object value) {
-			return actual
-					.currentContext()
+			Context context = actual.currentContext();
+
+			if (context.isEmpty()) {
+				if (key == KEY_ON_DISCARD) {
+					return Context.of(key, value);
+				}
+
+				return Context.of(KEY_ON_DISCARD, this, key, value);
+			}
+
+			return context
 					.put(KEY_ON_DISCARD, this)
 					.put(key, value);
 		}
 
 		@Override
 		public Context delete(Object key) {
-			return actual
-					.currentContext()
+			Context context = actual.currentContext();
+
+			if (context.isEmpty()) {
+				if (key == KEY_ON_DISCARD) {
+					return Context.empty();
+				}
+				else {
+					return this;
+				}
+			}
+
+			return context
 					.put(KEY_ON_DISCARD, this)
 					.delete(key);
 		}
 
 		@Override
 		public int size() {
-			return actual.currentContext()
-			             .put(KEY_ON_DISCARD, this)
-			             .size();
+			Context context = actual.currentContext();
+			if (context.hasKey(KEY_ON_DISCARD)) {
+				return context.size();
+			}
+
+			return context.size() + 1;
 		}
 
 		@Override
 		public Stream<Map.Entry<Object, Object>> stream() {
+			Context context = actual.currentContext();
+
+			if (context.isEmpty()) {
+				return Stream.of(new AbstractMap.SimpleEntry<>(KEY_ON_DISCARD, this));
+			}
+
 			return actual.currentContext()
 			             .put(KEY_ON_DISCARD, this)
 			             .stream();
@@ -732,5 +777,54 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		}
 
 		private static final long serialVersionUID = 8284666103614054915L;
+	}
+
+	static <T> int wipIncrement(AtomicIntegerFieldUpdater<T> updater, T instance) {
+		for (;;) {
+			int wip = updater.get(instance);
+
+			if (wip == Integer.MIN_VALUE) {
+				return Integer.MIN_VALUE;
+			}
+
+			if (updater.compareAndSet(instance, wip, wip + 1)) {
+				return wip;
+			}
+		}
+	}
+
+	static <T> void discardWithTermination(
+			AtomicIntegerFieldUpdater<T> updater,
+			T instance,
+			Queue<?> q,
+			Context context) {
+
+		for (;;) {
+			int wip = updater.get(instance);
+
+			// In all other modes we are free to discard queue immediately
+			// since there is no racing on polling
+			Operators.onDiscardQueueWithClear(q, context, null);
+
+			if (updater.compareAndSet(instance, wip, Integer.MIN_VALUE)) {
+				break;
+			}
+		}
+	}
+
+	static <T> void discardAsyncWithTermination(AtomicIntegerFieldUpdater<T> updater,
+			T instance,
+			Queue<?> q) {
+
+		for (;;) {
+			int wip = updater.get(instance);
+
+			// delegates discarding to the queue holder to ensure there is no racing on draining from the SpScQueue
+			q.clear();
+
+			if (updater.compareAndSet(instance, wip, Integer.MIN_VALUE)) {
+				break;
+			}
+		}
 	}
 }
