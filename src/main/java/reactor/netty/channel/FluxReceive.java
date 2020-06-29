@@ -65,6 +65,12 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 	static final AtomicIntegerFieldUpdater<FluxReceive> ONCE =
 		AtomicIntegerFieldUpdater.newUpdater(FluxReceive.class, "once");
 
+	// Please note, in this specific case WIP is non-volatile since all operation that
+	// involves work-in-progress pattern is within Netty Event-Loops which guarantees
+	// serial, thread-safe behaviour.
+	// However, we need that flag in order to preserve work-in-progress guarding that
+	// prevents stack overflow in case of onNext -> request -> onNext cycling on the
+	// same stack
 	int wip;
 
 
@@ -341,6 +347,9 @@ final class FluxReceive extends Flux<Object> implements Subscription, Disposable
 		else {
 			Queue<Object> q = receiverQueue;
 			if (q == null) {
+				// please note, in that case we are using non-thread safe, simple
+				// ArrayDeque since all modifications on this queue happens withing
+				// Netty Event Loop
 				q = new ArrayDeque<>();
 				receiverQueue = q;
 			}
