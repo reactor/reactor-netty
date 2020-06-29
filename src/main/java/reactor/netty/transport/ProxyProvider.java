@@ -408,7 +408,7 @@ public final class ProxyProvider {
 
 		/**
 		 * The proxy connect timeout in millis. Default to 10000 ms.
-		 * If this value set as non positive value, 0 ms will be applied.
+		 * If this value set as non positive value, there is no connect timeout.
 		 *
 		 * @param connectTimeoutMillis The proxy connect timeout in millis.
 		 * @return {@code this}
