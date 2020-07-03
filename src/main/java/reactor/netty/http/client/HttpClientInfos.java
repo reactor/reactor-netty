@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import reactor.netty.http.HttpInfos;
 import reactor.util.context.Context;
 
@@ -43,6 +44,13 @@ public interface HttpClientInfos extends HttpInfos {
      * @return the previous redirections or empty array
      */
     String[] redirectedFrom();
+
+    /**
+     * Return outbound headers to be sent
+     *
+     * @return outbound headers to be sent
+     */
+    HttpHeaders requestHeaders();
 
     /**
      * Return the fully qualified URL of the requested resource. In case of redirects, return the URL the last
