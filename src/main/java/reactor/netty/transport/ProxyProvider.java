@@ -322,12 +322,32 @@ public final class ProxyProvider {
 		private final String regex;
 		private Pattern pattern;
 
-		public RegexShouldProxyPredicate(String pattern) {
+        /**
+         * Create a {@link RegexShouldProxyPredicate} based off the provided regular expression.
+         * @param regex The string regular expression
+         * @return a predicate whether we should direct to proxy
+         */
+		public static RegexShouldProxyPredicate fromRegularExpression(String regex) {
+            return new RegexShouldProxyPredicate(regex);
+        }
+
+        /**
+         * Creates a {@link RegexShouldProxyPredicate} based off the provided pattern with possible wildcards as
+         * described in https://docs.oracle.com/javase/7/docs/api/java/net/doc-files/net-properties.html
+         *
+         * @param pattern The string wildcarded expression
+         * @return a predicate whether we should direct to proxy
+         */
+        public static RegexShouldProxyPredicate fromWildcardedPattern(String pattern) {
+            return new RegexShouldProxyPredicate(pattern.replaceAll("\\.", "\\\\.").replaceAll("\\*", "\\.*"));
+		}
+
+		private RegexShouldProxyPredicate(String pattern) {
 			this.regex = pattern;
 		}
 
-		private Pattern getPattern(){
-			if(pattern == null){
+		private Pattern getPattern() {
+			if (pattern == null) {
 				pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
 			}
 			return pattern;
@@ -335,7 +355,7 @@ public final class ProxyProvider {
 
 		@Override
 		public boolean test(SocketAddress socketAddress) {
-			if(!(socketAddress instanceof InetSocketAddress)){
+			if (!(socketAddress instanceof InetSocketAddress)) {
 				return false;
 			}
 			InetSocketAddress isa = (InetSocketAddress) socketAddress;

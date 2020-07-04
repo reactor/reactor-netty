@@ -16,15 +16,14 @@
 
 package reactor.netty.transport;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class ProxyProviderTest {
 
@@ -101,6 +100,13 @@ public class ProxyProviderTest {
 		                                      .address(ADDRESS_1)
 		                                      .build();
 		assertEquals(10000, provider.connectTimeoutMillis);
+	}
+
+	@Test
+	public void handleWildcardInNonProxyHosts(){
+		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("*.foo.com");
+		assertTrue("Should proxy", pred.test( new InetSocketAddress("some.other.com", 8080)));
+		assertFalse("Should not proxy", pred.test( new InetSocketAddress("some.foo.com", 8080)));
 	}
 
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
