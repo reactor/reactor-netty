@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -58,7 +59,7 @@ public final class ProxyProvider {
 	final String username;
 	final Function<? super String, ? extends String> password;
 	final Supplier<? extends InetSocketAddress> address;
-	final Pattern nonProxyHosts;
+	final Predicate<SocketAddress> shouldProxy;
 	final Supplier<? extends HttpHeaders> httpHeaders;
 	final Proxy type;
 	final long connectTimeoutMillis;
@@ -72,11 +73,11 @@ public final class ProxyProvider {
 		else {
 			this.address = builder.address;
 		}
-		if (builder.nonProxyHosts != null) {
-			this.nonProxyHosts = Pattern.compile(builder.nonProxyHosts, Pattern.CASE_INSENSITIVE);
+		if (builder.shouldProxy != null) {
+			this.shouldProxy = builder.shouldProxy;
 		}
 		else {
-			this.nonProxyHosts = null;
+			this.shouldProxy = a -> true;
 		}
 		if (Objects.isNull(builder.httpHeaders)) {
 			this.httpHeaders = NO_HTTP_HEADERS;
@@ -107,16 +108,14 @@ public final class ProxyProvider {
 	}
 
 	/**
-	 * Regular expression (<code>using java.util.regex</code>) for a configured
-	 * list of hosts that should be reached directly, bypassing the proxy.
+	 * A predicate {@link Predicate} on {@link SocketAddress} that returns true when the provided address should be
+	 * reached directly, bypassing the proxy
 	 *
-	 * @return Regular expression (<code>using java.util.regex</code>) for
-	 * a configured list of hosts that should be reached directly, bypassing the
-	 * proxy.
+	 * @return The predicate {@link Predicate} to test the incoming {@link SocketAddress} if we can reach directly,
+	 * bypassing the proxy
 	 */
-	@Nullable
-	public final Pattern getNonProxyHosts() {
-		return this.nonProxyHosts;
+	public final Predicate<SocketAddress> getNonProxyHosts() {
+		return this.shouldProxy;
 	}
 
 	/**
@@ -161,18 +160,7 @@ public final class ProxyProvider {
 	 * @return true if of type {@link InetSocketAddress} and hostname candidate to proxy
 	 */
 	public boolean shouldProxy(SocketAddress address) {
-		return address instanceof InetSocketAddress && shouldProxy(((InetSocketAddress) address).getHostString());
-	}
-
-	/**
-	 * Should proxy the given hostname
-	 *
-	 * @param hostName the hostname to test
-	 * @return true if candidate to proxy
-	 */
-	public boolean shouldProxy(@Nullable String hostName) {
-		return nonProxyHosts == null || hostName == null || !nonProxyHosts.matcher(hostName)
-		                                                                  .matches();
+		return address instanceof InetSocketAddress && shouldProxy.test(address);
 	}
 
 	/**
@@ -197,7 +185,7 @@ public final class ProxyProvider {
 	public String toString() {
 		return "ProxyProvider {" +
 				"address=" + address.get() +
-				", nonProxyHosts=" + nonProxyHosts +
+				", nonProxyHosts=" + shouldProxy +
 				", type=" + type +
 				'}';
 	}
@@ -245,7 +233,7 @@ public final class ProxyProvider {
 		String host;
 		int port;
 		Supplier<? extends InetSocketAddress> address;
-		String nonProxyHosts;
+		Predicate<SocketAddress> shouldProxy = a -> true;
 		Supplier<? extends HttpHeaders> httpHeaders;
 		Proxy type;
 		long connectTimeoutMillis = 10000;
@@ -292,7 +280,12 @@ public final class ProxyProvider {
 
 		@Override
 		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
-			this.nonProxyHosts = nonProxyHostsPattern;
+			return nonProxyHostsPredicate(new RegexShouldProxyPredicate(nonProxyHostsPattern));
+		}
+
+		@Override
+		public final Builder nonProxyHostsPredicate(Predicate<SocketAddress> nonProxyHostsPredicate){
+			this.shouldProxy = nonProxyHostsPredicate;
 			return this;
 		}
 
@@ -321,6 +314,37 @@ public final class ProxyProvider {
 		@Override
 		public ProxyProvider build() {
 			return new ProxyProvider(this);
+		}
+	}
+
+	static final class RegexShouldProxyPredicate implements Predicate<SocketAddress> {
+
+		private final String regex;
+		private Pattern pattern;
+
+		public RegexShouldProxyPredicate(String pattern) {
+			this.regex = pattern;
+		}
+
+		private Pattern getPattern(){
+			if(pattern == null){
+				pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+			}
+			return pattern;
+		}
+
+		@Override
+		public boolean test(SocketAddress socketAddress) {
+			if(!(socketAddress instanceof InetSocketAddress)){
+				return false;
+			}
+			InetSocketAddress isa = (InetSocketAddress) socketAddress;
+			return isa.getHostName() == null || !getPattern().matcher(isa.getHostName()).matches();
+		}
+
+		@Override
+		public String toString(){
+			return regex;
 		}
 	}
 
@@ -397,6 +421,16 @@ public final class ProxyProvider {
 		 * @return {@code this}
 		 */
 		Builder nonProxyHosts(String nonProxyHostsPattern);
+
+		/**
+		 * A standard predicate expression for a configured list of hosts that should be reached directly, bypassing
+		 * the proxy.
+		 *
+		 * @param nonProxyHostsPredicate A Predicate {@link Predicate} on {@link SocketAddress} to determine if the
+		 * address should not go through the configured proxy
+		 * @return {@code this}
+		 */
+		Builder nonProxyHostsPredicate(Predicate<SocketAddress> nonProxyHostsPredicate);
 
 		/**
 		 * A consumer to add request headers for the http proxy.
