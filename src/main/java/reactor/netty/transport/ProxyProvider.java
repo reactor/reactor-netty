@@ -45,7 +45,7 @@ import reactor.util.annotation.Nullable;
  */
 public final class ProxyProvider {
 
-	private static final Predicate<SocketAddress> ALWAYS_PROXY = a ->true;
+	private static final Predicate<SocketAddress> EMPTY_NON_PROXY_HOSTS = a -> true;
 
 	/**
 	 * Creates a builder for {@link ProxyProvider ProxyProvider}
@@ -63,7 +63,7 @@ public final class ProxyProvider {
 	final Function<? super String, ? extends String> password;
 	final Supplier<? extends InetSocketAddress> address;
 	final Pattern nonProxyHosts;
-	final Predicate<SocketAddress> shouldProxy;
+	final Predicate<SocketAddress> nonProxyHostPredicate;
 	final Supplier<? extends HttpHeaders> httpHeaders;
 	final Proxy type;
 	final long connectTimeoutMillis;
@@ -71,7 +71,7 @@ public final class ProxyProvider {
 	ProxyProvider(ProxyProvider.Build builder) {
 		this.username = builder.username;
 		this.password = builder.password;
-		this.shouldProxy = builder.shouldProxy;
+		this.nonProxyHostPredicate = builder.nonProxyHostPredicate;
 		if (Objects.isNull(builder.address)) {
 			this.address = () -> AddressUtils.createResolved(builder.host, builder.port);
 		}
@@ -117,7 +117,6 @@ public final class ProxyProvider {
 	 * list of hosts that should be reached directly, bypassing the proxy.
 	 *
 	 * @return Regular expression (<code>using java.util.regex</code>) for
-	 * @return Regular expression (<code>using java.util.regex</code>) for
 	 * a configured list of hosts that should be reached directly, bypassing the
 	 * proxy.
 	 * @deprecated as of 0.9.10. Use {@link #getNonProxyHostsPredicate()} ()}. This method will be removed in version 1.0.0.
@@ -136,7 +135,7 @@ public final class ProxyProvider {
 	 * directly, bypassing the proxy
 	 */
 	public final Predicate<SocketAddress> getNonProxyHostsPredicate() {
-		return this.shouldProxy;
+		return this.nonProxyHostPredicate;
 	}
 
 	/**
@@ -175,13 +174,14 @@ public final class ProxyProvider {
 	}
 
 	/**
-	 * Should proxy the given address
+	 * Returns true when the given {@link SocketAddress} should be reached via the configured proxy. When the methods
+	 * returns false, the client should reach the address directly and bypass the proxy
 	 *
 	 * @param address the address to test
 	 * @return true if of type {@link InetSocketAddress} and hostname candidate to proxy
 	 */
 	public boolean shouldProxy(SocketAddress address) {
-		return address instanceof InetSocketAddress && shouldProxy.test(address);
+		return address instanceof InetSocketAddress && nonProxyHostPredicate.test(address);
 	}
 
 	/**
@@ -206,7 +206,7 @@ public final class ProxyProvider {
 	public String toString() {
 		return "ProxyProvider {" +
 				"address=" + address.get() +
-				", nonProxyHosts=" + shouldProxy +
+				", nonProxyHosts=" + nonProxyHostPredicate +
 				", type=" + type +
 				'}';
 	}
@@ -254,7 +254,7 @@ public final class ProxyProvider {
 		String host;
 		int port;
 		Supplier<? extends InetSocketAddress> address;
-		Predicate<SocketAddress> shouldProxy = ProxyProvider.ALWAYS_PROXY;
+		Predicate<SocketAddress> nonProxyHostPredicate = ProxyProvider.EMPTY_NON_PROXY_HOSTS;
 		String nonProxyHosts;
 		Supplier<? extends HttpHeaders> httpHeaders;
 		Proxy type;
@@ -303,12 +303,12 @@ public final class ProxyProvider {
 		@Override
 		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
 			this.nonProxyHosts = nonProxyHostsPattern;
-			return nonProxyHostsPattern == null ? this :  nonProxyHostsPredicate(new RegexShouldProxyPredicate(nonProxyHostsPattern));
+			return nonProxyHostsPattern == null ? this : nonProxyHostsPredicate(new RegexShouldProxyPredicate(nonProxyHostsPattern));
 		}
 
 		@Override
 		public final Builder nonProxyHostsPredicate(@NonNull Predicate<SocketAddress> nonProxyHostsPredicate) {
-			this.shouldProxy = Objects.requireNonNull(nonProxyHostsPredicate, "nonProxyHostsPredicate");
+			this.nonProxyHostPredicate = Objects.requireNonNull(nonProxyHostsPredicate, "nonProxyHostsPredicate");
 			return this;
 		}
 
@@ -377,13 +377,20 @@ public final class ProxyProvider {
 			return pattern;
 		}
 
+		/**
+		 * The test returns true when the given {@link SocketAddress} should be contacted through the configured proxy.
+		 * When this method returns false, the client will reach out to the address directly and bypass the proxy
+		 *
+		 * @param socketAddress
+		 * @return true when we should go through proxy
+		 */
 		@Override
 		public boolean test(SocketAddress socketAddress) {
 			if (!(socketAddress instanceof InetSocketAddress)) {
 				return false;
 			}
 			InetSocketAddress isa = (InetSocketAddress) socketAddress;
-			return isa.getHostName() == null || !getPattern().matcher(isa.getHostName()).matches();
+			return isa.getHostString() == null || !getPattern().matcher(isa.getHostString()).matches();
 		}
 
 		@Override
@@ -471,7 +478,7 @@ public final class ProxyProvider {
 		 * the proxy.
 		 *
 		 * @param nonProxyHostsPredicate A Predicate {@link Predicate} on {@link SocketAddress} to determine if the
-		 *                               address should not go through the configured proxy
+		 * address should not go through the configured proxy
 		 * @return {@code this}
 		 */
 		Builder nonProxyHostsPredicate(Predicate<SocketAddress> nonProxyHostsPredicate);
