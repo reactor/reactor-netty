@@ -531,6 +531,10 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		@Override
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONFIGURED) {
+				// First send a notification that the connection is ready and then change the state
+				// In case a cancellation was received, ChannelOperations will be disposed
+				// and there will be no subscription to the I/O handler at all.
+				// https://github.com/reactor/reactor-netty/issues/1165
 				sink.success(connection);
 			}
 			obs.onStateChange(connection, newState);
@@ -600,8 +604,12 @@ final class PooledConnectionProvider implements ConnectionProvider {
 				ChannelOperations<?, ?> ops = opsFactory.create(pooledConnection, pooledConnection, null);
 				if (ops != null) {
 					ops.bind();
-					obs.onStateChange(ops, State.CONFIGURED);
+					// First send a notification that the connection is ready and then change the state
+					// In case a cancellation was received, ChannelOperations will be disposed
+					// and there will be no subscription to the I/O handler at all.
+					// https://github.com/reactor/reactor-netty/issues/1165
 					sink.success(ops);
+					obs.onStateChange(ops, State.CONFIGURED);
 				}
 				else {
 					//already configured, just forward the connection
