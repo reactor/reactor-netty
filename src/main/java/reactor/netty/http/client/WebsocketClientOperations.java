@@ -24,7 +24,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -74,8 +73,7 @@ final class WebsocketClientOperations extends HttpClientOperations
 					WebSocketVersion.V13,
 					subprotocols != null && !subprotocols.isEmpty() ? subprotocols : null,
 					true,
-					replaced.requestHeaders()
-					        .remove(HttpHeaderNames.HOST),
+					replaced.requestHeaders(),
 					websocketClientSpec.maxFramePayloadLength());
 
 		handshaker.handshake(channel)

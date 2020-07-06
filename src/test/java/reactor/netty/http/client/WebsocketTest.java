@@ -17,8 +17,10 @@
 package reactor.netty.http.client;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
@@ -53,6 +55,7 @@ import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.time.Duration;
@@ -1081,36 +1084,56 @@ public class WebsocketTest {
 	}
 
 	@Test
-	public void testExternalConnections_PullRequest1047() {
-		String incorrectHostName = "incorrect-host.io";
+	public void testExternalConnections_PR1047Issue1194() throws Exception {
+		String customHostName = "custom-host.io";
+		AtomicReference<HttpHeaders> serverRequestHeaders = new AtomicReference<>();
 		httpServer =
 				HttpServer.create()
 				          .port(0)
-				          .handle((req, res) -> {
-				              if (req.requestHeaders().get(HttpHeaderNames.HOST).contains(incorrectHostName)) {
-				                  return res.status(418)
-				                            .sendString(Mono.just("Incorrect Host header"));
-				              }
-				              return res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
-				                                                       .sendObject(new CloseWebSocketFrame()));
-				          })
+				          .handle((req, res) -> res.sendWebsocket((in, out) -> {
+				              serverRequestHeaders.set(in.headers());
+				              return out.sendString(Mono.just("echo"))
+				                                        .sendObject(new CloseWebSocketFrame());
+				          }))
 				          .wiretap(true)
 				          .bindNow();
 
+		AtomicReference<HttpHeaders> clientRequestHeaders = new AtomicReference<>();
+		AtomicReference<URI> websocketUri = new AtomicReference<>();
+		AtomicReference<Channel> channel = new AtomicReference<>();
 		Mono<Void> response =
 				HttpClient.create()
 				          .port(httpServer.address().getPort())
-				          .headers(h -> h.add(HttpHeaderNames.HOST, incorrectHostName))
+				          .headers(h -> h.add(HttpHeaderNames.HOST, customHostName))
 				          .websocket()
 				          .uri("/")
-				          .handle((in, out) -> out.sendObject(in.receiveFrames()
-				                                                .doOnNext(WebSocketFrame::retain)
-				                                                .then()))
+				          .handle((in, out) -> {
+				              clientRequestHeaders.set(((WebsocketClientOperations) in).requestHeaders());
+				              websocketUri.set(((WebsocketClientOperations) in).websocketUri());
+				              channel.set(((WebsocketClientOperations) in).channel());
+				              return out.sendObject(in.receiveFrames()
+				                                      .doOnNext(WebSocketFrame::retain)
+				                                      .then());
+				          })
 				          .next();
 
 		StepVerifier.create(response)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+
+		assertThat(serverRequestHeaders.get()).isNotNull();
+		assertThat(serverRequestHeaders.get().get(HttpHeaderNames.HOST)).isEqualTo(customHostName);
+
+		assertThat(clientRequestHeaders.get()).isNotNull();
+		assertThat(clientRequestHeaders.get().get(HttpHeaderNames.HOST)).isEqualTo(customHostName);
+
+		assertThat(channel.get()).isNotNull();
+		assertThat(channel.get().remoteAddress()).isInstanceOf(InetSocketAddress.class);
+		String address =
+				HttpClientConnect.HttpClientHandler.resolveHostHeaderValue((InetSocketAddress) channel.get().remoteAddress());
+
+		assertThat(websocketUri.get()).isNotNull();
+		assertThat(websocketUri.get()).isEqualTo(new URI("ws://" + address + "/"));
 	}
 
 	@Test
