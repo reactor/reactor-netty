@@ -66,16 +66,9 @@ public interface HttpClientRequest extends HttpClientInfos {
 	HttpClientRequest headers(HttpHeaders headers);
 
 	/**
-	 * Return true  if redirected will be followed
+	 * Return true if redirected will be followed
 	 *
 	 * @return true if redirected will be followed
 	 */
 	boolean isFollowRedirect();
-
-	/**
-	 * Return outbound headers to be sent
-	 *
-	 * @return outbound headers to be sent
-	 */
-	HttpHeaders requestHeaders();
 }
