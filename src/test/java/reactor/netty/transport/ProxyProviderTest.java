@@ -171,7 +171,7 @@ public class ProxyProviderTest {
 	@Test
 	public void nonProxyHosts_builderDefault_empty(){
 		Predicate<SocketAddress> pred = ProxyProvider.builder().type(ProxyProvider.Proxy.HTTP).host("something").build().getNonProxyHostsPredicate();
-		assertFalse("Default do not proxy", pred.test(someAddress("localhost")));
+		assertFalse("Default should proxy", pred.test(someAddress("localhost")));
 	}
 
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
