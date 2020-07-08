@@ -343,7 +343,7 @@ public final class ProxyProvider {
 	static final class RegexShouldProxyPredicate implements Predicate<SocketAddress> {
 
 		private final String regex;
-		private Pattern pattern;
+		private final Pattern pattern;
 
 		/**
 		 * Create a {@link RegexShouldProxyPredicate} based off the provided regular expression.
@@ -368,13 +368,7 @@ public final class ProxyProvider {
 
 		private RegexShouldProxyPredicate(String pattern) {
 			this.regex = pattern;
-		}
-
-		private Pattern getPattern() {
-			if (pattern == null) {
-				pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
-			}
-			return pattern;
+			this.pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
 		}
 
 		/**
@@ -390,7 +384,7 @@ public final class ProxyProvider {
 				return false;
 			}
 			InetSocketAddress isa = (InetSocketAddress) socketAddress;
-			return isa.getHostString() == null || !getPattern().matcher(isa.getHostString()).matches();
+			return isa.getHostString() == null || !pattern.matcher(isa.getHostString()).matches();
 		}
 
 		@Override
