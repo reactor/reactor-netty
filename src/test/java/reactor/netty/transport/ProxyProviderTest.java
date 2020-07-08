@@ -17,8 +17,10 @@
 package reactor.netty.transport;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Test;
@@ -102,11 +104,74 @@ public class ProxyProviderTest {
 		assertEquals(10000, provider.connectTimeoutMillis);
 	}
 
+	private SocketAddress someAddress(String host) {
+		return new InetSocketAddress(host, 8080);
+	}
+
 	@Test
-	public void handleWildcardInNonProxyHosts(){
+	public void nonProxyHosts_wildcardInitially() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("*.foo.com");
-		assertTrue("Should proxy", pred.test( new InetSocketAddress("some.other.com", 8080)));
-		assertFalse("Should not proxy", pred.test( new InetSocketAddress("some.foo.com", 8080)));
+		assertFalse("Should proxy, nothing matching foo", pred.test(someAddress("some.other.com")));
+		assertTrue("Should not proxy, prefix in wildcard", pred.test(someAddress("some.foo.com")));
+	}
+
+	@Test
+	public void nonProxyHosts_wildcardFinish() {
+		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("foo*");
+		assertFalse("Should proxy, nothing matching prefix", pred.test(someAddress("other.foo.com")));
+		assertTrue("Should not proxy, anything in wildcard", pred.test(someAddress("foo.other.com")));
+		assertTrue("Should proxy, nothing in wildcard", pred.test(someAddress("foo.")));
+	}
+
+	@Test
+	public void nonProxyHosts_wildcardBoth() {
+		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("*foo*");
+		assertTrue("Should not proxy, contains foo", pred.test(someAddress("some.foo.com")));
+		assertFalse("Should proxy, no foo", pred.test(someAddress("some.other.com")));
+	}
+
+	@Test
+	public void nonProxyHosts_wildcardNone() {
+		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("foo.com");
+		assertTrue("Should not proxy, exact match", pred.test(someAddress("foo.com")));
+		assertFalse("Should proxy, mismatches", pred.test(someAddress("other.com")));
+	}
+
+	@Test
+	public void nonProxyHosts_concatenated() {
+		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("exact.com|*first.com|last.com*|*both.com*");
+		assertTrue("Should not proxy, has exact match", pred.test(someAddress("exact.com")));
+		assertTrue("Should not proxy, matches a wildcarded prefix", pred.test(someAddress("other.first.com")));
+		assertTrue("Should not proxy, matches a wildcarded suffix", pred.test(someAddress("last.com.net")));
+		assertTrue("Should not proxy, matches wildcards", pred.test(someAddress("some.both.com.other")));
+		assertTrue("Should not proxy, matches many", pred.test(someAddress("both.com.first.com")));
+	}
+
+	@Test
+	public void nonProxyHosts_null() {
+		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern(null);
+		assertFalse("Should proxy when nonProxyHosts is blanked out", pred.test(someAddress("foo.com")));
+	}
+
+	@Test
+	public void nonProxyHosts_empty() {
+		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("");
+		assertFalse("Should proxy when nonProxyHosts is blanked out", pred.test(someAddress("foo.com")));
+	}
+
+	@Test
+	public void nonProxyHosts_javaDefault() {
+		ProxyProvider.RegexShouldProxyPredicate defaultPredicate = ProxyProvider.RegexShouldProxyPredicate.DEFAULT_NON_PROXY;
+		assertTrue("Should not proxy loopback", defaultPredicate.test(someAddress("127.0.0.1")));
+		assertTrue("Should not proxy loopback", defaultPredicate.test(someAddress("127.0.0.2")));
+		assertTrue("Should not proxy default", defaultPredicate.test(someAddress("0.0.0.0")));
+		assertTrue("Should not proxy localhost", defaultPredicate.test(someAddress("localhost")));
+	}
+
+	@Test
+	public void nonProxyHosts_builderDefault_empty(){
+		Predicate<SocketAddress> pred = ProxyProvider.builder().type(ProxyProvider.Proxy.HTTP).host("something").build().getNonProxyHostsPredicate();
+		assertFalse("Default do not proxy", pred.test(someAddress("localhost")));
 	}
 
 	private ProxyProvider createProxy(InetSocketAddress address, Function<String, String> passwordFunc) {
