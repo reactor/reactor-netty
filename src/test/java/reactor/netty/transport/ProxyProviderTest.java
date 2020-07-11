@@ -25,7 +25,10 @@ import java.util.function.Predicate;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ProxyProviderTest {
 
@@ -166,6 +169,13 @@ public class ProxyProviderTest {
 		assertTrue("Should not proxy loopback", defaultPredicate.test(someAddress("127.0.0.2")));
 		assertTrue("Should not proxy default", defaultPredicate.test(someAddress("0.0.0.0")));
 		assertTrue("Should not proxy localhost", defaultPredicate.test(someAddress("localhost")));
+	}
+
+	@Test
+	public void nonProxyHosts_wildcardInTheMiddle() {
+		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("some.*.com");
+		assertFalse("Should proxy, nothing matching other", pred.test(someAddress("some.other.com")));
+		assertFalse("Should proxy, nothing matching foo", pred.test(someAddress("some.foo.com")));
 	}
 
 	@Test
