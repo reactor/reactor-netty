@@ -72,7 +72,7 @@ ext {
   testAddonVersion = reactorCoreVersion
   hamcrestVersion = '2.2'
   assertJVersion = '3.16.1'
-  hoverflyJavaVersion = '0.13.0'
+  hoverflyJavaVersion = '0.13.1'
   tomcatVersion = '9.0.37'
   boringSslVersion = '2.0.31.Final'
   junitVersion = '4.12'
