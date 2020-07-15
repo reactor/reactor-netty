@@ -171,7 +171,7 @@ public class MonoSendManyTest {
 	public void shouldNotLeakOnRacingCancelAndOnNext() {
 		int messagesToSend = 128;
 
-		for (int i = 0; i < 100000; i++) {
+		for (int i = 0; i < 10000; i++) {
 			//use an extra handler
 			EmbeddedChannel channel =
 					new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {
@@ -216,7 +216,7 @@ public class MonoSendManyTest {
 			ReferenceCountUtil.safeRelease(v);
 			discarded.add((ReferenceCounted)v);
 		});
-		for (int i = 0; i < 100000; i++) {
+		for (int i = 0; i < 10000; i++) {
 			//use an extra handler
 			EmbeddedChannel channel =
 					new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {
