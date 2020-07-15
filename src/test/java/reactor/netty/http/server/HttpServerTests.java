@@ -795,7 +795,6 @@ public class HttpServerTests {
 		FutureMono.from(ch.get().closeFuture()).block(Duration.ofSeconds(30));
 	}
 
-	@Ignore
 	@Test
 	public void contextShouldBeTransferredFromDownStreamToUpStream() {
 		AtomicReference<Context> context = new AtomicReference<>();
@@ -809,22 +808,29 @@ public class HttpServerTests {
 				HttpClient.create(ConnectionProvider.create("contextShouldBeTransferredFromDownStreamToUpStream", 1))
 				          .remoteAddress(disposableServer::address);
 
-		Mono<String> content = client.post()
-		                             .uri("/")
-		                             .send(ByteBufFlux.fromString(Mono.just("bodysample")
-		                                                              .subscriberContext(c -> {
-		                                                                  context.set(c);
-		                                                                      return c;
-		                                                                  })))
-		                             .responseContent()
-		                             .aggregate()
-		                             .asString()
-		                             .subscriberContext(c -> c.put("Hello", "World"));
+		for (int i = 0; i < 10000; i++) {
+			Mono<String> content = client.post()
+			                             .uri("/")
+			                             .send(ByteBufFlux.fromString(Mono.just(
+					                             "bodysample")
+			                                                              .subscriberContext(
+					                                                              c -> {
+						                                                              context.set(
+								                                                              c);
+						                                                              return c;
+					                                                              })))
+			                             .responseContent()
+			                             .aggregate()
+			                             .asString()
+			                             .subscriberContext(c -> c.put("Hello", "World"));
 
 			StepVerifier.create(content)
 			            .expectComplete()
 			            .verify(Duration.ofSeconds(30));
-			assertThat(context.get().get("Hello").equals("World")).isTrue();
+			assertThat(context.get()
+			                  .get("Hello")
+			                  .equals("World")).isTrue();
+		}
 	}
 
 	@Test
