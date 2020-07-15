@@ -38,6 +38,8 @@ import io.netty.util.internal.StringUtil;
 import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 
+import static reactor.netty.transport.ProxyProvider.Build.ALWAYS_PROXY;
+
 /**
  * Proxy configuration
  *
@@ -183,6 +185,21 @@ public final class ProxyProvider {
 	}
 
 	/**
+	 * Returns true when the given hostname should be reached via the configured proxy. When the method returns false,
+	 * the client should reach the address directly and bypass the proxy
+	 *
+	 * @param hostName the hostname to test
+	 * @return true if should be proxied
+	 * @deprecated as of 0.9.10. use {@link #shouldProxy(SocketAddress)}. This method will be removed in version 1.0.0.
+	 */
+	@Deprecated
+	public boolean shouldProxy(@Nullable String hostName) {
+		return nonProxyHostPredicate == ALWAYS_PROXY || hostName == null ||
+				!((RegexShouldProxyPredicate) nonProxyHostPredicate).pattern.matcher(hostName)
+																			.matches();
+	}
+
+	/**
 	 * Proxy Type
 	 */
 	public enum Proxy {
@@ -248,12 +265,15 @@ public final class ProxyProvider {
 
 	static final class Build implements TypeSpec, AddressSpec, Builder {
 
+		@SuppressWarnings("UnnecessaryLambda")
+		static final Predicate<SocketAddress> ALWAYS_PROXY = a -> false;
+
 		String username;
 		Function<? super String, ? extends String> password;
 		String host;
 		int port;
 		Supplier<? extends InetSocketAddress> address;
-		Predicate<SocketAddress> nonProxyHostPredicate = new AlwaysProxyPredicate();
+		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
 		String nonProxyHosts;
 		Supplier<? extends HttpHeaders> httpHeaders;
 		Proxy type;
@@ -339,37 +359,12 @@ public final class ProxyProvider {
 		}
 	}
 
-	static final class AlwaysProxyPredicate implements Predicate<SocketAddress> {
-
-		/**
-		 * The test always returns false which means for any {@link SocketAddress} do not bypass the proxy. Instead,
-		 * we should always go through the proxy.
-		 *
-		 * @param socketAddress the address we are choosing to connect via proxy or not
-		 * @return always return false
-		 */
-		@Override
-		public boolean test(SocketAddress socketAddress) {
-			return false;
-		}
-	}
-
 	static final class RegexShouldProxyPredicate implements Predicate<SocketAddress> {
 
 		public static final RegexShouldProxyPredicate DEFAULT_NON_PROXY = RegexShouldProxyPredicate.fromWildcardedPattern("localhost|127.*|[::1]|0.0.0.0|[::0]");
 
 		private final String regex;
 		private final Pattern pattern;
-
-		/**
-		 * Create a {@link RegexShouldProxyPredicate} based off the provided regular expression.
-		 *
-		 * @param regex The string regular expression
-		 * @return a predicate whether we should bypass the proxy
-		 */
-		public static RegexShouldProxyPredicate fromRegularExpression(String regex) {
-			return new RegexShouldProxyPredicate(regex);
-		}
 
 		/**
 		 * Creates a {@link RegexShouldProxyPredicate} based off the provided pattern with possible wildcards as

@@ -123,7 +123,7 @@ public class ProxyProviderTest {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("foo*");
 		assertFalse("Should proxy, nothing matching prefix", pred.test(someAddress("other.foo.com")));
 		assertTrue("Should not proxy, anything in wildcard", pred.test(someAddress("foo.other.com")));
-		assertTrue("Should proxy, nothing in wildcard", pred.test(someAddress("foo.")));
+		assertTrue("Should not proxy, nothing in wildcard", pred.test(someAddress("foo.")));
 	}
 
 	@Test
