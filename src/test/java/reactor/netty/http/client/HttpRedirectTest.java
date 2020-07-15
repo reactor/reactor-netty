@@ -624,7 +624,7 @@ public class HttpRedirectTest {
 		                  .secure(spec -> spec.sslContext(clientSslCtxBuilder))
 		                  .get()
 		                  .uri(requestUri)
-		                  .responseConnection((res, conn) -> Mono.justOrEmpty(res.resourceUrl())))
+		                  .response((res, conn) -> Mono.justOrEmpty(res.resourceUrl())))
 		            .expectNext("https://localhost:" + redirectServer.port() + destinationPath)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
