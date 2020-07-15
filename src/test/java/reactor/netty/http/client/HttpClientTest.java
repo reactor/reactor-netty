@@ -1288,7 +1288,6 @@ public class HttpClientTest {
 	public void testExplicitSendMonoErrorOnGet() {
 		disposableServer =
 				HttpServer.create()
-				          .host("localhost")
 				          .port(0)
 				          .handle((req, res) -> res.send(req.receive().retain()))
 				          .bindNow();

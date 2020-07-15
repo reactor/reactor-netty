@@ -79,6 +79,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -794,6 +795,7 @@ public class HttpServerTests {
 		FutureMono.from(ch.get().closeFuture()).block(Duration.ofSeconds(30));
 	}
 
+	@Ignore
 	@Test
 	public void contextShouldBeTransferredFromDownStreamToUpStream() {
 		AtomicReference<Context> context = new AtomicReference<>();
