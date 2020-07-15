@@ -428,7 +428,15 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	final URI websocketUri() {
 		URI uri;
 		try {
-			uri = new URI(resourceUrl);
+			String url = uri();
+			if (url.startsWith(HttpClient.HTTP_SCHEME) || url.startsWith(HttpClient.WS_SCHEME)) {
+				uri = new URI(url);
+			}
+			else {
+				String host = requestHeaders().get(HttpHeaderNames.HOST);
+				uri = new URI((isSecure ? HttpClient.WSS_SCHEME :
+				                          HttpClient.WS_SCHEME) + "://" + host + (url.startsWith("/") ? url : "/" + url));
+			}
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException(e);

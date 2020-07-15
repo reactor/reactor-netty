@@ -343,7 +343,7 @@ public class DefaultPooledConnectionProviderTest {
 		DefaultPooledConnectionProvider provider =
 				(DefaultPooledConnectionProvider) ConnectionProvider.builder("testIssue951_MaxPendingAcquire")
 				                                             .maxConnections(1)
-				                                             .pendingAcquireTimeout(Duration.ofMillis(20))
+				                                             .pendingAcquireTimeout(Duration.ofMillis(30))
 				                                             .pendingAcquireMaxCount(1)
 				                                             .build();
 		CountDownLatch latch = new CountDownLatch(2);
@@ -378,7 +378,7 @@ public class DefaultPooledConnectionProviderTest {
 			int onNext = 0;
 			int onErrorTimeout = 0;
 			int onErrorPendingAcquire = 0;
-			String msg1 = "Pool#acquire(Duration) has been pending for more than the configured timeout of 20ms";
+			String msg1 = "Pool#acquire(Duration) has been pending for more than the configured timeout of 30ms";
 			String msg2 = "Pending acquire queue has reached its maximum size of 1";
 			for (int i = 0; i < 3; i++) {
 				Signal<? extends Connection> signal = list.get(i);

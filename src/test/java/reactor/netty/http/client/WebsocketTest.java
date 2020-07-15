@@ -16,6 +16,17 @@
 
 package reactor.netty.http.client;
 
+import java.nio.charset.Charset;
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -50,19 +61,6 @@ import reactor.test.StepVerifier;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.function.Tuple2;
-
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.nio.charset.Charset;
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
-import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.is;
@@ -937,12 +935,16 @@ public class WebsocketTest {
 				          .handle((req, res) -> res.sendWebsocket((in, out) -> Mono.never()))
 				          .bindNow();
 
-		HttpClient client = HttpClient.create()
-		                              .remoteAddress(() -> new InetSocketAddress("not a valid host name", 42));
-		StepVerifier.create(client.websocket()
-		                          .connect())
-		            .expectError(UnknownHostException.class)
-		            .verify(Duration.ofSeconds(5));
+		HttpClient httpClient =
+				HttpClient.create()
+				          .remoteAddress(httpServer::address)
+				          .wiretap(true)
+				          .headers(h -> h.add(HttpHeaderNames.HOST, "[::1"));
+
+		StepVerifier.create(httpClient.websocket()
+		                              .connect())
+		            .expectError()
+		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
@@ -1012,39 +1014,6 @@ public class WebsocketTest {
 				          .block();
 		Assert.assertNotNull(res);
 		Assert.assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
-	}
-
-	@Test
-	public void testExternalConnections_PullRequest1047() {
-		String incorrectHostName = "incorrect-host.io";
-		httpServer =
-				HttpServer.create()
-				          .port(0)
-				          .handle((req, res) -> {
-				              if (req.requestHeaders().get(HttpHeaderNames.HOST).contains(incorrectHostName)) {
-				                  return res.status(418)
-				                            .sendString(Mono.just("Incorrect Host header"));
-				              }
-				              return res.sendWebsocket((in, out) -> out.sendString(Mono.just("echo"))
-				                                                       .sendObject(new CloseWebSocketFrame()));
-				          })
-				          .wiretap(true)
-				          .bindNow();
-
-		Mono<Void> response =
-				HttpClient.create()
-				          .port(httpServer.port())
-				          .headers(h -> h.add(HttpHeaderNames.HOST, incorrectHostName))
-				          .websocket()
-				          .uri("/")
-				          .handle((in, out) -> out.sendObject(in.receiveFrames()
-				                                                .doOnNext(WebSocketFrame::retain)
-				                                                .then()))
-				          .next();
-
-		StepVerifier.create(response)
-		            .expectComplete()
-		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test

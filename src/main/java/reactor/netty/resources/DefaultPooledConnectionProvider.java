@@ -178,6 +178,10 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 		@Override
 		public void onStateChange(Connection connection, State newState) {
 			if (newState == State.CONFIGURED) {
+				// First send a notification that the connection is ready and then change the state
+				// In case a cancellation was received, ChannelOperations will be disposed
+				// and there will be no subscription to the I/O handler at all.
+				// https://github.com/reactor/reactor-netty/issues/1165
 				sink.success(connection);
 			}
 			obs.onStateChange(connection, newState);
@@ -265,12 +269,21 @@ final class DefaultPooledConnectionProvider extends PooledConnectionProvider<Def
 				if (ops != null) {
 					if (c.pipeline().get(NettyPipeline.H2MultiplexHandler) == null) {
 						ops.bind();
+						// First send a notification that the connection is ready and then change the state
+						// In case a cancellation was received, ChannelOperations will be disposed
+						// and there will be no subscription to the I/O handler at all.
+						// https://github.com/reactor/reactor-netty/issues/1165
+						sink.success(ops);
 						obs.onStateChange(ops, State.CONFIGURED);
 					}
 					else {
+						// First send a notification that the connection is ready and then change the state
+						// In case a cancellation was received, ChannelOperations will be disposed
+						// and there will be no subscription to the I/O handler at all.
+						// https://github.com/reactor/reactor-netty/issues/1165
+						sink.success(ops);
 						obs.onStateChange(pooledConnection, State.CONFIGURED);
 					}
-					sink.success(ops);
 				}
 				else {
 					// Already configured, just forward the connection

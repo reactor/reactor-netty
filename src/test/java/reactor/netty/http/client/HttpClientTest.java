@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -2349,5 +2350,55 @@ public class HttpClientTest {
 		            .expectNext("testIssue1133")
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testIssue1031() {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .host("localhost")
+				          .wiretap(true)
+				          .route(r -> r.get("/1", (req, res) -> res.sendRedirect("/2"))
+				                       .get("/2", (req, res) -> res.status(200)
+				                                                   .sendString(Mono.just("OK"))))
+				          .bindNow();
+
+		AtomicReference<List<HttpClientInfos>> onRequest = new AtomicReference<>(new ArrayList<>());
+		AtomicReference<HttpClientInfos> onRedirect = new AtomicReference<>();
+		AtomicReference<HttpClientInfos> onResponse = new AtomicReference<>();
+		AtomicReference<HttpClientInfos> onResponseError = new AtomicReference<>();
+		Tuple2<String, HttpResponseStatus> response =
+				createHttpClientForContextWithAddress()
+				          .followRedirect(true, req -> req.addHeader("testIssue1031", "testIssue1031"))
+				          .doOnRequest((req, c) -> onRequest.get().add(req))
+				          .doOnRedirect((res, c) -> onRedirect.set(res))
+				          .doOnResponse((res, c) -> onResponse.set(res))
+				          .doOnResponseError((res, t) -> onResponseError.set(res))
+				          .get()
+				          .uri("/1")
+				          .responseSingle((res, bytes) -> bytes.asString().zipWith(Mono.just(res.status())))
+				          .block(Duration.ofSeconds(30));
+
+		assertThat(response).isNotNull();
+		assertThat(response.getT1()).isEqualTo("OK");
+		assertThat(response.getT2()).isEqualTo(HttpResponseStatus.OK);
+		assertThat(onRequest.get().size()).isEqualTo(2);
+		String address = "http://" + disposableServer.host() + ":" + disposableServer.port();
+		checkExpectationsIssue1031(onRequest.get().get(0), "/1", 0, address + "/1", null);
+		checkExpectationsIssue1031(onRequest.get().get(1), "/2", 1, address + "/2", "testIssue1031");
+		checkExpectationsIssue1031(onRedirect.get(), "/1", 0, address + "/1", null);
+		checkExpectationsIssue1031(onResponse.get(), "/2", 1, address + "/2", "testIssue1031");
+		assertThat(onResponseError.get()).isNull();
+	}
+
+	private void checkExpectationsIssue1031(HttpClientInfos info, String expectedUri, int expectedRedirections,
+			String expectedResourceUri, String expectedLocation) {
+		assertThat(info).isNotNull();
+		assertThat(info.method()).isEqualTo(HttpMethod.GET);
+		assertThat(info.uri()).isEqualTo(expectedUri);
+		assertThat(info.redirectedFrom().length).isEqualTo(expectedRedirections);
+		assertThat(info.resourceUrl()).isEqualTo(expectedResourceUri);
+		assertThat(info.requestHeaders().get("testIssue1031")).isEqualTo(expectedLocation);
 	}
 }

@@ -1142,6 +1142,7 @@ public class HttpServerTests {
 	}
 
 	@Test
+	@SuppressWarnings("FutureReturnValueIgnored")
 	public void testExpectErrorWhenConnectionClosed() throws Exception {
 		SelfSignedCertificate ssc = new SelfSignedCertificate();
 		SslContext serverCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
@@ -1153,7 +1154,8 @@ public class HttpServerTests {
 				          .port(0)
 				          .secure(spec -> spec.sslContext(serverCtx))
 				          .handle((req, res) -> {
-				              res.withConnection(DisposableChannel::dispose);
+				              // "FutureReturnValueIgnored" is suppressed deliberately
+				              res.withConnection(conn -> conn.channel().close());
 				              return res.sendString(Flux.just("OK").hide())
 				                        .then()
 				                        .doOnError(t -> {

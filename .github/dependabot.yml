@@ -1,0 +1,38 @@
+version: 2
+updates:
+- package-ecosystem: gradle
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  assignees:
+  - violetagg
+  labels:
+  - type/dependency-upgrade
+  ignore:
+  - dependency-name: com.github.johnrengelman.shadow
+    versions:
+    - ">= 6.a"
+    - "< 7"
+  - dependency-name: com.jfrog.artifactory
+    versions:
+    - ">= 4.15.a"
+    - "< 4.16"
+  - dependency-name: com.jfrog.artifactory
+    versions:
+    - "> 4.9.8"
+  - dependency-name: io.micrometer:micrometer-core
+    versions:
+    - ">= 1.4.a"
+    - "< 1.5"
+  - dependency-name: io.micrometer:micrometer-core
+    versions:
+    - "> 1.5.0"
+  - dependency-name: junit:junit
+    versions:
+    - ">= 4.13.a"
+    - "< 4.14"
+  - dependency-name: org.asciidoctor.convert
+    versions:
+    - "> 1.5.11"
+  rebase-strategy: disabled
