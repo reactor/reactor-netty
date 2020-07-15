@@ -194,9 +194,9 @@ public final class ProxyProvider {
 	 */
 	@Deprecated
 	public boolean shouldProxy(@Nullable String hostName) {
-		return nonProxyHostPredicate == ALWAYS_PROXY || hostName == null ||
-				!((RegexShouldProxyPredicate) nonProxyHostPredicate).pattern.matcher(hostName)
-																			.matches();
+		return nonProxyHostPredicate == ALWAYS_PROXY
+				|| hostName == null
+				|| ((nonProxyHostPredicate instanceof RegexShouldProxyPredicate) && !((RegexShouldProxyPredicate) nonProxyHostPredicate).pattern.matcher(hostName).matches());
 	}
 
 	/**
