@@ -155,6 +155,7 @@ public final class ProxyProvider {
 	 *
 	 * @return The predicate {@link Predicate} to test the incoming {@link SocketAddress} if it should be reached
 	 * directly, bypassing the proxy
+	 * @since 0.9.10
 	 */
 	public final Predicate<SocketAddress> getNonProxyHostsPredicate() {
 		return this.nonProxyHostPredicate;
@@ -547,6 +548,7 @@ public final class ProxyProvider {
 		 * @param nonProxyHostsPredicate A Predicate {@link Predicate} on {@link SocketAddress} that returns
 		 * {@literal true} if the host should bypass the configured proxy
 		 * @return {@code this}
+		 * @since 0.9.10
 		 */
 		Builder nonProxyHostsPredicate(Predicate<SocketAddress> nonProxyHostsPredicate);
 
