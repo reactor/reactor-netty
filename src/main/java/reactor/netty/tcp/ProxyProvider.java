@@ -277,9 +277,8 @@ public final class ProxyProvider {
 				username, getPasswordValue(), getAddress().get(), getNonProxyHostsValue(), httpHeaders.get(), getType(), connectTimeoutMillis);
 	}
 
-	@Nullable
-	private String getNonProxyHostsValue() {
-		return (getNonProxyHosts() == null) ? null : getNonProxyHosts().toString();
+	private boolean getNonProxyHostsValue() {
+		return nonProxyHostPredicate.test(getAddress().get());
 	}
 
 	@Nullable
