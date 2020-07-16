@@ -27,9 +27,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -77,6 +79,17 @@ final class PooledConnectionProvider implements ConnectionProvider {
 
 	final ConcurrentMap<PoolKey, InstrumentedPool<PooledConnection>> channelPools =
 			PlatformDependent.newConcurrentHashMap();
+	/**
+	 * This map keeps a weakref to the {@link InstrumentedPool#metrics() metrics} of created pools through the same PoolKey that is used in
+	 * {@link #channelPools}. This is so that metrics providing objects don't get garbage collected too early,
+	 * as metrics-related frameworks (such as micrometer) don't hold strong references to metrics providing objects
+	 * (rightfully so). When the PoolKey is garbage collected, the metrics will become garbage collectable again.
+	 *
+	 * @see #acquire(Bootstrap)
+	 * @see #disposeLater()
+	 */
+	private final Map<PoolKey, ConnectionPoolMetrics> poolMetrics = new WeakHashMap<>();
+
 	final String                          name;
 	final Map<SocketAddress, PoolFactory> poolFactoryPerRemoteHost = new HashMap<>();
 	final PoolFactory                     defaultPoolFactory;
@@ -150,10 +163,18 @@ final class PooledConnectionProvider implements ConnectionProvider {
 						new PooledConnectionAllocator(bootstrap, poolFactory, opsFactory).pool;
 
 				if (poolFactory.metricsEnabled || BootstrapHandlers.findMetricsSupport(bootstrap) != null) {
-					PooledConnectionProviderMetrics.registerMetrics(name,
+					// registrar is null when metrics are enabled on HttpClient level or
+					// with the `metrics(boolean metricsEnabled)` method on ConnectionProvider
+					MeterRegistrar registrar = poolFactory.registrar != null ?
+							poolFactory.registrar.get() : MicrometerPooledConnectionProviderMeterRegistrar.INSTANCE;
+
+					ConnectionPoolMetrics.DelegatingConnectionPoolMetrics metrics =
+							new ConnectionPoolMetrics.DelegatingConnectionPoolMetrics(newPool.metrics());
+					poolMetrics.put(poolKey, metrics);
+					registrar.registerMetrics(name,
 							poolKey.hashCode() + "",
-							Metrics.formatSocketAddress(remoteAddress),
-							newPool.metrics());
+							remoteAddress,
+							metrics);
 				}
 				return newPool;
 			});
@@ -697,6 +718,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final boolean     metricsEnabled;
 		final Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
 				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
+		final Supplier<? extends MeterRegistrar> registrar;
 
 		PoolFactory(ConnectionPoolSpec<?> conf) {
 			this.maxConnections = conf.maxConnections;
@@ -707,6 +729,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 			this.maxLifeTime = conf.maxLifeTime != null ? conf.maxLifeTime.toMillis() : -1;
 			this.metricsEnabled = conf.metricsEnabled;
 			this.leasingStrategy = conf.leasingStrategy;
+			this.registrar = conf.registrar;
 		}
 
 		InstrumentedPool<PooledConnection> newPool(Publisher<PooledConnection> allocator) {
@@ -743,4 +766,5 @@ final class PooledConnectionProvider implements ConnectionProvider {
 					return FutureMono.from(pooledConnection.channel.close());
 				};
 	}
+
 }

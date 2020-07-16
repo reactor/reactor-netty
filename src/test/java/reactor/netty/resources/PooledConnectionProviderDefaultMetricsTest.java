@@ -49,7 +49,7 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 /**
  * @author Violeta Georgieva
  */
-public class PooledConnectionProviderMetricsTest {
+public class PooledConnectionProviderDefaultMetricsTest {
 	private MeterRegistry registry;
 
 	@Before
@@ -66,23 +66,23 @@ public class PooledConnectionProviderMetricsTest {
 	}
 
 	@Test
-	public void testClientMetricsEnabled() throws Exception {
+	public void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
 		doTest(ConnectionProvider.create("test", 1), true);
 	}
 
 	@Test
-	public void testClientMetricsDisabled() throws Exception {
+	public void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
 		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(),
-		       false);
+				false);
 	}
 
 	private void doTest(ConnectionProvider provider, boolean clientMetricsEnabled) throws Exception {
 		DisposableServer server =
 				HttpServer.create()
-				          .port(0)
-				          .handle((req, res) -> res.header("Connection", "close")
-				                                   .sendString(Mono.just("test")))
-				          .bindNow();
+						.port(0)
+						.handle((req, res) -> res.header("Connection", "close")
+								.sendString(Mono.just("test")))
+						.bindNow();
 
 		AtomicBoolean metrics1 = new AtomicBoolean(false);
 		AtomicBoolean metrics2 = new AtomicBoolean(false);
@@ -95,46 +95,49 @@ public class PooledConnectionProviderMetricsTest {
 		AtomicReference<String[]> tags2 = new AtomicReference<>();
 
 		HttpClient.create(fixed)
-		          .port(server.port())
-		          .doOnResponse((res, conn) -> {
-		              conn.channel()
-		                  .closeFuture()
-		                  .addListener(f -> latch.countDown());
+				.port(server.port())
+				.doOnResponse((res, conn) -> {
+					conn.channel()
+							.closeFuture()
+							.addListener(f -> latch.countDown());
 
-		              PooledConnectionProvider.PoolKey key = (PooledConnectionProvider.PoolKey) fixed.channelPools.keySet().toArray()[0];
-		              InetSocketAddress sa = (InetSocketAddress) conn.channel().remoteAddress();
-		              String[] tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort(), NAME, "test"};
-		              tags1.set(tagsArr);
+					PooledConnectionProvider.PoolKey key = (PooledConnectionProvider.PoolKey) fixed.channelPools
+							.keySet().toArray()[0];
+					InetSocketAddress sa = (InetSocketAddress) conn.channel().remoteAddress();
+					String[] tagsArr = new String[] {ID, key.hashCode() + "", REMOTE_ADDRESS, sa
+							.getHostString() + ":" + sa.getPort(), NAME, "test"};
+					tags1.set(tagsArr);
 
-		              double totalConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr);
-		              double activeConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
-		              double idleConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr);
-		              double pendingConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr);
+					double totalConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, tagsArr);
+					double activeConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, tagsArr);
+					double idleConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, tagsArr);
+					double pendingConnections = getGaugeValue(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, tagsArr);
 
-		              if (totalConnections == 1 && activeConnections == 1 &&
-		                      idleConnections == 0 && pendingConnections == 0) {
-		                  metrics1.set(true);
-		              }
-			          tagsArr = new String[]{ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa.getPort()};
-			          tags2.set(tagsArr);
+					if (totalConnections == 1 && activeConnections == 1 &&
+							idleConnections == 0 && pendingConnections == 0) {
+						metrics1.set(true);
+					}
+					tagsArr = new String[] {ID, key.hashCode() + "", REMOTE_ADDRESS, sa.getHostString() + ":" + sa
+							.getPort()};
+					tags2.set(tagsArr);
 
-			          totalConnections = getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr);
-			          activeConnections = getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr);
-			          idleConnections = getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr);
-			          pendingConnections = getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr);
+					totalConnections = getGaugeValue(namePrefix + TOTAL_CONNECTIONS, tagsArr);
+					activeConnections = getGaugeValue(namePrefix + ACTIVE_CONNECTIONS, tagsArr);
+					idleConnections = getGaugeValue(namePrefix + IDLE_CONNECTIONS, tagsArr);
+					pendingConnections = getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr);
 
-			          if (totalConnections == 1 && activeConnections == 1 &&
-			                  idleConnections == 0 && pendingConnections == 0) {
-			              metrics2.set(true);
-			          }
-		          })
-		          .metrics(clientMetricsEnabled, s -> s)
-		          .get()
-		          .uri("/")
-		          .responseContent()
-		          .aggregate()
-		          .asString()
-		          .block(Duration.ofSeconds(30));
+					if (totalConnections == 1 && activeConnections == 1 &&
+							idleConnections == 0 && pendingConnections == 0) {
+						metrics2.set(true);
+					}
+				})
+				.metrics(clientMetricsEnabled, s -> s)
+				.get()
+				.uri("/")
+				.responseContent()
+				.aggregate()
+				.asString()
+				.block(Duration.ofSeconds(30));
 
 		assertTrue(latch.await(30, TimeUnit.SECONDS));
 		assertTrue(metrics1.get());
@@ -154,7 +157,7 @@ public class PooledConnectionProviderMetricsTest {
 		assertEquals(0, getGaugeValue(namePrefix + PENDING_CONNECTIONS, tagsArr), 0.0);
 
 		fixed.disposeLater()
-		     .block(Duration.ofSeconds(30));
+				.block(Duration.ofSeconds(30));
 
 		server.disposeNow();
 	}
