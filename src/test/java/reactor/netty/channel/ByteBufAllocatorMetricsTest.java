@@ -120,7 +120,6 @@ public class ByteBufAllocatorMetricsTest {
 		assertThat(getGaugeValue(name + HEAP_ARENAS, tags)).isGreaterThan(0);
 		assertThat(getGaugeValue(name + DIRECT_ARENAS, tags)).isGreaterThan(0);
 		assertThat(getGaugeValue(name + THREAD_LOCAL_CACHES, tags)).isGreaterThan(0);
-		assertThat(getGaugeValue(name + TINY_CACHE_SIZE, tags)).isGreaterThan(0);
 		assertThat(getGaugeValue(name + SMALL_CACHE_SIZE, tags)).isGreaterThan(0);
 		assertThat(getGaugeValue(name + NORMAL_CACHE_SIZE, tags)).isGreaterThan(0);
 		assertThat(getGaugeValue(name + CHUNK_SIZE, tags)).isGreaterThan(0);
