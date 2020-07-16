@@ -158,11 +158,12 @@ public final class ProxyProvider {
 	 */
 	public final ProxyHandler newProxyHandler() {
 		InetSocketAddress proxyAddr = this.address.get();
-		String username = this.username;
-		String password = Objects.nonNull(username) && Objects.nonNull(this.password) ?
-				this.password.apply(username) : null;
 
 		final boolean b = Objects.nonNull(username) && Objects.nonNull(password);
+
+		String username = this.username;
+		String password = b ? this.password.apply(username) : null;
+
 		final ProxyHandler proxyHandler;
 		switch (this.type) {
 			case HTTP:
