@@ -173,9 +173,7 @@ public class MonoSendManyTest {
 
 		for (int i = 0; i < 10000; i++) {
 			//use an extra handler
-			EmbeddedChannel channel =
-					new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {
-			});
+			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
 			TestPublisher<ByteBuf> source = TestPublisher.createNoncompliant(TestPublisher.Violation.DEFER_CANCELLATION);
 
@@ -218,13 +216,10 @@ public class MonoSendManyTest {
 		});
 		for (int i = 0; i < 10000; i++) {
 			//use an extra handler
-			EmbeddedChannel channel =
-					new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {
-					});
+			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
 			UnicastProcessor<ByteBuf> source = UnicastProcessor.create();
-			MonoSendMany<ByteBuf, ByteBuf> m =
-					MonoSendMany.byteBufSource(source, channel, b -> false);
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> false);
 			BaseSubscriber<Void> testSubscriber = m
 					.doOnDiscard(ReferenceCounted.class, discarded::add)
 					.subscribeWith(new BaseSubscriber<Void>() {});

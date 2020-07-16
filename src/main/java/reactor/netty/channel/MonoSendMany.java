@@ -18,7 +18,6 @@ package reactor.netty.channel;
 
 import java.nio.channels.ClosedChannelException;
 import java.util.AbstractMap;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
@@ -51,7 +50,6 @@ import reactor.core.Exceptions;
 import reactor.core.Fuseable;
 import reactor.core.Scannable;
 import reactor.core.publisher.Operators;
-import reactor.netty.ReactorNetty;
 import reactor.util.annotation.Nullable;
 import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
@@ -701,9 +699,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return Context.of(KEY_ON_DISCARD, this, key, value);
 			}
 
-			return context
-					.put(KEY_ON_DISCARD, this)
-					.put(key, value);
+			return context.put(KEY_ON_DISCARD, this)
+			              .put(key, value);
 		}
 
 		@Override
@@ -719,9 +716,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				}
 			}
 
-			return context
-					.put(KEY_ON_DISCARD, this)
-					.delete(key);
+			return context .put(KEY_ON_DISCARD, this)
+			               .delete(key);
 		}
 
 		@Override
