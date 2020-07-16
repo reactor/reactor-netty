@@ -78,9 +78,6 @@ public final class ProxyProvider {
 		return proxy.proxyProvider;
 	}
 
-	@SuppressWarnings("UnnecessaryLambda")
-	private static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
-
 	final String username;
 	final Function<? super String, ? extends String> password;
 	final Supplier<? extends InetSocketAddress> address;
@@ -106,12 +103,7 @@ public final class ProxyProvider {
 		else {
 			this.nonProxyHosts = null;
 		}
-		if (Objects.isNull(builder.httpHeaders)) {
-			this.httpHeaders = NO_HTTP_HEADERS;
-		}
-		else {
-			this.httpHeaders = builder.httpHeaders;
-		}
+		this.httpHeaders = builder.httpHeaders;
 		this.type = builder.type;
 		this.connectTimeoutMillis = builder.connectTimeoutMillis;
 	}
@@ -303,6 +295,9 @@ public final class ProxyProvider {
 	static final class Build implements TypeSpec, AddressSpec, Builder {
 
 		@SuppressWarnings("UnnecessaryLambda")
+		static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
+
+		@SuppressWarnings("UnnecessaryLambda")
 		static final Predicate<SocketAddress> ALWAYS_PROXY = a -> false;
 
 		String username;
@@ -312,7 +307,7 @@ public final class ProxyProvider {
 		Supplier<? extends InetSocketAddress> address;
 		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
 		String nonProxyHosts;
-		Supplier<? extends HttpHeaders> httpHeaders;
+		Supplier<? extends HttpHeaders> httpHeaders = NO_HTTP_HEADERS;
 		Proxy type;
 		long connectTimeoutMillis = 10000;
 
@@ -370,11 +365,13 @@ public final class ProxyProvider {
 
 		@Override
 		public Builder httpHeaders(Consumer<HttpHeaders> headers) {
-			this.httpHeaders = () -> new DefaultHttpHeaders() {
-				{
-					headers.accept(this);
-				}
-			};
+			if (headers != null) {
+				this.httpHeaders = () -> new DefaultHttpHeaders() {
+					{
+						headers.accept(this);
+					}
+				};
+			}
 			return this;
 		}
 
