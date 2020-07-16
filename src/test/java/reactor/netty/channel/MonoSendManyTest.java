@@ -16,18 +16,33 @@
 package reactor.netty.channel;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import org.junit.Test;
 import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
+import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.UnicastProcessor;
 import reactor.test.StepVerifier;
+import reactor.test.publisher.TestPublisher;
+import reactor.test.util.RaceTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -150,6 +165,89 @@ public class MonoSendManyTest {
 
 		System.gc();
 		wait(_w.get(0));
+	}
+
+	@Test
+	public void shouldNotLeakOnRacingCancelAndOnNext() {
+		int messagesToSend = 128;
+
+		for (int i = 0; i < 10000; i++) {
+			//use an extra handler
+			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
+
+			TestPublisher<ByteBuf> source = TestPublisher.createNoncompliant(TestPublisher.Violation.DEFER_CANCELLATION);
+
+			IdentityHashMap<ReferenceCounted, Object> discarded = new IdentityHashMap<>();
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> false);
+			BaseSubscriber<Void> testSubscriber = m
+				.doOnDiscard(ReferenceCounted.class, v -> discarded.put(v, null))
+				.subscribeWith(new BaseSubscriber<Void>() {});
+			Queue<Object> messages = channel.outboundMessages();
+			Queue<ByteBuf> buffersToSend = new ArrayDeque<>(messagesToSend);
+			for (int j = 0; j < messagesToSend; j++) {
+				buffersToSend.offer(ByteBufAllocator.DEFAULT.buffer().writeInt(j));
+			}
+
+			RaceTestUtils.race(testSubscriber::cancel, () -> {
+				for (ByteBuf buf : buffersToSend) {
+					source.next(buf);
+				}
+			});
+
+			channel.flush();
+
+			messages.forEach(ReferenceCountUtil::safeRelease);
+
+			assertThat(discarded.size() + messages.size())
+					.as("Expect all element are flushed or discarded but was discarded " +
+							": [" + discarded.size() + "], flushed : [" + messages.size() + "]")
+					.isEqualTo(messagesToSend);
+		}
+	}
+
+	@Test
+	public void shouldNotLeakIfFusedOnRacingCancelAndOnNext() {
+		int messagesToSend = 128;
+
+		ArrayBlockingQueue<ReferenceCounted> discarded = new ArrayBlockingQueue<>(messagesToSend * 2);
+		Hooks.onNextDropped(v -> {
+			ReferenceCountUtil.safeRelease(v);
+			discarded.add((ReferenceCounted)v);
+		});
+		for (int i = 0; i < 10000; i++) {
+			//use an extra handler
+			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
+
+			UnicastProcessor<ByteBuf> source = UnicastProcessor.create();
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> false);
+			BaseSubscriber<Void> testSubscriber = m
+					.doOnDiscard(ReferenceCounted.class, discarded::add)
+					.subscribeWith(new BaseSubscriber<Void>() {});
+			Queue<Object> messages = channel.outboundMessages();
+			Queue<ByteBuf> buffersToSend = new ArrayDeque<>(messagesToSend);
+			for (int j = 0; j < messagesToSend; j++) {
+				buffersToSend.offer(ByteBufAllocator.DEFAULT.buffer().writeInt(j));
+			}
+
+			RaceTestUtils.race(testSubscriber::cancel, () -> {
+				for (ByteBuf buf : buffersToSend) {
+					source.onNext(buf);
+				}
+			});
+
+			IdentityHashMap<ReferenceCounted, ?> distinctDiscarded =
+					discarded.stream().collect(Collectors.toMap(Function.identity(),
+							Function.identity(), (r1, r2) -> r1, IdentityHashMap::new));
+
+			channel.flush();
+			messages.forEach(ReferenceCountUtil::release);
+
+			assertThat(distinctDiscarded.size() + messages.size())
+					.as("Expect all element are flushed or discarded but was discarded " +
+							": [" + distinctDiscarded.size() + "], flushed : [" + messages.size() + "]")
+					.isEqualTo(messagesToSend);
+			discarded.clear();
+		}
 	}
 
 	static void wait(WeakReference<Subscription> ref){
