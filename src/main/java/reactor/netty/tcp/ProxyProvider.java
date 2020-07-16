@@ -81,7 +81,6 @@ public final class ProxyProvider {
 	final String username;
 	final Function<? super String, ? extends String> password;
 	final Supplier<? extends InetSocketAddress> address;
-	final Pattern nonProxyHosts;
 	final Predicate<SocketAddress> nonProxyHostPredicate;
 	final Supplier<? extends HttpHeaders> httpHeaders;
 	final Proxy type;
@@ -96,12 +95,6 @@ public final class ProxyProvider {
 		}
 		else {
 			this.address = builder.address;
-		}
-		if (builder.nonProxyHosts != null) {
-			this.nonProxyHosts = Pattern.compile(builder.nonProxyHosts, Pattern.CASE_INSENSITIVE);
-		}
-		else {
-			this.nonProxyHosts = null;
 		}
 		this.httpHeaders = builder.httpHeaders;
 		this.type = builder.type;
@@ -138,7 +131,12 @@ public final class ProxyProvider {
 	@Nullable
 	@Deprecated
 	public final Pattern getNonProxyHosts() {
-		return this.nonProxyHosts;
+		if (nonProxyHostPredicate instanceof RegexShouldProxyPredicate) {
+			return ((RegexShouldProxyPredicate) nonProxyHostPredicate).pattern;
+		}
+		else {
+			return null;
+		}
 	}
 
 	/**
@@ -242,7 +240,7 @@ public final class ProxyProvider {
 	@Deprecated
 	public String asDetailedString() {
 		return "address=" + this.address.get() +
-				", nonProxyHosts=" + this.nonProxyHosts +
+				", nonProxyHosts=" + nonProxyHostPredicate +
 				", type=" + this.type;
 	}
 
@@ -306,7 +304,6 @@ public final class ProxyProvider {
 		int port;
 		Supplier<? extends InetSocketAddress> address;
 		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
-		String nonProxyHosts;
 		Supplier<? extends HttpHeaders> httpHeaders = NO_HTTP_HEADERS;
 		Proxy type;
 		long connectTimeoutMillis = 10000;
@@ -353,7 +350,6 @@ public final class ProxyProvider {
 
 		@Override
 		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
-			this.nonProxyHosts = nonProxyHostsPattern;
 			return StringUtil.isNullOrEmpty(nonProxyHostsPattern) ? this : nonProxyHostsPredicate(new RegexShouldProxyPredicate(nonProxyHostsPattern));
 		}
 
