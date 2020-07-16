@@ -15,8 +15,10 @@
  */
 package reactor.netty.resources;
 
+import java.net.SocketAddress;
+
 import io.micrometer.core.instrument.Gauge;
-import reactor.pool.InstrumentedPool;
+import reactor.netty.Metrics;
 
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
@@ -29,38 +31,50 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 
 /**
+ * Default implementation of {@link reactor.netty.resources.ConnectionProvider.MeterRegistrar}.
+ *
+ * Registers gauges for every metric in {@link ConnectionPoolMetrics}.
+ *
+ * Every gauge uses id, poolName and remoteAddress as tags.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */
-final class PooledConnectionProviderMetrics {
+final class MicrometerPooledConnectionProviderMeterRegistrar implements ConnectionProvider.MeterRegistrar {
 
-	static void registerMetrics(String poolName, String id, String remoteAddress,
-			InstrumentedPool.PoolMetrics metrics) {
+	static final MicrometerPooledConnectionProviderMeterRegistrar INSTANCE = new MicrometerPooledConnectionProviderMeterRegistrar();
+
+	private MicrometerPooledConnectionProviderMeterRegistrar() {}
+
+	@Override
+	public void registerMetrics(String poolName, String id, SocketAddress remoteAddress,
+								 ConnectionPoolMetrics metrics) {
 		// This is for backwards compatibility and will be removed in the next versions
-		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress};
+		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, addressAsString};
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX + "." + poolName, metrics, tags);
 
-		tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, NAME, poolName};
+		tags = new String[] {ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName};
 		registerMetricsInternal(CONNECTION_PROVIDER_PREFIX, metrics, tags);
 	}
 
-	private static void registerMetricsInternal(String name, InstrumentedPool.PoolMetrics metrics, String... tags) {
-		Gauge.builder(name + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
+	private void registerMetricsInternal(String name, ConnectionPoolMetrics metrics, String... tags) {
+		Gauge.builder(name + TOTAL_CONNECTIONS, metrics, ConnectionPoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(name + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
+		Gauge.builder(name + ACTIVE_CONNECTIONS, metrics, ConnectionPoolMetrics::acquiredSize)
 		     .description("The number of the connections that have been successfully acquired and are in active use")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(name + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
+		Gauge.builder(name + IDLE_CONNECTIONS, metrics, ConnectionPoolMetrics::idleSize)
 		     .description("The number of the idle connections")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(name + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
+		Gauge.builder(name + PENDING_CONNECTIONS, metrics, ConnectionPoolMetrics::pendingAcquireSize)
 		     .description("The number of the request, that are pending acquire a connection")
 		     .tags(tags)
 		     .register(REGISTRY);
