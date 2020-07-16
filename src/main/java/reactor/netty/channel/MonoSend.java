@@ -70,8 +70,6 @@ abstract class MonoSend<I, O> extends Mono<Void> {
 
 	static final Function<Object, Object>   TRANSFORMATION_FUNCTION    = Function.identity();
 
-	static final Consumer<ByteBuf> CONSUMER_BB_NOCHECK_CLEANUP = ByteBuf::release;
-
 	static final Consumer<Object>  CONSUMER_NOCHECK_CLEANUP    = ReferenceCountUtil::release;
 
 	static final ToIntFunction<ByteBuf> SIZE_OF_BB  = ByteBuf::readableBytes;
