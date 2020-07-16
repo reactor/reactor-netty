@@ -290,6 +290,8 @@ public final class ProxyProvider {
 		return password.apply(username);
 	}
 
+	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler("reactor.netty.proxy");
+
 	static final class Build implements TypeSpec, AddressSpec, Builder {
 
 		@SuppressWarnings("UnnecessaryLambda")
@@ -626,7 +628,7 @@ public final class ProxyProvider {
 				           .get(NettyPipeline.LoggingHandler) != null) {
 					pipeline.addBefore(NettyPipeline.ProxyHandler,
 					                   NettyPipeline.ProxyLoggingHandler,
-					                   new LoggingHandler("reactor.netty.proxy"));
+					                   LOGGING_HANDLER);
 				}
 			}
 		}
