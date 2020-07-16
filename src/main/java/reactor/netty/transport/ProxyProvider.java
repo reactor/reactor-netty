@@ -508,8 +508,8 @@ public final class ProxyProvider {
 		 * A standard predicate expression for a configured list of hosts that should be reached directly, bypassing
 		 * the proxy.
 		 *
-		 * @param nonProxyHostsPredicate A Predicate {@link Predicate} on {@link SocketAddress} to determine if the
-		 *                               address should not go through the configured proxy
+		 * @param nonProxyHostsPredicate A Predicate {@link Predicate} on {@link SocketAddress} that returns
+		 * {@literal true} if the host should bypass the configured proxy
 		 * @return {@code this}
 		 */
 		Builder nonProxyHostsPredicate(Predicate<SocketAddress> nonProxyHostsPredicate);
