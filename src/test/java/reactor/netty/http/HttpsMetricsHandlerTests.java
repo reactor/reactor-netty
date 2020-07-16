@@ -99,6 +99,7 @@ public class HttpsMetricsHandlerTests extends HttpMetricsHandlerTests {
 
 		assertTrue(latch.await(30, TimeUnit.SECONDS));
 
+		Thread.sleep(1000);
 		InetSocketAddress sa = (InetSocketAddress) disposableServer.channel().localAddress();
 		String serverAddress = sa.getHostString() + ":" + sa.getPort();
 		String[] summaryTags = new String[]{REMOTE_ADDRESS, serverAddress, URI, "unknown"};
