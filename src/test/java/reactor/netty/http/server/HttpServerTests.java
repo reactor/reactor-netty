@@ -797,14 +797,12 @@ public class HttpServerTests {
 		for (int i = 0; i < 10000; i++) {
 			Mono<String> content = client.post()
 			                             .uri("/")
-			                             .send(ByteBufFlux.fromString(Mono.just(
-					                             "bodysample")
+			                             .send(ByteBufFlux.fromString(Mono.just("bodysample")
 			                                                              .subscriberContext(
-					                                                              c -> {
-						                                                              context.set(
-								                                                              c);
-						                                                              return c;
-					                                                              })))
+			                                                                      c -> {
+			                                                                          context.set(c);
+			                                                                          return c;
+			                                                                      })))
 			                             .responseContent()
 			                             .aggregate()
 			                             .asString()

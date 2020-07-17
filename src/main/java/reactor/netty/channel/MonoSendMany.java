@@ -740,9 +740,8 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return Stream.of(new AbstractMap.SimpleEntry<>(KEY_ON_DISCARD, this));
 			}
 
-			return actualContext
-			             .put(KEY_ON_DISCARD, this)
-			             .stream();
+			return actualContext.put(KEY_ON_DISCARD, this)
+			                    .stream();
 		}
 
 		@SuppressWarnings("rawtypes")
