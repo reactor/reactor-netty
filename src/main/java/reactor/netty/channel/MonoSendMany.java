@@ -76,7 +76,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 	static MonoSendMany<ByteBuf, ByteBuf> byteBufSource(Publisher<? extends ByteBuf> source,
 			Channel channel,
 			Predicate<ByteBuf> predicate) {
-		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION_BB, CONSUMER_BB_NOCHECK_CLEANUP, SIZE_OF_BB);
+		return new MonoSendMany<>(source, channel, predicate, TRANSFORMATION_FUNCTION_BB, CONSUMER_NOCHECK_CLEANUP, SIZE_OF_BB);
 	}
 
 	static MonoSendMany<?, ?> objectSource(Publisher<?> source, Channel channel, Predicate<Object> predicate) {
