@@ -119,6 +119,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		final EventLoop                    eventLoop;
 		final MonoSendMany<I, O>           parent;
 		final CoreSubscriber<? super Void> actual;
+		final Context                      actualContext;
 		final Runnable                     asyncFlush;
 
 
@@ -140,6 +141,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		SendManyInner(MonoSendMany<I, O> parent, CoreSubscriber<? super Void> actual) {
 			this.parent = parent;
 			this.actual = actual;
+			this.actualContext = actual.currentContext();
 			this.requested = MAX_SIZE;
 			this.ctx = parent.ctx;
 			this.eventLoop = ctx.channel().eventLoop();
@@ -181,7 +183,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 		@Override
 		public void onError(Throwable t) {
 			if (terminalSignal != null) {
-				Operators.onErrorDropped(t, actual.currentContext());
+				Operators.onErrorDropped(t, actualContext);
 				return;
 			}
 
@@ -202,7 +204,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 			if (terminalSignal != null) {
 				parent.sourceCleanup.accept(t);
-				Operators.onDiscard(t, actual.currentContext());
+				Operators.onDiscard(t, actualContext);
 				return;
 			}
 
@@ -211,7 +213,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				onError(Operators.onOperatorError(s,
 						Exceptions.failWithOverflow(Exceptions.BACKPRESSURE_ERROR_QUEUE_FULL),
 						t,
-						actual.currentContext()));
+						actualContext));
 				return;
 			}
 			trySchedule();
@@ -287,7 +289,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 						if (s == Operators.cancelledSubscription()) {
 							parent.sourceCleanup.accept(sourceMessage);
-							Operators.onDiscard(sourceMessage, actual.currentContext());
+							Operators.onDiscard(sourceMessage, actualContext);
 							onInterruptionCleanup();
 							return;
 						}
@@ -366,7 +368,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 					actual.onError(t);
 				}
 				else {
-					Operators.onErrorDropped(t, actual.currentContext());
+					Operators.onErrorDropped(t, actualContext);
 				}
 			}
 		}
@@ -422,7 +424,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			catch (Throwable t) {
 				if (Operators.terminate(SUBSCRIPTION, this)) {
 					onInterruptionCleanup();
-					actual.onError(Operators.onRejectedExecution(t, null, null, null, actual.currentContext()));
+					actual.onError(Operators.onRejectedExecution(t, null, null, null, actualContext));
 				}
 			}
 		}
@@ -469,7 +471,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 			if (tryFailure(cause)) {
 				return this;
 			}
-			Operators.onErrorDropped(cause, actual.currentContext());
+			Operators.onErrorDropped(cause, actualContext);
 			return this;
 		}
 
@@ -664,7 +666,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				//        for now we have double releasing issue
 			}
 			// propagates discard to the downstream
-			Operators.onDiscard(i, actual.currentContext());
+			Operators.onDiscard(i, actualContext);
 		}
 
 		// Context interface impl
@@ -675,7 +677,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return (T) this;
 			}
 
-			return actual.currentContext().get(key);
+			return actualContext.get(key);
 		}
 
 		@Override
@@ -684,12 +686,12 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 				return true;
 			}
 
-			return actual.currentContext().hasKey(key);
+			return actualContext.hasKey(key);
 		}
 
 		@Override
 		public Context put(Object key, Object value) {
-			Context context = actual.currentContext();
+			Context context = actualContext;
 
 			if (context.isEmpty()) {
 				if (key == KEY_ON_DISCARD) {
@@ -705,7 +707,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public Context delete(Object key) {
-			Context context = actual.currentContext();
+			Context context = actualContext;
 
 			if (context.isEmpty()) {
 				if (key == KEY_ON_DISCARD) {
@@ -722,7 +724,7 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public int size() {
-			Context context = actual.currentContext();
+			Context context = actualContext;
 			if (context.hasKey(KEY_ON_DISCARD)) {
 				return context.size();
 			}
@@ -732,15 +734,14 @@ final class MonoSendMany<I, O> extends MonoSend<I, O> implements Scannable {
 
 		@Override
 		public Stream<Map.Entry<Object, Object>> stream() {
-			Context context = actual.currentContext();
+			Context context = actualContext;
 
 			if (context.isEmpty()) {
 				return Stream.of(new AbstractMap.SimpleEntry<>(KEY_ON_DISCARD, this));
 			}
 
-			return actual.currentContext()
-			             .put(KEY_ON_DISCARD, this)
-			             .stream();
+			return actualContext.put(KEY_ON_DISCARD, this)
+			                    .stream();
 		}
 
 		@SuppressWarnings("rawtypes")
