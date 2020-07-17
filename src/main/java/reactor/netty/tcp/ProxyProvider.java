@@ -352,7 +352,9 @@ public final class ProxyProvider {
 
 		@Override
 		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
-			return StringUtil.isNullOrEmpty(nonProxyHostsPattern) ? this : nonProxyHostsPredicate(new RegexShouldProxyPredicate(nonProxyHostsPattern));
+			return StringUtil.isNullOrEmpty(nonProxyHostsPattern) ?
+					nonProxyHostsPredicate(ALWAYS_PROXY) :
+					nonProxyHostsPredicate(new RegexShouldProxyPredicate(nonProxyHostsPattern));
 		}
 
 		@Override
