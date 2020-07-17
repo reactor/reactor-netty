@@ -38,8 +38,6 @@ import io.netty.util.internal.StringUtil;
 import reactor.netty.NettyPipeline;
 import reactor.util.annotation.Nullable;
 
-import static reactor.netty.transport.ProxyProvider.Build.ALWAYS_PROXY;
-
 /**
  * Proxy configuration
  *
@@ -95,26 +93,6 @@ public final class ProxyProvider {
 	 */
 	public final Supplier<? extends InetSocketAddress> getAddress() {
 		return this.address;
-	}
-
-	/**
-	 * Regular expression (<code>using java.util.regex</code>) for a configured
-	 * list of hosts that should be reached directly, bypassing the proxy.
-	 *
-	 * @return Regular expression (<code>using java.util.regex</code>) for
-	 * a configured list of hosts that should be reached directly, bypassing the
-	 * proxy.
-	 * @deprecated as of 0.9.10. Use {@link #getNonProxyHostsPredicate()}. This method will be removed in version 1.0.0.
-	 */
-	@Nullable
-	@Deprecated
-	public final Pattern getNonProxyHosts() {
-		if (nonProxyHostPredicate instanceof RegexShouldProxyPredicate) {
-			return ((RegexShouldProxyPredicate) nonProxyHostPredicate).pattern;
-		}
-		else {
-			return null;
-		}
 	}
 
 	/**
@@ -174,21 +152,6 @@ public final class ProxyProvider {
 	 */
 	public boolean shouldProxy(SocketAddress address) {
 		return address instanceof InetSocketAddress && !nonProxyHostPredicate.test(address);
-	}
-
-	/**
-	 * Returns true when the given hostname should be reached via the configured proxy. When the method returns false,
-	 * the client should reach the address directly and bypass the proxy
-	 *
-	 * @param hostName the hostname to test
-	 * @return true if should be proxied
-	 * @deprecated as of 0.9.10. use {@link #shouldProxy(SocketAddress)}. This method will be removed in version 1.0.0.
-	 */
-	@Deprecated
-	public boolean shouldProxy(@Nullable String hostName) {
-		return nonProxyHostPredicate == ALWAYS_PROXY
-				|| hostName == null
-				|| ((nonProxyHostPredicate instanceof RegexShouldProxyPredicate) && !((RegexShouldProxyPredicate) nonProxyHostPredicate).pattern.matcher(hostName).matches());
 	}
 
 	/**
