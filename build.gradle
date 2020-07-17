@@ -387,7 +387,6 @@ configure(rootProject) { project ->
 			// reactor.netty.tcp package
 			"reactor.netty.tcp.SslProvider#asDetailedString()",
 			"reactor.netty.tcp.SslProvider#asSimpleString()",
-			"reactor.netty.tcp.TcpClient#addressSupplier(java.util.function.Supplier)",
 			"reactor.netty.tcp.TcpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
 			"reactor.netty.tcp.TcpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
 			"reactor.netty.tcp.TcpResources#onChannel(io.netty.channel.EventLoopGroup)",
@@ -395,10 +394,12 @@ configure(rootProject) { project ->
 			"reactor.netty.tcp.TcpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
 			"reactor.netty.tcp.TcpResources#preferNative()",
 			"reactor.netty.tcp.TcpServer#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.tcp.TcpServer#bootstrap(java.util.function.Function)",
 			"reactor.netty.tcp.TcpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
 			"reactor.netty.tcp.TcpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
 			// reactor.netty.udp package
 			"reactor.netty.udp.UdpClient#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.udp.UdpClient#bootstrap(java.util.function.Function)",
 			"reactor.netty.udp.UdpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
 			"reactor.netty.udp.UdpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
 			"reactor.netty.udp.UdpResources#onChannel(io.netty.channel.EventLoopGroup)",
@@ -406,6 +407,7 @@ configure(rootProject) { project ->
 			"reactor.netty.udp.UdpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
 			"reactor.netty.udp.UdpResources#preferNative()",
 			"reactor.netty.udp.UdpServer#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.udp.UdpServer#bootstrap(java.util.function.Function)",
 			"reactor.netty.udp.UdpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
 			"reactor.netty.udp.UdpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
 			// reactor.netty package
@@ -429,7 +431,6 @@ configure(rootProject) { project ->
 			"reactor.netty.tcp.SslProvider#removeSslSupport(io.netty.bootstrap.Bootstrap)",
 			"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.Bootstrap, reactor.netty.tcp.SslProvider)",
 			"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.ServerBootstrap, reactor.netty.tcp.SslProvider)",
-			"reactor.netty.tcp.TcpClient#bootstrap(java.util.function.Function)",
 			"reactor.netty.tcp.TcpClient#configure()",
 			"reactor.netty.tcp.TcpClient#connect(io.netty.bootstrap.Bootstrap)",
 			"reactor.netty.tcp.TcpClient#hasProxy()", // Moved to TcpClientConfig
@@ -439,7 +440,6 @@ configure(rootProject) { project ->
 			"reactor.netty.tcp.TcpResources#acquire(io.netty.bootstrap.Bootstrap)",
 			"reactor.netty.tcp.TcpServer#attr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `childAttr`
 			"reactor.netty.tcp.TcpServer#bind(io.netty.bootstrap.ServerBootstrap)",
-			"reactor.netty.tcp.TcpServer#bootstrap(java.util.function.Function)",
 			"reactor.netty.tcp.TcpServer#configure()",
 			"reactor.netty.tcp.TcpServer#isSecure()",// Moved to TcpServerConfig
 			"reactor.netty.tcp.TcpServer#observe(reactor.netty.ConnectionObserver)", // Renamed to `childObserve`
@@ -448,9 +448,7 @@ configure(rootProject) { project ->
 			"reactor.netty.tcp.TcpServer#selectorOption(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `option`
 			"reactor.netty.tcp.TcpServer#sslProvider()", // Moved to TcpServerConfig
 			//reactor.netty.udp package
-			"reactor.netty.udp.UdpClient#bootstrap(java.util.function.Function)",
 			"reactor.netty.udp.UdpServer#bind()",
-			"reactor.netty.udp.UdpServer#bootstrap(java.util.function.Function)",
 			// reactor.netty package
 			"reactor.netty.DisposableChannel#address()" // Returns SocketAddress instead of InetSocketAddress
 		]
@@ -470,7 +468,6 @@ configure(rootProject) { project ->
 			"reactor.netty.channel.BootstrapHandlers", // Removed
 			// reactor.netty.http.client package
 			"reactor.netty.http.client.HttpResponseDecoderSpec",
-			"reactor.netty.http.client.PrematureCloseException", // Serializable
 			// reactor.netty.http.server package
 			"reactor.netty.http.server.HttpRequestDecoderSpec",
 			// reactor.netty.http package
@@ -480,8 +477,6 @@ configure(rootProject) { project ->
 			// reactor.netty.tcp package
 			"reactor.netty.tcp.InetSocketAddressUtil", // Moved and renamed
 			"reactor.netty.tcp.ProxyProvider", // Moved
-			// reactor.netty package
-			"reactor.netty.ChannelBindException" // Serializable
 		]
 		onlyIf {"$compatibleVersion" != "SKIP"}
   }
