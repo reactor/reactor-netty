@@ -56,13 +56,9 @@ public final class ProxyProvider {
 		return new ProxyProvider.Build();
 	}
 
-	@SuppressWarnings("UnnecessaryLambda")
-	static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
-
 	final String username;
 	final Function<? super String, ? extends String> password;
 	final Supplier<? extends InetSocketAddress> address;
-	final Pattern nonProxyHosts;
 	final Predicate<SocketAddress> nonProxyHostPredicate;
 	final Supplier<? extends HttpHeaders> httpHeaders;
 	final Proxy type;
@@ -78,18 +74,7 @@ public final class ProxyProvider {
 		else {
 			this.address = builder.address;
 		}
-		if (builder.nonProxyHosts != null) {
-			this.nonProxyHosts = Pattern.compile(builder.nonProxyHosts, Pattern.CASE_INSENSITIVE);
-		}
-		else {
-			this.nonProxyHosts = null;
-		}
-		if (Objects.isNull(builder.httpHeaders)) {
-			this.httpHeaders = NO_HTTP_HEADERS;
-		}
-		else {
-			this.httpHeaders = builder.httpHeaders;
-		}
+		this.httpHeaders = builder.httpHeaders;
 		this.type = builder.type;
 		this.connectTimeoutMillis = builder.connectTimeoutMillis;
 	}
@@ -124,7 +109,12 @@ public final class ProxyProvider {
 	@Nullable
 	@Deprecated
 	public final Pattern getNonProxyHosts() {
-		return this.nonProxyHosts;
+		if (nonProxyHostPredicate instanceof RegexShouldProxyPredicate) {
+			return ((RegexShouldProxyPredicate) nonProxyHostPredicate).pattern;
+		}
+		else {
+			return null;
+		}
 	}
 
 	/**
@@ -146,11 +136,12 @@ public final class ProxyProvider {
 	 */
 	public final ProxyHandler newProxyHandler() {
 		InetSocketAddress proxyAddr = this.address.get();
-		String username = this.username;
-		String password = Objects.nonNull(username) && Objects.nonNull(this.password) ?
-				this.password.apply(username) : null;
 
 		final boolean b = Objects.nonNull(username) && Objects.nonNull(password);
+
+		String username = this.username;
+		String password = b ? this.password.apply(username) : null;
+
 		final ProxyHandler proxyHandler;
 		switch (this.type) {
 			case HTTP:
@@ -214,7 +205,7 @@ public final class ProxyProvider {
 		if (pipeline.get(NettyPipeline.LoggingHandler) != null) {
 			pipeline.addBefore(NettyPipeline.ProxyHandler,
 					NettyPipeline.ProxyLoggingHandler,
-					new LoggingHandler("reactor.netty.proxy"));
+					LOGGING_HANDLER);
 		}
 	}
 
@@ -251,9 +242,8 @@ public final class ProxyProvider {
 				username, getPasswordValue(), getAddress().get(), getNonProxyHostsValue(), httpHeaders.get(), getType(), connectTimeoutMillis);
 	}
 
-	@Nullable
-	private String getNonProxyHostsValue() {
-		return (getNonProxyHosts() == null) ? null : getNonProxyHosts().toString();
+	private boolean getNonProxyHostsValue() {
+		return nonProxyHostPredicate.test(getAddress().get());
 	}
 
 	@Nullable
@@ -264,7 +254,12 @@ public final class ProxyProvider {
 		return password.apply(username);
 	}
 
+	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler("reactor.netty.proxy");
+
 	static final class Build implements TypeSpec, AddressSpec, Builder {
+
+		@SuppressWarnings("UnnecessaryLambda")
+		static final Supplier<? extends HttpHeaders> NO_HTTP_HEADERS = () -> null;
 
 		@SuppressWarnings("UnnecessaryLambda")
 		static final Predicate<SocketAddress> ALWAYS_PROXY = a -> false;
@@ -275,8 +270,7 @@ public final class ProxyProvider {
 		int port;
 		Supplier<? extends InetSocketAddress> address;
 		Predicate<SocketAddress> nonProxyHostPredicate = ALWAYS_PROXY;
-		String nonProxyHosts;
-		Supplier<? extends HttpHeaders> httpHeaders;
+		Supplier<? extends HttpHeaders> httpHeaders = NO_HTTP_HEADERS;
 		Proxy type;
 		long connectTimeoutMillis = 10000;
 
@@ -322,8 +316,9 @@ public final class ProxyProvider {
 
 		@Override
 		public final Builder nonProxyHosts(String nonProxyHostsPattern) {
-			this.nonProxyHosts = nonProxyHostsPattern;
-			return StringUtil.isNullOrEmpty(nonProxyHostsPattern) ? this : nonProxyHostsPredicate(new RegexShouldProxyPredicate(nonProxyHostsPattern));
+			return StringUtil.isNullOrEmpty(nonProxyHostsPattern) ?
+					nonProxyHostsPredicate(ALWAYS_PROXY) :
+					nonProxyHostsPredicate(new RegexShouldProxyPredicate(nonProxyHostsPattern));
 		}
 
 		@Override
@@ -334,11 +329,13 @@ public final class ProxyProvider {
 
 		@Override
 		public Builder httpHeaders(Consumer<HttpHeaders> headers) {
-			this.httpHeaders = () -> new DefaultHttpHeaders() {
-				{
-					headers.accept(this);
-				}
-			};
+			if (headers != null) {
+				this.httpHeaders = () -> new DefaultHttpHeaders() {
+					{
+						headers.accept(this);
+					}
+				};
+			}
 			return this;
 		}
 

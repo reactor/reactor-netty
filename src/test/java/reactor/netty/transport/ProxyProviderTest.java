@@ -151,15 +151,27 @@ public class ProxyProviderTest {
 	}
 
 	@Test
-	public void nonProxyHosts_null() {
+	public void nonProxyHosts_null_1() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern(null);
 		assertFalse("Should proxy when nonProxyHosts is blanked out", pred.test(someAddress("foo.com")));
 	}
 
 	@Test
-	public void nonProxyHosts_empty() {
+	public void nonProxyHosts_null_2() {
+		assertFalse("Should proxy when nonProxyHosts is blanked out",
+				createNonProxyHostsProxy(null).nonProxyHostPredicate.test(someAddress(NON_PROXY_HOSTS)));
+	}
+
+	@Test
+	public void nonProxyHosts_empty_1() {
 		ProxyProvider.RegexShouldProxyPredicate pred = ProxyProvider.RegexShouldProxyPredicate.fromWildcardedPattern("");
 		assertFalse("Should proxy when nonProxyHosts is blanked out", pred.test(someAddress("foo.com")));
+	}
+
+	@Test
+	public void nonProxyHosts_empty_2() {
+		assertFalse("Should proxy when nonProxyHosts is blanked out",
+				createNonProxyHostsProxy("").nonProxyHostPredicate.test(someAddress(NON_PROXY_HOSTS)));
 	}
 
 	@Test
@@ -198,7 +210,7 @@ public class ProxyProviderTest {
 		return ProxyProvider.builder()
 		                    .type(ProxyProvider.Proxy.SOCKS5)
 		                    .address(address)
-		                    .nonProxyHosts("localhost")
+		                    .nonProxyHosts(NON_PROXY_HOSTS)
 		                    .build();
 	}
 
@@ -215,6 +227,15 @@ public class ProxyProviderTest {
 		                    .type(ProxyProvider.Proxy.SOCKS5)
 		                    .address(ADDRESS_1)
 		                    .connectTimeoutMillis(connectTimeoutMillis)
+		                    .build();
+	}
+
+	private ProxyProvider createNonProxyHostsProxy(String nonProxyHosts) {
+		return ProxyProvider.builder()
+		                    .type(ProxyProvider.Proxy.HTTP)
+		                    .address(ADDRESS_1)
+		                    .nonProxyHosts(NON_PROXY_HOSTS)
+		                    .nonProxyHosts(nonProxyHosts)
 		                    .build();
 	}
 }
