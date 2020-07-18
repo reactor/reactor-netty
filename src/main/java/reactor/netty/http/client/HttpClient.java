@@ -17,6 +17,7 @@ package reactor.netty.http.client;
 
 import java.net.SocketAddress;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -973,6 +974,24 @@ public abstract class HttpClient {
 		Objects.requireNonNull(method, "method");
 		TcpClient tcpConfiguration = tcpConfiguration().bootstrap(b -> HttpClientConfiguration.method(b, method));
 		return new HttpClientFinalizer(tcpConfiguration);
+	}
+
+	/**
+	 * Specifies the request timeout duration in milliseconds.
+	 * This is time that takes to receive a response after sending a request.
+	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no request timeout
+	 * will be applied.
+	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the request timeout.
+	 * The request timeout setting on {@link HttpClientRequest} level overrides any request timeout
+	 * setting on {@link HttpClient} level.
+	 *
+	 * @param timeout the request timeout duration (resolution: ms)
+	 * @return a new {@link HttpClient}
+	 * @since 0.9.11
+	 */
+	@SuppressWarnings("deprecation")
+	public final HttpClient requestTimeout(Duration timeout) {
+		return tcpConfiguration(tcpClient -> tcpClient.bootstrap(b -> HttpClientConfiguration.requestTimeout(b, timeout)));
 	}
 
 	/**

@@ -20,10 +20,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.ClosedChannelException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -62,6 +64,7 @@ import io.netty.handler.codec.http.multipart.HttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
@@ -102,6 +105,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
 	String                      resourceUrl;
 	String                      path;
+	Duration                    requestTimeout;
 
 	volatile ResponseState responseState;
 
@@ -128,6 +132,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.resourceUrl = replaced.resourceUrl;
 		this.path = replaced.path;
+		this.requestTimeout = replaced.requestTimeout;
 	}
 
 	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
@@ -322,6 +327,17 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
+	public HttpClientRequest requestTimeout(Duration timeout) {
+		if (!hasSentHeaders()) {
+			this.requestTimeout = timeout;
+		}
+		else {
+			throw new IllegalStateException("Status and headers already sent");
+		}
+		return this;
+	}
+
+	@Override
 	public boolean isKeepAlive() {
 		ResponseState rs = responseState;
 		if (rs != null) {
@@ -511,6 +527,10 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
+		if (requestTimeout != null) {
+			addHandler(NettyPipeline.RequestTimeoutHandler,
+					new ReadTimeoutHandler(requestTimeout.toMillis(), TimeUnit.MILLISECONDS));
+		}
 		channel().read();
 	}
 

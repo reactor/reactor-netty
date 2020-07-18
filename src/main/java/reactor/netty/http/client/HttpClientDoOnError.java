@@ -16,6 +16,7 @@
 
 package reactor.netty.http.client;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -74,6 +75,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		final Context             context;
 		final ClientCookieDecoder cookieDecoder;
 		final boolean             isWebsocket;
+		final Duration            requestTimeout;
 
 		PreparingHttpClientRequest(Context context, HttpClientConfiguration c) {
 			this.context = context;
@@ -83,6 +85,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 			this.path = HttpOperations.resolvePath(this.uri);
 			this.method = c.method;
 			this.isWebsocket = c.websocketClientSpec != null;
+			this.requestTimeout = c.requestTimeout;
 		}
 
 		@Override
@@ -113,6 +116,11 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		@Override
 		public boolean isFollowRedirect() {
 			return true;
+		}
+
+		@Override
+		public HttpClientRequest requestTimeout(Duration timeout) {
+			throw new UnsupportedOperationException("Should not add request timeout");
 		}
 
 		@Override

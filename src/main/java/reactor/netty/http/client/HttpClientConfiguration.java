@@ -17,6 +17,7 @@
 package reactor.netty.http.client;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -66,6 +67,8 @@ final class HttpClientConfiguration {
 	Consumer<HttpClientRequest> redirectRequestConsumer = null;
 
 	Function<String, String> uriTagValue = null;
+
+	Duration requestTimeout = null;
 
 	Function<Mono<HttpClientConfiguration>, Mono<HttpClientConfiguration>> deferredConf                   = null;
 
@@ -306,6 +309,11 @@ final class HttpClientConfiguration {
 
 	static Bootstrap uriTagValue(Bootstrap b, @Nullable Function<String, String> uriTagValue) {
 		getOrCreate(b).uriTagValue = uriTagValue;
+		return b;
+	}
+
+	static Bootstrap requestTimeout(Bootstrap b, Duration timeout) {
+		getOrCreate(b).requestTimeout = timeout;
 		return b;
 	}
 

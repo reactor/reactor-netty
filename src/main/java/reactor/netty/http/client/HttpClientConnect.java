@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -461,6 +462,7 @@ final class HttpClientConnect extends HttpClient {
 		                              redirectRequestConsumer;
 		final HttpResponseDecoderSpec decoder;
 		final ProxyProvider           proxyProvider;
+		final Duration                requestTimeout;
 
 		volatile UriEndpoint        toURI;
 		volatile UriEndpoint        fromURI;
@@ -478,6 +480,7 @@ final class HttpClientConnect extends HttpClient {
 			this.cookieDecoder = configuration.cookieDecoder;
 			this.decoder = configuration.decoder;
 			this.proxyProvider = proxyProvider;
+			this.requestTimeout = configuration.requestTimeout;
 
 			HttpHeaders defaultHeaders = configuration.headers;
 			if (compress) {
@@ -542,6 +545,7 @@ final class HttpClientConnect extends HttpClient {
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
 				ch.resourceUrl = toURI.toExternalForm();
+				ch.requestTimeout = requestTimeout;
 
 				UriEndpoint uri = toURI;
 				HttpHeaders headers = ch.getNettyRequest()
