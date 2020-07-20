@@ -348,10 +348,6 @@ configure(rootProject) { project ->
 		txtOutputFile = file("${project.buildDir}/reports/japi.txt")
 		ignoreMissingClasses = true
 		includeSynthetic = true
-		methodExcludes = [
-			// this is a method with a default implementation
-			"reactor.netty.resources.LoopResources#onChannelClass(java.lang.Class, io.netty.channel.EventLoopGroup)"
-		]
 		onlyIf {"$compatibleVersion" != "SKIP"}
   }
   tasks.japicmp.dependsOn(downloadBaseline)
