@@ -19,6 +19,8 @@ package reactor.netty.http.client;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
 
+import java.time.Duration;
+
 /**
  * An Http Reactive client metadata contract for outgoing requests. It inherits several
  * accessor related to HTTP flow : headers, params, URI, method, websocket...
@@ -71,4 +73,19 @@ public interface HttpClientRequest extends HttpClientInfos {
 	 * @return true if redirected will be followed
 	 */
 	boolean isFollowRedirect();
+
+	/**
+	 * Specifies the request timeout duration in milliseconds.
+	 * This is time that takes to receive a response after sending a request.
+	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no request timeout
+	 * will be applied.
+	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the request timeout.
+	 * The request timeout setting on {@link HttpClientRequest} level overrides any request timeout
+	 * setting on {@link HttpClient} level.
+	 *
+	 * @param timeout the request timeout duration
+	 * @return this outbound
+	 * @since 0.9.11
+	 */
+	HttpClientRequest requestTimeout(Duration timeout);
 }

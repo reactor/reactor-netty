@@ -18,6 +18,7 @@ package reactor.netty.http.client;
 
 import java.net.SocketAddress;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
@@ -222,6 +223,16 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	/**
+	 * Return the configured request timeout or null
+	 *
+	 * @return the configured request timeout or null
+	 */
+	@Nullable
+	public Duration requestTimeout() {
+		return requestTimeout;
+	}
+
+	/**
 	 * Returns the current {@link SslProvider} if that {@link HttpClient} secured via SSL
 	 * transport or null
 	 *
@@ -288,6 +299,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	HttpProtocol[] protocols;
 	int _protocols;
 	Consumer<HttpClientRequest> redirectRequestConsumer;
+	Duration requestTimeout;
 	boolean retryDisabled;
 	SslProvider sslProvider;
 	URI uri;
@@ -333,6 +345,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 		this.protocols = parent.protocols;
 		this._protocols = parent._protocols;
 		this.redirectRequestConsumer = parent.redirectRequestConsumer;
+		this.requestTimeout = parent.requestTimeout;
 		this.retryDisabled = parent.retryDisabled;
 		this.sslProvider = parent.sslProvider;
 		this.uri = parent.uri;

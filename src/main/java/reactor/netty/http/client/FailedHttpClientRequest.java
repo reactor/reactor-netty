@@ -26,6 +26,7 @@ import reactor.netty.http.Cookies;
 import reactor.netty.http.HttpOperations;
 import reactor.util.context.Context;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,6 +45,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	final boolean             isWebsocket;
 	final HttpMethod          method;
 	final String              path;
+	final Duration            requestTimeout;
 	final String              uri;
 
 	FailedHttpClientRequest(Context context, HttpClientConfig c) {
@@ -54,6 +56,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 		this.method = c.method;
 		this.uri = c.uri == null ? c.uriStr : c.uri.toString();
 		this.path = HttpOperations.resolvePath(this.uri);
+		this.requestTimeout = c.requestTimeout;
 	}
 
 	@Override
@@ -123,13 +126,18 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	}
 
 	@Override
-	public String uri() {
-		return uri;
+	public HttpClientRequest requestTimeout(Duration timeout) {
+		throw new UnsupportedOperationException("Should not add request timeout");
 	}
 
 	@Override
 	public String resourceUrl() {
 		return null;
+	}
+
+	@Override
+	public String uri() {
+		return uri;
 	}
 
 	@Override

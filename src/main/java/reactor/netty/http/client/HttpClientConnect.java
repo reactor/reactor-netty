@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -390,6 +391,7 @@ class HttpClientConnect extends HttpClient {
 		                              redirectRequestConsumer;
 		final HttpResponseDecoderSpec decoder;
 		final ProxyProvider           proxyProvider;
+		final Duration                requestTimeout;
 
 		volatile UriEndpoint        toURI;
 		volatile UriEndpoint        fromURI;
@@ -403,6 +405,7 @@ class HttpClientConnect extends HttpClient {
 			this.redirectRequestConsumer = configuration.redirectRequestConsumer;
 			this.decoder = configuration.decoder;
 			this.proxyProvider = configuration.proxyProvider();
+			this.requestTimeout = configuration.requestTimeout;
 
 			HttpHeaders defaultHeaders = configuration.headers;
 			if (compress) {
@@ -459,6 +462,7 @@ class HttpClientConnect extends HttpClient {
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
 				ch.resourceUrl = toURI.toExternalForm();
+				ch.requestTimeout = requestTimeout;
 
 				UriEndpoint uri = toURI;
 				HttpHeaders headers = ch.getNettyRequest()

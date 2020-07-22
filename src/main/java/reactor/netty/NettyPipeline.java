@@ -44,6 +44,7 @@ import io.netty.channel.ChannelInboundHandler;
  * -> http traffic handler ? [HttpTrafficHandler]
  * -> http metrics ? [HttpMetricsHandler]
  * -> http form/multipart/send file ? [ChunkedWriter]
+ * -> request timeout handler ? [RequestTimeoutHandler]
  * -> http aggregator (websocket) ? [HttpAggregator]
  * -> websocket compression ? [WsCompressionHandler]
  * -> websocket frame aggregator ? [WsFrameAggregator]
@@ -106,6 +107,7 @@ public interface NettyPipeline {
 	String ProxyLoggingHandler   = LEFT + "proxyLoggingHandler";
 	String ProxyProtocolDecoder  = LEFT + "proxyProtocolDecoder";
 	String ProxyProtocolReader   = LEFT + "proxyProtocolReader";
+	String RequestTimeoutHandler = LEFT + "requestTimeoutHandler";
 	String SslHandler            = LEFT + "sslHandler";
 	String SslLoggingHandler     = LEFT + "sslLoggingHandler";
 	String SslReader             = LEFT + "sslReader";

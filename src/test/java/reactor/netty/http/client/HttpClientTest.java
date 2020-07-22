@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -55,6 +56,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -75,6 +77,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import org.junit.After;
@@ -91,6 +94,7 @@ import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.FutureMono;
+import reactor.netty.NettyPipeline;
 import reactor.netty.SocketUtils;
 import reactor.netty.http.server.HttpServer;
 import reactor.netty.resources.ConnectionProvider;
@@ -2400,5 +2404,55 @@ public class HttpClientTest {
 		assertThat(info.redirectedFrom().length).isEqualTo(expectedRedirections);
 		assertThat(info.resourceUrl()).isEqualTo(expectedResourceUri);
 		assertThat(info.requestHeaders().get("testIssue1031")).isEqualTo(expectedLocation);
+	}
+
+	@Test
+	public void testIssue1159() {
+		disposableServer =
+				HttpServer.create()
+				          .port(0)
+				          .wiretap(true)
+				          .handle((req, res) -> res.sendString(Mono.just("testIssue1159")))
+				          .bindNow();
+
+		doTestIssue1159(false, 100);
+		doTestIssue1159(true, 200);
+	}
+
+	private void doTestIssue1159(boolean onHttpRequestLevel, long expectedTimeout) {
+		AtomicBoolean onRequest = new AtomicBoolean();
+		AtomicBoolean onResponse = new AtomicBoolean();
+		AtomicBoolean onDisconnected = new AtomicBoolean();
+		AtomicLong timeout = new AtomicLong();
+		String response =
+				createHttpClientForContextWithAddress()
+				        .doOnRequest((req, conn) -> {
+				            if (onHttpRequestLevel) {
+				                req.requestTimeout(Duration.ofMillis(200));
+				            }
+				            onRequest.set(conn.channel().pipeline().get(NettyPipeline.RequestTimeoutHandler) != null);
+				        })
+				        .doOnResponse((req, conn) -> {
+				            ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.RequestTimeoutHandler);
+				            if (handler != null) {
+				                onResponse.set(true);
+				                timeout.set(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
+				            }
+				        })
+				        .doOnDisconnected(conn ->
+				            onDisconnected.set(conn.channel().pipeline().get(NettyPipeline.RequestTimeoutHandler) != null))
+				        .requestTimeout(Duration.ofMillis(100))
+				        .post()
+				        .uri("/")
+				        .responseContent()
+				        .aggregate()
+				        .asString()
+				        .block(Duration.ofSeconds(30));
+
+		assertThat(response).isEqualTo("testIssue1159");
+		assertThat(onRequest.get()).isFalse();
+		assertThat(onResponse.get()).isTrue();
+		assertThat(onDisconnected.get()).isFalse();
+		assertThat(timeout.get()).isEqualTo(expectedTimeout);
 	}
 }
