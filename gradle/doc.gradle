@@ -14,85 +14,85 @@
  * limitations under the License.
  */
 configure(rootProject) {
-  apply plugin: "java"
-  apply plugin: 'org.asciidoctor.convert'
+	apply plugin: "java"
+	apply plugin: 'org.asciidoctor.convert'
 
-  // put asciidoctor dependencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
-  dependencies {
-	asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.16'
-	asciidoctor 'org.jruby:jruby-complete:9.2.5.0'
-  }
-
-  javadoc {
-	dependsOn jar
-	group = "Reactor Netty Javadoc"
-
-	description = "Generates aggregated Javadoc API documentation."
-	title = "Reactor Netty ${version}"
-
-	if (JavaVersion.current().isJava8Compatible()) {
-	  compileTestJava.options.compilerArgs += "-parameters"
-	  tasks.withType(Javadoc) {
-		options.addStringOption('Xdoclint:none', '-quiet')
-	  }
+	// put asciidoctor dependencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
+	dependencies {
+		asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.16'
+		asciidoctor 'org.jruby:jruby-complete:9.2.5.0'
 	}
 
-	options.addStringOption('charSet', 'UTF-8')
+	javadoc {
+		dependsOn jar
+		group = "Reactor Netty Javadoc"
 
-	options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
-	options.author = true
-	options.header = "Reactor Netty"
-	options.overview = "src/api/overview.html"
-	options.stylesheetFile = file("src/api/stylesheet.css")
-	options.links(rootProject.ext.javadocLinks)
+		description = "Generates aggregated Javadoc API documentation."
+		title = "Reactor Netty ${version}"
 
-	maxMemory = "1024m"
-	destinationDir = new File(buildDir, "docs/javadoc")
-	source rootProject.sourceSets.main.allJava
-	doFirst {
-	  classpath = files(rootProject.sourceSets.main.compileClasspath)
-	}
-  }
+		if (JavaVersion.current().isJava8Compatible()) {
+			compileTestJava.options.compilerArgs += "-parameters"
+			tasks.withType(Javadoc) {
+				options.addStringOption('Xdoclint:none', '-quiet')
+			}
+		}
 
-  asciidoctor {
-	sourceDir "$rootDir/src/docs/asciidoc/"
-	sources {
-	  include "index.asciidoc"
-	}
-	resources {
-	  from(sourceDir) {
-		include 'images/**'
-		include 'highlight/**/*'
-	  }
-	}
-	outputDir file("$buildDir/asciidoc")
-	backends = ['html5', 'pdf']
-	logDocuments = true
-	options = [
-			doctype: 'book'
-	]
-	attributes 'allow-uri-read': '',
-			imagesdir: "images/",
-			stylesdir: "stylesheets/",
-			stylesheet: 'reactor.css',
-			'source-highlighter': 'highlightjs',
-			'highlightjsdir': "./highlight",
-			'highlightjs-theme': 'railscasts'
-  }
+		options.addStringOption('charSet', 'UTF-8')
 
-  task docsZip(type: Zip, dependsOn: asciidoctor) {
-	archiveBaseName.set("reactor-netty")
-  archiveClassifier.set("docs")
-	afterEvaluate() {
-		//we copy the pdf late, when a potential customVersion has been applied to rootProject
-		from("$buildDir/asciidoc/pdf/index.pdf") {
-			into ("docs/")
-			rename("index.pdf", "reactor-netty-reference-guide-${rootProject.version}.pdf")
+		options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
+		options.author = true
+		options.header = "Reactor Netty"
+		options.overview = "src/api/overview.html"
+		options.stylesheetFile = file("src/api/stylesheet.css")
+		options.links(rootProject.ext.javadocLinks)
+
+		maxMemory = "1024m"
+		destinationDir = new File(buildDir, "docs/javadoc")
+		source rootProject.sourceSets.main.allJava
+		doFirst {
+			classpath = files(rootProject.sourceSets.main.compileClasspath)
 		}
 	}
-	from("$buildDir/asciidoc/html5/index.html") { into("docs/") }
-	from("$buildDir/asciidoc/html5/images") { into("docs/images/") }
-	from("$buildDir/asciidoc/html5/highlight") { into("docs/highlight/") }
-  }
+
+	asciidoctor {
+		sourceDir "$rootDir/src/docs/asciidoc/"
+		sources {
+			include "index.asciidoc"
+		}
+		resources {
+			from(sourceDir) {
+				include 'images/**'
+				include 'highlight/**/*'
+			}
+		}
+		outputDir file("$buildDir/asciidoc")
+		backends = ['html5', 'pdf']
+		logDocuments = true
+		options = [
+				doctype: 'book'
+		]
+		attributes 'allow-uri-read': '',
+				imagesdir: "images/",
+				stylesdir: "stylesheets/",
+				stylesheet: 'reactor.css',
+				'source-highlighter': 'highlightjs',
+				'highlightjsdir': "./highlight",
+				'highlightjs-theme': 'railscasts'
+	}
+
+	task docsZip(type: Zip, dependsOn: asciidoctor) {
+		archiveBaseName.set("reactor-netty")
+		archiveClassifier.set("docs")
+		afterEvaluate() {
+			//we copy the pdf late, when a potential customVersion has been applied to rootProject
+			from("$buildDir/asciidoc/pdf/index.pdf") {
+				into("docs/")
+				rename("index.pdf", "reactor-netty-reference-guide-${rootProject.version}.pdf")
+			}
+		}
+		from("$buildDir/asciidoc/html5/index.html") { into("docs/") }
+		from("$buildDir/asciidoc/html5/images") { into("docs/images/") }
+		from("$buildDir/asciidoc/html5/highlight") { into("docs/highlight/") }
+	}
 }
 

@@ -16,209 +16,210 @@
 import me.champeau.gradle.japicmp.JapicmpTask
 
 buildscript {
-  repositories {
-	maven { url "https://repo.spring.io/plugins-release" }
-  }
-  dependencies {
-	classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
-			'com.google.gradle:osdetector-gradle-plugin:1.6.2'
-  }
+	repositories {
+		maven { url "https://repo.spring.io/plugins-release" }
+	}
+	dependencies {
+		classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7',
+				'com.google.gradle:osdetector-gradle-plugin:1.6.2'
+	}
 }
 
 plugins {
-  id "com.github.hierynomus.license" version "0.15.0"
-  id 'org.asciidoctor.convert' version '1.5.11'
-  id 'com.github.johnrengelman.shadow' version '5.2.0'
-  id "com.jfrog.artifactory" version "4.9.8" apply false
-  id "de.undercouch.download" version "4.1.1"
-  id 'me.champeau.gradle.japicmp' version '0.2.9'
+	id "com.github.hierynomus.license" version "0.15.0"
+	id 'org.asciidoctor.convert' version '1.5.11'
+	id 'com.github.johnrengelman.shadow' version '5.2.0'
+	id "com.jfrog.artifactory" version "4.9.8" apply false
+	id "de.undercouch.download" version "4.1.1"
+	id 'me.champeau.gradle.japicmp' version '0.2.9'
 }
 
 description = 'Reactive Streams Netty driver'
 
 ext {
-  if (project.hasProperty('versionBranch') && version.toString().endsWith("-SNAPSHOT")) {
-	versionBranch = versionBranch.replaceAll("\"", "").trim()
-	if (!versionBranch.isEmpty()) {
-	  realVersion = version.toString() + "-" + versionBranch
-	  project.version = realVersion
-	  println "Building special snapshot ${project.version}"
+	if (project.hasProperty('versionBranch') && version.toString().endsWith("-SNAPSHOT")) {
+		versionBranch = versionBranch.replaceAll("\"", "").trim()
+		if (!versionBranch.isEmpty()) {
+			realVersion = version.toString() + "-" + versionBranch
+			project.version = realVersion
+			println "Building special snapshot ${project.version}"
+		}
 	}
-  }
 
-  gradleScriptDir = "${rootProject.projectDir}/gradle"
+	gradleScriptDir = "${rootProject.projectDir}/gradle"
 
-  //Metrics
-  micrometerVersion = '1.5.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
+	//Metrics
+	micrometerVersion = '1.5.0' //optional baseline: technically could work with 1.2.x, should work with any 1.3.x
 
-  jsr305Version = '3.0.2'
+	jsr305Version = '3.0.2'
 
-  // Logging
-  slf4jVersion = '1.7.30'
-  logbackVersion = '1.2.3'
+	// Logging
+	slf4jVersion = '1.7.30'
+	logbackVersion = '1.2.3'
 
-  // Netty
-  nettyDefaultVersion = '4.1.51.Final'
-  if (!project.hasProperty("forceNettyVersion")) {
-	nettyVersion = nettyDefaultVersion
-  }
-  else {
-	nettyVersion = forceNettyVersion
-	println "Netty version defined from command line: ${forceNettyVersion}"
-  }
+	// Netty
+	nettyDefaultVersion = '4.1.51.Final'
+	if (!project.hasProperty("forceNettyVersion")) {
+		nettyVersion = nettyDefaultVersion
+	}
+	else {
+		nettyVersion = forceNettyVersion
+		println "Netty version defined from command line: ${forceNettyVersion}"
+	}
 
-  // Testing
-  jacksonDatabindVersion = '2.11.1'
-  testAddonVersion = reactorCoreVersion
-  hamcrestVersion = '2.2'
-  assertJVersion = '3.16.1'
-  hoverflyJavaVersion = '0.13.1'
-  tomcatVersion = '9.0.37'
-  boringSslVersion = '2.0.31.Final'
-  junitVersion = '4.12'
+	// Testing
+	jacksonDatabindVersion = '2.11.1'
+	testAddonVersion = reactorCoreVersion
+	hamcrestVersion = '2.2'
+	assertJVersion = '3.16.1'
+	hoverflyJavaVersion = '0.13.1'
+	tomcatVersion = '9.0.37'
+	boringSslVersion = '2.0.31.Final'
+	junitVersion = '4.12'
 
-  javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
-				  "https://docs.oracle.com/javaee/6/api/",
-				  "https://fasterxml.github.io/jackson-databind/javadoc/2.5/",
-				  "https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
-				  "https://projectreactor.io/docs/core/release/api/",
-				  "https://netty.io/4.1/api/",
-				  "https://projectreactor.io/docs/netty/release/api/",] as String[]
+	javadocLinks = ["https://docs.oracle.com/javase/7/docs/api/",
+					"https://docs.oracle.com/javaee/6/api/",
+					"https://fasterxml.github.io/jackson-databind/javadoc/2.5/",
+					"https://www.reactive-streams.org/reactive-streams-1.0.3-javadoc/",
+					"https://projectreactor.io/docs/core/release/api/",
+					"https://netty.io/4.1/api/",
+					"https://projectreactor.io/docs/netty/release/api/",] as String[]
 }
 
 
 configure(rootProject) { project ->
-  group = 'io.projectreactor.netty'
+	group = 'io.projectreactor.netty'
 
-  apply plugin: 'java'
-  apply plugin: 'jacoco'
-  apply from: "$gradleScriptDir/releaser.gradle"
-  apply from: "$gradleScriptDir/setup.gradle"
-  apply plugin: 'propdeps'
-  apply from: "${gradleScriptDir}/errorprone.gradle"
-  apply plugin: 'com.google.osdetector'
-  apply plugin: 'idea'
+	apply plugin: 'java'
+	apply plugin: 'jacoco'
+	apply from: "$gradleScriptDir/releaser.gradle"
+	apply from: "$gradleScriptDir/setup.gradle"
+	apply plugin: 'propdeps'
+	apply from: "${gradleScriptDir}/errorprone.gradle"
+	apply plugin: 'com.google.osdetector'
+	apply plugin: 'idea'
 
-  jacoco {
-	toolVersion = '0.8.5'
-  }
-
-  jacocoTestReport {
-	reports {
-	  xml.enabled = true
-	  html.enabled = true
-	}
-  }
-
-  [compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
-														   "-Xlint:cast",
-														   "-Xlint:classfile",
-														   "-Xlint:dep-ann",
-														   "-Xlint:divzero",
-														   "-Xlint:empty",
-														   "-Xlint:finally",
-														   "-Xlint:overrides",
-														   "-Xlint:path",
-														   "-Xlint:processing",
-														   "-Xlint:static",
-														   "-Xlint:try",
-														   "-Xlint:deprecation",
-														   "-Xlint:unchecked",
-														   "-Xlint:-serial",      // intentionally disabled
-														   "-Xlint:-options",     // intentionally disabled
-														   "-Xlint:-fallthrough", // intentionally disabled
-														   "-Xlint:rawtypes"
-  ]
-
-  compileJava {
-	sourceCompatibility = 1.8
-	targetCompatibility = 1.8
-  }
-
-  compileTestJava {
-	sourceCompatibility = 1.8
-	targetCompatibility = 1.8
-  }
-
-  if (JavaVersion.current().isJava8Compatible()) {
-	compileTestJava.options.compilerArgs += "-parameters"
-	tasks.withType(Javadoc) {
-	  options.addStringOption('Xdoclint:none', '-quiet')
-	  options.addStringOption('encoding', 'UTF-8')
-	}
-  }
-
-  [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
-  sourceSets.test.resources.srcDirs = ["src/test/resources", "src/test/java"]
-
-  configurations.all {
-	exclude group: 'commons-logging', module: 'commons-logging'
-  }
-
-  project.tasks.withType(Test).all {
-	// run tests with IPv4 only when IPv6 is available
-	if (project.hasProperty('preferIPv4Stack')) {
-		systemProperty("java.net.preferIPv4Stack", "true")
-	}
-	// run tests with preferring IPv6 addresses
-	if (project.hasProperty('preferIPv6Addresses')) {
-		systemProperty("java.net.preferIPv6Addresses", "true")
-	}
-	systemProperty("java.awt.headless", "true")
-	systemProperty("reactor.trace.cancel", "true")
-	systemProperty("reactor.trace.nocapacity", "true")
-	systemProperty("testGroups", project.properties.get("testGroups"))
-	systemProperty("io.netty.leakDetection.level", "paranoid")
-	scanForTestClasses = false
-	include '**/*Tests.*'
-	include '**/*Test.*'
-	include '**/*Spec.*'
-	exclude '**/*Abstract*.*'
-  }
-
-  test {
-	testLogging {
-	  events  "passed", "failed"
-	  showExceptions true
-	  exceptionFormat "full"
-	  maxGranularity 3
+	jacoco {
+		toolVersion = '0.8.5'
 	}
 
-	onOutput { descriptor, event ->
-	  if (event.message.contains("ResourceLeakDetector")) {
-		logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message )
-	  }
+	jacocoTestReport {
+		reports {
+			xml.enabled = true
+			html.enabled = true
+		}
 	}
-  }
 
-  sourceSets {
-	  examples {
-		compileClasspath += sourceSets.main.output
-		runtimeClasspath += sourceSets.main.output
-	  }
-	  jarFileTest
-  }
+	[compileJava, compileTestJava]*.options*.compilerArgs = ["-Xlint:varargs",
+															 "-Xlint:cast",
+															 "-Xlint:classfile",
+															 "-Xlint:dep-ann",
+															 "-Xlint:divzero",
+															 "-Xlint:empty",
+															 "-Xlint:finally",
+															 "-Xlint:overrides",
+															 "-Xlint:path",
+															 "-Xlint:processing",
+															 "-Xlint:static",
+															 "-Xlint:try",
+															 "-Xlint:deprecation",
+															 "-Xlint:unchecked",
+															 "-Xlint:-serial",      // intentionally disabled
+															 "-Xlint:-options",     // intentionally disabled
+															 "-Xlint:-fallthrough", // intentionally disabled
+															 "-Xlint:rawtypes"
+	]
+
+	compileJava {
+		sourceCompatibility = 1.8
+		targetCompatibility = 1.8
+	}
+
+	compileTestJava {
+		sourceCompatibility = 1.8
+		targetCompatibility = 1.8
+	}
+
+	if (JavaVersion.current().isJava8Compatible()) {
+		compileTestJava.options.compilerArgs += "-parameters"
+		tasks.withType(Javadoc) {
+			options.addStringOption('Xdoclint:none', '-quiet')
+			options.addStringOption('encoding', 'UTF-8')
+		}
+	}
+
+	[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+	sourceSets.test.resources.srcDirs = ["src/test/resources", "src/test/java"]
+
+	configurations.all {
+		exclude group: 'commons-logging', module: 'commons-logging'
+	}
+
+	project.tasks.withType(Test).all {
+		// run tests with IPv4 only when IPv6 is available
+		if (project.hasProperty('preferIPv4Stack')) {
+			systemProperty("java.net.preferIPv4Stack", "true")
+		}
+		// run tests with preferring IPv6 addresses
+		if (project.hasProperty('preferIPv6Addresses')) {
+			systemProperty("java.net.preferIPv6Addresses", "true")
+		}
+		systemProperty("java.awt.headless", "true")
+		systemProperty("reactor.trace.cancel", "true")
+		systemProperty("reactor.trace.nocapacity", "true")
+		systemProperty("testGroups", project.properties.get("testGroups"))
+		systemProperty("io.netty.leakDetection.level", "paranoid")
+		scanForTestClasses = false
+		include '**/*Tests.*'
+		include '**/*Test.*'
+		include '**/*Spec.*'
+		exclude '**/*Abstract*.*'
+	}
+
+	test {
+		testLogging {
+			events "passed", "failed"
+			showExceptions true
+			exceptionFormat "full"
+			maxGranularity 3
+		}
+
+		onOutput { descriptor, event ->
+			if (event.message.contains("ResourceLeakDetector")) {
+				logger.error("ERROR: Test: " + descriptor + " produced resource leak: " + event.message)
+			}
+		}
+	}
+
+	sourceSets {
+		examples {
+			compileClasspath += sourceSets.main.output
+			runtimeClasspath += sourceSets.main.output
+		}
+		jarFileTest
+	}
 
 	//TODO evaluate if this is still necessary, if not remove that and `idea` plugin
 	idea.module.testSourceDirs += sourceSets.jarFileTest.allSource.srcDirs
 	idea.module.testSourceDirs += sourceSets.examples.allSource.srcDirs
 
 	repositories {
-	mavenCentral()
-	if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
-	  if (System.getenv ()["bamboo_buildNumber"] == null) {
-		mavenLocal()
-	  } else {
-		println 'Bamboo CI detected, avoiding use of mavenLocal()'
-	  }
-	  maven { url 'https://repo.spring.io/libs-snapshot' }
-	  maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+		mavenCentral()
+		if (version.endsWith('-SNAPSHOT') || version.contains('-SNAPSHOT-')) { //classic or customized snapshots
+			if (System.getenv()["bamboo_buildNumber"] == null) {
+				mavenLocal()
+			}
+			else {
+				println 'Bamboo CI detected, avoiding use of mavenLocal()'
+			}
+			maven { url 'https://repo.spring.io/libs-snapshot' }
+			maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+		}
+		maven { url 'https://repo.spring.io/libs-milestone' }
+		maven { url 'https://repo.spring.io/libs-release' }
+		maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+		jcenter()
 	}
-	maven { url 'https://repo.spring.io/libs-milestone' }
-	maven { url 'https://repo.spring.io/libs-release' }
-	maven { url "https://oss.sonatype.org/content/repositories/releases/" }
-	jcenter()
-  }
 
 	def os_suffix = ""
 	if (osdetector.classifier in ["linux-x86_64"] || ["osx-x86_64"] || ["windows-x86_64"]) {
@@ -232,91 +233,91 @@ configure(rootProject) { project ->
 	}
 
 	// dependencies that are common across all java projects
-  dependencies {
-	// JSR-305 annotations
-	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+	dependencies {
+		// JSR-305 annotations
+		compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
 
-	compile "io.netty:netty-handler-proxy:$nettyVersion"
-	compile "io.netty:netty-codec-http2:$nettyVersion"
-	optional "io.netty:netty-codec-haproxy:$nettyVersion"
+		compile "io.netty:netty-handler-proxy:$nettyVersion"
+		compile "io.netty:netty-codec-http2:$nettyVersion"
+		optional "io.netty:netty-codec-haproxy:$nettyVersion"
 
-	//Metrics
-	optional "io.micrometer:micrometer-core:$micrometerVersion"
+		//Metrics
+		optional "io.micrometer:micrometer-core:$micrometerVersion"
 
-	// Logging
-	optional "org.slf4j:slf4j-api:$slf4jVersion"
+		// Logging
+		optional "org.slf4j:slf4j-api:$slf4jVersion"
 
-	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
-	shaded("io.projectreactor.addons:reactor-pool:$reactorPoolVersion") {
-		exclude module: "reactor-core"
-	}
-
-	compile "io.netty:netty-handler:$nettyVersion"
-	compile "io.netty:netty-codec-http:$nettyVersion"
-
-	//transport resolution: typical build forces epoll but not kqueue transitively
-	//on the other hand, if we want to make transport-specific tests, we'll make all
-	// native optional at compile time and add correct native/nio to testRuntime
-	if (project.hasProperty("forceTransport")) {
-	  //so that the main code compiles
-	  optional "io.netty:netty-transport-native-epoll:$nettyVersion"
-	  optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
-	  //now we explicitly add correctly qualified native, or do nothing if we want to test NIO
-	  if (forceTransport == "native") {
-		if (osdetector.os == "osx") {
-		  testRuntime "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
+		compile "io.projectreactor:reactor-core:$reactorCoreVersion"
+		shaded("io.projectreactor.addons:reactor-pool:$reactorPoolVersion") {
+			exclude module: "reactor-core"
 		}
-		else if (osdetector.os == "linux") {
-		  testRuntime "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
+
+		compile "io.netty:netty-handler:$nettyVersion"
+		compile "io.netty:netty-codec-http:$nettyVersion"
+
+		//transport resolution: typical build forces epoll but not kqueue transitively
+		//on the other hand, if we want to make transport-specific tests, we'll make all
+		// native optional at compile time and add correct native/nio to testRuntime
+		if (project.hasProperty("forceTransport")) {
+			//so that the main code compiles
+			optional "io.netty:netty-transport-native-epoll:$nettyVersion"
+			optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
+			//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
+			if (forceTransport == "native") {
+				if (osdetector.os == "osx") {
+					testRuntime "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
+				}
+				else if (osdetector.os == "linux") {
+					testRuntime "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
+				}
+			}
+			else if (forceTransport != "nio") {
+				throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
+			}
 		}
-	  }
-	  else if (forceTransport != "nio") {
-		throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
-	  }
+		else {
+			//classic build to be distributed
+			compile "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
+			optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		}
+
+		// Testing
+		testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+		testCompile "io.projectreactor:reactor-test:$testAddonVersion"
+		testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
+		testCompile "org.assertj:assertj-core:$assertJVersion"
+		testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
+		testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
+		testCompile "junit:junit:$junitVersion"
+
+		testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
+		testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
+		// Needed for HTTP/2 testing
+		testRuntime "io.netty:netty-tcnative-boringssl-static:$boringSslVersion" + os_suffix
+
+		jarFileTestCompile "org.assertj:assertj-core:$assertJVersion"
+		jarFileTestCompile "junit:junit:$junitVersion"
+
+		examplesRuntime "ch.qos.logback:logback-classic:$logbackVersion"
+		examplesRuntime "io.netty:netty-tcnative-boringssl-static:$boringSslVersion" + os_suffix
+
+		for (dependency in project.configurations.shaded.dependencies) {
+			compileOnly(dependency)
+		}
 	}
-	else {
-	  //classic build to be distributed
-	  compile "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
-	  optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
+
+	jar {
+		classifier = 'original'
+
+		manifest {
+			attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
+					"Implementation-Title": project.name,
+					"Implementation-Version": project.version,
+					"Automatic-Module-Name": "reactor.netty")
+		}
 	}
 
-	// Testing
-	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
-	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
-	testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
-	testCompile "org.assertj:assertj-core:$assertJVersion"
-	testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
-	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
-	testCompile "junit:junit:$junitVersion"
-
-	testRuntime "org.slf4j:jcl-over-slf4j:$slf4jVersion"
-	testRuntime "ch.qos.logback:logback-classic:$logbackVersion"
-	// Needed for HTTP/2 testing
-	testRuntime "io.netty:netty-tcnative-boringssl-static:$boringSslVersion" + os_suffix
-
-	jarFileTestCompile "org.assertj:assertj-core:$assertJVersion"
-	jarFileTestCompile "junit:junit:$junitVersion"
-
-	examplesRuntime "ch.qos.logback:logback-classic:$logbackVersion"
-	examplesRuntime "io.netty:netty-tcnative-boringssl-static:$boringSslVersion" + os_suffix
-
-	for (dependency in project.configurations.shaded.dependencies) {
-	    compileOnly(dependency)
-	}
-  }
-
-  jar {
-	classifier = 'original'
-
-	manifest {
-	  attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
-			  "Implementation-Title": project.name,
-			  "Implementation-Version": project.version,
-			  "Automatic-Module-Name": "reactor.netty")
-	}
-  }
-
-  task downloadBaseline(type: Download) {
+	task downloadBaseline(type: Download) {
 		onlyIf {
 			if (project.gradle.startParameter.isOffline()) {
 				println "Offline: skipping downloading of baseline and JAPICMP"
@@ -336,9 +337,9 @@ configure(rootProject) { project ->
 		compress true
 		src "https://repo.spring.io/libs-snapshot/io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}.jar"
 		dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar"
-  }
+	}
 
-  task japicmp(type: JapicmpTask) {
+	task japicmp(type: JapicmpTask) {
 		oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar")
 		newClasspath = files(shadowJar.archiveFile)
 		onlyBinaryIncompatibleModified = true
@@ -348,235 +349,235 @@ configure(rootProject) { project ->
 		ignoreMissingClasses = true
 		includeSynthetic = true
 		methodExcludes = [
-			// Deprecated methods in 0.9.x that are removed in 1.0.0
-			// reactor.netty.http.client package
-			"reactor.netty.http.client.HttpClient#addressSupplier(java.util.function.Supplier)",
-			"reactor.netty.http.client.HttpClient#doAfterResponse(java.util.function.BiConsumer)",
-			"reactor.netty.http.client.HttpClient#metrics(boolean)",
-			"reactor.netty.http.client.HttpClient#metrics(boolean, reactor.netty.http.client.HttpClientMetricsRecorder)",
-			"reactor.netty.http.client.HttpClient#websocket(java.lang.String)",
-			"reactor.netty.http.client.HttpClient#websocket(int)",
-			"reactor.netty.http.client.HttpClient#websocket(boolean)",
-			"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int)",
-			"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int, boolean)",
-			// reactor.netty.http.server package
-			"reactor.netty.http.server.HttpServer#metrics(boolean)",
-			"reactor.netty.http.server.HttpServer#metrics(boolean, reactor.netty.http.server.HttpServerMetricsRecorder)",
-			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(boolean, java.util.function.BiFunction)",
-			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, java.util.function.BiFunction)",
-			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, java.util.function.BiFunction)",
-			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, boolean, java.util.function.BiFunction)",
-			"reactor.netty.http.server.HttpServerRoutes#ws(java.lang.String, java.util.function.BiFunction, java.lang.String)",
-			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String)",
-			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int)",
-			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int, boolean)",
-			// reactor.netty.resources package
-			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String)",
-			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration)",
-			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration, java.time.Duration)",
-			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String)",
-			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int)",
-			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long)",
-			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration)",
-			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration, java.time.Duration)",
-			"reactor.netty.resources.ConnectionProvider#maxConnections()",
-			"reactor.netty.resources.LoopResources#onChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.resources.LoopResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.resources.LoopResources#onServerChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.resources.LoopResources#preferNative()",
-			// reactor.netty.tcp package
-			"reactor.netty.tcp.SslProvider#asDetailedString()",
-			"reactor.netty.tcp.SslProvider#asSimpleString()",
-			"reactor.netty.tcp.TcpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
-			"reactor.netty.tcp.TcpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
-			"reactor.netty.tcp.TcpResources#onChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.tcp.TcpResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.tcp.TcpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.tcp.TcpResources#preferNative()",
-			"reactor.netty.tcp.TcpServer#addressSupplier(java.util.function.Supplier)",
-			"reactor.netty.tcp.TcpServer#bootstrap(java.util.function.Function)",
-			"reactor.netty.tcp.TcpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
-			"reactor.netty.tcp.TcpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
-			// reactor.netty.udp package
-			"reactor.netty.udp.UdpClient#addressSupplier(java.util.function.Supplier)",
-			"reactor.netty.udp.UdpClient#bootstrap(java.util.function.Function)",
-			"reactor.netty.udp.UdpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
-			"reactor.netty.udp.UdpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
-			"reactor.netty.udp.UdpResources#onChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.udp.UdpResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.udp.UdpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
-			"reactor.netty.udp.UdpResources#preferNative()",
-			"reactor.netty.udp.UdpServer#addressSupplier(java.util.function.Supplier)",
-			"reactor.netty.udp.UdpServer#bootstrap(java.util.function.Function)",
-			"reactor.netty.udp.UdpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
-			"reactor.netty.udp.UdpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
-			// reactor.netty package
-			"reactor.netty.ChannelBindException#fail(io.netty.bootstrap.AbstractBootstrap, java.lang.Throwable)",
+				// Deprecated methods in 0.9.x that are removed in 1.0.0
+				// reactor.netty.http.client package
+				"reactor.netty.http.client.HttpClient#addressSupplier(java.util.function.Supplier)",
+				"reactor.netty.http.client.HttpClient#doAfterResponse(java.util.function.BiConsumer)",
+				"reactor.netty.http.client.HttpClient#metrics(boolean)",
+				"reactor.netty.http.client.HttpClient#metrics(boolean, reactor.netty.http.client.HttpClientMetricsRecorder)",
+				"reactor.netty.http.client.HttpClient#websocket(java.lang.String)",
+				"reactor.netty.http.client.HttpClient#websocket(int)",
+				"reactor.netty.http.client.HttpClient#websocket(boolean)",
+				"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int)",
+				"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int, boolean)",
+				// reactor.netty.http.server package
+				"reactor.netty.http.server.HttpServer#metrics(boolean)",
+				"reactor.netty.http.server.HttpServer#metrics(boolean, reactor.netty.http.server.HttpServerMetricsRecorder)",
+				"reactor.netty.http.server.HttpServerResponse#sendWebsocket(boolean, java.util.function.BiFunction)",
+				"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, java.util.function.BiFunction)",
+				"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, java.util.function.BiFunction)",
+				"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, boolean, java.util.function.BiFunction)",
+				"reactor.netty.http.server.HttpServerRoutes#ws(java.lang.String, java.util.function.BiFunction, java.lang.String)",
+				"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String)",
+				"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int)",
+				"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int, boolean)",
+				// reactor.netty.resources package
+				"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String)",
+				"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration)",
+				"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration, java.time.Duration)",
+				"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String)",
+				"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int)",
+				"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long)",
+				"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration)",
+				"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration, java.time.Duration)",
+				"reactor.netty.resources.ConnectionProvider#maxConnections()",
+				"reactor.netty.resources.LoopResources#onChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.resources.LoopResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.resources.LoopResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.resources.LoopResources#preferNative()",
+				// reactor.netty.tcp package
+				"reactor.netty.tcp.SslProvider#asDetailedString()",
+				"reactor.netty.tcp.SslProvider#asSimpleString()",
+				"reactor.netty.tcp.TcpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+				"reactor.netty.tcp.TcpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+				"reactor.netty.tcp.TcpResources#onChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.tcp.TcpResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.tcp.TcpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.tcp.TcpResources#preferNative()",
+				"reactor.netty.tcp.TcpServer#addressSupplier(java.util.function.Supplier)",
+				"reactor.netty.tcp.TcpServer#bootstrap(java.util.function.Function)",
+				"reactor.netty.tcp.TcpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+				"reactor.netty.tcp.TcpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+				// reactor.netty.udp package
+				"reactor.netty.udp.UdpClient#addressSupplier(java.util.function.Supplier)",
+				"reactor.netty.udp.UdpClient#bootstrap(java.util.function.Function)",
+				"reactor.netty.udp.UdpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+				"reactor.netty.udp.UdpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+				"reactor.netty.udp.UdpResources#onChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.udp.UdpResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.udp.UdpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+				"reactor.netty.udp.UdpResources#preferNative()",
+				"reactor.netty.udp.UdpServer#addressSupplier(java.util.function.Supplier)",
+				"reactor.netty.udp.UdpServer#bootstrap(java.util.function.Function)",
+				"reactor.netty.udp.UdpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+				"reactor.netty.udp.UdpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+				// reactor.netty package
+				"reactor.netty.ChannelBindException#fail(io.netty.bootstrap.AbstractBootstrap, java.lang.Throwable)",
 
-			// New methods added in 1.0.0 with default implementation
-			// reactor.netty package
-			"reactor.netty.DisposableServer#address()",
-			"reactor.netty.DisposableServer#path()",
+				// New methods added in 1.0.0 with default implementation
+				// reactor.netty package
+				"reactor.netty.DisposableServer#address()",
+				"reactor.netty.DisposableServer#path()",
 
-			// !!!Backwards incompatible changes!!!
-			// reactor.netty.http.client package
-			"reactor.netty.http.client.HttpClient#mapConnect(java.util.function.BiFunction)",
-			// reactor.netty.http.server package
-			"reactor.netty.http.server.HttpServer#observe(reactor.netty.ConnectionObserver)", // Renamed to `childObserve`
-			// reactor.netty.resources package
-			"reactor.netty.resources.ConnectionProvider#acquire(io.netty.bootstrap.Bootstrap)",
-			// reactor.netty.tcp package
-			"reactor.netty.tcp.SslProvider#findSslSupport(io.netty.bootstrap.Bootstrap)",
-			"reactor.netty.tcp.SslProvider#findSslSupport(io.netty.bootstrap.ServerBootstrap)",
-			"reactor.netty.tcp.SslProvider#removeSslSupport(io.netty.bootstrap.Bootstrap)",
-			"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.Bootstrap, reactor.netty.tcp.SslProvider)",
-			"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.ServerBootstrap, reactor.netty.tcp.SslProvider)",
-			"reactor.netty.tcp.TcpClient#configure()",
-			"reactor.netty.tcp.TcpClient#connect(io.netty.bootstrap.Bootstrap)",
-			"reactor.netty.tcp.TcpClient#hasProxy()", // Moved to TcpClientConfig
-			"reactor.netty.tcp.TcpClient#isSecure()", // Moved to TcpClientConfig
-			"reactor.netty.tcp.TcpClient#proxyProvider()", // Moved to TcpClientConfig
-			"reactor.netty.tcp.TcpClient#sslProvider()", // Moved to TcpClientConfig
-			"reactor.netty.tcp.TcpResources#acquire(io.netty.bootstrap.Bootstrap)",
-			"reactor.netty.tcp.TcpServer#attr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `childAttr`
-			"reactor.netty.tcp.TcpServer#bind(io.netty.bootstrap.ServerBootstrap)",
-			"reactor.netty.tcp.TcpServer#configure()",
-			"reactor.netty.tcp.TcpServer#isSecure()",// Moved to TcpServerConfig
-			"reactor.netty.tcp.TcpServer#observe(reactor.netty.ConnectionObserver)", // Renamed to `childObserve`
-			"reactor.netty.tcp.TcpServer#option(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `childOption`
-			"reactor.netty.tcp.TcpServer#selectorAttr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `attr`
-			"reactor.netty.tcp.TcpServer#selectorOption(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `option`
-			"reactor.netty.tcp.TcpServer#sslProvider()", // Moved to TcpServerConfig
-			//reactor.netty.udp package
-			"reactor.netty.udp.UdpServer#bind()",
-			// reactor.netty package
-			"reactor.netty.DisposableChannel#address()" // Returns SocketAddress instead of InetSocketAddress
+				// !!!Backwards incompatible changes!!!
+				// reactor.netty.http.client package
+				"reactor.netty.http.client.HttpClient#mapConnect(java.util.function.BiFunction)",
+				// reactor.netty.http.server package
+				"reactor.netty.http.server.HttpServer#observe(reactor.netty.ConnectionObserver)", // Renamed to `childObserve`
+				// reactor.netty.resources package
+				"reactor.netty.resources.ConnectionProvider#acquire(io.netty.bootstrap.Bootstrap)",
+				// reactor.netty.tcp package
+				"reactor.netty.tcp.SslProvider#findSslSupport(io.netty.bootstrap.Bootstrap)",
+				"reactor.netty.tcp.SslProvider#findSslSupport(io.netty.bootstrap.ServerBootstrap)",
+				"reactor.netty.tcp.SslProvider#removeSslSupport(io.netty.bootstrap.Bootstrap)",
+				"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.Bootstrap, reactor.netty.tcp.SslProvider)",
+				"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.ServerBootstrap, reactor.netty.tcp.SslProvider)",
+				"reactor.netty.tcp.TcpClient#configure()",
+				"reactor.netty.tcp.TcpClient#connect(io.netty.bootstrap.Bootstrap)",
+				"reactor.netty.tcp.TcpClient#hasProxy()", // Moved to TcpClientConfig
+				"reactor.netty.tcp.TcpClient#isSecure()", // Moved to TcpClientConfig
+				"reactor.netty.tcp.TcpClient#proxyProvider()", // Moved to TcpClientConfig
+				"reactor.netty.tcp.TcpClient#sslProvider()", // Moved to TcpClientConfig
+				"reactor.netty.tcp.TcpResources#acquire(io.netty.bootstrap.Bootstrap)",
+				"reactor.netty.tcp.TcpServer#attr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `childAttr`
+				"reactor.netty.tcp.TcpServer#bind(io.netty.bootstrap.ServerBootstrap)",
+				"reactor.netty.tcp.TcpServer#configure()",
+				"reactor.netty.tcp.TcpServer#isSecure()",// Moved to TcpServerConfig
+				"reactor.netty.tcp.TcpServer#observe(reactor.netty.ConnectionObserver)", // Renamed to `childObserve`
+				"reactor.netty.tcp.TcpServer#option(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `childOption`
+				"reactor.netty.tcp.TcpServer#selectorAttr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `attr`
+				"reactor.netty.tcp.TcpServer#selectorOption(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `option`
+				"reactor.netty.tcp.TcpServer#sslProvider()", // Moved to TcpServerConfig
+				//reactor.netty.udp package
+				"reactor.netty.udp.UdpServer#bind()",
+				// reactor.netty package
+				"reactor.netty.DisposableChannel#address()" // Returns SocketAddress instead of InetSocketAddress
 		]
 		fieldExcludes = [
-			// Deprecated fields in 0.9.x that are removed in 1.0.0
-			// reactor.netty.http.client package
-			"reactor.netty.http.client.PrematureCloseException#DURING_RESPONSE",
-			"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE_SENDING_REQUEST",
-			"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE",
-			// reactor.netty package
-			"reactor.netty.NettyPipeline#HttpInitializer",
-			"reactor.netty.NettyPipeline#SslMetricsHandler"
+				// Deprecated fields in 0.9.x that are removed in 1.0.0
+				// reactor.netty.http.client package
+				"reactor.netty.http.client.PrematureCloseException#DURING_RESPONSE",
+				"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE_SENDING_REQUEST",
+				"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE",
+				// reactor.netty package
+				"reactor.netty.NettyPipeline#HttpInitializer",
+				"reactor.netty.NettyPipeline#SslMetricsHandler"
 		]
 		classExcludes = [
-			// !!!Backwards incompatible changes!!!
-			// reactor.netty.channel package
-			"reactor.netty.channel.BootstrapHandlers", // Removed
-			// reactor.netty.http.client package
-			"reactor.netty.http.client.HttpResponseDecoderSpec",
-			// reactor.netty.http.server package
-			"reactor.netty.http.server.HttpRequestDecoderSpec",
-			// reactor.netty.http package
-			"reactor.netty.http.HttpResources", // Method changed in super class
-			// reactor.netty.resources package
-			"reactor.netty.resources.PooledConnectionProvider", // Renamed to DefaultPooledConnectionProvider
-			// reactor.netty.tcp package
-			"reactor.netty.tcp.InetSocketAddressUtil", // Moved and renamed
-			"reactor.netty.tcp.ProxyProvider", // Moved
+				// !!!Backwards incompatible changes!!!
+				// reactor.netty.channel package
+				"reactor.netty.channel.BootstrapHandlers", // Removed
+				// reactor.netty.http.client package
+				"reactor.netty.http.client.HttpResponseDecoderSpec",
+				// reactor.netty.http.server package
+				"reactor.netty.http.server.HttpRequestDecoderSpec",
+				// reactor.netty.http package
+				"reactor.netty.http.HttpResources", // Method changed in super class
+				// reactor.netty.resources package
+				"reactor.netty.resources.PooledConnectionProvider", // Renamed to DefaultPooledConnectionProvider
+				// reactor.netty.tcp package
+				"reactor.netty.tcp.InetSocketAddressUtil", // Moved and renamed
+				"reactor.netty.tcp.ProxyProvider", // Moved
 		]
-		onlyIf {"$compatibleVersion" != "SKIP"}
-  }
-  tasks.japicmp.dependsOn(downloadBaseline)
-  shadowJar.finalizedBy(japicmp)
+		onlyIf { "$compatibleVersion" != "SKIP" }
+	}
+	tasks.japicmp.dependsOn(downloadBaseline)
+	shadowJar.finalizedBy(japicmp)
 
-  check.dependsOn jacocoTestReport
+	check.dependsOn jacocoTestReport
 
-  shadowJar {
-	  classifier = null
+	shadowJar {
+		classifier = null
 
-	  dependsOn(project.tasks.jar)
+		dependsOn(project.tasks.jar)
 
-	  manifest {
-		  inheritFrom project.tasks.jar.manifest
-	  }
+		manifest {
+			inheritFrom project.tasks.jar.manifest
+		}
 
-	  configurations = [project.configurations.shaded]
+		configurations = [project.configurations.shaded]
 
-	  project.afterEvaluate {
-		  dependencies {
-			  def shadedDependencies = project.configurations
-					  .shaded
-					  .dependencies
-					  .collect { "${it.group}:${it.name}".toString() }
-					  .toSet()
+		project.afterEvaluate {
+			dependencies {
+				def shadedDependencies = project.configurations
+						.shaded
+						.dependencies
+						.collect { "${it.group}:${it.name}".toString() }
+						.toSet()
 
-			  // Exclude every compile-scoped dependency (including the transitive ones)
-			  for (id in project.configurations.compile.resolvedConfiguration.resolvedArtifacts*.moduleVersion*.id) {
-				  def module = "${id.group}:${id.name}".toString()
-				  if (!shadedDependencies.contains(module)) {
-					  project.configurations.shaded.exclude(group: id.group, module: id.name)
-					  exclude(dependency(module))
-				  }
-			  }
-		  }
-	  }
+				// Exclude every compile-scoped dependency (including the transitive ones)
+				for (id in project.configurations.compile.resolvedConfiguration.resolvedArtifacts*.moduleVersion*.id) {
+					def module = "${id.group}:${id.name}".toString()
+					if (!shadedDependencies.contains(module)) {
+						project.configurations.shaded.exclude(group: id.group, module: id.name)
+						exclude(dependency(module))
+					}
+				}
+			}
+		}
 
-	  exclude 'META-INF/maven*/**'
-  }
+		exclude 'META-INF/maven*/**'
+	}
 
-  task relocateShadowJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation) {
-	  target = tasks.shadowJar
-	  prefix = "reactor.netty.internal.shaded"
-  }
+	task relocateShadowJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation) {
+		target = tasks.shadowJar
+		prefix = "reactor.netty.internal.shaded"
+	}
 
-  tasks.shadowJar.dependsOn tasks.relocateShadowJar
+	tasks.shadowJar.dependsOn tasks.relocateShadowJar
 
-  //add shadowJar to the publication
-  publishing.publications.mavenJava.artifact(shadowJar)
+	//add shadowJar to the publication
+	publishing.publications.mavenJava.artifact(shadowJar)
 
-  task jarFileTest(type: Test) {
-	  testClassesDirs = sourceSets.jarFileTest.output.classesDirs
-	  classpath = sourceSets.jarFileTest.runtimeClasspath
+	task jarFileTest(type: Test) {
+		testClassesDirs = sourceSets.jarFileTest.output.classesDirs
+		classpath = sourceSets.jarFileTest.runtimeClasspath
 
-	  systemProperty("jarFile", shadowJar.outputs.files.singleFile)
+		systemProperty("jarFile", shadowJar.outputs.files.singleFile)
 
-	  dependsOn(shadowJar)
-  }
-  project.tasks.check.dependsOn(jarFileTest)
+		dependsOn(shadowJar)
+	}
+	project.tasks.check.dependsOn(jarFileTest)
 
-  task examples(type: Jar) {
-	  from sourceSets.examples.output
-  }
-  project.tasks.check.dependsOn(examples)
+	task examples(type: Jar) {
+		from sourceSets.examples.output
+	}
+	project.tasks.check.dependsOn(examples)
 
-  project.tasks.compileTestJava.classpath += configurations.shaded
-  project.tasks.test.classpath += configurations.shaded
+	project.tasks.compileTestJava.classpath += configurations.shaded
+	project.tasks.test.classpath += configurations.shaded
 
-  task shadedJarTest(type: Test) {
-	  testClassesDirs = sourceSets.test.output.classesDirs
+	task shadedJarTest(type: Test) {
+		testClassesDirs = sourceSets.test.output.classesDirs
 
-	  Set<? super File> mainOutputs = [
-			  project.sourceSets.main.output.resourcesDir,
-			  project.sourceSets.main.java.outputDir,
-	  ]
+		Set<? super File> mainOutputs = [
+				project.sourceSets.main.output.resourcesDir,
+				project.sourceSets.main.java.outputDir,
+		]
 
-	  classpath = shadowJar.outputs.files
-	  // Exclude main outputs since we have the shaded JAR on the classpath already
-	  classpath += sourceSets.test.runtimeClasspath.filter { !(it in mainOutputs) }
+		classpath = shadowJar.outputs.files
+		// Exclude main outputs since we have the shaded JAR on the classpath already
+		classpath += sourceSets.test.runtimeClasspath.filter { !(it in mainOutputs) }
 
-	  //The imports are not relocated, we do relocation only for the main sources not the tests
-	  exclude '**/*PooledConnectionProviderTest*.*'
+		//The imports are not relocated, we do relocation only for the main sources not the tests
+		exclude '**/*PooledConnectionProviderTest*.*'
 
-	  dependsOn(shadowJar)
-  }
-  project.tasks.check.dependsOn(shadedJarTest)
+		dependsOn(shadowJar)
+	}
+	project.tasks.check.dependsOn(shadedJarTest)
 }
 
 configurations.all {
-  // check for updates every build
-  resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+	// check for updates every build
+	resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
 
-  license {
-    header rootProject.file('codequality/HEADER')
-    includes(["**/*.java", "**/*.css"])
-    strictCheck true
-    mapping {
-        java = 'SLASHSTAR_STYLE'
-        css = 'SLASHSTAR_STYLE'
-    }
-  }
+	license {
+		header rootProject.file('codequality/HEADER')
+		includes(["**/*.java", "**/*.css"])
+		strictCheck true
+		mapping {
+			java = 'SLASHSTAR_STYLE'
+			css = 'SLASHSTAR_STYLE'
+		}
+	}
 }

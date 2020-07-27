@@ -56,9 +56,10 @@ task bumpVersionsInReadme(type: Copy, group: "releaser helpers", description: "r
 		include 'README.md'
 	}
 	into rootProject.rootDir
-	filter { line -> line
-			.replace(oldVersion, currentVersion)
-			.replace(oldSnapshot, nextVersion)
+	filter { line ->
+		line
+				.replace(oldVersion, currentVersion)
+				.replace(oldSnapshot, nextVersion)
 	}
 }
 
@@ -72,7 +73,7 @@ String getOrGenerateBuildNumber() {
 	}
 	ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC)
 	long secondsInDay = now.toEpochSecond() - ZonedDateTime.now(ZoneOffset.UTC).withSecond(0).withHour(0).withMinute(0).toEpochSecond()
-	String buildNumber = "$version-${now.get(ChronoField.YEAR)}${now.get(ChronoField.MONTH_OF_YEAR).toString().padLeft(2,'0')}${now.get(ChronoField.DAY_OF_MONTH).toString().padLeft(2,'0')}@${secondsInDay}"
+	String buildNumber = "$version-${now.get(ChronoField.YEAR)}${now.get(ChronoField.MONTH_OF_YEAR).toString().padLeft(2, '0')}${now.get(ChronoField.DAY_OF_MONTH).toString().padLeft(2, '0')}@${secondsInDay}"
 	println "No buildNumber set, generated: $buildNumber"
 	return buildNumber
 }
