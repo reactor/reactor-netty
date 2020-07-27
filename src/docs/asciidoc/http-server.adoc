@@ -628,8 +628,8 @@ public class Application {
                           .port(8080)
                           .protocol(HttpProtocol.H2) <1>
                           .secure(spec ->            <2>
-                                  SslContextBuilder.forServer(new File("certificate.crt"),
-                                                              new File("private.key")))
+                                  spec.sslContext(SslContextBuilder.forServer(new File("certificate.crt"),
+                                                              new File("private.key"))))
                           .handle((request, response) -> response.sendString(Mono.just("hello")))
                           .bindNow();
 
