@@ -167,4 +167,22 @@ public class TcpResourcesTest {
 		client.dispose();
 		server.disposeNow();
 	}
+
+	@Test
+	public void testIssue1227() {
+		TcpResources.get();
+
+		TcpResources old = TcpResources.tcpResources.get();
+
+		LoopResources loops = LoopResources.create("testIssue1227");
+		TcpResources.set(loops);
+		ConnectionProvider provider = ConnectionProvider.create("testIssue1227");
+		TcpResources.set(provider);
+		assertThat(old.isDisposed()).isTrue();
+
+		TcpResources current = TcpResources.tcpResources.get();
+		TcpResources.disposeLoopsAndConnectionsLater()
+		            .block();
+		assertThat(current.isDisposed()).isTrue();
+	}
 }

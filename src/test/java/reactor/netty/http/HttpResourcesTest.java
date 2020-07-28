@@ -118,5 +118,21 @@ public class HttpResourcesTest {
 		}
 	}
 
+	@Test
+	public void testIssue1227() {
+		HttpResources.get();
 
+		HttpResources old = HttpResources.httpResources.get();
+
+		LoopResources loops = LoopResources.create("testIssue1227");
+		HttpResources.set(loops);
+		ConnectionProvider provider = ConnectionProvider.create("testIssue1227");
+		HttpResources.set(provider);
+		assertThat(old.isDisposed()).isTrue();
+
+		HttpResources current = HttpResources.httpResources.get();
+		HttpResources.disposeLoopsAndConnectionsLater()
+		             .block();
+		assertThat(current.isDisposed()).isTrue();
+	}
 }
