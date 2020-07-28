@@ -44,40 +44,40 @@ import reactor.util.annotation.NonNull;
 public class TcpResources implements ConnectionProvider, LoopResources {
 
 	/**
-	 * Return the global HTTP resources for event loops and pooling
+	 * Return the global TCP resources for event loops and pooling
 	 *
-	 * @return the global HTTP resources for event loops and pooling
+	 * @return the global TCP resources for event loops and pooling
 	 */
 	public static TcpResources get() {
 		return getOrCreate(tcpResources, null, null, ON_TCP_NEW,  "tcp");
 	}
 
 	/**
-	 * Update pooling resources and return the global HTTP resources.
+	 * Update pooling resources and return the global TCP resources.
 	 * Note: The previous {@link ConnectionProvider} will be disposed.
 	 *
 	 * @param provider a new {@link ConnectionProvider} to replace the current
-	 * @return the global HTTP resources
+	 * @return the global TCP resources
 	 */
 	public static TcpResources set(ConnectionProvider provider) {
 		return getOrCreate(tcpResources, null, provider, ON_TCP_NEW, "tcp");
 	}
 
 	/**
-	 * Update event loops resources and return the global HTTP resources.
+	 * Update event loops resources and return the global TCP resources.
 	 * Note: The previous {@link LoopResources} will be disposed.
 	 *
 	 * @param loops a new {@link LoopResources} to replace the current
-	 * @return the global HTTP resources
+	 * @return the global TCP resources
 	 */
 	public static TcpResources set(LoopResources loops) {
 		return getOrCreate(tcpResources, loops, null, ON_TCP_NEW ,"tcp");
 	}
 
 	/**
-	 * Reset http resources to default and return its instance
+	 * Reset TCP resources to default and return its instance
 	 *
-	 * @return the global HTTP resources
+	 * @return the global TCP resources
 	 */
 	public static TcpResources reset() {
 		disposeLoopsAndConnections();
@@ -296,14 +296,14 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 					if(resources != null) {
 						if(loops != null) {
 							if (log.isWarnEnabled()) {
-								log.warn("[{}] resources will use a new LoopResources: {}," +
+								log.warn("[{}] resources will use a new LoopResources: {}, " +
 										"the previous LoopResources will be disposed", name, loops);
 							}
 							resources.defaultLoops.dispose();
 						}
 						if(provider != null) {
 							if (log.isWarnEnabled()) {
-								log.warn("[{}] resources will use a new ConnectionProvider: {}," +
+								log.warn("[{}] resources will use a new ConnectionProvider: {}, " +
 										"the previous ConnectionProvider will be disposed", name, provider);
 							}
 							resources.defaultProvider.dispose();

@@ -49,7 +49,7 @@ public class UdpResources implements LoopResources {
 	}
 
 	/**
-	 * Update event loops resources and return the global HTTP resources.
+	 * Update event loops resources and return the global UDP resources.
 	 * Note: The previous {@link LoopResources} will be disposed.
 	 *
 	 * @param loops a new {@link LoopResources} to replace the current
