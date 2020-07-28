@@ -105,8 +105,10 @@ public final class HttpResources extends TcpResources {
 	}
 
 	/**
-	 * Update pooling resources and return the global HTTP/1.x resources
+	 * Update pooling resources and return the global HTTP/1.x resources.
+	 * Note: The previous {@link ConnectionProvider} will be disposed.
 	 *
+	 * @param provider a new {@link ConnectionProvider} to replace the current
 	 * @return the global HTTP/1.x resources
 	 */
 	public static HttpResources set(ConnectionProvider provider) {
@@ -114,8 +116,10 @@ public final class HttpResources extends TcpResources {
 	}
 
 	/**
-	 * Update event loops resources and return the global HTTP/1.x resources
+	 * Update event loops resources and return the global HTTP/1.x resources.
+	 * Note: The previous {@link LoopResources} will be disposed.
 	 *
+	 * @param loops a new {@link LoopResources} to replace the current
 	 * @return the global HTTP/1.x resources
 	 */
 	public static HttpResources set(LoopResources loops) {

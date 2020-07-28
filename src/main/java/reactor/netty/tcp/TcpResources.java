@@ -115,8 +115,10 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Update provider resources and return the global TCP resources
+	 * Update pooling resources and return the global TCP resources.
+	 * Note: The previous {@link ConnectionProvider} will be disposed.
 	 *
+	 * @param provider a new {@link ConnectionProvider} to replace the current
 	 * @return the global TCP resources
 	 */
 	public static TcpResources set(ConnectionProvider provider) {
@@ -124,8 +126,10 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 	}
 
 	/**
-	 * Update pooling resources and return the global TCP resources
+	 * Update event loops resources and return the global TCP resources.
+	 * Note: The previous {@link LoopResources} will be disposed.
 	 *
+	 * @param loops a new {@link LoopResources} to replace the current
 	 * @return the global TCP resources
 	 */
 	public static TcpResources set(LoopResources loops) {
