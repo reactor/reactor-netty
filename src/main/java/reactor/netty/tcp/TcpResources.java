@@ -258,14 +258,14 @@ public class TcpResources implements ConnectionProvider, LoopResources {
 					if (resources != null) {
 						if (loops != null) {
 							if (log.isWarnEnabled()) {
-								log.warn("[{}] resources will use a new LoopResources: {}," +
+								log.warn("[{}] resources will use a new LoopResources: {}, " +
 										"the previous LoopResources will be disposed", name, loops);
 							}
 							resources.defaultLoops.dispose();
 						}
 						if (provider != null) {
 							if (log.isWarnEnabled()) {
-								log.warn("[{}] resources will use a new ConnectionProvider: {}," +
+								log.warn("[{}] resources will use a new ConnectionProvider: {}, " +
 										"the previous ConnectionProvider will be disposed", name, provider);
 							}
 							resources.defaultProvider.dispose();
