@@ -15,6 +15,7 @@
  */
 package reactor.netty.tcp;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,13 +24,19 @@ import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.OpenSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
+import reactor.test.StepVerifier;
+
+import javax.net.ssl.SSLHandshakeException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -41,13 +48,16 @@ public class SslProviderTests {
 	private List<String> protocols;
 	private SslContext sslContext;
 	private HttpServer server;
-	private SslContextBuilder builder;
+	private SslContextBuilder serverSslContextBuilder;
+	private SslContextBuilder clientSslContextBuilder;
 	private DisposableServer disposableServer;
 
 	@Before
 	public void setUp() throws Exception {
 		SelfSignedCertificate cert = new SelfSignedCertificate();
-		builder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		serverSslContextBuilder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
+		clientSslContextBuilder = SslContextBuilder.forClient()
+		                                           .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		protocols = new ArrayList<>();
 		server = HttpServer.create()
 		                   .port(0)
@@ -71,7 +81,7 @@ public class SslProviderTests {
 	public void testProtocolHttp11SslConfiguration() {
 		disposableServer =
 				server.protocol(HttpProtocol.HTTP11)
-				      .secure(spec -> spec.sslContext(builder))
+				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .bindNow();
 		assertTrue(protocols.isEmpty());
 		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
@@ -81,7 +91,7 @@ public class SslProviderTests {
 	@Test
 	public void testSslConfigurationProtocolHttp11_1() {
 		disposableServer =
-				server.secure(spec -> spec.sslContext(builder))
+				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
 		assertTrue(protocols.isEmpty());
@@ -93,7 +103,7 @@ public class SslProviderTests {
 	public void testSslConfigurationProtocolHttp11_2() {
 		disposableServer =
 				server.protocol(HttpProtocol.H2)
-				      .secure(spec -> spec.sslContext(builder))
+				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
 		assertTrue(protocols.isEmpty());
@@ -105,7 +115,7 @@ public class SslProviderTests {
 	public void testProtocolH2SslConfiguration() {
 		disposableServer =
 				server.protocol(HttpProtocol.H2)
-				      .secure(spec -> spec.sslContext(builder))
+				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .bindNow();
 		assertEquals(2, protocols.size());
 		assertTrue(protocols.contains("h2"));
@@ -117,7 +127,7 @@ public class SslProviderTests {
 	@Test
 	public void testSslConfigurationProtocolH2_1() {
 		disposableServer =
-				server.secure(spec -> spec.sslContext(builder))
+				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
 		assertEquals(2, protocols.size());
@@ -131,7 +141,7 @@ public class SslProviderTests {
 	public void testSslConfigurationProtocolH2_2() {
 		disposableServer =
 				server.protocol(HttpProtocol.HTTP11)
-				      .secure(spec -> spec.sslContext(builder))
+				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
 		assertEquals(2, protocols.size());
@@ -139,5 +149,61 @@ public class SslProviderTests {
 		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext);
+	}
+
+	@Test
+	public void testTls13Support() {
+		disposableServer =
+				server.secure(spec -> spec.sslContext(serverSslContextBuilder.protocols("TLSv1.3")))
+				      .handle((req, res) -> res.sendString(Mono.just("testTls13Support")))
+				      .bindNow();
+
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .port(disposableServer.port())
+		                  .secure(spec -> spec.sslContext(clientSslContextBuilder.protocols("TLSv1.3")))
+		                  .get()
+		                  .uri("/")
+		                  .responseContent()
+		                  .aggregate()
+		                  .asString())
+		            .expectNext("testTls13Support")
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void testTls13UnsupportedProtocol_1() {
+		doTestTls13UnsupportedProtocol(true, false);
+	}
+
+	@Test
+	public void testTls13UnsupportedProtocol_2() {
+		doTestTls13UnsupportedProtocol(false, true);
+	}
+
+	private void doTestTls13UnsupportedProtocol(boolean serverSupport, boolean clientSupport) {
+		if (serverSupport) {
+			serverSslContextBuilder.protocols("TLSv1.3");
+		}
+		disposableServer =
+				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
+				      .handle((req, res) -> res.sendString(Mono.just("testTls13Support")))
+				      .bindNow();
+
+		if (clientSupport) {
+			clientSslContextBuilder.protocols("TLSv1.3");
+		}
+		StepVerifier.create(
+		        HttpClient.create()
+		                  .port(disposableServer.port())
+		                  .secure(spec -> spec.sslContext(clientSslContextBuilder))
+		                  .get()
+		                  .uri("/")
+		                  .responseContent()
+		                  .aggregate()
+		                  .asString())
+		            .expectError(SSLHandshakeException.class)
+		            .verify(Duration.ofSeconds(30));
 	}
 }
