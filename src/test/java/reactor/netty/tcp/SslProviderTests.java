@@ -24,6 +24,7 @@ import io.netty.handler.ssl.OpenSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import reactor.netty.DisposableServer;
@@ -41,6 +42,7 @@ public class SslProviderTests {
 	private SslContext sslContext;
 	private HttpServer server;
 	private SslContextBuilder builder;
+	private DisposableServer disposableServer;
 
 	@Before
 	public void setUp() throws Exception {
@@ -48,43 +50,48 @@ public class SslProviderTests {
 		builder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey());
 		protocols = new ArrayList<>();
 		server = HttpServer.create()
-				           .port(0)
-				           .tcpConfiguration(tcpServer -> tcpServer.doOnBind(b -> {
-				               SslProvider ssl = reactor.netty.tcp.SslProvider.findSslSupport(b);
-				               if (ssl != null) {
-				                   protocols.addAll(ssl.sslContext.applicationProtocolNegotiator().protocols());
-				                   sslContext = ssl.sslContext;
-				               }
-				           }));
+		                   .port(0)
+		                   .tcpConfiguration(tcpServer -> tcpServer.doOnBind(b -> {
+		                       SslProvider ssl = reactor.netty.tcp.SslProvider.findSslSupport(b);
+		                       if (ssl != null) {
+		                           protocols.addAll(ssl.sslContext.applicationProtocolNegotiator().protocols());
+		                           sslContext = ssl.sslContext;
+		                       }
+		                   }));
+	}
+
+	@After
+	public void tearDown() {
+		if (disposableServer != null) {
+			disposableServer.disposeNow();
+		}
 	}
 
 	@Test
 	public void testProtocolHttp11SslConfiguration() {
-		DisposableServer disposableServer =
+		disposableServer =
 				server.protocol(HttpProtocol.HTTP11)
 				      .secure(spec -> spec.sslContext(builder))
 				      .bindNow();
 		assertTrue(protocols.isEmpty());
 		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
 		                                   sslContext instanceof JdkSslContext);
-		disposableServer.disposeNow();
 	}
 
 	@Test
 	public void testSslConfigurationProtocolHttp11_1() {
-		DisposableServer disposableServer =
+		disposableServer =
 				server.secure(spec -> spec.sslContext(builder))
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
 		assertTrue(protocols.isEmpty());
 		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
 		                                   sslContext instanceof JdkSslContext);
-		disposableServer.disposeNow();
 	}
 
 	@Test
 	public void testSslConfigurationProtocolHttp11_2() {
-		DisposableServer disposableServer =
+		disposableServer =
 				server.protocol(HttpProtocol.H2)
 				      .secure(spec -> spec.sslContext(builder))
 				      .protocol(HttpProtocol.HTTP11)
@@ -92,12 +99,11 @@ public class SslProviderTests {
 		assertTrue(protocols.isEmpty());
 		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
 		                                   sslContext instanceof JdkSslContext);
-		disposableServer.disposeNow();
 	}
 
 	@Test
 	public void testProtocolH2SslConfiguration() {
-		DisposableServer disposableServer =
+		disposableServer =
 				server.protocol(HttpProtocol.H2)
 				      .secure(spec -> spec.sslContext(builder))
 				      .bindNow();
@@ -106,12 +112,11 @@ public class SslProviderTests {
 		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext);
-		disposableServer.disposeNow();
 	}
 
 	@Test
 	public void testSslConfigurationProtocolH2_1() {
-		DisposableServer disposableServer =
+		disposableServer =
 				server.secure(spec -> spec.sslContext(builder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
@@ -120,12 +125,11 @@ public class SslProviderTests {
 		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext);
-		disposableServer.disposeNow();
 	}
 
 	@Test
 	public void testSslConfigurationProtocolH2_2() {
-		DisposableServer disposableServer =
+		disposableServer =
 				server.protocol(HttpProtocol.HTTP11)
 				      .secure(spec -> spec.sslContext(builder))
 				      .protocol(HttpProtocol.H2)
@@ -135,6 +139,5 @@ public class SslProviderTests {
 		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 		                                       sslContext instanceof OpenSslContext :
 		                                       sslContext instanceof JdkSslContext);
-		disposableServer.disposeNow();
 	}
 }
