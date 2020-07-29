@@ -1,0 +1,66 @@
+/*
+ * Copyright (c) 2011-Present VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+configure(rootProject) {
+	apply plugin: 'org.asciidoctor.convert'
+
+	// put asciidoctor dependencies/extensions to 'asciidoctor' configuration instead of buildscript classpath
+	dependencies {
+		asciidoctor 'org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.16'
+		asciidoctor 'org.jruby:jruby-complete:9.2.5.0'
+	}
+
+	asciidoctor {
+		sourceDir "$rootDir/docs/asciidoc/"
+		sources {
+			include "index.asciidoc"
+		}
+		resources {
+			from(sourceDir) {
+				include 'images/**'
+				include 'highlight/**/*'
+			}
+		}
+		outputDir file("$buildDir/asciidoc")
+		backends = ['html5', 'pdf']
+		logDocuments = true
+		options = [
+				doctype: 'book'
+		]
+		attributes 'allow-uri-read': '',
+				imagesdir: "images/",
+				stylesdir: "stylesheets/",
+				stylesheet: 'reactor.css',
+				'source-highlighter': 'highlightjs',
+				'highlightjsdir': "./highlight",
+				'highlightjs-theme': 'railscasts'
+	}
+
+	task docsZip(type: Zip, dependsOn: asciidoctor) {
+		archiveBaseName.set("reactor-netty")
+		archiveClassifier.set("docs")
+		afterEvaluate() {
+			//we copy the pdf late, when a potential customVersion has been applied to rootProject
+			from("$buildDir/asciidoc/pdf/index.pdf") {
+				into("docs/")
+				rename("index.pdf", "reactor-netty-reference-guide-${rootProject.version}.pdf")
+			}
+		}
+		from("$buildDir/asciidoc/html5/index.html") { into("docs/") }
+		from("$buildDir/asciidoc/html5/images") { into("docs/images/") }
+		from("$buildDir/asciidoc/html5/highlight") { into("docs/highlight/") }
+	}
+}
+

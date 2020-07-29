@@ -13,7 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-rootProject.name = 'reactor-netty'
-include 'reactor-netty-core'
-include 'reactor-netty-http'
-include 'reactor-netty-examples'
+dependencies {
+	compile project(':reactor-netty-http')
+
+	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
+	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+}
+
+description = "Examples for the Reactor Netty library"

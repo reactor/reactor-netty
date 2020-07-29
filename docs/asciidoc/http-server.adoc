@@ -1,0 +1,798 @@
+:sourcedir: ./../../reactor-netty-http/src/main/java
+:javadoc: https://projectreactor.io/docs/netty/release/api
+
+[[http-server]]
+= HTTP Server
+
+`Reactor Netty` provides the easy-to-use and easy-to-configure
+{javadoc}/reactor/netty/http/server/HttpServer.html[`HttpServer`] class.
+It hides most of the `Netty` functionality that is needed in order to create a `HTTP` server
+and adds `Reactive Streams` backpressure.
+
+== Starting and Stopping
+
+To start an HTTP server, you must create and configure a
+{javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer] instance.
+By default, the `host` is configured for any local address, and the system picks up an ephemeral port
+when the `bind` operation is invoked.
+The following example shows how to create an `HttpServer` instance:
+
+====
+[source,java]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()   <1>
+                          .bindNow(); <2>
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Creates an {javadoc}/reactor/netty/http/server/HttpServer.html[HttpServer]
+instance ready for configuring.
+<2> Starts the server in a blocking fashion and waits for it to finish initializing.
+====
+
+The returned {javadoc}/reactor/netty/DisposableServer.html[`DisposableServer`]
+offers a simple server API, including {javadoc}/reactor/netty/DisposableChannel.html#disposeNow-java.time.Duration-[`disposeNow()`],
+which shuts the server down in a blocking fashion.
+
+=== Host and Port
+
+To serve on a specific `host` and `port`, you can apply the following configuration to the `HTTP` server:
+
+====
+[source,java]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .host("localhost") <1>
+                          .port(8080)        <2>
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Configures the `HTTP` server host
+<2> Configures the `HTTP` server port
+====
+
+== Routing HTTP
+
+Defining routes for the `HTTP` server requires configuring the provided
+{javadoc}/reactor/netty/http/server/HttpServerRoutes.html[`HttpServerRoutes`] builder.
+The following example shows how to do so:
+
+====
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .route(routes ->
+                              routes.get("/hello",        <1>
+                                         (request, response) -> response.sendString(Mono.just("Hello World!")))
+                                    .post("/echo",        <2>
+                                         (request, response) -> response.send(request.receive().retain()))
+                                    .get("/path/{param}", <3>
+                                         (request, response) -> response.sendString(Mono.just(request.param("param"))))
+                                    .ws("/ws",            <4>
+                                         (wsInbound, wsOutbound) -> wsOutbound.send(wsInbound.receive().retain())))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Serves a `GET` request to `/hello` and returns `Hello World!`
+<2> Serves a `POST` request to `/echo` and returns the received request body as a response.
+<3> Serves a `GET` request to `/path/{param}` and returns the value of the path parameter.
+<4> Serves websocket to `/ws` and returns the received incoming data as outgoing data.
+====
+
+NOTE: The server routes are unique and only the first matching in order of declaration is invoked.
+
+=== SSE
+
+The following code shows how you can configure the `HTTP` server to serve `Server-Sent Events`:
+
+====
+[source,java]
+----
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+import reactor.netty.http.server.HttpServerRequest;
+import reactor.netty.http.server.HttpServerResponse;
+
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.Charset;
+import java.time.Duration;
+import java.util.function.BiFunction;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .route(routes -> routes.get("/sse", serveSse()))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+
+    /**
+     * Prepares SSE response
+     * The "Content-Type" is "text/event-stream"
+     * The flushing strategy is "flush after every element" emitted by the provided Publisher
+     */
+    private static BiFunction<HttpServerRequest, HttpServerResponse, Publisher<Void>> serveSse() {
+        Flux<Long> flux = Flux.interval(Duration.ofSeconds(10));
+        return (request, response) ->
+            response.sse()
+                    .send(flux.map(Application::toByteBuf), b -> true);
+    }
+
+    /**
+     * Transforms the Object to ByteBuf following the expected SSE format.
+     */
+    private static ByteBuf toByteBuf(Object any) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            out.write("data: ".getBytes(Charset.defaultCharset()));
+            MAPPER.writeValue(out, any);
+            out.write("\n\n".getBytes(Charset.defaultCharset()));
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return ByteBufAllocator.DEFAULT
+                               .buffer()
+                               .writeBytes(out.toByteArray());
+    }
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+}
+----
+====
+
+=== Static Resources
+
+The following code shows how you can configure the `HTTP` server to serve static resources:
+
+====
+[source,java]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .route(routes -> routes.file("/index.html", pathToFile))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+====
+
+== Writing Data
+
+To send data to a connected client, you must attach an I/O handler by using either
+{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
+{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
+The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`],
+to be able to write data. The following example uses the `handle(...)` method:
+
+====
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .handle((request, response) -> response.sendString(Mono.just("hello"))) <1>
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Sends `hello` string to the connected clients
+====
+
+=== Adding Headers and Other Metadata
+
+When you send data to the connected clients, you may need to send additional headers,
+cookies, status code, and other metadata.
+You can provide this additional metadata by using
+{javadoc}/reactor/netty/http/server/HttpServerResponse.html[`HttpServerResponse`].
+The following example shows how to do so:
+
+====
+[source,java]
+----
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .route(routes ->
+                              routes.get("/hello",
+                                         (request, response) ->
+                                             response.status(HttpResponseStatus.OK)
+                                                     .header(HttpHeaderNames.CONTENT_LENGTH, "12")
+                                                     .sendString(Mono.just("Hello World!"))))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+====
+
+=== Compression
+
+You can configure the `HTTP` server to send a compressed response, depending on the request header
+`Accept-Encoding`.
+
+`Reactor Netty` provides three different strategies for compressing the outgoing data:
+
+* `compress(boolean)`: Depending on the boolean that is provided, the compression is enabled (`true`) or disabled (`false`).
+* `compress(int)`: The compression is performed once the response size exceeds the given value (in bytes).
+* `compress(BiPredicate<HttpServerRequest, HttpServerResponse>)`: The compression is performed if
+the predicate returns `true`.
+
+The following example uses the `compress` method (set to `true`) to enable compression:
+
+====
+[source,java]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .compress(true)
+                          .route(routes -> routes.file("/index.html", pathToFile))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+====
+
+== Consuming Data
+
+To receive data from a connected client, you must attach an I/O handler by using either
+{javadoc}/reactor/netty/http/server/HttpServer.html#handle-java.util.function.BiFunction-[`handle(...)`] or
+{javadoc}/reactor/netty/http/server/HttpServer.html#route-java.util.function.Consumer-[`route(...)`].
+The I/O handler has access to {javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`],
+to be able to read data.
+
+The following example uses the `handle(...)` method:
+
+====
+[source,java]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .handle((request, response) -> request.receive().then()) <1>
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Receives data from the connected clients
+====
+
+=== Reading Headers, URI Params, and other Metadata
+
+When you receive data from the connected clients, you might need to check request headers,
+parameters, and other metadata. You can obtain this additional metadata by using
+{javadoc}/reactor/netty/http/server/HttpServerRequest.html[`HttpServerRequest`].
+The following example shows how to do so:
+
+====
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .route(routes ->
+                              routes.get("/{param}",
+                                         (request, response) -> {
+                                             if (request.requestHeaders().contains("Some-Header")) {
+                                                 return response.sendString(Mono.just(request.param("param")));
+                                             }
+                                             return response.sendNotFound();
+                                         }))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+====
+
+==== Obtaining the Remote (Client) Address
+
+In addition to the metadata that you can obtain from the request, you can also receive the
+`host (server)` address, the `remote (client)` address and the `scheme`. Depending on the
+chosen factory method, you can retrieve the information directly from the channel or by
+using the `Forwarded` or `X-Forwarded-*` `HTTP` request headers.
+The following example shows how to do so:
+
+====
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .forwarded(true) <1>
+                          .route(routes ->
+                              routes.get("/clientip",
+                                         (request, response) ->
+                                             response.sendString(Mono.just(request.remoteAddress() <2>
+                                                                                  .getHostString()))))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Specifies that the information about the connection is to be obtained from the `Forwarded` and `X-Forwarded-*`
+`HTTP` request headers, if possible.
+<2> Returns the address of the remote (client) peer.
+====
+
+=== HTTP Request Decoder
+
+By default, `Netty` configures some restrictions for the incoming requests, such as:
+
+* The maximum length of the initial line.
+* The maximum length of all headers.
+* The maximum length of the content or each chunk.
+
+For more information, see https://netty.io/4.1/api/io/netty/handler/codec/http/HttpRequestDecoder.html[`HttpRequestDecoder`]
+and https://netty.io/4.1/api/io/netty/handler/codec/http/HttpServerUpgradeHandler.html[`HttpServerUpgradeHandler`]
+
+By default, the `HTTP` server is configured with the following settings:
+
+====
+[source,java,indent=0]
+./../../reactor-netty-http/src/main/java/reactor/netty/http/HttpDecoderSpec.java
+----
+include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=31..35]
+----
+====
+====
+[source,java,indent=0]
+./../../reactor-netty-http/src/main/java/reactor/netty/http/server/HttpRequestDecoderSpec.java
+----
+include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=41]
+----
+====
+
+When you need to change these default settings, you can configure the `HTTP` server as follows:
+
+====
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .httpRequestDecoder(spec -> spec.maxHeaderSize(16384)) <1>
+                          .handle((request, response) -> response.sendString(Mono.just("hello")))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> The maximum length of all headers will be `16384`.
+When this value is exceeded, a
+https://netty.io/4.1/api/io/netty/handler/codec/TooLongFrameException.html[TooLongFrameException]
+is raised.
+====
+
+== TCP-level Configuration
+
+When you need to change configuration on the TCP level, you can use the following snippet
+to extend the default `TCP` server configuration:
+
+====
+[source,java]
+----
+import io.netty.channel.ChannelOption;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+====
+
+See <<tcp-server>> for more detail about TCP-level configuration.
+
+=== Wire Logger
+
+`Reactor Netty` provides wire logging for when you need to inspect the traffic between the peers.
+By default, wire logging is disabled.
+To enable it, you must set the logger `reactor.netty.http.server.HttpServer` level to `DEBUG`
+and apply the following configuration:
+
+====
+[source,java]
+----
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .wiretap(true) <1>
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Enables the wire logging
+====
+
+== SSL and TLS
+
+When you need SSL or TLS, you can apply the configuration shown in the next example.
+By default, if `OpenSSL` is available,
+https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#OPENSSL[`SslProvider.OPENSSL`]
+provider is used as a provider. Otherwise
+https://netty.io/4.1/api/io/netty/handler/ssl/SslProvider.html#JDK[`SslProvider.JDK`] is used.
+You can switch the provider by using
+https://netty.io/4.1/api/io/netty/handler/ssl/SslContextBuilder.html#sslProvider-io.netty.handler.ssl.SslProvider-[`SslContextBuilder`]
+or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
+
+The following example uses `SslContextBuilder`:
+
+====
+[source,java]
+----
+import io.netty.handler.ssl.SslContextBuilder;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+import java.io.File;
+
+public class Application {
+
+    public static void main(String[] args) {
+        File cert = new File("certificate.crt");
+        File key = new File("private.key");
+        DisposableServer server =
+                HttpServer.create()
+                          .secure(spec -> spec.sslContext(SslContextBuilder.forServer(cert,key)))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+====
+
+== HTTP Access Log
+
+The current logging support provides only the https://en.wikipedia.org/wiki/Common_Log_Format[Common Log Format].
+
+You can use `-Dreactor.netty.http.server.accessLogEnabled=true` to enable the `HTTP` access log.
+By default, it is disabled.
+
+You can use the following configuration (for Logback or similar logging frameworks) to have a separate
+`HTTP` access log file:
+
+====
+[source,xml]
+----
+<appender name="accessLog" class="ch.qos.logback.core.FileAppender">
+    <file>access_log.log</file>
+    <encoder>
+        <pattern>%msg%n</pattern>
+    </encoder>
+</appender>
+<appender name="async" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="accessLog" />
+</appender>
+
+<logger name="reactor.netty.http.server.AccessLog" level="INFO" additivity="false">
+    <appender-ref ref="async"/>
+</logger>
+----
+====
+
+== HTTP/2
+
+By default, the `HTTP` server supports `HTTP/1.1`. If you need `HTTP/2`, you can get it through configuration.
+In addition to the protocol configuration, if you need `H2` but not `H2C (cleartext)`, you must also configure SSL.
+
+NOTE: As that protocol is not supported "`out-of-the-box`" by JDK8, you need an additional dependency to a native library that
+supports it -- for example, https://netty.io/wiki/forked-tomcat-native.html[`netty-tcnative-boringssl-static`].
+
+The following listing presents a simple `H2` example:
+
+====
+[source,java]
+----
+import io.netty.handler.ssl.SslContextBuilder;
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.server.HttpServer;
+import java.io.File;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .port(8080)
+                          .protocol(HttpProtocol.H2) <1>
+                          .secure(spec ->            <2>
+                                  spec.sslContext(SslContextBuilder.forServer(new File("certificate.crt"),
+                                                              new File("private.key"))))
+                          .handle((request, response) -> response.sendString(Mono.just("hello")))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Configures the server to support only `HTTP/2`
+<2> Configures `SSL`
+====
+
+The application should now behave as follows:
+
+====
+[source,bash]
+----
+$ curl --http2 https://localhost:8080 -i
+HTTP/2 200
+
+hello
+----
+====
+
+The following listing presents a simple `H2C` example:
+
+====
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .port(8080)
+                          .protocol(HttpProtocol.H2C)
+                          .handle((request, response) -> response.sendString(Mono.just("hello")))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+====
+
+The application should now behave as follows:
+
+====
+[source,bash]
+----
+$ curl --http2-prior-knowledge http://localhost:8080 -i
+HTTP/2 200
+
+hello
+----
+====
+
+== Metrics
+The HTTP server supports built-in integration with https://micrometer.io/[`Micrometer`].
+It exposes all metrics with a prefix of `reactor.netty.http.server`.
+
+The following table provides information for the HTTP server metrics:
+
+[width="100%",options="header"]
+|=======
+| metric name | type | description
+| reactor.netty.http.server.data.received | DistributionSummary | Amount of the data received, in bytes
+| reactor.netty.http.server.data.sent | DistributionSummary | Amount of the data sent, in bytes
+| reactor.netty.http.server.errors | Counter | Number of errors that occurred
+| reactor.netty.http.server.data.received.time | Timer | Time spent in consuming incoming data
+| reactor.netty.http.server.data.sent.time | Timer | Time spent in sending outgoing data
+| reactor.netty.http.server.response.time | Timer | Total time for the request/response
+|=======
+
+These additional metrics are also available:
+
+include::alloc-metrics.adoc[]
+
+The following example enables that integration:
+
+====
+[source,java]
+----
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.config.MeterFilter;
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        Metrics.globalRegistry <1>
+               .config()
+               .meterFilter(MeterFilter.maximumAllowableTags("reactor.netty.http.server", "URI", 100, MeterFilter.deny()));
+
+        DisposableServer server =
+                HttpServer.create()
+                          .metrics(true, s -> {
+                              if (s.startsWith("/stream/")) { <2>
+                                  return "/stream/{n}";
+                              }
+                              else if (s.startsWith("/bytes/")) {
+                                  return "/bytes/{n}";
+                              }
+                              return s;
+                          }) <3>
+                          .route(r ->
+                                  r.get("/stream/{n}",
+                                        (req, res) -> res.sendString(Mono.just(req.param("n"))))
+                                   .get("/bytes/{n}",
+                                        (req, res) -> res.sendString(Mono.just(req.param("n")))))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Applies upper limit for the meters with `URI` tag
+<2> Templated URIs will be used as an URI tag value when possible
+<3> Enables the built-in integration with Micrometer
+====
+
+NOTE: In order to avoid a memory and CPU overhead of the enabled metrics, it is important to convert the real URIs to templated URIs when possible.
+Without a conversion to a template-like form, each distinct URI leads to the creation of a distinct tag, which takes a lot of memory for the metrics.
+
+NOTE: Always apply an upper limit for the meters with URI tags. Configuring an upper limit on the number of meters can help in cases when the real URIs cannot be templated.
+You can find more information at https://micrometer.io/docs/concepts#_denyaccept_meters[`maximumAllowableTags`].
+
+When HTTP server metrics are needed for an integration with a system other than `Micrometer` or you want
+to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
+
+====
+[source,java]
+----
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+
+public class Application {
+
+    public static void main(String[] args) {
+        DisposableServer server =
+                HttpServer.create()
+                          .metrics(true, () -> new CustomHttpServerMetricsRecorder()) <1>
+                          .route(r ->
+                                  r.get("/stream/{n}",
+                                        (req, res) -> res.sendString(Mono.just(req.param("n"))))
+                                   .get("/bytes/{n}",
+                                        (req, res) -> res.sendString(Mono.just(req.param("n")))))
+                          .bindNow();
+
+        server.onDispose()
+              .block();
+    }
+}
+----
+<1> Enables HTTP server metrics and provides {javadoc}/reactor/netty/http/server/HttpServerMetricsRecorder.html[`HttpServerMetricsRecorder`] implementation.
+====

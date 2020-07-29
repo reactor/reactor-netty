@@ -13,109 +13,108 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+if (project.name == 'reactor-netty-examples') {
+	return
+}
 
-configure(rootProject) { subproject ->
-	apply from: "$gradleScriptDir/doc.gradle"
-	apply plugin: 'maven-publish'
-	apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
 
+task sourcesJar(type: Jar) {
+	archiveClassifier.set('sources')
+	from sourceSets.main.allSource
+}
 
-	task sourcesJar(type: Jar) {
-		archiveClassifier.set('sources')
-		from sourceSets.main.allSource
-	}
+task javadocJar(type: Jar) {
+	archiveClassifier.set('javadoc')
+	from javadoc
+}
 
-	task javadocJar(type: Jar) {
-		archiveClassifier.set('javadoc')
-		from javadoc
-	}
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+			artifact sourcesJar
+			artifact javadocJar
 
-	publishing {
-		publications {
-			mavenJava(MavenPublication) {
-				from components.java
-				artifact sourcesJar
-				artifact javadocJar
+			//FIXME don't rely solely on Bamboo to detect release environment
+			if (System.getenv()["bamboo_buildNumber"] != null) {
+				artifact docsZip
+				println docsZip
+			}
 
-				//FIXME don't rely solely on Bamboo to detect release environment
-				if (System.getenv()["bamboo_buildNumber"] != null) {
-					artifact docsZip
-					println docsZip
+			pom {
+				afterEvaluate {
+					name = project.description
+					description = project.description
+				}
+				packaging = 'jar' //if not explicitly set, end up as `pom` in output. omitted in output if set as `jar`...
+
+				url = 'https://github.com/reactor/reactor-netty'
+				organization {
+					name = 'reactor'
+					url = 'https://github.com/reactor'
+				}
+				licenses {
+					license {
+						name = 'The Apache Software License, Version 2.0'
+						url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+						distribution = 'repo'
+					}
+				}
+				scm {
+					url = 'https://github.com/reactor/reactor-netty'
+					connection = 'scm:git:git://github.com/reactor/reactor-netty'
+					developerConnection = 'scm:git:git://github.com/reactor/reactor-netty'
+				}
+				developers {
+					developer {
+						id = 'smaldini'
+						name = 'Stephane Maldini'
+						email = 'smaldini@pivotal.io'
+					}
+					developer {
+						id = 'simonbasle'
+						name = 'Simon Baslé'
+						email = 'sbasle@pivotal.io'
+					}
+					developer {
+						id = 'violetagg'
+						name = 'Violeta Georgieva'
+						email = 'vgeorgieva@pivotal.io'
+					}
+				}
+				issueManagement {
+					system = "GitHub Issues"
+					url = "https://github.com/reactor/reactor-netty/issues"
 				}
 
-				pom {
-					afterEvaluate {
-						name = project.description
-						description = project.description
-					}
-					packaging = 'jar' //if not explicitly set, end up as `pom` in output. omitted in output if set as `jar`...
-
-					url = 'https://github.com/reactor/reactor-netty'
-					organization {
-						name = 'reactor'
-						url = 'https://github.com/reactor'
-					}
-					licenses {
-						license {
-							name = 'The Apache Software License, Version 2.0'
-							url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-							distribution = 'repo'
+				withXml {
+					//set optional true for compileOnly dependencies, which are not in there by default
+					asNode().dependencies[0].each { node ->
+						def group = node.groupId.text()
+						def artifact = node.artifactId.text()
+						def version = node.version.text()
+						def isOptional = project.configurations.optional.allDependencies.any { dep -> dep.group == group && dep.name == artifact }
+						if (isOptional) {
+							node.appendNode('optional', true)
+							println "$group:$artifact:$version has been marked as optional in generated pom"
 						}
 					}
-					scm {
-						url = 'https://github.com/reactor/reactor-netty'
-						connection = 'scm:git:git://github.com/reactor/reactor-netty'
-						developerConnection = 'scm:git:git://github.com/reactor/reactor-netty'
-					}
-					developers {
-						developer {
-							id = 'smaldini'
-							name = 'Stephane Maldini'
-							email = 'smaldini@pivotal.io'
-						}
-						developer {
-							id = 'simonbasle'
-							name = 'Simon Baslé'
-							email = 'sbasle@pivotal.io'
-						}
-						developer {
-							id = 'violetagg'
-							name = 'Violeta Georgieva'
-							email = 'vgeorgieva@pivotal.io'
-						}
-					}
-					issueManagement {
-						system = "GitHub Issues"
-						url = "https://github.com/reactor/reactor-netty/issues"
-					}
-
-					withXml {
-						//set optional true for compileOnly dependencies, which are not in there by default
-						asNode().dependencies[0].each { node ->
-							def group = node.groupId.text()
-							def artifact = node.artifactId.text()
-							def version = node.version.text()
-							def isOptional = project.configurations.optional.allDependencies.any { dep -> dep.group == group && dep.name == artifact }
-							if (isOptional) {
-								node.appendNode('optional', true)
-								println "$group:$artifact:$version has been marked as optional in generated pom"
-							}
-						}
-						//groovy magic incantation to sort dependencies alphabetically (scope/group/name..)
-						def sorted = asNode().dependencies[0].children().collect().sort { it.scope.text() + it.groupId.text() + it.artifactId.text() }
-						asNode().dependencies[0].children().with { deps ->
-							deps.clear()
-							sorted.each { deps.add(it) }
-						}
+					//groovy magic incantation to sort dependencies alphabetically (scope/group/name..)
+					def sorted = asNode().dependencies[0].children().collect().sort { it.scope.text() + it.groupId.text() + it.artifactId.text() }
+					asNode().dependencies[0].children().with { deps ->
+						deps.clear()
+						sorted.each { deps.add(it) }
 					}
 				}
 			}
 		}
 	}
+}
 
-	artifactoryPublish {
-		//don't activate the onlyIf clause below yet, so that Bamboo builds will publish stuff...
-		//onlyIf { project.hasProperty("artifactory_publish_password") }
-		publications(publishing.publications.mavenJava)
-	}
+artifactoryPublish {
+	//don't activate the onlyIf clause below yet, so that Bamboo builds will publish stuff...
+	//onlyIf { project.hasProperty("artifactory_publish_password") }
+	publications(publishing.publications.mavenJava)
 }

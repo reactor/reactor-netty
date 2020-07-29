@@ -14,9 +14,6 @@ updates:
     versions:
     - ">= 6.a"
     - "< 7"
-  - dependency-name: com.jfrog.artifactory
-    versions:
-    - "> 4.9.8"
   - dependency-name: io.micrometer:micrometer-core
     versions:
     - "> 1.5.0"

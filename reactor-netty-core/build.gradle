@@ -1,0 +1,284 @@
+/*
+ * Copyright (c) 2011-Present VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import me.champeau.gradle.japicmp.JapicmpTask
+
+apply plugin: 'java-test-fixtures'
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'me.champeau.gradle.japicmp'
+apply plugin: 'de.undercouch.download'
+
+sourceSets {
+	jarFileTest
+}
+
+configurations {
+	shaded
+}
+
+dependencies {
+	// JSR-305 annotations
+	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+
+	compile "io.netty:netty-handler:$nettyVersion"
+	compile "io.netty:netty-handler-proxy:$nettyVersion"
+
+	//Metrics
+	optional "io.micrometer:micrometer-core:$micrometerVersion"
+
+	// Logging
+	optional "org.slf4j:slf4j-api:$slf4jVersion"
+
+	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
+	shaded("io.projectreactor.addons:reactor-pool:$reactorPoolVersion") {
+		exclude module: "reactor-core"
+	}
+
+	// Testing
+	testCompile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
+	testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
+	testCompile "org.assertj:assertj-core:$assertJVersion"
+	testCompile "junit:junit:$junitVersion"
+
+	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
+	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
+
+	for (dependency in project.configurations.shaded.dependencies) {
+		compileOnly(dependency)
+		testCompile(dependency)
+	}
+
+	jarFileTestCompile "org.assertj:assertj-core:$assertJVersion"
+	jarFileTestCompile "junit:junit:$junitVersion"
+}
+
+jar {
+	archiveClassifier.set('original')
+	manifest {
+		attributes("Automatic-Module-Name": "reactor.netty.core")
+	}
+}
+
+task downloadBaseline(type: Download) {
+	onlyIf {
+		if (project.gradle.startParameter.isOffline()) {
+			println "Offline: skipping downloading of baseline and JAPICMP"
+			return false
+		}
+		else if ("$compatibleVersion" == "SKIP") {
+			println "SKIP: Instructed to skip the baseline comparison"
+			return false
+		}
+		else {
+			println "Will download and perform baseline comparison with ${compatibleVersion}"
+			return true
+		}
+	}
+
+	onlyIfNewer true
+	compress true
+	src "https://repo.spring.io/libs-snapshot/io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}-original.jar"
+	dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}-original.jar"
+}
+
+task japicmp(type: JapicmpTask) {
+	oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}-original.jar")
+	newClasspath = files(jar.archiveFile)
+	packageIncludes = ["reactor.netty", "reactor.netty.channel", "reactor.netty.resources", "reactor.netty.tcp", "reactor.netty.transport", "reactor.netty.udp"]
+	onlyBinaryIncompatibleModified = true
+	failOnModification = true
+	failOnSourceIncompatibility = true
+	txtOutputFile = file("${project.buildDir}/reports/japi.txt")
+	ignoreMissingClasses = true
+	includeSynthetic = true
+	methodExcludes = [
+			// Deprecated methods in 0.9.x that are removed in 1.0.0
+			// reactor.netty.resources package
+			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String)",
+			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration)",
+			"reactor.netty.resources.ConnectionProvider#elastic(java.lang.String, java.time.Duration, java.time.Duration)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration)",
+			"reactor.netty.resources.ConnectionProvider#fixed(java.lang.String, int, long, java.time.Duration, java.time.Duration)",
+			"reactor.netty.resources.ConnectionProvider#maxConnections()",
+			"reactor.netty.resources.LoopResources#onChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.resources.LoopResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.resources.LoopResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.resources.LoopResources#preferNative()",
+			// reactor.netty.tcp package
+			"reactor.netty.tcp.SslProvider#asDetailedString()",
+			"reactor.netty.tcp.SslProvider#asSimpleString()",
+			"reactor.netty.tcp.TcpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+			"reactor.netty.tcp.TcpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+			"reactor.netty.tcp.TcpResources#onChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.tcp.TcpResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.tcp.TcpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.tcp.TcpResources#preferNative()",
+			"reactor.netty.tcp.TcpServer#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.tcp.TcpServer#bootstrap(java.util.function.Function)",
+			"reactor.netty.tcp.TcpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+			"reactor.netty.tcp.TcpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+			// reactor.netty.udp package
+			"reactor.netty.udp.UdpClient#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.udp.UdpClient#bootstrap(java.util.function.Function)",
+			"reactor.netty.udp.UdpClient#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+			"reactor.netty.udp.UdpClient#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+			"reactor.netty.udp.UdpResources#onChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.udp.UdpResources#onDatagramChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.udp.UdpResources#onServerChannel(io.netty.channel.EventLoopGroup)",
+			"reactor.netty.udp.UdpResources#preferNative()",
+			"reactor.netty.udp.UdpServer#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.udp.UdpServer#bootstrap(java.util.function.Function)",
+			"reactor.netty.udp.UdpServer#doOnLifecycle(java.util.function.Consumer, java.util.function.Consumer, java.util.function.Consumer)",
+			"reactor.netty.udp.UdpServer#metrics(boolean, reactor.netty.channel.ChannelMetricsRecorder)",
+			// reactor.netty package
+			"reactor.netty.ChannelBindException#fail(io.netty.bootstrap.AbstractBootstrap, java.lang.Throwable)",
+
+			// New methods added in 1.0.0 with default implementation
+			// reactor.netty package
+			"reactor.netty.DisposableServer#address()",
+			"reactor.netty.DisposableServer#path()",
+
+			// !!!Backwards incompatible changes!!!
+			// reactor.netty.resources package
+			"reactor.netty.resources.ConnectionProvider#acquire(io.netty.bootstrap.Bootstrap)",
+			// reactor.netty.tcp package
+			"reactor.netty.tcp.SslProvider#findSslSupport(io.netty.bootstrap.Bootstrap)",
+			"reactor.netty.tcp.SslProvider#findSslSupport(io.netty.bootstrap.ServerBootstrap)",
+			"reactor.netty.tcp.SslProvider#removeSslSupport(io.netty.bootstrap.Bootstrap)",
+			"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.Bootstrap, reactor.netty.tcp.SslProvider)",
+			"reactor.netty.tcp.SslProvider#setBootstrap(io.netty.bootstrap.ServerBootstrap, reactor.netty.tcp.SslProvider)",
+			"reactor.netty.tcp.TcpClient#configure()",
+			"reactor.netty.tcp.TcpClient#connect(io.netty.bootstrap.Bootstrap)",
+			"reactor.netty.tcp.TcpClient#hasProxy()", // Moved to TcpClientConfig
+			"reactor.netty.tcp.TcpClient#isSecure()", // Moved to TcpClientConfig
+			"reactor.netty.tcp.TcpClient#proxyProvider()", // Moved to TcpClientConfig
+			"reactor.netty.tcp.TcpClient#sslProvider()", // Moved to TcpClientConfig
+			"reactor.netty.tcp.TcpResources#acquire(io.netty.bootstrap.Bootstrap)",
+			"reactor.netty.tcp.TcpServer#attr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `childAttr`
+			"reactor.netty.tcp.TcpServer#bind(io.netty.bootstrap.ServerBootstrap)",
+			"reactor.netty.tcp.TcpServer#configure()",
+			"reactor.netty.tcp.TcpServer#isSecure()",// Moved to TcpServerConfig
+			"reactor.netty.tcp.TcpServer#observe(reactor.netty.ConnectionObserver)", // Renamed to `childObserve`
+			"reactor.netty.tcp.TcpServer#option(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `childOption`
+			"reactor.netty.tcp.TcpServer#selectorAttr(io.netty.util.AttributeKey, java.lang.Object)", // Renamed to `attr`
+			"reactor.netty.tcp.TcpServer#selectorOption(io.netty.channel.ChannelOption, java.lang.Object)", // Renamed to `option`
+			"reactor.netty.tcp.TcpServer#sslProvider()", // Moved to TcpServerConfig
+			//reactor.netty.udp package
+			"reactor.netty.udp.UdpServer#bind()",
+			// reactor.netty package
+			"reactor.netty.DisposableChannel#address()" // Returns SocketAddress instead of InetSocketAddress
+	]
+	fieldExcludes = [
+			// Deprecated fields in 0.9.x that are removed in 1.0.0
+			// reactor.netty package
+			"reactor.netty.NettyPipeline#HttpInitializer",
+			"reactor.netty.NettyPipeline#SslMetricsHandler"
+	]
+	classExcludes = [
+			// !!!Backwards incompatible changes!!!
+			// reactor.netty.channel package
+			"reactor.netty.channel.BootstrapHandlers", // Removed
+			// reactor.netty.resources package
+			"reactor.netty.resources.PooledConnectionProvider", // Renamed to DefaultPooledConnectionProvider
+			// reactor.netty.tcp package
+			"reactor.netty.tcp.InetSocketAddressUtil", // Moved and renamed
+			"reactor.netty.tcp.ProxyProvider" // Moved
+	]
+	onlyIf { "$compatibleVersion" != "SKIP" }
+}
+
+tasks.japicmp.dependsOn(downloadBaseline)
+
+tasks.check.dependsOn(japicmp)
+
+shadowJar {
+	archiveClassifier.set(null)
+
+	dependsOn(project.tasks.jar)
+
+	manifest {
+		inheritFrom project.tasks.jar.manifest
+	}
+
+	configurations = [project.configurations.shaded]
+
+	project.afterEvaluate {
+		dependencies {
+			def shadedDependencies = project.configurations
+					.shaded
+					.dependencies
+					.collect { "${it.group}:${it.name}".toString() }
+					.toSet()
+
+			// Exclude every compile-scoped dependency (including the transitive ones)
+			for (id in project.configurations.compile.resolvedConfiguration.resolvedArtifacts*.moduleVersion*.id) {
+				def module = "${id.group}:${id.name}".toString()
+				if (!shadedDependencies.contains(module)) {
+					project.configurations.shaded.exclude(group: id.group, module: id.name)
+					exclude(dependency(module))
+				}
+			}
+		}
+	}
+
+	exclude 'META-INF/maven*/**'
+}
+
+task relocateShadowJar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation) {
+	target = tasks.shadowJar
+	prefix = "reactor.netty.internal.shaded"
+}
+
+tasks.shadowJar.dependsOn(relocateShadowJar)
+
+//add shadowJar to the publication
+publishing.publications.mavenJava.artifact(shadowJar)
+
+task jarFileTest(type: Test) {
+	testClassesDirs = sourceSets.jarFileTest.output.classesDirs
+	classpath = sourceSets.jarFileTest.runtimeClasspath
+
+	systemProperty("jarFile", shadowJar.outputs.files.singleFile)
+
+	dependsOn(shadowJar)
+}
+
+tasks.check.dependsOn(jarFileTest)
+
+task shadedJarTest(type: Test) {
+	testClassesDirs = sourceSets.test.output.classesDirs
+
+	Set<? super File> mainOutputs = [
+			project.sourceSets.main.output.resourcesDir,
+			project.sourceSets.main.java.outputDir,
+	]
+
+	classpath = shadowJar.outputs.files
+	// Exclude main outputs since we have the shaded JAR on the classpath already
+	classpath += sourceSets.test.runtimeClasspath.filter { !(it in mainOutputs) }
+
+	//The imports are not relocated, we do relocation only for the main sources not the tests
+	exclude '**/*PooledConnectionProviderTest*.*'
+
+	dependsOn(shadowJar)
+}
+
+tasks.check.dependsOn(shadedJarTest)
+
+description = "Core functionality for the Reactor Netty library"

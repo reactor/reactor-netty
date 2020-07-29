@@ -1,0 +1,151 @@
+/*
+ * Copyright (c) 2011-Present VMware, Inc. or its affiliates, All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import me.champeau.gradle.japicmp.JapicmpTask
+
+apply plugin: 'me.champeau.gradle.japicmp'
+apply plugin: 'de.undercouch.download'
+
+dependencies {
+	compile project(path: ':reactor-netty-core', configuration: 'shadow')
+
+	// JSR-305 annotations
+	compileOnly "com.google.code.findbugs:jsr305:$jsr305Version"
+
+	compile "io.netty:netty-codec-http:$nettyVersion"
+	compile "io.netty:netty-codec-http2:$nettyVersion"
+	optional "io.netty:netty-codec-haproxy:$nettyVersion"
+
+	//Metrics
+	optional "io.micrometer:micrometer-core:$micrometerVersion"
+
+	// Logging
+	optional "org.slf4j:slf4j-api:$slf4jVersion"
+
+	compile "io.projectreactor:reactor-core:$reactorCoreVersion"
+
+	testCompile(testFixtures(project(':reactor-netty-core'))) {
+		exclude module: "reactor-netty-core"
+	}
+
+	// Testing
+	testCompile "io.specto:hoverfly-java:$hoverflyJavaVersion"
+	testCompile "org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion"
+	testCompile "io.projectreactor:reactor-test:$testAddonVersion"
+	testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
+	testCompile "org.assertj:assertj-core:$assertJVersion"
+	testCompile "junit:junit:$junitVersion"
+
+	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
+	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
+
+	// Needed for proxy testing
+	testRuntimeOnly "io.netty:netty-handler-proxy:$nettyVersion"
+	// Needed for HTTP/2 testing
+	testRuntimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+}
+
+jar {
+	manifest {
+		attributes("Automatic-Module-Name": "reactor.netty.http")
+	}
+}
+
+task downloadBaseline(type: Download) {
+	onlyIf {
+		if (project.gradle.startParameter.isOffline()) {
+			println "Offline: skipping downloading of baseline and JAPICMP"
+			return false
+		}
+		else if ("$compatibleVersion" == "SKIP") {
+			println "SKIP: Instructed to skip the baseline comparison"
+			return false
+		}
+		else {
+			println "Will download and perform baseline comparison with ${compatibleVersion}"
+			return true
+		}
+	}
+
+	onlyIfNewer true
+	compress true
+	src "https://repo.spring.io/libs-snapshot/io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}.jar"
+	dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar"
+}
+
+task japicmp(type: JapicmpTask) {
+	oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar")
+	newClasspath = files(jar.archiveFile, project(':reactor-netty-core').jar)
+	packageIncludes = ["reactor.netty.http", "reactor.netty.http.client", "reactor.netty.http.server"]
+	onlyBinaryIncompatibleModified = true
+	failOnModification = true
+	failOnSourceIncompatibility = true
+	txtOutputFile = file("${project.buildDir}/reports/japi.txt")
+	ignoreMissingClasses = true
+	includeSynthetic = true
+	methodExcludes = [
+			// Deprecated methods in 0.9.x that are removed in 1.0.0
+			// reactor.netty.http.client package
+			"reactor.netty.http.client.HttpClient#addressSupplier(java.util.function.Supplier)",
+			"reactor.netty.http.client.HttpClient#doAfterResponse(java.util.function.BiConsumer)",
+			"reactor.netty.http.client.HttpClient#metrics(boolean)",
+			"reactor.netty.http.client.HttpClient#metrics(boolean, reactor.netty.http.client.HttpClientMetricsRecorder)",
+			"reactor.netty.http.client.HttpClient#websocket(java.lang.String)",
+			"reactor.netty.http.client.HttpClient#websocket(int)",
+			"reactor.netty.http.client.HttpClient#websocket(boolean)",
+			"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int)",
+			"reactor.netty.http.client.HttpClient#websocket(java.lang.String, int, boolean)",
+			// reactor.netty.http.server package
+			"reactor.netty.http.server.HttpServer#metrics(boolean)",
+			"reactor.netty.http.server.HttpServer#metrics(boolean, reactor.netty.http.server.HttpServerMetricsRecorder)",
+			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(boolean, java.util.function.BiFunction)",
+			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, java.util.function.BiFunction)",
+			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, java.util.function.BiFunction)",
+			"reactor.netty.http.server.HttpServerResponse#sendWebsocket(java.lang.String, int, boolean, java.util.function.BiFunction)",
+			"reactor.netty.http.server.HttpServerRoutes#ws(java.lang.String, java.util.function.BiFunction, java.lang.String)",
+			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String)",
+			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int)",
+			"reactor.netty.http.server.HttpServerRoutes#ws(java.util.function.Predicate, java.util.function.BiFunction, java.lang.String, int, boolean)",
+
+			// !!!Backwards incompatible changes!!!
+			// reactor.netty.http.client package
+			"reactor.netty.http.client.HttpClient#mapConnect(java.util.function.BiFunction)",
+			// reactor.netty.http.server package
+			"reactor.netty.http.server.HttpServer#observe(reactor.netty.ConnectionObserver)" // Renamed to `childObserve`
+	]
+	fieldExcludes = [
+			// Deprecated fields in 0.9.x that are removed in 1.0.0
+			// reactor.netty.http.client package
+			"reactor.netty.http.client.PrematureCloseException#DURING_RESPONSE",
+			"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE_SENDING_REQUEST",
+			"reactor.netty.http.client.PrematureCloseException#BEFORE_RESPONSE"
+	]
+	classExcludes = [
+			// !!!Backwards incompatible changes!!!
+			// reactor.netty.http.client package
+			"reactor.netty.http.client.HttpResponseDecoderSpec",
+			// reactor.netty.http.server package
+			"reactor.netty.http.server.HttpRequestDecoderSpec",
+			// reactor.netty.http package
+			"reactor.netty.http.HttpResources" // Method changed in super class
+	]
+	onlyIf { "$compatibleVersion" != "SKIP" }
+}
+
+tasks.japicmp.dependsOn(downloadBaseline)
+
+tasks.check.dependsOn(japicmp)
+
+description = "HTTP functionality for the Reactor Netty library"
