@@ -121,6 +121,10 @@ public final class ReactorNetty {
 	 */
 	public static final String POOL_MAX_IDLE_TIME = "reactor.netty.pool.maxIdleTime";
 	/**
+	 * Default max life time, fallback - max life time is not specified.
+	 */
+	public static final String POOL_MAX_LIFE_TIME = "reactor.netty.pool.maxLifeTime";
+	/**
 	 * Default leasing strategy (fifo, lifo), fallback to fifo.
 	 * <ul>
 	 *     <li>fifo - The connection selection is first in, first out</li>
