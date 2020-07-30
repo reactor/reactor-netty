@@ -73,6 +73,13 @@ public interface ConnectionProvider extends Disposable {
 			"-1"));
 
 	/**
+	 * Default max life time, fallback - max life time is not specified.
+	 */
+	long DEFAULT_POOL_MAX_LIFE_TIME = Long.parseLong(System.getProperty(
+			ReactorNetty.POOL_MAX_LIFE_TIME,
+			"-1"));
+
+	/**
 	 * The connection selection is first in, first out.
 	 */
 	String LEASING_STRATEGY_FIFO = "fifo";
@@ -470,6 +477,9 @@ public interface ConnectionProvider extends Disposable {
 			if (DEFAULT_POOL_MAX_IDLE_TIME > -1) {
 				maxIdleTime(Duration.ofMillis(DEFAULT_POOL_MAX_IDLE_TIME));
 			}
+			if (DEFAULT_POOL_MAX_LIFE_TIME > -1) {
+				maxLifeTime(Duration.ofMillis(DEFAULT_POOL_MAX_LIFE_TIME));
+			}
 			if(LEASING_STRATEGY_LIFO.equals(DEFAULT_POOL_LEASING_STRATEGY)) {
 				lifo();
 			}
@@ -541,7 +551,7 @@ public interface ConnectionProvider extends Disposable {
 
 		/**
 		 * Set the options to use for configuring {@link ConnectionProvider} max life time (resolution: ms).
-		 * By default no max life time.
+		 * Default to {@link #DEFAULT_POOL_MAX_LIFE_TIME} if specified otherwise - no max life time.
 		 *
 		 * @param maxLifeTime the {@link Duration} after which the channel will be closed (resolution: ms)
 		 * @return {@literal this}
