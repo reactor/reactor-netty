@@ -72,6 +72,9 @@ jar {
 	}
 }
 
+components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
+components.java.withVariantsFromConfiguration(configurations.testFixturesRuntimeElements) { skip() }
+
 task downloadBaseline(type: Download) {
 	onlyIf {
 		if (project.gradle.startParameter.isOffline()) {

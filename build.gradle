@@ -238,6 +238,10 @@ subprojects {
 		}
 	}
 
+	tasks.withType(GenerateModuleMetadata) {
+		enabled = false
+	}
+
 	jar {
 		manifest {
 			attributes("Created-By": "${System.getProperty("java.version")} (${System.getProperty("java.specification.vendor")})",
