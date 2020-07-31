@@ -250,6 +250,9 @@ tasks.shadowJar.dependsOn(relocateShadowJar)
 //add shadowJar to the publication
 publishing.publications.mavenJava.artifact(shadowJar)
 
+//add docs.zip to the publication
+publishing.publications.mavenJava.artifact(rootProject.tasks.docsZip)
+
 task jarFileTest(type: Test) {
 	testClassesDirs = sourceSets.jarFileTest.output.classesDirs
 	classpath = sourceSets.jarFileTest.runtimeClasspath

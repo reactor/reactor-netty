@@ -37,12 +37,6 @@ publishing {
 			artifact sourcesJar
 			artifact javadocJar
 
-			//FIXME don't rely solely on Bamboo to detect release environment
-			if (System.getenv()["bamboo_buildNumber"] != null) {
-				artifact docsZip
-				println docsZip
-			}
-
 			pom {
 				afterEvaluate {
 					name = project.description
