@@ -20,9 +20,11 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.logging.ByteBufFormat;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AttributeKey;
@@ -261,8 +263,8 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	}
 
 	/**
-	 * Apply or remove a wire logger configuration using {@link Transport} category
-	 * and {@code DEBUG} logger level.
+	 * Apply or remove a wire logger configuration using {@link Transport} category,
+	 * {@code DEBUG} logger level and {@link ByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
 	 *
 	 * @param enable specifies whether the wire logger configuration will be added to the pipeline
 	 * @return a new {@link Transport} reference
@@ -286,8 +288,8 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	}
 
 	/**
-	 * Apply a wire logger configuration using the specified category
-	 * and {@code DEBUG} logger level.
+	 * Apply a wire logger configuration using the specified category,
+	 * {@code DEBUG} logger level and {@link ByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
 	 *
 	 * @param category the logger category
 	 * @return a new {@link Transport} reference
@@ -298,8 +300,8 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	}
 
 	/**
-	 * Apply a wire logger configuration using the specified category
-	 * and logger level.
+	 * Apply a wire logger configuration using the specified category,
+	 * logger level and {@link ByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
 	 *
 	 * @param category the logger category
 	 * @param level the logger level
@@ -308,8 +310,24 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	public T wiretap(String category, LogLevel level) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
+		return wiretap(category, LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
+	}
+
+	/**
+	 * Apply a wire logger configuration using the specified category,
+	 * logger level and {@link ByteBuf} format.
+	 *
+	 * @param category the logger category
+	 * @param level the logger level
+	 * @param format the {@link ByteBuf} format
+	 * @return a new {@link Transport} reference
+	 */
+	public final T wiretap(String category, LogLevel level, ByteBufFormat format) {
+		Objects.requireNonNull(category, "category");
+		Objects.requireNonNull(level, "level");
+		Objects.requireNonNull(format, "format");
 		T dup = duplicate();
-		dup.configuration().loggingHandler = new LoggingHandler(category, level);
+		dup.configuration().loggingHandler = new LoggingHandler(category, level, format);
 		return dup;
 	}
 
