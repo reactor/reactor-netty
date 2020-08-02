@@ -13,13 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-dependencies {
-	compile project(':reactor-netty-http')
+package reactor.netty.examples.documentation.http.server.wiretap;
 
-	compile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
 
-	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
-	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+public class Application {
+
+	public static void main(String[] args) {
+		DisposableServer server =
+				HttpServer.create()
+				          .wiretap(true) //<1>
+				          .bindNow();
+
+		server.onDispose()
+		      .block();
+	}
 }
-
-description = "Examples for the Reactor Netty library"

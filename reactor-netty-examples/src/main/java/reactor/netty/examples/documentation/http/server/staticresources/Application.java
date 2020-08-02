@@ -13,13 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-dependencies {
-	compile project(':reactor-netty-http')
+package reactor.netty.examples.documentation.http.server.staticresources;
 
-	compile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
 
-	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
-	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+public class Application {
+
+	public static void main(String[] args) throws URISyntaxException {
+		Path file = Paths.get(Application.class.getResource("/logback.xml").toURI());
+		DisposableServer server =
+				HttpServer.create()
+				          .route(routes -> routes.file("/index.html", file))
+				          .bindNow();
+
+		server.onDispose()
+		      .block();
+	}
 }
-
-description = "Examples for the Reactor Netty library"

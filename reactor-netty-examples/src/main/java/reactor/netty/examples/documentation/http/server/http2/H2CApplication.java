@@ -13,13 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-dependencies {
-	compile project(':reactor-netty-http')
+package reactor.netty.examples.documentation.http.server.http2;
 
-	compile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.HttpProtocol;
+import reactor.netty.http.server.HttpServer;
 
-	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
-	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+public class H2CApplication {
+
+	public static void main(String[] args) {
+		DisposableServer server =
+				HttpServer.create()
+				          .port(8080)
+				          .protocol(HttpProtocol.H2C)
+				          .handle((request, response) -> response.sendString(Mono.just("hello")))
+				          .bindNow();
+
+		server.onDispose()
+		      .block();
+	}
 }
-
-description = "Examples for the Reactor Netty library"

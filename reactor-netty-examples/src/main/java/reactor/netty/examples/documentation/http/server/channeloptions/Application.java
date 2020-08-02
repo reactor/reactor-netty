@@ -13,13 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-dependencies {
-	compile project(':reactor-netty-http')
+package reactor.netty.examples.documentation.http.server.channeloptions;
 
-	compile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+import io.netty.channel.ChannelOption;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
 
-	runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
-	runtimeOnly "io.netty:netty-tcnative-boringssl-static:$boringSslVersion$os_suffix"
+public class Application {
+
+	public static void main(String[] args) {
+		DisposableServer server =
+				HttpServer.create()
+				          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+				          .bindNow();
+
+		server.onDispose()
+		      .block();
+	}
 }
-
-description = "Examples for the Reactor Netty library"
