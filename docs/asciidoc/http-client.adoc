@@ -1,4 +1,5 @@
 :sourcedir: ./../../reactor-netty-http/src/main/java
+:examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client
 :javadoc: https://projectreactor.io/docs/netty/release/api
 
 [[http-client]]
@@ -16,22 +17,10 @@ To connect the `HTTP` client to a given `HTTP` endpoint, you must create and con
 The following example shows how to do so:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/connect/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()                   <1>
-                          .get()                      <2>
-                          .uri("http://example.com/") <3>
-                          .response()                 <4>
-                          .block();
-    }
-}
+include::{examplesdir}/connect/Application.java[lines=18..32]
 ----
 <1> Creates a {javadoc}/reactor/netty/http/client/HttpClient.html[HttpClient]
 instance ready for configuring.
@@ -44,32 +33,10 @@ instance ready for configuring.
 The following example uses `WebSocket`:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/websocket/Application.java
 ----
-import io.netty.buffer.Unpooled;
-import io.netty.util.CharsetUtil;
-import reactor.core.publisher.Flux;
-import reactor.netty.http.client.HttpClient;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClient.create()
-                  .websocket()
-                  .uri("wss://echo.websocket.org")
-                  .handle((inbound, outbound) -> {
-                      inbound.receive()
-                             .asString()
-                             .take(1)
-                             .subscribe(System.out::println);
-
-                      final byte[] msgBytes = "hello".getBytes(CharsetUtil.ISO_8859_1);
-                      return outbound.send(Flux.just(Unpooled.wrappedBuffer(msgBytes), Unpooled.wrappedBuffer(msgBytes)))
-                                     .neverComplete();
-                  })
-                  .blockLast();
-    }
-}
+include::{examplesdir}/websocket/Application.java[lines=18..42]
 ----
 ====
 
@@ -78,24 +45,10 @@ public class Application {
 In order to connect to a specific host and port, you can apply the following configuration to the `HTTP` client:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/address/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .host("example.com") <1>
-                          .port(80)            <2>
-                          .get()
-                          .uri("/")
-                          .response()
-                          .block();
-    }
-}
+include::{examplesdir}/address/Application.java[lines=18..35]
 ----
 <1> Configures the `HTTP` host
 <2> Configures the `HTTP` port
@@ -110,25 +63,10 @@ a request body is expected. `Content-Length` provided through request headers di
 if necessary. The following example sends `hello`:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/send/Application.java
 ----
-import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .post()
-                          .uri("http://example.com/")
-                          .send(ByteBufFlux.fromString(Mono.just("hello"))) <1>
-                          .response()
-                          .block();
-    }
-}
+include::{examplesdir}/send/Application.java[lines=18..35]
 ----
 <1> Sends a `hello` string to the given `HTTP` endpoint
 ====
@@ -139,27 +77,10 @@ When sending data to a given `HTTP` endpoint, you may need to send additional he
 You can use the following configuration to do so:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/send/headers/Application.java
 ----
-import io.netty.handler.codec.http.HttpHeaderNames;
-import reactor.core.publisher.Mono;
-import reactor.netty.ByteBufFlux;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .headers(h -> h.set(HttpHeaderNames.CONTENT_LENGTH, 5)) <1>
-                          .post()
-                          .uri("http://example.com/")
-                          .send(ByteBufFlux.fromString(Mono.just("hello")))
-                          .response()
-                          .block();
-    }
-}
+include::{examplesdir}/send/headers/Application.java[lines=18..38]
 ----
 <1> Disables `Transfer-Encoding: chunked` and provides `Content-Length` header.
 ====
@@ -170,23 +91,10 @@ You can enable compression on the `HTTP` client, which means the request header
 `Accept-Encoding` is added to the request headers. The following example shows how to do so:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/compression/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .compress(true)
-                          .get()
-                          .uri("http://example.com/")
-                          .response()
-                          .block();
-    }
-}
+include::{examplesdir}/compression/Application.java[lines=18..34]
 ----
 ====
 
@@ -203,23 +111,10 @@ predicate matches.
 The following example uses `followRedirect(true)`:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/redirect/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .followRedirect(true)
-                          .get()
-                          .uri("http://example.com/")
-                          .response()
-                          .block();
-    }
-}
+include::{examplesdir}/redirect/Application.java[lines=18..34]
 ----
 ====
 
@@ -230,23 +125,10 @@ To receive data from a given `HTTP` endpoint, you can use one of the methods fro
 The following example uses the `responseContent` method:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/read/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-
-public class Application {
-
-    public static void main(String[] args) {
-        String response =
-                HttpClient.create()
-                          .get()
-                          .uri("http://example.com/")
-                          .responseContent() <1>
-                          .aggregate()       <2>
-                          .asString()        <3>
-                          .block();
-    }
-}
+include::{examplesdir}/read/Application.java[lines=18..33]
 ----
 <1> Receives data from a given `HTTP` endpoint
 <2> Aggregates the data
@@ -261,24 +143,10 @@ You can obtain this additional metadata by using
 The following example shows how to do so.
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/read/status/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-
-public class Application {
-
-    public static void main(String[] args) {
-        String response =
-                HttpClient.create()
-                          .get()
-                          .uri("http://example.com/")
-                          .responseSingle((resp, bytes) -> {
-                              System.out.println(resp.status()); <1>
-                              return bytes.asString();
-                          })
-                          .block();
-    }
-}
+include::{examplesdir}/read/status/Application.java[lines=18..34]
 ----
 <1> Obtains the status code.
 ====
@@ -313,24 +181,10 @@ include::{sourcedir}/reactor/netty/http/client/HttpResponseDecoderSpec.java[line
 When you need to change these default settings, you can configure the `HTTP` client as follows:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/responsedecoder/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-
-public class Application {
-
-    public static void main(String[] args) {
-        String response =
-                HttpClient.create()
-                        .httpResponseDecoder(spec -> spec.maxHeaderSize(16384)) <1>
-                        .get()
-                        .uri("http://example.com/")
-                        .responseContent()
-                        .aggregate()
-                        .asString()
-                        .block();
-    }
-}
+include::{examplesdir}/responsedecoder/Application.java[lines=18..35]
 ----
 <1> The maximum length of all headers will be `16384`.
 When this value is exceeded, a
@@ -344,28 +198,10 @@ When you need configurations on a TCP level, you can use the following snippet
 to extend the default `TCP` client configuration (add an option, bind address etc.):
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/channeloptions/Application.java
 ----
-import io.netty.channel.ChannelOption;
-import reactor.netty.http.client.HttpClient;
-import java.net.InetSocketAddress;
-
-public class Application {
-
-    public static void main(String[] args) {
-        String response =
-                HttpClient.create()
-                          .bindAddress(() -> new InetSocketAddress("host", port))
-                          .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
-                          .get()
-                          .uri("http://example.com/")
-                          .responseContent()
-                          .aggregate()
-                          .asString()
-                          .block();
-        System.out.println("Response " + response);
-    }
-}
+include::{examplesdir}/channeloptions/Application.java[lines=18..40]
 ----
 ====
 
@@ -379,23 +215,10 @@ To enable it, you must set the logger `reactor.netty.http.client.HttpClient` lev
 and apply the following configuration:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/wiretap/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .wiretap(true) <1>
-                          .get()
-                          .uri("http://example.com/")
-                          .response()
-                          .block();
-    }
-}
+include::{examplesdir}/wiretap/Application.java[lines=18..34]
 ----
 <1> Enables the wire logging
 ====
@@ -412,24 +235,10 @@ or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 The following example uses `SslContextBuilder`:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/security/Application.java
 ----
-import io.netty.handler.ssl.SslContextBuilder;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .secure(spec -> spec.sslContext(SslContextBuilder.forClient()))
-                          .get()
-                          .uri("https://example.com/")
-                          .response()
-                          .block();
-    }
-}
+include::{examplesdir}/security/Application.java[lines=18..37]
 ----
 ====
 
@@ -465,42 +274,10 @@ include::alloc-metrics.adoc[]
 The following example enables that integration:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/metrics/Application.java
 ----
-import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.config.MeterFilter;
-import reactor.netty.http.client.HttpClient;
-
-public class Application {
-
-    public static void main(String[] args) {
-        Metrics.globalRegistry <1>
-               .config()
-               .meterFilter(MeterFilter.maximumAllowableTags("reactor.netty.http.client", "URI", 100, MeterFilter.deny()));
-
-        HttpClient client =
-                HttpClient.create()
-                          .metrics(true, s -> {
-                              if (s.startsWith("/stream/")) { <2>
-                                  return "/stream/{n}";
-                              }
-                              else if (s.startsWith("/bytes/")) {
-                                  return "/bytes/{n}";
-                              }
-                              return s;
-                          }); <3>
-
-        client.get()
-              .uri("http://httpbin.org/stream/2")
-              .responseContent()
-              .blockLast();
-
-        client.get()
-              .uri("http://httpbin.org/bytes/1024")
-              .responseContent()
-              .blockLast();
-    }
-}
+include::{examplesdir}/metrics/Application.java[lines=18..51]
 ----
 <1> Applies upper limit for the meters with `URI` tag
 <2> Templated URIs will be used as an URI tag value when possible
@@ -517,26 +294,10 @@ When HTTP client metrics are needed for an integration with a system other than 
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/client/metrics/custom/Application.java
 ----
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.http.client.HttpClientResponse;
-
-import java.net.SocketAddress;
-import java.time.Duration;
-
-public class Application {
-
-    public static void main(String[] args) {
-        HttpClientResponse response =
-                HttpClient.create()
-                          .metrics(true, () -> new CustomHttpClientMetricsRecorder()) <1>
-                          .get()
-                          .uri("https://httpbin.org/stream/2")
-                          .response()
-                          .block();
-    }
-}
+include::{examplesdir}/metrics/custom/Application.java[lines=18..37]
 ----
 <1> Enables HTTP client metrics and provides {javadoc}/reactor/netty/http/client/HttpClientMetricsRecorder.html[`HttpClientMetricsRecorder`] implementation.
 ====
