@@ -1,4 +1,5 @@
 :sourcedir: ./../../reactor-netty-core/src/main/java
+:examplesdir: ./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server
 :javadoc: https://projectreactor.io/docs/netty/release/api
 
 [[tcp-server]]
@@ -18,22 +19,10 @@ when the `bind` operation is invoked. The following example shows how to create 
 configure a `TcpServer` instance:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/create/Application.java
 ----
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()   <1>
-                         .bindNow(); <2>
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/create/Application.java[lines=18..31]
 ----
 <1> Creates a {javadoc}/reactor/netty/tcp/TcpServer.html[`TcpServer`]
 instance that is ready for configuring.
@@ -49,24 +38,10 @@ which shuts the server down in a blocking fashion.
 To serve on a specific `host` and `port`, you can apply the following configuration to the `TCP` server:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/address/Application.java
 ----
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .host("localhost") <1>
-                         .port(8080)        <2>
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/address/Application.java[lines=18..33]
 ----
 <1> Configures the `TCP` server host
 <2> Configures the `TCP` server port
@@ -79,24 +54,10 @@ The I/O handler has access to {javadoc}/reactor/netty/NettyOutbound.html[`NettyO
 to be able to write data. The following example shows how to attach an I/O handler:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/send/Application.java
 ----
-import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .handle((inbound, outbound) -> outbound.sendString(Mono.just("hello"))) <1>
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/send/Application.java[lines=18..33]
 ----
 <1> Sends `hello` string to the connected clients
 ====
@@ -108,23 +69,10 @@ The I/O handler has access to {javadoc}/reactor/netty/NettyInbound.html[`NettyIn
 to be able to read data. The following example shows how to use it:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/read/Application.java
 ----
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .handle((inbound, outbound) -> inbound.receive().then()) <1>
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/read/Application.java[lines=18..32]
 ----
 <1> Receives data from the connected clients
 ====
@@ -141,26 +89,10 @@ The following lifecycle callbacks are provided to let you extend the `TCP` serve
 The following example uses the `doOnConnection` callback:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/lifecycle/Application.java
 ----
-import io.netty.handler.timeout.ReadTimeoutHandler;
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-import java.util.concurrent.TimeUnit;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .doOnConnection(conn ->
-                                 conn.addHandler(new ReadTimeoutHandler(10, TimeUnit.SECONDS))) <1>
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/lifecycle/Application.java[lines=18..35]
 ----
 <1> `Netty` pipeline is extended with `ReadTimeoutHandler` when a remote client is connected.
 ====
@@ -189,24 +121,10 @@ include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=40..48]
 If additional options are necessary or changes to the current options are needed, you can apply the following configuration:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/channeloptions/Application.java
 ----
-import io.netty.channel.ChannelOption;
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/channeloptions/Application.java[lines=18..33]
 ----
 ====
 
@@ -224,23 +142,10 @@ To enable it, you must set the logger `reactor.netty.tcp.TcpServer` level to `DE
 and apply the following configuration;
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/wiretap/Application.java
 ----
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .wiretap(true) <1>
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/wiretap/Application.java[lines=18..32]
 ----
 <1> Enables the wire logging
 ====
@@ -266,25 +171,10 @@ include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=78..107]
 If changes to the these settings are needed, you can apply the following configuration:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/eventloop/Application.java
 ----
-import reactor.netty.DisposableServer;
-import reactor.netty.resources.LoopResources;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        LoopResources loop = LoopResources.create("event-loop", 1, 4, true);
-        DisposableServer server =
-                TcpServer.create()
-                         .runOn(loop)
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/eventloop/Application.java[lines=18..35]
 ----
 ====
 
@@ -302,28 +192,10 @@ or by setting `-Dio.netty.handler.ssl.noOpenSsl=true`.
 The following example uses `SslContextBuilder`:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/security/Application.java
 ----
-import io.netty.handler.ssl.SslContextBuilder;
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-import java.io.File;
-
-public class Application {
-
-    public static void main(String[] args) {
-        File cert = new File("certificate.crt");
-        File key = new File("private.key");
-        DisposableServer server =
-                TcpServer.create()
-                         .secure(spec ->
-                                 spec.sslContext(SslContextBuilder.forServer(cert, key)))
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/security/Application.java[lines=18..39]
 ----
 ====
 
@@ -349,23 +221,10 @@ include::alloc-metrics.adoc[]
 The following example enables that integration:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/metrics/Application.java
 ----
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .metrics(true) <1>
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/metrics/Application.java[lines=18..32]
 ----
 <1> Enables the built-in integration with Micrometer
 ====
@@ -374,23 +233,10 @@ When TCP server metrics are needed for an integration with a system other than `
 to provide your own integration with `Micrometer`, you can provide your own metrics recorder, as follows:
 
 ====
-[source,java]
+[source,java,indent=0]
+./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/metrics/custom/Application.java
 ----
-import reactor.netty.DisposableServer;
-import reactor.netty.tcp.TcpServer;
-
-public class Application {
-
-    public static void main(String[] args) {
-        DisposableServer server =
-                TcpServer.create()
-                         .metrics(true, () -> new CustomChannelMetricsRecorder()) <1>
-                         .bindNow();
-
-        server.onDispose()
-              .block();
-    }
-}
+include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
 ----
 <1> Enables TCP server metrics and provides {javadoc}/reactor/netty/channel/ChannelMetricsRecorder.html[`ChannelMetricsRecorder`] implementation.
 ====
