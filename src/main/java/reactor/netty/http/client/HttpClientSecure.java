@@ -21,13 +21,11 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
-import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpClient;
 
@@ -82,7 +80,6 @@ final class HttpClientSecure extends HttpClientOperator {
 			sslCtx =
 					SslContextBuilder.forClient()
 					                 .sslProvider(provider)
-					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
 					                 .applicationProtocolConfig(new ApplicationProtocolConfig(
 							                 ApplicationProtocolConfig.Protocol.ALPN,
 							                 ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,

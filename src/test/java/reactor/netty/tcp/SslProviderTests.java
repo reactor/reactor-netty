@@ -19,8 +19,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.netty.handler.ssl.JdkSslContext;
-import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.OpenSslContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -38,13 +37,20 @@ import reactor.test.StepVerifier;
 
 import javax.net.ssl.SSLHandshakeException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Violeta Georgieva
  */
 public class SslProviderTests {
+	static final String PROTOCOL_TLS_V1_3 = "TLSv1.3";
+
+	// expected TLSv1.3 cipher suites commonly used by JDK 11+ and OpenSSL
+    static final String[] TLSV13_CIPHER_SUITES = { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
+
+	// expected cipher suites that are mandatory for HTTP/2
+	static final String[] HTTP2_MANDATORY_CIPHER_SUITES = { "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" };
+
 	private List<String> protocols;
 	private SslContext sslContext;
 	private HttpServer server;
@@ -59,6 +65,7 @@ public class SslProviderTests {
 		clientSslContextBuilder = SslContextBuilder.forClient()
 		                                           .trustManager(InsecureTrustManagerFactory.INSTANCE);
 		protocols = new ArrayList<>();
+		sslContext = null;
 		server = HttpServer.create()
 		                   .port(0)
 		                   .tcpConfiguration(tcpServer -> tcpServer.doOnBind(b -> {
@@ -83,9 +90,10 @@ public class SslProviderTests {
 				server.protocol(HttpProtocol.HTTP11)
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .bindNow();
-		assertTrue(protocols.isEmpty());
-		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
-		                                   sslContext instanceof JdkSslContext);
+		assertThat(protocols).isEmpty();
+		assertThat(sslContext).isInstanceOf(OpenSslContext.class).satisfies(ctx -> {
+			assertThat(ctx.cipherSuites()).contains(TLSV13_CIPHER_SUITES);
+		});
 	}
 
 	@Test
@@ -94,9 +102,10 @@ public class SslProviderTests {
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
-		assertTrue(protocols.isEmpty());
-		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
-		                                   sslContext instanceof JdkSslContext);
+		assertThat(protocols).isEmpty();
+		assertThat(sslContext).isInstanceOf(OpenSslContext.class).satisfies(ctx -> {
+			assertThat(ctx.cipherSuites()).contains(TLSV13_CIPHER_SUITES);
+		});
 	}
 
 	@Test
@@ -106,9 +115,10 @@ public class SslProviderTests {
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.HTTP11)
 				      .bindNow();
-		assertTrue(protocols.isEmpty());
-		assertTrue(OpenSsl.isAvailable() ? sslContext instanceof OpenSslContext :
-		                                   sslContext instanceof JdkSslContext);
+		assertThat(protocols).isEmpty();
+		assertThat(sslContext).isInstanceOf(OpenSslContext.class).satisfies(ctx -> {
+			assertThat(ctx.cipherSuites()).contains(TLSV13_CIPHER_SUITES);
+		});
 	}
 
 	@Test
@@ -117,11 +127,10 @@ public class SslProviderTests {
 				server.protocol(HttpProtocol.H2)
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .bindNow();
-		assertEquals(2, protocols.size());
-		assertTrue(protocols.contains("h2"));
-		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
-		                                       sslContext instanceof OpenSslContext :
-		                                       sslContext instanceof JdkSslContext);
+		assertThat(protocols).containsExactly(ApplicationProtocolNames.HTTP_2, ApplicationProtocolNames.HTTP_1_1);
+		assertThat(sslContext).isInstanceOf(OpenSslContext.class).satisfies(ctx -> {
+			assertThat(ctx.cipherSuites()).contains(TLSV13_CIPHER_SUITES).contains(HTTP2_MANDATORY_CIPHER_SUITES);
+		});
 	}
 
 	@Test
@@ -130,11 +139,10 @@ public class SslProviderTests {
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
-		assertEquals(2, protocols.size());
-		assertTrue(protocols.contains("h2"));
-		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
-		                                       sslContext instanceof OpenSslContext :
-		                                       sslContext instanceof JdkSslContext);
+		assertThat(protocols).containsExactly(ApplicationProtocolNames.HTTP_2, ApplicationProtocolNames.HTTP_1_1);
+		assertThat(sslContext).isInstanceOf(OpenSslContext.class).satisfies(ctx -> {
+			assertThat(ctx.cipherSuites()).contains(TLSV13_CIPHER_SUITES).contains(HTTP2_MANDATORY_CIPHER_SUITES);
+		});
 	}
 
 	@Test
@@ -144,24 +152,22 @@ public class SslProviderTests {
 				      .secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .protocol(HttpProtocol.H2)
 				      .bindNow();
-		assertEquals(2, protocols.size());
-		assertTrue(protocols.contains("h2"));
-		assertTrue(io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
-		                                       sslContext instanceof OpenSslContext :
-		                                       sslContext instanceof JdkSslContext);
+		assertThat(protocols).containsExactly(ApplicationProtocolNames.HTTP_2, ApplicationProtocolNames.HTTP_1_1);
+		assertThat(sslContext).isInstanceOf(OpenSslContext.class).satisfies(ctx -> {
+			assertThat(ctx.cipherSuites()).contains(TLSV13_CIPHER_SUITES).contains(HTTP2_MANDATORY_CIPHER_SUITES);
+		});
 	}
 
 	@Test
 	public void testTls13Support() {
 		disposableServer =
-				server.secure(spec -> spec.sslContext(serverSslContextBuilder.protocols("TLSv1.3")))
+				server.secure(spec -> spec.sslContext(serverSslContextBuilder.protocols(PROTOCOL_TLS_V1_3)))
 				      .handle((req, res) -> res.sendString(Mono.just("testTls13Support")))
 				      .bindNow();
 
-		StepVerifier.create(
-		        HttpClient.create()
+		StepVerifier.create(HttpClient.create()
 		                  .port(disposableServer.port())
-		                  .secure(spec -> spec.sslContext(clientSslContextBuilder.protocols("TLSv1.3")))
+		                  .secure(spec -> spec.sslContext(clientSslContextBuilder.protocols(PROTOCOL_TLS_V1_3)))
 		                  .get()
 		                  .uri("/")
 		                  .responseContent()
@@ -184,7 +190,7 @@ public class SslProviderTests {
 
 	private void doTestTls13UnsupportedProtocol(boolean serverSupport, boolean clientSupport) {
 		if (serverSupport) {
-			serverSslContextBuilder.protocols("TLSv1.3");
+			serverSslContextBuilder.protocols(PROTOCOL_TLS_V1_3);
 		}
 		disposableServer =
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
@@ -192,7 +198,7 @@ public class SslProviderTests {
 				      .bindNow();
 
 		if (clientSupport) {
-			clientSslContextBuilder.protocols("TLSv1.3");
+			clientSslContextBuilder.protocols(PROTOCOL_TLS_V1_3);
 		}
 		StepVerifier.create(
 		        HttpClient.create()

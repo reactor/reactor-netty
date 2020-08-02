@@ -32,7 +32,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.OpenSsl;
@@ -40,7 +39,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
@@ -76,6 +74,8 @@ public final class SslProvider {
 	 * configurator callback to inject default settings to an existing provider
 	 * configuration.
 	 *
+	 * @param provider ssl provider to use
+	 * @param handlerConfigurator ssl configuration handler to use
 	 * @return a new SslProvider
 	 */
 	public static SslProvider addHandlerConfigurator(
@@ -103,6 +103,7 @@ public final class SslProvider {
 	/**
 	 * Add Ssl support on the given client bootstrap
 	 * @param b a given bootstrap to enrich
+	 * @param sslProvider ssl provider to use
 	 *
 	 * @return an enriched bootstrap
 	 */
@@ -248,6 +249,8 @@ public final class SslProvider {
 		/**
 		 * The SslContextBuilder for building a new {@link SslContext}.
 		 *
+		 * @param sslCtxBuilder The SslContextBuilder to use for building a new {@link SslContext}.
+		 * 
 		 * @return {@literal this}
 		 */
 		DefaultConfigurationSpec sslContext(SslContextBuilder sslCtxBuilder);
@@ -271,7 +274,6 @@ public final class SslProvider {
 		/**
 		 * {@link io.netty.handler.ssl.SslProvider} will be set depending on
 		 * <code>OpenSsl.isAlpnSupported()</code>,
-		 * {@link Http2SecurityUtil#CIPHERS},
 		 * ALPN support,
 		 * HTTP/1.1 and HTTP/2 support
 		 *
@@ -375,7 +377,6 @@ public final class SslProvider {
 				                     io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 				                             io.netty.handler.ssl.SslProvider.OPENSSL :
 				                             io.netty.handler.ssl.SslProvider.JDK)
-				                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
 				                 .applicationProtocolConfig(new ApplicationProtocolConfig(
 				                     ApplicationProtocolConfig.Protocol.ALPN,
 				                     ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
