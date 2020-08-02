@@ -46,7 +46,7 @@ public class SslProviderTests {
 	static final String PROTOCOL_TLS_V1_3 = "TLSv1.3";
 
 	// expected TLSv1.3 cipher suites commonly used by JDK 11+ and OpenSSL
-    static final String[] TLSV13_CIPHER_SUITES = { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
+	static final String[] TLSV13_CIPHER_SUITES = { "TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384" };
 
 	// expected cipher suites that are mandatory for HTTP/2
 	static final String[] HTTP2_MANDATORY_CIPHER_SUITES = { "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" };
