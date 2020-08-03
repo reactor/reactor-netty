@@ -20,7 +20,7 @@ The following example shows how to create an `HttpServer` instance:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/create/Application.java
+.{examplesdir}/create/Application.java
 ----
 include::{examplesdir}/create/Application.java[lines=18..31]
 ----
@@ -39,7 +39,7 @@ To serve on a specific `host` and `port`, you can apply the following configurat
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/address/Application.java
+.{examplesdir}/address/Application.java
 ----
 include::{examplesdir}/address/Application.java[lines=18..33]
 ----
@@ -55,7 +55,7 @@ The following example shows how to do so:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/routing/Application.java
+.{examplesdir}/routing/Application.java
 ----
 include::{examplesdir}/routing/Application.java[lines=18..41]
 ----
@@ -73,7 +73,7 @@ The following code shows how you can configure the `HTTP` server to serve `Serve
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/sse/Application.java
+.{examplesdir}/sse/Application.java
 ----
 include::{examplesdir}/sse/Application.java[lines=18..76]
 ----
@@ -85,7 +85,7 @@ The following code shows how you can configure the `HTTP` server to serve static
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/staticresources/Application.java
+.{examplesdir}/staticresources/Application.java
 ----
 include::{examplesdir}/staticresources/Application.java[lines=18..37]
 ----
@@ -101,7 +101,7 @@ to be able to write data. The following example uses the `handle(...)` method:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/send/Application.java
+.{examplesdir}/send/Application.java
 ----
 include::{examplesdir}/send/Application.java[lines=18..33]
 ----
@@ -118,7 +118,7 @@ The following example shows how to do so:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/send/headers/Application.java
+.{examplesdir}/send/headers/Application.java
 ----
 include::{examplesdir}/send/headers/Application.java[lines=18..40]
 ----
@@ -140,7 +140,7 @@ The following example uses the `compress` method (set to `true`) to enable compr
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/compression/Application.java
+.{examplesdir}/compression/Application.java
 ----
 include::{examplesdir}/compression/Application.java[lines=18..38]
 ----
@@ -158,7 +158,7 @@ The following example uses the `handle(...)` method:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/read/Application.java
+.{examplesdir}/read/Application.java
 ----
 include::{examplesdir}/read/Application.java[lines=18..32]
 ----
@@ -174,7 +174,7 @@ The following example shows how to do so:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/read/headers/Application.java
+.{examplesdir}/read/headers/Application.java
 ----
 include::{examplesdir}/read/headers/Application.java[lines=18..40]
 ----
@@ -190,7 +190,7 @@ The following example shows how to do so:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/clientaddress/Application.java
+.{examplesdir}/clientaddress/Application.java
 ----
 include::{examplesdir}/clientaddress/Application.java[lines=18..38]
 ----
@@ -214,14 +214,14 @@ By default, the `HTTP` server is configured with the following settings:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-http/src/main/java/reactor/netty/http/HttpDecoderSpec.java
+.{sourcedir}/reactor/netty/http/HttpDecoderSpec.java
 ----
 include::{sourcedir}/reactor/netty/http/HttpDecoderSpec.java[lines=31..35]
 ----
 ====
 ====
 [source,java,indent=0]
-./../../reactor-netty-http/src/main/java/reactor/netty/http/server/HttpRequestDecoderSpec.java
+.{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java
 ----
 include::{sourcedir}/reactor/netty/http/server/HttpRequestDecoderSpec.java[lines=41]
 ----
@@ -231,7 +231,7 @@ When you need to change these default settings, you can configure the `HTTP` ser
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/requestdecoder/Application.java
+.{examplesdir}/requestdecoder/Application.java
 ----
 include::{examplesdir}/requestdecoder/Application.java[lines=18..34]
 ----
@@ -248,7 +248,7 @@ to extend the default `TCP` server configuration:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/channeloptions/Application.java
+.{examplesdir}/channeloptions/Application.java
 ----
 include::{examplesdir}/channeloptions/Application.java[lines=18..33]
 ----
@@ -265,7 +265,7 @@ and apply the following configuration:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/wiretap/Application.java
+.{examplesdir}/wiretap/Application.java
 ----
 include::{examplesdir}/wiretap/Application.java[lines=18..32]
 ----
@@ -287,7 +287,7 @@ The following example uses `SslContextBuilder`:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/security/Application.java
+.{examplesdir}/security/Application.java
 ----
 include::{examplesdir}/security/Application.java[lines=18..39]
 ----
@@ -334,7 +334,7 @@ The following listing presents a simple `H2` example:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/http2/H2Application.java
+.{examplesdir}/http2/H2Application.java
 ----
 include::{examplesdir}/http2/H2Application.java[lines=18..44]
 ----
@@ -358,7 +358,7 @@ The following listing presents a simple `H2C` example:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/http2/H2CApplication.java
+.{examplesdir}/http2/H2CApplication.java
 ----
 include::{examplesdir}/http2/H2CApplication.java[lines=18..41]
 ----
@@ -401,7 +401,7 @@ The following example enables that integration:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/metrics/Application.java
+.{examplesdir}/metrics/Application.java
 ----
 include::{examplesdir}/metrics/Application.java[lines=18..52]
 ----
@@ -421,7 +421,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/http/server/metrics/custom/Application.java
+.{examplesdir}/metrics/custom/Application.java
 ----
 include::{examplesdir}/metrics/custom/Application.java[lines=18..41]
 ----

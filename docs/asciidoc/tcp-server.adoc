@@ -20,7 +20,7 @@ configure a `TcpServer` instance:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/create/Application.java
+.{examplesdir}/create/Application.java
 ----
 include::{examplesdir}/create/Application.java[lines=18..31]
 ----
@@ -39,7 +39,7 @@ To serve on a specific `host` and `port`, you can apply the following configurat
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/address/Application.java
+.{examplesdir}/address/Application.java
 ----
 include::{examplesdir}/address/Application.java[lines=18..33]
 ----
@@ -55,7 +55,7 @@ to be able to write data. The following example shows how to attach an I/O handl
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/send/Application.java
+.{examplesdir}/send/Application.java
 ----
 include::{examplesdir}/send/Application.java[lines=18..33]
 ----
@@ -70,7 +70,7 @@ to be able to read data. The following example shows how to use it:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/read/Application.java
+.{examplesdir}/read/Application.java
 ----
 include::{examplesdir}/read/Application.java[lines=18..32]
 ----
@@ -90,7 +90,7 @@ The following example uses the `doOnConnection` callback:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/lifecycle/Application.java
+.{examplesdir}/lifecycle/Application.java
 ----
 include::{examplesdir}/lifecycle/Application.java[lines=18..35]
 ----
@@ -112,7 +112,7 @@ By default, the `TCP` server is configured with the following options:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-core/src/main/java/reactor/netty/tcp/TcpServerBind.java
+.{sourcedir}/reactor/netty/tcp/TcpServerBind.java
 ----
 include::{sourcedir}/reactor/netty/tcp/TcpServerBind.java[lines=40..48]
 ----
@@ -122,7 +122,7 @@ If additional options are necessary or changes to the current options are needed
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/channeloptions/Application.java
+.{examplesdir}/channeloptions/Application.java
 ----
 include::{examplesdir}/channeloptions/Application.java[lines=18..33]
 ----
@@ -143,7 +143,7 @@ and apply the following configuration;
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/wiretap/Application.java
+.{examplesdir}/wiretap/Application.java
 ----
 include::{examplesdir}/wiretap/Application.java[lines=18..32]
 ----
@@ -162,7 +162,7 @@ The default configuration for the `Event Loop Group` is the following:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
+.{sourcedir}/reactor/netty/ReactorNetty.java
 ----
 include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=78..107]
 ----
@@ -172,7 +172,7 @@ If changes to the these settings are needed, you can apply the following configu
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/eventloop/Application.java
+.{examplesdir}/eventloop/Application.java
 ----
 include::{examplesdir}/eventloop/Application.java[lines=18..35]
 ----
@@ -193,7 +193,7 @@ The following example uses `SslContextBuilder`:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/security/Application.java
+.{examplesdir}/security/Application.java
 ----
 include::{examplesdir}/security/Application.java[lines=18..39]
 ----
@@ -222,7 +222,7 @@ The following example enables that integration:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/metrics/Application.java
+.{examplesdir}/metrics/Application.java
 ----
 include::{examplesdir}/metrics/Application.java[lines=18..32]
 ----
@@ -234,7 +234,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/server/metrics/custom/Application.java
+.{examplesdir}/metrics/custom/Application.java
 ----
 include::{examplesdir}/metrics/custom/Application.java[lines=18..35]
 ----

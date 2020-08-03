@@ -19,7 +19,7 @@ The following example shows how to create a `TcpClient`:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/create/Application.java
+.{examplesdir}/create/Application.java
 ----
 include::{examplesdir}/create/Application.java[lines=18..31]
 ----
@@ -39,7 +39,7 @@ The following example shows how to do so:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/address/Application.java
+.{examplesdir}/address/Application.java
 ----
 include::{examplesdir}/address/Application.java[lines=18..33]
 ----
@@ -55,7 +55,7 @@ to be able to write data.
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/send/Application.java
+.{examplesdir}/send/Application.java
 ----
 include::{examplesdir}/send/Application.java[lines=18..35]
 ----
@@ -70,7 +70,7 @@ to be able to read data. The following example shows how to do so:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/read/Application.java
+.{examplesdir}/read/Application.java
 ----
 include::{examplesdir}/read/Application.java[lines=18..34]
 ----
@@ -89,7 +89,7 @@ The following example uses the `doOnConnected` callback:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/lifecycle/Application.java
+.{examplesdir}/lifecycle/Application.java
 ----
 include::{examplesdir}/lifecycle/Application.java[lines=18..37]
 ----
@@ -111,7 +111,7 @@ By default, the `TCP` client is configured with the following options:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-core/src/main/java/reactor/netty/tcp/TcpClientConnect.java
+.{sourcedir}/reactor/netty/tcp/TcpClientConnect.java
 ----
 include::{sourcedir}/reactor/netty/tcp/TcpClientConnect.java[lines=38..43]
 ----
@@ -121,7 +121,7 @@ If additional options are necessary or changes to the current options are needed
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/channeloptions/Application.java
+.{examplesdir}/channeloptions/Application.java
 ----
 include::{examplesdir}/channeloptions/Application.java[lines=18..35]
 ----
@@ -142,7 +142,7 @@ and apply the following configuration:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/wiretap/Application.java
+.{examplesdir}/wiretap/Application.java
 ----
 include::{examplesdir}/wiretap/Application.java[lines=18..34]
 ----
@@ -161,7 +161,7 @@ The following listing shows the default configuration for the Event Loop Group:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-core/src/main/java/reactor/netty/ReactorNetty.java
+.{sourcedir}/reactor/netty/ReactorNetty.java
 ----
 include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=78..107]
 ----
@@ -171,7 +171,7 @@ If you need changes to the these settings, you can apply the following configura
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/eventloop/Application.java
+.{examplesdir}/eventloop/Application.java
 ----
 include::{examplesdir}/eventloop/Application.java[lines=18..37]
 ----
@@ -191,7 +191,7 @@ If you need to disable the connection pool, you can apply the following configur
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/pool/Application.java
+.{examplesdir}/pool/Application.java
 ----
 include::{examplesdir}/pool/Application.java[lines=18..33]
 ----
@@ -201,7 +201,7 @@ If you need to specify an idle time for the channels in the connection pool, you
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/pool/config/Application.java
+.{examplesdir}/pool/config/Application.java
 ----
 include::{examplesdir}/pool/config/Application.java[lines=18..42]
 ----
@@ -221,7 +221,7 @@ The following example enables that integration:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/pool/metrics/Application.java
+.{examplesdir}/pool/metrics/Application.java
 ----
 include::{examplesdir}/pool/metrics/Application.java[lines=18..40]
 ----
@@ -243,7 +243,7 @@ The following example uses `SslContextBuilder`:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/security/Application.java
+.{examplesdir}/security/Application.java
 ----
 include::{examplesdir}/security/Application.java[lines=18..37]
 ----
@@ -257,7 +257,7 @@ The following example uses `ProxyProvider`:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/proxy/Application.java
+.{examplesdir}/proxy/Application.java
 ----
 include::{examplesdir}/proxy/Application.java[lines=18..38]
 ----
@@ -290,7 +290,7 @@ The following example enables that integration:
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/metrics/Application.java
+.{examplesdir}/metrics/Application.java
 ----
 include::{examplesdir}/metrics/Application.java[lines=18..34]
 ----
@@ -302,7 +302,7 @@ to provide your own integration with `Micrometer`, you can provide your own metr
 
 ====
 [source,java,indent=0]
-./../../reactor-netty-examples/src/main/java/reactor/netty/examples/documentation/tcp/client/metrics/custom/Application.java
+.{examplesdir}/metrics/custom/Application.java
 ----
 include::{examplesdir}/metrics/custom/Application.java[lines=18..37]
 ----
