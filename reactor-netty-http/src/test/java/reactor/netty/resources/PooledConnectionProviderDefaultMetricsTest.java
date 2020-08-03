@@ -49,7 +49,7 @@ import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 /**
  * @author Violeta Georgieva
  */
-public class PooledConnectionProviderMetricsTest {
+public class PooledConnectionProviderDefaultMetricsTest {
 	private MeterRegistry registry;
 
 	@Before
@@ -66,14 +66,13 @@ public class PooledConnectionProviderMetricsTest {
 	}
 
 	@Test
-	public void testClientMetricsEnabled() throws Exception {
+	public void testConnectionProviderMetricsDisabledAndHttpClientMetricsEnabled() throws Exception {
 		doTest(ConnectionProvider.create("test", 1), true);
 	}
 
 	@Test
-	public void testClientMetricsDisabled() throws Exception {
-		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(),
-		       false);
+	public void testConnectionProviderMetricsEnableAndHttpClientMetricsDisabled() throws Exception {
+		doTest(ConnectionProvider.builder("test").maxConnections(1).metrics(true).lifo().build(), false);
 	}
 
 	private void doTest(ConnectionProvider provider, boolean clientMetricsEnabled) throws Exception {

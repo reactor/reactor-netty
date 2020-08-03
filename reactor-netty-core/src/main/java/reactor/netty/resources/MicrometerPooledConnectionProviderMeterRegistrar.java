@@ -15,8 +15,10 @@
  */
 package reactor.netty.resources;
 
+import java.net.SocketAddress;
+
 import io.micrometer.core.instrument.Gauge;
-import reactor.pool.InstrumentedPool;
+import reactor.netty.Metrics;
 
 import static reactor.netty.Metrics.ACTIVE_CONNECTIONS;
 import static reactor.netty.Metrics.CONNECTION_PROVIDER_PREFIX;
@@ -29,30 +31,41 @@ import static reactor.netty.Metrics.REMOTE_ADDRESS;
 import static reactor.netty.Metrics.TOTAL_CONNECTIONS;
 
 /**
+ * Default implementation of {@link reactor.netty.resources.ConnectionProvider.MeterRegistrar}.
+ *
+ * Registers gauges for every metric in {@link ConnectionPoolMetrics}.
+ *
+ * Every gauge uses id, poolName and remoteAddress as tags.
+ *
  * @author Violeta Georgieva
  * @since 0.9
  */
-final class PooledConnectionProviderMetrics {
+final class MicrometerPooledConnectionProviderMeterRegistrar implements ConnectionProvider.MeterRegistrar {
 
-	static void registerMetrics(String poolName, String id, String remoteAddress,
-			InstrumentedPool.PoolMetrics metrics) {
-		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, remoteAddress, NAME, poolName};
-		Gauge.builder(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::allocatedSize)
+	static final MicrometerPooledConnectionProviderMeterRegistrar INSTANCE = new MicrometerPooledConnectionProviderMeterRegistrar();
+
+	private MicrometerPooledConnectionProviderMeterRegistrar() {}
+
+	@Override
+	public void registerMetrics(String poolName, String id, SocketAddress remoteAddress, ConnectionPoolMetrics metrics) {
+		String addressAsString = Metrics.formatSocketAddress(remoteAddress);
+		String[] tags = new String[] {ID, id, REMOTE_ADDRESS, addressAsString, NAME, poolName};
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + TOTAL_CONNECTIONS, metrics, ConnectionPoolMetrics::allocatedSize)
 		     .description("The number of all connections, active or idle.")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::acquiredSize)
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + ACTIVE_CONNECTIONS, metrics, ConnectionPoolMetrics::acquiredSize)
 		     .description("The number of the connections that have been successfully acquired and are in active use")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::idleSize)
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + IDLE_CONNECTIONS, metrics, ConnectionPoolMetrics::idleSize)
 		     .description("The number of the idle connections")
 		     .tags(tags)
 		     .register(REGISTRY);
 
-		Gauge.builder(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, metrics, InstrumentedPool.PoolMetrics::pendingAcquireSize)
+		Gauge.builder(CONNECTION_PROVIDER_PREFIX + PENDING_CONNECTIONS, metrics, ConnectionPoolMetrics::pendingAcquireSize)
 		     .description("The number of the request, that are pending acquire a connection")
 		     .tags(tags)
 		     .register(REGISTRY);
