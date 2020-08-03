@@ -648,7 +648,7 @@ class HttpServerOperations extends HttpOperations<HttpServerRequest, HttpServerR
 			                 .doOnEach(signal -> {
 			                     if(!signal.hasError() && (websocketServerSpec.protocols() == null || ops.selectedSubprotocol() != null)) {
 			                         websocketHandler.apply(ops, ops)
-			                                         .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContext())));
+			                                         .subscribe(new WebsocketSubscriber(ops, Context.of(signal.getContextView())));
 			                     }
 			                 });
 		}
