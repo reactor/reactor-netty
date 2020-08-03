@@ -37,6 +37,7 @@ import reactor.netty.transport.ClientTransportConfig;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class PooledConnectionProviderCustomMetricsTest {
 
@@ -87,8 +88,10 @@ public class PooledConnectionProviderCustomMetricsTest {
 		try {
 			pool.acquire(config, ConnectionObserver.emptyListener(), remoteAddress, config.resolver())
 			    .block(Duration.ofSeconds(10L));
+			fail("Exception is expected");
 		}
 		catch (Exception expected) {
+			// ignore
 		}
 	}
 
