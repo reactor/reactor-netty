@@ -77,7 +77,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	 * Block the {@link ClientTransport} and return a {@link Connection}. Disposing must be
 	 * done by the user via {@link Connection#dispose()}.
 	 *
-	 * @param timeout connect timeout
+	 * @param timeout connect timeout (resolution: ns)
 	 * @return a {@link Connection}
 	 */
 	protected Connection connectNow(Duration timeout) {

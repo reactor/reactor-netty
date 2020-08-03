@@ -1044,4 +1044,19 @@ public class TcpServerTests {
 		}
 	}
 
+	@Test(expected = ArithmeticException.class)
+	public void testBindTimeoutLongOverflow() {
+		TcpServer.create()
+		         .port(0)
+		         .bindNow(Duration.ofMillis(Long.MAX_VALUE));
+	}
+
+	@Test(expected = ArithmeticException.class)
+	public void testDisposeTimeoutLongOverflow() {
+		TcpServer.create()
+		         .port(0)
+		         .bindNow()
+		         .disposeNow(Duration.ofMillis(Long.MAX_VALUE));
+	}
+
 }

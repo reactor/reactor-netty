@@ -297,4 +297,11 @@ public class UdpServerTests {
 		         .port(1234)
 		         .bindNow();
 	}
+
+	@Test(expected = ArithmeticException.class)
+	public void testBindTimeoutLongOverflow() {
+		UdpServer.create()
+		         .port(0)
+		         .bindNow(Duration.ofMillis(Long.MAX_VALUE));
+	}
 }

@@ -18,6 +18,7 @@ package reactor.netty;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.Objects;
 
 import io.netty.channel.Channel;
 import io.netty.channel.socket.DatagramChannel;
@@ -81,17 +82,26 @@ public interface DisposableChannel extends Disposable {
 	/**
 	 * Releases or closes the underlying {@link Channel} in a blocking fashion with
 	 * the provided timeout.
+	 *
+	 * @param timeout max dispose timeout (resolution: ns)
 	 */
 	default void disposeNow(Duration timeout) {
 		if (isDisposed()) {
 			return;
 		}
+
+		Objects.requireNonNull(timeout, "timeout");
+
 		dispose();
 		try {
 			onDispose().block(timeout);
 		}
-		catch (Exception e) {
-			throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
+		catch (IllegalStateException e) {
+			if (e.getMessage()
+			     .contains("blocking read")) {
+				throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
+			}
+			throw e;
 		}
 	}
 

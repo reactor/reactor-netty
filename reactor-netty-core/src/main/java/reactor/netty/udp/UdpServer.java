@@ -110,7 +110,7 @@ public abstract class UdpServer extends Transport<UdpServer, UdpServerConfig> {
 	 * offers simple server API, including to {@link Connection#disposeNow()}
 	 * shut it down in a blocking fashion.
 	 *
-	 * @param timeout max startup timeout
+	 * @param timeout max startup timeout (resolution: ns)
 	 * @return a {@link Connection}
 	 */
 	public final Connection bindNow(Duration timeout) {

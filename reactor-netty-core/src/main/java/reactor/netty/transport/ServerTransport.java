@@ -135,7 +135,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 	 * offers simple server API, including to {@link DisposableServer#disposeNow()}
 	 * shut it down in a blocking fashion.
 	 *
-	 * @param timeout max startup timeout
+	 * @param timeout max startup timeout (resolution: ns)
 	 * @return a {@link DisposableServer}
 	 */
 	public final DisposableServer bindNow(Duration timeout) {
@@ -510,8 +510,12 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				onDispose().then(terminateSignals)
 				           .block(timeout);
 			}
-			catch (Exception e) {
-				throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
+			catch (IllegalStateException e) {
+				if (e.getMessage()
+						.contains("blocking read")) {
+					throw new IllegalStateException("Socket couldn't be stopped within " + timeout.toMillis() + "ms");
+				}
+				throw e;
 			}
 		}
 
