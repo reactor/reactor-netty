@@ -68,7 +68,7 @@ final class HttpClientConfiguration {
 
 	Function<String, String> uriTagValue = null;
 
-	Duration requestTimeout = null;
+	Duration responseTimeout = null;
 
 	Function<Mono<HttpClientConfiguration>, Mono<HttpClientConfiguration>> deferredConf                   = null;
 
@@ -96,6 +96,7 @@ final class HttpClientConfiguration {
 		this.protocols = from.protocols;
 		this.deferredConf = from.deferredConf;
 		this.uriTagValue = from.uriTagValue;
+		this.responseTimeout = from.responseTimeout;
 	}
 
 	static HttpClientConfiguration getAndClean(Bootstrap b) {
@@ -312,8 +313,8 @@ final class HttpClientConfiguration {
 		return b;
 	}
 
-	static Bootstrap requestTimeout(Bootstrap b, Duration timeout) {
-		getOrCreate(b).requestTimeout = timeout;
+	static Bootstrap responseTimeout(Bootstrap b, Duration timeout) {
+		getOrCreate(b).responseTimeout = timeout;
 		return b;
 	}
 

@@ -105,7 +105,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	Supplier<String>[]          redirectedFrom = EMPTY_REDIRECTIONS;
 	String                      resourceUrl;
 	String                      path;
-	Duration                    requestTimeout;
+	Duration                    responseTimeout;
 
 	volatile ResponseState responseState;
 
@@ -132,7 +132,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 		this.cookieDecoder = replaced.cookieDecoder;
 		this.resourceUrl = replaced.resourceUrl;
 		this.path = replaced.path;
-		this.requestTimeout = replaced.requestTimeout;
+		this.responseTimeout = replaced.responseTimeout;
 	}
 
 	HttpClientOperations(Connection c, ConnectionObserver listener, ClientCookieEncoder encoder, ClientCookieDecoder decoder) {
@@ -327,9 +327,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 	}
 
 	@Override
-	public HttpClientRequest requestTimeout(Duration timeout) {
+	public HttpClientRequest responseTimeout(Duration timeout) {
 		if (!hasSentHeaders()) {
-			this.requestTimeout = timeout;
+			this.responseTimeout = timeout;
 		}
 		else {
 			throw new IllegalStateException("Status and headers already sent");
@@ -527,9 +527,9 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 			channel().writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 		}
 		listener().onStateChange(this, HttpClientState.REQUEST_SENT);
-		if (requestTimeout != null) {
-			addHandler(NettyPipeline.RequestTimeoutHandler,
-					new ReadTimeoutHandler(requestTimeout.toMillis(), TimeUnit.MILLISECONDS));
+		if (responseTimeout != null) {
+			addHandler(NettyPipeline.ResponseTimeoutHandler,
+					new ReadTimeoutHandler(responseTimeout.toMillis(), TimeUnit.MILLISECONDS));
 		}
 		channel().read();
 	}

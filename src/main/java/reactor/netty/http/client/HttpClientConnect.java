@@ -462,7 +462,7 @@ final class HttpClientConnect extends HttpClient {
 		                              redirectRequestConsumer;
 		final HttpResponseDecoderSpec decoder;
 		final ProxyProvider           proxyProvider;
-		final Duration                requestTimeout;
+		final Duration                responseTimeout;
 
 		volatile UriEndpoint        toURI;
 		volatile UriEndpoint        fromURI;
@@ -480,7 +480,7 @@ final class HttpClientConnect extends HttpClient {
 			this.cookieDecoder = configuration.cookieDecoder;
 			this.decoder = configuration.decoder;
 			this.proxyProvider = proxyProvider;
-			this.requestTimeout = configuration.requestTimeout;
+			this.responseTimeout = configuration.responseTimeout;
 
 			HttpHeaders defaultHeaders = configuration.headers;
 			if (compress) {
@@ -545,7 +545,7 @@ final class HttpClientConnect extends HttpClient {
 		Publisher<Void> requestWithBody(HttpClientOperations ch) {
 			try {
 				ch.resourceUrl = toURI.toExternalForm();
-				ch.requestTimeout = requestTimeout;
+				ch.responseTimeout = responseTimeout;
 
 				UriEndpoint uri = toURI;
 				HttpHeaders headers = ch.getNettyRequest()

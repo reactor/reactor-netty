@@ -75,7 +75,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		final Context             context;
 		final ClientCookieDecoder cookieDecoder;
 		final boolean             isWebsocket;
-		final Duration            requestTimeout;
+		final Duration            responseTimeout;
 
 		PreparingHttpClientRequest(Context context, HttpClientConfiguration c) {
 			this.context = context;
@@ -85,7 +85,7 @@ final class HttpClientDoOnError extends HttpClientOperator {
 			this.path = HttpOperations.resolvePath(this.uri);
 			this.method = c.method;
 			this.isWebsocket = c.websocketClientSpec != null;
-			this.requestTimeout = c.requestTimeout;
+			this.responseTimeout = c.responseTimeout;
 		}
 
 		@Override
@@ -119,8 +119,8 @@ final class HttpClientDoOnError extends HttpClientOperator {
 		}
 
 		@Override
-		public HttpClientRequest requestTimeout(Duration timeout) {
-			throw new UnsupportedOperationException("Should not add request timeout");
+		public HttpClientRequest responseTimeout(Duration timeout) {
+			throw new UnsupportedOperationException("Should not add response timeout");
 		}
 
 		@Override

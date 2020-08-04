@@ -81,7 +81,7 @@ public interface NettyPipeline {
 	String WsCompressionHandler = LEFT + "wsCompressionHandler";
 	String ProxyProtocolDecoder = LEFT + "proxyProtocolDecoder";
 	String ProxyProtocolReader  = LEFT + "proxyProtocolReader";
-	String RequestTimeoutHandler = LEFT + "requestTimeoutHandler";
+	String ResponseTimeoutHandler = LEFT + "responseTimeoutHandler";
 
 	/**
 	 * Create a new {@link ChannelInboundHandler} that will invoke
