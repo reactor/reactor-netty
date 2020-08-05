@@ -1123,11 +1123,11 @@ public class HttpClientTest {
 				      })
 				      .post()
 				      .send((req, out) ->
-				          out.sendString(Mono.subscriberContext()
+				          out.sendString(Mono.deferContextual(Mono::just)
 				                             .map(ctx -> ctx.getOrDefault("test", "fail"))))
 				      .responseContent()
 				      .asString()
-				      .subscriberContext(Context.of("test", "success")))
+				      .contextWrite(Context.of("test", "success")))
 				    .expectNext("success")
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
@@ -1159,7 +1159,7 @@ public class HttpClientTest {
 				            requestError1.set(req.currentContext().getOrDefault("test", "empty")))
 				        .doOnResponseError((res, err) ->
 				            responseError1.set(res.currentContext().getOrDefault("test", "empty")))
-				        .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
+				        .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1182,7 +1182,7 @@ public class HttpClientTest {
 				            requestError2.set(req.currentContext().getOrDefault("test", "empty"))
 				            ,(res, err) ->
 				            responseError2.set(res.currentContext().getOrDefault("test", "empty")))
-				        .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
+				        .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
 				        .responseContent()
@@ -1206,7 +1206,7 @@ public class HttpClientTest {
 		                             .bindNow();
 
 		Mono<String> content = createHttpClientForContextWithPort()
-		                               .mapConnect((c) -> c.subscriberContext(Context.of("test", "success")))
+		                               .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
 		                               .post()
 		                               .uri("/")
 		                               .send((req, out) -> {

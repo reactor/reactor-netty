@@ -48,7 +48,7 @@ import reactor.util.annotation.Nullable;
 final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
 
-	final Sinks.Many<Long> progressFlux;
+	final Sinks.Many<Long> progressSink;
 	final HttpRequest request;
 
 	boolean         needNewEncoder;
@@ -78,7 +78,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		this.newCharset = charset;
 		this.request = request;
 		this.cleanOnTerminate = true;
-		this.progressFlux = Sinks.many().multicast().onBackpressureError();
+		this.progressSink = Sinks.many().multicast().onBackpressureError();
 		this.newMode = encoderMode;
 		this.newFactory = factory;
 		this.newMultipart = multipart;
@@ -88,12 +88,12 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	public HttpContent readChunk(ByteBufAllocator allocator) throws Exception {
 		HttpContent c = super.readChunk(allocator);
 		if (c == null) {
-			progressFlux.emitComplete();
+			progressSink.emitComplete();
 		}
 		else {
-			progressFlux.emitNext(progress());
+			progressSink.emitNext(progress());
 			if (isEndOfInput()) {
-				progressFlux.emitComplete();
+				progressSink.emitComplete();
 			}
 		}
 		return c;

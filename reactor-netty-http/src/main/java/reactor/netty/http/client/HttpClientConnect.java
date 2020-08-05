@@ -119,8 +119,8 @@ class HttpClientConnect extends HttpClient {
 
 		if (config.doOnRequestError != null) {
 			mono = mono.onErrorResume(error ->
-					Mono.subscriberContext()
-					    .doOnNext(ctx -> config.doOnRequestError.accept(new FailedHttpClientRequest(ctx, config), error))
+					Mono.deferContextual(Mono::just)
+					    .doOnNext(ctx -> config.doOnRequestError.accept(new FailedHttpClientRequest(Context.of(ctx), config), error))
 					    .then(Mono.error(error)));
 		}
 

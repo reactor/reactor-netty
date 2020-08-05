@@ -811,7 +811,7 @@ public class HttpServerTests {
 			Mono<String> content = client.post()
 			                             .uri("/")
 			                             .send(ByteBufFlux.fromString(Mono.just("bodysample")
-			                                                              .subscriberContext(
+			                                                              .contextWrite(
 			                                                                      c -> {
 			                                                                          context.set(c);
 			                                                                          return c;
@@ -819,7 +819,7 @@ public class HttpServerTests {
 			                             .responseContent()
 			                             .aggregate()
 			                             .asString()
-			                             .subscriberContext(c -> c.put("Hello", "World"));
+			                             .contextWrite(c -> c.put("Hello", "World"));
 
 			StepVerifier.create(content)
 			            .expectComplete()
