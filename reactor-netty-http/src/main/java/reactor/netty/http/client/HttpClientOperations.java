@@ -848,7 +848,7 @@ class HttpClientOperations extends HttpOperations<NettyInbound, NettyOutbound>
 				ChannelFuture f = parent.channel()
 				                        .writeAndFlush(r);
 
-				Flux<Long> tail = encoder.progressFlux.onBackpressureLatest();
+				Flux<Long> tail = encoder.progressFlux.asFlux().onBackpressureLatest();
 
 				if (encoder.cleanOnTerminate) {
 					tail = tail.doOnCancel(encoder)

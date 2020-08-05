@@ -37,10 +37,9 @@ import org.reactivestreams.Subscription;
 import reactor.core.Exceptions;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxIdentityProcessor;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Processors;
+import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 import reactor.test.publisher.TestPublisher;
 import reactor.test.util.RaceTestUtils;
@@ -219,8 +218,8 @@ public class MonoSendManyTest {
 			//use an extra handler
 			EmbeddedChannel channel = new EmbeddedChannel(true, true, new ChannelHandlerAdapter() {});
 
-			FluxIdentityProcessor<ByteBuf> source = Processors.unicast();
-			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source, channel, b -> false);
+			Sinks.Many<ByteBuf> source = Sinks.many().unicast().onBackpressureBuffer();
+			MonoSendMany<ByteBuf, ByteBuf> m = MonoSendMany.byteBufSource(source.asFlux(), channel, b -> false);
 			BaseSubscriber<Void> testSubscriber = m
 					.doOnDiscard(ReferenceCounted.class, discarded::add)
 					.subscribeWith(new BaseSubscriber<Void>() {});
@@ -232,7 +231,7 @@ public class MonoSendManyTest {
 
 			RaceTestUtils.race(testSubscriber::cancel, () -> {
 				for (ByteBuf buf : buffersToSend) {
-					source.onNext(buf);
+					source.emitNext(buf);
 				}
 			});
 

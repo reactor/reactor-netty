@@ -85,10 +85,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxIdentityProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.Processors;
+import reactor.core.publisher.Sinks;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ByteBufMono;
 import reactor.netty.Connection;
@@ -374,13 +373,13 @@ public class HttpClientTest {
 
 	@Test
 	public void prematureCancel() {
-		FluxIdentityProcessor<Void> signal = Processors.more().multicastNoBackpressure();
+		Sinks.Many<Void> signal = Sinks.many().multicast().onBackpressureError();
 		disposableServer =
 				TcpServer.create()
 				         .host("localhost")
 				         .port(0)
 				         .handle((in, out) -> {
-				             signal.onComplete();
+				             signal.emitComplete();
 				             return out.withConnection(c -> c.addHandlerFirst(new HttpResponseEncoder()))
 				                       .sendObject(Mono.delay(Duration.ofSeconds(2))
 				                                       .map(t -> new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
@@ -395,7 +394,7 @@ public class HttpClientTest {
 				        .get()
 				        .uri("/")
 				        .responseContent()
-				        .timeout(signal))
+				        .timeout(signal.asFlux()))
 				    .verifyError(TimeoutException.class);
 	}
 

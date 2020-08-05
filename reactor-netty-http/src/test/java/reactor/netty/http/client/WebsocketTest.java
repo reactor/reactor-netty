@@ -43,11 +43,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxIdentityProcessor;
 import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.Processors;
+import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.netty.DisposableServer;
@@ -273,9 +272,9 @@ public class WebsocketTest {
 		CountDownLatch serverLatch = new CountDownLatch(c);
 
 		FluxProcessor<String, String> server =
-				Processors.<String>replayAll().serialize();
+				FluxProcessor.<String>fromSink(Sinks.many().replay().all()).serialize();
 		FluxProcessor<String, String> client =
-				Processors.<String>replayAll().serialize();
+				FluxProcessor.<String>fromSink(Sinks.many().replay().all()).serialize();
 
 		server.log("server")
 		      .subscribe(v -> serverLatch.countDown());
@@ -571,7 +570,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		FluxIdentityProcessor<String> output = Processors.replayAll();
+		Sinks.Many<String> output = Sinks.many().replay().all();
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .websocket()
@@ -583,11 +582,11 @@ public class WebsocketTest {
 		                                          .map(byteBuf ->
 		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
-		                                          .subscribeWith(output)
+		                                          .subscribeWith(FluxProcessor.fromSink(output))
 		                                          .then()))
 		          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(output.collectList().block(Duration.ofSeconds(30)))
+		assertThat(output.asFlux().collectList().block(Duration.ofSeconds(30)))
 				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
 	}
 
@@ -727,7 +726,7 @@ public class WebsocketTest {
 				          .wiretap(true)
 				          .bindNow();
 
-		FluxIdentityProcessor<String> output = Processors.replayAll();
+		Sinks.Many<String> output = Sinks.many().replay().all();
 		HttpClient.create()
 		          .port(httpServer.port())
 		          .websocket()
@@ -739,11 +738,11 @@ public class WebsocketTest {
 		                                          .map(byteBuf ->
 		                                              byteBuf.readCharSequence(byteBuf.readableBytes(), Charset.defaultCharset()).toString())
 		                                          .take(count)
-		                                          .subscribeWith(output)
+		                                          .subscribeWith(FluxProcessor.fromSink(output))
 		                                          .then()))
 		          .blockLast(Duration.ofSeconds(30));
 
-		assertThat(output.collectList().block(Duration.ofSeconds(30)))
+		assertThat(output.asFlux().collectList().block(Duration.ofSeconds(30)))
 				.isEqualTo(expectation.collectList().block(Duration.ofSeconds(30)));
 
 	}
@@ -1105,7 +1104,7 @@ public class WebsocketTest {
 	@Test
 	public void testIssue900_2() {
 		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
+		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
 
 		httpServer =
 				HttpServer.create()
@@ -1119,7 +1118,7 @@ public class WebsocketTest {
 				                                                  new CloseWebSocketFrame(1008, "something"))
 				                                            .delayElements(Duration.ofMillis(100)))
 				                            .then(in.receiveFrames()
-				                                    .subscribeWith(incomingData)
+				                                    .subscribeWith(FluxProcessor.fromSink(incomingData))
 				                                    .then());
 				              })
 				          )
@@ -1134,7 +1133,7 @@ public class WebsocketTest {
 		                                                .doOnNext(WebSocketFrame::retain)))
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
+		StepVerifier.create(incomingData.asFlux())
 		            .expectNext(new TextWebSocketFrame("echo"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1147,7 +1146,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue663_1() {
-		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
+		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
 
 		httpServer =
 				HttpServer.create()
@@ -1157,7 +1156,7 @@ public class WebsocketTest {
 				                  o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 				                                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
-				                          .subscribeWith(incomingData)
+				                          .subscribeWith(FluxProcessor.fromSink(incomingData))
 				                          .then())))
 				          .wiretap(true)
 				          .bindNow();
@@ -1170,7 +1169,7 @@ public class WebsocketTest {
 		          .handle((in, out) -> in.receiveFrames())
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
+		StepVerifier.create(incomingData.asFlux())
 		            .expectNext(new PongWebSocketFrame())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1178,7 +1177,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue663_2() {
-		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
+		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
 
 		httpServer =
 				HttpServer.create()
@@ -1188,7 +1187,7 @@ public class WebsocketTest {
 				                  o.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 				                   .delayElements(Duration.ofMillis(100)))
 				                   .then(i.receiveFrames()
-				                          .subscribeWith(incomingData)
+				                          .subscribeWith(FluxProcessor.fromSink(incomingData))
 				                          .then())))
 				          .wiretap(true)
 				          .bindNow();
@@ -1201,14 +1200,14 @@ public class WebsocketTest {
 		          .handle((in, out) -> in.receiveFrames())
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
+		StepVerifier.create(incomingData.asFlux())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
 	public void testIssue663_3() {
-		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
+		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
 
 		httpServer =
 				HttpServer.create()
@@ -1226,11 +1225,11 @@ public class WebsocketTest {
 		              out.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 		                                 .delayElements(Duration.ofMillis(100)))
 		                 .then(in.receiveFrames()
-		                         .subscribeWith(incomingData)
+		                         .subscribeWith(FluxProcessor.fromSink(incomingData))
 		                         .then()))
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
+		StepVerifier.create(incomingData.asFlux())
 		            .expectNext(new PongWebSocketFrame())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1238,7 +1237,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue663_4() {
-		FluxIdentityProcessor<WebSocketFrame> incomingData = Processors.more().multicastNoBackpressure();
+		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
 
 		httpServer =
 				HttpServer.create()
@@ -1257,11 +1256,11 @@ public class WebsocketTest {
 		              out.sendObject(Flux.just(new PingWebSocketFrame(), new CloseWebSocketFrame())
 		                                 .delayElements(Duration.ofMillis(100)))
 		                 .then(in.receiveFrames()
-		                         .subscribeWith(incomingData)
+		                         .subscribeWith(FluxProcessor.fromSink(incomingData))
 		                         .then()))
 		          .subscribe();
 
-		StepVerifier.create(incomingData)
+		StepVerifier.create(incomingData.asFlux())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}
@@ -1273,7 +1272,7 @@ public class WebsocketTest {
 		                                 .map(i -> Integer.toString(i))
 		                                 .delayElements(Duration.ofMillis(50));
 
-		FluxIdentityProcessor<String> someConsumer = Processors.replayAll();
+		Sinks.Many<String> someConsumer = Sinks.many().replay().all();
 
 		httpServer =
 				HttpServer.create()
@@ -1288,11 +1287,11 @@ public class WebsocketTest {
 				                              .publish()     // We want the connection alive even after takeUntil
 				                              .autoConnect() // which will trigger cancel
 				                              .takeUntil(msg -> msg.equals("5"))
-				                              .subscribeWith(someConsumer)
+				                              .subscribeWith(FluxProcessor.fromSink(someConsumer))
 				                              .then())))
 				          .bindNow();
 
-		FluxIdentityProcessor<String> clientFlux = Processors.replayAll();
+		Sinks.Many<String> clientFlux = Sinks.many().replay().all();
 
 		Flux<String> toSend = Flux.range(1, 10)
 		                          .map(i -> Integer.toString(i));
@@ -1307,11 +1306,11 @@ public class WebsocketTest {
 		                        in.receiveFrames()
 		                          .cast(TextWebSocketFrame.class)
 		                          .map(TextWebSocketFrame::text)
-		                          .subscribeWith(clientFlux)
+		                          .subscribeWith(FluxProcessor.fromSink(clientFlux))
 		                          .then()))
 		          .subscribe();
 
-		StepVerifier.create(clientFlux)
+		StepVerifier.create(clientFlux.asFlux())
 		            .expectNextCount(10)
 		            .verifyComplete();
 	}

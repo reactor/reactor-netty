@@ -36,8 +36,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestEncoder;
 import io.netty.handler.codec.http.multipart.MemoryFileUpload;
 import io.netty.handler.stream.ChunkedInput;
 import reactor.core.Exceptions;
-import reactor.core.publisher.FluxIdentityProcessor;
-import reactor.core.publisher.Processors;
+import reactor.core.publisher.Sinks;
 import reactor.util.annotation.Nullable;
 
 /**
@@ -49,7 +48,7 @@ import reactor.util.annotation.Nullable;
 final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		implements ChunkedInput<HttpContent>, Runnable, HttpClientForm {
 
-	final FluxIdentityProcessor<Long> progressFlux;
+	final Sinks.Many<Long> progressFlux;
 	final HttpRequest request;
 
 	boolean         needNewEncoder;
@@ -79,7 +78,7 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 		this.newCharset = charset;
 		this.request = request;
 		this.cleanOnTerminate = true;
-		this.progressFlux = Processors.more().multicastNoBackpressure();
+		this.progressFlux = Sinks.many().multicast().onBackpressureError();
 		this.newMode = encoderMode;
 		this.newFactory = factory;
 		this.newMultipart = multipart;
@@ -89,12 +88,12 @@ final class HttpClientFormEncoder extends HttpPostRequestEncoder
 	public HttpContent readChunk(ByteBufAllocator allocator) throws Exception {
 		HttpContent c = super.readChunk(allocator);
 		if (c == null) {
-			progressFlux.onComplete();
+			progressFlux.emitComplete();
 		}
 		else {
-			progressFlux.onNext(progress());
+			progressFlux.emitNext(progress());
 			if (isEndOfInput()) {
-				progressFlux.onComplete();
+				progressFlux.emitComplete();
 			}
 		}
 		return c;

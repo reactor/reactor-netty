@@ -82,11 +82,11 @@ import org.junit.After;
 import org.junit.Test;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxIdentityProcessor;
+import reactor.core.publisher.FluxProcessor;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
-import reactor.core.publisher.Processors;
 import reactor.core.publisher.SignalType;
+import reactor.core.publisher.Sinks;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
@@ -1190,7 +1190,7 @@ public class HttpServerTests {
 	public void testNormalConnectionCloseForWebSocketClient() {
 		Flux<String> flux = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
-		FluxIdentityProcessor<String> receiver = Processors.unicast();
+		Sinks.Many<String> receiver = Sinks.many().unicast().onBackpressureBuffer();
 		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
 		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
 		List<String> test =
@@ -1222,12 +1222,12 @@ public class HttpServerTests {
 			          in.receive()
 			            .asString()
 			            .doFinally((s) -> done.onComplete())
-			            .subscribeWith(receiver);
+			            .subscribeWith(FluxProcessor.fromSink(receiver));
 			          return done.then(Mono.delay(Duration.ofMillis(500)));
 		          })
 		          .blockLast();
 
-		StepVerifier.create(receiver)
+		StepVerifier.create(receiver.asFlux())
 		            .expectNextSequence(test)
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
