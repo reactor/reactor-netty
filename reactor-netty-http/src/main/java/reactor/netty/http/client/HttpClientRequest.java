@@ -75,17 +75,17 @@ public interface HttpClientRequest extends HttpClientInfos {
 	boolean isFollowRedirect();
 
 	/**
-	 * Specifies the request timeout duration in milliseconds.
+	 * Specifies the response timeout duration in milliseconds.
 	 * This is time that takes to receive a response after sending a request.
-	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no request timeout
+	 * If the {@code timeout} is {@code null}, any previous setting will be removed and no response timeout
 	 * will be applied.
-	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the request timeout.
-	 * The request timeout setting on {@link HttpClientRequest} level overrides any request timeout
+	 * If the {@code timeout} is less than {@code 1ms}, then {@code 1ms} will be the response timeout.
+	 * The response timeout setting on {@link HttpClientRequest} level overrides any response timeout
 	 * setting on {@link HttpClient} level.
 	 *
-	 * @param timeout the request timeout duration
+	 * @param timeout the response timeout duration
 	 * @return this outbound
 	 * @since 0.9.11
 	 */
-	HttpClientRequest requestTimeout(Duration timeout);
+	HttpClientRequest responseTimeout(Duration timeout);
 }

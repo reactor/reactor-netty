@@ -107,7 +107,7 @@ public interface NettyPipeline {
 	String ProxyLoggingHandler   = LEFT + "proxyLoggingHandler";
 	String ProxyProtocolDecoder  = LEFT + "proxyProtocolDecoder";
 	String ProxyProtocolReader   = LEFT + "proxyProtocolReader";
-	String RequestTimeoutHandler = LEFT + "requestTimeoutHandler";
+	String ResponseTimeoutHandler = LEFT + "responseTimeoutHandler";
 	String SslHandler            = LEFT + "sslHandler";
 	String SslLoggingHandler     = LEFT + "sslLoggingHandler";
 	String SslReader             = LEFT + "sslReader";

@@ -45,7 +45,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	final boolean             isWebsocket;
 	final HttpMethod          method;
 	final String              path;
-	final Duration            requestTimeout;
+	final Duration            responseTimeout;
 	final String              uri;
 
 	FailedHttpClientRequest(Context context, HttpClientConfig c) {
@@ -56,7 +56,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 		this.method = c.method;
 		this.uri = c.uri == null ? c.uriStr : c.uri.toString();
 		this.path = HttpOperations.resolvePath(this.uri);
-		this.requestTimeout = c.requestTimeout;
+		this.responseTimeout = c.responseTimeout;
 	}
 
 	@Override
@@ -126,7 +126,7 @@ final class FailedHttpClientRequest implements HttpClientRequest {
 	}
 
 	@Override
-	public HttpClientRequest requestTimeout(Duration timeout) {
+	public HttpClientRequest responseTimeout(Duration timeout) {
 		throw new UnsupportedOperationException("Should not add request timeout");
 	}
 

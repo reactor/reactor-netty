@@ -2428,20 +2428,20 @@ public class HttpClientTest {
 				createHttpClientForContextWithAddress()
 				        .doOnRequest((req, conn) -> {
 				            if (onHttpRequestLevel) {
-				                req.requestTimeout(Duration.ofMillis(200));
+				                req.responseTimeout(Duration.ofMillis(200));
 				            }
-				            onRequest.set(conn.channel().pipeline().get(NettyPipeline.RequestTimeoutHandler) != null);
+				            onRequest.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null);
 				        })
 				        .doOnResponse((req, conn) -> {
-				            ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.RequestTimeoutHandler);
+				            ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler);
 				            if (handler != null) {
 				                onResponse.set(true);
 				                timeout.set(((ReadTimeoutHandler) handler).getReaderIdleTimeInMillis());
 				            }
 				        })
 				        .doOnDisconnected(conn ->
-				            onDisconnected.set(conn.channel().pipeline().get(NettyPipeline.RequestTimeoutHandler) != null))
-				        .requestTimeout(Duration.ofMillis(100))
+				            onDisconnected.set(conn.channel().pipeline().get(NettyPipeline.ResponseTimeoutHandler) != null))
+				        .responseTimeout(Duration.ofMillis(100))
 				        .post()
 				        .uri("/")
 				        .responseContent()
