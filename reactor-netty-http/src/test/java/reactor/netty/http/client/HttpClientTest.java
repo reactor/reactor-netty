@@ -1102,22 +1102,22 @@ public class HttpClientTest {
 		StepVerifier.create(
 				client.port(disposableServer.port())
 				      .doOnRequest((req, c) -> {
-				          if (req.currentContext().hasKey("test")) {
+				          if (req.currentContextView().hasKey("test")) {
 				              latch.countDown();
 				          }
 				      })
 				      .doAfterRequest((req, c) -> {
-				          if (req.currentContext().hasKey("test")) {
+				          if (req.currentContextView().hasKey("test")) {
 				              latch.countDown();
 				          }
 				      })
 				      .doOnResponse((res, c) -> {
-				          if (res.currentContext().hasKey("test")) {
+				          if (res.currentContextView().hasKey("test")) {
 				              latch.countDown();
 				          }
 				      })
 				      .doAfterResponseSuccess((req, c) -> {
-				          if (req.currentContext().hasKey("test")) {
+				          if (req.currentContextView().hasKey("test")) {
 				              latch.countDown();
 				          }
 				      })
@@ -1156,9 +1156,9 @@ public class HttpClientTest {
 				createHttpClientForContextWithPort()
 				        .headers(h -> h.add("before", "test"))
 				        .doOnRequestError((req, err) ->
-				            requestError1.set(req.currentContext().getOrDefault("test", "empty")))
+				            requestError1.set(req.currentContextView().getOrDefault("test", "empty")))
 				        .doOnResponseError((res, err) ->
-				            responseError1.set(res.currentContext().getOrDefault("test", "empty")))
+				            responseError1.set(res.currentContextView().getOrDefault("test", "empty")))
 				        .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
@@ -1179,9 +1179,9 @@ public class HttpClientTest {
 				createHttpClientForContextWithPort()
 				        .headers(h -> h.add("during", "test"))
 				        .doOnError((req, err) ->
-				            requestError2.set(req.currentContext().getOrDefault("test", "empty"))
+				            requestError2.set(req.currentContextView().getOrDefault("test", "empty"))
 				            ,(res, err) ->
-				            responseError2.set(res.currentContext().getOrDefault("test", "empty")))
+				            responseError2.set(res.currentContextView().getOrDefault("test", "empty")))
 				        .mapConnect((c) -> c.contextWrite(Context.of("test", "success")))
 				        .get()
 				        .uri("/")
@@ -1212,7 +1212,7 @@ public class HttpClientTest {
 		                               .send((req, out) -> {
 		                                   req.requestHeaders()
 		                                      .set("test",
-		                                           req.currentContext()
+		                                           req.currentContextView()
 		                                              .getOrDefault("test", "fail"));
 		                                   return Mono.empty();
 		                               })

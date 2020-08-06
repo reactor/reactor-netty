@@ -20,6 +20,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import reactor.netty.http.HttpInfos;
 import reactor.util.annotation.Nullable;
 import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 /**
  * An Http Reactive Channel with several accessors related to HTTP flow: resource URL,
@@ -34,8 +35,20 @@ public interface HttpClientInfos extends HttpInfos {
      * via {@link HttpClient.ResponseReceiver#response()} or related terminating API.
      *
      * @return the current user {@link Context}
+     * @deprecated Use {@link #currentContextView()}. This method
+     * will be removed in version 1.1.0.
      */
+    @Deprecated
     Context currentContext();
+
+    /**
+     * Return the current {@link ContextView} associated with the Mono/Flux exposed
+     * via {@link HttpClient.ResponseReceiver#response()} or related terminating API.
+     *
+     * @return the current user {@link ContextView}
+     * @since 1.0.0
+     */
+    ContextView currentContextView();
 
     /**
      * Return the previous redirections or empty array
