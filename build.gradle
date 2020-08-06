@@ -30,11 +30,12 @@ plugins {
 	id 'com.jfrog.artifactory' version '4.16.1' apply false
 	id 'me.champeau.gradle.japicmp' version '0.2.9' apply false
 	id 'de.undercouch.download' version '4.1.1' apply false
+	id 'io.spring.javadoc' version '0.0.1' apply false
+	id 'io.spring.javadoc-aggregate' version '0.0.1' apply false
 }
 
 description = 'Reactive Streams Netty driver'
 
-apply from: "gradle/asciidoc.gradle"
 apply from: "gradle/releaser.gradle"
 
 ext {
@@ -210,34 +211,6 @@ subprojects {
 		jcenter()
 	}
 
-	dependencies {
-		//transport resolution: typical build forces epoll but not kqueue transitively
-		//on the other hand, if we want to make transport-specific tests, we'll make all
-		// native optional at compile time and add correct native/nio to testRuntime
-		if (project.hasProperty("forceTransport")) {
-			//so that the main code compiles
-			optional "io.netty:netty-transport-native-epoll:$nettyVersion"
-			optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
-			//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
-			if (forceTransport == "native") {
-				if (osdetector.os == "osx") {
-					testRuntime "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
-				}
-				else if (osdetector.os == "linux") {
-					testRuntime "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
-				}
-			}
-			else if (forceTransport != "nio") {
-				throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
-			}
-		}
-		else {
-			//classic build to be distributed
-			compile "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
-			optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
-		}
-	}
-
 	tasks.withType(GenerateModuleMetadata) {
 		enabled = false
 	}
@@ -262,8 +235,6 @@ subprojects {
 		}
 	}
 }
-
-assemble.dependsOn docsZip
 
 configurations.all {
 	// check for updates every build

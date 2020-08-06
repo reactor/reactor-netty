@@ -15,6 +15,7 @@
  */
 import me.champeau.gradle.japicmp.JapicmpTask
 
+apply plugin: 'io.spring.javadoc'
 apply plugin: 'me.champeau.gradle.japicmp'
 apply plugin: 'de.undercouch.download'
 
@@ -27,6 +28,31 @@ dependencies {
 	compile "io.netty:netty-codec-http:$nettyVersion"
 	compile "io.netty:netty-codec-http2:$nettyVersion"
 	optional "io.netty:netty-codec-haproxy:$nettyVersion"
+	//transport resolution: typical build forces epoll but not kqueue transitively
+	//on the other hand, if we want to make transport-specific tests, we'll make all
+	// native optional at compile time and add correct native/nio to testRuntime
+	if (project.hasProperty("forceTransport")) {
+		//so that the main code compiles
+		optional "io.netty:netty-transport-native-epoll:$nettyVersion"
+		optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
+		//now we explicitly add correctly qualified native, or do nothing if we want to test NIO
+		if (forceTransport == "native") {
+			if (osdetector.os == "osx") {
+				testRuntime "io.netty:netty-transport-native-kqueue:$nettyVersion$os_suffix"
+			}
+			else if (osdetector.os == "linux") {
+				testRuntime "io.netty:netty-transport-native-epoll:$nettyVersion$os_suffix"
+			}
+		}
+		else if (forceTransport != "nio") {
+			throw new InvalidUserDataException("invalid -PforceTranport option " + forceTransport + ", should be native|nio")
+		}
+	}
+	else {
+		//classic build to be distributed
+		compile "io.netty:netty-transport-native-epoll:$nettyVersion:linux-x86_64"
+		optional "io.netty:netty-transport-native-kqueue:$nettyVersion"
+	}
 
 	//Metrics
 	optional "io.micrometer:micrometer-core:$micrometerVersion"
