@@ -27,6 +27,7 @@ dependencies {
 
 	compile "io.netty:netty-codec-http:$nettyVersion"
 	compile "io.netty:netty-codec-http2:$nettyVersion"
+	compile "io.netty:netty-resolver-dns:$nettyVersion"
 	optional "io.netty:netty-codec-haproxy:$nettyVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all

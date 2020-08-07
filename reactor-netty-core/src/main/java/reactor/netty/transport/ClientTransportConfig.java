@@ -28,7 +28,6 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.DefaultAddressResolverGroup;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -47,7 +46,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	@Override
 	public int channelHash() {
-		return Objects.hash(super.channelHash(), proxyProvider, resolver);
+		return Objects.hash(super.channelHash(), proxyProvider, nameResolverProvider != null ? nameResolverProvider : resolver);
 	}
 
 	/**
@@ -99,6 +98,16 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
+	 * Return the configured {@link NameResolverProvider} or null
+	 *
+	 * @return the configured {@link NameResolverProvider} or null
+	 */
+	@Nullable
+	public NameResolverProvider getNameResolverProvider() {
+		return nameResolverProvider;
+	}
+
+	/**
 	 * Return the {@link ProxyProvider} if any or null
 	 *
 	 * @return the {@link ProxyProvider} if any or null
@@ -118,12 +127,12 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	}
 
 	/**
-	 * Return the {@link AddressResolverGroup}
+	 * Return the configured {@link AddressResolverGroup}
 	 *
-	 * @return the {@link AddressResolverGroup}
+	 * @return the configured {@link AddressResolverGroup}
 	 */
 	public final AddressResolverGroup<?> resolver() {
-		return resolver;
+		return resolver != null ? resolver : defaultResolver();
 	}
 
 
@@ -134,6 +143,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	Consumer<? super CONF>            doOnConnect;
 	Consumer<? super Connection>      doOnConnected;
 	Consumer<? super Connection>      doOnDisconnected;
+	NameResolverProvider              nameResolverProvider;
 	ProxyProvider                     proxyProvider;
 	Supplier<? extends SocketAddress> remoteAddress;
 	AddressResolverGroup<?>           resolver;
@@ -143,7 +153,6 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		super(options);
 		this.connectionProvider = Objects.requireNonNull(connectionProvider, "connectionProvider");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddress");
-		this.resolver = DefaultAddressResolverGroup.INSTANCE;
 	}
 
 	protected ClientTransportConfig(ClientTransportConfig<CONF> parent) {
@@ -152,6 +161,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		this.doOnConnect = parent.doOnConnect;
 		this.doOnConnected = parent.doOnConnected;
 		this.doOnDisconnected = parent.doOnDisconnected;
+		this.nameResolverProvider = parent.nameResolverProvider;
 		this.proxyProvider = parent.proxyProvider;
 		this.remoteAddress = parent.remoteAddress;
 		this.resolver = parent.resolver;
@@ -180,6 +190,13 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 		}
 	}
 
+	/**
+	 * Return the configured default {@link AddressResolverGroup}.
+	 *
+	 * @return the configured default {@link AddressResolverGroup}
+	 */
+	protected abstract AddressResolverGroup<?> defaultResolver();
+
 	@Override
 	protected EventLoopGroup eventLoopGroup() {
 		return loopResources().onClient(isPreferNative());
@@ -193,11 +210,11 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	protected AddressResolverGroup<?> resolverInternal() {
 		if (metricsRecorder != null) {
 			return new AddressResolverGroupMetrics(
-					(AddressResolverGroup<SocketAddress>) resolver,
+					(AddressResolverGroup<SocketAddress>) resolver(),
 					Objects.requireNonNull(metricsRecorder.get(), "Metrics recorder supplier returned null"));
 		}
 		else {
-			return resolver;
+			return resolver();
 		}
 	}
 

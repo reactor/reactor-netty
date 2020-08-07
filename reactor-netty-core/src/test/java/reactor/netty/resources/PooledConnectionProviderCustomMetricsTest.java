@@ -28,6 +28,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -118,6 +120,11 @@ public class PooledConnectionProviderCustomMetricsTest {
 		@Override
 		protected ChannelMetricsRecorder defaultMetricsRecorder() {
 			return null;
+		}
+
+		@Override
+		protected AddressResolverGroup<?> defaultResolver() {
+			return DefaultAddressResolverGroup.INSTANCE;
 		}
 
 		@Override

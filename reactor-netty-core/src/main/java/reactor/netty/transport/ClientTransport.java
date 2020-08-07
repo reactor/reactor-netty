@@ -213,6 +213,24 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		Objects.requireNonNull(resolver, "resolver");
 		T dup = duplicate();
 		dup.configuration().resolver = resolver;
+		dup.configuration().nameResolverProvider = null;
+		return dup;
+	}
+
+	/**
+	 * Apply a name resolver configuration.
+	 *
+	 * @param nameResolverSpec the name resolver callback
+	 * @return a new {@link ClientTransport} reference
+	 */
+	public T resolver(Consumer<NameResolverProvider.NameResolverSpec> nameResolverSpec) {
+		Objects.requireNonNull(nameResolverSpec, "nameResolverSpec");
+		NameResolverProvider.Build builder = new NameResolverProvider.Build();
+		nameResolverSpec.accept(builder);
+		T dup = duplicate();
+		NameResolverProvider provider = builder.build();
+		dup.configuration().nameResolverProvider = provider;
+		dup.configuration().resolver = provider.newNameResolverGroup(dup.configuration().defaultLoopResources());
 		return dup;
 	}
 }

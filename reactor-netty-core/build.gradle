@@ -35,6 +35,7 @@ dependencies {
 
 	compile "io.netty:netty-handler:$nettyVersion"
 	compile "io.netty:netty-handler-proxy:$nettyVersion"
+	compile "io.netty:netty-resolver-dns:$nettyVersion"
 	//transport resolution: typical build forces epoll but not kqueue transitively
 	//on the other hand, if we want to make transport-specific tests, we'll make all
 	// native optional at compile time and add correct native/nio to testRuntime
