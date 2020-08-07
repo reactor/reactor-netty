@@ -1062,7 +1062,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue900_1() {
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		Sinks.One<WebSocketCloseStatus> statusClient = Sinks.one();
 
 		httpServer =
 				HttpServer.create()
@@ -1080,7 +1080,7 @@ public class WebsocketTest {
 				          .uri("/")
 				          .handle((in, out) -> {
 				              in.receiveCloseStatus()
-				                .subscribeWith(statusClient);
+				                .subscribeWith(MonoProcessor.fromSink(statusClient));
 
 				              return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
 				                                              new CloseWebSocketFrame(1008, "something")))
@@ -1095,7 +1095,7 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusClient)
+		StepVerifier.create(statusClient.asMono())
 		            .expectNext(new WebSocketCloseStatus(1008, "something"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1103,7 +1103,7 @@ public class WebsocketTest {
 
 	@Test
 	public void testIssue900_2() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
+		Sinks.One<WebSocketCloseStatus> statusServer = Sinks.one();
 		Sinks.Many<WebSocketFrame> incomingData = Sinks.many().multicast().onBackpressureError();
 
 		httpServer =
@@ -1112,7 +1112,7 @@ public class WebsocketTest {
 				          .handle((req, res) ->
 				              res.sendWebsocket((in, out) -> {
 				                  in.receiveCloseStatus()
-				                    .subscribeWith(statusServer);
+				                    .subscribeWith(MonoProcessor.fromSink(statusServer));
 
 				                  return out.sendObject(Flux.just(new TextWebSocketFrame("echo"),
 				                                                  new CloseWebSocketFrame(1008, "something"))
@@ -1138,7 +1138,7 @@ public class WebsocketTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusServer)
+		StepVerifier.create(statusServer.asMono())
 		            .expectNext(new WebSocketCloseStatus(1008, "something"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));

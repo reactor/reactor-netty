@@ -66,6 +66,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoProcessor;
+import reactor.core.publisher.Sinks;
 import reactor.netty.ChannelBindException;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -323,8 +324,8 @@ public class TcpServerTests {
 
 		assertNotNull(context);
 
-		MonoProcessor<String> m1 = MonoProcessor.create();
-		MonoProcessor<String> m2 = MonoProcessor.create();
+		Sinks.One<String> m1 = Sinks.one();
+		Sinks.One<String> m2 = Sinks.one();
 
 		Connection client1 =
 				TcpClient.create()
@@ -334,7 +335,7 @@ public class TcpServerTests {
 				             in.receive()
 				               .asString()
 				               .log("-----------------CLIENT1")
-				               .subscribe(m1::onNext);
+				               .subscribe(m1::emitValue);
 
 				             return out.sendString(Mono.just("gogogo"))
 				                       .neverComplete();
@@ -352,7 +353,7 @@ public class TcpServerTests {
 				               .takeUntil(d -> d.contains("<- 1024 mark here"))
 				               .reduceWith(String::new, String::concat)
 				               .log("-----------------CLIENT2")
-				               .subscribe(m2::onNext);
+				               .subscribe(m2::emitValue);
 
 				             return out.sendString(Mono.just("GOGOGO"))
 				                       .neverComplete();
@@ -362,8 +363,8 @@ public class TcpServerTests {
 
 		assertNotNull(client2);
 
-		String client1Response = m1.block();
-		String client2Response = m2.block();
+		String client1Response = m1.asMono().block();
+		String client2Response = m2.asMono().block();
 
 		client1.disposeNow();
 		client2.disposeNow();
@@ -424,8 +425,8 @@ public class TcpServerTests {
 
 		assertNotNull(context);
 
-		MonoProcessor<String> m1 = MonoProcessor.create();
-		MonoProcessor<String> m2 = MonoProcessor.create();
+		Sinks.One<String> m1 = Sinks.one();
+		Sinks.One<String> m2 = Sinks.one();
 
 		Connection client1 =
 				TcpClient.create()
@@ -434,7 +435,7 @@ public class TcpServerTests {
 				             in.receive()
 				               .asString()
 				               .log("-----------------CLIENT1")
-				               .subscribe(m1::onNext);
+				               .subscribe(m1::emitValue);
 
 				             return out.sendString(Mono.just("gogogo"))
 				                       .neverComplete();
@@ -451,7 +452,7 @@ public class TcpServerTests {
 				               .take(2)
 				               .reduceWith(String::new, String::concat)
 				               .log("-----------------CLIENT2")
-				               .subscribe(m2::onNext);
+				               .subscribe(m2::emitValue);
 
 				             return out.sendString(Mono.just("GOGOGO"))
 				                       .neverComplete();
@@ -461,8 +462,8 @@ public class TcpServerTests {
 
 		assertNotNull(client2);
 
-		String client1Response = m1.block();
-		String client2Response = m2.block();
+		String client1Response = m1.asMono().block();
+		String client2Response = m2.asMono().block();
 
 		client1.disposeNow();
 		client2.disposeNow();
@@ -743,7 +744,7 @@ public class TcpServerTests {
 
 	@Test
 	public void testChannelGroupClosesAllConnections() throws Exception {
-		MonoProcessor<Void> serverConnDisposed = MonoProcessor.create();
+		Sinks.One<Void> serverConnDisposed = Sinks.one();
 
 		ChannelGroup group = new DefaultChannelGroup(new DefaultEventExecutor());
 
@@ -754,7 +755,7 @@ public class TcpServerTests {
 				         .port(0)
 				         .doOnConnection(c -> {
 				             c.onDispose()
-				              .subscribe(serverConnDisposed);
+				              .subscribe(MonoProcessor.fromSink(serverConnDisposed));
 				             group.add(c.channel());
 				             latch.countDown();
 				         })
@@ -774,7 +775,7 @@ public class TcpServerTests {
 		FutureMono.from(group.close())
 		          .block(Duration.ofSeconds(30));
 
-		serverConnDisposed.block(Duration.ofSeconds(5));
+		serverConnDisposed.asMono().block(Duration.ofSeconds(5));
 	}
 
 	@Test
@@ -894,14 +895,14 @@ public class TcpServerTests {
 		                            .remoteAddress(disposableServer::address)
 		                            .wiretap(true);
 
-		MonoProcessor<String> result = MonoProcessor.create();
+		Sinks.One<String> result = Sinks.one();
 		Flux.merge(client.connect(), client.connect())
 		    .flatMap(conn ->
 		            conn.inbound()
 		                .receive()
 		                .asString())
 		    .collect(Collectors.joining())
-		    .subscribe(result);
+		    .subscribe(MonoProcessor.fromSink(result));
 
 		assertTrue(latch1.await(30, TimeUnit.SECONDS));
 
@@ -914,7 +915,7 @@ public class TcpServerTests {
 
 		assertTrue(latch2.await(30, TimeUnit.SECONDS));
 
-		StepVerifier.create(result)
+		StepVerifier.create(result.asMono())
 		            .expectNext("delay1000delay1000")
 		            .verifyComplete();
 	}

@@ -2173,12 +2173,12 @@ public class HttpClientTest {
 				          .wiretap(true)
 				          .bindNow(Duration.ofSeconds(30));
 
-		MonoProcessor<Void> processor = MonoProcessor.create();
+		Sinks.One<Void> processor = Sinks.one();
 		StepVerifier.create(
 		        createHttpClientForContextWithPort()
 		                .doAfterResponseSuccess((res, conn) -> {
 		                    conn.onDispose()
-		                        .subscribeWith(processor);
+		                        .subscribeWith(MonoProcessor.fromSink(processor));
 		                    conn.dispose();
 		                })
 		                .get()
@@ -2190,7 +2190,7 @@ public class HttpClientTest {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(processor)
+		StepVerifier.create(processor.asMono())
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 	}

@@ -1191,8 +1191,8 @@ public class HttpServerTests {
 		Flux<String> flux = Flux.range(0, 100)
 		                        .map(n -> String.format("%010d", n));
 		Sinks.Many<String> receiver = Sinks.many().unicast().onBackpressureBuffer();
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		Sinks.One<WebSocketCloseStatus> statusServer = Sinks.one();
+		Sinks.One<WebSocketCloseStatus> statusClient = Sinks.one();
 		List<String> test =
 		    flux.collectList()
 		        .block();
@@ -1204,7 +1204,7 @@ public class HttpServerTests {
 			                               out.sendString(flux)
 			                                  .then(out.sendClose(4404, "test"))
 			                                  .then(in.receiveCloseStatus()
-			                                          .subscribeWith(statusServer)
+			                                          .subscribeWith(MonoProcessor.fromSink(statusServer))
 			                                          .then())
 		                               ))
 		                               .wiretap(true)
@@ -1216,14 +1216,14 @@ public class HttpServerTests {
 		          .websocket()
 		          .uri("/")
 		          .handle((in, out) -> {
-			          MonoProcessor<Object> done = MonoProcessor.create();
+			          Sinks.One<Object> done = Sinks.one();
 			          in.receiveCloseStatus()
-			            .subscribeWith(statusClient);
+			            .subscribeWith(MonoProcessor.fromSink(statusClient));
 			          in.receive()
 			            .asString()
-			            .doFinally((s) -> done.onComplete())
+			            .doFinally((s) -> done.emitEmpty())
 			            .subscribeWith(FluxProcessor.fromSink(receiver));
-			          return done.then(Mono.delay(Duration.ofMillis(500)));
+			          return done.asMono().then(Mono.delay(Duration.ofMillis(500)));
 		          })
 		          .blockLast();
 
@@ -1232,13 +1232,13 @@ public class HttpServerTests {
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusClient)
+		StepVerifier.create(statusClient.asMono())
 		            .expectNext(new WebSocketCloseStatus(4404, "test"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
 
-		StepVerifier.create(statusServer)
+		StepVerifier.create(statusServer.asMono())
 		            .expectNext(new WebSocketCloseStatus(4404, "test"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1249,14 +1249,14 @@ public class HttpServerTests {
 
 	@Test
 	public void testNormalConnectionCloseForWebSocketServer() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		Sinks.One<WebSocketCloseStatus> statusServer = Sinks.one();
+		Sinks.One<WebSocketCloseStatus> statusClient = Sinks.one();
 
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) -> in.receiveCloseStatus()
-		                                                                   .subscribeWith(statusServer)
+		                                                                   .subscribeWith(MonoProcessor.fromSink(statusServer))
 		                                                                   .then()))
 		                             .wiretap(true)
 		                             .bindNow();
@@ -1268,15 +1268,15 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> out.sendClose(4404, "test")
 		                                  .then(in.receiveCloseStatus()
-		                                          .subscribeWith(statusClient)))
+		                                          .subscribeWith(MonoProcessor.fromSink(statusClient))))
 		          .blockLast();
 
-		StepVerifier.create(statusClient)
+		StepVerifier.create(statusClient.asMono())
 		            .expectNext(new WebSocketCloseStatus(4404, "test"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusServer)
+		StepVerifier.create(statusServer.asMono())
 		            .expectNext(new WebSocketCloseStatus(4404, "test"))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1284,14 +1284,14 @@ public class HttpServerTests {
 
 	@Test
 	public void testCancelConnectionCloseForWebSocketClient() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		Sinks.One<WebSocketCloseStatus> statusServer = Sinks.one();
+		Sinks.One<WebSocketCloseStatus> statusClient = Sinks.one();
 
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) -> in.receiveCloseStatus()
-		                                                                   .subscribeWith(statusServer)
+		                                                                   .subscribeWith(MonoProcessor.fromSink(statusServer))
 		                                                                   .then()))
 		                             .wiretap(true)
 		                             .bindNow();
@@ -1303,7 +1303,7 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> {
 		              in.receiveCloseStatus()
-		                .subscribeWith(statusClient);
+		                .subscribeWith(MonoProcessor.fromSink(statusClient));
 
 		              in.withConnection(Connection::dispose);
 
@@ -1311,12 +1311,12 @@ public class HttpServerTests {
 		          })
 		          .subscribe();
 
-		StepVerifier.create(statusClient)
+		StepVerifier.create(statusClient.asMono())
 		            .expectNext(new WebSocketCloseStatus(-1, ""))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusServer)
+		StepVerifier.create(statusServer.asMono())
 		            .expectNext(new WebSocketCloseStatus(-1, ""))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1324,15 +1324,15 @@ public class HttpServerTests {
 
 	@Test
 	public void testCancelReceivingForWebSocketClient() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		Sinks.One<WebSocketCloseStatus> statusServer = Sinks.one();
+		Sinks.One<WebSocketCloseStatus> statusClient = Sinks.one();
 
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) ->
 		                                 resp.sendWebsocket((in, out) -> {
 		                                     in.receiveCloseStatus()
-		                                       .subscribeWith(statusServer);
+		                                       .subscribeWith(MonoProcessor.fromSink(statusServer));
 
 		                                     return out.sendString(Flux.interval(Duration.ofMillis(10))
 		                                                               .map(l -> l + ""));
@@ -1347,7 +1347,7 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> {
 		              in.receiveCloseStatus()
-		                .subscribeWith(statusClient);
+		                .subscribeWith(MonoProcessor.fromSink(statusClient));
 
 		              in.receive()
 		                .take(1)
@@ -1357,12 +1357,12 @@ public class HttpServerTests {
 		          })
 		          .subscribe();
 
-		StepVerifier.create(statusClient)
+		StepVerifier.create(statusClient.asMono())
 		            .expectNext(new WebSocketCloseStatus(-1, ""))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusServer)
+		StepVerifier.create(statusServer.asMono())
 		            .expectNext(new WebSocketCloseStatus(-1, ""))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1370,14 +1370,14 @@ public class HttpServerTests {
 
 	@Test
 	public void testCancelConnectionCloseForWebSocketServer() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		Sinks.One<WebSocketCloseStatus> statusServer = Sinks.one();
+		Sinks.One<WebSocketCloseStatus> statusClient = Sinks.one();
 
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) -> resp.sendWebsocket((in, out) -> {
 		                                 in.receiveCloseStatus()
-		                                   .subscribeWith(statusServer);
+		                                   .subscribeWith(MonoProcessor.fromSink(statusServer));
 
 		                                 in.withConnection(Connection::dispose);
 
@@ -1393,18 +1393,18 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> {
 		              in.receiveCloseStatus()
-		                .subscribeWith(statusClient);
+		                .subscribeWith(MonoProcessor.fromSink(statusClient));
 
 		              return Mono.never();
 		          })
 		          .subscribe();
 
-		StepVerifier.create(statusClient)
+		StepVerifier.create(statusClient.asMono())
 		            .expectNext(new WebSocketCloseStatus(-1, ""))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusServer)
+		StepVerifier.create(statusServer.asMono())
 		            .expectNext(new WebSocketCloseStatus(-1, ""))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1412,14 +1412,14 @@ public class HttpServerTests {
 
 	@Test
 	public void testCancelReceivingForWebSocketServer() {
-		MonoProcessor<WebSocketCloseStatus> statusServer = MonoProcessor.create();
-		MonoProcessor<WebSocketCloseStatus> statusClient = MonoProcessor.create();
+		Sinks.One<WebSocketCloseStatus> statusServer = Sinks.one();
+		Sinks.One<WebSocketCloseStatus> statusClient = Sinks.one();
 
 		disposableServer = HttpServer.create()
 		                             .port(0)
 		                             .handle((req, resp) -> resp.sendWebsocket((in, out) -> {
 		                                 in.receiveCloseStatus()
-		                                   .subscribeWith(statusServer);
+		                                   .subscribeWith(MonoProcessor.fromSink(statusServer));
 
 		                                 in.receive()
 		                                   .take(1)
@@ -1437,19 +1437,19 @@ public class HttpServerTests {
 		          .uri("/")
 		          .handle((in, out) -> {
 		              in.receiveCloseStatus()
-		                .subscribeWith(statusClient);
+		                .subscribeWith(MonoProcessor.fromSink(statusClient));
 
 		              return out.sendString(Flux.interval(Duration.ofMillis(10))
 		                                        .map(l -> l + ""));
 		          })
 		          .subscribe();
 
-		StepVerifier.create(statusClient)
+		StepVerifier.create(statusClient.asMono())
 		            .expectNext(new WebSocketCloseStatus(-1, ""))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
 
-		StepVerifier.create(statusServer)
+		StepVerifier.create(statusServer.asMono())
 		            .expectNext(new WebSocketCloseStatus(-1, ""))
 		            .expectComplete()
 		            .verify(Duration.ofSeconds(30));
@@ -1705,7 +1705,7 @@ public class HttpServerTests {
 		                              .remoteAddress(disposableServer::address)
 		                              .wiretap(true);
 
-		MonoProcessor<String> result = MonoProcessor.create();
+		Sinks.One<String> result = Sinks.one();
 		Flux.just("/delay500", "/delay1000")
 		    .flatMap(s ->
 		            client.get()
@@ -1714,7 +1714,7 @@ public class HttpServerTests {
 		                  .aggregate()
 		                  .asString())
 		    .collect(Collectors.joining())
-		    .subscribe(result);
+		    .subscribe(MonoProcessor.fromSink(result));
 
 		assertThat(latch1.await(30, TimeUnit.SECONDS)).isTrue();
 
@@ -1727,7 +1727,7 @@ public class HttpServerTests {
 
 		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 
-		StepVerifier.create(result)
+		StepVerifier.create(result.asMono())
 		            .expectNext("delay500delay1000")
 		            .verifyComplete();
 	}
