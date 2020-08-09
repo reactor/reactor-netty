@@ -45,6 +45,7 @@ public class TransportTest {
 		doTestWiretap(transport.wiretap(true), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category"), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category", LogLevel.DEBUG), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
+		doTestWiretap(transport.wiretap("category", LogLevel.INFO), LogLevel.INFO, ByteBufFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category", LogLevel.INFO, ByteBufFormat.HEX_DUMP), LogLevel.INFO, ByteBufFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category", LogLevel.DEBUG, ByteBufFormat.SIMPLE), LogLevel.DEBUG, ByteBufFormat.SIMPLE);
 	}
