@@ -310,7 +310,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	public T wiretap(String category, LogLevel level) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
-		return wiretap(category, LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
+		return wiretap(category, level, ByteBufFormat.HEX_DUMP);
 	}
 
 	/**
