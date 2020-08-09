@@ -2454,4 +2454,39 @@ public class HttpClientTest {
 		assertThat(onDisconnected.get()).isFalse();
 		assertThat(timeout.get()).isEqualTo(expectedTimeout);
 	}
+
+	@Test
+	public void testLoopAndResolver() {
+		LoopResources loop = LoopResources.create("testLoopAndResolver");
+		HttpClient client =
+				HttpClient.create()
+				          .wiretap(true);
+
+		StepVerifier.create(client.get()
+		                          .uri("https://example.com")
+		                          .response((r, buf) -> Mono.just(r.status().code())))
+		            .expectNextMatches(status -> status >= 200 && status < 400)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.runOn(loop, false)
+		                          .get()
+		                          .uri("https://example.com")
+		                          .response((r, buf) -> Mono.just(r.status().code())))
+		            .expectNextMatches(status -> status >= 200 && status < 400)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		StepVerifier.create(client.runOn(loop, false)
+		                          .resolver(spec -> spec.trace(true))
+		                          .get()
+		                          .uri("https://example.com")
+		                          .response((r, buf) -> Mono.just(r.status().code())))
+		            .expectNextMatches(status -> status >= 200 && status < 400)
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		loop.disposeLater()
+		    .block(Duration.ofSeconds(30));
+	}
 }

@@ -119,7 +119,7 @@ public final class UdpClientConfig extends ClientTransportConfig<UdpClientConfig
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new UdpOperations(ch, c);
 
 	static final AddressResolverGroup<?> DEFAULT_RESOLVER =
-			NameResolverProvider.builder().build().newNameResolverGroup(UdpResources.get());
+			NameResolverProvider.builder().build().newNameResolverGroup(UdpResources.get(), LoopResources.DEFAULT_NATIVE);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(UdpClient.class);
 

@@ -18,6 +18,7 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -46,7 +47,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	@Override
 	public int channelHash() {
-		return Objects.hash(super.channelHash(), proxyProvider, nameResolverProvider != null ? nameResolverProvider : resolver);
+		return Objects.hash(super.channelHash(), proxyProvider, nameResolverProvider != null ? nameResolverProvider : resolver.get());
 	}
 
 	/**
@@ -132,7 +133,7 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 	 * @return the configured {@link AddressResolverGroup}
 	 */
 	public final AddressResolverGroup<?> resolver() {
-		return resolver != null ? resolver : defaultResolver();
+		return getOrCreateResolver();
 	}
 
 
@@ -140,19 +141,20 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	final ConnectionProvider connectionProvider;
 
-	Consumer<? super CONF>            doOnConnect;
-	Consumer<? super Connection>      doOnConnected;
-	Consumer<? super Connection>      doOnDisconnected;
-	NameResolverProvider              nameResolverProvider;
-	ProxyProvider                     proxyProvider;
-	Supplier<? extends SocketAddress> remoteAddress;
-	AddressResolverGroup<?>           resolver;
+	Consumer<? super CONF>                   doOnConnect;
+	Consumer<? super Connection>             doOnConnected;
+	Consumer<? super Connection>             doOnDisconnected;
+	NameResolverProvider                     nameResolverProvider;
+	ProxyProvider                            proxyProvider;
+	Supplier<? extends SocketAddress>        remoteAddress;
+	AtomicReference<AddressResolverGroup<?>> resolver;
 
 	protected ClientTransportConfig(ConnectionProvider connectionProvider, Map<ChannelOption<?>, ?> options,
 			Supplier<? extends SocketAddress> remoteAddress) {
 		super(options);
 		this.connectionProvider = Objects.requireNonNull(connectionProvider, "connectionProvider");
 		this.remoteAddress = Objects.requireNonNull(remoteAddress, "remoteAddress");
+		this.resolver = new AtomicReference<>();
 	}
 
 	protected ClientTransportConfig(ClientTransportConfig<CONF> parent) {
@@ -208,14 +210,34 @@ public abstract class ClientTransportConfig<CONF extends TransportConfig> extend
 
 	@SuppressWarnings("unchecked")
 	protected AddressResolverGroup<?> resolverInternal() {
+		AddressResolverGroup<?> resolverGroup = resolver();
 		if (metricsRecorder != null) {
 			return new AddressResolverGroupMetrics(
-					(AddressResolverGroup<SocketAddress>) resolver(),
+					(AddressResolverGroup<SocketAddress>) resolverGroup,
 					Objects.requireNonNull(metricsRecorder.get(), "Metrics recorder supplier returned null"));
 		}
 		else {
-			return resolver();
+			return resolverGroup;
 		}
+	}
+
+	AddressResolverGroup<?> getOrCreateResolver() {
+		AddressResolverGroup<?> resolverGroup = resolver.get();
+		if (resolverGroup == null) {
+			AddressResolverGroup<?> newResolverGroup;
+			if (nameResolverProvider != null) {
+				newResolverGroup = nameResolverProvider.newNameResolverGroup(loopResources(), preferNative);
+			}
+			else if (loopResources != null) {
+				newResolverGroup = NameResolverProvider.builder().build().newNameResolverGroup(loopResources(), preferNative);
+			}
+			else {
+				newResolverGroup = defaultResolver();
+			}
+			resolver.compareAndSet(null, newResolverGroup);
+			resolverGroup = getOrCreateResolver();
+		}
+		return resolverGroup;
 	}
 
 	static final class ClientTransportChannelInitializer implements ChannelPipelineConfigurer {

@@ -25,6 +25,7 @@ import io.netty.resolver.AddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
+import reactor.netty.resources.LoopResources;
 
 /**
  * A generic client {@link Transport} that will {@link #connect()} to a remote address and provide a {@link Connection}
@@ -212,7 +213,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	public T resolver(AddressResolverGroup<?> resolver) {
 		Objects.requireNonNull(resolver, "resolver");
 		T dup = duplicate();
-		dup.configuration().resolver = resolver;
+		dup.configuration().resolver.set(resolver);
 		dup.configuration().nameResolverProvider = null;
 		return dup;
 	}
@@ -228,9 +229,15 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		NameResolverProvider.Build builder = new NameResolverProvider.Build();
 		nameResolverSpec.accept(builder);
 		T dup = duplicate();
-		NameResolverProvider provider = builder.build();
-		dup.configuration().nameResolverProvider = provider;
-		dup.configuration().resolver = provider.newNameResolverGroup(dup.configuration().defaultLoopResources());
+		dup.configuration().nameResolverProvider = builder.build();
+		dup.configuration().resolver.set(null);
+		return dup;
+	}
+
+	@Override
+	public T runOn(LoopResources loopResources, boolean preferNative) {
+		T dup = super.runOn(loopResources, preferNative);
+		dup.configuration().resolver.set(null);
 		return dup;
 	}
 }

@@ -124,7 +124,7 @@ public final class TcpClientConfig extends ClientTransportConfig<TcpClientConfig
 	static final ChannelOperations.OnSetup DEFAULT_OPS = (ch, c, msg) -> new ChannelOperations<>(ch, c);
 
 	static final AddressResolverGroup<?> DEFAULT_RESOLVER =
-			NameResolverProvider.builder().build().newNameResolverGroup(TcpResources.get());
+			NameResolverProvider.builder().build().newNameResolverGroup(TcpResources.get(), LoopResources.DEFAULT_NATIVE);
 
 	static final LoggingHandler LOGGING_HANDLER = new LoggingHandler(TcpClient.class);
 

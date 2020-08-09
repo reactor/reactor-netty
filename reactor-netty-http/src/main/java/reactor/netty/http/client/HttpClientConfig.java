@@ -587,7 +587,7 @@ public final class HttpClientConfig extends ClientTransportConfig<HttpClientConf
 	}
 
 	static final AddressResolverGroup<?> DEFAULT_RESOLVER =
-			NameResolverProvider.builder().build().newNameResolverGroup(HttpResources.get());
+			NameResolverProvider.builder().build().newNameResolverGroup(HttpResources.get(), LoopResources.DEFAULT_NATIVE);
 
 	static final Pattern FOLLOW_REDIRECT_CODES = Pattern.compile("30[1278]");
 

@@ -65,7 +65,7 @@ public class NameResolverProviderTest {
 
 		builder.cacheMaxTimeToLive(Duration.ofSeconds(Long.MAX_VALUE));
 		assertThatExceptionOfType(ArithmeticException.class)
-				.isThrownBy(() -> builder.build().newNameResolverGroup(TcpResources.get()));
+				.isThrownBy(() -> builder.build().newNameResolverGroup(TcpResources.get(), LoopResources.DEFAULT_NATIVE));
 	}
 
 	@Test
@@ -84,7 +84,7 @@ public class NameResolverProviderTest {
 
 		builder.cacheMinTimeToLive(Duration.ofSeconds(Long.MAX_VALUE));
 		assertThatExceptionOfType(ArithmeticException.class)
-				.isThrownBy(() -> builder.build().newNameResolverGroup(TcpResources.get()));
+				.isThrownBy(() -> builder.build().newNameResolverGroup(TcpResources.get(), LoopResources.DEFAULT_NATIVE));
 	}
 
 	@Test
@@ -103,7 +103,7 @@ public class NameResolverProviderTest {
 
 		builder.cacheNegativeTimeToLive(Duration.ofSeconds(Long.MAX_VALUE));
 		assertThatExceptionOfType(ArithmeticException.class)
-				.isThrownBy(() -> builder.build().newNameResolverGroup(TcpResources.get()));
+				.isThrownBy(() -> builder.build().newNameResolverGroup(TcpResources.get(), LoopResources.DEFAULT_NATIVE));
 	}
 
 	@Test
@@ -204,6 +204,7 @@ public class NameResolverProviderTest {
 		assertTrue(builder.build().isRoundRobinSelection());
 	}
 
+	/*
 	@Test
 	public void runOn() {
 		assertNull(builder.build().loopResources());
@@ -220,6 +221,7 @@ public class NameResolverProviderTest {
 		assertThatExceptionOfType(NullPointerException.class)
 				.isThrownBy(() -> builder.runOn(null, false));
 	}
+	*/
 
 	@Test
 	public void searchDomains() {
