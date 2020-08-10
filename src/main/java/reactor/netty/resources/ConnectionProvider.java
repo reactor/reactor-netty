@@ -21,9 +21,6 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
-import reactor.pool.InstrumentedPool;
-import reactor.pool.Pool;
-import reactor.pool.PoolBuilder;
 import reactor.util.Metrics;
 import reactor.util.annotation.NonNull;
 
@@ -36,7 +33,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -466,8 +462,7 @@ public interface ConnectionProvider extends Disposable {
 		Duration maxIdleTime;
 		Duration maxLifeTime;
 		boolean  metricsEnabled;
-		Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
-				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
+		String   leasingStrategy        = DEFAULT_POOL_LEASING_STRATEGY;
 		Supplier<? extends ConnectionProvider.MeterRegistrar> registrar;
 
 		/**
@@ -479,12 +474,6 @@ public interface ConnectionProvider extends Disposable {
 			}
 			if (DEFAULT_POOL_MAX_LIFE_TIME > -1) {
 				maxLifeTime(Duration.ofMillis(DEFAULT_POOL_MAX_LIFE_TIME));
-			}
-			if(LEASING_STRATEGY_LIFO.equals(DEFAULT_POOL_LEASING_STRATEGY)) {
-				lifo();
-			}
-			else {
-				fifo();
 			}
 		}
 
@@ -606,26 +595,26 @@ public interface ConnectionProvider extends Disposable {
 		}
 
 		/**
-		 * Build a LIFO flavor of {@link Pool}, that is to say a flavor where the last
-		 * {@link Pool#acquire()} {@link Mono Mono} that was pending is served first
-		 * whenever a resource becomes available.
+		 * Configure the pool so that if there are idle connections (i.e. pool is under-utilized),
+		 * the next acquire operation will get the <b>Most Recently Used</b> connection
+		 * (MRU, i.e. the connection that was released last among the current idle connections).
 		 *
-		 * @return a builder of {@link Pool} with LIFO pending acquire ordering
+		 * @return {@literal this}
 		 */
 		public final SPEC lifo() {
-			this.leasingStrategy = PoolBuilder::lifo;
+			this.leasingStrategy = LEASING_STRATEGY_LIFO;
 			return get();
 		}
 
 		/**
-		 * Build a FIFO flavor of {@link Pool}, that is to say a flavor where the first
-		 * {@link Pool#acquire()} {@link Mono Mono} that was pending is served first
-		 * whenever a resource becomes available.
+		 * Configure the pool so that if there are idle connections (i.e. pool is under-utilized),
+		 * the next acquire operation will get the <b>Least Recently Used</b> connection
+		 * (LRU, i.e. the connection that was released first among the current idle connections).
 		 *
-		 * @return a builder of {@link Pool} with FIFO pending acquire ordering
+		 * @return {@literal this}
 		 */
 		public final SPEC fifo() {
-			this.leasingStrategy = PoolBuilder::fifo;
+			this.leasingStrategy = LEASING_STRATEGY_FIFO;
 			return get();
 		}
 

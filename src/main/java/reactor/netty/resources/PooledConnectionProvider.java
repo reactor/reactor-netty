@@ -55,11 +55,11 @@ import reactor.core.publisher.Operators;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.FutureMono;
-import reactor.netty.Metrics;
 import reactor.netty.channel.BootstrapHandlers;
 import reactor.netty.channel.ChannelOperations;
 import reactor.pool.InstrumentedPool;
 import reactor.pool.PoolBuilder;
+import reactor.pool.PoolConfig;
 import reactor.pool.PooledRef;
 import reactor.pool.PooledRefMetadata;
 import reactor.util.Logger;
@@ -716,8 +716,7 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		final long        maxIdleTime;
 		final long        maxLifeTime;
 		final boolean     metricsEnabled;
-		final Function<PoolBuilder<PooledConnectionProvider.PooledConnection, ?>,
-				InstrumentedPool<PooledConnectionProvider.PooledConnection>> leasingStrategy;
+		final String      leasingStrategy;
 		final Supplier<? extends MeterRegistrar> registrar;
 
 		PoolFactory(ConnectionPoolSpec<?> conf) {
@@ -733,14 +732,20 @@ final class PooledConnectionProvider implements ConnectionProvider {
 		}
 
 		InstrumentedPool<PooledConnection> newPool(Publisher<PooledConnection> allocator) {
-			return leasingStrategy.apply(
+			PoolBuilder<PooledConnection, PoolConfig<PooledConnection>> poolBuilder =
 					PoolBuilder.from(allocator)
 					           .destroyHandler(DEFAULT_DESTROY_HANDLER)
 					           .evictionPredicate(DEFAULT_EVICTION_PREDICATE
 					                   .or((poolable, meta) -> (maxIdleTime != -1 && meta.idleTime() >= maxIdleTime)
 					                           || (maxLifeTime != -1 && meta.lifeTime() >= maxLifeTime)))
 					           .maxPendingAcquire(pendingAcquireMaxCount)
-					           .sizeBetween(0, maxConnections));
+					           .sizeBetween(0, maxConnections);
+			if (LEASING_STRATEGY_FIFO.equals(leasingStrategy)) {
+				return poolBuilder.idleResourceReuseLruOrder()
+				                  .buildPool();
+			}
+			return poolBuilder.idleResourceReuseMruOrder()
+			                  .buildPool();
 		}
 
 		@Override
