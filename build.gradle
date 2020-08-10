@@ -335,13 +335,13 @@ configure(rootProject) { project ->
 
 		onlyIfNewer true
 		compress true
-		src "${repositories.jcenter().url}io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}.jar"
+		src "${repositories.jcenter().url}io/projectreactor/netty/reactor-netty/$compatibleVersion/reactor-netty-${compatibleVersion}-original.jar"
 		dest "${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar"
   }
 
   task japicmp(type: JapicmpTask) {
 		oldClasspath = files("${buildDir}/baselineLibs/reactor-netty-${compatibleVersion}.jar")
-		newClasspath = files(shadowJar.archiveFile)
+		newClasspath = files(jar.archiveFile)
 		onlyBinaryIncompatibleModified = true
 		failOnModification = true
 		failOnSourceIncompatibility = true
