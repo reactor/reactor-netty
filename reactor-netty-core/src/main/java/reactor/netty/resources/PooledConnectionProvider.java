@@ -237,9 +237,11 @@ public abstract class PooledConnectionProvider<T extends Connection> implements 
 				poolBuilder = poolBuilder.allocationStrategy(allocationStrategy);
 			}
 			if (LEASING_STRATEGY_FIFO.equals(leasingStrategy)) {
-				return poolBuilder.fifo();
+				return poolBuilder.idleResourceReuseLruOrder()
+				                  .buildPool();
 			}
-			return poolBuilder.lifo();
+			return poolBuilder.idleResourceReuseMruOrder()
+			                  .buildPool();
 		}
 
 		@Override
