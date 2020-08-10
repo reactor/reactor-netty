@@ -20,7 +20,7 @@ With `Gradle` from [repo.spring.io](https://repo.spring.io) or `Maven Central` r
     }
 
     dependencies {
-      compile "io.projectreactor.netty:reactor-netty:1.0.0-M1"
+      compile "io.projectreactor.netty:reactor-netty:1.0.0-M2"
       //compile "io.projectreactor.netty:reactor-netty:1.0.0"
     }
 ```
