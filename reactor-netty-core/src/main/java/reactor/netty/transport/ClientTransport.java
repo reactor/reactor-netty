@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.NoopAddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -188,6 +189,8 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
 		proxyOptions.accept(builder);
 		dup.configuration().proxyProvider = builder.build();
+
+		dup.configuration().resolver.compareAndSet(null, NoopAddressResolverGroup.INSTANCE);
 		return dup;
 	}
 
