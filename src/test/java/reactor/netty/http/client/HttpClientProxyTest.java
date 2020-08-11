@@ -53,8 +53,8 @@ public class HttpClientProxyTest {
 
 	private DisposableServer server;
 	private int port;
-    private static final String LOCALLY_NOT_RESOLVABLE_ADDRESS =
-            "http://some-random-address-that-is-only-resolvable-by-the-proxy-1234.com";
+	private static final String LOCALLY_NOT_RESOLVABLE_ADDRESS =
+			"http://some-random-address-that-is-only-resolvable-by-the-proxy-1234.com";
 
 	@Before
 	public void setUp() {
@@ -73,9 +73,9 @@ public class HttpClientProxyTest {
 				        .willReturn(success()
 				                .body("test")
 				                .header("Hoverfly", "Was-Here")),
-                    service(LOCALLY_NOT_RESOLVABLE_ADDRESS)
-                        .get("/")
-                        .willReturn(success().body("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS))));
+				    service(LOCALLY_NOT_RESOLVABLE_ADDRESS)
+				        .get("/")
+					    .willReturn(success().body("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS))));
 	}
 
 	@After
