@@ -179,13 +179,21 @@ include::{examplesdir}/eventloop/Application.java[lines=18..37]
 
 == Connection Pool
 
-By default, the `TCP` client uses a "`fixed`" connection pool with `500` as the maximum number of channels,
-`45s` as the pending acquire timeout and `1000` as the maximum number of the registered requests for acquire to keep in the pending queue.
+By default, the `TCP` client uses a "`fixed`" connection pool with `500` as the maximum number of channels
+and `1000` as the maximum number of the registered requests for acquire to keep in the pending queue
+(for the rest of the configurations check the system properties below).
 This means that the implementation creates a new channel if someone tries to acquire a channel but none is in the pool.
 When the maximum number of the channels in the pool is reached, new tries to acquire a channel are delayed
 until a channel is returned to the pool again.
-The implementation uses `FIFO` order for channels in the pool.
-By default, there is no idle time specified for the channels in the pool.
+
+====
+[source,java,indent=0]
+.{sourcedir}/reactor/netty/ReactorNetty.java
+----
+include::{sourcedir}/reactor/netty/ReactorNetty.java[lines=114..135]
+----
+====
+
 
 If you need to disable the connection pool, you can apply the following configuration:
 
