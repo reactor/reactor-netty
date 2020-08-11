@@ -1,0 +1,17 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = tab
+insert_final_newline = false
+max_line_length = 120
+tab_width = 4
+trim_trailing_whitespace = true
+ij_smart_tabs = true
+
+[*.java]
+ij_java_catch_on_new_line = true
+ij_java_else_on_new_line = true
+ij_java_finally_on_new_line = true
