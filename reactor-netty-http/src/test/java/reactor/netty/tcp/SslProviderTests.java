@@ -186,6 +186,9 @@ public class SslProviderTests {
 		if (serverSupport) {
 			serverSslContextBuilder.protocols("TLSv1.3");
 		}
+		else {
+			serverSslContextBuilder.protocols("TLSv1.2");
+		}
 		disposableServer =
 				server.secure(spec -> spec.sslContext(serverSslContextBuilder))
 				      .handle((req, res) -> res.sendString(Mono.just("testTls13Support")))
@@ -193,6 +196,9 @@ public class SslProviderTests {
 
 		if (clientSupport) {
 			clientSslContextBuilder.protocols("TLSv1.3");
+		}
+		else {
+			clientSslContextBuilder.protocols("TLSv1.2");
 		}
 		StepVerifier.create(
 		        HttpClient.create()
