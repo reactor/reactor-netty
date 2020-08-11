@@ -16,7 +16,6 @@
 package reactor.netty.resources;
 
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.internal.PlatformDependent;
 import org.reactivestreams.Publisher;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
@@ -41,11 +40,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.WeakHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -63,7 +62,19 @@ import static reactor.netty.resources.ConnectionProvider.ConnectionPoolSpec.PEND
 public abstract class PooledConnectionProvider<T extends Connection> implements ConnectionProvider {
 	final PoolFactory<T> defaultPoolFactory;
 
-	final ConcurrentMap<PoolKey, InstrumentedPool<T>> channelPools = PlatformDependent.newConcurrentHashMap();
+	final int poolCapacity = 5000; // Get a value from the configuration
+	final LinkedHashMap<PoolKey, InstrumentedPool<T>> channelPools =
+            new LinkedHashMap<PoolKey, InstrumentedPool<T>>(
+                    32, 0.75f, true) {
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<PoolKey, InstrumentedPool<T>> eldest) {
+			if (size() > poolCapacity) {
+				eldest.getValue().dispose();
+				return true;
+			}
+			return false;
+		}
+	};
 	/**
 	 * This map keeps a weakref to the {@link InstrumentedPool#metrics() metrics} of created pools through the same PoolKey that is used in
 	 * {@link #channelPools}. This is so that metrics providing objects don't get garbage collected too early,
