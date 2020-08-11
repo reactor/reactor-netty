@@ -39,6 +39,8 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
+import io.netty.resolver.NoopAddressResolverGroup;
 import reactor.core.Exceptions;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.NettyPipeline;
@@ -484,6 +486,26 @@ public abstract class BootstrapHandlers {
 			b.resolver(((AddressResolverGroupMetrics) resolver).resolverGroup);
 		}
 
+		return b;
+	}
+
+	/**
+	 * Changes the resolver to {@link NoopAddressResolverGroup} if the current one is
+	 * {@link DefaultAddressResolverGroup}.
+	 */
+	public static Bootstrap updateResolverForProxySupport(Bootstrap b) {
+		if (b.config().resolver() == DefaultAddressResolverGroup.INSTANCE) {
+			return b.resolver(NoopAddressResolverGroup.INSTANCE);
+		} else if (b.config().resolver() instanceof AddressResolverGroupMetrics) {
+			final AddressResolverGroupMetrics addressResolverGroupMetrics =
+					(AddressResolverGroupMetrics) b.config().resolver();
+			if (addressResolverGroupMetrics.resolverGroup.equals(DefaultAddressResolverGroup.INSTANCE)) {
+				return b.resolver(
+					new AddressResolverGroupMetrics(
+						NoopAddressResolverGroup.INSTANCE,
+						addressResolverGroupMetrics.recorder));
+			}
+		}
 		return b;
 	}
 

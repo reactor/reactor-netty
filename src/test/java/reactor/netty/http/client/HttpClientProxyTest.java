@@ -53,6 +53,8 @@ public class HttpClientProxyTest {
 
 	private DisposableServer server;
 	private int port;
+	private static final String LOCALLY_NOT_RESOLVABLE_ADDRESS =
+			"http://some-random-address-that-is-only-resolvable-by-the-proxy-1234.com";
 
 	@Before
 	public void setUp() {
@@ -70,7 +72,10 @@ public class HttpClientProxyTest {
 				        .get("/")
 				        .willReturn(success()
 				                .body("test")
-				                .header("Hoverfly", "Was-Here"))));
+				                .header("Hoverfly", "Was-Here")),
+				    service(LOCALLY_NOT_RESOLVABLE_ADDRESS)
+				        .get("/")
+					    .willReturn(success().body("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS))));
 	}
 
 	@After
@@ -165,13 +170,53 @@ public class HttpClientProxyTest {
 				    .verify(Duration.ofSeconds(30));
 	}
 
-	private Mono<Tuple2<String, HttpHeaders>> sendRequest(
+	@Test
+	public void shouldNotResolveTargetHostnameWhenMetricsEnabled() {
+		StepVerifier.create(
+				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+								.host("localhost")
+								.port(hoverflyRule.getProxyPort()),
+						null,
+						LOCALLY_NOT_RESOLVABLE_ADDRESS,
+						true,
+						true))
+				.expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void shouldNotResolveTargetHostnameWhenMetricsDisabled() {
+		StepVerifier.create(
+				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+								.host("localhost")
+								.port(hoverflyRule.getProxyPort()),
+						null,
+						LOCALLY_NOT_RESOLVABLE_ADDRESS,
+						true,
+						false))
+				.expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
+				.expectComplete()
+				.verify(Duration.ofSeconds(30));
+	}
+
+	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(
 			Consumer<? super ProxyProvider.TypeSpec> proxyOptions,
 			Supplier<? extends SocketAddress> connectAddressSupplier,
 			String uri,
 			boolean wiretap) {
+		return sendRequest(proxyOptions, connectAddressSupplier, uri, wiretap, false);
+	}
+
+	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(
+			Consumer<? super ProxyProvider.TypeSpec> proxyOptions,
+			Supplier<? extends SocketAddress> connectAddressSupplier,
+			String uri,
+			boolean wiretap,
+			boolean metricsEnabled) {
 		HttpClient client =
 				HttpClient.create()
+				          .metrics(metricsEnabled, () -> MicrometerHttpClientMetricsRecorder.INSTANCE)
 				          .tcpConfiguration(tcpClient -> tcpClient.proxy(proxyOptions))
 				          .doOnResponse((res, conn) -> {
 				              ChannelHandler handler = conn.channel().pipeline().get(NettyPipeline.ProxyLoggingHandler);
