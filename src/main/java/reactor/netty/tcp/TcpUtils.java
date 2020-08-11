@@ -41,9 +41,7 @@ final class TcpUtils {
 				NettyPipeline.ProxyHandler,
 				new ProxyProvider.DeferredProxySupport(proxyOptions));
 
-		if (b.config().resolver() == DefaultAddressResolverGroup.INSTANCE) {
-			return b.resolver(NoopAddressResolverGroup.INSTANCE);
-		}
+		BootstrapHandlers.updateResolverForProxySupport(b);
 		return b;
 	}
 
