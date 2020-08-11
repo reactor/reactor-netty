@@ -41,8 +41,7 @@ final class TcpUtils {
 				NettyPipeline.ProxyHandler,
 				new ProxyProvider.DeferredProxySupport(proxyOptions));
 
-		BootstrapHandlers.updateResolverForProxySupport(b);
-		return b;
+		return BootstrapHandlers.updateResolverForProxySupport(b);
 	}
 
 	static Bootstrap removeProxySupport(Bootstrap b) {

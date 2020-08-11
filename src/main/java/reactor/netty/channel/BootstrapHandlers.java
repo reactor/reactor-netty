@@ -489,6 +489,10 @@ public abstract class BootstrapHandlers {
 		return b;
 	}
 
+	/**
+	 * Changes the resolver to {@link NoopAddressResolverGroup} if the current one is
+	 * {@link DefaultAddressResolverGroup}.
+	 */
 	public static Bootstrap updateResolverForProxySupport(Bootstrap b) {
 		if (b.config().resolver() == DefaultAddressResolverGroup.INSTANCE) {
 			return b.resolver(NoopAddressResolverGroup.INSTANCE);
