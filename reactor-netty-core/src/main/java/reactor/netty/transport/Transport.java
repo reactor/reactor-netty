@@ -137,8 +137,8 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 		if (enable) {
 			if (!Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
-						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
-								" to the class path first");
+					"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+						" to the class path first");
 			}
 			T dup = duplicate();
 			dup.configuration().metricsRecorder = () -> configuration().defaultMetricsRecorder();
@@ -326,8 +326,19 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
 		Objects.requireNonNull(format, "format");
+		return wiretap(new LoggingHandler(category, level, format));
+	}
+
+	/**
+	 * Apply a wire logger configuration using a logging handler.
+	 *
+	 * @param loggingHandler the logging handler
+	 * @return a new {@link Transport} reference
+	 */
+	public final T wiretap(LoggingHandler loggingHandler) {
+		Objects.requireNonNull(loggingHandler, "customLoggingHandler");
 		T dup = duplicate();
-		dup.configuration().loggingHandler = new LoggingHandler(category, level, format);
+		dup.configuration().loggingHandler = loggingHandler;
 		return dup;
 	}
 

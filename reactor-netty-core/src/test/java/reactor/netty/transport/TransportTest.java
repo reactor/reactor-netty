@@ -21,6 +21,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.ByteBufFormat;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+
+import org.junit.Before;
 import org.junit.Test;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
@@ -37,11 +39,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class TransportTest {
 
+	private TestTransport transport;
+
+	@Before
+	public void setUp() throws Exception {
+		TestTransportConfig config = new TestTransportConfig(Collections.emptyMap());
+		transport = new TestTransport(config);
+	}
+
 	@Test
 	public void testWiretap() {
-		TestTransportConfig config = new TestTransportConfig(Collections.emptyMap());
-		TestTransport transport = new TestTransport(config);
-
 		doTestWiretap(transport.wiretap(true), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category"), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category", LogLevel.DEBUG), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
@@ -55,6 +62,15 @@ public class TransportTest {
 
 		assertThat(loggingHandler.level()).isSameAs(expectedLevel);
 		assertThat(loggingHandler.byteBufFormat()).isSameAs(expectedFormat);
+	}
+
+	@Test
+	public void testWiretapWithCustomLogginHandler() {
+		CustomLoggingHandler customLoggingHandler = new CustomLoggingHandler();
+
+		final TestTransport modifiedTransport = transport.wiretap(customLoggingHandler);
+
+		assertThat(modifiedTransport.config.loggingHandler).isSameAs(customLoggingHandler);
 	}
 
 	static final class TestTransport extends Transport<TestTransport, TestTransportConfig> {
@@ -123,4 +139,9 @@ public class TransportTest {
 			return null;
 		}
 	}
+
+	static final class CustomLoggingHandler extends LoggingHandler {
+
+	}
+
 }
