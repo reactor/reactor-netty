@@ -174,6 +174,7 @@ final class TcpServerBind extends TcpServer {
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void disposeNow(Duration timeout) {
 			if (isDisposed()) {
 				return;
@@ -190,7 +191,11 @@ final class TcpServerBind extends TcpServer {
 				channelGroup.forEach(channel -> {
 					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 					if (ops != null) {
-						channels.add(ops.onTerminate());
+						channels.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
+					}
+					else {
+						//"FutureReturnValueIgnored" this is deliberate
+						channel.close();
 					}
 				});
 				if (!channels.isEmpty()) {
