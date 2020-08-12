@@ -17,12 +17,13 @@ package reactor.netty.http.client;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.NoopAddressResolverGroup;
 import io.specto.hoverfly.junit.core.HoverflyConfig;
 import io.specto.hoverfly.junit.rule.HoverflyRule;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -34,12 +35,14 @@ import reactor.util.function.Tuple2;
 
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static io.specto.hoverfly.junit.core.SimulationSource.dsl;
 import static io.specto.hoverfly.junit.dsl.HoverflyDsl.service;
 import static io.specto.hoverfly.junit.dsl.ResponseCreators.success;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Violeta Georgieva
@@ -172,7 +175,6 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	@Ignore
 	public void shouldNotResolveTargetHostnameWhenMetricsEnabled() {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
@@ -188,7 +190,6 @@ public class HttpClientProxyTest {
 	}
 
 	@Test
-	@Ignore
 	public void shouldNotResolveTargetHostnameWhenMetricsDisabled() {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
@@ -201,6 +202,49 @@ public class HttpClientProxyTest {
 				    .expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
 				    .expectComplete()
 				    .verify(Duration.ofSeconds(30));
+	}
+
+	@Test
+	public void shouldUseDifferentResolvers() {
+		HttpClient client =
+				HttpClient.create()
+				          .remoteAddress(server::address)
+				          .metrics(true, () -> MicrometerHttpClientMetricsRecorder.INSTANCE)
+				          .wiretap(true);
+
+		AtomicReference<AddressResolverGroup<?>> resolver1 = new AtomicReference<>();
+		client.doOnConnect(config -> resolver1.set(config.resolver()))
+		      .get()
+		      .uri("https://example.com")
+		      .responseSingle((response, body) -> Mono.zip(body.asString(),
+		                                                   Mono.just(response.responseHeaders())))
+		      .block(Duration.ofSeconds(30));
+
+		AtomicReference<AddressResolverGroup<?>> resolver2 = new AtomicReference<>();
+		client.proxy(ops -> ops.type(ProxyProvider.Proxy.HTTP)
+		                       .host("localhost")
+		                       .port(hoverflyRule.getProxyPort()))
+		      .doOnConnect(config -> resolver2.set(config.resolver()))
+		      .get()
+		      .uri(LOCALLY_NOT_RESOLVABLE_ADDRESS)
+		      .responseSingle((response, body) -> Mono.zip(body.asString(),
+		                                                   Mono.just(response.responseHeaders())))
+		      .block(Duration.ofSeconds(30));
+
+		AtomicReference<AddressResolverGroup<?>> resolver3 = new AtomicReference<>();
+		client.doOnConnect(config -> resolver3.set(config.resolver()))
+		      .get()
+		      .uri("https://example.com")
+		      .responseSingle((response, body) -> Mono.zip(body.asString(),
+		                                                   Mono.just(response.responseHeaders())))
+		      .block(Duration.ofSeconds(30));
+
+		assertThat(resolver1.get()).isNotNull()
+			.isEqualTo(HttpClientConfig.DEFAULT_RESOLVER);
+		assertThat(resolver2.get()).isNotNull()
+			.isEqualTo(NoopAddressResolverGroup.INSTANCE);
+		assertThat(resolver3.get()).isNotNull()
+			.isSameAs(resolver1.get());
 	}
 
 	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(

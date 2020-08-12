@@ -18,10 +18,12 @@ package reactor.netty.transport;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.NoopAddressResolverGroup;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ConnectionObserver;
@@ -187,7 +189,11 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		T dup = duplicate();
 		ProxyProvider.Build builder = (ProxyProvider.Build) ProxyProvider.builder();
 		proxyOptions.accept(builder);
-		dup.configuration().proxyProvider = builder.build();
+		CONF conf = dup.configuration();
+		conf.proxyProvider = builder.build();
+		if (conf.defaultResolver().equals(conf.resolver())) {
+			conf.resolver = new AtomicReference<>(NoopAddressResolverGroup.INSTANCE);
+		}
 		return dup;
 	}
 
@@ -213,7 +219,7 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 	public T resolver(AddressResolverGroup<?> resolver) {
 		Objects.requireNonNull(resolver, "resolver");
 		T dup = duplicate();
-		dup.configuration().resolver.set(resolver);
+		dup.configuration().resolver = new AtomicReference<>(resolver);
 		dup.configuration().nameResolverProvider = null;
 		return dup;
 	}
@@ -228,16 +234,22 @@ public abstract class ClientTransport<T extends ClientTransport<T, CONF>,
 		Objects.requireNonNull(nameResolverSpec, "nameResolverSpec");
 		NameResolverProvider.Build builder = new NameResolverProvider.Build();
 		nameResolverSpec.accept(builder);
+		NameResolverProvider provider = builder.build();
+		if (provider.equals(configuration().nameResolverProvider)) {
+			@SuppressWarnings("unchecked")
+			T dup = (T) this;
+			return dup;
+		}
 		T dup = duplicate();
-		dup.configuration().nameResolverProvider = builder.build();
-		dup.configuration().resolver.set(null);
+		dup.configuration().nameResolverProvider = provider;
+		dup.configuration().resolver = new AtomicReference<>();
 		return dup;
 	}
 
 	@Override
 	public T runOn(LoopResources loopResources, boolean preferNative) {
 		T dup = super.runOn(loopResources, preferNative);
-		dup.configuration().resolver.set(null);
+		dup.configuration().resolver = new AtomicReference<>();
 		return dup;
 	}
 }

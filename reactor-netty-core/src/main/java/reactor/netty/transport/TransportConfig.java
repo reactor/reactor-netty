@@ -79,7 +79,7 @@ public abstract class TransportConfig {
 
 	public int channelHash() {
 		return Objects.hash(attrs, bindAddress != null ? bindAddress.get() : 0, channelGroup, doOnChannelInit,
-				loggingHandler, loopResources, metricsRecorder, observer, options, preferNative);
+				loggingHandler, loopResources, metricsRecorder != null ? metricsRecorder.get() : 0, observer, options, preferNative);
 	}
 
 	/**
