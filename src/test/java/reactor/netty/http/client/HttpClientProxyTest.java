@@ -75,7 +75,7 @@ public class HttpClientProxyTest {
 				                .header("Hoverfly", "Was-Here")),
 				    service(LOCALLY_NOT_RESOLVABLE_ADDRESS)
 				        .get("/")
-					    .willReturn(success().body("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS))));
+				        .willReturn(success().body("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS))));
 	}
 
 	@After
@@ -174,30 +174,30 @@ public class HttpClientProxyTest {
 	public void shouldNotResolveTargetHostnameWhenMetricsEnabled() {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-								.host("localhost")
-								.port(hoverflyRule.getProxyPort()),
-						null,
-						LOCALLY_NOT_RESOLVABLE_ADDRESS,
-						true,
-						true))
-				.expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+				                      .host("localhost")
+				                      .port(hoverflyRule.getProxyPort()),
+				            null,
+				            LOCALLY_NOT_RESOLVABLE_ADDRESS,
+				            true,
+				            true))
+				    .expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
 	}
 
 	@Test
 	public void shouldNotResolveTargetHostnameWhenMetricsDisabled() {
 		StepVerifier.create(
 				sendRequest(ops -> ops.type(ProxyProvider.Proxy.HTTP)
-								.host("localhost")
-								.port(hoverflyRule.getProxyPort()),
-						null,
-						LOCALLY_NOT_RESOLVABLE_ADDRESS,
-						true,
-						false))
-				.expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
-				.expectComplete()
-				.verify(Duration.ofSeconds(30));
+				                      .host("localhost")
+				                      .port(hoverflyRule.getProxyPort()),
+				            null,
+				            LOCALLY_NOT_RESOLVABLE_ADDRESS,
+				            true,
+				            false))
+				    .expectNextMatches(t -> ("Hi from " + LOCALLY_NOT_RESOLVABLE_ADDRESS).equals(t.getT1()))
+				    .expectComplete()
+				    .verify(Duration.ofSeconds(30));
 	}
 
 	private Mono<Tuple2<String, HttpHeaders>>  sendRequest(
