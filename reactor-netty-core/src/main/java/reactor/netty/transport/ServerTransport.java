@@ -486,6 +486,7 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 		}
 
 		@Override
+		@SuppressWarnings("FutureReturnValueIgnored")
 		public void disposeNow(Duration timeout) {
 			if (isDisposed()) {
 				return;
@@ -498,7 +499,11 @@ public abstract class ServerTransport<T extends ServerTransport<T, CONF>,
 				config.channelGroup.forEach(channel -> {
 					ChannelOperations<?, ?> ops = ChannelOperations.get(channel);
 					if (ops != null) {
-						channels.add(ops.onTerminate());
+						channels.add(ops.onTerminate().doFinally(sig -> ops.dispose()));
+					}
+					else {
+						//"FutureReturnValueIgnored" this is deliberate
+						channel.close();
 					}
 				});
 				if (!channels.isEmpty()) {

@@ -1721,11 +1721,11 @@ public class HttpServerTests {
 		// Stop accepting incoming requests, wait at most 3s for the active requests to finish
 		disposableServer.disposeNow();
 
+		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
+
 		// Dispose the event loop
 		loop.disposeLater()
 		    .block(Duration.ofSeconds(30));
-
-		assertThat(latch2.await(30, TimeUnit.SECONDS)).isTrue();
 
 		StepVerifier.create(result.asMono())
 		            .expectNext("delay500delay1000")
