@@ -16,6 +16,7 @@
 package reactor.netty.transport;
 
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -24,14 +25,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.group.ChannelGroup;
-import io.netty.handler.logging.ByteBufFormat;
 import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AttributeKey;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableChannel;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
@@ -68,7 +68,6 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * Set a new local address to which this transport should bind on subscribe.
 	 *
 	 * @param bindAddressSupplier A supplier of the address to bind to.
-	 *
 	 * @return a new {@link Transport}
 	 */
 	public T bindAddress(Supplier<? extends SocketAddress> bindAddressSupplier) {
@@ -137,8 +136,8 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 		if (enable) {
 			if (!Metrics.isInstrumentationAvailable()) {
 				throw new UnsupportedOperationException(
-						"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
-								" to the class path first");
+					"To enable metrics, you must add the dependency `io.micrometer:micrometer-core`" +
+						" to the class path first");
 			}
 			T dup = duplicate();
 			dup.configuration().metricsRecorder = () -> configuration().defaultMetricsRecorder();
@@ -264,7 +263,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Apply or remove a wire logger configuration using {@link Transport} category,
-	 * {@code DEBUG} logger level and {@link ByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
+	 * {@code DEBUG} logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
 	 *
 	 * @param enable specifies whether the wire logger configuration will be added to the pipeline
 	 * @return a new {@link Transport} reference
@@ -289,7 +288,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Apply a wire logger configuration using the specified category,
-	 * {@code DEBUG} logger level and {@link ByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
+	 * {@code DEBUG} logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
 	 *
 	 * @param category the logger category
 	 * @return a new {@link Transport} reference
@@ -301,7 +300,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 
 	/**
 	 * Apply a wire logger configuration using the specified category,
-	 * logger level and {@link ByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
+	 * logger level and {@link AdvancedByteBufFormat#HEX_DUMP} for {@link ByteBuf} format.
 	 *
 	 * @param category the logger category
 	 * @param level the logger level
@@ -310,7 +309,7 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	public T wiretap(String category, LogLevel level) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
-		return wiretap(category, level, ByteBufFormat.HEX_DUMP);
+		return wiretap(category, level, AdvancedByteBufFormat.HEX_DUMP);
 	}
 
 	/**
@@ -322,12 +321,33 @@ public abstract class Transport<T extends Transport<T, C>, C extends TransportCo
 	 * @param format the {@link ByteBuf} format
 	 * @return a new {@link Transport} reference
 	 */
-	public final T wiretap(String category, LogLevel level, ByteBufFormat format) {
+	public final T wiretap(String category, LogLevel level, AdvancedByteBufFormat format) {
 		Objects.requireNonNull(category, "category");
 		Objects.requireNonNull(level, "level");
 		Objects.requireNonNull(format, "format");
+		return wiretap(category, level, format, Charset.defaultCharset());
+	}
+
+	/**
+	 * Apply a wire logger configuration using the specific category,
+	 * logger level, {@link ByteBuf} format and charset.
+	 *
+	 * Relevant in case of {@link AdvancedByteBufFormat#TEXTUAL}
+	 * and a different charset than {@link Charset#defaultCharset()} is required.
+	 *
+	 * @param category the logger category
+	 * @param level    the logger level
+	 * @param format   the {@link ByteBuf} format
+	 * @param charset  the charset
+	 * @return a new {@link Transport} reference
+	 */
+	public final T wiretap(String category, LogLevel level, AdvancedByteBufFormat format, Charset charset) {
+		Objects.requireNonNull(category, "category");
+		Objects.requireNonNull(level, "level");
+		Objects.requireNonNull(format, "format");
+		Objects.requireNonNull(charset, "charset");
 		T dup = duplicate();
-		dup.configuration().loggingHandler = new LoggingHandler(category, level, format);
+		dup.configuration().loggingHandler = format.toLoggingHandler(category, level, charset);
 		return dup;
 	}
 
