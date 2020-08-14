@@ -15,22 +15,24 @@
  */
 package reactor.netty.transport;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Collections;
+import java.util.Map;
+
+import org.junit.Test;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.logging.ByteBufFormat;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import org.junit.Test;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
+import reactor.netty.logging.AdvancedByteBufFormat;
 import reactor.netty.resources.LoopResources;
-
-import java.util.Collections;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Violeta Georgieva
@@ -46,8 +48,14 @@ public class TransportTest {
 		doTestWiretap(transport.wiretap("category"), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category", LogLevel.DEBUG), LogLevel.DEBUG, ByteBufFormat.HEX_DUMP);
 		doTestWiretap(transport.wiretap("category", LogLevel.INFO), LogLevel.INFO, ByteBufFormat.HEX_DUMP);
-		doTestWiretap(transport.wiretap("category", LogLevel.INFO, ByteBufFormat.HEX_DUMP), LogLevel.INFO, ByteBufFormat.HEX_DUMP);
-		doTestWiretap(transport.wiretap("category", LogLevel.DEBUG, ByteBufFormat.SIMPLE), LogLevel.DEBUG, ByteBufFormat.SIMPLE);
+		doTestWiretap(
+			transport.wiretap("category", LogLevel.INFO, AdvancedByteBufFormat.HEX_DUMP),
+			LogLevel.INFO,
+			ByteBufFormat.HEX_DUMP);
+		doTestWiretap(
+			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.SIMPLE),
+			LogLevel.DEBUG,
+			ByteBufFormat.SIMPLE);
 	}
 
 	private void doTestWiretap(TestTransport transport, LogLevel expectedLevel, ByteBufFormat expectedFormat) {
@@ -74,6 +82,7 @@ public class TransportTest {
 		protected TestTransport duplicate() {
 			return new TestTransport(new TestTransportConfig(config));
 		}
+
 	}
 
 	static final class TestTransportConfig extends TransportConfig {
@@ -122,5 +131,7 @@ public class TransportTest {
 		protected EventLoopGroup eventLoopGroup() {
 			return null;
 		}
+
 	}
+
 }

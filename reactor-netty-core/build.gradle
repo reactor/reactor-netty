@@ -79,9 +79,10 @@ dependencies {
 	testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 	testCompile "org.assertj:assertj-core:$assertJVersion"
 	testCompile "junit:junit:$junitVersion"
+	testCompile "org.mockito:mockito-core:3.4.6"
+	testCompile "ch.qos.logback:logback-classic:$logbackVersion"
 
 	testRuntimeOnly "org.slf4j:jcl-over-slf4j:$slf4jVersion"
-	testRuntimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
 
 	for (dependency in project.configurations.shaded.dependencies) {
 		compileOnly(dependency)
