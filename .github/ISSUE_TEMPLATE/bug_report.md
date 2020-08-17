@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-<!--- Provide a general summary of the issue in the Title above -->
+<!--- Provide a general summary of the issue in the title above -->
 
 <!--- /!\ Make sure to follow the Contribution Guidelines and notably for security issues:
 https://github.com/reactor/reactor-netty/blob/master/CONTRIBUTING.md
@@ -42,5 +42,5 @@ public void repoCase() {
 
 * Reactor version(s) used:
 * Other relevant libraries versions (eg. `netty`, ...):
-* JVM version (`javar -version`):
-* OS and version (eg `uname -a`):
+* JVM version (`java -version`):
+* OS and version (eg. `uname -a`):
