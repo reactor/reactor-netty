@@ -9,9 +9,11 @@ insert_final_newline = false
 max_line_length = 120
 tab_width = 4
 trim_trailing_whitespace = true
+ij_continuation_indent_size = 8
 ij_smart_tabs = true
 
 [*.java]
 ij_java_catch_on_new_line = true
 ij_java_else_on_new_line = true
 ij_java_finally_on_new_line = true
+ij_java_keep_indents_on_empty_lines = false
