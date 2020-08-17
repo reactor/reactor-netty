@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -413,5 +414,35 @@ public class Http2Tests {
 			int[] arr = new int[100000];
 		}
 		System.gc();
+	}
+
+	@Test
+	public void testHttpClientDefaultSslProvider() {
+		HttpClient client = HttpClient.create()
+		                              .wiretap(true);
+
+		doTestHttpClientDefaultSslProvider(client.protocol(HttpProtocol.H2));
+		doTestHttpClientDefaultSslProvider(client.protocol(HttpProtocol.H2)
+		                               .secure());
+		doTestHttpClientDefaultSslProvider(client.secure()
+		                               .protocol(HttpProtocol.H2));
+		doTestHttpClientDefaultSslProvider(client.protocol(HttpProtocol.HTTP11)
+		                               .secure()
+		                               .protocol(HttpProtocol.H2));
+	}
+
+	private void doTestHttpClientDefaultSslProvider(HttpClient client) {
+		AtomicBoolean channel = new AtomicBoolean();
+		StepVerifier.create(client.doOnRequest((req, conn) -> channel.set(conn.channel().parent() != null))
+		                          .get()
+		                          .uri("https://example.com/")
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString())
+		            .expectNextMatches(s -> s.contains("Example Domain"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(channel.get()).isTrue();
 	}
 }

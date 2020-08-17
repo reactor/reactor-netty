@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -32,6 +33,8 @@ import reactor.netty.DisposableServer;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServer;
 import reactor.test.StepVerifier;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Violeta Georgieva
@@ -491,5 +494,32 @@ public class HttpTests {
 		HttpServer.create()
 		          .secure(sslContextSpec -> System.out.println())
 		          .bindNow();
+	}
+
+	@Test
+	public void testHttpClientDefaultSslProvider() {
+		HttpClient client = HttpClient.create()
+		                              .wiretap(true);
+
+		doTestHttpClientDefaultSslProvider(client);
+		doTestHttpClientDefaultSslProvider(client.secure());
+		doTestHttpClientDefaultSslProvider(client.protocol(HttpProtocol.H2)
+		                               .secure()
+		                               .protocol(HttpProtocol.HTTP11));
+	}
+
+	private void doTestHttpClientDefaultSslProvider(HttpClient client) {
+		AtomicBoolean channel = new AtomicBoolean();
+		StepVerifier.create(client.doOnRequest((req, conn) -> channel.set(conn.channel().parent() == null))
+		                          .get()
+		                          .uri("https://example.com/")
+		                          .responseContent()
+		                          .aggregate()
+		                          .asString())
+		            .expectNextMatches(s -> s.contains("Example Domain"))
+		            .expectComplete()
+		            .verify(Duration.ofSeconds(30));
+
+		assertThat(channel.get()).isTrue();
 	}
 }

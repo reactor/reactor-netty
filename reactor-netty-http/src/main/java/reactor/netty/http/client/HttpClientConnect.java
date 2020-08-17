@@ -206,7 +206,7 @@ class HttpClientConnect extends HttpClient {
 				if (handler.toURI.isSecure()) {
 					if (_config.sslProvider == null) {
 						_config = new HttpClientConfig(config);
-						_config.sslProvider = HttpClientSecure.DEFAULT_HTTP_SSL_PROVIDER;
+						_config.sslProvider = HttpClientSecure.defaultSslProvider(_config);
 					}
 				}
 				else {

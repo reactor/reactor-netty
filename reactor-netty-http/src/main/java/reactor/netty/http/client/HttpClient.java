@@ -1117,7 +1117,12 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	public final HttpClient protocol(HttpProtocol... supportedProtocols) {
 		Objects.requireNonNull(supportedProtocols, "supportedProtocols");
 		HttpClient dup = duplicate();
-		dup.configuration().protocols(supportedProtocols);
+		HttpClientConfig config = dup.configuration();
+		config.protocols(supportedProtocols);
+
+		if (HttpClientSecure.hasDefaultSslProvider(config)) {
+			dup.configuration().sslProvider = HttpClientSecure.defaultSslProvider(config);
+		}
 		return dup;
 	}
 
@@ -1180,7 +1185,7 @@ public abstract class HttpClient extends ClientTransport<HttpClient, HttpClientC
 	 * @return a new {@link HttpClient}
 	 */
 	public final HttpClient secure() {
-		SslProvider sslProvider = HttpClientSecure.sslProvider(null);
+		SslProvider sslProvider = HttpClientSecure.defaultSslProvider(configuration());
 		if (sslProvider.equals(configuration().sslProvider)) {
 			return this;
 		}

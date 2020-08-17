@@ -22,12 +22,10 @@ import javax.net.ssl.SSLParameters;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import reactor.netty.tcp.SslProvider;
-import reactor.util.annotation.Nullable;
 
 /**
  * Initializes the default {@link SslProvider} for the HTTP client.
@@ -37,10 +35,25 @@ import reactor.util.annotation.Nullable;
  */
 final class HttpClientSecure {
 
-	static SslProvider sslProvider(@Nullable SslProvider sslProvider) {
-		if (sslProvider == null) {
+	private HttpClientSecure() {
+	}
+
+	static SslProvider defaultSslProvider(HttpClientConfig config) {
+		if ((config._protocols & HttpClientConfig.h2) == HttpClientConfig.h2) {
+			return DEFAULT_HTTP2_SSL_PROVIDER;
+		}
+		else {
 			return DEFAULT_HTTP_SSL_PROVIDER;
 		}
+	}
+
+	@SuppressWarnings("ReferenceEquality")
+	static boolean hasDefaultSslProvider(HttpClientConfig config) {
+		// Reference comparison is deliberate
+		return DEFAULT_HTTP_SSL_PROVIDER == config.sslProvider || DEFAULT_HTTP2_SSL_PROVIDER == config.sslProvider;
+	}
+
+	static SslProvider sslProvider(SslProvider sslProvider) {
 		return SslProvider.addHandlerConfigurator(sslProvider, DEFAULT_HOSTNAME_VERIFICATION);
 	}
 
@@ -51,15 +64,15 @@ final class HttpClientSecure {
 		sslEngine.setSSLParameters(sslParameters);
 	};
 
-	static final SslContext DEFAULT_HTTP2_CONTEXT;
+	static final SslProvider HTTP2_SSL_PROVIDER;
 	static {
-		SslContext sslCtx;
+		SslProvider sslProvider;
 		try {
 			io.netty.handler.ssl.SslProvider provider =
 					io.netty.handler.ssl.SslProvider.isAlpnSupported(io.netty.handler.ssl.SslProvider.OPENSSL) ?
 							io.netty.handler.ssl.SslProvider.OPENSSL :
 							io.netty.handler.ssl.SslProvider.JDK;
-			sslCtx =
+			SslContextBuilder sslCtxBuilder =
 					SslContextBuilder.forClient()
 					                 .sslProvider(provider)
 					                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
@@ -68,18 +81,21 @@ final class HttpClientSecure {
 					                         ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
 					                         ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
 					                         ApplicationProtocolNames.HTTP_2,
-					                         ApplicationProtocolNames.HTTP_1_1))
-					                 .build();
+					                         ApplicationProtocolNames.HTTP_1_1));
+			sslProvider = SslProvider.builder()
+			                         .sslContext(sslCtxBuilder)
+			                         .defaultConfiguration(SslProvider.DefaultConfigurationType.H2)
+			                         .build();
 		}
 		catch (Exception e) {
-			sslCtx = null;
+			sslProvider = null;
 		}
-		DEFAULT_HTTP2_CONTEXT = sslCtx;
+		HTTP2_SSL_PROVIDER = sslProvider;
 	}
 
 	static final SslProvider DEFAULT_HTTP_SSL_PROVIDER =
 			SslProvider.addHandlerConfigurator(SslProvider.defaultClientProvider(), DEFAULT_HOSTNAME_VERIFICATION);
 
-	static final Consumer<SslProvider.SslContextSpec> SSL_DEFAULT_SPEC_HTTP2 =
-			sslProviderBuilder -> sslProviderBuilder.sslContext(DEFAULT_HTTP2_CONTEXT);
+	static final SslProvider DEFAULT_HTTP2_SSL_PROVIDER =
+			SslProvider.addHandlerConfigurator(HTTP2_SSL_PROVIDER, DEFAULT_HOSTNAME_VERIFICATION);
 }
