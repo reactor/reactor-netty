@@ -18,7 +18,6 @@ package reactor.netty.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -62,42 +61,38 @@ public class ReactorNettyLoggingHandlerTest {
 	}
 
 	@Test
-	public void shouldLogByteBuf() throws Exception {
-		final ByteBuf msg = Unpooled.copiedBuffer("TEST", StandardCharsets.UTF_8);
-		final EmbeddedChannel channel = new EmbeddedChannel(defaultCharsetReactorNettyLoggingHandler);
+	public void shouldLogByteBuf() {
+		final ByteBuf byteBuf = Unpooled.copiedBuffer("TEST", Charset.defaultCharset());
 
-		channel.writeInbound(msg);
-
-		Mockito.verify(mockedAppender, Mockito.times(4)).doAppend(loggingEventArgumentCaptor.capture());
-
-		final LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(2);
-		assertThat(relevantLog.getMessage()).isEqualTo("[id: 0xembedded, L:embedded - R:embedded] READ: 4B TEST");
+		sendMessage(byteBuf, "[id: 0xembedded, L:embedded - R:embedded] READ: 4B TEST");
 	}
 
 	@Test
-	public void shouldLogByteBufHolder() throws Exception {
+	public void shouldLogByteBufHolder() {
 		final ByteBufHolder byteBufHolder =
-			new DefaultByteBufHolder(Unpooled.copiedBuffer("TEST", StandardCharsets.UTF_8));
-		final EmbeddedChannel channel = new EmbeddedChannel(defaultCharsetReactorNettyLoggingHandler);
+			new DefaultByteBufHolder(Unpooled.copiedBuffer("TEST", Charset.defaultCharset()));
 
-		channel.writeInbound(byteBufHolder);
-
-		Mockito.verify(mockedAppender, Mockito.times(4)).doAppend(loggingEventArgumentCaptor.capture());
-
-		final LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(2);
-		assertThat(relevantLog.getMessage()).isEqualTo("[id: 0xembedded, L:embedded - R:embedded] READ: 4B TEST");
+		sendMessage(byteBufHolder, "[id: 0xembedded, L:embedded - R:embedded] READ: 4B TEST");
 	}
 
 	@Test
-	public void shouldLogObject() throws Exception {
-		final EmbeddedChannel channel = new EmbeddedChannel(defaultCharsetReactorNettyLoggingHandler);
+	public void shouldLogObject() {
+		sendMessage("TEST", "[id: 0xembedded, L:embedded - R:embedded] READ: TEST");
+	}
 
-		channel.writeInbound("TEST");
+	private void sendMessage(Object input, String expectedResult) {
+		final EmbeddedChannel channel = new EmbeddedChannel(defaultCharsetReactorNettyLoggingHandler);
+		channel.writeInbound(input);
 
 		Mockito.verify(mockedAppender, Mockito.times(4)).doAppend(loggingEventArgumentCaptor.capture());
 
 		final LoggingEvent relevantLog = loggingEventArgumentCaptor.getAllValues().get(2);
-		assertThat(relevantLog.getMessage()).isEqualTo("[id: 0xembedded, L:embedded - R:embedded] READ: TEST");
+		assertThat(relevantLog.getMessage()).isEqualTo(expectedResult);
+	}
+
+	@Test(expected = UnsupportedOperationException.class)
+	public void shouldThrowUnsupportedOperationExceptionWhenByteBufFormatIsCalled() {
+		defaultCharsetReactorNettyLoggingHandler.byteBufFormat();
 	}
 
 }

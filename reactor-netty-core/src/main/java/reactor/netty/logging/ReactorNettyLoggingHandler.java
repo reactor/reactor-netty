@@ -20,6 +20,7 @@ import java.nio.charset.Charset;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.logging.ByteBufFormat;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
@@ -28,8 +29,11 @@ import io.netty.handler.logging.LoggingHandler;
  * textual representation so it's human readable and less verbose.
  *
  * Hint: Logger escapes newlines as "\n" to reduce output.
+ *
+ * @author Maximilian Goeke
+ * @since 1.0.0
  */
-public class ReactorNettyLoggingHandler extends LoggingHandler {
+public final class ReactorNettyLoggingHandler extends LoggingHandler {
 
 	private final Charset charset;
 
@@ -40,7 +44,7 @@ public class ReactorNettyLoggingHandler extends LoggingHandler {
 	 * @param level   the log level
 	 * @param charset the charset used to decode the ByteBuf
 	 */
-	public ReactorNettyLoggingHandler(final String name, final LogLevel level, final Charset charset) {
+	ReactorNettyLoggingHandler(final String name, final LogLevel level, final Charset charset) {
 		super(name, level);
 		this.charset = charset;
 	}
@@ -59,20 +63,22 @@ public class ReactorNettyLoggingHandler extends LoggingHandler {
 	}
 
 	/* Format of message is:
-	 * CHANNEL EVENT_NAME: MESSAGE_LENGTH_IN_BYTESB CONTENT_OF_BYTE_BUF
+	 * <CHANNEL> <EVENT_NAME>: <MESSAGE_LENGTH_IN_BYTES>B <CONTENT_OF_BYTE_BUF>
 	 *
 	 * == Example ==
-	 * Channel: [id: 0x329c6ffd, L:/127.0.0.1:52640 - R:/127.0.0.1:8080]
-	 * EVENT_NAME: WRITE
-	 * MESSAGE_LENGTH_IN_BYTES: 4
-	 * CONTENT_OF_BYTE_BUF: echo
+	 * <Channel>: [id: 0x329c6ffd, L:/127.0.0.1:52640 - R:/127.0.0.1:8080]
+	 * <EVENT_NAME>: WRITE
+	 * <MESSAGE_LENGTH_IN_BYTES>: 4
+	 * <CONTENT_OF_BYTE_BUF>: echo
 	 *
 	 * result: [id: 0x329c6ffd, L:/127.0.0.1:52640 - R:/127.0.0.1:8080] WRITE: 4B echo
 	 */
 	private String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg) {
 		final String chStr = ctx.channel().toString();
-		final String message = msg.toString(charset).replace(System.lineSeparator(), "\\n");
-		final int messageLength = message.length();
+		final int messageLength = msg.readableBytes();
+		final String message = msg.toString(charset)
+			.replace("\n", "\\n")
+			.replace("\r", "\\r");
 
 		return new StringBuilder()
 			.append(chStr)
@@ -83,6 +89,15 @@ public class ReactorNettyLoggingHandler extends LoggingHandler {
 			.append("B ")
 			.append(message)
 			.toString();
+	}
+
+	/*
+	 * The UnsupportedOperationException is thrown to reduce confusion. ReactorNettyLoggingHandler is using
+	 * the AdvancedByteBufFormat and not ByteBufFormat.
+	 */
+	@Override
+	public ByteBufFormat byteBufFormat() {
+		throw new UnsupportedOperationException("ReactorNettyLoggingHandler isn't using the classic ByteBufFormat.");
 	}
 
 }

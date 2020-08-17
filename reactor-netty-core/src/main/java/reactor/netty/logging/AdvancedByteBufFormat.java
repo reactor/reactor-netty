@@ -26,6 +26,9 @@ import io.netty.handler.logging.LoggingHandler;
  * Used to control the format and verbosity of logging for {@link ByteBuf}s and {@link ByteBufHolder}s.
  *
  * Adds {@link AdvancedByteBufFormat#TEXTUAL} format to io.netty.handler.logging.ByteBufFormat.
+ *
+ * @author Maximilian Goeke
+ * @since 1.0.0
  */
 public enum AdvancedByteBufFormat {
 	SIMPLE,
