@@ -406,20 +406,7 @@ class HttpClientConnect extends HttpClient {
 			this.decoder = configuration.decoder;
 			this.proxyProvider = configuration.proxyProvider();
 			this.responseTimeout = configuration.responseTimeout;
-
-			HttpHeaders defaultHeaders = configuration.headers;
-			if (compress) {
-				if (defaultHeaders == null) {
-					this.defaultHeaders = new DefaultHttpHeaders();
-				}
-				else {
-					this.defaultHeaders = defaultHeaders;
-				}
-				this.defaultHeaders.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
-			}
-			else {
-				this.defaultHeaders = defaultHeaders;
-			}
+			this.defaultHeaders = configuration.headers;
 
 			String baseUrl = configuration.baseUrl;
 
@@ -473,7 +460,7 @@ class HttpClientConnect extends HttpClient {
 
 				ch.path = HttpOperations.resolvePath(ch.uri());
 
-				if (defaultHeaders != null) {
+				if (!defaultHeaders.isEmpty()) {
 					headers.set(defaultHeaders);
 				}
 
