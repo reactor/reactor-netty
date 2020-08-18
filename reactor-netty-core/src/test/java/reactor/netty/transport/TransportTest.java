@@ -32,8 +32,8 @@ import io.netty.handler.logging.LoggingHandler;
 import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
-import reactor.netty.logging.AdvancedByteBufFormat;
-import reactor.netty.logging.ReactorNettyLoggingHandler;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
+import reactor.netty.transport.logging.ReactorNettyLoggingHandler;
 import reactor.netty.resources.LoopResources;
 
 /**

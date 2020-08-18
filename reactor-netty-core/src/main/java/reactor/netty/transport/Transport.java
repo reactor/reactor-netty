@@ -31,7 +31,7 @@ import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.DisposableChannel;
 import reactor.netty.channel.ChannelMetricsRecorder;
-import reactor.netty.logging.AdvancedByteBufFormat;
+import reactor.netty.transport.logging.AdvancedByteBufFormat;
 import reactor.netty.resources.LoopResources;
 import reactor.util.Logger;
 import reactor.util.Loggers;
