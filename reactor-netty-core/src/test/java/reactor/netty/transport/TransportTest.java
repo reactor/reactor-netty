@@ -17,6 +17,7 @@ package reactor.netty.transport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Map;
 
@@ -32,6 +33,7 @@ import reactor.netty.ChannelPipelineConfigurer;
 import reactor.netty.ConnectionObserver;
 import reactor.netty.channel.ChannelMetricsRecorder;
 import reactor.netty.logging.AdvancedByteBufFormat;
+import reactor.netty.logging.ReactorNettyLoggingHandler;
 import reactor.netty.resources.LoopResources;
 
 /**
@@ -56,6 +58,11 @@ public class TransportTest {
 			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.SIMPLE),
 			LogLevel.DEBUG,
 			ByteBufFormat.SIMPLE);
+
+		doTestWiretapForTextualLogger(
+			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL), LogLevel.DEBUG);
+		doTestWiretapForTextualLogger(
+			transport.wiretap("category", LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL, Charset.defaultCharset()), LogLevel.DEBUG);
 	}
 
 	private void doTestWiretap(TestTransport transport, LogLevel expectedLevel, ByteBufFormat expectedFormat) {
@@ -63,6 +70,13 @@ public class TransportTest {
 
 		assertThat(loggingHandler.level()).isSameAs(expectedLevel);
 		assertThat(loggingHandler.byteBufFormat()).isSameAs(expectedFormat);
+	}
+
+	private void doTestWiretapForTextualLogger(TestTransport transport, LogLevel expectedLevel) {
+		LoggingHandler loggingHandler = transport.config.loggingHandler;
+
+		assertThat(loggingHandler).isInstanceOf(ReactorNettyLoggingHandler.class);
+		assertThat(loggingHandler.level()).isSameAs(expectedLevel);
 	}
 
 	static final class TestTransport extends Transport<TestTransport, TestTransportConfig> {

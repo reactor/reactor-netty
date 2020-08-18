@@ -76,9 +76,7 @@ public final class ReactorNettyLoggingHandler extends LoggingHandler {
 	private String formatByteBuf(ChannelHandlerContext ctx, String eventName, ByteBuf msg) {
 		final String chStr = ctx.channel().toString();
 		final int messageLength = msg.readableBytes();
-		final String message = msg.toString(charset)
-			.replace("\n", "\\n")
-			.replace("\r", "\\r");
+		final String message = msg.toString(charset);
 
 		return new StringBuilder()
 			.append(chStr)
